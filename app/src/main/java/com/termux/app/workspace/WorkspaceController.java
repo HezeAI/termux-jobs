@@ -73,17 +73,14 @@ public final class WorkspaceController {
         content = activity.findViewById(R.id.workspace_content);
         inputRow = activity.findViewById(R.id.workspace_input);
         inputRow.setPadding(dp(12), dp(6), dp(12), dp(6));
-        terminalInput = field("Введите команду…", "", false);
+        terminalInput = field("Введите команду…", "", true);
         terminalInput.setTypeface(Typeface.MONOSPACE); terminalInput.setTextSize(12);
-        terminalInput.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEND);
-        terminalInput.setOnEditorActionListener((v, action, event) -> {
-            if (action == android.view.inputmethod.EditorInfo.IME_ACTION_SEND ||
-                (event != null && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER && event.getAction() == android.view.KeyEvent.ACTION_DOWN)) {
-                sendInput(); return true;
-            }
-            return false;
-        });
-        inputRow.addView(terminalInput, new LinearLayout.LayoutParams(0, -1, 1));
+        terminalInput.setMinLines(1); terminalInput.setMinHeight(dp(48));
+        terminalInput.setHorizontallyScrolling(false);
+        terminalInput.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_NONE
+            | android.view.inputmethod.EditorInfo.IME_FLAG_NO_ENTER_ACTION
+            | android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI);
+        inputRow.addView(terminalInput, new LinearLayout.LayoutParams(0, -2, 1));
         TextView commands = button("★", false, this::chooseInputCommand);
         commands.setTextColor(ACCENT); commands.setTextSize(22);
         commands.setContentDescription("Вставить сохранённую команду");
@@ -473,7 +470,10 @@ public final class WorkspaceController {
         if (current == null || !current.isRunning() || current.getPid() <= 0) { activity.showToast("Нет работающего терминала", false); return; }
         String command = terminalInput.getText().toString();
         if (command.trim().isEmpty()) return;
-        current.write(command + "\r"); store.recordCommand(command);
+        if (current.getEmulator() != null) {
+            current.getEmulator().paste(command); current.write("\r");
+        } else current.write(command + "\r");
+        store.recordCommand(command);
         terminalInput.setText("");
         if (interactiveInput) activity.getTerminalView().requestFocus();
         else terminalInput.requestFocus();

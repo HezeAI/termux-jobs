@@ -58,6 +58,17 @@ public class WorkspaceNavigationTest {
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Собрать APK"));
         ViewGroup inputRow = activity.findViewById(R.id.workspace_input);
         EditText terminalInput = (EditText) inputRow.getChildAt(0);
+        terminalInput.setText("первая строка"); terminalInput.setSelection(terminalInput.length());
+        android.view.inputmethod.EditorInfo inputInfo = new android.view.inputmethod.EditorInfo();
+        android.view.inputmethod.InputConnection inputConnection = terminalInput.onCreateInputConnection(inputInfo);
+        assertNotNull(inputConnection);
+        assertEquals(android.view.inputmethod.EditorInfo.IME_ACTION_NONE,
+            inputInfo.imeOptions & android.view.inputmethod.EditorInfo.IME_MASK_ACTION);
+        inputConnection.commitText("\n", 1);
+        assertEquals("первая строка\n", terminalInput.getText().toString());
+        assertTrue(store.recentCommands.isEmpty());
+        terminalInput.setText("первая строка\nвторая строка");
+        assertEquals("первая строка\nвторая строка", terminalInput.getText().toString());
         terminalInput.setText("черновик");
         View commandPicker = findDescription(inputRow, "Вставить сохранённую команду");
         commandPicker.performClick(); shadowOf(Looper.getMainLooper()).idle();

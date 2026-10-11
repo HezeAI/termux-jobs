@@ -36,12 +36,12 @@ cp "$FORK_NATIVE/libtermux.so" "$FORK_STAGE/terminal-emulator/src/main/jniLibs/a
 cp "$FORK_NATIVE/libtermux-bootstrap.so" "$FORK_STAGE/app/src/main/jniLibs/arm64-v8a/"
 cd "$FORK_STAGE"
 export TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS=0
-export TERMUX_APP_VERSION_NAME=0.118.3-fork.5
-export TERMUX_APK_VERSION_TAG=fork-0.5-debug-arm64
+export TERMUX_APP_VERSION_NAME=0.118.3-fork.6
+export TERMUX_APK_VERSION_TAG=fork-0.6-debug-arm64
 FORK_GRADLE="$FORK_ROOT/.tools/gradle-7.2/bin/gradle"
 if [[ ! -x "$FORK_GRADLE" ]]; then FORK_GRADLE="$PWD/gradlew"; fi
 "$FORK_GRADLE" --no-daemon \
     -Pandroid.aapt2FromMavenOverride="${FORK_AAPT2:-$ANDROID_HOME/build-tools/30.0.3/aapt2}" \
     -x :app:downloadBootstraps :app:assembleDebug
 mkdir -p "$FORK_ROOT/build/apk"
-cp "$FORK_STAGE/app/build/outputs/apk/debug/termux-app_fork-0.5-debug-arm64_universal.apk" "$FORK_ROOT/build/apk/termux-fork-0.5-debug-arm64.apk"
+cp "$FORK_STAGE/app/build/outputs/apk/debug/termux-app_fork-0.6-debug-arm64_universal.apk" "$FORK_ROOT/build/apk/termux-fork-0.6-debug-arm64.apk"
