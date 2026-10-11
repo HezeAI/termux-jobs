@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
 /** Small versioned workspace, separate from Termux settings and shell processes. */
 public final class WorkspaceStore {
     public static final int MAX_TRANSCRIPT = 65536;
+    public static final int MAX_RECENT_COMMANDS = 25;
     public static final class Command {
         public String id = UUID.randomUUID().toString();
         public String name = "", command = "", category = "Общее", directory = "";
@@ -45,6 +46,7 @@ public final class WorkspaceStore {
     public interface ErrorListener { void onError(String message); }
     public final List<Command> commands = new ArrayList<>();
     public final List<Session> sessions = new ArrayList<>();
+    public final List<String> recentCommands = new ArrayList<>();
     private final AtomicFile file;
     private final ExecutorService writer = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -64,6 +66,16 @@ public final class WorkspaceStore {
         }
     }
     public boolean isWritable() { return writable; }
+    public void recordCommand(String command) {
+        if (!writable || command.trim().isEmpty()) return;
+        recentCommands.add(0, command);
+        while (recentCommands.size() > MAX_RECENT_COMMANDS) recentCommands.remove(recentCommands.size() - 1);
+        save();
+    }
+    public void clearRecentCommands() {
+        if (!writable) return;
+        recentCommands.clear(); save();
+    }
     public Session findByHandle(String handle) {
         for (Session s : sessions) if (!handle.isEmpty() && handle.equals(s.handle)) return s;
         return null;
@@ -93,7 +105,9 @@ public final class WorkspaceStore {
         for (Session s : sessions) ss.put(new JSONObject().put("id", s.id).put("name", s.name)
             .put("directory", s.directory).put("startup", s.startup).put("handle", s.handle)
             .put("transcript", tail(s.transcript, MAX_TRANSCRIPT)).put("updated", s.updated));
-        return root.put("commands", cs).put("sessions", ss);
+        JSONArray recent = new JSONArray();
+        for (int i = 0; i < Math.min(recentCommands.size(), MAX_RECENT_COMMANDS); i++) recent.put(recentCommands.get(i));
+        return root.put("commands", cs).put("sessions", ss).put("recentCommands", recent);
     }
     void decode(String json) throws JSONException {
         JSONObject root = new JSONObject(json);
@@ -112,7 +126,11 @@ public final class WorkspaceStore {
             s.startup = o.optString("startup"); s.handle = o.optString("handle"); s.transcript = tail(o.optString("transcript"), MAX_TRANSCRIPT);
             s.updated = o.optLong("updated"); ss.add(s);
         }
+        List<String> recent = new ArrayList<>();
+        JSONArray history = root.optJSONArray("recentCommands");
+        if (history != null) for (int i = 0; i < Math.min(history.length(), MAX_RECENT_COMMANDS); i++) recent.add(history.getString(i));
         commands.clear(); commands.addAll(cs); sessions.clear(); sessions.addAll(ss);
+        recentCommands.clear(); recentCommands.addAll(recent);
     }
     private static String validId(String id) throws JSONException {
         try { return UUID.fromString(id).toString(); }

@@ -52,6 +52,29 @@ public class WorkspaceStoreTest {
         WorkspaceStore reopened = new WorkspaceStore(context, errors::add);
         assertEquals("second", reopened.commands.get(0).name); reopened.close();
     }
+    @Test public void recentCommandsKeepNewest25PersistAndClearIndependently() throws Exception {
+        WorkspaceStore store = new WorkspaceStore(context, errors::add);
+        store.commands.add(new WorkspaceStore.Command());
+        store.sessions.add(new WorkspaceStore.Session());
+        for (int i = 0; i < 30; i++) store.recordCommand("echo " + i);
+        store.recordCommand("  ");
+        store.awaitWrites(); store.close();
+        WorkspaceStore reopened = new WorkspaceStore(context, errors::add);
+        assertEquals(25, reopened.recentCommands.size());
+        assertEquals("echo 29", reopened.recentCommands.get(0));
+        assertEquals("echo 5", reopened.recentCommands.get(24));
+        reopened.clearRecentCommands(); reopened.awaitWrites(); reopened.close();
+        WorkspaceStore cleared = new WorkspaceStore(context, errors::add);
+        assertTrue(cleared.recentCommands.isEmpty());
+        assertEquals(1, cleared.commands.size()); assertEquals(1, cleared.sessions.size());
+        cleared.close(); assertTrue(errors.isEmpty());
+    }
+    @Test public void oldWorkspaceWithoutJournalLoadsWithEmptyHistory() throws Exception {
+        WorkspaceStore store = new WorkspaceStore(context, errors::add);
+        org.json.JSONObject old = store.encode(); old.remove("recentCommands");
+        store.decode(old.toString()); assertTrue(store.recentCommands.isEmpty());
+        assertTrue(store.isWritable()); store.close();
+    }
     @Test public void corruptOrFutureFileIsNeverOverwritten() throws Exception {
         File file = new File(context.getFilesDir(), "workspace-v1.json");
         byte[] original = "{\"version\":99}".getBytes(StandardCharsets.UTF_8);

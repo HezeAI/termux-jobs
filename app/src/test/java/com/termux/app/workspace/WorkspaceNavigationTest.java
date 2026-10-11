@@ -37,6 +37,9 @@ public class WorkspaceNavigationTest {
         WorkspaceStore store = (WorkspaceStore) field.get(controller);
         store.commands.clear(); store.sessions.clear();
         ViewGroup nav = activity.findViewById(R.id.workspace_navigation);
+        assertEquals(3, nav.getChildCount()); assertNull(findText(nav, "Сессии"));
+        assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Недавние команды"));
+        assertNull(findText(activity.findViewById(R.id.workspace_content), "Новая сессия"));
         findText(nav, "Команды").performClick();
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Команд пока нет"));
         findDescription(activity.findViewById(R.id.workspace_header), "Новая команда").performClick();
@@ -85,9 +88,19 @@ public class WorkspaceNavigationTest {
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Команд пока нет"));
         findText(activity.findViewById(R.id.workspace_content), "Все команды").performClick();
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Собрать APK"));
-        findText(nav, "Сессии").performClick();
-        assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Нет активных сессий"));
         assertTrue(controller.onBack()); assertFalse(controller.onBack());
+        store.recordCommand("echo recent");
+        findText(nav, "Главная").performClick();
+        assertNotNull(findText(activity.findViewById(R.id.workspace_content), "echo recent"));
+        findText(activity.findViewById(R.id.workspace_content), "echo recent").performClick();
+        assertEquals("echo recent", terminalInput.getText().toString());
+        assertEquals(1, store.recentCommands.size()); // Insertion is not a new sent command.
+        findText(nav, "Главная").performClick();
+        findText(activity.findViewById(R.id.workspace_content), "Очистить").performClick();
+        shadowOf(Looper.getMainLooper()).idle();
+        ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        shadowOf(Looper.getMainLooper()).idle(); store.awaitWrites();
+        assertTrue(store.recentCommands.isEmpty()); assertEquals(2, store.commands.size());
         controller.close();
         WorkspaceStore reopened = new WorkspaceStore(activity, message -> fail(message));
         assertEquals("./gradlew assembleDebug", reopened.commands.get(0).command);

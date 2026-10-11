@@ -205,8 +205,8 @@ public final class WorkspaceController {
     }
     private void renderNavigation() {
         navigation.removeAllViews(); navigation.setPadding(dp(8), dp(6), dp(8), dp(6));
-        String[] labels = {"⌂\nГлавная", "▤\nСессии", ">_\nКоманды", "▣\nТерминал"};
-        Screen[] targets = Screen.values();
+        String[] labels = {"⌂\nГлавная", ">_\nКоманды", "▣\nТерминал"};
+        Screen[] targets = {Screen.HOME, Screen.COMMANDS, Screen.TERMINAL};
         for (int i = 0; i < targets.length; i++) {
             Screen target = targets[i]; TextView nav = button(labels[i], false, () -> show(target, true));
             nav.setTextSize(11); tintButton(nav, target == screen ? ACCENT : MUTED);
@@ -246,21 +246,35 @@ public final class WorkspaceController {
         else sessions(body);
     }
     private void home(LinearLayout body) {
-        TextView eyebrow = text("ГОТОВО К РАБОТЕ", 10, ACCENT); eyebrow.setLetterSpacing(.14f); eyebrow.setPadding(0, dp(12), 0, dp(10)); body.addView(eyebrow);
-        LinearLayout shortcuts = row();
-        shortcuts.addView(button("+\nНовая сессия", false, () -> editSession(null)), new LinearLayout.LayoutParams(0, dp(88), 1));
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(88), 1); lp.setMarginStart(dp(8));
-        shortcuts.addView(button(">_\nКоманды", false, () -> show(Screen.COMMANDS, true)), lp);
-        LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(0, dp(88), 1); lp2.setMarginStart(dp(8));
-        shortcuts.addView(button("▤\nСессии", false, () -> show(Screen.SESSIONS, true)), lp2); body.addView(shortcuts);
-        section(body, "Недавние сессии", "Все ›", () -> show(Screen.SESSIONS, true));
-        List<WorkspaceStore.Session> recent = sortedSessions();
-        if (recent.isEmpty()) empty(body, "Начните с новой сессии", "Задайте имя, каталог и стартовую команду.");
-        for (int i = 0; i < Math.min(4, recent.size()); i++) sessionCard(body, recent.get(i));
-        section(body, "Избранные команды", "Все ›", () -> { favorites = true; show(Screen.COMMANDS, true); });
-        int count = 0;
-        for (WorkspaceStore.Command c : store.commands) if (c.favorite && count++ < 4) commandCard(body, c);
-        if (count == 0) empty(body, "Ваши команды будут здесь", "Сохраните команду и отметьте её звездой.");
+        section(body, "Недавние команды", store.recentCommands.isEmpty() ? null : "Очистить", () -> {
+            if (!store.isWritable()) { activity.showToast("Журнал недоступен для записи", true); return; }
+            confirm("Очистить весь журнал недавних команд?", () -> { store.clearRecentCommands(); renderContent(); });
+        });
+        ScrollView journal = new ScrollView(activity); journal.setFillViewport(true);
+        journal.setBackground(shape(PANEL, BORDER, 16)); journal.setClipToOutline(true);
+        journal.setContentDescription("Журнал последних 25 команд");
+        journal.setOnTouchListener((v, event) -> {
+            v.getParent().requestDisallowInterceptTouchEvent(event.getActionMasked() != MotionEvent.ACTION_UP
+                && event.getActionMasked() != MotionEvent.ACTION_CANCEL);
+            return false;
+        });
+        LinearLayout entries = column(); entries.setPadding(dp(12), dp(12), dp(12), dp(12));
+        if (store.recentCommands.isEmpty()) {
+            entries.addView(text("Команд пока нет", 16, TEXT));
+            TextView hint = text("Здесь появятся команды, отправленные из поля ввода терминала.", 13, MUTED);
+            hint.setPadding(0, dp(8), 0, 0); entries.addView(hint);
+        }
+        for (String command : store.recentCommands) {
+            TextView entry = text(command, 13, TEXT); entry.setTypeface(Typeface.MONOSPACE);
+            entry.setPadding(dp(12), dp(14), dp(12), dp(14));
+            entry.setBackground(shape(Color.BLACK, BORDER, 12));
+            entry.setOnClickListener(v -> { WorkspaceStore.Command c = new WorkspaceStore.Command(); c.command = command; insertCommand(c); });
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2); params.setMargins(0, 0, 0, dp(8));
+            entries.addView(entry, params);
+        }
+        journal.addView(entries); body.addView(journal, new LinearLayout.LayoutParams(-1, dp(320)));
+        TextView count = text(store.recentCommands.size() + " / " + WorkspaceStore.MAX_RECENT_COMMANDS, 11, MUTED);
+        count.setPadding(0, dp(8), 0, 0); body.addView(count);
     }
     private void chips(LinearLayout body, String[] options, String selected, java.util.function.Consumer<String> click) {
         HorizontalScrollView scroller = new HorizontalScrollView(activity); scroller.setHorizontalScrollBarEnabled(false);
@@ -455,7 +469,8 @@ public final class WorkspaceController {
         if (current == null || !current.isRunning() || current.getPid() <= 0) { activity.showToast("Нет работающего терминала", false); return; }
         String command = terminalInput.getText().toString();
         if (command.trim().isEmpty()) return;
-        current.write(command + "\r"); terminalInput.setText(""); activity.getTerminalView().requestFocus();
+        current.write(command + "\r"); store.recordCommand(command);
+        terminalInput.setText(""); activity.getTerminalView().requestFocus();
     }
     private void chooseInputCommand() {
         List<WorkspaceStore.Command> commands = new ArrayList<>(store.commands);
