@@ -84,6 +84,14 @@ public class TermuxTerminalViewClient extends TermuxTerminalViewClientBase {
      * Should be called when mActivity.onCreate() is called
      */
     public void onCreate() {
+        android.content.SharedPreferences migration = mActivity.getSharedPreferences("workspace-input", Context.MODE_PRIVATE);
+        if (!migration.getBoolean("font-layout-reset-v17", false)) {
+            mActivity.getPreferences().setFontSize(
+                com.termux.shared.settings.preferences.TermuxAppSharedPreferences.getDefaultFontSizes(mActivity)[0]);
+            mActivity.getSharedPreferences("workspace-appearance", Context.MODE_PRIVATE).edit()
+                .remove("line-spacing-percent").apply();
+            migration.edit().putBoolean("font-layout-reset-v17", true).apply();
+        }
         mActivity.getTerminalView().setTextSize(mActivity.getPreferences().getFontSize());
         mActivity.getTerminalView().setKeepScreenOn(mActivity.getPreferences().shouldKeepScreenOn());
     }

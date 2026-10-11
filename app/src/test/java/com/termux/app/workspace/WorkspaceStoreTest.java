@@ -24,6 +24,19 @@ public class WorkspaceStoreTest {
         new File(context.getFilesDir(), "workspace-v1.json").delete();
         new File(context.getFilesDir(), "workspace-v1.json.bak").delete();
     }
+    @Test public void explicitSavedFlagPersistsAndLegacySessionsRemainSaved() throws Exception {
+        WorkspaceStore store = new WorkspaceStore(context, errors::add);
+        WorkspaceStore.Session temporary = new WorkspaceStore.Session(); temporary.name = "Temporary";
+        WorkspaceStore.Session saved = new WorkspaceStore.Session(); saved.name = "Saved"; saved.saved = true;
+        store.sessions.add(temporary); store.sessions.add(saved); store.save(); store.awaitWrites(); store.close();
+        WorkspaceStore restored = new WorkspaceStore(context, errors::add);
+        assertFalse(restored.sessions.get(0).saved); assertTrue(restored.sessions.get(1).saved);
+        org.json.JSONObject legacy = restored.encode();
+        for (int i = 0; i < legacy.getJSONArray("sessions").length(); i++) legacy.getJSONArray("sessions").getJSONObject(i).remove("saved");
+        restored.decode(legacy.toString());
+        assertTrue(restored.sessions.get(0).saved); assertTrue(restored.sessions.get(1).saved);
+        restored.close(); assertTrue(errors.isEmpty());
+    }
     @Test public void savesAndReopensCommandsProfilesAndIndependentHistory() throws Exception {
         WorkspaceStore first = new WorkspaceStore(context, errors::add);
         WorkspaceStore.Command command = new WorkspaceStore.Command();
@@ -32,17 +45,33 @@ public class WorkspaceStoreTest {
         first.commands.add(command);
         WorkspaceStore.Session session = new WorkspaceStore.Session();
         session.name = "Codex"; session.directory = "/data/data/com.termux/files/home/project";
-        session.startup = "codex"; session.transcript = "предыдущий вывод"; session.handle = "old-runtime-handle";
+        session.startup = "codex"; session.handle = "old-runtime-handle";
         first.sessions.add(session); first.save(); first.awaitWrites(); first.close();
         WorkspaceStore reopened = new WorkspaceStore(context, errors::add);
         assertEquals(1, reopened.commands.size()); assertEquals(command.command, reopened.commands.get(0).command);
         assertEquals(command.directory, reopened.commands.get(0).directory); assertTrue(reopened.commands.get(0).favorite);
         assertEquals(session.startup, reopened.sessions.get(0).startup);
-        assertEquals(session.transcript, reopened.sessions.get(0).transcript);
         assertNotEquals(session.id, reopened.sessions.get(0).copy().id);
-        assertEquals("", reopened.sessions.get(0).copy().handle); assertEquals("", reopened.sessions.get(0).copy().transcript);
+        assertEquals("", reopened.sessions.get(0).copy().handle);
         assertNotEquals(command.id, reopened.commands.get(0).copy().id);
         assertTrue(errors.isEmpty()); reopened.close();
+    }
+    @Test public void legacySnapshotsDoNotPreventRestoringSessionSettings() throws Exception {
+        WorkspaceStore original = new WorkspaceStore(context, errors::add);
+        WorkspaceStore.Session session = new WorkspaceStore.Session();
+        session.name = "Codex"; session.environment = "ubuntu"; session.directory = "/root"; session.startup = "codex";
+        original.sessions.add(session);
+        org.json.JSONObject legacy = original.encode();
+        legacy.getJSONArray("sessions").getJSONObject(0).put("transcript", "старый снимок");
+        original.close();
+        try (FileOutputStream out = new FileOutputStream(new File(context.getFilesDir(), "workspace-v1.json"))) {
+            out.write(legacy.toString().getBytes(StandardCharsets.UTF_8));
+        }
+        WorkspaceStore restored = new WorkspaceStore(context, errors::add);
+        assertTrue(restored.isWritable()); assertEquals("Codex", restored.sessions.get(0).name);
+        assertEquals("ubuntu", restored.sessions.get(0).environment); assertEquals("codex", restored.sessions.get(0).startup);
+        assertFalse(restored.encode().getJSONArray("sessions").getJSONObject(0).has("transcript"));
+        assertTrue(errors.isEmpty()); restored.close();
     }
     @Test public void threeStartupCommandsPersistDuplicateAndReadLegacy() throws Exception {
         WorkspaceStore store = new WorkspaceStore(context, errors::add);
@@ -196,7 +225,7 @@ public class WorkspaceStoreTest {
         File history = new File(SessionShell.directory(context.getFilesDir(), session.id), "history");
         try (FileOutputStream out = new FileOutputStream(history)) { out.write("git status\n".getBytes(StandardCharsets.UTF_8)); }
         SessionShell.prepare(context.getFilesDir(), session);
-        assertEquals("git status\n", SessionShell.readHistory(context.getFilesDir(), session.id));
+        assertEquals("git status\n", new String(java.nio.file.Files.readAllBytes(history.toPath()), StandardCharsets.UTF_8));
     }
     @Test public void shellPathsWithQuotesCannotInjectCommands() {
         assertEquals("'a'\\''b'", SessionShell.quote("a'b"));

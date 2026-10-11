@@ -30,8 +30,8 @@ android {
         applicationId "com.termux"
         minSdkVersion project.properties.minSdkVersion.toInteger()
         targetSdkVersion project.properties.targetSdkVersion.toInteger()
-        versionCode 1006
-        versionName "0.118.3"
+        versionCode 1017
+        versionName "0.2.1"
 
         if (appVersionName) versionName = appVersionName
         validateVersionName(versionName)
@@ -73,7 +73,9 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
+            // Preserve the existing install certificate and the tested, unminified code.
+            signingConfig signingConfigs.debug
+            minifyEnabled false
             shrinkResources false // Reproducible builds
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

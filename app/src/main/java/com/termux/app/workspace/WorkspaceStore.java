@@ -19,7 +19,6 @@ import java.util.concurrent.Executors;
 
 /** Small versioned workspace, separate from Termux settings and shell processes. */
 public final class WorkspaceStore {
-    public static final int MAX_TRANSCRIPT = 65536;
     public static final int MAX_RECENT_COMMANDS = 25;
     public static final class Command {
         public String id = UUID.randomUUID().toString();
@@ -34,9 +33,10 @@ public final class WorkspaceStore {
     }
     public static final class Session {
         public String id = UUID.randomUUID().toString();
-        public String name = "Bash", directory = "", startup = "", transcript = "", handle = "";
+        public String name = "Bash", directory = "", startup = "", handle = "";
         public String startup2 = "", startup3 = "", environment = "legacy";
         public long updated;
+        public boolean saved;
         public List<String> startupCommands() {
             List<String> result = new ArrayList<>();
             for (String command : new String[]{startup, startup2, startup3}) if (!command.trim().isEmpty()) result.add(command);
@@ -115,7 +115,7 @@ public final class WorkspaceStore {
             .put("command", c.command).put("category", c.category).put("directory", c.directory).put("favorite", c.favorite));
         for (Session s : sessions) ss.put(new JSONObject().put("id", s.id).put("name", s.name)
             .put("directory", s.directory).put("startup", s.startup).put("startup2", s.startup2).put("startup3", s.startup3).put("environment", s.environment).put("handle", s.handle)
-            .put("transcript", tail(s.transcript, MAX_TRANSCRIPT)).put("updated", s.updated));
+            .put("updated", s.updated).put("saved", s.saved));
         JSONArray recent = new JSONArray();
         for (int i = 0; i < Math.min(recentCommands.size(), MAX_RECENT_COMMANDS); i++) {
             RecentCommand entry = recentCommands.get(i);
@@ -139,8 +139,8 @@ public final class WorkspaceStore {
             JSONObject o = sa.getJSONObject(i); Session s = new Session();
             s.id = validId(o.getString("id")); s.name = o.getString("name"); s.directory = o.optString("directory");
             s.startup = o.optString("startup"); s.startup2 = o.optString("startup2"); s.startup3 = o.optString("startup3"); s.environment = o.optString("environment", "legacy");
-            if (!s.environment.equals("legacy") && !s.environment.equals("termux") && !s.environment.equals("ubuntu")) throw new JSONException("Unknown environment"); s.handle = o.optString("handle"); s.transcript = tail(o.optString("transcript"), MAX_TRANSCRIPT);
-            s.updated = o.optLong("updated"); ss.add(s);
+            if (!s.environment.equals("legacy") && !s.environment.equals("termux") && !s.environment.equals("ubuntu")) throw new JSONException("Unknown environment"); s.handle = o.optString("handle");
+            s.updated = o.optLong("updated"); s.saved = o.optBoolean("saved", true); ss.add(s);
         }
         List<RecentCommand> recent = new ArrayList<>();
         JSONArray history = root.optJSONArray("recentCommands");

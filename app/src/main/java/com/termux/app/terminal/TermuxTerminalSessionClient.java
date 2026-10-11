@@ -110,7 +110,6 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
 
     @Override
     public void onTextChanged(TerminalSession changedSession) {
-        mActivity.scheduleWorkspaceSnapshot();
         if (!mActivity.isVisible()) return;
 
         if (mActivity.getCurrentSession() == changedSession) mActivity.getTerminalView().onScreenUpdated();
@@ -127,13 +126,12 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
             mActivity.showToast(toToastTitle(updatedSession), true);
         }
 
-        termuxSessionListNotifyUpdated();
+        mActivity.termuxSessionTitleNotifyUpdated();
     }
 
     @Override
     public void onSessionFinished(final TerminalSession finishedSession) {
         if (mActivity.onWorkspaceSessionFinished(finishedSession)) return;
-        mActivity.captureWorkspace();
         mActivity.refreshWorkspace();
         TermuxService service = mActivity.getTermuxService();
 

@@ -20,15 +20,23 @@
         <LinearLayout
             android:id="@+id/workspace_header"
             android:layout_width="match_parent"
-            android:layout_height="72dp"
+            android:layout_height="wrap_content"
+            android:minHeight="64dp"
             android:layout_alignParentTop="true"
-            android:orientation="horizontal"
-            android:gravity="center_vertical" />
+            android:orientation="vertical"
+            android:gravity="center_vertical">
+            <LinearLayout
+                android:id="@+id/workspace_navigation"
+                android:layout_width="wrap_content"
+                android:layout_height="52dp"
+                android:orientation="horizontal"
+                android:background="#000000" />
+        </LinearLayout>
 
         <HorizontalScrollView
             android:id="@+id/workspace_tab_scroll"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="64dp"
             android:layout_below="@id/workspace_header"
             android:scrollbars="none"
             android:visibility="gone">
@@ -37,8 +45,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:orientation="horizontal"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="10dp"
                 android:gravity="center_vertical" />
         </HorizontalScrollView>
 
@@ -51,6 +61,8 @@
 
             <com.termux.view.TerminalView
                 android:id="@+id/terminal_view"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:defaultFocusHighlightEnabled="false"
@@ -146,13 +158,6 @@
             android:layout_above="@id/workspace_input" />
 
     </RelativeLayout>
-
-    <LinearLayout
-        android:id="@+id/workspace_navigation"
-        android:layout_width="match_parent"
-        android:layout_height="68dp"
-        android:orientation="horizontal"
-        android:background="#000000" />
 
     <View
         android:id="@+id/activity_termux_bottom_space_view"

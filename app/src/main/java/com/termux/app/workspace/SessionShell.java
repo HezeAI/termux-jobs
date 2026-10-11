@@ -5,8 +5,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.io.FileOutputStream;
-import java.io.FileInputStream;
-import java.io.ByteArrayOutputStream;
 
 /** Explicit Bash sessions with per-profile history, never terminal keystroke logging. */
 public final class SessionShell {
@@ -85,16 +83,5 @@ public final class SessionShell {
     }
     private static void write(File file, byte[] data) throws IOException {
         try (FileOutputStream out = new FileOutputStream(file)) { out.write(data); }
-    }
-    private static byte[] read(File file) throws IOException {
-        try (FileInputStream in = new FileInputStream(file); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[8192]; int count;
-            while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
-            return out.toByteArray();
-        }
-    }
-    public static String readHistory(File files, String id) throws IOException {
-        File history = new File(directory(files, id), "history");
-        return history.exists() ? WorkspaceStore.tail(new String(read(history), StandardCharsets.UTF_8), 131072) : "";
     }
 }

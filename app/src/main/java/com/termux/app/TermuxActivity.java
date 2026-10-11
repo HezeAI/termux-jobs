@@ -304,7 +304,6 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         super.onStop();
 
         Logger.logDebug(LOG_TAG, "onStop");
-        if (mWorkspace != null) mWorkspace.capture();
 
         if (mIsInvalidState) return;
 
@@ -783,8 +782,13 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
 
     public void termuxSessionListNotifyUpdated() {
-        if (mTermuxSessionListViewController != null) mTermuxSessionListViewController.notifyDataSetChanged();
+        termuxSessionTitleNotifyUpdated();
         refreshWorkspace();
+    }
+
+    /** OSC titles do not change workspace names or session membership. Keep touch targets stable. */
+    public void termuxSessionTitleNotifyUpdated() {
+        if (mTermuxSessionListViewController != null) mTermuxSessionListViewController.notifyDataSetChanged();
     }
 
     public void prepareWorkspaceBootstrap(Runnable ready) {
@@ -795,17 +799,11 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         if (mWorkspace != null) mWorkspace.refresh();
     }
 
-    public void scheduleWorkspaceSnapshot() {
-        if (mWorkspace != null) mWorkspace.onOutput();
-    }
 
     public boolean onWorkspaceSessionFinished(TerminalSession session) {
         return mWorkspace != null && mWorkspace.onFinished(session);
     }
 
-    public void captureWorkspace() {
-        if (mWorkspace != null) mWorkspace.capture();
-    }
 
     public com.termux.shared.shell.TermuxSession createWorkspaceSession(String name, String directory) {
         return mWorkspace == null ? null : mWorkspace.createDefault(name, directory);
