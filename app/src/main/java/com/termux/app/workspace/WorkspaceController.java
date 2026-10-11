@@ -80,6 +80,11 @@ public final class WorkspaceController {
             return false;
         });
         inputRow.addView(terminalInput, new LinearLayout.LayoutParams(0, -1, 1));
+        TextView commands = button("★", false, this::chooseInputCommand);
+        commands.setTextColor(ACCENT); commands.setTextSize(22);
+        commands.setContentDescription("Вставить сохранённую команду");
+        LinearLayout.LayoutParams commandsParams = new LinearLayout.LayoutParams(dp(48), dp(48));
+        commandsParams.setMarginStart(dp(8)); inputRow.addView(commands, commandsParams);
         TextView send = button("▷", true, this::sendInput); send.setContentDescription("Отправить в активный терминал");
         LinearLayout.LayoutParams sendParams = new LinearLayout.LayoutParams(dp(48), dp(48)); sendParams.setMarginStart(dp(8)); inputRow.addView(send, sendParams);
         activity.getWindow().setStatusBarColor(Color.BLACK);
@@ -347,8 +352,12 @@ public final class WorkspaceController {
         form.setPadding(dp(20), dp(4), dp(20), dp(18)); ScrollView scroll = new ScrollView(activity); scroll.addView(form); return scroll;
     }
     private void editCommand(WorkspaceStore.Command existing) {
+        editCommand(existing, "");
+    }
+    private void editCommand(WorkspaceStore.Command existing, String initialCommand) {
         if (!store.isWritable()) { activity.showToast("Библиотека недоступна для записи", true); return; }
         WorkspaceStore.Command draft = existing == null ? new WorkspaceStore.Command() : existing;
+        if (existing == null) draft.command = initialCommand;
         LinearLayout form = column(); EditText name = labeled(form, "Название", draft.name, false);
         EditText command = labeled(form, "Команда", draft.command, true);
         EditText categoryInput = labeled(form, "Категория", draft.category, false);
@@ -449,6 +458,32 @@ public final class WorkspaceController {
         String command = terminalInput.getText().toString();
         if (command.trim().isEmpty()) return;
         current.write(command + "\r"); terminalInput.setText(""); activity.getTerminalView().requestFocus();
+    }
+    private void chooseInputCommand() {
+        List<WorkspaceStore.Command> commands = new ArrayList<>(store.commands);
+        Collections.sort(commands, (a, b) -> Boolean.compare(b.favorite, a.favorite));
+        AlertDialog.Builder picker = new AlertDialog.Builder(activity)
+            .setTitle("Вставить команду").setNegativeButton("Отмена", null);
+        if (commands.isEmpty()) {
+            picker.setMessage("Сохраните команду в библиотеке или введите её в поле и нажмите «Сохранить ввод».");
+        } else {
+            String[] labels = new String[commands.size()];
+            for (int i = 0; i < commands.size(); i++) {
+                WorkspaceStore.Command command = commands.get(i);
+                labels[i] = (command.favorite ? "★ " : "") + command.name + " · " + command.category
+                    + "\n" + command.command;
+            }
+            picker.setItems(labels, (dialog, index) -> {
+                terminalInput.setText(commands.get(index).command);
+                terminalInput.setSelection(terminalInput.length());
+                terminalInput.requestFocus();
+            });
+        }
+        String input = terminalInput.getText().toString();
+        if (!input.trim().isEmpty() && store.isWritable()) {
+            picker.setNeutralButton("Сохранить ввод", (dialog, which) -> editCommand(null, input));
+        }
+        picker.show();
     }
     private void terminalMenu() {
         TerminalSession live = activity.getCurrentSession(); WorkspaceStore.Session profile = live == null ? null : store.findByHandle(live.mHandle);
