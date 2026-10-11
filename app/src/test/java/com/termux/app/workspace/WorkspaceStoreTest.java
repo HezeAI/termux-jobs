@@ -44,6 +44,92 @@ public class WorkspaceStoreTest {
         assertNotEquals(command.id, reopened.commands.get(0).copy().id);
         assertTrue(errors.isEmpty()); reopened.close();
     }
+    @Test public void threeStartupCommandsPersistDuplicateAndReadLegacy() throws Exception {
+        WorkspaceStore store = new WorkspaceStore(context, errors::add);
+        WorkspaceStore.Session session = new WorkspaceStore.Session();
+        session.startup = "cd /tmp"; session.startup2 = "export BUILD=1"; session.startup3 = "printf '%s' \"$BUILD\"";
+        store.sessions.add(session); store.save(); store.awaitWrites(); store.close();
+        WorkspaceStore reopened = new WorkspaceStore(context, errors::add);
+        assertEquals(session.startupCommands(), reopened.sessions.get(0).startupCommands());
+        assertEquals(session.startupCommands(), reopened.sessions.get(0).copy().startupCommands());
+        org.json.JSONObject legacy = reopened.encode().put("version", 2);
+        legacy.getJSONArray("sessions").getJSONObject(0).remove("startup2");
+        legacy.getJSONArray("sessions").getJSONObject(0).remove("startup3");
+        reopened.decode(legacy.toString());
+        assertEquals(java.util.Collections.singletonList("cd /tmp"), reopened.sessions.get(0).startupCommands());
+        reopened.close(); assertTrue(errors.isEmpty());
+    }
+    @Test public void startupSequencePreservesEnvironmentAndStopsOnFailure() throws Exception {
+        File folder = new File(context.getFilesDir(), "sequence"); assertTrue(folder.mkdirs() || folder.isDirectory());
+        String output = runStartup(folder, java.util.Arrays.asList("cd " + SessionShell.quote(folder.getAbsolutePath()),
+            "export FORK_SEQUENCE_VALUE='two lines'", "printf '%s|%s' \"$PWD\" \"$FORK_SEQUENCE_VALUE\""));
+        assertEquals(folder.getAbsolutePath() + "|two lines", output);
+        assertEquals("before", runStartup(folder, java.util.Arrays.asList("printf before", "false", "printf after")));
+    }
+    private String runStartup(File folder, java.util.List<String> commands) throws Exception {
+        File script = new File(folder, "run.sh");
+        java.nio.file.Files.write(script.toPath(), SessionShell.buildRc(folder.getAbsolutePath(),
+            new File(folder, "history").getAbsolutePath(), commands).getBytes(StandardCharsets.UTF_8));
+        Process process = new ProcessBuilder("/bin/bash", script.getAbsolutePath()).redirectError(ProcessBuilder.Redirect.INHERIT).start();
+        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+        byte[] buffer = new byte[1024]; int n;
+        while ((n = process.getInputStream().read(buffer)) != -1) output.write(buffer, 0, n);
+        assertTrue(process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS));
+        return new String(output.toByteArray(), StandardCharsets.UTF_8);
+    }
+    @Test public void environmentPersistsCopiesAndOldProfilesRemainLegacy() throws Exception {
+        WorkspaceStore store = new WorkspaceStore(context, errors::add);
+        WorkspaceStore.Session session = new WorkspaceStore.Session(); session.environment = "ubuntu"; session.directory = "/root";
+        store.sessions.add(session); store.save(); store.awaitWrites(); store.close();
+        WorkspaceStore reopened = new WorkspaceStore(context, errors::add);
+        assertEquals("ubuntu", reopened.sessions.get(0).environment);
+        assertEquals("ubuntu", reopened.sessions.get(0).copy().environment);
+        org.json.JSONObject old = reopened.encode().put("version", 3);
+        old.getJSONArray("sessions").getJSONObject(0).remove("environment"); reopened.decode(old.toString());
+        assertEquals("legacy", reopened.sessions.get(0).environment); reopened.close();
+    }
+    @Test public void bashReadinessRunsAfterInitializationOnlyOnceAndHonorsCancel() throws Exception {
+        File folder = new File(context.getFilesDir(), "ready"); assertTrue(folder.mkdirs() || folder.isDirectory());
+        java.nio.file.Files.write(new File(folder, ".bashrc").toPath(), "export FORK_READY_TEST=initialized\n".getBytes(StandardCharsets.UTF_8));
+        File cancel = new File(folder, "cancel");
+        if (cancel.exists()) assertTrue(cancel.delete());
+        String output = runReady(folder, cancel, java.util.Arrays.asList("printf 'FIRST:%s\\n' \"$FORK_READY_TEST\"", "printf 'SECOND\\n'"));
+        assertTrue(output.contains("FIRST:initialized")); assertTrue(output.contains("SECOND"));
+        assertEquals(output.indexOf("FIRST:initialized"), output.lastIndexOf("FIRST:initialized"));
+        assertTrue(cancel.createNewFile());
+        output = runReady(folder, cancel, java.util.Arrays.asList("printf SHOULD_NOT_RUN"));
+        assertFalse(output.contains("SHOULD_NOT_RUN"));
+        assertTrue(cancel.delete());
+        output = runReady(folder, cancel, java.util.Arrays.asList("false", "printf SHOULD_NOT_RUN"));
+        assertFalse(output.contains("SHOULD_NOT_RUN"));
+    }
+    private String runReady(File folder, File cancel, java.util.List<String> commands) throws Exception {
+        File rc = new File(folder, "bashrc");
+        java.nio.file.Files.write(rc.toPath(), SessionShell.buildReadyRc(folder.getAbsolutePath(), new File(folder, "history").getAbsolutePath(),
+            cancel.getAbsolutePath(), commands, false).getBytes(StandardCharsets.UTF_8));
+        Process process = new ProcessBuilder("/bin/bash", "--rcfile", rc.getAbsolutePath(), "-i")
+            .redirectError(ProcessBuilder.Redirect.INHERIT).start();
+        process.getOutputStream().write(":\nexit\n".getBytes(StandardCharsets.UTF_8)); process.getOutputStream().close();
+        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream(); byte[] buffer = new byte[1024]; int n;
+        while ((n = process.getInputStream().read(buffer)) != -1) output.write(buffer, 0, n);
+        assertTrue(process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS));
+        return new String(output.toByteArray(), StandardCharsets.UTF_8);
+    }
+    @Test public void ubuntuPreparationKeepsCommandsInGuestAndBothScriptsHaveValidSyntax() throws Exception {
+        WorkspaceStore.Session session = new WorkspaceStore.Session(); session.environment = "ubuntu"; session.directory = "/root/project with space";
+        session.startup = "printf '%s' \"quoted' value\""; session.startup2 = "false";
+        File rc = SessionShell.prepare(context.getFilesDir(), session);
+        String host = new String(java.nio.file.Files.readAllBytes(rc.toPath()), StandardCharsets.UTF_8);
+        assertTrue(host.contains("proot-distro login --bind")); assertTrue(host.contains("--work-dir '/root/project with space' ubuntu -- /bin/bash --rcfile"));
+        assertFalse(host.contains(session.startup));
+        File guest = new File(rc.getParentFile(), "ubuntu-bashrc");
+        String script = new String(java.nio.file.Files.readAllBytes(guest.toPath()), StandardCharsets.UTF_8);
+        assertTrue(script.contains("\"$HOME/.bashrc\"")); assertTrue(script.contains("PROMPT_COMMAND+=('_termux_workspace_ready')"));
+        for (File file : java.util.Arrays.asList(rc, guest)) {
+            Process check = new ProcessBuilder("/bin/bash", "-n", file.getAbsolutePath()).start();
+            assertTrue(check.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)); assertEquals(0, check.exitValue());
+        }
+    }
     @Test public void orderedWritesKeepNewestSnapshot() throws Exception {
         WorkspaceStore store = new WorkspaceStore(context, errors::add);
         WorkspaceStore.Command command = new WorkspaceStore.Command(); store.commands.add(command);

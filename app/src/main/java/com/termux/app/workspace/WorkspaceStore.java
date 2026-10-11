@@ -35,10 +35,16 @@ public final class WorkspaceStore {
     public static final class Session {
         public String id = UUID.randomUUID().toString();
         public String name = "Bash", directory = "", startup = "", transcript = "", handle = "";
+        public String startup2 = "", startup3 = "", environment = "legacy";
         public long updated;
+        public List<String> startupCommands() {
+            List<String> result = new ArrayList<>();
+            for (String command : new String[]{startup, startup2, startup3}) if (!command.trim().isEmpty()) result.add(command);
+            return result;
+        }
         public Session copy() {
             Session s = new Session();
-            s.name = name + " — копия"; s.directory = directory; s.startup = startup;
+            s.name = name + " — копия"; s.directory = directory; s.startup = startup; s.startup2 = startup2; s.startup3 = startup3; s.environment = environment;
             // A duplicate starts with its own independent history.
             return s;
         }
@@ -103,12 +109,12 @@ public final class WorkspaceStore {
     void awaitWrites() throws Exception { writer.submit(() -> {}).get(10, java.util.concurrent.TimeUnit.SECONDS); }
     public void close() { writer.shutdown(); } // Queued atomic writes finish after Activity destruction.
     JSONObject encode() throws JSONException {
-        JSONObject root = new JSONObject().put("version", 2);
+        JSONObject root = new JSONObject().put("version", 4);
         JSONArray cs = new JSONArray(), ss = new JSONArray();
         for (Command c : commands) cs.put(new JSONObject().put("id", c.id).put("name", c.name)
             .put("command", c.command).put("category", c.category).put("directory", c.directory).put("favorite", c.favorite));
         for (Session s : sessions) ss.put(new JSONObject().put("id", s.id).put("name", s.name)
-            .put("directory", s.directory).put("startup", s.startup).put("handle", s.handle)
+            .put("directory", s.directory).put("startup", s.startup).put("startup2", s.startup2).put("startup3", s.startup3).put("environment", s.environment).put("handle", s.handle)
             .put("transcript", tail(s.transcript, MAX_TRANSCRIPT)).put("updated", s.updated));
         JSONArray recent = new JSONArray();
         for (int i = 0; i < Math.min(recentCommands.size(), MAX_RECENT_COMMANDS); i++) {
@@ -120,7 +126,7 @@ public final class WorkspaceStore {
     void decode(String json) throws JSONException {
         JSONObject root = new JSONObject(json);
         int version = root.getInt("version");
-        if (version != 1 && version != 2) throw new JSONException("Unsupported workspace version");
+        if (version != 1 && version != 2 && version != 3 && version != 4) throw new JSONException("Unsupported workspace version");
         List<Command> cs = new ArrayList<>(); List<Session> ss = new ArrayList<>();
         JSONArray ca = root.getJSONArray("commands"), sa = root.getJSONArray("sessions");
         for (int i = 0; i < ca.length(); i++) {
@@ -132,7 +138,8 @@ public final class WorkspaceStore {
         for (int i = 0; i < sa.length(); i++) {
             JSONObject o = sa.getJSONObject(i); Session s = new Session();
             s.id = validId(o.getString("id")); s.name = o.getString("name"); s.directory = o.optString("directory");
-            s.startup = o.optString("startup"); s.handle = o.optString("handle"); s.transcript = tail(o.optString("transcript"), MAX_TRANSCRIPT);
+            s.startup = o.optString("startup"); s.startup2 = o.optString("startup2"); s.startup3 = o.optString("startup3"); s.environment = o.optString("environment", "legacy");
+            if (!s.environment.equals("legacy") && !s.environment.equals("termux") && !s.environment.equals("ubuntu")) throw new JSONException("Unknown environment"); s.handle = o.optString("handle"); s.transcript = tail(o.optString("transcript"), MAX_TRANSCRIPT);
             s.updated = o.optLong("updated"); ss.add(s);
         }
         List<RecentCommand> recent = new ArrayList<>();
