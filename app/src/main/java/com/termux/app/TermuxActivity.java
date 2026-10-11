@@ -83,6 +83,10 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
     private com.termux.app.workspace.WorkspaceController mWorkspace;
 
+    public void toggleWorkspaceKeyboard() {
+        if (mWorkspace != null) mWorkspace.toggleKeyboard();
+    }
+
     /**
      * The {@link TerminalView} shown in  {@link TermuxActivity} that displays the terminal.
      */

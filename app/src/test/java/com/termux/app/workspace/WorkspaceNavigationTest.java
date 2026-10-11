@@ -32,7 +32,10 @@ public class WorkspaceNavigationTest {
         Field terminalView = TermuxActivity.class.getDeclaredField("mTerminalView");
         terminalView.setAccessible(true);
         terminalView.set(activity, activity.findViewById(R.id.terminal_view));
+        activity.getSharedPreferences("workspace-input", android.content.Context.MODE_PRIVATE).edit().clear().commit();
         WorkspaceController controller = new WorkspaceController(activity);
+        assertFalse(activity.getTerminalView().onCheckIsTextEditor());
+        assertNull(activity.getTerminalView().onCreateInputConnection(new android.view.inputmethod.EditorInfo()));
         Field field = WorkspaceController.class.getDeclaredField("store"); field.setAccessible(true);
         WorkspaceStore store = (WorkspaceStore) field.get(controller);
         store.commands.clear(); store.sessions.clear();
@@ -64,6 +67,19 @@ public class WorkspaceNavigationTest {
         assertEquals("./gradlew assembleDebug", terminalInput.getText().toString());
         assertEquals(terminalInput.length(), terminalInput.getSelectionStart());
         assertNull(activity.getCurrentSession()); // Selection never launches a shell or sends input.
+        findDescription(activity.findViewById(R.id.workspace_header), "Меню терминала").performClick();
+        shadowOf(Looper.getMainLooper()).idle();
+        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 6, 6);
+        shadowOf(Looper.getMainLooper()).idle();
+        assertTrue(activity.getTerminalView().onCheckIsTextEditor());
+        assertTrue(activity.getSharedPreferences("workspace-input", android.content.Context.MODE_PRIVATE)
+            .getBoolean("interactive-input", false));
+        findDescription(activity.findViewById(R.id.workspace_header), "Меню терминала").performClick();
+        shadowOf(Looper.getMainLooper()).idle();
+        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 6, 6);
+        shadowOf(Looper.getMainLooper()).idle();
+        assertFalse(activity.getTerminalView().onCheckIsTextEditor());
+        assertNull(activity.getTerminalView().onCreateInputConnection(new android.view.inputmethod.EditorInfo()));
         terminalInput.setText("printf 'hello'");
         commandPicker.performClick(); shadowOf(Looper.getMainLooper()).idle();
         picker = ShadowAlertDialog.getLatestAlertDialog();

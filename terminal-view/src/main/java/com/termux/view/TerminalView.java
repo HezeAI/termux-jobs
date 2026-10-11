@@ -155,7 +155,7 @@ public final class TerminalView extends View {
                     stopTextSelectionMode();
                     return true;
                 }
-                requestFocus();
+                if (mSoftKeyboardInputEnabled) requestFocus();
                 mClient.onSingleTapUp(event);
                 return true;
             }
@@ -299,6 +299,7 @@ public final class TerminalView extends View {
 
     @Override
     public InputConnection onCreateInputConnection(EditorInfo outAttrs) {
+        if (!mSoftKeyboardInputEnabled) return null;
         // Ensure that inputType is only set if TerminalView is selected view with the keyboard and
         // an alternate view is not selected, like an EditText. This is necessary if an activity is
         // initially started with the alternate view or if activity is returned to from another app
@@ -508,8 +509,15 @@ public final class TerminalView extends View {
 
     @Override
     public boolean onCheckIsTextEditor() {
-        return true;
+        return mSoftKeyboardInputEnabled;
     }
+
+    private boolean mSoftKeyboardInputEnabled = true;
+
+    /** Controls IME input without disabling scrolling, selection, or hardware keys. */
+    public void setSoftKeyboardInputEnabled(boolean enabled) { mSoftKeyboardInputEnabled = enabled; }
+
+    public boolean isSoftKeyboardInputEnabled() { return mSoftKeyboardInputEnabled; }
 
     @Override
     public boolean isOpaque() {

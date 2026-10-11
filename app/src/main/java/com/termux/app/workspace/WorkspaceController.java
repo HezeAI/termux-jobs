@@ -56,6 +56,7 @@ public final class WorkspaceController {
     private String query = "", category = "Все";
     private boolean favorites, savedOnly, closed, snapshotPending, creating;
     private int toolbarVisibility = View.GONE;
+    private boolean interactiveInput;
     private final Runnable snapshot = () -> { snapshotPending = false; capture(); };
     private float swipeStart;
     private final java.util.Map<String, WorkspaceStore.Session> pendingRestarts = new java.util.HashMap<>();
@@ -63,6 +64,9 @@ public final class WorkspaceController {
     public WorkspaceController(TermuxActivity activity) {
         this.activity = activity;
         store = new WorkspaceStore(activity, message -> activity.showToast(message, true));
+        interactiveInput = activity.getSharedPreferences("workspace-input", Context.MODE_PRIVATE)
+            .getBoolean("interactive-input", false);
+        activity.getTerminalView().setSoftKeyboardInputEnabled(interactiveInput);
         header = activity.findViewById(R.id.workspace_header);
         navigation = activity.findViewById(R.id.workspace_navigation);
         tabs = activity.findViewById(R.id.workspace_tabs);
@@ -470,7 +474,9 @@ public final class WorkspaceController {
         String command = terminalInput.getText().toString();
         if (command.trim().isEmpty()) return;
         current.write(command + "\r"); store.recordCommand(command);
-        terminalInput.setText(""); activity.getTerminalView().requestFocus();
+        terminalInput.setText("");
+        if (interactiveInput) activity.getTerminalView().requestFocus();
+        else terminalInput.requestFocus();
     }
     private void chooseInputCommand() {
         List<WorkspaceStore.Command> commands = new ArrayList<>(store.commands);
@@ -498,14 +504,39 @@ public final class WorkspaceController {
     }
     private void terminalMenu() {
         TerminalSession live = activity.getCurrentSession(); WorkspaceStore.Session profile = live == null ? null : store.findByHandle(live.mHandle);
-        new AlertDialog.Builder(activity).setTitle(live == null ? "Терминал" : live.mSessionName).setItems(new String[]{"Новая сессия", "Настройки сессии", "Сохранить снимок", "История", "Клавиатура", "Дополнительные клавиши"}, (d, which) -> {
+        new AlertDialog.Builder(activity).setTitle(live == null ? "Терминал" : live.mSessionName).setItems(new String[]{"Новая сессия", "Настройки сессии", "Сохранить снимок", "История", "Клавиатура", "Дополнительные клавиши", "Интерактивный ввод: " + (interactiveInput ? "включён" : "выключен")}, (d, which) -> {
             if (which == 0) editSession(null);
             else if (which == 1 && profile != null) editSession(profile);
             else if (which == 2) { capture(); activity.showToast("Снимок передан на сохранение", false); }
             else if (which == 3 && profile != null) history(profile);
-            else if (which == 4) { InputMethodManager keyboard = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE); keyboard.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0); }
+            else if (which == 4) toggleKeyboard();
             else if (which == 5) { activity.toggleTerminalToolbar(); toolbarVisibility = activity.getTerminalToolbarViewPager().getVisibility(); }
+            else if (which == 6) setInteractiveInput(!interactiveInput);
         }).show();
+    }
+    public void toggleKeyboard() {
+        InputMethodManager keyboard = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
+        View target = interactiveInput ? activity.getTerminalView() : terminalInput;
+        if (target.hasFocus() && com.termux.shared.view.KeyboardUtils.isSoftKeyboardVisible(activity)) {
+            keyboard.hideSoftInputFromWindow(target.getWindowToken(), 0);
+        } else {
+            target.requestFocus(); keyboard.showSoftInput(target, InputMethodManager.SHOW_IMPLICIT);
+        }
+    }
+    private void setInteractiveInput(boolean enabled) {
+        interactiveInput = enabled;
+        activity.getSharedPreferences("workspace-input", Context.MODE_PRIVATE).edit()
+            .putBoolean("interactive-input", enabled).apply();
+        activity.getTerminalView().setSoftKeyboardInputEnabled(enabled);
+        InputMethodManager keyboard = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
+        keyboard.restartInput(activity.getTerminalView());
+        if (enabled) {
+            activity.getTerminalView().requestFocus();
+            keyboard.showSoftInput(activity.getTerminalView(), InputMethodManager.SHOW_IMPLICIT);
+        } else {
+            terminalInput.requestFocus();
+            keyboard.hideSoftInputFromWindow(terminalInput.getWindowToken(), 0);
+        }
     }
     private void history(WorkspaceStore.Session s) {
         TerminalSession live = liveFor(s); if (live != null) { captureOne(s, live); store.save(); }
