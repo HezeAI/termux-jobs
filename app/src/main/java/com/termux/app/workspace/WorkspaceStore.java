@@ -44,9 +44,14 @@ public final class WorkspaceStore {
         }
     }
     public interface ErrorListener { void onError(String message); }
+    public static final class RecentCommand {
+        public final String command;
+        public final long sentAt;
+        RecentCommand(String command, long sentAt) { this.command = command; this.sentAt = sentAt; }
+    }
     public final List<Command> commands = new ArrayList<>();
     public final List<Session> sessions = new ArrayList<>();
-    public final List<String> recentCommands = new ArrayList<>();
+    public final List<RecentCommand> recentCommands = new ArrayList<>();
     private final AtomicFile file;
     private final ExecutorService writer = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -68,7 +73,7 @@ public final class WorkspaceStore {
     public boolean isWritable() { return writable; }
     public void recordCommand(String command) {
         if (!writable || command.trim().isEmpty()) return;
-        recentCommands.add(0, command);
+        recentCommands.add(0, new RecentCommand(command, System.currentTimeMillis()));
         while (recentCommands.size() > MAX_RECENT_COMMANDS) recentCommands.remove(recentCommands.size() - 1);
         save();
     }
@@ -98,7 +103,7 @@ public final class WorkspaceStore {
     void awaitWrites() throws Exception { writer.submit(() -> {}).get(10, java.util.concurrent.TimeUnit.SECONDS); }
     public void close() { writer.shutdown(); } // Queued atomic writes finish after Activity destruction.
     JSONObject encode() throws JSONException {
-        JSONObject root = new JSONObject().put("version", 1);
+        JSONObject root = new JSONObject().put("version", 2);
         JSONArray cs = new JSONArray(), ss = new JSONArray();
         for (Command c : commands) cs.put(new JSONObject().put("id", c.id).put("name", c.name)
             .put("command", c.command).put("category", c.category).put("directory", c.directory).put("favorite", c.favorite));
@@ -106,12 +111,16 @@ public final class WorkspaceStore {
             .put("directory", s.directory).put("startup", s.startup).put("handle", s.handle)
             .put("transcript", tail(s.transcript, MAX_TRANSCRIPT)).put("updated", s.updated));
         JSONArray recent = new JSONArray();
-        for (int i = 0; i < Math.min(recentCommands.size(), MAX_RECENT_COMMANDS); i++) recent.put(recentCommands.get(i));
+        for (int i = 0; i < Math.min(recentCommands.size(), MAX_RECENT_COMMANDS); i++) {
+            RecentCommand entry = recentCommands.get(i);
+            recent.put(new JSONObject().put("command", entry.command).put("sentAt", entry.sentAt));
+        }
         return root.put("commands", cs).put("sessions", ss).put("recentCommands", recent);
     }
     void decode(String json) throws JSONException {
         JSONObject root = new JSONObject(json);
-        if (root.getInt("version") != 1) throw new JSONException("Unsupported workspace version");
+        int version = root.getInt("version");
+        if (version != 1 && version != 2) throw new JSONException("Unsupported workspace version");
         List<Command> cs = new ArrayList<>(); List<Session> ss = new ArrayList<>();
         JSONArray ca = root.getJSONArray("commands"), sa = root.getJSONArray("sessions");
         for (int i = 0; i < ca.length(); i++) {
@@ -126,9 +135,16 @@ public final class WorkspaceStore {
             s.startup = o.optString("startup"); s.handle = o.optString("handle"); s.transcript = tail(o.optString("transcript"), MAX_TRANSCRIPT);
             s.updated = o.optLong("updated"); ss.add(s);
         }
-        List<String> recent = new ArrayList<>();
+        List<RecentCommand> recent = new ArrayList<>();
         JSONArray history = root.optJSONArray("recentCommands");
-        if (history != null) for (int i = 0; i < Math.min(history.length(), MAX_RECENT_COMMANDS); i++) recent.add(history.getString(i));
+        if (history != null) for (int i = 0; i < Math.min(history.length(), MAX_RECENT_COMMANDS); i++) {
+            Object item = history.get(i);
+            if (item instanceof String) recent.add(new RecentCommand((String) item, 0));
+            else {
+                JSONObject entry = history.getJSONObject(i);
+                recent.add(new RecentCommand(entry.getString("command"), entry.optLong("sentAt")));
+            }
+        }
         commands.clear(); commands.addAll(cs); sessions.clear(); sessions.addAll(ss);
         recentCommands.clear(); recentCommands.addAll(recent);
     }

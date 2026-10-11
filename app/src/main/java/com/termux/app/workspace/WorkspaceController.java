@@ -1,6 +1,7 @@
 package com.termux.app.workspace;
 
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -10,6 +11,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.text.InputType;
+import android.text.TextWatcher;
+import android.text.Editable;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -53,7 +56,7 @@ public final class WorkspaceController {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService reader = Executors.newSingleThreadExecutor();
     private Screen screen = Screen.HOME;
-    private String query = "", category = "Все";
+    private String query = "", category = "Все", journalQuery = "";
     private boolean favorites, savedOnly, closed, snapshotPending, creating;
     private int toolbarVisibility = View.GONE;
     private boolean interactiveInput;
@@ -251,6 +254,10 @@ public final class WorkspaceController {
             if (!store.isWritable()) { activity.showToast("Журнал недоступен для записи", true); return; }
             confirm("Очистить весь журнал недавних команд?", () -> { store.clearRecentCommands(); renderContent(); });
         });
+        EditText search = field("Поиск по журналу", journalQuery, false);
+        search.setContentDescription("Поиск по журналу");
+        LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, dp(48));
+        searchParams.setMargins(0, 0, 0, dp(12)); body.addView(search, searchParams);
         ScrollView journal = new ScrollView(activity); journal.setFillViewport(true);
         journal.setBackground(shape(PANEL, BORDER, 16)); journal.setClipToOutline(true);
         journal.setContentDescription("Журнал последних 25 команд");
@@ -260,22 +267,71 @@ public final class WorkspaceController {
             return false;
         });
         LinearLayout entries = column(); entries.setPadding(dp(12), dp(12), dp(12), dp(12));
+        journal.addView(entries); body.addView(journal, new LinearLayout.LayoutParams(-1, dp(320)));
+        TextView count = text("", 11, MUTED); count.setPadding(0, dp(8), 0, 0); body.addView(count);
+        renderJournal(entries, count);
+        search.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void onTextChanged(CharSequence s, int start, int before, int after) {
+                journalQuery = s.toString(); renderJournal(entries, count); journal.scrollTo(0, 0);
+            }
+            public void afterTextChanged(Editable s) {}
+        });
+    }
+    private void renderJournal(LinearLayout entries, TextView count) {
+        entries.removeAllViews(); int shown = 0;
         if (store.recentCommands.isEmpty()) {
             entries.addView(text("Команд пока нет", 16, TEXT));
             TextView hint = text("Здесь появятся команды, отправленные из поля ввода терминала.", 13, MUTED);
             hint.setPadding(0, dp(8), 0, 0); entries.addView(hint);
         }
-        for (String command : store.recentCommands) {
-            TextView entry = text(command, 13, TEXT); entry.setTypeface(Typeface.MONOSPACE);
-            entry.setPadding(dp(12), dp(14), dp(12), dp(14));
-            entry.setBackground(shape(Color.BLACK, BORDER, 12));
-            entry.setOnClickListener(v -> { WorkspaceStore.Command c = new WorkspaceStore.Command(); c.command = command; insertCommand(c); });
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2); params.setMargins(0, 0, 0, dp(8));
-            entries.addView(entry, params);
+        for (WorkspaceStore.RecentCommand recent : store.recentCommands) {
+            if (!recent.command.toLowerCase(java.util.Locale.ROOT).contains(journalQuery.toLowerCase(java.util.Locale.ROOT))) continue;
+            shown++;
+            LinearLayout card = card(entries); card.setBackground(shape(Color.BLACK, BORDER, 12));
+            LinearLayout labels = column(); TextView entry = text(recent.command, 13, TEXT);
+            entry.setTypeface(Typeface.MONOSPACE); labels.addView(entry);
+            String time = recent.sentAt > 0 ? new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                .format(new java.util.Date(recent.sentAt)) : "Ранее";
+            TextView timestamp = text(time, 11, MUTED); timestamp.setPadding(0, dp(6), 0, 0); labels.addView(timestamp);
+            Runnable insert = () -> { WorkspaceStore.Command c = new WorkspaceStore.Command(); c.command = recent.command; insertCommand(c); };
+            entry.setOnClickListener(v -> insert.run());
+            labels.setOnClickListener(v -> insert.run()); card.setOnClickListener(v -> insert.run());
+            card.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
+            TextView more = button("⋮", false, () -> recentMenu(recent));
+            more.setContentDescription("Действия с записью " + recent.command); card.addView(more);
         }
-        journal.addView(entries); body.addView(journal, new LinearLayout.LayoutParams(-1, dp(320)));
-        TextView count = text(store.recentCommands.size() + " / " + WorkspaceStore.MAX_RECENT_COMMANDS, 11, MUTED);
-        count.setPadding(0, dp(8), 0, 0); body.addView(count);
+        if (shown == 0 && !store.recentCommands.isEmpty()) entries.addView(text("Ничего не найдено", 14, MUTED));
+        count.setText(store.recentCommands.size() + " / " + WorkspaceStore.MAX_RECENT_COMMANDS
+            + (journalQuery.isEmpty() ? "" : " · найдено: " + shown));
+    }
+    private void recentMenu(WorkspaceStore.RecentCommand recent) {
+        ((InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE))
+            .hideSoftInputFromWindow(content.getWindowToken(), 0);
+        Dialog sheet = new Dialog(activity); sheet.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
+        LinearLayout body = column(); body.setPadding(dp(20), dp(16), dp(20), dp(16));
+        body.setBackground(shape(PANEL, BORDER, 18));
+        TextView title = text(recent.command, 15, TEXT); title.setTypeface(Typeface.MONOSPACE);
+        title.setMaxLines(3); title.setEllipsize(TextUtils.TruncateAt.END); body.addView(title);
+        TextView insert = button("Вставить в терминал", false, () -> {
+            sheet.dismiss(); WorkspaceStore.Command c = new WorkspaceStore.Command(); c.command = recent.command; insertCommand(c);
+        });
+        TextView save = button("Сохранить в команды", false, () -> { sheet.dismiss(); editCommand(null, recent.command); });
+        save.setTextColor(ACCENT);
+        TextView copy = button("Скопировать", false, () -> {
+            ((android.content.ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE))
+                .setPrimaryClip(android.content.ClipData.newPlainText("Команда", recent.command));
+            sheet.dismiss(); activity.showToast("Команда скопирована", false);
+        });
+        for (TextView action : new TextView[]{insert, save, copy}) {
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(52)); params.setMargins(0, dp(8), 0, 0);
+            body.addView(action, params);
+        }
+        body.addView(button("Отмена", false, sheet::dismiss)); sheet.setContentView(body); sheet.show();
+        sheet.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+        sheet.getWindow().setLayout(-1, -2); sheet.getWindow().setGravity(Gravity.BOTTOM);
+        android.view.WindowManager.LayoutParams params = sheet.getWindow().getAttributes(); params.y = dp(68);
+        sheet.getWindow().setAttributes(params);
     }
     private void chips(LinearLayout body, String[] options, String selected, java.util.function.Consumer<String> click) {
         HorizontalScrollView scroller = new HorizontalScrollView(activity); scroller.setHorizontalScrollBarEnabled(false);
@@ -493,7 +549,7 @@ public final class WorkspaceController {
                     + "\n" + command.command;
             }
             picker.setItems(labels, (dialog, index) -> {
-                insertCommand(commands.get(index));
+                insertIntoCurrent(commands.get(index));
             });
         }
         String input = terminalInput.getText().toString();
@@ -558,6 +614,28 @@ public final class WorkspaceController {
         });
     }
     private void insertCommand(WorkspaceStore.Command command) {
+        List<TerminalSession> targets = new ArrayList<>();
+        for (TermuxSession session : live()) if (session.getTerminalSession().isRunning()) targets.add(session.getTerminalSession());
+        if (targets.size() > 1) {
+            String[] labels = new String[targets.size()];
+            for (int i = 0; i < targets.size(); i++) {
+                TerminalSession target = targets.get(i);
+                labels[i] = (target.mSessionName == null ? "Терминал " + (i + 1) : target.mSessionName)
+                    + " · " + compact(target.getCwd());
+            }
+            new AlertDialog.Builder(activity).setTitle("В какой терминал вставить?").setItems(labels, (dialog, index) -> {
+                TerminalSession target = targets.get(index);
+                boolean present = false;
+                for (TermuxSession session : live()) if (session.getTerminalSession() == target) present = true;
+                if (!present || !target.isRunning()) { activity.showToast("Этот терминал уже завершён", false); return; }
+                activity.getTermuxTerminalSessionClient().setCurrentSession(target); insertIntoCurrent(command);
+            }).setNegativeButton("Отмена", null).show();
+            return;
+        }
+        if (targets.size() == 1) activity.getTermuxTerminalSessionClient().setCurrentSession(targets.get(0));
+        insertIntoCurrent(command);
+    }
+    private void insertIntoCurrent(WorkspaceStore.Command command) {
         show(Screen.TERMINAL, true);
         terminalInput.setText(command.command);
         terminalInput.setSelection(terminalInput.length());

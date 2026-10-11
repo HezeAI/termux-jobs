@@ -119,6 +119,26 @@ public class WorkspaceNavigationTest {
         store.recordCommand("echo recent");
         findText(nav, "Главная").performClick();
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "echo recent"));
+        EditText journalSearch = (EditText) findDescription(activity.findViewById(R.id.workspace_content), "Поиск по журналу");
+        journalSearch.setText("not present");
+        assertNull(findText(activity.findViewById(R.id.workspace_content), "echo recent"));
+        assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Ничего не найдено"));
+        journalSearch.setText("ECHO");
+        assertNotNull(findText(activity.findViewById(R.id.workspace_content), "echo recent"));
+        journalSearch.setText("");
+        findDescription(activity.findViewById(R.id.workspace_content), "Действия с записью echo recent").performClick();
+        android.app.Dialog sheet = org.robolectric.shadows.ShadowDialog.getLatestDialog();
+        findText(sheet.getWindow().getDecorView(), "Скопировать").performClick();
+        assertEquals("echo recent", ((android.content.ClipboardManager) activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE))
+            .getPrimaryClip().getItemAt(0).getText().toString());
+        findDescription(activity.findViewById(R.id.workspace_content), "Действия с записью echo recent").performClick();
+        sheet = org.robolectric.shadows.ShadowDialog.getLatestDialog();
+        findText(sheet.getWindow().getDecorView(), "Сохранить в команды").performClick();
+        shadowOf(Looper.getMainLooper()).idle();
+        AlertDialog fromJournal = ShadowAlertDialog.getLatestAlertDialog();
+        fields.clear(); collectEditors(fromJournal.getWindow().getDecorView(), fields);
+        assertEquals("echo recent", fields.get(1).getText().toString());
+        fromJournal.getButton(AlertDialog.BUTTON_NEGATIVE).performClick(); shadowOf(Looper.getMainLooper()).idle();
         findText(activity.findViewById(R.id.workspace_content), "echo recent").performClick();
         assertEquals("echo recent", terminalInput.getText().toString());
         assertEquals(1, store.recentCommands.size()); // Insertion is not a new sent command.

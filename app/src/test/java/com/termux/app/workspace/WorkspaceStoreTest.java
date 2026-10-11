@@ -61,8 +61,9 @@ public class WorkspaceStoreTest {
         store.awaitWrites(); store.close();
         WorkspaceStore reopened = new WorkspaceStore(context, errors::add);
         assertEquals(25, reopened.recentCommands.size());
-        assertEquals("echo 29", reopened.recentCommands.get(0));
-        assertEquals("echo 5", reopened.recentCommands.get(24));
+        assertEquals("echo 29", reopened.recentCommands.get(0).command);
+        assertEquals("echo 5", reopened.recentCommands.get(24).command);
+        assertTrue(reopened.recentCommands.get(0).sentAt > 0);
         reopened.clearRecentCommands(); reopened.awaitWrites(); reopened.close();
         WorkspaceStore cleared = new WorkspaceStore(context, errors::add);
         assertTrue(cleared.recentCommands.isEmpty());
@@ -71,7 +72,12 @@ public class WorkspaceStoreTest {
     }
     @Test public void oldWorkspaceWithoutJournalLoadsWithEmptyHistory() throws Exception {
         WorkspaceStore store = new WorkspaceStore(context, errors::add);
-        org.json.JSONObject old = store.encode(); old.remove("recentCommands");
+        org.json.JSONObject old = store.encode().put("version", 1);
+        old.put("recentCommands", new org.json.JSONArray().put("echo legacy"));
+        store.decode(old.toString());
+        assertEquals("echo legacy", store.recentCommands.get(0).command);
+        assertEquals(0, store.recentCommands.get(0).sentAt);
+        old.remove("recentCommands");
         store.decode(old.toString()); assertTrue(store.recentCommands.isEmpty());
         assertTrue(store.isWritable()); store.close();
     }
