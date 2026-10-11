@@ -179,7 +179,7 @@ public final class WorkspaceController {
         TerminalSession current = activity.getCurrentSession();
         String title = screen == Screen.HOME ? "Termux" : screen == Screen.SESSIONS ? "Сессии" : screen == Screen.COMMANDS ? "Команды" : current != null && current.mSessionName != null ? current.mSessionName : "Терминал";
         LinearLayout labels = column(); TextView name = text(title, 22, TEXT); name.setTypeface(null, Typeface.BOLD); name.setSingleLine(); name.setEllipsize(TextUtils.TruncateAt.END); labels.addView(name);
-        String subtitle = screen == Screen.HOME ? "Ваше рабочее пространство" : screen == Screen.SESSIONS ? "Настройки и история под рукой" : screen == Screen.COMMANDS ? "Один раз сохранить. Быстро запустить." : currentDirectory();
+        String subtitle = screen == Screen.HOME ? "Ваше рабочее пространство" : screen == Screen.SESSIONS ? "Настройки и история под рукой" : screen == Screen.COMMANDS ? "Сохранить и вставить в терминал." : currentDirectory();
         TextView sub = text(subtitle, 11, MUTED); sub.setSingleLine(); sub.setEllipsize(TextUtils.TruncateAt.MIDDLE); labels.addView(sub);
         header.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
         if (screen == Screen.HOME) {
@@ -286,7 +286,7 @@ public final class WorkspaceController {
                 && matches(c.name + " " + c.command + " " + c.category)) { commandCard(body, c); count++; }
         }
         if (count == 0) empty(body, "Команд пока нет", "Нажмите +, чтобы сохранить команду, или измените фильтры.");
-        TextView hint = text("Запуск открывает отдельную сессию в заданном каталоге.", 12, MUTED); hint.setPadding(0, dp(16), 0, 0); body.addView(hint);
+        TextView hint = text("Выберите команду, чтобы вставить её в поле текущего терминала. Отправьте её самостоятельно.", 12, MUTED); hint.setPadding(0, dp(16), 0, 0); body.addView(hint);
     }
     private boolean matches(String value) { return value.toLowerCase(java.util.Locale.ROOT).contains(query.toLowerCase(java.util.Locale.ROOT)); }
     private List<WorkspaceStore.Session> sortedSessions() {
@@ -320,8 +320,8 @@ public final class WorkspaceController {
     }
     private void commandCard(LinearLayout parent, WorkspaceStore.Command c) {
         LinearLayout card = card(parent); cardLabels(card, c.name, c.command, c.category + (c.favorite ? "  ★" : ""), false);
-        card.setOnClickListener(v -> runCommand(c));
-        TextView run = button("▷", false, () -> runCommand(c)); run.setContentDescription("Запустить " + c.name); card.addView(run);
+        card.setOnClickListener(v -> insertCommand(c));
+        TextView run = button("↳", false, () -> insertCommand(c)); run.setContentDescription("Вставить " + c.name); card.addView(run);
         TextView more = button("⋮", false, () -> commandMenu(c)); more.setContentDescription("Действия с командой " + c.name); card.addView(more);
     }
     private void sessionCard(LinearLayout parent, WorkspaceStore.Session s) {
@@ -361,17 +361,15 @@ public final class WorkspaceController {
         LinearLayout form = column(); EditText name = labeled(form, "Название", draft.name, false);
         EditText command = labeled(form, "Команда", draft.command, true);
         EditText categoryInput = labeled(form, "Категория", draft.category, false);
-        EditText directory = labeled(form, "Рабочий каталог (пусто = домашний)", draft.directory, false);
         CheckBox favorite = new CheckBox(activity); favorite.setText("Добавить в избранное"); favorite.setTextColor(TEXT); favorite.setChecked(draft.favorite); form.addView(favorite);
         AlertDialog dialog = new AlertDialog.Builder(activity).setTitle(existing == null ? "Новая команда" : "Редактировать команду")
             .setView(formScroll(form)).setPositiveButton("Сохранить", null).setNegativeButton("Отмена", null).create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             if (name.getText().toString().trim().isEmpty()) { name.setError("Укажите название"); return; }
             if (command.getText().toString().trim().isEmpty()) { command.setError("Укажите команду"); return; }
-            if (!validDirectoryInput(directory)) return;
             draft.name = name.getText().toString().trim(); draft.command = command.getText().toString();
             draft.category = categoryInput.getText().toString().trim(); if (draft.category.isEmpty()) draft.category = "Общее";
-            draft.directory = directory.getText().toString().trim(); draft.favorite = favorite.isChecked();
+            draft.favorite = favorite.isChecked();
             if (existing == null) store.commands.add(draft); store.save(); dialog.dismiss(); renderContent();
         })); dialog.show();
     }
@@ -405,8 +403,8 @@ public final class WorkspaceController {
         })); dialog.show();
     }
     private void commandMenu(WorkspaceStore.Command c) {
-        new AlertDialog.Builder(activity).setTitle(c.name).setItems(new String[]{"Запустить", "Редактировать", "Дублировать", c.favorite ? "Убрать из избранного" : "В избранное", "Удалить"}, (d, which) -> {
-            if (which == 0) runCommand(c);
+        new AlertDialog.Builder(activity).setTitle(c.name).setItems(new String[]{"Вставить в терминал", "Редактировать", "Дублировать", c.favorite ? "Убрать из избранного" : "В избранное", "Удалить"}, (d, which) -> {
+            if (which == 0) insertCommand(c);
             else if (which == 1) editCommand(c);
             else if (which == 2) { store.commands.add(c.copy()); store.save(); renderContent(); }
             else if (which == 3) { c.favorite = !c.favorite; store.save(); renderContent(); }
@@ -474,9 +472,7 @@ public final class WorkspaceController {
                     + "\n" + command.command;
             }
             picker.setItems(labels, (dialog, index) -> {
-                terminalInput.setText(commands.get(index).command);
-                terminalInput.setSelection(terminalInput.length());
-                terminalInput.requestFocus();
+                insertCommand(commands.get(index));
             });
         }
         String input = terminalInput.getText().toString();
@@ -515,9 +511,11 @@ public final class WorkspaceController {
             });
         });
     }
-    private void runCommand(WorkspaceStore.Command command) {
-        WorkspaceStore.Session session = new WorkspaceStore.Session(); session.name = command.name; session.directory = command.directory; session.startup = command.command;
-        launchNew(session, true);
+    private void insertCommand(WorkspaceStore.Command command) {
+        show(Screen.TERMINAL, true);
+        terminalInput.setText(command.command);
+        terminalInput.setSelection(terminalInput.length());
+        terminalInput.requestFocus();
     }
     private String resolve(String directory) {
         if (directory.isEmpty() || directory.equals("~")) return TermuxConstants.TERMUX_HOME_DIR_PATH;
