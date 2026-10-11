@@ -64,10 +64,10 @@ android {
 
     signingConfigs {
         debug {
-            storeFile file('dev_keystore.jks')
-            keyAlias 'alias'
-            storePassword 'xrj45yWGLbsO7W0v'
-            keyPassword 'xrj45yWGLbsO7W0v'
+            storeFile rootProject.file('.signing/fork-debug.jks')
+            keyAlias 'termux-fork-debug'
+            storePassword System.getenv('TERMUX_FORK_KEYSTORE_PASSWORD') ?: 'termux-fork-debug'
+            keyPassword System.getenv('TERMUX_FORK_KEYSTORE_PASSWORD') ?: 'termux-fork-debug'
         }
     }
 
@@ -101,6 +101,11 @@ android {
     testOptions {
         unitTests {
             includeAndroidResources = true
+            all {
+                systemProperty 'user.home', rootProject.file('.tools/test-home').absolutePath
+                systemProperty 'maven.repo.local', rootProject.file('.tools/m2').absolutePath
+                systemProperty 'robolectric.dependency.repo.url', 'https://repo.maven.apache.org/maven2'
+            }
         }
     }
 

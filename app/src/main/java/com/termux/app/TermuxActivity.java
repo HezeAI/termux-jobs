@@ -81,6 +81,8 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
      */
     TermuxService mTermuxService;
 
+    private com.termux.app.workspace.WorkspaceController mWorkspace;
+
     /**
      * The {@link TerminalView} shown in  {@link TermuxActivity} that displays the terminal.
      */
@@ -236,6 +238,8 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
         setToggleKeyboardView();
 
+        mWorkspace = new com.termux.app.workspace.WorkspaceController(this);
+
         registerForContextMenu(mTerminalView);
 
         // Start the {@link TermuxService} and make it run regardless of who is bound to it
@@ -296,6 +300,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         super.onStop();
 
         Logger.logDebug(LOG_TAG, "onStop");
+        if (mWorkspace != null) mWorkspace.capture();
 
         if (mIsInvalidState) return;
 
@@ -318,6 +323,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         super.onDestroy();
 
         Logger.logDebug(LOG_TAG, "onDestroy");
+        if (mWorkspace != null) mWorkspace.close();
 
         if (mIsInvalidState) return;
 
@@ -390,6 +396,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
         // Update the {@link TerminalSession} and {@link TerminalEmulator} clients.
         mTermuxService.setTermuxTerminalSessionClient(mTermuxTerminalSessionClient);
+        refreshWorkspace();
     }
 
     @Override
@@ -406,19 +413,12 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
 
     private void setActivityTheme() {
-        if (mProperties.isUsingBlackUI()) {
-            this.setTheme(R.style.Theme_Termux_Black);
-        } else {
-            this.setTheme(R.style.Theme_Termux);
-        }
+        this.setTheme(R.style.Theme_Termux_Black);
     }
 
     private void setDrawerTheme() {
-        if (mProperties.isUsingBlackUI()) {
-            findViewById(R.id.left_drawer).setBackgroundColor(ContextCompat.getColor(this,
-                android.R.color.background_dark));
-            ((ImageButton) findViewById(R.id.settings_button)).setColorFilter(Color.WHITE);
-        }
+        findViewById(R.id.left_drawer).setBackgroundColor(Color.rgb(11, 19, 25));
+        ((ImageButton) findViewById(R.id.settings_button)).setColorFilter(Color.rgb(121, 223, 205));
     }
 
     private void setMargins() {
@@ -560,7 +560,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
     public void onBackPressed() {
         if (getDrawer().isDrawerOpen(Gravity.LEFT)) {
             getDrawer().closeDrawers();
-        } else {
+        } else if (mWorkspace == null || !mWorkspace.onBack()) {
             finishActivityIfNotFinishing();
         }
     }
@@ -779,7 +779,32 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
 
     public void termuxSessionListNotifyUpdated() {
-        mTermuxSessionListViewController.notifyDataSetChanged();
+        if (mTermuxSessionListViewController != null) mTermuxSessionListViewController.notifyDataSetChanged();
+        refreshWorkspace();
+    }
+
+    public void prepareWorkspaceBootstrap(Runnable ready) {
+        TermuxInstaller.setupBootstrapIfNeeded(this, ready);
+    }
+
+    public void refreshWorkspace() {
+        if (mWorkspace != null) mWorkspace.refresh();
+    }
+
+    public void scheduleWorkspaceSnapshot() {
+        if (mWorkspace != null) mWorkspace.onOutput();
+    }
+
+    public boolean onWorkspaceSessionFinished(TerminalSession session) {
+        return mWorkspace != null && mWorkspace.onFinished(session);
+    }
+
+    public void captureWorkspace() {
+        if (mWorkspace != null) mWorkspace.capture();
+    }
+
+    public com.termux.shared.shell.TermuxSession createWorkspaceSession(String name, String directory) {
+        return mWorkspace == null ? null : mWorkspace.createDefault(name, directory);
     }
 
     public boolean isVisible() {

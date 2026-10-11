@@ -110,6 +110,7 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
 
     @Override
     public void onTextChanged(TerminalSession changedSession) {
+        mActivity.scheduleWorkspaceSnapshot();
         if (!mActivity.isVisible()) return;
 
         if (mActivity.getCurrentSession() == changedSession) mActivity.getTerminalView().onScreenUpdated();
@@ -131,6 +132,9 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
 
     @Override
     public void onSessionFinished(final TerminalSession finishedSession) {
+        if (mActivity.onWorkspaceSessionFinished(finishedSession)) return;
+        mActivity.captureWorkspace();
+        mActivity.refreshWorkspace();
         TermuxService service = mActivity.getTermuxService();
 
         if (service == null || service.wantsToStop()) {
@@ -280,6 +284,7 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
         // be stale, like current session not selected or scrolled to.
         checkAndScrollToSession(session);
         updateBackgroundColor();
+        mActivity.refreshWorkspace();
     }
 
     void notifyOfSessionChange() {
@@ -345,7 +350,9 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
                 workingDirectory = currentSession.getCwd();
             }
 
-            TermuxSession newTermuxSession = service.createTermuxSession(null, null, null, workingDirectory, isFailSafe, sessionName);
+            TermuxSession newTermuxSession = isFailSafe
+                ? service.createTermuxSession(null, null, null, workingDirectory, true, sessionName)
+                : mActivity.createWorkspaceSession(sessionName, workingDirectory);
             if (newTermuxSession == null) return;
 
             TerminalSession newTerminalSession = newTermuxSession.getTerminalSession();

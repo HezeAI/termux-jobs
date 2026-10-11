@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# ARM64 host build: native libraries are linked locally, Gradle packages the unchanged Java app.
+set -euo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/build-env.sh"
+cd "$FORK_ROOT"
+: "${FORK_NATIVE_SYSROOT:?Set FORK_NATIVE_SYSROOT to an existing NDK sysroot (read only)}"
+FORK_CLANG="${FORK_NATIVE_CLANG:-clang}"
+FORK_LLD="${FORK_NATIVE_LLD:-ld.lld}"
+./scripts/create-debug-key.sh
+python3 scripts/prepare-java-verification.py --arm64
+FORK_STAGE="$FORK_ROOT/.verification/arm64"
+FORK_NATIVE="$FORK_ROOT/.verification/native"
+mkdir -p "$FORK_NATIVE" "$FORK_STAGE/app/src/main/jniLibs/arm64-v8a" "$FORK_STAGE/terminal-emulator/src/main/jniLibs/arm64-v8a"
+ln -sfn "$FORK_ROOT/.signing" "$FORK_STAGE/.signing"
+FORK_BOOTSTRAP="$FORK_ROOT/.tools/downloads/bootstrap-aarch64.zip"
+if [[ ! -f "$FORK_BOOTSTRAP" ]]; then
+    mkdir -p "$FORK_ROOT/.tools/downloads"
+    curl --fail --location --output "$FORK_BOOTSTRAP" 'https://github.com/termux/termux-packages/releases/download/bootstrap-2025.03.28-r1+apt-android-7/bootstrap-aarch64.zip'
+fi
+printf '%s  %s\n' 'c8d702b6f742935001c37cda81b8ac69504a95d5cf28f2899532dd8cd4b057eb' "$FORK_BOOTSTRAP" | sha256sum -c -
+cp "$FORK_BOOTSTRAP" "$FORK_STAGE/app/src/main/cpp/bootstrap-aarch64.zip"
+FORK_CFLAGS=(--target=aarch64-linux-android24 --sysroot="$FORK_NATIVE_SYSROOT" -std=c11 -Wall -Wextra -Werror -Os -fPIC -fno-stack-protector)
+"$FORK_CLANG" "${FORK_CFLAGS[@]}" -c terminal-emulator/src/main/jni/termux.c -o "$FORK_NATIVE/termux.o"
+"$FORK_CLANG" "${FORK_CFLAGS[@]}" -c app/src/main/cpp/termux-bootstrap.c -o "$FORK_NATIVE/bootstrap.o"
+(cd "$FORK_STAGE/app/src/main/cpp"; "$FORK_CLANG" --target=aarch64-linux-android24 -c termux-bootstrap-zip.S -o "$FORK_NATIVE/bootstrap-zip.o")
+FORK_NATIVE_LIB="$FORK_NATIVE_SYSROOT/usr/lib/aarch64-linux-android/24"
+link_native() {
+    local name="$1"; shift
+    "$FORK_LLD" -shared --no-undefined --gc-sections -z now -z noexecstack -z max-page-size=16384 \
+        -soname "$name" "$FORK_NATIVE_LIB/crtbegin_so.o" "$@" \
+        -L "$FORK_NATIVE_LIB" -lc -ldl "$FORK_NATIVE_LIB/crtend_so.o" -o "$FORK_NATIVE/$name"
+}
+link_native libtermux.so "$FORK_NATIVE/termux.o"
+link_native libtermux-bootstrap.so "$FORK_NATIVE/bootstrap.o" "$FORK_NATIVE/bootstrap-zip.o"
+cp "$FORK_NATIVE/libtermux.so" "$FORK_STAGE/terminal-emulator/src/main/jniLibs/arm64-v8a/"
+cp "$FORK_NATIVE/libtermux-bootstrap.so" "$FORK_STAGE/app/src/main/jniLibs/arm64-v8a/"
+cd "$FORK_STAGE"
+export TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS=0
+export TERMUX_APP_VERSION_NAME=0.118.3-fork.1
+export TERMUX_APK_VERSION_TAG=fork-0.1-debug-arm64
+FORK_GRADLE="$FORK_ROOT/.tools/gradle-7.2/bin/gradle"
+if [[ ! -x "$FORK_GRADLE" ]]; then FORK_GRADLE="$PWD/gradlew"; fi
+"$FORK_GRADLE" --no-daemon \
+    -Pandroid.aapt2FromMavenOverride="${FORK_AAPT2:-$ANDROID_HOME/build-tools/30.0.3/aapt2}" \
+    -x :app:downloadBootstraps :app:assembleDebug
+mkdir -p "$FORK_ROOT/build/apk"
+cp "$FORK_STAGE/app/build/outputs/apk/debug/termux-app_fork-0.1-debug-arm64_universal.apk" "$FORK_ROOT/build/apk/termux-fork-0.1-debug-arm64.apk"

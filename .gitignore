@@ -36,3 +36,7 @@ local.properties
 .swp
 ehthumbs.db
 Thumbs.db
+
+# Isolated local verification tools; never use the installed Termux as build output.
+.tools/
+.verification/
