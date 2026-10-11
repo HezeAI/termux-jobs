@@ -1,0 +1,12 @@
+Use case: ui-mockup.
+Create a polished high-fidelity PNG concept board for an existing Russian Android Termux fork, 1536x1024 landscape. This is a proposal, not a screenshot of the shipped app. Show exactly two large flat front-facing portrait app screens side by side, nearly filling the canvas, on a subtle dark background, no photorealistic phones, no perspective, no decoration. Caption above first screen "Главная", above second "Действия с командой". AMOLED pure black #000000, soft turquoise #79DFCD accents, rounded charcoal panels #0B1319 with very subtle #213039 borders, off-white text, muted grey secondary text, generous spacing. Minimal Android design, restrained, no gradients or glow. Crisp readable Russian sans serif typography and monospace command text.
+Both screens preserve the actual existing layout: app header "Termux" and a small settings gear; secondary subtitle "Ваше рабочее пространство"; bottom navigation with ONLY "Главная", "Команды", "Терминал", small thin line icons, Home active in turquoise. No session shortcut cards, no project cards, no charts, no extra navigation.
+First screen: header section "Недавние команды" with small "Очистить" at right. NEW addition is a slim search field with magnifier and placeholder "Поиск по журналу". Below it ONE internally scrollable rounded journal panel with subtle scrollbar. Show five rows newest first, each with readable command and smaller muted time:
+"git status" / "14:32",
+"./gradlew assembleDebug" / "14:28",
+"codex" / "14:20",
+"proot-distro login ubuntu" / "14:18",
+"python --version" / "14:15".
+Each row has only a small vertical ellipsis at right; first row selected softly turquoise. Footer under panel "5 / 25". Keep lots of black breathing space. Small explanatory line below screen outside app: "Поиск и быстрые действия — без новых вкладок".
+Second screen: same home and same journal lightly dimmed with a compact rounded bottom sheet above the unchanged bottom navigation. Bottom sheet shows a small drag handle; title "git status" in monospace; three spacious action rows with restrained icons and exact labels "Вставить в терминал", "Сохранить в команды", "Скопировать"; below a subtle text action "Отмена". Emphasize "Сохранить в команды" with turquoise bookmark icon. Small explanatory line outside screen: "Полезную команду можно сохранить из журнала".
+Maintain a simple clean practical mobile UI, no dashboards, no marketing slogans, no extra functionality beyond journal search and command context actions. All text spelled exactly as supplied.
