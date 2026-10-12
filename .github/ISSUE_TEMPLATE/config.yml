@@ -1,5 +1,15 @@
-blank_issues_enabled: false
-contact_links:
-  - name: Want ask questions about the project?
-    url: https://github.com/termux/termux-app/discussions
-    about: Join GitHub Discussions
+{
+  "blank_issues_enabled": false,
+  "contact_links": [
+    {
+      "name": "Руководство Termux Job’s",
+      "url": "https://github.com/HezeAI/termux-jobs/blob/fork/base/docs/fork/USAGE.md",
+      "about": "Работа с командами, сессиями и Ubuntu"
+    },
+    {
+      "name": "Установка и ограничения",
+      "url": "https://github.com/HezeAI/termux-jobs/blob/fork/base/README.md",
+      "about": "Совместимость APK и обновлений"
+    }
+  ]
+}

@@ -221,6 +221,10 @@ Build Tools 30.0.3, NDK 22.1.7171670 и Gradle 7.2 через wrapper.
 
 ## Документация и происхождение
 
+- [Руководство по использованию](docs/fork/USAGE.md).
+- [Журнал изменений](CHANGELOG.md).
+- [Участие в проекте](CONTRIBUTING.md).
+- [Порядок подготовки релиза](docs/fork/RELEASING.md).
 - [Подробности реализации и сборки](FORK.md).
 - [Архитектура и карта исходников](docs/fork/ARCHITECTURE.md).
 - [Проверки и результаты](docs/fork/VALIDATION.md).

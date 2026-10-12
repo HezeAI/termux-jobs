@@ -1,19 +1,37 @@
-name: "Feature request"
-description: "Suggest a new feature for Termux application"
-title: "[Feature]: "
-labels: ["feature request"]
-body:
-  - type: textarea
-    attributes:
-      label: Feature description
-      description: Describe the feature and why you want it.
-    validations:
-      required: true
-  - type: textarea
-    attributes:
-      label: Additional information
-      description: |
-        Does another app/terminal emulator have this feature?
-        Provide links to more background information.
-    validations:
-      required: true
+{
+  "name": "Предложение для Termux Job’s",
+  "description": "Улучшение интерфейса или рабочего сценария",
+  "title": "[Feature]: ",
+  "body": [
+    {
+      "type": "textarea",
+      "id": "problem",
+      "attributes": {
+        "label": "Какую задачу нужно решить?",
+        "description": "Опишите текущий сценарий и неудобство."
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "proposal",
+      "attributes": {
+        "label": "Предлагаемое поведение",
+        "description": "Как это должно работать в интерфейсе? Есть ли подходящий пример?"
+      },
+      "validations": {
+        "required": true
+      }
+    },
+    {
+      "type": "textarea",
+      "id": "alternatives",
+      "attributes": {
+        "label": "Другие способы",
+        "description": "Можно ли решить задачу существующими пресетами, скриптами или настройками?"
+      }
+    }
+  ]
+}
