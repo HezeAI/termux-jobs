@@ -1,293 +1,234 @@
 # Termux Job’s
 
-Неофициальный форк [Termux](https://github.com/termux/termux-app) с новым удобным
-интерфейсом и пресетами команд и сессий. Проект HezeAI, основан на Termux v0.118.3.
-Не является официальным выпуском Termux.
+**Termux с новым удобным интерфейсом, библиотекой команд и сохранёнными сценариями запуска.**
 
-- Пресеты команд: названия, категории, поиск, избранное и вставка в выбранный терминал.
-- Сохранённые сессии: ручное сохранение, рабочий каталог, до трёх команд запуска, среда Termux или Ubuntu.
-- Последовательный запуск: готовность Bash, остановка при ошибке и отмена оставшихся шагов.
-- Несколько терминалов: вкладки и закрытие с подтверждением.
-- Журнал последних 25 команд: поиск, повторная вставка и сохранение в библиотеку.
+Неофициальный форк [Termux](https://github.com/termux/termux-app), созданный HezeAI.
+Основан на Termux **v0.118.3**. Текущий выпуск — **v0.2.1** для Android 7+ и ARM64.
 
-**Скачать:** [GitHub Releases](https://github.com/HezeAI/termux-jobs/releases).
-Текущий релиз — **v0.2.1**, ARM64, Android 7+. Ubuntu, Codex и другие
-инструменты устанавливаются отдельно. Для Ubuntu требуется proot-distro
-с контейнером `ubuntu`. Следующие команды ждут выхода из интерактивного Codex.
+[Скачать APK](https://github.com/HezeAI/termux-jobs/releases/tag/v0.2.1) ·
+[Все выпуски](https://github.com/HezeAI/termux-jobs/releases) ·
+[Изменения v0.2.1](docs/fork/RELEASE-v0.2.1.md)
 
-**Установка:** APK v0.2.1 обновляет прежние сборки нашего форка с той же подписью
-без удаления приложения. Настройки, проекты и окружение остаются на месте.
-Поверх обычного Termux с другой подписью установка не поддерживается.
-Параллельная установка с `com.termux` не поддерживается. Перед заменой другого
-Termux сохраните данные: удаление приложения удаляет его среду.
+## Зачем модифицировать сам Termux?
+
+Shell-скрипт отлично подходит для автоматизации команд. Termux Job’s решает другую
+практическую задачу: как удобно пользоваться этой автоматизацией на телефоне,
+когда одновременно открыты несколько терминалов, а команды часто нужно выбирать,
+проверять, редактировать и отправлять в конкретную сессию.
 
-**Лицензия:** [GPLv3 only](LICENSE.md), с сохранением лицензий компонентов.
-Исходные авторы и история Termux сохранены; наши изменения описаны в
-[FORK.md](FORK.md), сборка и проверка — в [VALIDATION.md](docs/fork/VALIDATION.md).
-[Лицензии и происхождение компонентов](docs/fork/ATTRIBUTION.md).
-Ключ подписи не входит в репозиторий. Самостоятельные сборки с новым ключом
-не обновляют опубликованный APK. APK из CI предназначены для проверки сборки.
+Например, в одном терминале работает Codex, во втором — Bridge, в третьем идёт
+сборка Android-приложения. В обычном Termux для этого можно написать скрипты и aliases.
+В этом форке команды собраны в библиотеке с названиями, поиском и избранным,
+а запуск окружения оформлен как сохранённая сессия с каталогом и стартовыми шагами.
+Сами скрипты при этом остаются полезны: пресет может запускать уже существующий скрипт.
 
----
+Изменения в Android-приложении позволяют связать библиотеку с полем ввода,
+выбором активного терминала, вкладками и управлением жизненным циклом сессии.
+Это и есть причина форка: такие элементы интерфейса не появляются от добавления
+нескольких скриптов в HOME.
 
-## Документация оригинального Termux
+Форк не обещает ускорить Linux, сборку APK или работу Codex. Его преимущество —
+меньше повторяющихся действий в интерфейсе при работе с привычными инструментами.
+Если вам хватает aliases, shell-скриптов и стандартного интерфейса Termux,
+переходить на этот форк необязательно.
 
-Ниже сохранена upstream-документация; её ссылки на официальные выпуски и
-подписи относятся к оригинальному Termux.
+## Чем это отличается от списка готовых скриптов?
 
-# Termux application
+| Задача | Набор скриптов в обычном Termux | Termux Job’s |
+| --- | --- | --- |
+| Автоматизировать действия | Скрипт выполняет команды | Можно запускать тот же скрипт из пресета |
+| Найти нужную команду | Имена файлов, aliases или собственное меню | Названия, категории, поиск и избранное в приложении |
+| Проверить команду перед отправкой | Открыть или набрать текст вручную | Вставить пресет в поле ввода и отредактировать |
+| Выбрать терминал для команды | Переключиться в нужную сессию | Выбрать получателя при вставке из библиотеки |
+| Повторять запуск рабочего окружения | Скрипт и отдельное управление сессией | Сохранённый профиль: имя, каталог, среда и до трёх шагов |
+| Управлять несколькими процессами | Стандартные средства Termux | Вкладки, перезапуск и закрытие с подтверждением |
+| Повторить недавно отправленный текст | История оболочки | Дополнительный журнал последних 25 команд в интерфейсе |
 
-[![Build status](https://github.com/termux/termux-app/workflows/Build/badge.svg)](https://github.com/termux/termux-app/actions)
-[![Testing status](https://github.com/termux/termux-app/workflows/Unit%20tests/badge.svg)](https://github.com/termux/termux-app/actions)
-[![Join the chat at https://gitter.im/termux/termux](https://badges.gitter.im/termux/termux.svg)](https://gitter.im/termux/termux)
-[![Join the Termux discord server](https://img.shields.io/discord/641256914684084234.svg?label=&logo=discord&logoColor=ffffff&color=5865F2)](https://discord.gg/HXpF69X)
-[![Termux library releases at Jitpack](https://jitpack.io/v/termux/termux-app.svg)](https://jitpack.io/#termux/termux-app)
+Пресет команды и сохранённая сессия имеют разное назначение:
+**команда вставляет текст для отправки пользователем**, а **сессия запускает
+терминал с заранее заданными параметрами**.
 
+## Что реализовано
 
-[Termux](https://termux.com) is an Android terminal application and Linux environment.
+### Интерфейс
 
-Note that this repository is for the app itself (the user interface and the terminal emulation). For the packages installable inside the app, see [termux/termux-packages](https://github.com/termux/termux-packages).
+Три раздела — **Главная**, **Команды**, **Терминал** — доступны через плитки сверху.
+В разделе терминала есть вкладки активных сессий и общие настройки через шестерёнку.
+На главной находятся две отдельно прокручиваемые панели: недавние команды
+и сохранённые сессии. Оформление использует чёрный фон и мягкие бирюзовые акценты.
 
-Quick how-to about Termux package management is available at [Package Management](https://github.com/termux/termux-packages/wiki/Package-Management). It also has info on how to fix **`repository is under maintenance or down`** errors when running `apt` or `pkg` commands.
+### Библиотека команд
 
-***
+- Добавляйте собственные команды, задавайте понятные названия и категории.
+- Используйте поиск, фильтр категорий и избранное.
+- Редактируйте и удаляйте сохранённые записи.
+- Нажмите на карточку, чтобы вставить команду в поле ввода; если терминалов
+  несколько, выберите нужный.
+- Звёздочка возле поля ввода открывает библиотеку для текущего терминала.
 
-**@termux is looking for Termux Application maintainers for implementing new features, fixing bugs and reviewing pull requests since the current one (@fornwall) is inactive.**
+Выбор команды **не отправляет её автоматически и не открывает новый терминал**.
+Перед отправкой текст можно изменить. Вставка также не меняет рабочий каталог
+текущей оболочки: если нужен переход, укажите `cd` в самой команде.
 
-Issue https://github.com/termux/termux-app/issues/1072 needs extra attention.
+### Сохранённые сессии
 
-***
+Профиль сессии содержит название, рабочий каталог, среду выполнения и до трёх
+команд запуска. Обычные новые терминалы не добавляются в сохранённые автоматически.
 
-### Contents
-- [Termux App and Plugins](#Termux-App-and-Plugins)
-- [Installation](#Installation)
-- [Uninstallation](#Uninstallation)
-- [Important Links](#Important-Links)
-- [Debugging](#Debugging)
-- [For Maintainers and Contributors](#For-Maintainers-and-Contributors)
-- [Forking](#Forking)
-##
+Сохранить профиль можно двумя способами:
 
+1. Через «+» в панели сохранённых сессий на главной.
+2. Долгим нажатием на вкладку терминала → **«Сохранить сессию»**.
 
+Карточка профиля запускает сессию или открывает её уже работающий терминал.
+В меню сохранённой сессии доступны закрытие, настройки и удаление профиля.
+Долгое нажатие на вкладку терминала позволяет перезапустить, настроить
+или закрыть сессию. Закрытие и перезапуск требуют подтверждения.
 
-## Termux App and Plugins
+**Закрыть сессию** означает остановить её процесс и убрать вкладку.
+Сохранённый профиль при этом остаётся. **Удалить профиль** — отдельное действие;
+работающий терминал сначала нужно закрыть.
 
-The core [Termux](https://github.com/termux/termux-app) app comes with the following optional plugin apps.
+После перезапуска приложения профиль позволяет повторить запуск окружения.
+Он не сохраняет работающий процесс, содержимое оперативной памяти или состояние
+открытого редактора. История Bash профиля хранится отдельно; снимков вывода
+терминала и автоматических снимков в текущем выпуске нет.
+
+### Последовательные команды и выбор среды
+
+Для запуска с ожиданием оболочки доступны среды **Termux** и **Ubuntu**.
+В Ubuntu приложение входит автоматически; рабочий каталог относится к гостевой
+системе. Ubuntu должна быть заранее установлена через `proot-distro`
+под именем `ubuntu`, в ней должен быть Bash.
 
-- [Termux:API](https://github.com/termux/termux-api)
-- [Termux:Boot](https://github.com/termux/termux-boot)
-- [Termux:Float](https://github.com/termux/termux-float)
-- [Termux:Styling](https://github.com/termux/termux-styling)
-- [Termux:Tasker](https://github.com/termux/termux-tasker)
-- [Termux:Widget](https://github.com/termux/termux-widget)
-##
+Стартовые команды выполняются последовательно после готовности Bash.
+При ошибке следующие шаги отменяются. Это удобно для перехода в каталог проекта,
+подготовки окружения и запуска основной программы.
 
+Если шаг запускает интерактивную программу, следующий шаг ждёт её завершения.
+Например, после запуска Codex следующая команда не будет отправлена в его чат.
+Механизм рассчитан на Bash в поддерживаемых режимах, а не на произвольные
+приглашения любых программ. В совместимом режиме **«Как раньше»** поведение
+ожидания и отмены отличается; для последовательных сценариев выбирайте Termux или Ubuntu.
+
+Пункт **«Отменить команды запуска»** отменяет оставшиеся шаги в режимах Termux/Ubuntu,
+но не останавливает текущую программу. При следующем запуске профиля отмена сбрасывается.
+
+### Несколько терминалов
 
+Можно держать одновременно до восьми терминалов и переключаться между вкладками.
+Это позволяет разделять Codex, Bridge, сборку и обычную оболочку по разным сессиям.
+Сохранённые профили помогают повторять запуск, но не являются менеджером
+фоновых служб и не обходят ограничения Android на работу процессов.
 
-## Installation
+### Недавние команды и ввод
 
-Latest version is `v0.118.1`.
-
-Termux can be obtained through various sources listed below for **only** Android `>= 7`. Support was dropped for Android `5` and `6` on [2020-01-01](https://www.reddit.com/r/termux/comments/dnzdbs/end_of_android56_support_on_20200101/) at `v0.83`, old builds are available on [archive.org](https://archive.org/details/termux-repositories-legacy).
-
-The APK files of different sources are signed with different signature keys. The `Termux` app and all its plugins use the same [`sharedUserId`](https://developer.android.com/guide/topics/manifest/manifest-element) `com.termux` and so all their APKs installed on a device must have been signed with the same signature key to work together and so they must all be installed from the same source. Do not attempt to mix them together, i.e do not try to install an app or plugin from `F-Droid` and another one from a different source like `Github`. Android Package Manager will also normally not allow installation of APKs with different signatures and you will get errors on installation like `App not installed`, `Failed to install due to an unknown error`, `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, `INSTALL_FAILED_SHARED_USER_INCOMPATIBLE`, `signatures do not match previously installed version`, etc. This restriction can be bypassed with root or with custom roms.
-
-If you wish to install from a different source, then you must **uninstall any and all existing Termux or its plugin app APKs** from your device first, then install all new APKs from the same new source. Check [Uninstallation](#Uninstallation) section for details. You may also want to consider [Backing up Termux](https://wiki.termux.com/wiki/Backing_up_Termux) before the uninstallation so that you can restore it after re-installing from Termux different source.
-
-In the following paragraphs, *"bootstrap"* refers to the minimal packages that are shipped with the `termux-app` itself to start a working shell environment. Its zips are built and released [here](https://github.com/termux/termux-packages/releases).
-
-### F-Droid
-
-Termux application can be obtained from `F-Droid` from [here](https://f-droid.org/en/packages/com.termux/).
-
-You **do not** need to download the `F-Droid` app (via the `Download F-Droid` link) to install Termux. You can download the Termux APK directly from the site by clicking the `Download APK` link at the bottom of each version section.
-
-It usually takes a few days (or even a week or more) for updates to be available on `F-Droid` once an update has been released on `Github`. The `F-Droid` releases are built and published by `F-Droid` once they [detect](https://gitlab.com/fdroid/fdroiddata/-/blob/master/metadata/com.termux.yml) a new `Github` release. The Termux maintainers **do not** have any control over the building and publishing of the Termux apps on `F-Droid`. Moreover, the Termux maintainers also do not have access to the APK signing keys of `F-Droid` releases, so we cannot release an APK ourselves on `Github` that would be compatible with `F-Droid` releases.
-
-The `F-Droid` app often may not notify you of updates and you will manually have to do a pull down swipe action in the `Updates` tab of the app for it to check updates. Make sure battery optimizations are disabled for the app, check https://dontkillmyapp.com/ for details on how to do that.
-
-Only a universal APK is released, which will work on all supported architectures. The APK and bootstrap installation size will be `~180MB`. `F-Droid` does [not support](https://github.com/termux/termux-app/pull/1904) architecture specific APKs.
-
-### Github
-
-Termux application can be obtained on `Github` either from [`Github Releases`](https://github.com/termux/termux-app/releases) for version `>= 0.118.0` or from [`Github Build`](https://github.com/termux/termux-app/actions/workflows/debug_build.yml) action workflows.
-
-The APKs for `Github Releases` will be listed under `Assets` drop-down of a release. These are automatically attached when a new version is released.
-
-The APKs for `Github Build` action workflows will be listed under `Artifacts` section of a workflow run. These are created for each commit/push done to the repository and can be used by users who don't want to wait for releases and want to try out the latest features immediately or want to test their pull requests. Note that for action workflows, you need to be [**logged into a `Github` account**](https://github.com/login) for the `Artifacts` links to be enabled/clickable. If you are using the [`Github` app](https://github.com/mobile), then make sure to open workflow link in a browser like Chrome or Firefox that has your Github account logged in since the in-app browser may not be logged in. 
-
-The APKs for both of these are [`debuggable`](https://developer.android.com/studio/debug) and are compatible with each other but they are not compatible with other sources.
-
-Both universal and architecture specific APKs are released. The APK and bootstrap installation size will be `~180MB` if using universal and `~120MB` if using architecture specific. Check [here](https://github.com/termux/termux-app/issues/2153) for details.
-
-### Google Play Store **(Deprecated)**
-
-**Termux and its plugins are no longer updated on [Google Play Store](https://play.google.com/store/apps/details?id=com.termux) due to [android 10 issues](https://github.com/termux/termux-packages/wiki/Termux-and-Android-10) and have been deprecated.** The last version released for Android `>= 7` was `v0.101`. **It is highly recommended to not install Termux apps from Play Store any more.**
-
-There are plans for **unpublishing** the Termux app and all its plugins on Play Store soon so that new users cannot install it and for **disabling** the Termux apps with updates so that existing users **cannot continue using outdated versions**. You are encouraged to move to `F-Droid` or `Github` builds as soon as possible.
-
-You **will not need to buy plugins again** if you bought them on Play Store. All plugins are free on `F-Droid` and  `Github`.
-
-You can backup all your data under `$HOME/` and `$PREFIX/` before changing installation source, and then restore it afterwards, by following instructions at [Backing up Termux](https://wiki.termux.com/wiki/Backing_up_Termux) before the uninstallation.
-
-There is currently no work being done to solve android `10` issues and *working* updates will not be resumed on Google Play Store any time soon. We will continue targeting sdk `28` for now. So there is not much point in staying on Play Store builds and waiting for updates to be resumed. If for some reason you don't want to move to `F-Droid` or `Github` sources for now, then at least check [Package Management](https://github.com/termux/termux-packages/wiki/Package-Management) to **change your mirror**, otherwise, you will get **`repository is under maintenance or down`** errors when running `apt` or `pkg` commands. After that, it is also **highly advisable** to run `pkg upgrade` command to update all packages to the latest available versions, or at least update `termux-tools` package with `pkg install termux-tools` command. 
-
-Note that by upgrading old packages to latest versions, like that of `python` may break your setups/scripts since they may not be compatible anymore. Moreover, you will not be able to downgrade the package versions since termux repos only keep the latest version and you will have to manually rebuild the old versions of the packages if required as per https://github.com/termux/termux-packages/wiki/Building-packages.
-
-If you plan on staying on Play Store sources in future as well, then you may want to **disable automatic updates in Play Store** for Termux apps, since if and when updates to disable Termux apps are released, then **you will not be able to downgrade** and **will be forced** to move since apps won't work anymore. Only a way to backup `termux-app` data may be provided. The `termux-tools` [version `>= 0.135`](https://github.com/termux/termux-packages/pull/7493) will also show a banner at the top of the terminal saying `You are likely using a very old version of Termux, probably installed from the Google Play Store.`, you can remove it by running `rm -f /data/data/com.termux/files/usr/etc/motd-playstore` and restarting the app.
-
-#### Why Disable?
-
-<details>
-<summary></summary>
-
-- They should be disabled because deprecated things get removed and are not supported after some time, its the standard practice. It has been many months now since deprecation was announced and updates have not been released on Play Store since after `29 September 2020`.
-
-- The new versions have lots of **new features and fixes** which you can mostly check out in the Changelog of [`Github Releases`](https://github.com/termux/termux-app/releases) that you may be missing out. Extra detail is usually provided in [commit messages](https://github.com/termux/termux-app/commits/master).
-
-- Users on old versions are quite often reporting issues in multiple repositories and support forums that were **fixed months ago**, which we then have to deal with. The maintainers of @termux work in their free time, majorly for free, to work on development and provide support and having to re-re-deal with old issues takes away the already limited time from current work and is not possible to continue doing. Play Store page of `termux-app` has been filled with bad reviews of *"broken app"*, even though its clearly mentioned on the page that app is not being updated, yet users don't read and still install and report issues.
-
-- Asking people to pay for plugins when the `termux-app` at installation time is broken due to repository issues and has bugs is unethical.
-
-- Old versions don't have proper logging/debugging and crash report support. Reporting bugs without logs or detailed info is not helpful in solving them.
-
-- It's also easier for us to solve package related issues and provide custom functionality with app updates, which can't be done if users continue using old versions. For example, the [bintray shudown](https://github.com/termux/termux-packages/wiki/Package-Management) causing package install/update failures for new Play Store users is/was not an issue for F-Droid users since it is being shipped with updated bootstrap and repo info, hence no reported issues from new F-Droid users.
-</details>
-
-##
-
-
-
-## Uninstallation
-
-Uninstallation may be required if a user doesn't want Termux installed in their device anymore or is switching to a different [install source](#Installation). You may also want to consider [Backing up Termux](https://wiki.termux.com/wiki/Backing_up_Termux) before the uninstallation.
-
-To uninstall Termux completely, you must uninstall **any and all existing Termux or its plugin app APKs** listed in [Termux App and Plugins](#Termux-App-and-Plugins).
-
-Go to `Android Settings` -> `Applications` and then look for those apps. You can also use the search feature if it’s available on your device and search `termux` in the applications list.
-
-Even if you think you have not installed any of the plugins, it's strongly suggested to go through the application list in Android settings and double-check.
-##
-
-
-
-## Important Links
-
-### Community
-All community links are available [here](https://wiki.termux.com/wiki/Community).
-
-The main ones are the following.
-
-- [Termux Reddit community](https://reddit.com/r/termux)
-- [Termux Matrix Channel](https://matrix.to/#termux_termux:gitter.im)
-- [Termux Dev Matrix Channel](https://matrix.to/#termux_dev:gitter.im)
-- [Termux Twitter](https://twitter.com/termux/)
-- [Termux Reports Email](mailto:support@termux.dev)
-
-### Wikis
-
-- [Termux Wiki](https://wiki.termux.com/wiki/)
-- [Termux App Wiki](https://github.com/termux/termux-app/wiki)
-- [Termux Packages Wiki](https://github.com/termux/termux-packages/wiki)
-
-### Miscellaneous
-- [FAQ](https://wiki.termux.com/wiki/FAQ)
-- [Termux File System Layout](https://github.com/termux/termux-packages/wiki/Termux-file-system-layout)
-- [Differences From Linux](https://wiki.termux.com/wiki/Differences_from_Linux)
-- [Package Management](https://wiki.termux.com/wiki/Package_Management)
-- [Remote Access](https://wiki.termux.com/wiki/Remote_Access)
-- [Backing up Termux](https://wiki.termux.com/wiki/Backing_up_Termux)
-- [Terminal Settings](https://wiki.termux.com/wiki/Terminal_Settings)
-- [Touch Keyboard](https://wiki.termux.com/wiki/Touch_Keyboard)
-- [Android Storage and Sharing Data with Other Apps](https://wiki.termux.com/wiki/Internal_and_external_storage)
-- [Android APIs](https://wiki.termux.com/wiki/Termux:API)
-- [Moved Termux Packages Hosting From Bintray to IPFS](https://github.com/termux/termux-packages/issues/6348)
-- [Running Commands in Termux From Other Apps via `RUN_COMMAND` intent](https://github.com/termux/termux-app/wiki/RUN_COMMAND-Intent)
-- [Termux and Android 10](https://github.com/termux/termux-packages/wiki/Termux-and-Android-10)
-
-
-### Terminal
-
-<details>
-<summary></summary>
-
-### Terminal resources
-
-- [XTerm control sequences](https://invisible-island.net/xterm/ctlseqs/ctlseqs.html)
-- [vt100.net](https://vt100.net/)
-- [Terminal codes (ANSI and terminfo equivalents)](https://wiki.bash-hackers.org/scripting/terminalcodes)
-
-### Terminal emulators
-
-- VTE (libvte): Terminal emulator widget for GTK+, mainly used in gnome-terminal. [Source](https://github.com/GNOME/vte), [Open Issues](https://bugzilla.gnome.org/buglist.cgi?quicksearch=product%3A%22vte%22+), and [All (including closed) issues](https://bugzilla.gnome.org/buglist.cgi?bug_status=RESOLVED&bug_status=VERIFIED&chfield=resolution&chfieldfrom=-2000d&chfieldvalue=FIXED&product=vte&resolution=FIXED).
-
-- iTerm 2: OS X terminal application. [Source](https://github.com/gnachman/iTerm2), [Issues](https://gitlab.com/gnachman/iterm2/issues) and [Documentation](https://iterm2.com/documentation.html) (which includes [iTerm2 proprietary escape codes](https://iterm2.com/documentation-escape-codes.html)).
-
-- Konsole: KDE terminal application. [Source](https://projects.kde.org/projects/kde/applications/konsole/repository), in particular [tests](https://projects.kde.org/projects/kde/applications/konsole/repository/revisions/master/show/tests), [Bugs](https://bugs.kde.org/buglist.cgi?bug_severity=critical&bug_severity=grave&bug_severity=major&bug_severity=crash&bug_severity=normal&bug_severity=minor&bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&product=konsole) and [Wishes](https://bugs.kde.org/buglist.cgi?bug_severity=wishlist&bug_status=UNCONFIRMED&bug_status=NEW&bug_status=ASSIGNED&bug_status=REOPENED&product=konsole).
-
-- hterm: JavaScript terminal implementation from Chromium. [Source](https://github.com/chromium/hterm), including [tests](https://github.com/chromium/hterm/blob/master/js/hterm_vt_tests.js), and [Google group](https://groups.google.com/a/chromium.org/forum/#!forum/chromium-hterm).
-
-- xterm: The grandfather of terminal emulators. [Source](https://invisible-island.net/datafiles/release/xterm.tar.gz).
-
-- Connectbot: Android SSH client. [Source](https://github.com/connectbot/connectbot)
-
-- Android Terminal Emulator: Android terminal app which Termux terminal handling is based on. Inactive. [Source](https://github.com/jackpal/Android-Terminal-Emulator).
-</details>
-
-##
-
-
-
-### Debugging
-
-You can help debug problems of the `Termux` app and its plugins by setting appropriate `logcat` `Log Level` in `Termux` app settings -> `<APP_NAME>` -> `Debugging` -> `Log Level` (Requires `Termux` app version `>= 0.118.0`). The `Log Level` defaults to `Normal` and log level `Verbose` currently logs additional information. Its best to revert log level to `Normal` after you have finished debugging since private data may otherwise be passed to `logcat` during normal operation and moreover, additional logging increases execution time.
-
-The plugin apps **do not execute the commands themselves** but send execution intents to `Termux` app, which has its own log level which can be set in `Termux` app settings -> `Termux` -> `Debugging` -> `Log Level`. So you must set log level for both `Termux` and the respective plugin app settings to get all the info.
-
-Once log levels have been set, you can run the `logcat` command in `Termux` app terminal to view the logs in realtime (`Ctrl+c` to stop) or use `logcat -d > logcat.txt` to take a dump of the log. You can also view the logs from a PC over `ADB`. For more information, check official android `logcat` guide [here](https://developer.android.com/studio/command-line/logcat).
-
-Moreover, users can generate termux files `stat` info and `logcat` dump automatically too with terminal's long hold options menu `More` -> `Report Issue` option and selecting `YES` in the prompt shown to add debug info. This can be helpful for reporting and debugging other issues. If the report generated is too large, then `Save To File` option in context menu (3 dots on top right) of `ReportActivity` can be used and the file viewed/shared instead.
-
-Users must post complete report (optionally without sensitive info) when reporting issues. Issues opened with **(partial) screenshots of error reports** instead of text will likely be automatically closed/deleted.
-
-##### Log Levels
-
-- `Off` - Log nothing.
-- `Normal` - Start logging error, warn and info messages and stacktraces.
-- `Debug` - Start logging debug messages.
-- `Verbose` - Start logging verbose messages.
-##
-
-
-
-## For Maintainers and Contributors
-
-The [termux-shared](termux-shared) library was added in [`v0.109`](https://github.com/termux/termux-app/releases/tag/v0.109). It defines shared constants and utils of the Termux app and its plugins. It was created to allow for the removal of all hardcoded paths in the Termux app. Some of the termux plugins are using this as well and rest will in future. If you are contributing code that is using a constant or a util that may be shared, then define it in `termux-shared` library if it currently doesn't exist and reference it from there. Update the relevant changelogs as well. Pull requests using hardcoded values **will/should not** be accepted. Termux app and plugin specific classes must be added under `com.termux.shared.termux` package and general classes outside it. The [`termux-shared` `LICENSE`](termux-shared/LICENSE.md) must also be checked and updated if necessary when contributing code. The licenses of any external library or code must be honoured.
-
-The main Termux constants are defined by [`TermuxConstants`](https://github.com/termux/termux-app/blob/master/termux-shared/src/main/java/com/termux/shared/termux/TermuxConstants.java) class. It also contains information on how to fork Termux or build it with your own package name. Changing the package name will require building the bootstrap zip packages and other packages with the new `$PREFIX`, check [Building Packages](https://github.com/termux/termux-packages/wiki/Building-packages) for more info.
-
-Check [Termux Libraries](https://github.com/termux/termux-app/wiki/Termux-Libraries) for how to import termux libraries in plugin apps and [Forking and Local Development](https://github.com/termux/termux-app/wiki/Termux-Libraries#forking-and-local-development) for how to update termux libraries for plugins.
-
-Commit messages **must** use [Conventional Commits](https://www.conventionalcommits.org) specs so that chagelogs can automatically be generated by the [`create-conventional-changelog`](https://github.com/termux/create-conventional-changelog) script, check its repo for further details on the spec. Use the following `types` as `Added: Add foo`, `Added|Fixed: Add foo and fix bar`, `Changed!: Change baz as a breaking change`, etc. You can optionally add a scope as well, like `Fixed(terminal): Some bug`. The space after `:` is necessary.
-
-- **Added** for new features.
-- **Changed** for changes in existing functionality.
-- **Deprecated** for soon-to-be removed features.
-- **Removed** for now removed features.
-- **Fixed** for any bug fixes.
-- **Security** in case of vulnerabilities.
-- **Docs** for updating documentation.
-
-Changelogs for releases are generated based on [Keep a Changelog](https://github.com/olivierlacan/keep-a-changelog) specs.
-
-The `versionName` in `build.gradle` files of Termux and its plugin apps must follow the [semantic version `2.0.0` spec](https://semver.org/spec/v2.0.0.html) in the format `major.minor.patch(-prerelease)(+buildmetadata)`. When bumping `versionName` in `build.gradle` files and when creating a tag for new releases on github, make sure to include the patch number as well, like `v0.1.0` instead of just `v0.1`. The `build.gradle` files and `attach_debug_apks_to_release` workflow validates the version as well and the build/attachment will fail if `versionName` does not follow the spec.
-##
-
-
-
-## Forking
-
-- Check [`TermuxConstants`](https://github.com/termux/termux-app/blob/master/termux-shared/src/main/java/com/termux/shared/termux/TermuxConstants.java) javadocs for instructions on what changes to make in the app to change package name.
-- You also need to recompile bootstrap zip for the new package name. Check [here](https://github.com/termux/termux-app/issues/1983) and [here](https://github.com/termux/termux-app/issues/2081#issuecomment-865280111) for experimental work on it.
-- Currently, not all plugins use `TermuxConstants` from `termux-shared` library and have hardcoded `com.termux` values and will need to be manually patched.
-- If forking termux plugins, check [Forking and Local Development](https://github.com/termux/termux-app/wiki/Termux-Libraries#forking-and-local-development) for info on how to use termux libraries for plugins.
+Журнал на главной хранит последние **25 команд, отправленных кнопкой из поля ввода**.
+Новые записи появляются сверху, самые старые вытесняются. Есть поиск,
+повторная вставка, копирование, сохранение в библиотеку и очистка с подтверждением.
+
+Простая вставка не создаёт запись. Прямой интерактивный ввод в терминал
+в этот журнал не попадает; он не заменяет историю Bash.
+
+В общих настройках есть **«Интерактивный ввод»**: он включает прямой ввод
+в окно терминала для редакторов, запросов пароля и других интерактивных программ.
+Нижнее поле ввода при этом остаётся доступным.
+
+## Пример: Codex в Ubuntu
+
+Предположим, Ubuntu и Codex уже установлены и настроены.
+Создайте сохранённую сессию:
+
+| Поле | Пример |
+| --- | --- |
+| Название | Codex — мой проект |
+| Среда | Ubuntu |
+| Рабочий каталог | `/root/projects/my-project` |
+| Команда 1 | `codex` |
+
+Приложение войдёт в Ubuntu, откроет указанный каталог и запустит Codex после
+готовности Bash. Не нужно добавлять `proot-distro login ubuntu` первым шагом
+при уже выбранной среде Ubuntu.
+
+Отдельный профиль «Сборка» может использовать каталог Android-проекта
+и команду `./gradlew assembleDebug`. Для длинной подготовки сохраните её
+в shell-скрипте и укажите запуск скрипта одним из шагов профиля.
+Все команды в этих примерах требуют заранее установленных инструментов.
+
+## Установка и обновление
+
+Релиз **v0.2.1**: `Termux-Jobs-v0.2.1-arm64.apk`, Android 7+,
+архитектура **ARM64 / arm64-v8a**. Контрольная сумма APK опубликована
+в файле `SHA256SUMS` рядом с ним.
+
+1. Скачайте APK из [релиза v0.2.1](https://github.com/HezeAI/termux-jobs/releases/tag/v0.2.1).
+2. Разрешите установку приложений для источника, из которого открываете APK.
+3. Установите приложение и откройте его. На чистой установке будет подготовлено
+   базовое окружение Termux.
+4. Установите нужные пакеты и инструменты под свои задачи.
+
+**Если уже установлен Termux Job’s с той же подписью**, устанавливайте новый APK
+поверх, не удаляя приложение. В v0.2.1 сохранены пакет и сертификат прежних
+сборок нашего форка, внутренний номер версии повышен до 1017.
+Данные приложения сохраняются при совместимом обновлении; резервная копия
+перед обновлением всё равно полезна.
+
+**Если установлен обычный Termux с другой подписью**, обновление поверх
+не поддерживается. Пакет форка — `com.termux`, поэтому параллельная установка
+с другим приложением `com.termux` также невозможна. Перед переходом сохраните
+свою среду: удаление Android-приложения удаляет его приватные данные.
+
+Ubuntu, Codex, Bridge, SDK/NDK и инструменты сборки **не входят в APK**.
+Авторизация, проекты и настроенное окружение не поставляются вместе с приложением.
+Совместимость отдельных приложений-дополнений Termux зависит от их подписи;
+не следует считать дополнения из другого источника совместимыми с этим форком.
+
+## Ограничения и границы проекта
+
+- Это не официальный выпуск Termux и не отдельный Linux-дистрибутив.
+- Терминальный эмулятор, PTY/JNI и базовое окружение происходят из Termux;
+  изменения форка сосредоточены на интерфейсе, командах и сессиях.
+- Сохранённая сессия восстанавливает параметры запуска, а не живой процесс.
+- Последовательный запуск требует поддерживаемой оболочки и корректных команд.
+- Ограничения Android по памяти, батарее и фоновым процессам сохраняются.
+- Рабочий стол экспериментального отдельного приложения не входит в v0.2.1.
+- В текущем выпуске нет встроенного общего чата или облачной синхронизации пресетов.
+
+## Исходники, сборка и участие
+
+Исходники опубликованного APK соответствуют тегу **`v0.2.1`**.
+Основная ветка разработки — `fork/base`.
+
+Для стандартной сборки нужны JDK 11, Android SDK Platform 30,
+Build Tools 30.0.3, NDK 22.1.7171670 и Gradle 7.2 через wrapper.
+После подготовки инструментов:
+
+```sh
+./scripts/check.sh
+./scripts/build-debug.sh
+```
+
+Для ARM64-хоста предусмотрен отдельный скрипт локальной сборки.
+Требования, переменные окружения, подпись и проверки описаны в [FORK.md](FORK.md)
+и [VALIDATION.md](docs/fork/VALIDATION.md).
+
+Ключ опубликованных APK не хранится в репозитории. Самостоятельная сборка
+с другим ключом и APK из CI не обновляют опубликованный APK с сохранением подписи.
+
+Сообщайте об ошибках через [GitHub Issues](https://github.com/HezeAI/termux-jobs/issues).
+Укажите версию приложения, Android, шаги воспроизведения и ожидаемый результат.
+Перед публикацией логов и скриншотов уберите токены, приватные ключи и другие секреты.
+
+## Документация и происхождение
+
+- [Подробности реализации и сборки](FORK.md).
+- [Архитектура и карта исходников](docs/fork/ARCHITECTURE.md).
+- [Проверки и результаты](docs/fork/VALIDATION.md).
+- [Описание релиза v0.2.1](docs/fork/RELEASE-v0.2.1.md).
+- [Авторство и лицензии компонентов](docs/fork/ATTRIBUTION.md).
+- [Сохранённый README оригинального Termux](docs/README-UPSTREAM.md) — справочная
+  документация upstream; сведения о его выпусках и подписи не описывают этот форк.
+
+Лицензия проекта — [GNU GPLv3 only](LICENSE.md), с сохранением лицензий
+компонентов и авторства оригинального Termux. Исходная история проекта сохранена.
+Termux Job’s не связан с официальной командой Termux.
