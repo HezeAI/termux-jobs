@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
 
 /** Small versioned workspace, separate from Termux settings and shell processes. */
 public final class WorkspaceStore {
-    public static final int MAX_RECENT_COMMANDS = 25;
+    public static final int MAX_RECENT_COMMANDS = 50;
     public static final class Command {
         public String id = UUID.randomUUID().toString();
         public String name = "", command = "", category = "Общее", directory = "";
@@ -49,6 +49,11 @@ public final class WorkspaceStore {
             return s;
         }
     }
+    public static final class Note {
+        public String id = UUID.randomUUID().toString();
+        public String name = "", text = "", category = "Общее";
+        public boolean favorite;
+    }
     public interface ErrorListener { void onError(String message); }
     public static final class RecentCommand {
         public final String command;
@@ -56,6 +61,7 @@ public final class WorkspaceStore {
         RecentCommand(String command, long sentAt) { this.command = command; this.sentAt = sentAt; }
     }
     public final List<Command> commands = new ArrayList<>();
+    public final List<Note> notes = new ArrayList<>();
     public final List<Session> sessions = new ArrayList<>();
     public final List<RecentCommand> recentCommands = new ArrayList<>();
     private final AtomicFile file;
@@ -109,24 +115,27 @@ public final class WorkspaceStore {
     void awaitWrites() throws Exception { writer.submit(() -> {}).get(10, java.util.concurrent.TimeUnit.SECONDS); }
     public void close() { writer.shutdown(); } // Queued atomic writes finish after Activity destruction.
     JSONObject encode() throws JSONException {
-        JSONObject root = new JSONObject().put("version", 4);
+        JSONObject root = new JSONObject().put("version", 5);
         JSONArray cs = new JSONArray(), ss = new JSONArray();
         for (Command c : commands) cs.put(new JSONObject().put("id", c.id).put("name", c.name)
             .put("command", c.command).put("category", c.category).put("directory", c.directory).put("favorite", c.favorite));
         for (Session s : sessions) ss.put(new JSONObject().put("id", s.id).put("name", s.name)
             .put("directory", s.directory).put("startup", s.startup).put("startup2", s.startup2).put("startup3", s.startup3).put("environment", s.environment).put("handle", s.handle)
             .put("updated", s.updated).put("saved", s.saved));
+        JSONArray ns = new JSONArray();
+        for (Note n : notes) ns.put(new JSONObject().put("id", n.id).put("name", n.name)
+            .put("text", n.text).put("category", n.category).put("favorite", n.favorite));
         JSONArray recent = new JSONArray();
         for (int i = 0; i < Math.min(recentCommands.size(), MAX_RECENT_COMMANDS); i++) {
             RecentCommand entry = recentCommands.get(i);
             recent.put(new JSONObject().put("command", entry.command).put("sentAt", entry.sentAt));
         }
-        return root.put("commands", cs).put("sessions", ss).put("recentCommands", recent);
+        return root.put("commands", cs).put("sessions", ss).put("notes", ns).put("recentCommands", recent);
     }
     void decode(String json) throws JSONException {
         JSONObject root = new JSONObject(json);
         int version = root.getInt("version");
-        if (version != 1 && version != 2 && version != 3 && version != 4) throw new JSONException("Unsupported workspace version");
+        if (version != 1 && version != 2 && version != 3 && version != 4 && version != 5) throw new JSONException("Unsupported workspace version");
         List<Command> cs = new ArrayList<>(); List<Session> ss = new ArrayList<>();
         JSONArray ca = root.getJSONArray("commands"), sa = root.getJSONArray("sessions");
         for (int i = 0; i < ca.length(); i++) {
@@ -142,6 +151,14 @@ public final class WorkspaceStore {
             if (!s.environment.equals("legacy") && !s.environment.equals("termux") && !s.environment.equals("ubuntu")) throw new JSONException("Unknown environment"); s.handle = o.optString("handle");
             s.updated = o.optLong("updated"); s.saved = o.optBoolean("saved", true); ss.add(s);
         }
+        List<Note> ns = new ArrayList<>();
+        JSONArray na = root.optJSONArray("notes");
+        if (version == 5 && na == null) throw new JSONException("Missing notes");
+        if (na != null) for (int i = 0; i < na.length(); i++) {
+            JSONObject o = na.getJSONObject(i); Note n = new Note();
+            n.id = validId(o.getString("id")); n.name = o.getString("name"); n.text = o.getString("text");
+            n.category = o.optString("category", "Общее"); n.favorite = o.optBoolean("favorite"); ns.add(n);
+        }
         List<RecentCommand> recent = new ArrayList<>();
         JSONArray history = root.optJSONArray("recentCommands");
         if (history != null) for (int i = 0; i < Math.min(history.length(), MAX_RECENT_COMMANDS); i++) {
@@ -153,7 +170,7 @@ public final class WorkspaceStore {
             }
         }
         commands.clear(); commands.addAll(cs); sessions.clear(); sessions.addAll(ss);
-        recentCommands.clear(); recentCommands.addAll(recent);
+        notes.clear(); notes.addAll(ns); recentCommands.clear(); recentCommands.addAll(recent);
     }
     private static String validId(String id) throws JSONException {
         try { return UUID.fromString(id).toString(); }

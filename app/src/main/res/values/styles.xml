@@ -51,4 +51,14 @@
         <item name="android:colorAccent">#79DFCD</item>
     </style>
 
+    <style name="WorkspaceDialog" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/workspace_dialog_background</item>
+        <item name="android:colorBackground">#111A20</item>
+        <item name="android:colorAccent">#79DFCD</item>
+        <item name="android:textColorPrimary">#EDF5F6</item>
+        <item name="android:textColorSecondary">#91A6AF</item>
+        <item name="android:windowMinWidthMajor">92%</item>
+        <item name="android:windowMinWidthMinor">92%</item>
+        <item name="android:windowSoftInputMode">adjustResize|stateAlwaysHidden</item>
+    </style>
 </resources>

@@ -167,17 +167,17 @@ public class WorkspaceStoreTest {
         WorkspaceStore reopened = new WorkspaceStore(context, errors::add);
         assertEquals("second", reopened.commands.get(0).name); reopened.close();
     }
-    @Test public void recentCommandsKeepNewest25PersistAndClearIndependently() throws Exception {
+    @Test public void recentCommandsKeepNewest50PersistAndClearIndependently() throws Exception {
         WorkspaceStore store = new WorkspaceStore(context, errors::add);
         store.commands.add(new WorkspaceStore.Command());
         store.sessions.add(new WorkspaceStore.Session());
-        for (int i = 0; i < 30; i++) store.recordCommand("echo " + i);
+        for (int i = 0; i < 55; i++) store.recordCommand("echo " + i);
         store.recordCommand("  ");
         store.awaitWrites(); store.close();
         WorkspaceStore reopened = new WorkspaceStore(context, errors::add);
-        assertEquals(25, reopened.recentCommands.size());
-        assertEquals("echo 29", reopened.recentCommands.get(0).command);
-        assertEquals("echo 5", reopened.recentCommands.get(24).command);
+        assertEquals(50, reopened.recentCommands.size());
+        assertEquals("echo 54", reopened.recentCommands.get(0).command);
+        assertEquals("echo 5", reopened.recentCommands.get(49).command);
         assertTrue(reopened.recentCommands.get(0).sentAt > 0);
         reopened.clearRecentCommands(); reopened.awaitWrites(); reopened.close();
         WorkspaceStore cleared = new WorkspaceStore(context, errors::add);
@@ -195,6 +195,31 @@ public class WorkspaceStoreTest {
         old.remove("recentCommands");
         store.decode(old.toString()); assertTrue(store.recentCommands.isEmpty());
         assertTrue(store.isWritable()); store.close();
+    }
+    @Test public void journalKeepsRepeatedCommandsAsSeparateSentEntries() throws Exception {
+        WorkspaceStore store = new WorkspaceStore(context, errors::add);
+        store.recordCommand("echo repeat"); store.recordCommand("echo other"); store.recordCommand("echo repeat");
+        store.save(); store.awaitWrites(); store.close();
+        WorkspaceStore restored = new WorkspaceStore(context, errors::add);
+        assertEquals(3, restored.recentCommands.size());
+        assertEquals("echo repeat", restored.recentCommands.get(0).command);
+        assertEquals("echo other", restored.recentCommands.get(1).command);
+        assertEquals("echo repeat", restored.recentCommands.get(2).command); restored.close();
+    }
+    @Test public void notesRoundTripAndLegacyLibraryUpgradePreserveCommandsAndSessions() throws Exception {
+        WorkspaceStore store = new WorkspaceStore(context, errors::add);
+        WorkspaceStore.Command command = new WorkspaceStore.Command(); command.command = "echo first\necho second"; store.commands.add(command);
+        WorkspaceStore.Session session = new WorkspaceStore.Session(); session.saved = true; store.sessions.add(session);
+        org.json.JSONObject old = store.encode().put("version", 4); old.remove("notes");
+        store.decode(old.toString()); assertTrue(store.notes.isEmpty());
+        WorkspaceStore.Note note = new WorkspaceStore.Note(); note.name = "Инструкция"; note.text = "Строка 1\nСтрока 2";
+        note.category = "Сборка"; note.favorite = true; store.notes.add(note); store.save(); store.awaitWrites(); store.close();
+        WorkspaceStore restored = new WorkspaceStore(context, errors::add);
+        assertEquals(5, restored.encode().getInt("version")); assertEquals(1, restored.notes.size());
+        assertEquals(note.id, restored.notes.get(0).id); assertEquals(note.text, restored.notes.get(0).text);
+        assertEquals("Сборка", restored.notes.get(0).category); assertTrue(restored.notes.get(0).favorite);
+        assertEquals(command.command, restored.commands.get(0).command); assertEquals(session.id, restored.sessions.get(0).id);
+        restored.close(); assertTrue(errors.isEmpty());
     }
     @Test public void corruptOrFutureFileIsNeverOverwritten() throws Exception {
         File file = new File(context.getFilesDir(), "workspace-v1.json");

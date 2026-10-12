@@ -53,8 +53,8 @@ public final class WorkspaceController {
     private final FrameLayout content;
     private final ExecutorService reader = Executors.newSingleThreadExecutor();
     private Screen screen = Screen.HOME;
-    private String query = "", journalQuery = "", commandCategory = "";
-    private boolean favorites, savedOnly, closed, creating;
+    private String query = "", journalQuery = "", commandCategory = "", noteCategory = "";
+    private boolean noteFavorites, favorites, savedOnly, closed, creating;
     private int toolbarVisibility = View.GONE;
     private boolean interactiveInput;
     private float swipeStart;
@@ -160,8 +160,12 @@ public final class WorkspaceController {
     private void show(Screen target, boolean animate) {
         if (screen == Screen.TERMINAL && target != Screen.TERMINAL) {
             toolbarVisibility = activity.getTerminalToolbarViewPager().getVisibility();
-            InputMethodManager keyboard = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
-            keyboard.hideSoftInputFromWindow(activity.getTerminalView().getWindowToken(), 0);
+        }
+        if (screen != target) {
+            View focused = activity.getCurrentFocus();
+            if (focused != null) ((InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE))
+                .hideSoftInputFromWindow(focused.getWindowToken(), 0);
+            header.setFocusableInTouchMode(true); header.requestFocus();
         }
         screen = target;
         boolean terminal = screen == Screen.TERMINAL;
@@ -198,24 +202,25 @@ public final class WorkspaceController {
         action.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd), shape(Color.BLACK, Color.BLACK, 10), null));
         top.addView(action, new LinearLayout.LayoutParams(dp(48), dp(48)));
         header.addView(top, new LinearLayout.LayoutParams(-1, dp(48)));
-        LinearLayout.LayoutParams navigationParams = new LinearLayout.LayoutParams(-1, dp(56));
+        LinearLayout.LayoutParams navigationParams = new LinearLayout.LayoutParams(-1, -2);
         navigationParams.topMargin = dp(4);
         header.addView(navigation, navigationParams);
         if (screen == Screen.COMMANDS || screen == Screen.SESSIONS) {
             LinearLayout tools = row(); tools.setPadding(dp(8), dp(26), dp(8), dp(6));
-            TextView title = text(screen == Screen.COMMANDS ? "Команды" : "Сессии", 17, TEXT);
-            title.setTypeface(null, Typeface.BOLD);
-            tools.addView(title, new LinearLayout.LayoutParams(screen == Screen.COMMANDS ? -2 : 0, -2, screen == Screen.COMMANDS ? 0 : 1));
+            if (screen == Screen.SESSIONS) {
+                TextView title = text("Сессии", 17, TEXT); title.setTypeface(null, Typeface.BOLD);
+                tools.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
+            }
             if (screen == Screen.COMMANDS) {
-                EditText search = field("Поиск…", query, false);
-                search.setContentDescription("Поиск команд"); search.setTextSize(13);
+                EditText search = field("Поиск команд и/или заметок", query, false);
+                search.setContentDescription("Поиск команд и заметок"); search.setTextSize(13);
                 search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
                     | android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI);
                 android.graphics.drawable.Drawable icon = activity.getDrawable(R.drawable.workspace_search).mutate();
                 icon.setTint(MUTED); icon.setBounds(0, 0, dp(18), dp(18));
                 search.setCompoundDrawables(icon, null, null, null); search.setCompoundDrawablePadding(dp(6));
-                LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(0, dp(48), 1);
-                searchParams.setMarginStart(dp(10)); searchParams.setMarginEnd(dp(6)); tools.addView(search, searchParams);
+                LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(0, -2, 1);
+                search.setMinHeight(dp(48)); tools.addView(search, searchParams);
                 search.addTextChangedListener(new TextWatcher() {
                     public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
                     public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -232,7 +237,8 @@ public final class WorkspaceController {
             }
             TextView add = button("+", true, () -> { if (screen == Screen.COMMANDS) editCommand(null); else editSession(null); });
             add.setContentDescription(screen == Screen.COMMANDS ? "Новая команда" : "Новая сессия");
-            tools.addView(add, new LinearLayout.LayoutParams(dp(48), dp(48))); header.addView(tools);
+            if (screen == Screen.SESSIONS) tools.addView(add, new LinearLayout.LayoutParams(dp(48), dp(48)));
+            header.addView(tools);
         }
     }
     private String currentDirectory() {
@@ -246,11 +252,11 @@ public final class WorkspaceController {
     }
     private void renderNavigation() {
         navigation.removeAllViews(); navigation.setPadding(dp(8), 0, dp(8), 0);
-        String[] labels = {"⌂\nГлавная", ">_\nКоманды", "▣\nТерминал"};
+        String[] labels = {"⌂\nГлавная", ">_\nКоманды/Заметки", "▣\nТерминал"};
         Screen[] targets = {Screen.HOME, Screen.COMMANDS, Screen.TERMINAL};
         for (int i = 0; i < targets.length; i++) {
             Screen target = targets[i]; TextView nav = button(labels[i], false, () -> show(target, true));
-            nav.setTextSize(11); nav.setPadding(0, dp(4), 0, dp(4)); nav.setMinWidth(0);
+            nav.setTextSize(11); nav.setPadding(0, dp(4), 0, dp(4)); nav.setMinWidth(0); nav.setMinHeight(dp(56)); nav.setMaxLines(2);
             int resource = target == Screen.HOME ? R.drawable.workspace_home
                 : target == Screen.COMMANDS ? R.drawable.workspace_library : R.drawable.workspace_commands;
             android.graphics.drawable.Drawable icon = activity.getDrawable(resource).mutate();
@@ -259,7 +265,7 @@ public final class WorkspaceController {
             tintButton(nav, target == screen ? ACCENT : MUTED);
             nav.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),
                 shape(target == screen ? 0xff102522 : PANEL, target == screen ? ACCENT : BORDER, 12), null));
-            LinearLayout.LayoutParams tileParams = new LinearLayout.LayoutParams(0, dp(56), 1);
+            LinearLayout.LayoutParams tileParams = new LinearLayout.LayoutParams(0, -2, 1);
             if (i < targets.length - 1) tileParams.setMarginEnd(dp(8));
             navigation.addView(nav, tileParams);
         }
@@ -305,8 +311,11 @@ public final class WorkspaceController {
         if (screen == Screen.TERMINAL) return;
         content.removeAllViews();
         LinearLayout body = column(); body.setPadding(dp(16), 0, dp(16), dp(12));
-        if (screen == Screen.HOME) {
-            content.addView(body, new android.widget.FrameLayout.LayoutParams(-1, -1)); home(body);
+        if (screen == Screen.HOME || screen == Screen.COMMANDS) {
+            AdaptiveWorkspaceLayout viewport = new AdaptiveWorkspaceLayout(activity);
+            viewport.setContentDescription("Адаптивная область списков");
+            viewport.addView(body); content.addView(viewport, new android.widget.FrameLayout.LayoutParams(-1, -1));
+            if (screen == Screen.HOME) home(body); else commands(body);
         } else {
             ScrollView scroll = new ScrollView(activity); scroll.setFillViewport(true);
             scroll.addView(body); content.addView(scroll);
@@ -321,11 +330,11 @@ public final class WorkspaceController {
         });
         EditText search = field("Поиск по журналу", journalQuery, false);
         search.setContentDescription("Поиск по журналу");
-        LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, dp(48));
-        searchParams.setMargins(0, 0, 0, dp(12)); body.addView(search, searchParams);
+        LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, -2);
+        search.setMinHeight(dp(48)); searchParams.setMargins(0, 0, 0, dp(12)); body.addView(search, searchParams);
         ScrollView journal = new ScrollView(activity); journal.setFillViewport(true);
         journal.setBackground(shape(PANEL, BORDER, 16)); journal.setClipToOutline(true);
-        journal.setContentDescription("Журнал последних 25 команд");
+        journal.setContentDescription("Журнал последних 50 команд");
         journal.setOnTouchListener((v, event) -> {
             v.getParent().requestDisallowInterceptTouchEvent(event.getActionMasked() != MotionEvent.ACTION_UP
                 && event.getActionMasked() != MotionEvent.ACTION_CANCEL);
@@ -373,44 +382,68 @@ public final class WorkspaceController {
             String time = recent.sentAt > 0 ? new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
                 .format(new java.util.Date(recent.sentAt)) : "Ранее";
             TextView timestamp = text(time, 11, MUTED); timestamp.setPadding(0, dp(6), 0, 0); labels.addView(timestamp);
-            Runnable insert = () -> { WorkspaceStore.Command c = new WorkspaceStore.Command(); c.command = recent.command; insertCommand(c); };
+            Runnable insert = () -> recentMenu(recent);
             entry.setOnClickListener(v -> insert.run());
             labels.setOnClickListener(v -> insert.run()); card.setOnClickListener(v -> insert.run());
             card.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
-            TextView more = button("⋮", false, () -> recentMenu(recent));
-            more.setContentDescription("Действия с записью " + recent.command); card.addView(more);
         }
         if (shown == 0 && !store.recentCommands.isEmpty()) entries.addView(text("Ничего не найдено", 14, MUTED));
         count.setText(store.recentCommands.size() + " / " + WorkspaceStore.MAX_RECENT_COMMANDS
             + (journalQuery.isEmpty() ? "" : " · найдено: " + shown));
     }
     private void recentMenu(WorkspaceStore.RecentCommand recent) {
-        ((InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE))
-            .hideSoftInputFromWindow(content.getWindowToken(), 0);
-        Dialog sheet = new Dialog(activity); sheet.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
-        LinearLayout body = column(); body.setPadding(dp(20), dp(16), dp(20), dp(16));
-        body.setBackground(shape(PANEL, BORDER, 18));
-        TextView title = text(recent.command, 15, TEXT); title.setTypeface(Typeface.MONOSPACE);
-        title.setMaxLines(3); title.setEllipsize(TextUtils.TruncateAt.END); body.addView(title);
-        TextView insert = button("Вставить в терминал", false, () -> {
-            sheet.dismiss(); WorkspaceStore.Command c = new WorkspaceStore.Command(); c.command = recent.command; insertCommand(c);
+        hideDialogKeyboard();
+        LinearLayout body = previewBody(recent.command, true);
+        TextView time = text(recent.sentAt > 0 ? new java.text.SimpleDateFormat("dd.MM · HH:mm", java.util.Locale.getDefault())
+            .format(new java.util.Date(recent.sentAt)) : "Ранее", 12, MUTED);
+        time.setPadding(0, 0, 0, dp(10)); body.addView(time, 0);
+        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle("Недавняя команда")
+            .setView(formScroll(body)).setPositiveButton("Закрыть", null).create();
+        previewAction(body, "Вставить в терминал", R.drawable.workspace_commands, () -> {
+            dialog.dismiss(); WorkspaceStore.Command command = new WorkspaceStore.Command(); command.command = recent.command; insertCommand(command);
         });
-        TextView save = button("Сохранить в команды", false, () -> { sheet.dismiss(); editCommand(null, recent.command); });
-        save.setTextColor(ACCENT);
-        TextView copy = button("Скопировать", false, () -> {
+        previewAction(body, "Сохранить в команды", R.drawable.workspace_save, () -> { dialog.dismiss(); editCommand(null, recent.command); });
+        previewAction(body, "Скопировать", R.drawable.workspace_copy, () -> {
             ((android.content.ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE))
                 .setPrimaryClip(android.content.ClipData.newPlainText("Команда", recent.command));
-            sheet.dismiss(); activity.showToast("Команда скопирована", false);
+            dialog.dismiss(); activity.showToast("Команда скопирована", false);
         });
-        for (TextView action : new TextView[]{insert, save, copy}) {
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(52)); params.setMargins(0, dp(8), 0, 0);
-            body.addView(action, params);
-        }
-        sheet.setContentView(body); sheet.setCanceledOnTouchOutside(true); sheet.show();
-        sheet.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
-        sheet.getWindow().setLayout(-1, -2); sheet.getWindow().setGravity(Gravity.BOTTOM);
-        android.view.WindowManager.LayoutParams params = sheet.getWindow().getAttributes(); params.y = dp(68);
-        sheet.getWindow().setAttributes(params);
+        dialog.show();
+    }
+    private void hideDialogKeyboard() {
+        ((InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE))
+            .hideSoftInputFromWindow(content.getWindowToken(), 0);
+    }
+    private LinearLayout previewBody(String value, boolean code) {
+        LinearLayout body = column(); ScrollView pane = new ScrollView(activity); pane.setFillViewport(true);
+        pane.setContentDescription(code ? "Полный текст команды" : "Полный текст заметки");
+        pane.setBackground(shape(0xff0b1319, BORDER, 12)); pane.setClipToOutline(true);
+        TextView full = text(value, 14, TEXT); full.setPadding(dp(14), dp(14), dp(14), dp(14));
+        full.setTextIsSelectable(true); if (code) full.setTypeface(Typeface.MONOSPACE);
+        pane.addView(full); pane.setOnTouchListener((v, event) -> {
+            v.getParent().requestDisallowInterceptTouchEvent(event.getActionMasked() != MotionEvent.ACTION_UP
+                && event.getActionMasked() != MotionEvent.ACTION_CANCEL); return false;
+        });
+        int available = activity.getResources().getDisplayMetrics().heightPixels;
+        int height = Math.min(dp(240), Math.max(dp(96), available / 3));
+        body.addView(pane, new LinearLayout.LayoutParams(-1, height)); return body;
+    }
+    private void previewAction(LinearLayout body, String label, int icon, Runnable click) {
+        TextView action = WorkspaceDialogs.action(activity, label, icon);
+        action.setOnClickListener(v -> click.run()); LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.topMargin = dp(10); body.addView(action, params);
+    }
+    private void previewMetadata(LinearLayout body, String category, boolean favorite) {
+        TextView label = text(category + (favorite ? "   ★" : ""), 12, favorite ? ACCENT : MUTED);
+        label.setPadding(0, 0, 0, dp(12)); body.addView(label, 0);
+    }
+    private void openCommand(WorkspaceStore.Command command) {
+        hideDialogKeyboard(); LinearLayout body = previewBody(command.command, true);
+        previewMetadata(body, command.category, command.favorite);
+        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(command.name)
+            .setView(formScroll(body)).setPositiveButton("Закрыть", null).create();
+        previewAction(body, "Вставить в терминал", R.drawable.workspace_commands, () -> { dialog.dismiss(); insertCommand(command); });
+        dialog.show();
     }
     private void chips(LinearLayout body, String[] options, String selected, java.util.function.Consumer<String> click) {
         HorizontalScrollView scroller = new HorizontalScrollView(activity); scroller.setHorizontalScrollBarEnabled(false);
@@ -426,27 +459,127 @@ public final class WorkspaceController {
     }
     private void commands(LinearLayout body) {
         if (!commandCategory.isEmpty() && !commandCategories().contains(commandCategory)) commandCategory = "";
-        HorizontalScrollView filters = new HorizontalScrollView(activity); filters.setHorizontalScrollBarEnabled(false);
-        LinearLayout items = row(); items.setPadding(0, dp(10), 0, dp(10));
-        for (String option : new String[]{"Все команды", "Избранное"}) {
-            TextView chip = button(option, favorites == option.equals("Избранное"), () -> {
-                favorites = option.equals("Избранное"); renderContent();
-            });
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2); params.setMarginEnd(dp(8)); items.addView(chip, params);
-        }
-        TextView category = button((commandCategory.isEmpty() ? "Категория" : commandCategory) + " ▾", !commandCategory.isEmpty(), this::chooseCommandCategory);
-        category.setContentDescription("Фильтр категорий команд"); items.addView(category);
-        filters.addView(items); body.addView(filters);
-        LinearLayout entries = column(); entries.setPadding(dp(12), dp(12), dp(12), dp(12));
-        entries.setBackground(shape(PANEL, BORDER, 16)); entries.setClipToOutline(true);
-        entries.setContentDescription("Список сохранённых команд"); body.addView(entries);
+        if (!noteCategory.isEmpty() && !noteCategories().contains(noteCategory)) noteCategory = "";
+        libraryFilters(body, false);
+        LinearLayout commandEntries = libraryPanel(body, "Список сохранённых команд");
         int count = 0;
         for (WorkspaceStore.Command c : store.commands) {
             if ((!favorites || c.favorite) && (commandCategory.isEmpty() || commandCategory.equals(c.category))
-                && matches(c.name + " " + c.command + " " + c.category)) { commandCard(entries, c); count++; }
+                && matches(c.name + " " + c.command + " " + c.category)) { commandCard(commandEntries, c); count++; }
         }
-        if (count == 0) empty(entries, "Команд пока нет", "Нажмите +, чтобы сохранить команду, или измените фильтры.");
-        TextView hint = text("Выберите команду, чтобы вставить её в поле текущего терминала. Отправьте её самостоятельно.", 12, MUTED); hint.setPadding(0, dp(16), 0, 0); body.addView(hint);
+        if (count == 0) empty(commandEntries, "Команд пока нет", "Нажмите +, чтобы сохранить команду, или измените фильтры.");
+        libraryFilters(body, true);
+        LinearLayout noteEntries = libraryPanel(body, "Список сохранённых заметок"); count = 0;
+        for (WorkspaceStore.Note n : store.notes) {
+            if ((!noteFavorites || n.favorite) && (noteCategory.isEmpty() || noteCategory.equals(n.category))
+                && matches(n.name + " " + n.text + " " + n.category)) { noteCard(noteEntries, n); count++; }
+        }
+        if (count == 0) empty(noteEntries, "Заметок пока нет", "Нажмите +, чтобы сохранить заметку, или измените фильтры.");
+    }
+    private void libraryFilters(LinearLayout body, boolean notes) {
+        LinearLayout line = row(); line.setPadding(0, dp(10), 0, dp(10));
+        line.setContentDescription(notes ? "Фильтры заметок" : "Фильтры команд");
+        LinearLayout items = row();
+        String all = notes ? "Все заметки" : "Все команды";
+        for (String option : new String[]{all, "Избранное"}) {
+            TextView chip = button(option, (notes ? noteFavorites : favorites) == option.equals("Избранное"), () -> {
+                if (notes) noteFavorites = option.equals("Избранное"); else favorites = option.equals("Избранное"); renderContent();
+            });
+            compactFilter(chip);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1); params.setMarginEnd(dp(4)); items.addView(chip, params);
+        }
+        String selected = notes ? noteCategory : commandCategory;
+        TextView category = button((selected.isEmpty() ? "Категории" : selected) + " ▾", !selected.isEmpty(), () -> {
+            if (notes) chooseNoteCategory(); else chooseCommandCategory();
+        });
+        category.setContentDescription(notes ? "Фильтр категорий заметок" : "Фильтр категорий команд");
+        compactFilter(category);
+        items.addView(category, new LinearLayout.LayoutParams(0, -2, 1));
+        line.addView(items, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView add = button("+", true, () -> { if (notes) editNote(null); else editCommand(null); });
+        add.setContentDescription(notes ? "Новая заметка" : "Новая команда");
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(48), dp(48)); params.setMarginStart(dp(8));
+        line.addView(add, params); body.addView(line);
+    }
+    private void compactFilter(TextView filter) {
+        filter.setPadding(dp(4), dp(8), dp(4), dp(8));
+        filter.setMinWidth(0); filter.setMaxLines(2);
+        filter.setEllipsize(TextUtils.TruncateAt.END);
+    }
+    private LinearLayout libraryPanel(LinearLayout body, String description) {
+        ScrollView panel = new ScrollView(activity); panel.setFillViewport(true);
+        panel.setBackground(shape(PANEL, BORDER, 16)); panel.setClipToOutline(true); panel.setContentDescription(description);
+        panel.setOnTouchListener((v, event) -> {
+            v.getParent().requestDisallowInterceptTouchEvent(event.getActionMasked() != MotionEvent.ACTION_UP
+                && event.getActionMasked() != MotionEvent.ACTION_CANCEL); return false;
+        });
+        LinearLayout entries = column(); entries.setPadding(dp(12), dp(12), dp(12), dp(12));
+        panel.addView(entries); body.addView(panel, new LinearLayout.LayoutParams(-1, 0, 1)); return entries;
+    }
+    private List<String> noteCategories() {
+        Set<String> names = new LinkedHashSet<>();
+        for (WorkspaceStore.Note note : store.notes) if (!note.category.isEmpty()) names.add(note.category);
+        return new ArrayList<>(names);
+    }
+    private void chooseNoteCategory() {
+        List<String> categories = noteCategories();
+        List<String> labels = new ArrayList<>(); labels.add("Все категории"); labels.addAll(categories);
+        int selected = noteCategory.isEmpty() ? 0 : categories.indexOf(noteCategory) + 1;
+        WorkspaceDialogs.builder(activity).setTitle("Категории заметок")
+            .setSingleChoiceItems(labels.toArray(new String[0]), Math.max(0, selected), (dialog, which) -> {
+                noteCategory = which == 0 ? "" : categories.get(which - 1); dialog.dismiss(); renderContent();
+            }).setNegativeButton("Отмена", null).show();
+    }
+    private void noteCard(LinearLayout parent, WorkspaceStore.Note note) {
+        LinearLayout card = card(parent); card.setBackground(shape(Color.BLACK, BORDER, 12));
+        cardLabels(card, note.name, note.text, note.category + (note.favorite ? "  ★" : ""), false);
+        ((TextView) card.getChildAt(0)).setText("≡");
+        card.setContentDescription("Заметка " + note.name); card.setOnClickListener(v -> openNote(note));
+        TextView more = button("⋮", false, () -> noteMenu(note));
+        more.setContentDescription("Действия с заметкой " + note.name); card.addView(more);
+    }
+    private void openNote(WorkspaceStore.Note note) {
+        hideDialogKeyboard(); LinearLayout body = previewBody(note.text, false); previewMetadata(body, note.category, note.favorite);
+        WorkspaceDialogs.builder(activity).setTitle(note.name).setView(formScroll(body)).setPositiveButton("Закрыть", null).show();
+    }
+    private LinearLayout contextHeading(String name, String command, String category, boolean favorite) {
+        LinearLayout heading = column(); heading.setPadding(dp(20), dp(18), dp(20), dp(12));
+        TextView title = text(name, 20, TEXT); title.setTypeface(null, Typeface.BOLD); heading.addView(title);
+        if (!command.isEmpty()) {
+            TextView preview = text(command, 12, MUTED); preview.setTypeface(Typeface.MONOSPACE);
+            preview.setMaxLines(2); preview.setEllipsize(TextUtils.TruncateAt.END);
+            preview.setPadding(0, dp(8), 0, 0); heading.addView(preview);
+        }
+        TextView label = text(category + (favorite ? "   ★" : ""), 12, MUTED);
+        label.setPadding(0, dp(8), 0, 0); heading.addView(label); return heading;
+    }
+    private void noteMenu(WorkspaceStore.Note note) {
+        WorkspaceDialogs.builder(activity).setCustomTitle(contextHeading(note.name, "", note.category, note.favorite))
+            .setItems(new String[]{note.favorite ? "Убрать из избранного" : "В избранное", "Редактировать", "Удалить"}, (d, which) -> {
+                if (!store.isWritable()) { activity.showToast("Библиотека недоступна для записи", true); return; }
+                if (which == 0) { note.favorite = !note.favorite; store.save(); renderContent(); }
+                else if (which == 1) editNote(note);
+                else confirm("Удалить заметку «" + note.name + "»?", () -> { store.notes.remove(note); store.save(); renderContent(); });
+            }).setNegativeButton("Закрыть", null).show();
+    }
+    private void editNote(WorkspaceStore.Note existing) {
+        if (!store.isWritable()) { activity.showToast("Библиотека недоступна для записи", true); return; }
+        WorkspaceStore.Note draft = existing == null ? new WorkspaceStore.Note() : existing;
+        LinearLayout form = column(); EditText name = labeled(form, "Название", draft.name, false);
+        EditText text = labeled(form, "Текст заметки", draft.text, true);
+        EditText category = labeled(form, "Категория", draft.category, false);
+        CheckBox favorite = new CheckBox(activity); favorite.setText("Добавить в избранное"); favorite.setTextColor(TEXT);
+        favorite.setChecked(draft.favorite); form.addView(favorite);
+        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(existing == null ? "Новая заметка" : "Редактировать заметку")
+            .setView(formScroll(form)).setPositiveButton("Сохранить", null).setNegativeButton("Отмена", null).create();
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            if (name.getText().toString().trim().isEmpty()) { name.setError("Укажите название"); return; }
+            if (text.getText().toString().trim().isEmpty()) { text.setError("Укажите текст"); return; }
+            draft.name = name.getText().toString().trim(); draft.text = text.getText().toString();
+            draft.category = category.getText().toString().trim(); if (draft.category.isEmpty()) draft.category = "Общее";
+            draft.favorite = favorite.isChecked(); if (existing == null) store.notes.add(draft);
+            store.save(); dialog.dismiss(); renderContent();
+        })); dialog.show();
     }
     private List<String> commandCategories() {
         Set<String> names = new LinkedHashSet<>();
@@ -457,7 +590,7 @@ public final class WorkspaceController {
         List<String> categories = commandCategories();
         List<String> labels = new ArrayList<>(); labels.add("Все категории"); labels.addAll(categories);
         int selected = commandCategory.isEmpty() ? 0 : categories.indexOf(commandCategory) + 1;
-        new AlertDialog.Builder(activity).setTitle("Категории команд")
+        WorkspaceDialogs.builder(activity).setTitle("Категории команд")
             .setSingleChoiceItems(labels.toArray(new String[0]), Math.max(0, selected), (dialog, which) -> {
                 commandCategory = which == 0 ? "" : categories.get(which - 1);
                 dialog.dismiss(); renderContent();
@@ -496,7 +629,7 @@ public final class WorkspaceController {
     private void commandCard(LinearLayout parent, WorkspaceStore.Command c) {
         LinearLayout card = card(parent); card.setBackground(shape(Color.BLACK, BORDER, 12));
         cardLabels(card, c.name, c.command, c.category + (c.favorite ? "  ★" : ""), false);
-        card.setOnClickListener(v -> insertCommand(c));
+        card.setOnClickListener(v -> openCommand(c));
         TextView more = button("⋮", false, () -> commandMenu(c)); more.setContentDescription("Действия с командой " + c.name); card.addView(more);
     }
     private void sessionCard(LinearLayout parent, WorkspaceStore.Session s) {
@@ -509,7 +642,7 @@ public final class WorkspaceController {
     }
     private void search() {
         EditText input = field("Название, команда или каталог", query, false);
-        new AlertDialog.Builder(activity).setTitle("Поиск").setView(input)
+        WorkspaceDialogs.builder(activity).setTitle("Поиск").setView(input)
             .setPositiveButton("Найти", (d, which) -> { query = input.getText().toString().trim(); renderContent(); })
             .setNegativeButton("Отмена", null).show();
     }
@@ -538,7 +671,7 @@ public final class WorkspaceController {
         EditText command = labeled(form, "Команда", draft.command, true);
         EditText categoryInput = labeled(form, "Категория", draft.category, false);
         CheckBox favorite = new CheckBox(activity); favorite.setText("Добавить в избранное"); favorite.setTextColor(TEXT); favorite.setChecked(draft.favorite); form.addView(favorite);
-        AlertDialog dialog = new AlertDialog.Builder(activity).setTitle(existing == null ? "Новая команда" : "Редактировать команду")
+        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(existing == null ? "Новая команда" : "Редактировать команду")
             .setView(formScroll(form)).setPositiveButton("Сохранить", null).setNegativeButton("Отмена", null).create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             if (name.getText().toString().trim().isEmpty()) { name.setError("Укажите название"); return; }
@@ -573,7 +706,7 @@ public final class WorkspaceController {
             environment.setText("Среда запуска: " + environmentNames[Math.max(0, index)]);
         };
         updateEnvironment.run(); form.addView(environment);
-        environment.setOnClickListener(v -> new AlertDialog.Builder(activity).setTitle("Среда запуска")
+        environment.setOnClickListener(v -> WorkspaceDialogs.builder(activity).setTitle("Среда запуска")
             .setSingleChoiceItems(environmentNames, java.util.Arrays.asList(environments).indexOf(chosenEnvironment[0]), (d, which) -> {
                 chosenEnvironment[0] = environments[which];
                 if (which == 2 && directory.getText().toString().equals(TermuxConstants.TERMUX_HOME_DIR_PATH)) directory.setText("/root");
@@ -596,8 +729,9 @@ public final class WorkspaceController {
         form.addView(addCommand);
         TextView hint = text("Termux / Ubuntu: команды запускаются после готовности Bash в выбранной среде. Вход в Ubuntu выполняется автоматически — команду proot-distro login вводить не нужно. До трёх шагов, при ошибке остановка. После запуска Codex следующие шаги ждут его выхода.", 12, MUTED);
         hint.setPadding(0, dp(16), 0, 0); form.addView(hint);
-        AlertDialog dialog = new AlertDialog.Builder(activity).setTitle(existing == null ? "Новая сессия" : "Настройки сессии")
+        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(existing == null ? "Новая сессия" : "Настройки сессии")
             .setView(formScroll(form)).setPositiveButton(existing == null && launchAfterSave ? "Создать и запустить" : "Сохранить", null).setNegativeButton("Отмена", null).create();
+        if (existing == null && launchAfterSave) dialog.setButton(AlertDialog.BUTTON_NEUTRAL, "Сохранённые", (d, w) -> chooseSavedSession());
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             if (name.getText().toString().trim().isEmpty()) { name.setError("Укажите название"); return; }
             if (!validDirectoryInput(directory)) return;
@@ -612,11 +746,11 @@ public final class WorkspaceController {
         })); dialog.show();
     }
     private void commandMenu(WorkspaceStore.Command c) {
-        new AlertDialog.Builder(activity).setTitle(c.name).setItems(new String[]{c.favorite ? "Убрать из избранного" : "В избранное", "Редактировать", "Удалить"}, (d, which) -> {
+        WorkspaceDialogs.builder(activity).setCustomTitle(contextHeading(c.name, c.command, c.category, c.favorite)).setItems(new String[]{c.favorite ? "Убрать из избранного" : "В избранное", "Редактировать", "Удалить"}, (d, which) -> {
             if (which == 0) { c.favorite = !c.favorite; store.save(); renderContent(); }
             else if (which == 1) editCommand(c);
             else confirm("Удалить команду «" + c.name + "»?", () -> { store.commands.remove(c); store.save(); renderContent(); });
-        }).show();
+        }).setNegativeButton("Закрыть", null).show();
     }
     private void sessionMenu(WorkspaceStore.Session s) { sessionMenu(s, false); }
     private void sessionMenu(WorkspaceStore.Session s, boolean terminalTab) {
@@ -624,7 +758,7 @@ public final class WorkspaceController {
         if (terminalTab && !s.saved) actions.add("Сохранить сессию");
         if (terminalTab) Collections.addAll(actions, "Перезапустить", "Настройки", "Закрыть сессию");
         else Collections.addAll(actions, "Закрыть сессию", "Настройки", "Удалить сессию");
-        new AlertDialog.Builder(activity).setTitle(s.name).setItems(actions.toArray(new String[0]), (d, which) -> {
+        WorkspaceDialogs.builder(activity).setTitle(s.name).setItems(actions.toArray(new String[0]), (d, which) -> {
             String action = actions.get(which);
             if (action.equals("Сохранить сессию")) {
                 if (!store.isWritable()) { activity.showToast("Библиотека недоступна для записи", true); return; }
@@ -647,29 +781,68 @@ public final class WorkspaceController {
                 if (live != null && live.isRunning()) { activity.showToast("Сначала остановите сессию", true); return; }
                 if (live != null) activity.getTermuxTerminalSessionClient().removeFinishedSession(live);
                 store.sessions.remove(s); store.save();
-                File dir = SessionShell.directory(activity.getFilesDir(), s.id);
-                reader.execute(() -> { File[] files = dir.listFiles(); if (files != null) for (File f : files) f.delete(); dir.delete(); });
+                eraseSessionFiles(s);
                 renderContent();
             });
         }).show();
     }
+    private void chooseSavedSession() {
+        List<WorkspaceStore.Session> saved = new ArrayList<>();
+        for (WorkspaceStore.Session session : sortedSessions()) if (session.saved) saved.add(session);
+        AlertDialog.Builder picker = WorkspaceDialogs.builder(activity).setTitle("Сохранённые сессии");
+        if (saved.isEmpty()) picker.setMessage("Сохранённых сессий нет. Удерживайте вкладку терминала и выберите «Сохранить сессию».");
+        else {
+            String[] names = new String[saved.size()];
+            for (int i = 0; i < names.length; i++) names[i] = saved.get(i).name;
+            picker.setItems(names, (d, which) -> launch(saved.get(which)));
+        }
+        picker.setNegativeButton("Закрыть", null).show();
+    }
     private void closeSession(WorkspaceStore.Session profile) {
         TerminalSession target = liveFor(profile);
         if (target == null) { activity.showToast("Сессия уже закрыта", false); return; }
-        new AlertDialog.Builder(activity).setTitle("Закрыть сессию «" + profile.name + "»?")
-            .setMessage("Процесс будет остановлен, вкладка терминала закрыта. Сохранённые настройки и история останутся.")
-            .setNegativeButton("Отмена", null).setPositiveButton("Закрыть сессию", (d, which) -> {
-                if (liveFor(profile) != target) return;
-                if (target.isRunning() && target.getPid() <= 0) {
-                    activity.showToast("Дождитесь запуска сессии", false); return;
-                }
-                store.save(); pendingRestarts.remove(target.mHandle);
-                if (target.isRunning()) { pendingCloses.add(target.mHandle); target.finishIfRunning(); }
-                else { activity.getTermuxTerminalSessionClient().removeFinishedSession(target); refresh(); }
-            }).show();
+        if (!store.isWritable()) { activity.showToast("Библиотека недоступна для записи", true); return; }
+        AlertDialog.Builder dialog = WorkspaceDialogs.builder(activity).setTitle("Закрыть сессию «" + profile.name + "»?");
+        if (profile.saved) {
+            dialog.setMessage("Процесс будет остановлен, вкладка терминала закрыта. Сохранённые настройки и история останутся.")
+                .setPositiveButton("Закрыть сессию", (d, which) -> finishClose(profile, target, true));
+        } else {
+            dialog.setMessage("Сохранить настройки и историю команд Bash перед закрытием? История Codex остаётся в самом Codex.")
+                .setPositiveButton("Сохранить и закрыть", (d, which) -> finishClose(profile, target, true))
+                .setNegativeButton("Закрыть без сохранения", (d, which) -> finishClose(profile, target, false));
+        }
+        dialog.show();
+    }
+    private void finishClose(WorkspaceStore.Session profile, TerminalSession target, boolean save) {
+        if (liveFor(profile) != target) return;
+        if (target.isRunning() && target.getPid() <= 0) {
+            activity.showToast("Дождитесь запуска сессии", false); return;
+        }
+        if (save) { profile.saved = true; profile.updated = System.currentTimeMillis(); }
+        store.save(); pendingRestarts.remove(target.mHandle);
+        if (target.isRunning()) { pendingCloses.add(target.mHandle); target.finishIfRunning(); }
+        else {
+            retireProfile(profile);
+            activity.getTermuxTerminalSessionClient().removeFinishedSession(target); refresh();
+        }
+    }
+    /** Only after the process exits: it must not recreate the history while we remove it. */
+    private void retireProfile(WorkspaceStore.Session profile) {
+        profile.handle = "";
+        if (!profile.saved) { store.sessions.remove(profile); eraseSessionFiles(profile); }
+        store.save();
+    }
+    private void eraseSessionFiles(WorkspaceStore.Session profile) {
+        File dir = SessionShell.directory(activity.getFilesDir(), profile.id);
+        reader.execute(() -> {
+            File[] files = dir.listFiles(); boolean removed = true;
+            if (files != null) for (File f : files) if (!f.delete()) removed = false;
+            if (dir.exists() && !dir.delete()) removed = false;
+            if (!removed) activity.runOnUiThread(() -> activity.showToast("Не удалось полностью удалить историю сессии", true));
+        });
     }
     private void confirm(String message, Runnable action) {
-        new AlertDialog.Builder(activity).setMessage(message).setPositiveButton("Продолжить", (d, w) -> action.run()).setNegativeButton("Отмена", null).show();
+        WorkspaceDialogs.builder(activity).setMessage(message).setPositiveButton("Продолжить", (d, w) -> action.run()).setNegativeButton("Отмена", null).show();
     }
     private void sendInput() {
         TerminalSession current = activity.getCurrentSession();
@@ -685,32 +858,96 @@ public final class WorkspaceController {
         else terminalInput.requestFocus();
     }
     private void chooseInputCommand() {
+        hideDialogKeyboard();
         List<WorkspaceStore.Command> commands = new ArrayList<>(store.commands);
         Collections.sort(commands, (a, b) -> Boolean.compare(b.favorite, a.favorite));
-        AlertDialog.Builder picker = new AlertDialog.Builder(activity)
-            .setTitle("Вставить команду").setNegativeButton("Отмена", null);
-        if (commands.isEmpty()) {
-            picker.setMessage("Сохраните команду в библиотеке или введите её в поле и нажмите «Сохранить ввод».");
-        } else {
-            String[] labels = new String[commands.size()];
-            for (int i = 0; i < commands.size(); i++) {
-                WorkspaceStore.Command command = commands.get(i);
-                labels[i] = (command.favorite ? "★ " : "") + command.name + " · " + command.category
-                    + "\n" + command.command;
+        List<WorkspaceStore.Note> notes = new ArrayList<>(store.notes);
+        Collections.sort(notes, (a, b) -> Boolean.compare(b.favorite, a.favorite));
+        boolean[] noteTab = {false};
+        String[] queries = {"", ""};
+        List<Object> visible = new ArrayList<>(commands);
+        android.widget.BaseAdapter adapter = new android.widget.BaseAdapter() {
+            public int getCount() { return visible.size(); }
+            public Object getItem(int position) { return visible.get(position); }
+            public long getItemId(int position) { return position; }
+            public View getView(int position, View recycled, ViewGroup parent) {
+                FrameLayout outer = new FrameLayout(activity); outer.setPadding(dp(16), dp(4), dp(16), dp(4));
+                Object item = getItem(position);
+                WorkspaceStore.Command preview;
+                if (item instanceof WorkspaceStore.Note) {
+                    WorkspaceStore.Note note = (WorkspaceStore.Note) item;
+                    preview = new WorkspaceStore.Command(); preview.name = note.name; preview.command = note.text;
+                    preview.category = note.category; preview.favorite = note.favorite;
+                } else preview = (WorkspaceStore.Command) item;
+                LinearLayout row = WorkspaceDialogs.commandRow(activity, preview); row.setDuplicateParentStateEnabled(true);
+                outer.addView(row, new FrameLayout.LayoutParams(-1, -2)); return outer;
             }
-            picker.setItems(labels, (dialog, index) -> {
-                insertIntoCurrent(commands.get(index));
-            });
-        }
+        };
+        LinearLayout heading = column(); heading.setPadding(dp(20), dp(18), dp(20), dp(12));
+        heading.setFocusableInTouchMode(true);
+        LinearLayout tabs = row();
+        TextView commandTab = button("Сохранённые команды", true, () -> {});
+        TextView notesTab = button("Заметки", false, () -> {});
+        commandTab.setMaxLines(2); notesTab.setMaxLines(2);
+        commandTab.setPadding(dp(6), dp(8), dp(6), dp(8));
+        LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams(0, -2, 1.5f); tabParams.setMarginEnd(dp(8));
+        tabs.addView(commandTab, tabParams); tabs.addView(notesTab, new LinearLayout.LayoutParams(0, -2, 1)); heading.addView(tabs);
+        TextView hint = text("Нажми на команду, чтобы вставить", 12, MUTED); hint.setPadding(0, dp(8), 0, dp(12)); heading.addView(hint);
+        EditText search = field("Найти команду", "", false); search.setContentDescription("Поиск в меню звёздочки");
+        search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH | android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI);
+        search.setMinHeight(dp(48)); heading.addView(search, new LinearLayout.LayoutParams(-1, -2));
+        TextView empty = text(commands.isEmpty() ? "Сохраните команду в библиотеке или нажмите «Сохранить ввод»." : "Ничего не найдено", 12, MUTED);
+        empty.setPadding(0, dp(12), 0, 0); empty.setVisibility(commands.isEmpty() ? View.VISIBLE : View.GONE); heading.addView(empty);
+        AlertDialog.Builder builder = WorkspaceDialogs.builder(activity).setCustomTitle(heading)
+            .setAdapter(adapter, (dialog, index) -> {
+                Object item = visible.get(index);
+                if (item instanceof WorkspaceStore.Note) {
+                    WorkspaceStore.Command value = new WorkspaceStore.Command(); value.command = ((WorkspaceStore.Note) item).text;
+                    insertIntoCurrent(value);
+                } else insertIntoCurrent((WorkspaceStore.Command) item);
+            })
+            .setNegativeButton("Закрыть", null);
         String input = terminalInput.getText().toString();
-        if (!input.trim().isEmpty() && store.isWritable()) {
-            picker.setNeutralButton("Сохранить ввод", (dialog, which) -> editCommand(null, input));
-        }
-        picker.show();
+        if (!input.trim().isEmpty() && store.isWritable()) builder.setNeutralButton("Сохранить ввод", (dialog, which) -> editCommand(null, input));
+        Runnable refresh = () -> {
+            String key = search.getText().toString().toLowerCase(java.util.Locale.ROOT); visible.clear();
+            if (noteTab[0]) {
+                for (WorkspaceStore.Note note : notes) if ((note.name + " " + note.text + " " + note.category)
+                    .toLowerCase(java.util.Locale.ROOT).contains(key)) visible.add(note);
+            } else {
+                for (WorkspaceStore.Command command : commands) if ((command.name + " " + command.command + " " + command.category)
+                    .toLowerCase(java.util.Locale.ROOT).contains(key)) visible.add(command);
+            }
+            boolean libraryEmpty = noteTab[0] ? notes.isEmpty() : commands.isEmpty();
+            empty.setText(libraryEmpty ? (noteTab[0] ? "Сохраните заметку в библиотеке." : "Сохраните команду в библиотеке или нажмите «Сохранить ввод».") : "Ничего не найдено");
+            empty.setVisibility(visible.isEmpty() ? View.VISIBLE : View.GONE); adapter.notifyDataSetChanged();
+            hint.setText(noteTab[0] ? "Нажми на заметку, чтобы вставить" : "Нажми на команду, чтобы вставить");
+            search.setHint(noteTab[0] ? "Найти заметку" : "Найти команду");
+            for (TextView tab : new TextView[]{commandTab, notesTab}) {
+                boolean selected = (tab == notesTab) == noteTab[0]; tab.setSelected(selected);
+                tintButton(tab, selected ? ACCENT : TEXT);
+                tab.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd), shape(selected ? 0xff102522 : PANEL, selected ? ACCENT : BORDER, 12), null));
+            }
+        };
+        commandTab.setOnClickListener(v -> { noteTab[0] = false; search.setText(queries[0]); refresh.run(); });
+        notesTab.setOnClickListener(v -> { noteTab[0] = true; search.setText(queries[1]); refresh.run(); });
+        search.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence value, int start, int count, int after) {}
+            public void onTextChanged(CharSequence value, int start, int before, int count) {
+                queries[noteTab[0] ? 1 : 0] = value.toString(); refresh.run();
+            }
+            public void afterTextChanged(Editable value) {}
+        });
+        refresh.run();
+        search.setOnEditorActionListener((v, action, event) -> {
+            if (action != android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) return false;
+            ((InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(search.getWindowToken(), 0); return true;
+        });
+        AlertDialog picker = builder.create(); picker.setOnShowListener(d -> heading.requestFocus()); picker.show();
     }
     private void terminalMenu() {
         TerminalSession live = activity.getCurrentSession(); WorkspaceStore.Session profile = live == null ? null : store.findByHandle(live.mHandle);
-        new AlertDialog.Builder(activity).setTitle(live == null ? "Терминал" : live.mSessionName).setItems(new String[]{"Клавиатура", "Дополнительные клавиши", "Интерактивный ввод: " + (interactiveInput ? "включён" : "выключен"), "Отменить команды запуска"}, (d, which) -> {
+        WorkspaceDialogs.builder(activity).setTitle(live == null ? "Терминал" : live.mSessionName).setItems(new String[]{"Клавиатура", "Дополнительные клавиши", "Интерактивный ввод: " + (interactiveInput ? "включён" : "выключен"), "Отменить команды запуска"}, (d, which) -> {
             if (which == 0) toggleKeyboard();
             else if (which == 1) { activity.toggleTerminalToolbar(); toolbarVisibility = activity.getTerminalToolbarViewPager().getVisibility(); }
             else if (which == 2) setInteractiveInput(!interactiveInput);
@@ -754,7 +991,7 @@ public final class WorkspaceController {
                 labels[i] = (target.mSessionName == null ? "Терминал " + (i + 1) : target.mSessionName)
                     + " · " + compact(target.getCwd());
             }
-            new AlertDialog.Builder(activity).setTitle("В какой терминал вставить?").setItems(labels, (dialog, index) -> {
+            WorkspaceDialogs.builder(activity).setTitle("В какой терминал вставить?").setItems(labels, (dialog, index) -> {
                 TerminalSession target = targets.get(index);
                 boolean present = false;
                 for (TermuxSession session : live()) if (session.getTerminalSession() == target) present = true;
@@ -852,6 +1089,13 @@ public final class WorkspaceController {
                 }
             }
         }
+        if (activity.getTermuxService() != null && store.isWritable()) {
+            for (WorkspaceStore.Session profile : new ArrayList<>(store.sessions)) {
+                if (!profile.saved && !profile.handle.isEmpty() && liveFor(profile) == null) {
+                    store.sessions.remove(profile); eraseSessionFiles(profile); changed = true;
+                }
+            }
+        }
         if (changed) store.save();
         renderTabs(); renderHeader(); renderContent();
     }
@@ -859,6 +1103,7 @@ public final class WorkspaceController {
         WorkspaceStore.Session profile = store.findByHandle(session.mHandle);
         if (profile != null) { store.save(); }
         if (pendingCloses.remove(session.mHandle)) {
+            if (profile != null) retireProfile(profile);
             activity.getTermuxTerminalSessionClient().removeFinishedSession(session); refresh(); return true;
         }
         WorkspaceStore.Session restart = pendingRestarts.remove(session.mHandle);
