@@ -1,0 +1,422 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workspace_text_000" formatted="false">"printf \'%s\\n\' \'Waiting for Ubuntu shell…\'\n"</string>
+    <string name="workspace_text_001" formatted="false">"Command "</string>
+    <string name="workspace_text_002" formatted="false">" failed; startup stopped."</string>
+    <string name="workspace_text_003" formatted="false">" ]; then printf \'%s\\n\' \'Startup commands cancelled.\'; return 0; fi\n"</string>
+    <string name="workspace_text_004" formatted="false">"Shell ready. Starting command "</string>
+    <string name="workspace_text_005" formatted="false">"Command failed: "</string>
+    <string name="workspace_text_006" formatted="false">"; further startup stopped."</string>
+    <string name="workspace_text_007" formatted="false">"Enter a command…"</string>
+    <string name="workspace_text_008" formatted="false">"Insert a saved command"</string>
+    <string name="workspace_text_009" formatted="false">"Send to the active terminal"</string>
+    <string name="workspace_text_010" formatted="false">"App settings"</string>
+    <string name="workspace_text_011" formatted="false">"Terminal menu"</string>
+    <string name="workspace_text_012" formatted="false">"Sessions"</string>
+    <string name="workspace_text_013" formatted="false">"Search commands and/or notes"</string>
+    <string name="workspace_text_014" formatted="false">"Search commands and notes"</string>
+    <string name="workspace_text_015" formatted="false">"New command"</string>
+    <string name="workspace_text_016" formatted="false">"New session"</string>
+    <string name="workspace_text_017" formatted="false">"No active session"</string>
+    <string name="workspace_text_018" formatted="false">"⌂\nHome"</string>
+    <string name="workspace_text_019" formatted="false">"&gt;_\nCommands/Notes"</string>
+    <string name="workspace_text_020" formatted="false">"▣\nTerminal"</string>
+    <string name="workspace_text_021" formatted="false">"Project files"</string>
+    <string name="workspace_text_022" formatted="false">"Open sessions"</string>
+    <string name="workspace_text_023" formatted="false">"Session "</string>
+    <string name="workspace_text_024" formatted="false">"No open sessions. Tap +."</string>
+    <string name="workspace_text_025" formatted="false">"Long press for session actions"</string>
+    <string name="workspace_text_026" formatted="false">"Open a session first"</string>
+    <string name="workspace_text_027" formatted="false">"Adaptive list area"</string>
+    <string name="workspace_text_028" formatted="false">"Recent commands"</string>
+    <string name="workspace_text_029" formatted="false">"Clear"</string>
+    <string name="workspace_text_030" formatted="false">"The command log is read-only"</string>
+    <string name="workspace_text_031" formatted="false">"Clear the entire recent command log?"</string>
+    <string name="workspace_text_032" formatted="false">"Search command log"</string>
+    <string name="workspace_text_033" formatted="false">"Last 50 commands"</string>
+    <string name="workspace_text_034" formatted="false">"Saved sessions"</string>
+    <string name="workspace_text_035" formatted="false">"Saved session list"</string>
+    <string name="workspace_text_036" formatted="false">"No saved sessions"</string>
+    <string name="workspace_text_037" formatted="false">"Tap + to prepare startup commands."</string>
+    <string name="workspace_text_038" formatted="false">"No commands yet"</string>
+    <string name="workspace_text_039" formatted="false">"Commands sent from the terminal input field will appear here."</string>
+    <string name="workspace_text_040" formatted="false">"Earlier"</string>
+    <string name="workspace_text_041" formatted="false">"Nothing found"</string>
+    <string name="workspace_text_042" formatted="false">" · found: "</string>
+    <string name="workspace_text_043" formatted="false">"Recent command"</string>
+    <string name="workspace_text_044" formatted="false">"Close"</string>
+    <string name="workspace_text_045" formatted="false">"Insert into terminal"</string>
+    <string name="workspace_text_046" formatted="false">"Save to commands"</string>
+    <string name="workspace_text_047" formatted="false">"Copy"</string>
+    <string name="workspace_text_048" formatted="false">"Command"</string>
+    <string name="workspace_text_049" formatted="false">"Command copied"</string>
+    <string name="workspace_text_050" formatted="false">"Full command text"</string>
+    <string name="workspace_text_051" formatted="false">"Full note text"</string>
+    <string name="workspace_text_052" formatted="false">"Search: "</string>
+    <string name="workspace_text_053" formatted="false">"Saved command list"</string>
+    <string name="workspace_text_054" formatted="false">"Tap + to save a command, or change the filters."</string>
+    <string name="workspace_text_055" formatted="false">"Saved note list"</string>
+    <string name="workspace_text_056" formatted="false">"No notes yet"</string>
+    <string name="workspace_text_057" formatted="false">"Tap + to save a note, or change the filters."</string>
+    <string name="workspace_text_058" formatted="false">"Note filters"</string>
+    <string name="workspace_text_059" formatted="false">"Command filters"</string>
+    <string name="workspace_text_060" formatted="false">"All notes"</string>
+    <string name="workspace_text_061" formatted="false">"All commands"</string>
+    <string name="workspace_text_062" formatted="false">"Favorites"</string>
+    <string name="workspace_text_063" formatted="false">"Categories"</string>
+    <string name="workspace_text_064" formatted="false">"Note category filter"</string>
+    <string name="workspace_text_065" formatted="false">"Command category filter"</string>
+    <string name="workspace_text_066" formatted="false">"New note"</string>
+    <string name="workspace_text_067" formatted="false">"All categories"</string>
+    <string name="workspace_text_068" formatted="false">"Note categories"</string>
+    <string name="workspace_text_069" formatted="false">"Cancel"</string>
+    <string name="workspace_text_070" formatted="false">"Note "</string>
+    <string name="workspace_text_071" formatted="false">"Actions for note "</string>
+    <string name="workspace_text_072" formatted="false">"Remove from favorites"</string>
+    <string name="workspace_text_073" formatted="false">"Add to favorites"</string>
+    <string name="workspace_text_074" formatted="false">"Edit"</string>
+    <string name="workspace_text_075" formatted="false">"Delete"</string>
+    <string name="workspace_text_076" formatted="false">"The library is read-only"</string>
+    <string name="workspace_text_077" formatted="false">"Delete note “"</string>
+    <string name="workspace_text_078" formatted="false">"Name"</string>
+    <string name="workspace_text_079" formatted="false">"Note text"</string>
+    <string name="workspace_text_080" formatted="false">"Category"</string>
+    <string name="workspace_text_081" formatted="false">"Add to favorites"</string>
+    <string name="workspace_text_082" formatted="false">"Edit note"</string>
+    <string name="workspace_text_083" formatted="false">"Save"</string>
+    <string name="workspace_text_084" formatted="false">"Enter a name"</string>
+    <string name="workspace_text_085" formatted="false">"Enter text"</string>
+    <string name="workspace_text_086" formatted="false">"General"</string>
+    <string name="workspace_text_087" formatted="false">"Command categories"</string>
+    <string name="workspace_text_088" formatted="false">"Active"</string>
+    <string name="workspace_text_089" formatted="false">"Saved"</string>
+    <string name="workspace_text_090" formatted="false">"No active sessions"</string>
+    <string name="workspace_text_091" formatted="false">"Create a session or launch a saved one."</string>
+    <string name="workspace_text_092" formatted="false">"+  New session"</string>
+    <string name="workspace_text_093" formatted="false">"Actions for command "</string>
+    <string name="workspace_text_094" formatted="false">"● Active"</string>
+    <string name="workspace_text_095" formatted="false">"Finished"</string>
+    <string name="workspace_text_096" formatted="false">"Saved"</string>
+    <string name="workspace_text_097" formatted="false">"Open "</string>
+    <string name="workspace_text_098" formatted="false">"Launch "</string>
+    <string name="workspace_text_099" formatted="false">"Actions for session "</string>
+    <string name="workspace_text_100" formatted="false">"Folder: "</string>
+    <string name="workspace_text_101" formatted="false">"Environment: "</string>
+    <string name="workspace_text_102" formatted="false">"Chat: "</string>
+    <string name="workspace_text_103" formatted="false">"New chat"</string>
+    <string name="workspace_text_104" formatted="false">"A new chat does not replace previous history. Saving is optional."</string>
+    <string name="workspace_text_105" formatted="false">"Resume chat"</string>
+    <string name="workspace_text_106" formatted="false">"Start chat"</string>
+    <string name="workspace_text_107" formatted="false">"Name, command or directory"</string>
+    <string name="workspace_text_108" formatted="false">"Search"</string>
+    <string name="workspace_text_109" formatted="false">"Find"</string>
+    <string name="workspace_text_110" formatted="false">"Edit command"</string>
+    <string name="workspace_text_111" formatted="false">"Enter a command"</string>
+    <string name="workspace_text_112" formatted="false">"Invalid directory"</string>
+    <string name="workspace_text_113" formatted="false">"Use an absolute path or ~/folder"</string>
+    <string name="workspace_text_114" formatted="false">"Session name"</string>
+    <string name="workspace_text_115" formatted="false">"Working directory"</string>
+    <string name="workspace_text_116" formatted="false">"Choose working directory"</string>
+    <string name="workspace_text_117" formatted="false">"Legacy behavior"</string>
+    <string name="workspace_text_118" formatted="false">"Termux · wait for Bash"</string>
+    <string name="workspace_text_119" formatted="false">"Ubuntu · wait for Bash"</string>
+    <string name="workspace_text_120" formatted="false">"SSH · server"</string>
+    <string name="workspace_text_121" formatted="false">"Codex session"</string>
+    <string name="workspace_text_122" formatted="false">"Startup environment"</string>
+    <string name="workspace_text_123" formatted="false">"Server address"</string>
+    <string name="workspace_text_124" formatted="false">"User"</string>
+    <string name="workspace_text_125" formatted="false">"Port"</string>
+    <string name="workspace_text_126" formatted="false">"Automatic"</string>
+    <string name="workspace_text_127" formatted="false">"SSH key file"</string>
+    <string name="workspace_text_128" formatted="false">"Password"</string>
+    <string name="workspace_text_129" formatted="false">"SSH authentication"</string>
+    <string name="workspace_text_130" formatted="false">"Choose key"</string>
+    <string name="workspace_text_131" formatted="false">"Password"</string>
+    <string name="workspace_text_132" formatted="false">"SSH password"</string>
+    <string name="workspace_text_133" formatted="false">"Saved; leave blank to keep it"</string>
+    <string name="workspace_text_134" formatted="false">"Show password"</string>
+    <string name="workspace_text_135" formatted="false">"Remember password"</string>
+    <string name="workspace_text_136" formatted="false">"Stored with Android Keystore. You will need to enter the password again after uninstalling the app."</string>
+    <string name="workspace_text_137" formatted="false">"Authentication: "</string>
+    <string name="workspace_text_138" formatted="false">"Keep connection open"</string>
+    <string name="workspace_text_139" formatted="false">"Codex environment"</string>
+    <string name="workspace_text_140" formatted="false">"Codex permissions"</string>
+    <string name="workspace_text_141" formatted="false">"Codex chat"</string>
+    <string name="workspace_text_142" formatted="false">"Full access · no approvals"</string>
+    <string name="workspace_text_143" formatted="false">"Project only · with approvals"</string>
+    <string name="workspace_text_144" formatted="false">"Read only · with approvals"</string>
+    <string name="workspace_text_145" formatted="false">"Codex environment: "</string>
+    <string name="workspace_text_146" formatted="false">"Access: "</string>
+    <string name="workspace_text_147" formatted="false">"New"</string>
+    <string name="workspace_text_148" formatted="false">"Select a specific chat"</string>
+    <string name="workspace_text_149" formatted="false">"Choose at startup"</string>
+    <string name="workspace_text_150" formatted="false">"Choose chat"</string>
+    <string name="workspace_text_151" formatted="false">"Enter chat ID"</string>
+    <string name="workspace_text_152" formatted="false">"Codex chat ID"</string>
+    <string name="workspace_text_153" formatted="false">"Select"</string>
+    <string name="workspace_text_154" formatted="false">"Invalid ID"</string>
+    <string name="workspace_text_155" formatted="false">"Port must be between 1 and 65535"</string>
+    <string name="workspace_text_156" formatted="false">"Authentication and history come from the selected environment. Codex will prompt you to sign in if needed. The control card requires Codex with app-server and --remote support. Full access is limited to files available in that environment. Sandbox support on Android depends on Codex; startup stops on failure and permissions are never elevated automatically."</string>
+    <string name="workspace_text_157" formatted="false">"Startup environment: "</string>
+    <string name="workspace_text_158" formatted="false">"Command 1 (optional)"</string>
+    <string name="workspace_text_159" formatted="false">"Command 2"</string>
+    <string name="workspace_text_160" formatted="false">"Command 3"</string>
+    <string name="workspace_text_161" formatted="false">"+ Command"</string>
+    <string name="workspace_text_162" formatted="false">"Add startup command"</string>
+    <string name="workspace_text_163" formatted="false">"Termux / Ubuntu: commands start when Bash is ready in the selected environment. Ubuntu login is automatic; do not add proot-distro login. Up to three steps; startup stops on errors. Steps after Codex wait for it to exit. SSH: the directory and all commands run on the server with Bash. Password and host-key confirmation appear in the terminal; each command waits for the previous one to finish."</string>
+    <string name="workspace_text_164" formatted="false">"Session settings"</string>
+    <string name="workspace_text_165" formatted="false">"Create and launch"</string>
+    <string name="workspace_text_166" formatted="false">"Enter an address without spaces, user or port"</string>
+    <string name="workspace_text_167" formatted="false">"Enter an SSH user"</string>
+    <string name="workspace_text_168" formatted="false">"Enter an accessible key file: /path or ~/path"</string>
+    <string name="workspace_text_169" formatted="false">"Password: up to 256 characters, no line breaks"</string>
+    <string name="workspace_text_170" formatted="false">"Enter a password to save"</string>
+    <string name="workspace_text_171" formatted="false">"Keystore is unavailable. Disable password saving or try again."</string>
+    <string name="workspace_text_172" formatted="false">"Name updated. Directory and command changes apply on the next launch."</string>
+    <string name="workspace_text_173" formatted="false">"Enter an absolute working directory"</string>
+    <string name="workspace_text_174" formatted="false">"Loading history…"</string>
+    <string name="workspace_text_175" formatted="false">"Find a chat or directory"</string>
+    <string name="workspace_text_176" formatted="false">"All chats"</string>
+    <string name="workspace_text_177" formatted="false">"Chats in this folder"</string>
+    <string name="workspace_text_178" formatted="false">"Choose a Codex chat"</string>
+    <string name="workspace_text_179" formatted="false">"Resume selected chat"</string>
+    <string name="workspace_text_180" formatted="false">"New chat in this folder"</string>
+    <string name="workspace_text_181" formatted="false">"Could not read the entire history. Check Codex and authentication in the selected environment."</string>
+    <string name="workspace_text_182" formatted="false">" · new directory: "</string>
+    <string name="workspace_text_183" formatted="false">"\nNo saved chats yet."</string>
+    <string name="workspace_text_184" formatted="false">"Unknown directory"</string>
+    <string name="workspace_text_185" formatted="false">"No chats in this folder. Select “All chats”."</string>
+    <string name="workspace_text_186" formatted="false">"No matching chats"</string>
+    <string name="workspace_text_187" formatted="false">"Resume chat in another folder?"</string>
+    <string name="workspace_text_188" formatted="false">"Original directory:\n"</string>
+    <string name="workspace_text_189" formatted="false">"\n\nNew working directory:\n"</string>
+    <string name="workspace_text_190" formatted="false">"\n\nHistory remains unchanged and may contain old tasks and paths. Files are not moved; permissions remain as selected in session settings."</string>
+    <string name="workspace_text_191" formatted="false">"Continue in new folder"</string>
+    <string name="workspace_text_192" formatted="false">"Checking history and directory…"</string>
+    <string name="workspace_text_193" formatted="false">"Checking chat"</string>
+    <string name="workspace_text_194" formatted="false">"Chat unavailable or original directory unknown. Check the ID and selected environment."</string>
+    <string name="workspace_text_195" formatted="false">"Codex · connecting…"</string>
+    <string name="workspace_text_196" formatted="false">"Codex · no data ›"</string>
+    <string name="workspace_text_197" formatted="false">"Codex status and model"</string>
+    <string name="workspace_text_198" formatted="false">"Resets "</string>
+    <string name="workspace_text_199" formatted="false">"Reset time unavailable"</string>
+    <string name="workspace_text_200" formatted="false">"Getting Codex status…"</string>
+    <string name="workspace_text_201" formatted="false">"Model: "</string>
+    <string name="workspace_text_202" formatted="false">"no data"</string>
+    <string name="workspace_text_203" formatted="false">"Reasoning: "</string>
+    <string name="workspace_text_204" formatted="false">"Five-hour limit"</string>
+    <string name="workspace_text_205" formatted="false">"Weekly limit"</string>
+    <string name="workspace_text_206" formatted="false">"Shared account limit. Access: "</string>
+    <string name="workspace_text_207" formatted="false">"full"</string>
+    <string name="workspace_text_208" formatted="false">"read only"</string>
+    <string name="workspace_text_209" formatted="false">"project only"</string>
+    <string name="workspace_text_210" formatted="false">"\nStatus refreshes every 30 seconds. Model and reasoning selection uses Codex\'s own menu and applies only to this session. If Codex is responding, the app waits for completion. Input text is preserved."</string>
+    <string name="workspace_text_211" formatted="false">"Codex status"</string>
+    <string name="workspace_text_212" formatted="false">"Refresh"</string>
+    <string name="workspace_text_213" formatted="false">"Model catalog unavailable. After this update, launch a new Codex terminal with the same chat ID."</string>
+    <string name="workspace_text_214" formatted="false">"Codex model"</string>
+    <string name="workspace_text_215" formatted="false">"No reasoning"</string>
+    <string name="workspace_text_216" formatted="false">"Minimal"</string>
+    <string name="workspace_text_217" formatted="false">"Low"</string>
+    <string name="workspace_text_218" formatted="false">"Medium"</string>
+    <string name="workspace_text_219" formatted="false">"High"</string>
+    <string name="workspace_text_220" formatted="false">"Very high"</string>
+    <string name="workspace_text_221" formatted="false">"Maximum"</string>
+    <string name="workspace_text_222" formatted="false">"Ultra"</string>
+    <string name="workspace_text_223" formatted="false">"Codex did not report available reasoning levels for this model"</string>
+    <string name="workspace_text_224" formatted="false">" · reasoning"</string>
+    <string name="workspace_text_225" formatted="false">"Apply Codex settings?"</string>
+    <string name="workspace_text_226" formatted="false">"\nReasoning: "</string>
+    <string name="workspace_text_227" formatted="false">"\n\nOnly for the current session."</string>
+    <string name="workspace_text_228" formatted="false">"Apply"</string>
+    <string name="workspace_text_229" formatted="false">"Session has already ended"</string>
+    <string name="workspace_text_230" formatted="false">"These settings are already selected in Codex"</string>
+    <string name="workspace_text_231" formatted="false">"Codex settings"</string>
+    <string name="workspace_text_232" formatted="false">"Checking session state…"</string>
+    <string name="workspace_text_233" formatted="false">"Could not wait for Codex to become idle"</string>
+    <string name="workspace_text_234" formatted="false">"Codex status unavailable"</string>
+    <string name="workspace_text_235" formatted="false">"Waiting for the Codex response to finish…"</string>
+    <string name="workspace_text_236" formatted="false">"Applying via the Codex menu…"</string>
+    <string name="workspace_text_237" formatted="false">"Session ended"</string>
+    <string name="workspace_text_238" formatted="false">"Codex confirmed: "</string>
+    <string name="workspace_text_239" formatted="false">"No keys in ~/.ssh. Enter the path to your key file."</string>
+    <string name="workspace_text_240" formatted="false">"Connect"</string>
+    <string name="workspace_text_241" formatted="false">"Enter a password"</string>
+    <string name="workspace_text_242" formatted="false">"Delete command “"</string>
+    <string name="workspace_text_243" formatted="false">"Terminal · base session"</string>
+    <string name="workspace_text_244" formatted="false">"The base tab cannot be closed. You can restart its shell."</string>
+    <string name="workspace_text_245" formatted="false">"Restart"</string>
+    <string name="workspace_text_246" formatted="false">"Restart the base shell?"</string>
+    <string name="workspace_text_247" formatted="false">"Close menu"</string>
+    <string name="workspace_text_248" formatted="false">"Save session"</string>
+    <string name="workspace_text_249" formatted="false">"Settings"</string>
+    <string name="workspace_text_250" formatted="false">"Close session"</string>
+    <string name="workspace_text_251" formatted="false">"Delete session"</string>
+    <string name="workspace_text_252" formatted="false">"Stop the current process and run the startup command again?"</string>
+    <string name="workspace_text_253" formatted="false">"Open the terminal and wait for startup"</string>
+    <string name="workspace_text_254" formatted="false">"Delete settings and session history for “"</string>
+    <string name="workspace_text_255" formatted="false">"”? Stop the active terminal first."</string>
+    <string name="workspace_text_256" formatted="false">"Stop the session first"</string>
+    <string name="workspace_text_257" formatted="false">"No saved sessions. Long press a terminal tab and select “Save session”."</string>
+    <string name="workspace_text_258" formatted="false">"Wait for status to refresh and try saving again"</string>
+    <string name="workspace_text_259" formatted="false">"Chat ID is not available yet. Wait for Codex startup and try saving again; the new helper version is required."</string>
+    <string name="workspace_text_260" formatted="false">"Session saved"</string>
+    <string name="workspace_text_261" formatted="false">"Session is already closed"</string>
+    <string name="workspace_text_262" formatted="false">"Close session “"</string>
+    <string name="workspace_text_263" formatted="false">"The process will stop and the terminal tab will close. Saved settings and history will remain."</string>
+    <string name="workspace_text_264" formatted="false">"Save settings and Bash command history before closing? Codex history is kept by Codex itself."</string>
+    <string name="workspace_text_265" formatted="false">"Save and close"</string>
+    <string name="workspace_text_266" formatted="false">"Close without saving"</string>
+    <string name="workspace_text_267" formatted="false">"Wait for status to refresh and try closing again"</string>
+    <string name="workspace_text_268" formatted="false">"Chat ID is not available yet. Wait for startup or close without saving."</string>
+    <string name="workspace_text_269" formatted="false">"Wait for session startup"</string>
+    <string name="workspace_text_270" formatted="false">"Could not fully delete session history"</string>
+    <string name="workspace_text_271" formatted="false">"Continue"</string>
+    <string name="workspace_text_272" formatted="false">"No running terminal"</string>
+    <string name="workspace_text_273" formatted="false">"Saved commands"</string>
+    <string name="workspace_text_274" formatted="false">"Notes"</string>
+    <string name="workspace_text_275" formatted="false">"Tap a command to insert it"</string>
+    <string name="workspace_text_276" formatted="false">"Find a command"</string>
+    <string name="workspace_text_277" formatted="false">"Search in the star menu"</string>
+    <string name="workspace_text_278" formatted="false">"Save a command to the library or tap “Save input”."</string>
+    <string name="workspace_text_279" formatted="false">"Save input"</string>
+    <string name="workspace_text_280" formatted="false">"Save a note to the library."</string>
+    <string name="workspace_text_281" formatted="false">"Tap a note to insert it"</string>
+    <string name="workspace_text_282" formatted="false">"Find a note"</string>
+    <string name="workspace_text_283" formatted="false">"Terminal"</string>
+    <string name="workspace_text_284" formatted="false">"Keyboard"</string>
+    <string name="workspace_text_285" formatted="false">"Extra keys"</string>
+    <string name="workspace_text_286" formatted="false">"Interactive input: "</string>
+    <string name="workspace_text_287" formatted="false">"enabled"</string>
+    <string name="workspace_text_288" formatted="false">"disabled"</string>
+    <string name="workspace_text_289" formatted="false">"Cancel startup commands"</string>
+    <string name="workspace_text_290" formatted="false">"Following commands cancelled. The current process continues running."</string>
+    <string name="workspace_text_291" formatted="false">"Could not cancel commands"</string>
+    <string name="workspace_text_292" formatted="false">"Terminal "</string>
+    <string name="workspace_text_293" formatted="false">"Which terminal should receive the command?"</string>
+    <string name="workspace_text_294" formatted="false">"This terminal has already ended"</string>
+    <string name="workspace_text_295" formatted="false">"Terminal service is still starting"</string>
+    <string name="workspace_text_296" formatted="false">"Maximum of 8 terminals. Close a finished session."</string>
+    <string name="workspace_text_297" formatted="false">"Directory unavailable: "</string>
+    <string name="workspace_text_298" formatted="false">"Enter a password in session settings"</string>
+    <string name="workspace_text_299" formatted="false">"Select a specific chat or enter its ID in session settings"</string>
+    <string name="workspace_text_300" formatted="false">"Could not create terminal"</string>
+    <string name="workspace_text_301" formatted="false">"Saved password unavailable. Enter it again in session settings."</string>
+    <string name="workspace_text_302" formatted="false">"Could not prepare session"</string>
+    <string name="workspace_text_303" formatted="false">"Terminal exits immediately. Check shell settings and restart it manually."</string>
+    <string name="workspace_text_304" formatted="false">" — copy"</string>
+    <string name="workspace_text_305" formatted="false">"Could not read the library. The original file was preserved."</string>
+    <string name="workspace_text_306" formatted="false">"The library is read-only; original data was preserved."</string>
+    <string name="workspace_text_307" formatted="false">"Could not save the library."</string>
+    <string name="workspace_text_308" formatted="false">"Library write error. Check free storage space."</string>
+    <string name="workspace_text_309" formatted="false">"favorites"</string>
+    <string name="workspace_text_310" formatted="false">"favorites"</string>
+    <string name="workspace_text_311" formatted="false">"Favorite command"</string>
+    <string name="workspace_text_312" formatted="false">" || { printf \'%s\\n\' \'Could not open directory on server.\' &gt;&amp;2; return 1; }\n"</string>
+    <string name="workspace_text_313" formatted="false">"Server: command "</string>
+    <string name="workspace_text_314" formatted="false">"Verify SSH server"</string>
+    <string name="workspace_text_315" formatted="false">"Trust"</string>
+    <string name="workspace_text_316" formatted="false">"(\ncommand -v codex &gt;/dev/null 2&gt;&amp;1 || { printf \'%s\\n\' \'Codex is not installed in the selected environment.\' &gt;&amp;2; exit 127; }\n"</string>
+    <string name="workspace_text_317" formatted="false">"command -v node &gt;/dev/null 2&gt;&amp;1 || { printf \'%s\\n\' \'Local Codex control requires Node.js in the selected environment.\' &gt;&amp;2; exit 127; }\n"</string>
+    <string name="workspace_text_318" formatted="false">" ] || { printf \'%s\\n\' \'Codex connection is already in use.\' &gt;&amp;2; exit 1; }\n"</string>
+    <string name="workspace_text_319" formatted="false">"kill -0 \"$_jobs_codex_pid\" 2&gt;/dev/null || { printf \'%s\\n\' \'Could not start app-server. Check your Codex version.\' &gt;&amp;2; exit 1; }\n"</string>
+    <string name="workspace_text_320" formatted="false">"_jobs_codex_wait=$((_jobs_codex_wait+1)); [ \"$_jobs_codex_wait\" -lt 100 ] || { printf \'%s\\n\' \'Timed out waiting for Codex.\' &gt;&amp;2; exit 1; }; sleep 0.1\ndone\n"</string>
+    <string name="workspace_text_321" formatted="false">") || { printf \'%s\\n\' \'Could not resume chat with the selected permissions.\' &gt;&amp;2; exit 1; }\n"</string>
+    <string name="workspace_text_322" formatted="false">"Could not read Codex status ("</string>
+    <string name="workspace_text_323" formatted="false">"). The chat may still be running."</string>
+    <string name="workspace_text_324" formatted="false">"Node.js was not found in the selected environment"</string>
+    <string name="workspace_text_325" formatted="false">"The selected environment cannot access the adapter file"</string>
+    <string name="workspace_text_326" formatted="false">"The selected environment cannot access the current session socket"</string>
+    <string name="workspace_text_327" formatted="false">"Adapter file or socket not found"</string>
+    <string name="workspace_text_328" formatted="false">"Codex server is not accepting connections"</string>
+    <string name="workspace_text_329" formatted="false">"Adapter access denied"</string>
+    <string name="workspace_text_330" formatted="false">"Adapter launcher not found"</string>
+    <string name="workspace_text_331" formatted="false">"Local protocol handshake failed"</string>
+    <string name="workspace_text_332" formatted="false">"Codex status unavailable: "</string>
+    <string name="workspace_text_333" formatted="false">"). Chat and authentication were not changed."</string>
+    <string name="workspace_text_334" formatted="false">"Status helper has not started. For a session created before v0.2.13, open a new Codex terminal with the same chat ID."</string>
+    <string name="workspace_text_335" formatted="false">"Multiple chats: choose a chat in the terminal"</string>
+    <string name="workspace_text_336" formatted="false">": no data"</string>
+    <string name="workspace_text_337" formatted="false">"5h"</string>
+    <string name="workspace_text_338" formatted="false">"7d"</string>
+    <string name="workspace_text_339" formatted="false">"Could not identify the selected Codex menu item. Complete selection in the terminal."</string>
+    <string name="workspace_text_340" formatted="false">"Codex menu item not found. Complete selection in the terminal."</string>
+    <string name="workspace_text_341" formatted="false">"Could not select a Codex menu item. Complete selection in the terminal."</string>
+    <string name="workspace_text_342" formatted="false">"Codex input is busy or another menu is open. Close it and try again."</string>
+    <string name="workspace_text_343" formatted="false">"Codex did not confirm the change. Check the terminal menu; settings were not marked as applied."</string>
+    <string name="workspace_text_344" formatted="false">"Codex does not offer session-only application for this model. Complete selection in the terminal."</string>
+    <string name="workspace_text_345" formatted="false">"The menu opened for a different model. Complete selection in the terminal."</string>
+    <string name="workspace_text_346" formatted="false">"This Codex version does not offer session-only application. Complete selection in the terminal."</string>
+    <string name="workspace_text_347" formatted="false">"This reasoning level requires a separate Codex confirmation. Complete selection in the terminal."</string>
+    <string name="workspace_text_348" formatted="false">"Invalid path"</string>
+    <string name="workspace_text_349" formatted="false">"Invalid file list"</string>
+    <string name="workspace_text_350" formatted="false">"Invalid file name"</string>
+    <string name="workspace_text_351" formatted="false">"Invalid file size"</string>
+    <string name="workspace_text_352" formatted="false">"Too many files; choose a subfolder"</string>
+    <string name="workspace_text_353" formatted="false">"All"</string>
+    <string name="workspace_text_354" formatted="false">"Text"</string>
+    <string name="workspace_text_355" formatted="false">"Images"</string>
+    <string name="workspace_text_356" formatted="false">"Enter a single folder name without / or line breaks"</string>
+    <string name="workspace_text_357" formatted="false">"Text exceeds 256 KB; use the terminal or export"</string>
+    <string name="workspace_text_358" formatted="false">"Binary file; export is available"</string>
+    <string name="workspace_text_359" formatted="false">"File exceeds the 256 MB export limit"</string>
+    <string name="workspace_text_360" formatted="false">"Enter valid SSH settings"</string>
+    <string name="workspace_text_361" formatted="false">"Invalid SSH key path"</string>
+    <string name="workspace_text_362" formatted="false">"Window closed"</string>
+    <string name="workspace_text_363" formatted="false">"Enter a password to browse files"</string>
+    <string name="workspace_text_364" formatted="false">"Operation cancelled"</string>
+    <string name="workspace_text_365" formatted="false">"File or list is too large"</string>
+    <string name="workspace_text_366" formatted="false">"SSH unavailable: verify login, password and trusted host key in the terminal"</string>
+    <string name="workspace_text_367" formatted="false">"Directory or file unavailable; check the path and selected environment"</string>
+    <string name="workspace_text_368" formatted="false">"Parent folder"</string>
+    <string name="workspace_text_369" formatted="false">"Home directory"</string>
+    <string name="workspace_text_370" formatted="false">"File filter: "</string>
+    <string name="workspace_text_371" formatted="false">", selected"</string>
+    <string name="workspace_text_372" formatted="false">"Find a file or folder"</string>
+    <string name="workspace_text_373" formatted="false">"Find a folder"</string>
+    <string name="workspace_text_374" formatted="false">"Loading…"</string>
+    <string name="workspace_text_375" formatted="false">"Files · "</string>
+    <string name="workspace_text_376" formatted="false">"Choose folder"</string>
+    <string name="workspace_text_377" formatted="false">"Create folder"</string>
+    <string name="workspace_text_378" formatted="false">"SSH password for files"</string>
+    <string name="workspace_text_379" formatted="false">"Could not open files"</string>
+    <string name="workspace_text_380" formatted="false">"Folder "</string>
+    <string name="workspace_text_381" formatted="false">"File "</string>
+    <string name="workspace_text_382" formatted="false">"No matching files or folders"</string>
+    <string name="workspace_text_383" formatted="false">"Opened directory in the selected environment · "</string>
+    <string name="workspace_text_384" formatted="false">"New folder name"</string>
+    <string name="workspace_text_385" formatted="false">"New empty folder"</string>
+    <string name="workspace_text_386" formatted="false">"Create"</string>
+    <string name="workspace_text_387" formatted="false">"Enter a single folder name"</string>
+    <string name="workspace_text_388" formatted="false">"Preview"</string>
+    <string name="workspace_text_389" formatted="false">"Share"</string>
+    <string name="workspace_text_390" formatted="false">"Copy path"</string>
+    <string name="workspace_text_391" formatted="false">"To Download"</string>
+    <string name="workspace_text_392" formatted="false">"File path"</string>
+    <string name="workspace_text_393" formatted="false">"Path copied"</string>
+    <string name="workspace_text_394" formatted="false">"Image exceeds 16 MB; use export"</string>
+    <string name="workspace_text_395" formatted="false">"Could not read image"</string>
+    <string name="workspace_text_396" formatted="false">"Preview: "</string>
+    <string name="workspace_text_397" formatted="false">"Could not create temporary file"</string>
+    <string name="workspace_text_398" formatted="false">"Download unavailable; check storage permission"</string>
+    <string name="workspace_text_399" formatted="false">"Saved: "</string>
+    <string name="workspace_text_400" formatted="false">"File saved to Download"</string>
+    <string name="workspace_text_401" formatted="false">"Project file"</string>
+    <string name="workspace_text_402" formatted="false">"Share file"</string>
+    <string name="workspace_text_403" formatted="false">"No app available to share the file"</string>
+    <string name="workspace_text_404" formatted="false">"Language / Язык"</string>
+    <string name="workspace_text_405" formatted="false">"System"</string>
+    <string name="workspace_text_406" formatted="false">"Русский"</string>
+    <string name="workspace_text_407" formatted="false">"English"</string>
+    <string name="workspace_text_408" formatted="false">"Home"</string>
+    <string name="workspace_text_409" formatted="false">"Commands/Notes"</string>
+    <string name="workspace_text_410" formatted="false">"Codex status unavailable inside the terminal ("</string>
+    <string name="workspace_text_411" formatted="false">"unrecognized reason"</string>
+    <string name="workspace_text_412" formatted="false">"chat or storage is already in use"</string>
+    <string name="workspace_text_413" formatted="false">"chat history was not found by the server"</string>
+    <string name="workspace_text_414" formatted="false">"server rejected access settings"</string>
+    <string name="workspace_text_415" formatted="false">"history database error"</string>
+    <string name="workspace_text_416" formatted="false">"incompatible history format"</string>
+    <string name="workspace_text_417" formatted="false">"server authentication error"</string>
+    <string name="workspace_text_418" formatted="false">"Chat directory changed. Confirm the original folder in session settings."</string>
+</resources>

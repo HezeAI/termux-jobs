@@ -33,7 +33,7 @@
                 android:background="#000000" />
         </LinearLayout>
 
-        <HorizontalScrollView
+        <FrameLayout
             android:id="@+id/workspace_tab_scroll"
             android:layout_width="match_parent"
             android:layout_height="64dp"
@@ -42,7 +42,7 @@
             android:visibility="gone">
             <LinearLayout
                 android:id="@+id/workspace_tabs"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="horizontal"
                 android:paddingStart="0dp"
@@ -50,7 +50,7 @@
                 android:paddingTop="6dp"
                 android:paddingBottom="10dp"
                 android:gravity="center_vertical" />
-        </HorizontalScrollView>
+        </FrameLayout>
 
         <LinearLayout
             android:id="@+id/workspace_codex_status"
@@ -58,7 +58,9 @@
             android:layout_height="wrap_content"
             android:layout_below="@id/workspace_tab_scroll"
             android:orientation="horizontal"
-            android:gravity="center"
+            android:gravity="start|center_vertical"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
             android:visibility="gone" />
 
         <androidx.drawerlayout.widget.DrawerLayout

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="msg_directory_absolute_path">"Абсолютный путь каталога %1$s: «%2$s»"</string>
+    <string name="error_app_not_installed_or_disabled_warning">"Приложение %1$s (%2$s) не установлено или отключено."</string>
+    <string name="error_get_package_context_failed_title">"Не удалось получить контекст пакета"</string>
+    <string name="error_get_package_context_failed_message">"Не удалось получить контекст пакета «%1$s». Приложение может быть не установлено или иметь другую подпись APK. Инструкции по установке: %2$s."</string>
+    <string name="error_get_component_state_failed">"Не удалось определить состояние компонента %1$s/%2$s"</string>
+    <string name="error_enable_component_failed">"Не удалось включить компонент %1$s/%2$s"</string>
+    <string name="error_disable_component_failed">"Не удалось отключить компонент %1$s/%2$s"</string>
+    <string name="message_sudo_please_grant_permissions">"Предоставьте разрешения на следующем экране"</string>
+    <string name="title_report_text">"Текст отчёта"</string>
+    <string name="msg_report_truncated">"**Отчёт сокращён**\n\nОтчёт слишком большой для просмотра. Выберите «Сохранить в файл» в меню справа сверху и откройте его в текстовом редакторе.\n\n##\n\n"</string>
+    <string name="title_share_with">"Поделиться через"</string>
+    <string name="title_open_url_with">"Открыть ссылку через"</string>
+    <string name="msg_storage_permission_not_granted">"Нет разрешения на доступ к хранилищу."</string>
+    <string name="msg_file_saved_successfully">"Файл %1$s сохранён в «%2$s»."</string>
+    <string name="error_sending_sigkill_to_process">"Отправлен SIGKILL процессу по запросу пользователя или из-за остановки службы Android"</string>
+    <string name="error_execution_cancelled">"Выполнение отменено из-за остановки службы"</string>
+    <string name="error_failed_to_execute_termux_session_command">"Не удалось выполнить команду сессии Termux «%1$s»"</string>
+    <string name="error_failed_to_execute_termux_task_command">"Не удалось выполнить команду задачи Termux «%1$s»"</string>
+    <string name="error_exception_received_while_executing_termux_session_command">"Ошибка выполнения команды сессии Termux «%1$s».\nОшибка: %2$s"</string>
+    <string name="error_exception_received_while_executing_termux_task_command">"Ошибка выполнения команды задачи Termux «%1$s».\nОшибка: %2$s"</string>
+    <string name="msg_report_issue">"Чтобы сообщить о проблеме, скопируйте текст отчёта из меню справа сверху и отправьте его по подходящей ссылке.\n\nДля сбоя приложения укажите действия, приведшие к нему, и способ воспроизведения.\n\nНа GitHub выбирайте репозиторий проекта, к которому относится проблема. Отчёты с частичными скриншотами вместо текста или файла могут быть автоматически закрыты. Личные и не относящиеся к проблеме сведения можно удалить.\n\nОфициальное сообщество Termux не поддерживает инструменты взлома; обращения о них могут быть удалены и привести к блокировке. Подробнее: %1$s/wiki/Hacking."</string>
+    <string name="msg_termux_app_required_by_app">"Для выполнения команд приложению %1$s нужен Termux."</string>
+    <string name="error_termux_app_package_context_not_accessible">"Контекст приложения Termux недоступен."</string>
+    <string name="error_termux_prefix_dir_path_not_accessible">"Каталог $PREFIX приложения Termux недоступен для %1$s. Termux может быть не настроен, Termux и %1$s могут иметь разные подписи или у каталога /data/data/com.termux/files/usr отсутствуют права чтения, записи и выполнения."</string>
+    <string name="action_yes">"Да"</string>
+    <string name="action_no">"Нет"</string>
+    <string name="action_copy">"Копировать"</string>
+    <string name="action_share">"Поделиться"</string>
+    <string name="action_cancel">"Отмена"</string>
+    <string name="action_save_to_file">"Сохранить в файл"</string>
+    <string name="action_enable_launcher_icon">"Показать значок приложения"</string>
+    <string name="action_disable_launcher_icon">"Скрыть значок приложения"</string>
+    <string name="msg_enabling_launcher_icon">"Включение значка %1$s"</string>
+    <string name="msg_disabling_launcher_icon">"Отключение значка %1$s"</string>
+    <string name="setting_launcher_icon_title">"Значок приложения"</string>
+    <string name="setting_launcher_icon_enabled_off">"Значок приложения скрыт."</string>
+    <string name="setting_launcher_icon_enabled_on">"Значок приложения виден. По умолчанию."</string>
+    <string name="log_level_title">"Уровень журналирования"</string>
+    <string name="log_level_off">"Выключено"</string>
+    <string name="log_level_normal">"Обычный"</string>
+    <string name="log_level_debug">"Отладка"</string>
+    <string name="log_level_verbose">"Подробный"</string>
+    <string name="log_level_unknown">"Неизвестный"</string>
+    <string name="log_level_value">"Уровень журнала Logcat: «%1$s»"</string>
+</resources>

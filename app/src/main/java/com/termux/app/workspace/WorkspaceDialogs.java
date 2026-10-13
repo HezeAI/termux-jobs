@@ -40,9 +40,9 @@ final class WorkspaceDialogs {
             Context c = getContext(); FrameLayout outer = new FrameLayout(c);
             outer.setPadding(dp(c, 16), dp(c, 4), dp(c, 16), dp(c, 4));
             String label = getItem(position).toString();
-            TextView row = action(c, label, label.equals("Удалить") ? R.drawable.workspace_delete
-                : label.equals("Редактировать") ? R.drawable.workspace_edit
-                : label.contains("избранное") || label.contains("избранного") ? R.drawable.workspace_star : 0);
+            TextView row = action(c, label, label.equals(WorkspaceText.tr("Удалить")) ? R.drawable.workspace_delete
+                : label.equals(WorkspaceText.tr("Редактировать")) ? R.drawable.workspace_edit
+                : label.contains(WorkspaceText.tr("избранное")) || label.contains(WorkspaceText.tr("избранного")) ? R.drawable.workspace_star : 0);
             row.setBackground(background(c, position == selected)); row.setDuplicateParentStateEnabled(true);
             outer.addView(row, new FrameLayout.LayoutParams(-1, -2)); return outer;
         }
@@ -51,7 +51,7 @@ final class WorkspaceDialogs {
         TextView row = new TextView(c); row.setText(label); row.setTextSize(15);
         row.setGravity(Gravity.CENTER_VERTICAL); row.setMinHeight(dp(c, 54));
         row.setPadding(dp(c, 16), dp(c, 12), dp(c, 16), dp(c, 12));
-        int color = label.equals("Удалить") ? DANGER : TEXT; row.setTextColor(color);
+        int color = label.equals(WorkspaceText.tr("Удалить")) ? DANGER : TEXT; row.setTextColor(color);
         if (icon != 0) {
             Drawable image = c.getDrawable(icon).mutate(); image.setTint(color);
             image.setBounds(0, 0, dp(c, 22), dp(c, 22)); row.setCompoundDrawables(image, null, null, null);
@@ -86,7 +86,7 @@ final class WorkspaceDialogs {
         TextView category = new TextView(c); category.setText(command.category); category.setTextSize(11); category.setTextColor(MUTED); labels.addView(category);
         row.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
         if (command.favorite) { TextView star = new TextView(c); star.setText("★"); star.setTextSize(24); star.setTextColor(ACCENT);
-            star.setPadding(dp(c, 12), 0, 0, 0); star.setContentDescription("Избранная команда"); row.addView(star); }
+            star.setPadding(dp(c, 12), 0, 0, 0); star.setContentDescription(WorkspaceText.tr("Избранная команда")); row.addView(star); }
         return row;
     }
 }

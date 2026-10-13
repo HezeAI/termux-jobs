@@ -28,7 +28,13 @@ import com.termux.shared.termux.TermuxUtils;
 public class SettingsActivity extends AppCompatActivity {
 
     @Override
+    protected void attachBaseContext(android.content.Context base) {
+        super.attachBaseContext(com.termux.app.workspace.WorkspaceLanguage.wrap(base));
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
+        com.termux.app.workspace.WorkspaceLanguage.initialize(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
         if (savedInstanceState == null) {

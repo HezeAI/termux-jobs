@@ -183,6 +183,11 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
     private static final String LOG_TAG = "TermuxActivity";
 
     @Override
+    protected void attachBaseContext(android.content.Context base) {
+        super.attachBaseContext(com.termux.app.workspace.WorkspaceLanguage.wrap(base));
+    }
+
+    @Override
     public void onCreate(Bundle savedInstanceState) {
 
         Logger.logDebug(LOG_TAG, "onCreate");
@@ -200,6 +205,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
         setActivityTheme();
 
+        com.termux.app.workspace.WorkspaceLanguage.initialize(this);
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_termux);
@@ -796,9 +802,13 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
     }
 
     public void refreshWorkspace() {
-        if (mWorkspace != null) mWorkspace.refresh();
+        if (mWorkspace != null) { mWorkspace.refresh(); if(mIsVisible) mWorkspace.ensureBaseTerminal(); }
     }
 
+
+    public boolean isWorkspaceBaseTerminal(TerminalSession session) {
+        return mWorkspace != null && mWorkspace.isBaseTerminal(session);
+    }
 
     public boolean onWorkspaceSessionFinished(TerminalSession session) {
         return mWorkspace != null && mWorkspace.onFinished(session);

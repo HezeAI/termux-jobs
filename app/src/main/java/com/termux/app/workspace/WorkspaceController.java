@@ -59,6 +59,7 @@ public final class WorkspaceController {
         }
     }
     private final FrameLayout content;
+    private final List<WorkspaceFileBrowser> fileBrowsers=new ArrayList<>();
     private final ExecutorService reader = Executors.newSingleThreadExecutor();
     private final android.os.Handler codexHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final ExecutorService codexReader = Executors.newSingleThreadExecutor();
@@ -77,7 +78,9 @@ public final class WorkspaceController {
     }};
     private Screen screen = Screen.HOME;
     private String query = "", journalQuery = "", commandCategory = "", noteCategory = "";
-    private boolean noteFavorites, favorites, savedOnly, closed, creating;
+    private boolean noteFavorites, favorites, savedOnly, closed, creating, baseCreating;
+    private long lastBaseRestart, baseStartedAt;
+    private int baseRestartFailures;
     private int toolbarVisibility = View.GONE;
     private boolean interactiveInput;
     private float swipeStart;
@@ -98,7 +101,7 @@ public final class WorkspaceController {
         content = activity.findViewById(R.id.workspace_content);
         inputRow = activity.findViewById(R.id.workspace_input);
         inputRow.setPadding(dp(12), dp(6), dp(12), dp(6));
-        terminalInput = field("Введите команду…", "", true);
+        terminalInput = field(WorkspaceText.tr("Введите команду…"), "", true);
         terminalInput.setTypeface(Typeface.MONOSPACE); terminalInput.setTextSize(12);
         terminalInput.setMinLines(1); terminalInput.setMinHeight(dp(48));
         terminalInput.setHorizontallyScrolling(false);
@@ -108,10 +111,10 @@ public final class WorkspaceController {
         inputRow.addView(terminalInput, new LinearLayout.LayoutParams(0, -2, 1));
         TextView commands = button("★", false, this::chooseInputCommand);
         commands.setTextColor(ACCENT); commands.setTextSize(22);
-        commands.setContentDescription("Вставить сохранённую команду");
+        commands.setContentDescription(WorkspaceText.tr("Вставить сохранённую команду"));
         LinearLayout.LayoutParams commandsParams = new LinearLayout.LayoutParams(dp(48), dp(48));
         commandsParams.setMarginEnd(dp(8)); inputRow.addView(commands, 0, commandsParams);
-        TextView send = button("▷", true, this::sendInput); send.setContentDescription("Отправить в активный терминал");
+        TextView send = button("▷", true, this::sendInput); send.setContentDescription(WorkspaceText.tr("Отправить в активный терминал"));
         LinearLayout.LayoutParams sendParams = new LinearLayout.LayoutParams(dp(48), dp(48)); sendParams.setMarginStart(dp(8)); inputRow.addView(send, sendParams);
         activity.getWindow().setStatusBarColor(Color.BLACK);
         activity.getWindow().setNavigationBarColor(Color.BLACK);
@@ -127,6 +130,12 @@ public final class WorkspaceController {
         show(Screen.HOME, false);
         codexHandler.postDelayed(codexPoll, 1000);
     }
+    public void refreshLanguage() {
+        terminalInput.setHint(WorkspaceText.tr("Введите команду…"));
+        inputRow.getChildAt(0).setContentDescription(WorkspaceText.tr("Вставить сохранённую команду"));
+        inputRow.getChildAt(inputRow.getChildCount()-1).setContentDescription(WorkspaceText.tr("Отправить в активный терминал"));
+        renderHeader(); renderNavigation(); renderTabs(); renderContent(); renderCodexStatus();
+    }
     private int dp(float value) { return Math.round(value * activity.getResources().getDisplayMetrics().density); }
     private LinearLayout column() { LinearLayout v = new LinearLayout(activity); v.setOrientation(LinearLayout.VERTICAL); return v; }
     private LinearLayout row() { LinearLayout v = new LinearLayout(activity); v.setOrientation(LinearLayout.HORIZONTAL); v.setGravity(Gravity.CENTER_VERTICAL); return v; }
@@ -139,7 +148,7 @@ public final class WorkspaceController {
         d.setStroke(dp(1), stroke); return d;
     }
     private TextView button(String label, boolean active, Runnable click) {
-        TextView b = text(label, 13, active ? Color.BLACK : TEXT);
+        TextView b = new WorkspaceIconButton(activity);b.setText(label);b.setTextSize(13);b.setTextColor(active?Color.BLACK:TEXT);
         b.setGravity(Gravity.CENTER); b.setPadding(dp(13), dp(8), dp(13), dp(8)); b.setMinHeight(dp(48));
         b.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),
             shape(active ? ACCENT : PANEL, active ? ACCENT : BORDER, 12), null));
@@ -151,7 +160,7 @@ public final class WorkspaceController {
                 b.setText(label.substring(label.indexOf('\n') + 1));
                 b.setCompoundDrawables(null, drawable, null, null); b.setCompoundDrawablePadding(dp(4));
             } else {
-                b.setText(""); b.setCompoundDrawables(drawable, null, null, null); b.setContentDescription(label);
+                ((WorkspaceIconButton)b).setIcon(drawable,dp(22)); b.setContentDescription(label);
                 b.setMinWidth(dp(48));
             }
         }
@@ -165,9 +174,12 @@ public final class WorkspaceController {
             case "▣": return R.drawable.workspace_terminal;
             case "⌕": return R.drawable.workspace_search;
             case "+": return R.drawable.workspace_plus;
+            case "★": return R.drawable.workspace_star;
+            case "▱": return R.drawable.workspace_folder;
             case "▷": return R.drawable.workspace_play;
             case "⋮": return R.drawable.workspace_more;
             case "⚙": return R.drawable.workspace_settings;
+            case "◎": return R.drawable.workspace_language;
             case "›": return R.drawable.workspace_next;
             default: return 0;
         }
@@ -212,15 +224,19 @@ public final class WorkspaceController {
         TextView name = text("Termux Job’s", 17, TEXT); name.setTypeface(null, Typeface.BOLD);
         name.setSingleLine(); name.setEllipsize(TextUtils.TruncateAt.END);
         top.addView(name, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView language=button("◎",false,()->WorkspaceLanguage.showPicker(activity,this::refreshLanguage));
+        language.setContentDescription(WorkspaceText.tr("Язык / Language"));
+        LinearLayout.LayoutParams languageParams=new LinearLayout.LayoutParams(dp(48),dp(48));languageParams.setMarginEnd(dp(6));
+        top.addView(language,languageParams);
         TextView action;
         if (screen == Screen.HOME || screen == Screen.SESSIONS) {
             action = button("⚙", false, () -> activity.startActivity(new android.content.Intent(activity, SettingsActivity.class)));
-            action.setContentDescription("Настройки приложения");
+            action.setContentDescription(WorkspaceText.tr("Настройки приложения"));
         } else if (screen == Screen.TERMINAL) {
-            action = button("⚙", false, this::terminalMenu); action.setContentDescription("Меню терминала");
+            action = button("⚙", false, this::terminalMenu); action.setContentDescription(WorkspaceText.tr("Меню терминала"));
         } else {
             action = button("⚙", false, () -> activity.startActivity(new android.content.Intent(activity, SettingsActivity.class)));
-            action.setContentDescription("Настройки приложения");
+            action.setContentDescription(WorkspaceText.tr("Настройки приложения"));
         }
         action.setPadding(dp(10), dp(8), dp(10), dp(8)); action.setMinWidth(dp(48));
         for (android.graphics.drawable.Drawable drawable : action.getCompoundDrawables())
@@ -234,12 +250,12 @@ public final class WorkspaceController {
         if (screen == Screen.COMMANDS || screen == Screen.SESSIONS) {
             LinearLayout tools = row(); tools.setPadding(dp(8), dp(26), dp(8), dp(6));
             if (screen == Screen.SESSIONS) {
-                TextView title = text("Сессии", 17, TEXT); title.setTypeface(null, Typeface.BOLD);
+                TextView title = text(WorkspaceText.tr("Сессии"), 17, TEXT); title.setTypeface(null, Typeface.BOLD);
                 tools.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
             }
             if (screen == Screen.COMMANDS) {
-                EditText search = field("Поиск команд и/или заметок", query, false);
-                search.setContentDescription("Поиск команд и заметок"); search.setTextSize(13);
+                EditText search = field(WorkspaceText.tr("Поиск команд и/или заметок"), query, false);
+                search.setContentDescription(WorkspaceText.tr("Поиск команд и заметок")); search.setTextSize(13);
                 search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
                     | android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI);
                 android.graphics.drawable.Drawable icon = activity.getDrawable(R.drawable.workspace_search).mutate();
@@ -262,14 +278,14 @@ public final class WorkspaceController {
                 });
             }
             TextView add = button("+", true, () -> { if (screen == Screen.COMMANDS) editCommand(null); else editSession(null); });
-            add.setContentDescription(screen == Screen.COMMANDS ? "Новая команда" : "Новая сессия");
+            add.setContentDescription(screen == Screen.COMMANDS ? WorkspaceText.tr("Новая команда") : WorkspaceText.tr("Новая сессия"));
             if (screen == Screen.SESSIONS) tools.addView(add, new LinearLayout.LayoutParams(dp(48), dp(48)));
             header.addView(tools);
         }
     }
     private String currentDirectory() {
         TerminalSession s = activity.getCurrentSession();
-        return s == null ? "Нет активной сессии" : compact(s.getCwd());
+        return s == null ? WorkspaceText.tr("Нет активной сессии") : compact(s.getCwd());
     }
     private String compact(String path) {
         if (path == null || path.isEmpty()) return "~";
@@ -278,20 +294,20 @@ public final class WorkspaceController {
     }
     private void renderNavigation() {
         navigation.removeAllViews(); navigation.setPadding(dp(8), 0, dp(8), 0);
-        String[] labels = {"⌂\nГлавная", ">_\nКоманды/Заметки", "▣\nТерминал"};
+        String[] labels = {WorkspaceText.tr("Главная"), WorkspaceText.tr("Команды/Заметки"), WorkspaceText.tr("Терминал")};
         Screen[] targets = {Screen.HOME, Screen.COMMANDS, Screen.TERMINAL};
         for (int i = 0; i < targets.length; i++) {
-            Screen target = targets[i]; TextView nav = button(labels[i], false, () -> show(target, true));
+            Screen target = targets[i]; TextView nav = button("", false, () -> show(target, true));
             nav.setTextSize(11); nav.setPadding(0, dp(4), 0, dp(4)); nav.setMinWidth(0); nav.setMinHeight(dp(56)); nav.setMaxLines(2);
             int resource = target == Screen.HOME ? R.drawable.workspace_home
                 : target == Screen.COMMANDS ? R.drawable.workspace_library : R.drawable.workspace_commands;
             android.graphics.drawable.Drawable icon = activity.getDrawable(resource).mutate();
-            icon.setBounds(0, 0, dp(28), dp(28)); nav.setCompoundDrawables(null, icon, null, null);
-            nav.setContentDescription(labels[i].substring(labels[i].indexOf('\n') + 1));
+            ((WorkspaceIconButton)nav).setIcon(icon,dp(28));
+            nav.setContentDescription(labels[i]);
             tintButton(nav, target == screen ? ACCENT : MUTED);
             nav.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),
                 shape(target == screen ? 0xff102522 : PANEL, target == screen ? ACCENT : BORDER, 12), null));
-            LinearLayout.LayoutParams tileParams = new LinearLayout.LayoutParams(0, -2, 1);
+            LinearLayout.LayoutParams tileParams = new LinearLayout.LayoutParams(0, dp(56), 1);
             if (i < targets.length - 1) tileParams.setMarginEnd(dp(8));
             navigation.addView(nav, tileParams);
         }
@@ -322,35 +338,47 @@ public final class WorkspaceController {
         if(terminalInput.hasFocus())((InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE)).restartInput(terminalInput);
     }
     private void renderTabs() {
-        syncTerminalInput();
-        renderCodexStatus();
-        tabs.removeAllViews();
-        View selected = null;
-        for (TermuxSession ts : live()) {
-            TerminalSession s = ts.getTerminalSession();
-            boolean active = activity.getCurrentSession() == s;
-            LinearLayout item = column();
-            TextView label = text(s.mSessionName == null ? "Bash" : s.mSessionName, 17, active ? ACCENT : MUTED);
-            label.setGravity(Gravity.CENTER); label.setSingleLine(); label.setMaxWidth(dp(180));
-            label.setEllipsize(TextUtils.TruncateAt.END); label.setPadding(dp(16), dp(2), dp(16), 0);
-            if (active) label.setTypeface(null, Typeface.BOLD);
-            item.addView(label, new LinearLayout.LayoutParams(-1, 0, 1));
-            View underline = new View(activity); underline.setBackgroundColor(active ? ACCENT : Color.TRANSPARENT);
-            item.addView(underline, new LinearLayout.LayoutParams(-1, dp(2)));
-            item.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd), shape(Color.BLACK, Color.BLACK, 0), null));
-            item.setContentDescription(label.getText()); item.setFocusable(true);
-            item.setOnClickListener(v -> { activity.getTermuxTerminalSessionClient().setCurrentSession(s); show(Screen.TERMINAL, false); });
-            item.setOnLongClickListener(v -> { WorkspaceStore.Session p = store.findByHandle(s.mHandle); if (p != null) sessionMenu(p, true); return true; });
-            tabs.addView(item, new LinearLayout.LayoutParams(-2, dp(48)));
-            if (active) selected = item;
+        syncTerminalInput(); renderCodexStatus(); tabs.removeAllViews();
+        tabs.setPadding(dp(10),dp(4),dp(10),dp(8));
+        TerminalSession current=activity.getCurrentSession();
+        String name=current==null?WorkspaceText.tr("Сессии"):current.mSessionName==null?"Bash":current.mSessionName;
+        WorkspaceStore.Session profile=current==null?null:store.findByHandle(current.mHandle);
+        String subtitle=profile==null?"":ProjectFiles.environmentLabel(profile)+" · "+compact(profile.directory);
+        TextView selector=button(name+"  ▾"+(subtitle.isEmpty()?"":"\n"+subtitle),false,()->{});
+        selector.setTextSize(13);selector.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);selector.setMaxLines(2);selector.setEllipsize(TextUtils.TruncateAt.END);
+        selector.setContentDescription(name);selector.setOnClickListener(v->showSessionStack(selector));
+        selector.setOnLongClickListener(v->{WorkspaceStore.Session selected=activity.getCurrentSession()==null?null:store.findByHandle(activity.getCurrentSession().mHandle);if(selected!=null)sessionMenu(selected,true);return true;});
+        tabs.addView(selector,new LinearLayout.LayoutParams(0,dp(48),1));
+        TextView add=button("+",false,()->editSession(null));add.setContentDescription(WorkspaceText.tr("Новая сессия"));
+        LinearLayout.LayoutParams addParams=new LinearLayout.LayoutParams(dp(48),dp(48));addParams.setMarginStart(dp(6));tabs.addView(add,addParams);
+        TextView files=button("▱",false,this::showProjectFiles);files.setContentDescription(WorkspaceText.tr("Файлы проекта"));
+        LinearLayout.LayoutParams fileParams=new LinearLayout.LayoutParams(dp(48),dp(48));fileParams.setMarginStart(dp(10));tabs.addView(files,fileParams);
+    }
+    private void showSessionStack(View anchor) {
+        LinearLayout body=column();body.setPadding(dp(8),dp(8),dp(8),dp(8));body.setBackground(shape(PANEL,BORDER,14));
+        TextView heading=text(WorkspaceText.tr("Открытые сессии"),14,TEXT);heading.setPadding(dp(6),dp(4),dp(6),dp(10));body.addView(heading);
+        ScrollView scroll=new ScrollView(activity);LinearLayout list=column();scroll.addView(list);
+        android.widget.PopupWindow popup=new android.widget.PopupWindow(body,Math.min(dp(340),activity.getResources().getDisplayMetrics().widthPixels-dp(24)),-2,true);
+        popup.setBackgroundDrawable(shape(PANEL,BORDER,14));popup.setOutsideTouchable(true);popup.setElevation(dp(8));
+        for(TermuxSession ts:live()) {
+            TerminalSession terminal=ts.getTerminalSession();WorkspaceStore.Session profile=store.findByHandle(terminal.mHandle);
+            String title=terminal.mSessionName==null?"Bash":terminal.mSessionName;
+            String info=profile==null?"":ProjectFiles.environmentLabel(profile)+" · "+compact(profile.directory);
+            TextView item=button(title+(activity.getCurrentSession()==terminal?"  ✓":"")+"\n"+info,false,()->{popup.dismiss();activity.getTermuxTerminalSessionClient().setCurrentSession(terminal);show(Screen.TERMINAL,false);});
+            item.setTextSize(14);item.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);item.setMaxLines(3);item.setContentDescription(WorkspaceText.tr("Сессия ")+title);
+            item.setOnLongClickListener(v->{popup.dismiss();if(profile!=null)sessionMenu(profile,true);return true;});LinearLayout.LayoutParams rowParams=new LinearLayout.LayoutParams(-1,-2);rowParams.bottomMargin=dp(6);list.addView(item,rowParams);
         }
-        TextView add = button("+", false, () -> editSession(null)); add.setContentDescription("Новая сессия");
-        add.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd), shape(Color.BLACK, Color.BLACK, 0), null));
-        tabs.addView(add, new LinearLayout.LayoutParams(dp(48), dp(48)));
-        if (selected != null) {
-            View activeTab = selected;
-            tabs.post(() -> { if (activeTab.getParent() == tabs) activeTab.requestRectangleOnScreen(new android.graphics.Rect(0, 0, activeTab.getWidth(), activeTab.getHeight()), true); });
-        }
+        if(live().isEmpty())list.addView(text(WorkspaceText.tr("Нет открытых сессий. Нажмите +."),13,MUTED));
+        body.addView(scroll,new LinearLayout.LayoutParams(-1,Math.min(dp(360),Math.max(dp(70),live().size()*dp(76)))));
+        body.addView(text(WorkspaceText.tr("Долгий тап — действия сессии"),12,MUTED));popup.showAsDropDown(anchor,0,dp(4));
+    }
+    private void showProjectFiles() {
+        TerminalSession terminal=activity.getCurrentSession();WorkspaceStore.Session profile=terminal==null?null:store.findByHandle(terminal.mHandle);
+        if(profile==null){activity.showToast(WorkspaceText.tr("Сначала откройте сессию"),false);return;}
+        showFileBrowser(profile,profile.directory,null);
+    }
+    private void showFileBrowser(WorkspaceStore.Session profile,String path,WorkspaceFileBrowser.DirectoryChoice choice){
+        WorkspaceFileBrowser browser=new WorkspaceFileBrowser(activity,profile,path,choice);fileBrowsers.add(browser);browser.show();
     }
     private void renderContent() {
         if (screen == Screen.TERMINAL) return;
@@ -358,7 +386,7 @@ public final class WorkspaceController {
         LinearLayout body = column(); body.setPadding(dp(16), 0, dp(16), dp(12));
         if (screen == Screen.HOME || screen == Screen.COMMANDS) {
             AdaptiveWorkspaceLayout viewport = new AdaptiveWorkspaceLayout(activity);
-            viewport.setContentDescription("Адаптивная область списков");
+            viewport.setContentDescription(WorkspaceText.tr("Адаптивная область списков"));
             viewport.addView(body); content.addView(viewport, new android.widget.FrameLayout.LayoutParams(-1, -1));
             if (screen == Screen.HOME) home(body); else commands(body);
         } else {
@@ -369,17 +397,17 @@ public final class WorkspaceController {
     }
 
     private void home(LinearLayout body) {
-        section(body, "Недавние команды", store.recentCommands.isEmpty() ? null : "Очистить", () -> {
-            if (!store.isWritable()) { activity.showToast("Журнал недоступен для записи", true); return; }
-            confirm("Очистить весь журнал недавних команд?", () -> { store.clearRecentCommands(); renderContent(); });
+        section(body, WorkspaceText.tr("Недавние команды"), store.recentCommands.isEmpty() ? null : WorkspaceText.tr("Очистить"), () -> {
+            if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Журнал недоступен для записи"), true); return; }
+            confirm(WorkspaceText.tr("Очистить весь журнал недавних команд?"), () -> { store.clearRecentCommands(); renderContent(); });
         });
-        EditText search = field("Поиск по журналу", journalQuery, false);
-        search.setContentDescription("Поиск по журналу");
+        EditText search = field(WorkspaceText.tr("Поиск по журналу"), journalQuery, false);
+        search.setContentDescription(WorkspaceText.tr("Поиск по журналу"));
         LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, -2);
         search.setMinHeight(dp(48)); searchParams.setMargins(0, 0, 0, dp(12)); body.addView(search, searchParams);
         ScrollView journal = new WorkspacePanelScrollView(activity);
         journal.setBackground(shape(PANEL, BORDER, 16)); journal.setClipToOutline(true);
-        journal.setContentDescription("Журнал последних 50 команд");
+        journal.setContentDescription(WorkspaceText.tr("Журнал последних 50 команд"));
         LinearLayout entries = column(); entries.setPadding(dp(12), dp(12), dp(12), dp(12));
         journal.addView(entries); body.addView(journal, new LinearLayout.LayoutParams(-1, 0, 1));
         TextView count = text("", 11, MUTED); count.setPadding(0, dp(8), 0, 0); body.addView(count);
@@ -391,21 +419,21 @@ public final class WorkspaceController {
             }
             public void afterTextChanged(Editable s) {}
         });
-        section(body, "Сохранённые сессии", "+", () -> editSession(null, false));
+        section(body, WorkspaceText.tr("Сохранённые сессии"), "+", () -> editSession(null, false));
         ScrollView saved = new WorkspacePanelScrollView(activity);
         saved.setBackground(shape(PANEL, BORDER, 16)); saved.setClipToOutline(true);
-        saved.setContentDescription("Список сохранённых сессий");
+        saved.setContentDescription(WorkspaceText.tr("Список сохранённых сессий"));
         LinearLayout profiles = column(); profiles.setPadding(dp(12), dp(12), dp(12), dp(12));
         saved.addView(profiles); body.addView(saved, new LinearLayout.LayoutParams(-1, 0, 1));
         int savedCount = 0;
         for (WorkspaceStore.Session profile : sortedSessions()) if (profile.saved) { sessionCard(profiles, profile); savedCount++; }
-        if (savedCount == 0) empty(profiles, "Сохранённых сессий нет", "Нажмите +, чтобы подготовить команду запуска.");
+        if (savedCount == 0) empty(profiles, WorkspaceText.tr("Сохранённых сессий нет"), WorkspaceText.tr("Нажмите +, чтобы подготовить команду запуска."));
     }
     private void renderJournal(LinearLayout entries, TextView count) {
         entries.removeAllViews(); int shown = 0;
         if (store.recentCommands.isEmpty()) {
-            entries.addView(text("Команд пока нет", 16, TEXT));
-            TextView hint = text("Здесь появятся команды, отправленные из поля ввода терминала.", 13, MUTED);
+            entries.addView(text(WorkspaceText.tr("Команд пока нет"), 16, TEXT));
+            TextView hint = text(WorkspaceText.tr("Здесь появятся команды, отправленные из поля ввода терминала."), 13, MUTED);
             hint.setPadding(0, dp(8), 0, 0); entries.addView(hint);
         }
         for (WorkspaceStore.RecentCommand recent : store.recentCommands) {
@@ -415,33 +443,33 @@ public final class WorkspaceController {
             LinearLayout labels = column(); TextView entry = text(recent.command, 13, TEXT);
             entry.setTypeface(Typeface.MONOSPACE); labels.addView(entry);
             String time = recent.sentAt > 0 ? new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-                .format(new java.util.Date(recent.sentAt)) : "Ранее";
+                .format(new java.util.Date(recent.sentAt)) : WorkspaceText.tr("Ранее");
             TextView timestamp = text(time, 11, MUTED); timestamp.setPadding(0, dp(6), 0, 0); labels.addView(timestamp);
             Runnable insert = () -> recentMenu(recent);
             entry.setOnClickListener(v -> insert.run());
             labels.setOnClickListener(v -> insert.run()); card.setOnClickListener(v -> insert.run());
             card.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
         }
-        if (shown == 0 && !store.recentCommands.isEmpty()) entries.addView(text("Ничего не найдено", 14, MUTED));
+        if (shown == 0 && !store.recentCommands.isEmpty()) entries.addView(text(WorkspaceText.tr("Ничего не найдено"), 14, MUTED));
         count.setText(store.recentCommands.size() + " / " + WorkspaceStore.MAX_RECENT_COMMANDS
-            + (journalQuery.isEmpty() ? "" : " · найдено: " + shown));
+            + (journalQuery.isEmpty() ? "" : WorkspaceText.tr(" · найдено: ") + shown));
     }
     private void recentMenu(WorkspaceStore.RecentCommand recent) {
         hideDialogKeyboard();
         LinearLayout body = previewBody(recent.command, true);
         TextView time = text(recent.sentAt > 0 ? new java.text.SimpleDateFormat("dd.MM · HH:mm", java.util.Locale.getDefault())
-            .format(new java.util.Date(recent.sentAt)) : "Ранее", 12, MUTED);
+            .format(new java.util.Date(recent.sentAt)) : WorkspaceText.tr("Ранее"), 12, MUTED);
         time.setPadding(0, 0, 0, dp(10)); body.addView(time, 0);
-        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle("Недавняя команда")
-            .setView(formScroll(body)).setPositiveButton("Закрыть", null).create();
-        previewAction(body, "Вставить в терминал", R.drawable.workspace_commands, () -> {
+        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Недавняя команда"))
+            .setView(formScroll(body)).setPositiveButton(WorkspaceText.tr("Закрыть"), null).create();
+        previewAction(body, WorkspaceText.tr("Вставить в терминал"), R.drawable.workspace_commands, () -> {
             dialog.dismiss(); WorkspaceStore.Command command = new WorkspaceStore.Command(); command.command = recent.command; insertCommand(command);
         });
-        previewAction(body, "Сохранить в команды", R.drawable.workspace_save, () -> { dialog.dismiss(); editCommand(null, recent.command); });
-        previewAction(body, "Скопировать", R.drawable.workspace_copy, () -> {
+        previewAction(body, WorkspaceText.tr("Сохранить в команды"), R.drawable.workspace_save, () -> { dialog.dismiss(); editCommand(null, recent.command); });
+        previewAction(body, WorkspaceText.tr("Скопировать"), R.drawable.workspace_copy, () -> {
             ((android.content.ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE))
-                .setPrimaryClip(android.content.ClipData.newPlainText("Команда", recent.command));
-            dialog.dismiss(); activity.showToast("Команда скопирована", false);
+                .setPrimaryClip(android.content.ClipData.newPlainText(WorkspaceText.tr("Команда"), recent.command));
+            dialog.dismiss(); activity.showToast(WorkspaceText.tr("Команда скопирована"), false);
         });
         dialog.show();
     }
@@ -451,7 +479,7 @@ public final class WorkspaceController {
     }
     private LinearLayout previewBody(String value, boolean code) {
         LinearLayout body = column(); ScrollView pane = new ScrollView(activity); pane.setFillViewport(true);
-        pane.setContentDescription(code ? "Полный текст команды" : "Полный текст заметки");
+        pane.setContentDescription(code ? WorkspaceText.tr("Полный текст команды") : WorkspaceText.tr("Полный текст заметки"));
         pane.setBackground(shape(0xff0b1319, BORDER, 12)); pane.setClipToOutline(true);
         TextView full = text(value, 14, TEXT); full.setPadding(dp(14), dp(14), dp(14), dp(14));
         full.setTextIsSelectable(true); if (code) full.setTypeface(Typeface.MONOSPACE);
@@ -476,8 +504,8 @@ public final class WorkspaceController {
         hideDialogKeyboard(); LinearLayout body = previewBody(command.command, true);
         previewMetadata(body, command.category, command.favorite);
         AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(command.name)
-            .setView(formScroll(body)).setPositiveButton("Закрыть", null).create();
-        previewAction(body, "Вставить в терминал", R.drawable.workspace_commands, () -> { dialog.dismiss(); insertCommand(command); });
+            .setView(formScroll(body)).setPositiveButton(WorkspaceText.tr("Закрыть"), null).create();
+        previewAction(body, WorkspaceText.tr("Вставить в терминал"), R.drawable.workspace_commands, () -> { dialog.dismiss(); insertCommand(command); });
         dialog.show();
     }
     private void chips(LinearLayout body, String[] options, String selected, java.util.function.Consumer<String> click) {
@@ -490,49 +518,52 @@ public final class WorkspaceController {
         scroller.addView(items); body.addView(scroller);
     }
     private void searchSummary(LinearLayout body) {
-        if (!query.isEmpty()) body.addView(button("Поиск: " + query + "  ×", false, () -> { query = ""; renderContent(); }));
+        if (!query.isEmpty()) body.addView(button(WorkspaceText.tr("Поиск: ") + query + "  ×", false, () -> { query = ""; renderContent(); }));
     }
     private void commands(LinearLayout body) {
         if (!commandCategory.isEmpty() && !commandCategories().contains(commandCategory)) commandCategory = "";
         if (!noteCategory.isEmpty() && !noteCategories().contains(noteCategory)) noteCategory = "";
         libraryFilters(body, false);
-        LinearLayout commandEntries = libraryPanel(body, "Список сохранённых команд");
+        LinearLayout commandEntries = libraryPanel(body, WorkspaceText.tr("Список сохранённых команд"));
         int count = 0;
         for (WorkspaceStore.Command c : store.commands) {
             if ((!favorites || c.favorite) && (commandCategory.isEmpty() || commandCategory.equals(c.category))
                 && matches(c.name + " " + c.command + " " + c.category)) { commandCard(commandEntries, c); count++; }
         }
-        if (count == 0) empty(commandEntries, "Команд пока нет", "Нажмите +, чтобы сохранить команду, или измените фильтры.");
+        if (count == 0) empty(commandEntries, WorkspaceText.tr("Команд пока нет"), WorkspaceText.tr("Нажмите +, чтобы сохранить команду, или измените фильтры."));
         libraryFilters(body, true);
-        LinearLayout noteEntries = libraryPanel(body, "Список сохранённых заметок"); count = 0;
+        LinearLayout noteEntries = libraryPanel(body, WorkspaceText.tr("Список сохранённых заметок")); count = 0;
         for (WorkspaceStore.Note n : store.notes) {
             if ((!noteFavorites || n.favorite) && (noteCategory.isEmpty() || noteCategory.equals(n.category))
                 && matches(n.name + " " + n.text + " " + n.category)) { noteCard(noteEntries, n); count++; }
         }
-        if (count == 0) empty(noteEntries, "Заметок пока нет", "Нажмите +, чтобы сохранить заметку, или измените фильтры.");
+        if (count == 0) empty(noteEntries, WorkspaceText.tr("Заметок пока нет"), WorkspaceText.tr("Нажмите +, чтобы сохранить заметку, или измените фильтры."));
     }
     private void libraryFilters(LinearLayout body, boolean notes) {
         LinearLayout line = row(); line.setPadding(0, dp(10), 0, dp(10));
-        line.setContentDescription(notes ? "Фильтры заметок" : "Фильтры команд");
+        line.setContentDescription(notes ? WorkspaceText.tr("Фильтры заметок") : WorkspaceText.tr("Фильтры команд"));
         LinearLayout items = row();
-        String all = notes ? "Все заметки" : "Все команды";
-        for (String option : new String[]{all, "Избранное"}) {
-            TextView chip = button(option, (notes ? noteFavorites : favorites) == option.equals("Избранное"), () -> {
-                if (notes) noteFavorites = option.equals("Избранное"); else favorites = option.equals("Избранное"); renderContent();
+        String all = notes ? WorkspaceText.tr("Все заметки") : WorkspaceText.tr("Все команды");
+        for (String option : new String[]{all, WorkspaceText.tr("Избранное")}) {
+            boolean active = (notes ? noteCategory : commandCategory).isEmpty() && (notes ? noteFavorites : favorites) == option.equals(WorkspaceText.tr("Избранное"));
+            TextView chip = button(option, active, () -> {
+                if (notes) { noteFavorites = option.equals(WorkspaceText.tr("Избранное")); noteCategory = ""; } else { favorites = option.equals(WorkspaceText.tr("Избранное")); commandCategory = ""; } renderContent();
             });
+            chip.setSelected(active);
             compactFilter(chip);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, -2, 1); params.setMarginEnd(dp(4)); items.addView(chip, params);
         }
         String selected = notes ? noteCategory : commandCategory;
-        TextView category = button((selected.isEmpty() ? "Категории" : selected) + " ▾", !selected.isEmpty(), () -> {
+        TextView category = button((selected.isEmpty() ? WorkspaceText.tr("Категории") : selected) + " ▾", !selected.isEmpty(), () -> {
             if (notes) chooseNoteCategory(); else chooseCommandCategory();
         });
-        category.setContentDescription(notes ? "Фильтр категорий заметок" : "Фильтр категорий команд");
+        category.setContentDescription(notes ? WorkspaceText.tr("Фильтр категорий заметок") : WorkspaceText.tr("Фильтр категорий команд"));
+        category.setSelected(!selected.isEmpty());
         compactFilter(category);
         items.addView(category, new LinearLayout.LayoutParams(0, -2, 1));
         line.addView(items, new LinearLayout.LayoutParams(0, -2, 1));
         TextView add = button("+", true, () -> { if (notes) editNote(null); else editCommand(null); });
-        add.setContentDescription(notes ? "Новая заметка" : "Новая команда");
+        add.setContentDescription(notes ? WorkspaceText.tr("Новая заметка") : WorkspaceText.tr("Новая команда"));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(48), dp(48)); params.setMarginStart(dp(8));
         line.addView(add, params); body.addView(line);
     }
@@ -554,24 +585,24 @@ public final class WorkspaceController {
     }
     private void chooseNoteCategory() {
         List<String> categories = noteCategories();
-        List<String> labels = new ArrayList<>(); labels.add("Все категории"); labels.addAll(categories);
+        List<String> labels = new ArrayList<>(); labels.add(WorkspaceText.tr("Все категории")); labels.addAll(categories);
         int selected = noteCategory.isEmpty() ? 0 : categories.indexOf(noteCategory) + 1;
-        WorkspaceDialogs.builder(activity).setTitle("Категории заметок")
+        WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Категории заметок"))
             .setSingleChoiceItems(labels.toArray(new String[0]), Math.max(0, selected), (dialog, which) -> {
-                noteCategory = which == 0 ? "" : categories.get(which - 1); dialog.dismiss(); renderContent();
-            }).setNegativeButton("Отмена", null).show();
+                noteCategory = which == 0 ? "" : categories.get(which - 1); noteFavorites = false; dialog.dismiss(); renderContent();
+            }).setNegativeButton(WorkspaceText.tr("Отмена"), null).show();
     }
     private void noteCard(LinearLayout parent, WorkspaceStore.Note note) {
         LinearLayout card = card(parent); card.setBackground(shape(Color.BLACK, BORDER, 12));
         cardLabels(card, note.name, note.text, note.category + (note.favorite ? "  ★" : ""), false);
         ((TextView) card.getChildAt(0)).setText("≡");
-        card.setContentDescription("Заметка " + note.name); card.setOnClickListener(v -> openNote(note));
+        card.setContentDescription(WorkspaceText.tr("Заметка ") + note.name); card.setOnClickListener(v -> openNote(note));
         TextView more = button("⋮", false, () -> noteMenu(note));
-        more.setContentDescription("Действия с заметкой " + note.name); card.addView(more);
+        more.setContentDescription(WorkspaceText.tr("Действия с заметкой ") + note.name); card.addView(more);
     }
     private void openNote(WorkspaceStore.Note note) {
         hideDialogKeyboard(); LinearLayout body = previewBody(note.text, false); previewMetadata(body, note.category, note.favorite);
-        WorkspaceDialogs.builder(activity).setTitle(note.name).setView(formScroll(body)).setPositiveButton("Закрыть", null).show();
+        WorkspaceDialogs.builder(activity).setTitle(note.name).setView(formScroll(body)).setPositiveButton(WorkspaceText.tr("Закрыть"), null).show();
     }
     private LinearLayout contextHeading(String name, String command, String category, boolean favorite) {
         LinearLayout heading = column(); heading.setPadding(dp(20), dp(18), dp(20), dp(12));
@@ -586,28 +617,28 @@ public final class WorkspaceController {
     }
     private void noteMenu(WorkspaceStore.Note note) {
         WorkspaceDialogs.builder(activity).setCustomTitle(contextHeading(note.name, "", note.category, note.favorite))
-            .setItems(new String[]{note.favorite ? "Убрать из избранного" : "В избранное", "Редактировать", "Удалить"}, (d, which) -> {
-                if (!store.isWritable()) { activity.showToast("Библиотека недоступна для записи", true); return; }
+            .setItems(new String[]{note.favorite ? WorkspaceText.tr("Убрать из избранного") : WorkspaceText.tr("В избранное"), WorkspaceText.tr("Редактировать"), WorkspaceText.tr("Удалить")}, (d, which) -> {
+                if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
                 if (which == 0) { note.favorite = !note.favorite; store.save(); renderContent(); }
                 else if (which == 1) editNote(note);
-                else confirm("Удалить заметку «" + note.name + "»?", () -> { store.notes.remove(note); store.save(); renderContent(); });
-            }).setNegativeButton("Закрыть", null).show();
+                else confirm(WorkspaceText.tr("Удалить заметку «") + note.name + "»?", () -> { store.notes.remove(note); store.save(); renderContent(); });
+            }).setNegativeButton(WorkspaceText.tr("Закрыть"), null).show();
     }
     private void editNote(WorkspaceStore.Note existing) {
-        if (!store.isWritable()) { activity.showToast("Библиотека недоступна для записи", true); return; }
+        if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
         WorkspaceStore.Note draft = existing == null ? new WorkspaceStore.Note() : existing;
-        LinearLayout form = column(); EditText name = labeled(form, "Название", draft.name, false);
-        EditText text = labeled(form, "Текст заметки", draft.text, true);
-        EditText category = labeled(form, "Категория", draft.category, false);
-        CheckBox favorite = new CheckBox(activity); favorite.setText("Добавить в избранное"); favorite.setTextColor(TEXT);
+        LinearLayout form = column(); EditText name = labeled(form, WorkspaceText.tr("Название"), draft.name, false);
+        EditText text = labeled(form, WorkspaceText.tr("Текст заметки"), draft.text, true);
+        EditText category = labeled(form, WorkspaceText.tr("Категория"), draft.category, false);
+        CheckBox favorite = new CheckBox(activity); favorite.setText(WorkspaceText.tr("Добавить в избранное")); favorite.setTextColor(TEXT);
         favorite.setChecked(draft.favorite); form.addView(favorite);
-        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(existing == null ? "Новая заметка" : "Редактировать заметку")
-            .setView(formScroll(form)).setPositiveButton("Сохранить", null).setNegativeButton("Отмена", null).create();
+        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(existing == null ? WorkspaceText.tr("Новая заметка") : WorkspaceText.tr("Редактировать заметку"))
+            .setView(formScroll(form)).setPositiveButton(WorkspaceText.tr("Сохранить"), null).setNegativeButton(WorkspaceText.tr("Отмена"), null).create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            if (name.getText().toString().trim().isEmpty()) { name.setError("Укажите название"); return; }
-            if (text.getText().toString().trim().isEmpty()) { text.setError("Укажите текст"); return; }
+            if (name.getText().toString().trim().isEmpty()) { name.setError(WorkspaceText.tr("Укажите название")); return; }
+            if (text.getText().toString().trim().isEmpty()) { text.setError(WorkspaceText.tr("Укажите текст")); return; }
             draft.name = name.getText().toString().trim(); draft.text = text.getText().toString();
-            draft.category = category.getText().toString().trim(); if (draft.category.isEmpty()) draft.category = "Общее";
+            draft.category = category.getText().toString().trim(); if (draft.category.isEmpty()) draft.category = WorkspaceText.tr("Общее");
             draft.favorite = favorite.isChecked(); if (existing == null) store.notes.add(draft);
             store.save(); dialog.dismiss(); renderContent();
         })); dialog.show();
@@ -619,13 +650,13 @@ public final class WorkspaceController {
     }
     private void chooseCommandCategory() {
         List<String> categories = commandCategories();
-        List<String> labels = new ArrayList<>(); labels.add("Все категории"); labels.addAll(categories);
+        List<String> labels = new ArrayList<>(); labels.add(WorkspaceText.tr("Все категории")); labels.addAll(categories);
         int selected = commandCategory.isEmpty() ? 0 : categories.indexOf(commandCategory) + 1;
-        WorkspaceDialogs.builder(activity).setTitle("Категории команд")
+        WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Категории команд"))
             .setSingleChoiceItems(labels.toArray(new String[0]), Math.max(0, selected), (dialog, which) -> {
-                commandCategory = which == 0 ? "" : categories.get(which - 1);
+                commandCategory = which == 0 ? "" : categories.get(which - 1); favorites = false;
                 dialog.dismiss(); renderContent();
-            }).setNegativeButton("Отмена", null).show();
+            }).setNegativeButton(WorkspaceText.tr("Отмена"), null).show();
     }
     private boolean matches(String value) { return value.toLowerCase(java.util.Locale.ROOT).contains(query.toLowerCase(java.util.Locale.ROOT)); }
     private List<WorkspaceStore.Session> sortedSessions() {
@@ -633,13 +664,13 @@ public final class WorkspaceController {
         result.sort((a, b) -> Long.compare(b.updated, a.updated)); return result;
     }
     private void sessions(LinearLayout body) {
-        chips(body, new String[]{"Активные", "Сохранённые"}, savedOnly ? "Сохранённые" : "Активные", value -> { savedOnly = value.equals("Сохранённые"); renderContent(); });
+        chips(body, new String[]{WorkspaceText.tr("Активные"), WorkspaceText.tr("Сохранённые")}, savedOnly ? WorkspaceText.tr("Сохранённые") : WorkspaceText.tr("Активные"), value -> { savedOnly = value.equals(WorkspaceText.tr("Сохранённые")); renderContent(); });
         searchSummary(body); int count = 0;
         for (WorkspaceStore.Session s : sortedSessions()) {
             if ((savedOnly ? s.saved : liveFor(s) != null) && matches(s.name + " " + s.directory + " " + android.text.TextUtils.join(" ", s.startupCommands()))) { sessionCard(body, s); count++; }
         }
-        if (count == 0) empty(body, savedOnly ? "Сохранённых сессий нет" : "Нет активных сессий", "Создайте сессию или запустите сохранённую.");
-        body.addView(button("+  Новая сессия", true, () -> editSession(null)));
+        if (count == 0) empty(body, savedOnly ? WorkspaceText.tr("Сохранённых сессий нет") : WorkspaceText.tr("Нет активных сессий"), WorkspaceText.tr("Создайте сессию или запустите сохранённую."));
+        body.addView(button(WorkspaceText.tr("+  Новая сессия"), true, () -> editSession(null)));
     }
     private void empty(LinearLayout parent, String title, String subtitle) {
         LinearLayout card = column(); card.setPadding(dp(18), dp(24), dp(18), dp(24)); card.setBackground(shape(PANEL, BORDER, 16));
@@ -661,21 +692,31 @@ public final class WorkspaceController {
         LinearLayout card = card(parent); card.setBackground(shape(Color.BLACK, BORDER, 12));
         cardLabels(card, c.name, c.command, c.category + (c.favorite ? "  ★" : ""), false);
         card.setOnClickListener(v -> openCommand(c));
-        TextView more = button("⋮", false, () -> commandMenu(c)); more.setContentDescription("Действия с командой " + c.name); card.addView(more);
+        TextView more = button("⋮", false, () -> commandMenu(c)); more.setContentDescription(WorkspaceText.tr("Действия с командой ") + c.name); card.addView(more);
     }
     private void sessionCard(LinearLayout parent, WorkspaceStore.Session s) {
         TerminalSession running = liveFor(s); boolean active = running != null && running.isRunning();
-        LinearLayout card = card(parent); cardLabels(card, s.name, s.startupCommands().isEmpty() ? compact(s.directory) : android.text.TextUtils.join(" → ", s.startupCommands()), active ? "● Активна" : running != null ? "Завершена" : "Сохранена", true);
+        LinearLayout card = card(parent); cardLabels(card, s.name, s.startupCommands().isEmpty() ? compact(s.directory) : android.text.TextUtils.join(" → ", s.startupCommands()), active ? WorkspaceText.tr("● Активна") : running != null ? WorkspaceText.tr("Завершена") : WorkspaceText.tr("Сохранена"), true);
         if (screen == Screen.HOME) card.setBackground(shape(Color.BLACK, BORDER, 12));
-        card.setOnClickListener(v -> launch(s));
-        TextView run = button(active ? "›" : "▷", false, () -> launch(s)); run.setContentDescription(active ? "Открыть " + s.name : "Запустить " + s.name); card.addView(run);
-        TextView more = button("⋮", false, () -> sessionMenu(s)); more.setContentDescription("Действия с сессией " + s.name); card.addView(more);
+        card.setOnClickListener(v -> openSavedSession(s));
+        TextView run = button(active ? "›" : "▷", false, () -> openSavedSession(s)); run.setContentDescription(active ? WorkspaceText.tr("Открыть ") + s.name : WorkspaceText.tr("Запустить ") + s.name); card.addView(run,new LinearLayout.LayoutParams(dp(48),dp(48)));
+        TextView more = button("⋮", false, () -> sessionMenu(s)); more.setContentDescription(WorkspaceText.tr("Действия с сессией ") + s.name); LinearLayout.LayoutParams moreParams=new LinearLayout.LayoutParams(dp(48),dp(48)); moreParams.setMarginStart(dp(8)); card.addView(more,moreParams);
+    }
+    private void openSavedSession(WorkspaceStore.Session profile) {
+        if(!profile.environment.equals("codex")||liveFor(profile)!=null&&liveFor(profile).isRunning()){launch(profile);return;}
+        LinearLayout body=column();body.addView(text(WorkspaceText.tr("Папка: ")+profile.directory,14,TEXT));body.addView(text(WorkspaceText.tr("Среда: ")+ProjectFiles.environmentLabel(profile),13,MUTED));
+        body.addView(text(WorkspaceText.tr("Чат: ")+(profile.codexThreadName.isEmpty()?WorkspaceText.tr("Новый чат"):profile.codexThreadName),14,TEXT));
+        body.addView(text(WorkspaceText.tr("Новый чат не заменяет прежнюю историю. Сохранение — по вашему выбору."),12,MUTED));
+        WorkspaceDialogs.builder(activity).setTitle(profile.name).setView(body)
+            .setPositiveButton(profile.codexChat.equals("id")?WorkspaceText.tr("Продолжить чат"):WorkspaceText.tr("Начать чат"),(d,w)->launch(profile))
+            .setNeutralButton(WorkspaceText.tr("Новый чат"),(d,w)->{WorkspaceStore.Session next=profile.copy();next.name=profile.name;next.codexChat="new";next.codexThread="";next.codexThreadName="";next.codexSourceDirectory="";next.saved=false;launchNew(next,true);})
+            .setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
     }
     private void search() {
-        EditText input = field("Название, команда или каталог", query, false);
-        WorkspaceDialogs.builder(activity).setTitle("Поиск").setView(input)
-            .setPositiveButton("Найти", (d, which) -> { query = input.getText().toString().trim(); renderContent(); })
-            .setNegativeButton("Отмена", null).show();
+        EditText input = field(WorkspaceText.tr("Название, команда или каталог"), query, false);
+        WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Поиск")).setView(input)
+            .setPositiveButton(WorkspaceText.tr("Найти"), (d, which) -> { query = input.getText().toString().trim(); renderContent(); })
+            .setNegativeButton(WorkspaceText.tr("Отмена"), null).show();
     }
     private EditText field(String hint, String value, boolean multiline) {
         EditText e = new EditText(activity); e.setHint(hint); e.setText(value); e.setTextColor(TEXT); e.setHintTextColor(MUTED); e.setTextSize(14);
@@ -695,130 +736,150 @@ public final class WorkspaceController {
         editCommand(existing, "");
     }
     private void editCommand(WorkspaceStore.Command existing, String initialCommand) {
-        if (!store.isWritable()) { activity.showToast("Библиотека недоступна для записи", true); return; }
+        if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
         WorkspaceStore.Command draft = existing == null ? new WorkspaceStore.Command() : existing;
         if (existing == null) draft.command = initialCommand;
-        LinearLayout form = column(); EditText name = labeled(form, "Название", draft.name, false);
-        EditText command = labeled(form, "Команда", draft.command, true);
-        EditText categoryInput = labeled(form, "Категория", draft.category, false);
-        CheckBox favorite = new CheckBox(activity); favorite.setText("Добавить в избранное"); favorite.setTextColor(TEXT); favorite.setChecked(draft.favorite); form.addView(favorite);
-        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(existing == null ? "Новая команда" : "Редактировать команду")
-            .setView(formScroll(form)).setPositiveButton("Сохранить", null).setNegativeButton("Отмена", null).create();
+        LinearLayout form = column(); EditText name = labeled(form, WorkspaceText.tr("Название"), draft.name, false);
+        EditText command = labeled(form, WorkspaceText.tr("Команда"), draft.command, true);
+        EditText categoryInput = labeled(form, WorkspaceText.tr("Категория"), draft.category, false);
+        CheckBox favorite = new CheckBox(activity); favorite.setText(WorkspaceText.tr("Добавить в избранное")); favorite.setTextColor(TEXT); favorite.setChecked(draft.favorite); form.addView(favorite);
+        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(existing == null ? WorkspaceText.tr("Новая команда") : WorkspaceText.tr("Редактировать команду"))
+            .setView(formScroll(form)).setPositiveButton(WorkspaceText.tr("Сохранить"), null).setNegativeButton(WorkspaceText.tr("Отмена"), null).create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            if (name.getText().toString().trim().isEmpty()) { name.setError("Укажите название"); return; }
-            if (command.getText().toString().trim().isEmpty()) { command.setError("Укажите команду"); return; }
+            if (name.getText().toString().trim().isEmpty()) { name.setError(WorkspaceText.tr("Укажите название")); return; }
+            if (command.getText().toString().trim().isEmpty()) { command.setError(WorkspaceText.tr("Укажите команду")); return; }
             draft.name = name.getText().toString().trim(); draft.command = command.getText().toString();
-            draft.category = categoryInput.getText().toString().trim(); if (draft.category.isEmpty()) draft.category = "Общее";
+            draft.category = categoryInput.getText().toString().trim(); if (draft.category.isEmpty()) draft.category = WorkspaceText.tr("Общее");
             draft.favorite = favorite.isChecked();
             if (existing == null) store.commands.add(draft); store.save(); dialog.dismiss(); renderContent();
         })); dialog.show();
     }
     private boolean validDirectoryInput(EditText field) {
         String value = field.getText().toString().trim();
-        if (value.indexOf('\0') >= 0 || value.contains("\n")) { field.setError("Некорректный каталог"); return false; }
+        if (value.indexOf('\0') >= 0 || value.contains("\n")) { field.setError(WorkspaceText.tr("Некорректный каталог")); return false; }
         if (!value.isEmpty() && !value.startsWith("/") && !value.equals("~") && !value.startsWith("~/")) {
-            field.setError("Используйте абсолютный путь или ~/каталог"); return false;
+            field.setError(WorkspaceText.tr("Используйте абсолютный путь или ~/каталог")); return false;
         }
         return true;
     }
     private void editSession(WorkspaceStore.Session existing) { editSession(existing, true); }
     private void editSession(WorkspaceStore.Session existing, boolean launchAfterSave) {
-        if (!store.isWritable()) { activity.showToast("Библиотека недоступна для записи", true); return; }
+        if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
         WorkspaceStore.Session draft = existing == null ? new WorkspaceStore.Session() : existing;
-        LinearLayout form = column(); EditText name = labeled(form, "Название сессии", existing == null ? "" : draft.name, false);
-        EditText directory = labeled(form, "Рабочий каталог", existing == null ? TermuxConstants.TERMUX_HOME_DIR_PATH : draft.directory, false);
+        LinearLayout form = column(); EditText name = labeled(form, WorkspaceText.tr("Название сессии"), existing == null ? "" : draft.name, false);
+        EditText directory = labeled(form, WorkspaceText.tr("Рабочий каталог"), existing == null ? TermuxConstants.TERMUX_HOME_DIR_PATH : draft.directory, false);
         String[] chosenEnvironment = {existing == null ? "termux" : draft.environment};
+        TextView chooseDirectory=button("▱",false,()->{});
+        chooseDirectory.setContentDescription(WorkspaceText.tr("Выбрать рабочий каталог"));
+        form.removeView(directory);LinearLayout directoryRow=row();directoryRow.addView(directory,new LinearLayout.LayoutParams(0,-2,1));directoryRow.addView(chooseDirectory,new LinearLayout.LayoutParams(dp(48),dp(48)));form.addView(directoryRow);
+
         String[] environments = {"legacy", "termux", "ubuntu", "ssh", "codex"};
-        String[] environmentNames = {"Как раньше", "Termux · ждать Bash", "Ubuntu · ждать Bash", "SSH · сервер", "Сессия Codex"};
+        String[] environmentNames = {WorkspaceText.tr("Как раньше"), WorkspaceText.tr("Termux · ждать Bash"), WorkspaceText.tr("Ubuntu · ждать Bash"), WorkspaceText.tr("SSH · сервер"), WorkspaceText.tr("Сессия Codex")};
         TextView environment = button("", false, () -> {});
-        environment.setContentDescription("Среда запуска");
+        environment.setContentDescription(WorkspaceText.tr("Среда запуска"));
         LinearLayout sshFields = column();
-        EditText sshHost = labeled(sshFields, "Адрес сервера", draft.sshHost, false);
-        EditText sshUser = labeled(sshFields, "Пользователь", draft.sshUser, false);
-        EditText sshPort = labeled(sshFields, "Порт", Integer.toString(draft.sshPort), false);
+        EditText sshHost = labeled(sshFields, WorkspaceText.tr("Адрес сервера"), draft.sshHost, false);
+        EditText sshUser = labeled(sshFields, WorkspaceText.tr("Пользователь"), draft.sshUser, false);
+        EditText sshPort = labeled(sshFields, WorkspaceText.tr("Порт"), Integer.toString(draft.sshPort), false);
         sshPort.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
         String[] authModes = {"auto", "key", "password"};
-        String[] authNames = {"Автоматически", "Файл SSH-ключа", "По паролю"};
+        String[] authNames = {WorkspaceText.tr("Автоматически"), WorkspaceText.tr("Файл SSH-ключа"), WorkspaceText.tr("По паролю")};
         String[] chosenAuth = {draft.sshAuth};
-        TextView auth = button("", false, () -> {}); auth.setContentDescription("Авторизация SSH"); sshFields.addView(auth);
+        TextView auth = button("", false, () -> {}); auth.setContentDescription(WorkspaceText.tr("Авторизация SSH")); sshFields.addView(auth);
         LinearLayout keyFields = column(); sshFields.addView(keyFields);
-        EditText identity = labeled(keyFields, "Файл SSH-ключа", draft.sshIdentity, false);
-        identity.setContentDescription("Файл SSH-ключа");
-        keyFields.addView(button("Выбрать ключ", false, () -> chooseSshKey(identity)));
+        EditText identity = labeled(keyFields, WorkspaceText.tr("Файл SSH-ключа"), draft.sshIdentity, false);
+        identity.setContentDescription(WorkspaceText.tr("Файл SSH-ключа"));
+        keyFields.addView(button(WorkspaceText.tr("Выбрать ключ"), false, () -> chooseSshKey(identity)));
         LinearLayout passwordFields = column(); sshFields.addView(passwordFields);
-        EditText password = labeled(passwordFields, "Пароль", "", false); password.setContentDescription("Пароль SSH");
+        EditText password = labeled(passwordFields, WorkspaceText.tr("Пароль"), "", false); password.setContentDescription(WorkspaceText.tr("Пароль SSH"));
         password.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         password.setSaveEnabled(false); password.setLongClickable(false);
-        if (!draft.sshEncryptedPassword.isEmpty()) password.setHint("Сохранён; оставьте пустым, чтобы не менять");
-        CheckBox showPassword = new CheckBox(activity); showPassword.setText("Показать пароль"); showPassword.setTextColor(TEXT);
+        if (!draft.sshEncryptedPassword.isEmpty()) password.setHint(WorkspaceText.tr("Сохранён; оставьте пустым, чтобы не менять"));
+        CheckBox showPassword = new CheckBox(activity); showPassword.setText(WorkspaceText.tr("Показать пароль")); showPassword.setTextColor(TEXT);
         showPassword.setOnCheckedChangeListener((b, checked) -> {
             password.setTransformationMethod(checked ? null : android.text.method.PasswordTransformationMethod.getInstance());
             password.setSelection(password.length());
         }); passwordFields.addView(showPassword);
-        CheckBox rememberPassword = new CheckBox(activity); rememberPassword.setText("Запомнить пароль"); rememberPassword.setTextColor(TEXT);
+        CheckBox rememberPassword = new CheckBox(activity); rememberPassword.setText(WorkspaceText.tr("Запомнить пароль")); rememberPassword.setTextColor(TEXT);
         rememberPassword.setChecked(!draft.sshEncryptedPassword.isEmpty()); passwordFields.addView(rememberPassword);
-        passwordFields.addView(text("Сохранение через Android Keystore. После удаления приложения пароль потребуется ввести заново.", 12, MUTED));
+        passwordFields.addView(text(WorkspaceText.tr("Сохранение через Android Keystore. После удаления приложения пароль потребуется ввести заново."), 12, MUTED));
         Runnable updateAuth = () -> {
-            auth.setText("Авторизация: " + authNames[Math.max(0, java.util.Arrays.asList(authModes).indexOf(chosenAuth[0]))]);
+            auth.setText(WorkspaceText.tr("Авторизация: ") + authNames[Math.max(0, java.util.Arrays.asList(authModes).indexOf(chosenAuth[0]))]);
             keyFields.setVisibility(chosenAuth[0].equals("key") ? View.VISIBLE : View.GONE);
             passwordFields.setVisibility(chosenAuth[0].equals("password") ? View.VISIBLE : View.GONE);
         }; updateAuth.run();
-        auth.setOnClickListener(v -> WorkspaceDialogs.builder(activity).setTitle("Авторизация SSH")
+        auth.setOnClickListener(v -> WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Авторизация SSH"))
             .setSingleChoiceItems(authNames, java.util.Arrays.asList(authModes).indexOf(chosenAuth[0]), (d, which) -> {
                 chosenAuth[0] = authModes[which]; updateAuth.run(); d.dismiss();
-            }).setNegativeButton("Отмена", null).show());
+            }).setNegativeButton(WorkspaceText.tr("Отмена"), null).show());
         android.widget.CheckBox sshKeepOpen = new android.widget.CheckBox(activity);
-        sshKeepOpen.setText("Оставить подключение открытым"); sshKeepOpen.setTextColor(TEXT);
+        sshKeepOpen.setText(WorkspaceText.tr("Оставить подключение открытым")); sshKeepOpen.setTextColor(TEXT);
         sshKeepOpen.setChecked(draft.sshKeepOpen); sshFields.addView(sshKeepOpen);
         LinearLayout codexFields = column();
         String[] codexEnvironment = {draft.codexEnvironment}, codexAccess = {draft.codexAccess}, codexChat = {draft.codexChat};
         String[] codexThread = {draft.codexThread}, codexThreadName = {draft.codexThreadName};
+        String[] codexSourceDirectory={draft.codexSourceDirectory};
+        String[] codexConfirmedDirectory={existing!=null&&!draft.codexSourceDirectory.isEmpty()?draft.directory:""};
         TextView codexEnvButton = button("", false, () -> {}); codexFields.addView(codexEnvButton);
         TextView codexAccessButton = button("", false, () -> {}); codexFields.addView(codexAccessButton);
         TextView codexChatButton = button("", false, () -> {}); codexFields.addView(codexChatButton);
-        codexEnvButton.setContentDescription("Среда Codex"); codexAccessButton.setContentDescription("Доступ Codex"); codexChatButton.setContentDescription("Чат Codex");
+        codexEnvButton.setContentDescription(WorkspaceText.tr("Среда Codex")); codexAccessButton.setContentDescription(WorkspaceText.tr("Доступ Codex")); codexChatButton.setContentDescription(WorkspaceText.tr("Чат Codex"));
         String[] accessModes = {"full", "project", "read"};
-        String[] accessNames = {"Полный доступ · без подтверждений", "В пределах проекта · с подтверждениями", "Только чтение · с подтверждениями"};
+        String[] accessNames = {WorkspaceText.tr("Полный доступ · без подтверждений"), WorkspaceText.tr("В пределах проекта · с подтверждениями"), WorkspaceText.tr("Только чтение · с подтверждениями")};
         Runnable updateCodex = () -> {
-            codexEnvButton.setText("Среда Codex: " + (codexEnvironment[0].equals("ubuntu") ? "Ubuntu" : "Termux"));
-            codexAccessButton.setText("Доступ: " + accessNames[Math.max(0, java.util.Arrays.asList(accessModes).indexOf(codexAccess[0]))]);
-            codexChatButton.setText("Чат: " + (codexChat[0].equals("new") ? "Новый" : codexChat[0].equals("last") ? "Выберите конкретный чат" : codexChat[0].equals("id") ? codexThreadName[0] : "Выбрать при запуске"));
+            codexEnvButton.setText(WorkspaceText.tr("Среда Codex: ") + (codexEnvironment[0].equals("ubuntu") ? "Ubuntu" : "Termux"));
+            codexAccessButton.setText(WorkspaceText.tr("Доступ: ") + accessNames[Math.max(0, java.util.Arrays.asList(accessModes).indexOf(codexAccess[0]))]);
+            codexChatButton.setText(WorkspaceText.tr("Чат: ") + (codexChat[0].equals("new") ? WorkspaceText.tr("Новый") : codexChat[0].equals("last") ? WorkspaceText.tr("Выберите конкретный чат") : codexChat[0].equals("id") ? codexThreadName[0] : WorkspaceText.tr("Выбрать при запуске")));
         }; updateCodex.run();
-        codexEnvButton.setOnClickListener(v -> WorkspaceDialogs.builder(activity).setTitle("Среда Codex")
+        codexEnvButton.setOnClickListener(v -> WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Среда Codex"))
             .setSingleChoiceItems(new String[]{"Termux", "Ubuntu"}, codexEnvironment[0].equals("ubuntu") ? 1 : 0, (d, which) -> {
-                codexEnvironment[0] = which == 0 ? "termux" : "ubuntu"; codexChat[0] = "new"; codexThread[0] = ""; codexThreadName[0] = "";
+                codexEnvironment[0] = which == 0 ? "termux" : "ubuntu"; codexChat[0] = "new"; codexThread[0] = ""; codexThreadName[0] = "";codexSourceDirectory[0]="";codexConfirmedDirectory[0]="";
                 if (which == 1 && directory.getText().toString().equals(TermuxConstants.TERMUX_HOME_DIR_PATH)) directory.setText("/root");
                 else if (which == 0 && directory.getText().toString().equals("/root")) directory.setText(TermuxConstants.TERMUX_HOME_DIR_PATH);
                 updateCodex.run(); d.dismiss();
-            }).setNegativeButton("Отмена", null).show());
-        codexAccessButton.setOnClickListener(v -> WorkspaceDialogs.builder(activity).setTitle("Доступ Codex")
+            }).setNegativeButton(WorkspaceText.tr("Отмена"), null).show());
+        codexAccessButton.setOnClickListener(v -> WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Доступ Codex"))
             .setSingleChoiceItems(accessNames, java.util.Arrays.asList(accessModes).indexOf(codexAccess[0]), (d, which) -> {
                 codexAccess[0] = accessModes[which]; updateCodex.run(); d.dismiss();
-            }).setNegativeButton("Отмена", null).show());
-        codexChatButton.setOnClickListener(v -> WorkspaceDialogs.builder(activity).setTitle("Чат Codex")
-            .setItems(new String[]{"Новый чат", "Выбрать чат", "Ввести ID чата"}, (d, which) -> {
-                if (which == 0) { codexChat[0] = "new"; codexThread[0] = ""; updateCodex.run(); }
-                else if (which == 1) chooseCodexChat(codexEnvironment[0], (id, title) -> {
-                    codexChat[0] = id.isEmpty() ? "choose" : "id"; codexThread[0] = id; codexThreadName[0] = title; updateCodex.run();
+            }).setNegativeButton(WorkspaceText.tr("Отмена"), null).show());
+        codexChatButton.setOnClickListener(v -> WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Чат Codex"))
+            .setItems(new String[]{WorkspaceText.tr("Новый чат"), WorkspaceText.tr("Выбрать чат"), WorkspaceText.tr("Ввести ID чата")}, (d, which) -> {
+                if (which == 0) { codexChat[0] = "new"; codexThread[0] = ""; codexThreadName[0]="";codexSourceDirectory[0]="";codexConfirmedDirectory[0]=""; updateCodex.run(); }
+                else if (which == 1) chooseCodexChat(codexEnvironment[0], directory.getText().toString().trim(), (id, title, source) -> {
+                    codexChat[0] = id.isEmpty() ? "new" : "id"; codexThread[0] = id; codexThreadName[0] = title;codexSourceDirectory[0]=source;codexConfirmedDirectory[0]=directory.getText().toString().trim(); updateCodex.run();
                 });
                 else {
-                    EditText id = field("ID чата Codex", codexThread[0], false);
-                    AlertDialog picker = WorkspaceDialogs.builder(activity).setTitle("ID чата Codex").setView(id).setPositiveButton("Выбрать", null).setNegativeButton("Отмена", null).create();
+                    EditText id = field(WorkspaceText.tr("ID чата Codex"), codexThread[0], false);
+                    AlertDialog picker = WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("ID чата Codex")).setView(id).setPositiveButton(WorkspaceText.tr("Выбрать"), null).setNegativeButton(WorkspaceText.tr("Отмена"), null).create();
                     picker.setOnShowListener(x -> picker.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(y -> {
-                        String value = id.getText().toString().trim(); if (!CodexSessionShell.validThread(value)) { id.setError("Некорректный ID"); return; }
-                        codexChat[0] = "id"; codexThread[0] = value; codexThreadName[0] = value; updateCodex.run(); picker.dismiss();
+                        String value = id.getText().toString().trim(); if (!CodexSessionShell.validThread(value)) { id.setError(WorkspaceText.tr("Некорректный ID")); return; }
+                        String env=codexEnvironment[0],cwd=directory.getText().toString().trim();
+                        verifyCodexChat(env,cwd,value,(title,source)->{if(!picker.isShowing()||!env.equals(codexEnvironment[0])||!cwd.equals(directory.getText().toString().trim()))return;codexChat[0]="id";codexThread[0]=value;codexThreadName[0]=title;codexSourceDirectory[0]=source;codexConfirmedDirectory[0]=cwd;updateCodex.run();picker.dismiss();});
                     })); picker.show();
                 }
-            }).setNegativeButton("Отмена", null).show());
-        codexFields.addView(text("Авторизация и история берутся из выбранной среды. Если вход не выполнен, Codex предложит авторизоваться. Для карточки управления нужна версия Codex с app-server и --remote. Полный доступ действует в пределах доступных среде файлов. На Android ограничения sandbox зависят от поддержки Codex; при ошибке запуск остановится, права не повышаются автоматически.", 12, MUTED));
+            }).setNegativeButton(WorkspaceText.tr("Отмена"), null).show());
+        chooseDirectory.setOnClickListener(v->{
+            WorkspaceStore.Session location=new WorkspaceStore.Session();location.id=draft.id;location.environment=chosenEnvironment[0];location.codexEnvironment=codexEnvironment[0];
+            location.sshHost=sshHost.getText().toString().trim();location.sshUser=sshUser.getText().toString().trim();location.sshAuth=chosenAuth[0];location.sshIdentity=identity.getText().toString().trim();location.sshEncryptedPassword=draft.sshEncryptedPassword;
+            try{location.sshPort=Integer.parseInt(sshPort.getText().toString());}catch(NumberFormatException e){sshPort.setError(WorkspaceText.tr("Порт от 1 до 65535"));return;}
+            showFileBrowser(location,directory.getText().toString().trim(),path->{directory.setText(path);if(name.getText().toString().trim().isEmpty())name.setText(new File(path).getName());});
+        });
+        directory.addTextChangedListener(new TextWatcher(){
+            public void beforeTextChanged(CharSequence t,int start,int count,int after){}
+            public void onTextChanged(CharSequence t,int start,int before,int count){
+                if(codexChat[0].equals("id")){codexConfirmedDirectory[0]="";updateCodex.run();}
+            }
+            public void afterTextChanged(Editable t){}
+        });
+        codexFields.addView(text(WorkspaceText.tr("Авторизация и история берутся из выбранной среды. Если вход не выполнен, Codex предложит авторизоваться. Для карточки управления нужна версия Codex с app-server и --remote. Полный доступ действует в пределах доступных среде файлов. На Android ограничения sandbox зависят от поддержки Codex; при ошибке запуск остановится, права не повышаются автоматически."), 12, MUTED));
         Runnable updateEnvironment = () -> {
             sshFields.setVisibility(chosenEnvironment[0].equals("ssh") ? View.VISIBLE : View.GONE);
             codexFields.setVisibility(chosenEnvironment[0].equals("codex") ? View.VISIBLE : View.GONE);
             int index = java.util.Arrays.asList(environments).indexOf(chosenEnvironment[0]);
-            environment.setText("Среда запуска: " + environmentNames[Math.max(0, index)]);
+            environment.setText(WorkspaceText.tr("Среда запуска: ") + environmentNames[Math.max(0, index)]);
         };
         updateEnvironment.run(); form.addView(environment); form.addView(sshFields); form.addView(codexFields);
-        environment.setOnClickListener(v -> WorkspaceDialogs.builder(activity).setTitle("Среда запуска")
+        environment.setOnClickListener(v -> WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Среда запуска"))
             .setSingleChoiceItems(environmentNames, java.util.Arrays.asList(environments).indexOf(chosenEnvironment[0]), (d, which) -> {
                 chosenEnvironment[0] = environments[which];
                 if ((which == 2 || (which == 4 && codexEnvironment[0].equals("ubuntu"))) && directory.getText().toString().equals(TermuxConstants.TERMUX_HOME_DIR_PATH)) directory.setText("/root");
@@ -826,17 +887,17 @@ public final class WorkspaceController {
                 else if ((which < 2 || (which == 4 && codexEnvironment[0].equals("termux"))) && directory.getText().toString().equals("/root")) directory.setText(TermuxConstants.TERMUX_HOME_DIR_PATH);
                 if (which == 4 && name.getText().toString().trim().isEmpty()) name.setText("Codex");
                 updateEnvironment.run(); d.dismiss();
-            }).setNegativeButton("Отмена", null).show());
+            }).setNegativeButton(WorkspaceText.tr("Отмена"), null).show());
         LinearLayout commandFields = column(); form.addView(commandFields);
         List<EditText> startupFields = new ArrayList<>();
-        startupFields.add(labeled(commandFields, "Команда 1 (необязательно)", draft.startup, true));
-        if (!draft.startup2.isEmpty() || !draft.startup3.isEmpty()) startupFields.add(labeled(commandFields, "Команда 2", draft.startup2, true));
-        if (!draft.startup3.isEmpty()) startupFields.add(labeled(commandFields, "Команда 3", draft.startup3, true));
-        TextView addCommand = button("+ Команда", false, () -> {});
-        addCommand.setContentDescription("Добавить команду запуска");
+        startupFields.add(labeled(commandFields, WorkspaceText.tr("Команда 1 (необязательно)"), draft.startup, true));
+        if (!draft.startup2.isEmpty() || !draft.startup3.isEmpty()) startupFields.add(labeled(commandFields, WorkspaceText.tr("Команда 2"), draft.startup2, true));
+        if (!draft.startup3.isEmpty()) startupFields.add(labeled(commandFields, WorkspaceText.tr("Команда 3"), draft.startup3, true));
+        TextView addCommand = button(WorkspaceText.tr("+ Команда"), false, () -> {});
+        addCommand.setContentDescription(WorkspaceText.tr("Добавить команду запуска"));
         addCommand.setOnClickListener(v -> {
             if (startupFields.size() >= 3) return;
-            startupFields.add(labeled(commandFields, "Команда " + (startupFields.size() + 1), "", true));
+            startupFields.add(labeled(commandFields, WorkspaceText.tr("Команда ") + (startupFields.size() + 1), "", true));
             if (startupFields.size() == 3) addCommand.setVisibility(View.GONE);
         });
         if (startupFields.size() == 3) addCommand.setVisibility(View.GONE);
@@ -849,26 +910,31 @@ public final class WorkspaceController {
             public void beforeTextChanged(CharSequence x, int a, int b, int c) {} public void onTextChanged(CharSequence x, int a, int b, int c) { toggleCommands.run(); }
             public void afterTextChanged(Editable x) {}
         });
-        TextView hint = text("Termux / Ubuntu: команды запускаются после готовности Bash в выбранной среде. Вход в Ubuntu выполняется автоматически — команду proot-distro login вводить не нужно. До трёх шагов, при ошибке остановка. После запуска Codex следующие шаги ждут его выхода. SSH: каталог и все команды выполняются на сервере с Bash. Пароль и подтверждение ключа — в терминале; следующая команда ждёт завершения предыдущей.", 12, MUTED);
+        TextView hint = text(WorkspaceText.tr("Termux / Ubuntu: команды запускаются после готовности Bash в выбранной среде. Вход в Ubuntu выполняется автоматически — команду proot-distro login вводить не нужно. До трёх шагов, при ошибке остановка. После запуска Codex следующие шаги ждут его выхода. SSH: каталог и все команды выполняются на сервере с Bash. Пароль и подтверждение ключа — в терминале; следующая команда ждёт завершения предыдущей."), 12, MUTED);
         hint.setPadding(0, dp(16), 0, 0); form.addView(hint);
-        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(existing == null ? "Новая сессия" : "Настройки сессии")
-            .setView(formScroll(form)).setPositiveButton(existing == null && launchAfterSave ? "Создать и запустить" : "Сохранить", null).setNegativeButton("Отмена", null).create();
-        if (existing == null && launchAfterSave) dialog.setButton(AlertDialog.BUTTON_NEUTRAL, "Сохранённые", (d, w) -> chooseSavedSession());
+        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(existing == null ? WorkspaceText.tr("Новая сессия") : WorkspaceText.tr("Настройки сессии"))
+            .setView(formScroll(form)).setPositiveButton(existing == null && launchAfterSave ? WorkspaceText.tr("Создать и запустить") : WorkspaceText.tr("Сохранить"), null).setNegativeButton(WorkspaceText.tr("Отмена"), null).create();
+        if (existing == null && launchAfterSave) dialog.setButton(AlertDialog.BUTTON_NEUTRAL, WorkspaceText.tr("Сохранённые"), (d, w) -> chooseSavedSession());
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            if (name.getText().toString().trim().isEmpty()) { name.setError("Укажите название"); return; }
+            if (name.getText().toString().trim().isEmpty()) { name.setError(WorkspaceText.tr("Укажите название")); return; }
             if (!validDirectoryInput(directory)) return;
+            if(chosenEnvironment[0].equals("codex")&&codexChat[0].equals("id")&&!codexConfirmedDirectory[0].equals(directory.getText().toString().trim())) {
+                String env=codexEnvironment[0],cwd=directory.getText().toString().trim(),thread=codexThread[0];
+                verifyCodexChat(env,cwd,thread,(title,source)->{if(!dialog.isShowing()||!env.equals(codexEnvironment[0])||!cwd.equals(directory.getText().toString().trim())||!thread.equals(codexThread[0]))return;codexSourceDirectory[0]=source;codexConfirmedDirectory[0]=cwd;codexThreadName[0]=title;dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();});return;
+            }
+
             int port = 22;
             if (chosenEnvironment[0].equals("ssh")) {
-                if (!SshSessionShell.validHost(sshHost.getText().toString().trim())) { sshHost.setError("Укажите адрес без пробелов, пользователя и порта"); return; }
-                if (!SshSessionShell.validUser(sshUser.getText().toString().trim())) { sshUser.setError("Укажите пользователя SSH"); return; }
+                if (!SshSessionShell.validHost(sshHost.getText().toString().trim())) { sshHost.setError(WorkspaceText.tr("Укажите адрес без пробелов, пользователя и порта")); return; }
+                if (!SshSessionShell.validUser(sshUser.getText().toString().trim())) { sshUser.setError(WorkspaceText.tr("Укажите пользователя SSH")); return; }
                 try { port = Integer.parseInt(sshPort.getText().toString()); } catch (NumberFormatException e) { port = 0; }
-                if (!SshSessionShell.validPort(port)) { sshPort.setError("Порт от 1 до 65535"); return; }
+                if (!SshSessionShell.validPort(port)) { sshPort.setError(WorkspaceText.tr("Порт от 1 до 65535")); return; }
             }
             boolean sshPasswordMode = chosenEnvironment[0].equals("ssh") && chosenAuth[0].equals("password");
             if (chosenEnvironment[0].equals("ssh") && chosenAuth[0].equals("key")) {
                 String path = identity.getText().toString().trim();
                 if (!SshSessionShell.validIdentity(path) || !new File(resolve(path)).isFile() || !new File(resolve(path)).canRead()) {
-                    identity.setError("Укажите доступный файл ключа: /путь или ~/путь"); return;
+                    identity.setError(WorkspaceText.tr("Укажите доступный файл ключа: /путь или ~/путь")); return;
                 }
             }
             boolean sameConnection = draft.sshHost.equals(sshHost.getText().toString().trim())
@@ -876,17 +942,17 @@ public final class WorkspaceController {
             String encrypted = sshPasswordMode && rememberPassword.isChecked() && sameConnection ? draft.sshEncryptedPassword : "";
             char[] secret = new char[password.length()]; android.text.TextUtils.getChars(password.getText(), 0, secret.length, secret, 0);
             if (sshPasswordMode && (password.getText().toString().contains("\n") || password.getText().toString().contains("\r") || password.getText().toString().indexOf('\0') >= 0 || secret.length > 256)) {
-                java.util.Arrays.fill(secret, '\0'); password.setError("Пароль до 256 символов, без переносов строки"); return;
+                java.util.Arrays.fill(secret, '\0'); password.setError(WorkspaceText.tr("Пароль до 256 символов, без переносов строки")); return;
             }
             if (sshPasswordMode && rememberPassword.isChecked() && encrypted.isEmpty() && secret.length == 0) {
-                password.setError("Введите пароль для сохранения"); return;
+                password.setError(WorkspaceText.tr("Введите пароль для сохранения")); return;
             }
             if (sshPasswordMode && rememberPassword.isChecked() && secret.length > 0) {
                 WorkspaceStore.Session binding = new WorkspaceStore.Session(); binding.id = draft.id;
                 binding.sshHost = sshHost.getText().toString().trim(); binding.sshUser = sshUser.getText().toString().trim(); binding.sshPort = port;
                 try { encrypted = SshPasswordVault.encrypt(binding, secret); }
                 catch (java.security.GeneralSecurityException | RuntimeException e) {
-                    java.util.Arrays.fill(secret, '\0'); password.setError("Keystore недоступен. Отключите запоминание или повторите."); return;
+                    java.util.Arrays.fill(secret, '\0'); password.setError(WorkspaceText.tr("Keystore недоступен. Отключите запоминание или повторите.")); return;
                 }
             }
             char[] oldSecret = pendingSshPasswords.remove(draft.id); if (oldSecret != null) java.util.Arrays.fill(oldSecret, '\0');
@@ -895,7 +961,7 @@ public final class WorkspaceController {
             draft.sshAuth = chosenAuth[0]; draft.sshIdentity = identity.getText().toString().trim(); draft.sshEncryptedPassword = encrypted;
             draft.sshHost = sshHost.getText().toString().trim(); draft.sshUser = sshUser.getText().toString().trim();
             draft.sshPort = port; draft.sshKeepOpen = sshKeepOpen.isChecked();
-            draft.codexEnvironment = codexEnvironment[0]; draft.codexAccess = codexAccess[0]; draft.codexChat = codexChat[0]; draft.codexThread = codexThread[0]; draft.codexThreadName = codexThreadName[0];
+            draft.codexEnvironment = codexEnvironment[0]; draft.codexAccess = codexAccess[0]; draft.codexChat = codexChat[0]; draft.codexThread = codexThread[0]; draft.codexThreadName = codexThreadName[0];draft.codexSourceDirectory=codexSourceDirectory[0];
             draft.environment = chosenEnvironment[0]; draft.name = name.getText().toString().trim(); draft.directory = directory.getText().toString().trim(); draft.startup = startupFields.get(0).getText().toString();
             draft.startup2 = startupFields.size() > 1 ? startupFields.get(1).getText().toString() : "";
             draft.startup3 = startupFields.size() > 2 ? startupFields.get(2).getText().toString() : ""; draft.updated = System.currentTimeMillis();
@@ -903,46 +969,75 @@ public final class WorkspaceController {
             TerminalSession live = liveFor(draft); if (live != null) live.mSessionName = draft.name;
             store.save(); dialog.dismiss(); refresh();
             if (existing == null && launchAfterSave) launch(draft);
-            else if (live != null) activity.showToast("Имя обновлено. Каталог и команда применятся при следующем запуске.", true);
+            else if (live != null) activity.showToast(WorkspaceText.tr("Имя обновлено. Каталог и команда применятся при следующем запуске."), true);
         }));
         dialog.setOnDismissListener(d -> password.setText("")); dialog.show();
     }
-    private interface ChatChoice { void chosen(String id, String name); }
-    private void chooseCodexChat(String environment, ChatChoice choice) {
-        TextView loading = text("Загрузка чатов из " + (environment.equals("ubuntu") ? "Ubuntu…" : "Termux…"), 14, MUTED);
-        loading.setPadding(dp(20), dp(20), dp(20), dp(20));
-        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle("Выбрать чат Codex").setView(loading)
-            .setNegativeButton("Отмена", null).show();
-        codexReader.execute(() -> {
-            List<String> ids = new ArrayList<>(), titles = new ArrayList<>(); String failure = null;
-            WorkspaceStore.Session profile = new WorkspaceStore.Session(); profile.codexEnvironment = environment;
-            try (CodexRpc rpc = CodexRpc.history(activity, profile)) {
-                String cursor = null;
-                for (int page = 0; page < 10; page++) {
-                    org.json.JSONObject params = new org.json.JSONObject().put("limit", 50).put("sortKey", "updated_at").put("archived", false).put("modelProviders", new org.json.JSONArray());
-                    if (cursor != null) params.put("cursor", cursor);
-                    org.json.JSONObject data = rpc.call("thread/list", params);
-                    org.json.JSONArray chats = data.getJSONArray("data");
-                    for (int n = 0; n < chats.length(); n++) {
-                        org.json.JSONObject chat = chats.getJSONObject(n); String id = chat.getString("id");
-                        if (!CodexSessionShell.validThread(id)) continue;
-                        ids.add(id); String title = chat.optString("name", "");
-                        if (title.isEmpty() || title.equals("null")) title = compact(chat.optString("preview", "Чат Codex"));
-                        long date = chat.optLong("updatedAt");
-                        titles.add(title + " · " + chat.optString("cwd", "") + (date > 0 ? " · " + android.text.format.DateFormat.format("dd.MM.yy", date * 1000) : ""));
-                    }
-                    cursor = data.isNull("nextCursor") ? null : data.optString("nextCursor", null); if (cursor == null || cursor.isEmpty()) break;
+    private interface ChatChoice {void chosen(String id,String name,String sourceDirectory);}
+    private void chooseCodexChat(String environment,String directory,ChatChoice choice) {
+        String cwd=CodexProjects.directory(environment,directory);
+        if(cwd.isEmpty()){activity.showToast(WorkspaceText.tr("Укажите абсолютный рабочий каталог"),true);return;}
+        LinearLayout body=column();body.setPadding(dp(12),dp(4),dp(12),dp(8));
+        TextView loading=text(WorkspaceText.tr("Загрузка истории…"),13,MUTED);body.addView(loading);
+        EditText search=field(WorkspaceText.tr("Найти чат или каталог"),"",false);body.addView(search);
+        LinearLayout filters=row();body.addView(filters);
+        TextView all=button(WorkspaceText.tr("Все чаты"),false,()->{}),project=button(WorkspaceText.tr("Чаты этой папки"),false,()->{});all.setTextSize(12);project.setTextSize(12);all.setTextColor(ACCENT);
+        filters.addView(all,new LinearLayout.LayoutParams(0,-2,1));LinearLayout.LayoutParams projectParams=new LinearLayout.LayoutParams(0,-2,1);projectParams.setMarginStart(dp(6));filters.addView(project,projectParams);
+        ScrollView scroll=new ScrollView(activity);LinearLayout rows=column();scroll.addView(rows);body.addView(scroll,new LinearLayout.LayoutParams(-1,dp(280)));
+        AlertDialog dialog=WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Выбрать чат Codex")).setView(body)
+            .setPositiveButton(WorkspaceText.tr("Продолжить выбранный чат"),null).setNeutralButton(WorkspaceText.tr("Новый чат в этой папке"),(d,w)->choice.chosen("",WorkspaceText.tr("Новый чат"),""))
+            .setNegativeButton(WorkspaceText.tr("Отмена"),null).create();
+        dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false));dialog.show();
+        codexReader.execute(()->{
+            List<CodexChatCatalog.Entry> chats=new ArrayList<>();String failure=null;
+            WorkspaceStore.Session profile=new WorkspaceStore.Session();profile.codexEnvironment=environment;
+            try(CodexRpc rpc=CodexRpc.history(activity,profile)) {
+                String cursor=null;for(int page=0;page<10;page++) {
+                    org.json.JSONObject data=rpc.call("thread/list",CodexChatCatalog.params(cursor));org.json.JSONArray entries=data.getJSONArray("data");
+                    for(int i=0;i<entries.length();i++){CodexChatCatalog.Entry entry=CodexChatCatalog.parse(entries.getJSONObject(i));if(entry!=null)chats.add(entry);}
+                    cursor=data.isNull("nextCursor")?null:data.optString("nextCursor",null);if(cursor==null||cursor.isEmpty())break;
                 }
-            } catch (Exception e) { failure = "Не удалось прочитать чаты. Проверьте установку и вход Codex в этой среде. Можно ввести ID чата в настройках сессии."; }
-            final String error = failure;
-            activity.runOnUiThread(() -> {
-                if (closed || !dialog.isShowing()) return;
-                if (error != null || ids.isEmpty()) { loading.setText(error == null ? "Сохранённых чатов пока нет. Создайте новый чат." : error); return; }
-                dialog.dismiss();
-                WorkspaceDialogs.builder(activity).setTitle("Чаты Codex")
-                    .setItems(titles.toArray(new String[0]), (d, n) -> choice.chosen(ids.get(n), titles.get(n)))
-                    .setNegativeButton("Отмена", null).show();
+            }catch(Exception e){failure=WorkspaceText.tr("Не удалось прочитать всю историю. Проверьте Codex и авторизацию в выбранной среде.");}
+            String error=failure;activity.runOnUiThread(()->{
+                if(closed||!dialog.isShowing())return;
+                loading.setText(error!=null?error:(environment.equals("ubuntu")?"Ubuntu":"Termux")+WorkspaceText.tr(" · новый каталог: ")+cwd+(chats.isEmpty()?WorkspaceText.tr("\nСохранённых чатов пока нет."):""));
+                int[] selected={-1};boolean[] projectOnly={false};Runnable[] render=new Runnable[1];
+                render[0]=()->{
+                    rows.removeAllViews();all.setTextColor(projectOnly[0]?MUTED:ACCENT);project.setTextColor(projectOnly[0]?ACCENT:MUTED);int shown=0;
+                    for(int i=0;i<chats.size();i++) {
+                        CodexChatCatalog.Entry entry=chats.get(i);if(!CodexChatCatalog.visible(entry,environment,cwd,projectOnly[0],search.getText().toString()))continue;
+                        final int index=i;String subtitle=entry.cwd.isEmpty()?WorkspaceText.tr("Каталог неизвестен"):entry.cwd;
+                        if(entry.updated>0)subtitle+=" · "+android.text.format.DateFormat.format("dd.MM HH:mm",entry.updated*1000);
+                        TextView item=button(entry.name+(selected[0]==i?"  ✓":"")+"\n"+subtitle,false,()->{selected[0]=index;dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);render[0].run();});
+                        item.setTextSize(13);item.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);item.setTextColor(selected[0]==i?ACCENT:TEXT);item.setMaxLines(3);item.setEllipsize(TextUtils.TruncateAt.END);
+                        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(6);rows.addView(item,lp);shown++;
+                    }
+                    if(shown==0)rows.addView(text(projectOnly[0]?WorkspaceText.tr("Чатов этой папки нет. Выберите «Все чаты»."):WorkspaceText.tr("Нет подходящих чатов"),13,MUTED));
+                    if(selected[0]>=0&&!CodexChatCatalog.visible(chats.get(selected[0]),environment,cwd,projectOnly[0],search.getText().toString()))selected[0]=-1;
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(selected[0]>=0);
+                };
+                all.setOnClickListener(v->{projectOnly[0]=false;render[0].run();});project.setOnClickListener(v->{projectOnly[0]=true;render[0].run();});
+                search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence t,int a,int c,int f){}public void onTextChanged(CharSequence t,int a,int b,int c){render[0].run();}public void afterTextChanged(Editable t){}});render[0].run();
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{if(selected[0]<0)return;CodexChatCatalog.Entry entry=chats.get(selected[0]);verifyCodexChat(environment,cwd,entry.id,(title,source)->{if(dialog.isShowing()){choice.chosen(entry.id,title,source);dialog.dismiss();}});});
             });
+        });
+    }
+    private void confirmCodexDirectory(String environment,String target,String source,Runnable accepted) {
+        if(CodexProjects.matches(environment,target,source)){accepted.run();return;}
+        WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Продолжить чат в другой папке?"))
+            .setMessage(WorkspaceText.tr("Исходный каталог:\n")+source+WorkspaceText.tr("\n\nНовый рабочий каталог:\n")+CodexProjects.directory(environment,target)+WorkspaceText.tr("\n\nИстория останется прежней. В ней могут быть старые задачи и пути. Файлы не переносятся; права остаются выбранными в настройках сессии."))
+            .setPositiveButton(WorkspaceText.tr("Продолжить в новой папке"),(d,w)->accepted.run()).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
+    }
+    private void verifyCodexChat(String environment,String cwd,String id,java.util.function.BiConsumer<String,String> choice) {
+        TextView waiting=text(WorkspaceText.tr("Проверка истории и каталога…"),14,MUTED);waiting.setPadding(dp(16),dp(16),dp(16),dp(16));
+        AlertDialog progress=WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Проверка чата")).setView(waiting).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
+        codexReader.execute(()->{
+            WorkspaceStore.Session profile=new WorkspaceStore.Session();profile.codexEnvironment=environment;String title=null,source=null;
+            try(CodexRpc rpc=CodexRpc.history(activity,profile)){
+                org.json.JSONObject chat=rpc.call("thread/read",new org.json.JSONObject().put("threadId",id).put("includeTurns",false)).getJSONObject("thread");
+                String original=chat.optString("cwd","");if(original.startsWith("/")&&!CodexProjects.directory(environment,original).isEmpty()){source=original;title=chat.optString("name",id);if(title.isEmpty()||title.equals("null"))title=id;}
+            }catch(Exception ignored){}
+            String result=title,origin=source;activity.runOnUiThread(()->{if(closed||!progress.isShowing())return;progress.dismiss();if(result==null)activity.showToast(WorkspaceText.tr("Чат недоступен или исходный каталог неизвестен. Проверьте ID и выбранную среду."),true);else confirmCodexDirectory(environment,cwd,origin,()->{if(!closed)choice.accept(result,origin);});});
         });
     }
     private WorkspaceStore.Session currentCodex() {
@@ -959,21 +1054,22 @@ public final class WorkspaceController {
         codexStatus.setVisibility(screen == Screen.TERMINAL && profile != null && !ended ? View.VISIBLE : View.GONE);
         if (profile == null) return;
         CodexStatus status = codexStatuses.get(profile.id);
-        String label = status == null ? "Codex · подключение…" : !status.error.isEmpty() ? "Codex · нет данных ›" : status.summary() + " ›";
+        String label = status == null ? WorkspaceText.tr("Codex · подключение…") : !status.error.isEmpty() ? WorkspaceText.tr("Codex · нет данных ›") : (status.model.isEmpty()?"Codex":status.model)+(status.effort.isEmpty()?"":" · "+effortName(status.effort))+"  "+status.summary()+" ›";
         TextView chip = button(label, false, () -> showCodexStatus(profile)); chip.setMinHeight(dp(34)); chip.setTextSize(12); chip.setTextColor(ACCENT);
-        chip.setPadding(dp(12), dp(4), dp(12), dp(4)); chip.setContentDescription("Статус и модель Codex");
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2); params.bottomMargin = dp(6); codexStatus.addView(chip, params);
+        chip.setMaxLines(2);chip.setEllipsize(TextUtils.TruncateAt.END);chip.setPadding(dp(12), dp(4), dp(12), dp(4)); chip.setContentDescription(WorkspaceText.tr("Статус и модель Codex"));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-2, -2); params.topMargin=dp(6);params.bottomMargin = dp(6); codexStatus.addView(chip, params);
     }
     private void loadCodexStatus(WorkspaceStore.Session profile, Runnable done) {
         if (closed || codexLoading) return;
         codexLoading = true;
+        String socketAtRequest=profile.codexSocketId,handleAtRequest=profile.handle;
         codexReader.execute(() -> {
             CodexStatus result;
             try { result = CodexStatus.local(activity.getFilesDir(), profile); }
             catch (Exception e) { result = new CodexStatus(); result.error = CodexRpc.diagnostic(e); }
             CodexStatus status = result;
             activity.runOnUiThread(() -> {
-                codexLoading = false; if (closed) return;
+                codexLoading = false; if (closed||!socketAtRequest.equals(profile.codexSocketId)||!handleAtRequest.equals(profile.handle)) return;
                 TerminalSession terminal=liveFor(profile);
                 if(terminal!=null && status.effort.isEmpty() && !status.model.isEmpty()) {
                     String changed=CodexModelSelection.acknowledgement(codexScreen(terminal));
@@ -989,6 +1085,7 @@ public final class WorkspaceController {
                     }
                     status.model=choice[1];status.effort=choice[2];
                 } else if(choice!=null)codexConfirmedChoices.remove(profile.codexSocketId);
+                if(CodexProjects.bind(profile,status)){store.save();renderContent();}
                 codexStatuses.put(profile.id, status); renderCodexStatus(); if (done != null) done.run();
             });
         });
@@ -996,20 +1093,20 @@ public final class WorkspaceController {
     private String codexResetTime(CodexStatus status, String window) {
         org.json.JSONObject limit = status.limits.optJSONObject(window);
         long reset = limit == null ? 0 : limit.optLong("resetsAt");
-        return reset > 0 ? "Обновится " + android.text.format.DateFormat.format("dd.MM HH:mm", reset * 1000) : "Время обновления недоступно";
+        return reset > 0 ? WorkspaceText.tr("Обновится ") + android.text.format.DateFormat.format("dd.MM HH:mm", reset * 1000) : WorkspaceText.tr("Время обновления недоступно");
     }
     private void showCodexStatus(WorkspaceStore.Session profile) {
         CodexStatus status = codexStatuses.get(profile.id);
         AlertDialog[] shown = {null};
         LinearLayout form = column();
         if (status == null || !status.error.isEmpty()) {
-            form.addView(text(status == null ? "Получение статуса Codex…" : status.error, 14, MUTED));
+            form.addView(text(status == null ? WorkspaceText.tr("Получение статуса Codex…") : WorkspaceText.statusError(status.error), 14, MUTED));
         } else {
-            form.addView(button("Модель: " + (status.model.isEmpty() ? "нет данных" : status.model) + " ›", false, () -> { if (shown[0] != null) shown[0].dismiss(); chooseCodexModel(profile, status); }));
-            form.addView(button("Рассуждение: " + (status.effort.isEmpty() ? "нет данных" : effortName(status.effort)) + " ›", false, () -> { if (shown[0] != null) shown[0].dismiss(); chooseCodexEffort(profile, status); }));
+            form.addView(button(WorkspaceText.tr("Модель: ") + (status.model.isEmpty() ? WorkspaceText.tr("нет данных") : status.model) + " ›", false, () -> { if (shown[0] != null) shown[0].dismiss(); chooseCodexModel(profile, status); }));
+            form.addView(button(WorkspaceText.tr("Рассуждение: ") + (status.effort.isEmpty() ? WorkspaceText.tr("нет данных") : effortName(status.effort)) + " ›", false, () -> { if (shown[0] != null) shown[0].dismiss(); chooseCodexEffort(profile, status); }));
             form.addView(text("", 12, MUTED));
             for (String window : new String[]{"primary", "secondary"}) {
-                String title = window.equals("primary") ? "Пятичасовой лимит" : "Недельный лимит";
+                String title = window.equals("primary") ? WorkspaceText.tr("Пятичасовой лимит") : WorkspaceText.tr("Недельный лимит");
                 form.addView(text(CodexStatus.limit(status.limits, window, title), 14, TEXT));
                 org.json.JSONObject limit = status.limits.optJSONObject(window);
                 if (limit != null && limit.has("usedPercent")) {
@@ -1019,11 +1116,11 @@ public final class WorkspaceController {
                 }
                 TextView time = text(codexResetTime(status, window), 12, MUTED); time.setPadding(0, dp(4), 0, dp(14)); form.addView(time);
             }
-            form.addView(text("Общий лимит аккаунта. Доступ: " + (profile.codexAccess.equals("full") ? "полный" : profile.codexAccess.equals("read") ? "только чтение" : "в пределах проекта") +
-                "\nСтатус обновляется раз в 30 секунд. Выбор модели и рассуждения применяется через штатное меню Codex только к этой сессии. Если Codex отвечает, приложение дождётся завершения. Поле ввода сохраняется.", 12, MUTED));
+            form.addView(text(WorkspaceText.tr("Общий лимит аккаунта. Доступ: ") + (profile.codexAccess.equals("full") ? WorkspaceText.tr("полный") : profile.codexAccess.equals("read") ? WorkspaceText.tr("только чтение") : WorkspaceText.tr("в пределах проекта")) +
+                WorkspaceText.tr("\nСтатус обновляется раз в 30 секунд. Выбор модели и рассуждения применяется через штатное меню Codex только к этой сессии. Если Codex отвечает, приложение дождётся завершения. Поле ввода сохраняется."), 12, MUTED));
         }
-        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle("Статус Codex").setView(formScroll(form))
-            .setPositiveButton("Обновить", null).setNegativeButton("Закрыть", null).create();
+        AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Статус Codex")).setView(formScroll(form))
+            .setPositiveButton(WorkspaceText.tr("Обновить"), null).setNegativeButton(WorkspaceText.tr("Закрыть"), null).create();
         shown[0] = dialog;
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             if (codexLoading) return;
@@ -1036,19 +1133,19 @@ public final class WorkspaceController {
         loadCodexStatus(profile, () -> { if (dialog.isShowing()) { dialog.dismiss(); showCodexStatus(profile); } });
     }
     private void chooseCodexModel(WorkspaceStore.Session profile, CodexStatus status) {
-        if (status.models.length()==0) {activity.showToast("Каталог моделей недоступен. После этого обновления запустите новый терминал Codex с прежним ID чата.", true);return;}
+        if (status.models.length()==0) {activity.showToast(WorkspaceText.tr("Каталог моделей недоступен. После этого обновления запустите новый терминал Codex с прежним ID чата."), true);return;}
         String[] labels=new String[status.models.length()];int[] selected={0};
         for(int i=0;i<labels.length;i++) {org.json.JSONObject model=status.models.optJSONObject(i);labels[i]=model==null?"—":model.optString("displayName",model.optString("model"));if(model!=null && model.optString("model").equals(status.model))selected[0]=i;}
-        WorkspaceDialogs.builder(activity).setTitle("Модель Codex")
+        WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Модель Codex"))
             .setSingleChoiceItems(labels,selected[0],(d,w)-> {d.dismiss();chooseCodexEffortFor(profile,status,status.models.optJSONObject(w));})
-            .setNegativeButton("Отмена",null).show();
+            .setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
     }
     private void chooseCodexEffort(WorkspaceStore.Session profile, CodexStatus status) {
         for(int i=0;i<status.models.length();i++) {org.json.JSONObject model=status.models.optJSONObject(i);if(model!=null && model.optString("model").equals(status.model)) {chooseCodexEffortFor(profile,status,model);return;}}
         chooseCodexModel(profile,status);
     }
     private String effortName(String effort) {
-        switch(effort) {case "none":return "Без рассуждения";case "minimal":return "Минимальный";case "low":return "Низкий";case "medium":return "Средний";case "high":return "Высокий";case "xhigh":return "Очень высокий";case "max":return "Максимальный";case "ultra":return "Ультра";default:return effort;}
+        switch(effort) {case "none":return WorkspaceText.tr("Без рассуждения");case "minimal":return WorkspaceText.tr("Минимальный");case "low":return WorkspaceText.tr("Низкий");case "medium":return WorkspaceText.tr("Средний");case "high":return WorkspaceText.tr("Высокий");case "xhigh":return WorkspaceText.tr("Очень высокий");case "max":return WorkspaceText.tr("Максимальный");case "ultra":return WorkspaceText.tr("Ультра");default:return effort;}
     }
     private void chooseCodexEffortFor(WorkspaceStore.Session profile,CodexStatus status,org.json.JSONObject model) {
         if(model==null)return;
@@ -1056,17 +1153,17 @@ public final class WorkspaceController {
         List<String> values=new ArrayList<>(),labels=new ArrayList<>();
         if(options!=null)for(int i=0;i<options.length();i++) {org.json.JSONObject option=options.optJSONObject(i);String effort=option==null?"":option.optString("reasoningEffort");if(!CodexModelSelection.effortLabel(effort).isEmpty()) {values.add(effort);labels.add(effortName(effort));}}
         if(values.isEmpty()) {String effort=model.optString("defaultReasoningEffort");if(!CodexModelSelection.effortLabel(effort).isEmpty()) {values.add(effort);labels.add(effortName(effort));}}
-        if(values.isEmpty()) {activity.showToast("Codex не сообщил доступные уровни для этой модели",true);return;}
+        if(values.isEmpty()) {activity.showToast(WorkspaceText.tr("Codex не сообщил доступные уровни для этой модели"),true);return;}
         String current=model.optString("model").equals(status.model)?status.effort:model.optString("defaultReasoningEffort");int[] selected={Math.max(0,values.indexOf(current))};
-        WorkspaceDialogs.builder(activity).setTitle(model.optString("displayName",model.optString("model"))+" · поведение")
+        WorkspaceDialogs.builder(activity).setTitle(model.optString("displayName",model.optString("model"))+WorkspaceText.tr(" · поведение"))
             .setSingleChoiceItems(labels.toArray(new String[0]),selected[0],(d,w)-> {d.dismiss();confirmCodexModel(profile,model,values.get(w),values.size()==1);})
-            .setNegativeButton("Отмена",null).show();
+            .setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
     }
     private void confirmCodexModel(WorkspaceStore.Session profile,org.json.JSONObject model,String effort,boolean singleEffort) {
-        WorkspaceDialogs.builder(activity).setTitle("Применить параметры Codex?")
-            .setMessage("Модель: "+model.optString("displayName",model.optString("model"))+"\nПоведение: "+effortName(effort)+"\n\nТолько для текущей сессии.")
-            .setPositiveButton("Применить",(d,w)->applyCodexModel(profile,model,effort,singleEffort))
-            .setNegativeButton("Отмена",null).show();
+        WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Применить параметры Codex?"))
+            .setMessage(WorkspaceText.tr("Модель: ")+model.optString("displayName",model.optString("model"))+WorkspaceText.tr("\nПоведение: ")+effortName(effort)+WorkspaceText.tr("\n\nТолько для текущей сессии."))
+            .setPositiveButton(WorkspaceText.tr("Применить"),(d,w)->applyCodexModel(profile,model,effort,singleEffort))
+            .setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
     }
     private String codexScreen(TerminalSession terminal) {
         com.termux.terminal.TerminalEmulator emulator=terminal.getEmulator();
@@ -1075,27 +1172,27 @@ public final class WorkspaceController {
     private void applyCodexModel(WorkspaceStore.Session profile,org.json.JSONObject model,String effort,boolean singleEffort) {
         if(codexApplyDialog!=null && codexApplyDialog.isShowing())return;
         TerminalSession terminal=liveFor(profile);
-        if(terminal==null || !terminal.isRunning()) {activity.showToast("Сессия уже завершена",false);return;}
+        if(terminal==null || !terminal.isRunning()) {activity.showToast(WorkspaceText.tr("Сессия уже завершена"),false);return;}
         String id=model.optString("model");
         String wanted="Model changed to "+id+" "+effort;
         CodexStatus cached=codexStatuses.get(profile.id);
-        if(cached!=null && cached.model.equals(id) && (cached.effort.equals(effort) || CodexModelSelection.acknowledgement(codexScreen(terminal)).equals(wanted))) {activity.showToast("Эти параметры уже выбраны в Codex",false);return;}
+        if(cached!=null && cached.model.equals(id) && (cached.effort.equals(effort) || CodexModelSelection.acknowledgement(codexScreen(terminal)).equals(wanted))) {activity.showToast(WorkspaceText.tr("Эти параметры уже выбраны в Codex"),false);return;}
         ((InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(terminalInput.getWindowToken(),0);
         int generation=++codexApplyGeneration;
-        AlertDialog dialog=WorkspaceDialogs.builder(activity).setTitle("Параметры Codex").setMessage("Проверяем состояние сессии…")
-            .setNegativeButton("Отмена",(d,w)->codexApplyGeneration++).create();codexApplyDialog=dialog;
+        AlertDialog dialog=WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Параметры Codex")).setMessage(WorkspaceText.tr("Проверяем состояние сессии…"))
+            .setNegativeButton(WorkspaceText.tr("Отмена"),(d,w)->codexApplyGeneration++).create();codexApplyDialog=dialog;
         dialog.setOnCancelListener(d->codexApplyGeneration++);dialog.show();
         long until=System.currentTimeMillis()+300000;
         Runnable waiting=new Runnable() {public void run() {
             if(closed || generation!=codexApplyGeneration || !dialog.isShowing())return;
-            if(!terminal.isRunning() || System.currentTimeMillis()>until) {dialog.dismiss();activity.showToast("Не удалось дождаться свободного Codex",true);return;}
+            if(!terminal.isRunning() || System.currentTimeMillis()>until) {dialog.dismiss();activity.showToast(WorkspaceText.tr("Не удалось дождаться свободного Codex"),true);return;}
             if(codexLoading) {codexHandler.postDelayed(this,500);return;}
             loadCodexStatus(profile,()-> {
                 if(closed || generation!=codexApplyGeneration || !dialog.isShowing())return;
                 CodexStatus status=codexStatuses.get(profile.id);
-                if(status==null || !status.error.isEmpty()) {dialog.dismiss();activity.showToast(status==null?"Статус Codex недоступен":status.error,true);return;}
-                if(!status.state.equals("idle")) {dialog.setMessage("Ожидаем завершения ответа Codex…");codexHandler.postDelayed(this,3000);return;}
-                dialog.setMessage("Применяем через штатное меню Codex…");
+                if(status==null || !status.error.isEmpty()) {dialog.dismiss();activity.showToast(status==null?WorkspaceText.tr("Статус Codex недоступен"):status.error,true);return;}
+                if(!status.state.equals("idle")) {dialog.setMessage(WorkspaceText.tr("Ожидаем завершения ответа Codex…"));codexHandler.postDelayed(this,3000);return;}
+                dialog.setMessage(WorkspaceText.tr("Применяем через штатное меню Codex…"));
                 runCodexModelSelection(terminal,profile,model,effort,singleEffort,generation,dialog);
             });
         }};waiting.run();
@@ -1117,11 +1214,11 @@ public final class WorkspaceController {
         };
         Runnable tick=new Runnable() {public void run() {
             if(closed || generation!=codexApplyGeneration || !dialog.isShowing())return;
-            if(!terminal.isRunning()) {dialog.dismiss();activity.showToast("Сессия завершена",false);return;}
+            if(!terminal.isRunning()) {dialog.dismiss();activity.showToast(WorkspaceText.tr("Сессия завершена"),false);return;}
             selection.step(adapter,System.currentTimeMillis());
             if(!selection.finished) {codexHandler.postDelayed(this,200);return;}
             dialog.dismiss();
-            if(selection.confirmed) {CodexStatus status=codexStatuses.get(profile.id);if(status!=null) {status.model=model.optString("model");status.effort=effort;codexConfirmedChoices.put(profile.codexSocketId,new String[]{status.thread,status.model,effort,"Model changed to "+status.model+" "+effort});renderCodexStatus();}activity.showToast("Codex подтвердил: "+model.optString("displayName",model.optString("model"))+" · "+effortName(effort),true);}
+            if(selection.confirmed) {CodexStatus status=codexStatuses.get(profile.id);if(status!=null) {status.model=model.optString("model");status.effort=effort;codexConfirmedChoices.put(profile.codexSocketId,new String[]{status.thread,status.model,effort,"Model changed to "+status.model+" "+effort});renderCodexStatus();}activity.showToast(WorkspaceText.tr("Codex подтвердил: ")+model.optString("displayName",model.optString("model"))+" · "+effortName(effort),true);}
             else activity.showToast(selection.error,true);
         }};tick.run();
     }
@@ -1141,58 +1238,62 @@ public final class WorkspaceController {
             if (file.isFile() && file.canRead() && !n.endsWith(".pub") && !n.equals("config") && !n.startsWith("known_hosts") && !n.startsWith("authorized_keys")) keys.add(file);
         }
         Collections.sort(keys, (a, b) -> a.getName().compareTo(b.getName()));
-        AlertDialog.Builder picker = WorkspaceDialogs.builder(activity).setTitle("Файл SSH-ключа");
-        if (keys.isEmpty()) picker.setMessage("Ключей в ~/.ssh нет. Укажите путь к своему файлу в поле.");
+        AlertDialog.Builder picker = WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Файл SSH-ключа"));
+        if (keys.isEmpty()) picker.setMessage(WorkspaceText.tr("Ключей в ~/.ssh нет. Укажите путь к своему файлу в поле."));
         else { String[] names = new String[keys.size()]; for (int i = 0; i < names.length; i++) names[i] = keys.get(i).getName();
             picker.setItems(names, (d, which) -> identity.setText(keys.get(which).getAbsolutePath())); }
-        picker.setNegativeButton("Закрыть", null).show();
+        picker.setNegativeButton(WorkspaceText.tr("Закрыть"), null).show();
     }
     private void requestSshPassword(WorkspaceStore.Session session, boolean add) {
-        LinearLayout form = column(); EditText password = labeled(form, "Пароль SSH", "", false);
+        LinearLayout form = column(); EditText password = labeled(form, WorkspaceText.tr("Пароль SSH"), "", false);
         password.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD); password.setSaveEnabled(false);
         AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(session.sshUser + "@" + session.sshHost)
-            .setView(formScroll(form)).setPositiveButton("Подключиться", null).setNegativeButton("Отмена", null).create();
+            .setView(formScroll(form)).setPositiveButton(WorkspaceText.tr("Подключиться"), null).setNegativeButton(WorkspaceText.tr("Отмена"), null).create();
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            if (password.length() == 0) { password.setError("Введите пароль"); return; }
+            if (password.length() == 0) { password.setError(WorkspaceText.tr("Введите пароль")); return; }
             char[] secret = new char[password.length()]; TextUtils.getChars(password.getText(), 0, secret.length, secret, 0);
             char[] old = pendingSshPasswords.put(session.id, secret); if (old != null) java.util.Arrays.fill(old, '\0');
             password.setText(""); dialog.dismiss(); launchNew(session, add);
         })); dialog.setOnDismissListener(d -> password.setText("")); dialog.show();
     }
     private void commandMenu(WorkspaceStore.Command c) {
-        WorkspaceDialogs.builder(activity).setCustomTitle(contextHeading(c.name, c.command, c.category, c.favorite)).setItems(new String[]{c.favorite ? "Убрать из избранного" : "В избранное", "Редактировать", "Удалить"}, (d, which) -> {
+        WorkspaceDialogs.builder(activity).setCustomTitle(contextHeading(c.name, c.command, c.category, c.favorite)).setItems(new String[]{c.favorite ? WorkspaceText.tr("Убрать из избранного") : WorkspaceText.tr("В избранное"), WorkspaceText.tr("Редактировать"), WorkspaceText.tr("Удалить")}, (d, which) -> {
             if (which == 0) { c.favorite = !c.favorite; store.save(); renderContent(); }
             else if (which == 1) editCommand(c);
-            else confirm("Удалить команду «" + c.name + "»?", () -> { store.commands.remove(c); store.save(); renderContent(); });
-        }).setNegativeButton("Закрыть", null).show();
+            else confirm(WorkspaceText.tr("Удалить команду «") + c.name + "»?", () -> { store.commands.remove(c); store.save(); renderContent(); });
+        }).setNegativeButton(WorkspaceText.tr("Закрыть"), null).show();
     }
     private void sessionMenu(WorkspaceStore.Session s) { sessionMenu(s, false); }
     private void sessionMenu(WorkspaceStore.Session s, boolean terminalTab) {
+        if(WorkspaceStore.isBase(s)) {
+            WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Terminal · базовая сессия")).setMessage(WorkspaceText.tr("Базовая вкладка не закрывается. Можно перезапустить оболочку."))
+                .setPositiveButton(WorkspaceText.tr("Перезапустить"),(d,w)->confirm(WorkspaceText.tr("Перезапустить базовую оболочку?"),()->{TerminalSession current=liveFor(s);if(current!=null&&current.isRunning())current.finishIfRunning();else launch(s);}))
+                .setNegativeButton(WorkspaceText.tr("Закрыть меню"),null).show();return;
+        }
         List<String> actions = new ArrayList<>();
-        if (terminalTab && !s.saved) actions.add("Сохранить сессию");
-        if (terminalTab) Collections.addAll(actions, "Перезапустить", "Настройки", "Закрыть сессию");
-        else Collections.addAll(actions, "Закрыть сессию", "Настройки", "Удалить сессию");
+        if (terminalTab && !s.saved) actions.add(WorkspaceText.tr("Сохранить сессию"));
+        if (terminalTab) Collections.addAll(actions, WorkspaceText.tr("Перезапустить"), WorkspaceText.tr("Настройки"), WorkspaceText.tr("Закрыть сессию"));
+        else Collections.addAll(actions, WorkspaceText.tr("Закрыть сессию"), WorkspaceText.tr("Настройки"), WorkspaceText.tr("Удалить сессию"));
         WorkspaceDialogs.builder(activity).setTitle(s.name).setItems(actions.toArray(new String[0]), (d, which) -> {
             String action = actions.get(which);
-            if (action.equals("Сохранить сессию")) {
-                if (!store.isWritable()) { activity.showToast("Библиотека недоступна для записи", true); return; }
-                s.saved = true; s.updated = System.currentTimeMillis(); store.save();
-                activity.showToast("Сессия сохранена", false); renderContent(); return;
+            if (action.equals(WorkspaceText.tr("Сохранить сессию"))) {
+                if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
+                saveSessionProfile(s);return;
             }
-            if (action.equals("Настройки")) editSession(s);
-            else if (action.equals("Перезапустить")) confirm("Остановить текущий процесс и повторно выполнить стартовую команду?", () -> {
+            if (action.equals(WorkspaceText.tr("Настройки"))) editSession(s);
+            else if (action.equals(WorkspaceText.tr("Перезапустить"))) confirm(WorkspaceText.tr("Остановить текущий процесс и повторно выполнить стартовую команду?"), () -> {
                 TerminalSession live = liveFor(s);
                 if (live != null && live.isRunning()) {
-                    if (live.getPid() <= 0) { activity.showToast("Откройте терминал и дождитесь запуска", false); return; }
+                    if (live.getPid() <= 0) { activity.showToast(WorkspaceText.tr("Откройте терминал и дождитесь запуска"), false); return; }
                     pendingRestarts.put(live.mHandle, s); store.save(); finishWorkspaceSession(live);
                 } else {
                     store.save(); launch(s);
                 }
             });
-            else if (action.equals("Закрыть сессию")) closeSession(s);
-            else confirm("Удалить настройки и историю сессии «" + s.name + "»? Активный терминал сначала нужно остановить.", () -> {
+            else if (action.equals(WorkspaceText.tr("Закрыть сессию"))) closeSession(s);
+            else confirm(WorkspaceText.tr("Удалить настройки и историю сессии «") + s.name + WorkspaceText.tr("»? Активный терминал сначала нужно остановить."), () -> {
                 TerminalSession live = liveFor(s);
-                if (live != null && live.isRunning()) { activity.showToast("Сначала остановите сессию", true); return; }
+                if (live != null && live.isRunning()) { activity.showToast(WorkspaceText.tr("Сначала остановите сессию"), true); return; }
                 if (live != null) activity.getTermuxTerminalSessionClient().removeFinishedSession(live);
                 store.sessions.remove(s); store.save();
                 eraseSessionFiles(s);
@@ -1203,34 +1304,47 @@ public final class WorkspaceController {
     private void chooseSavedSession() {
         List<WorkspaceStore.Session> saved = new ArrayList<>();
         for (WorkspaceStore.Session session : sortedSessions()) if (session.saved) saved.add(session);
-        AlertDialog.Builder picker = WorkspaceDialogs.builder(activity).setTitle("Сохранённые сессии");
-        if (saved.isEmpty()) picker.setMessage("Сохранённых сессий нет. Удерживайте вкладку терминала и выберите «Сохранить сессию».");
+        AlertDialog.Builder picker = WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Сохранённые сессии"));
+        if (saved.isEmpty()) picker.setMessage(WorkspaceText.tr("Сохранённых сессий нет. Удерживайте вкладку терминала и выберите «Сохранить сессию»."));
         else {
             String[] names = new String[saved.size()];
             for (int i = 0; i < names.length; i++) names[i] = saved.get(i).name;
             picker.setItems(names, (d, which) -> launch(saved.get(which)));
         }
-        picker.setNegativeButton("Закрыть", null).show();
+        picker.setNegativeButton(WorkspaceText.tr("Закрыть"), null).show();
+    }
+    private void saveSessionProfile(WorkspaceStore.Session profile) {
+        if(profile.environment.equals("codex")&&profile.codexChat.equals("new")&&liveFor(profile)!=null&&liveFor(profile).isRunning()) {
+            if(codexLoading){activity.showToast(WorkspaceText.tr("Дождитесь обновления статуса и повторите сохранение"),false);return;}
+            loadCodexStatus(profile,()->{if(!store.sessions.contains(profile))return;if(profile.codexChat.equals("id"))saveSessionProfile(profile);else activity.showToast(WorkspaceText.tr("ID чата ещё не получен. Дождитесь запуска Codex и повторите сохранение; нужен помощник новой версии."),true);});return;
+        }
+        profile.saved=true;profile.updated=System.currentTimeMillis();store.save();activity.showToast(WorkspaceText.tr("Сессия сохранена"),false);renderContent();
     }
     private void closeSession(WorkspaceStore.Session profile) {
+        if(WorkspaceStore.isBase(profile))return;
         TerminalSession target = liveFor(profile);
-        if (target == null) { activity.showToast("Сессия уже закрыта", false); return; }
-        if (!store.isWritable()) { activity.showToast("Библиотека недоступна для записи", true); return; }
-        AlertDialog.Builder dialog = WorkspaceDialogs.builder(activity).setTitle("Закрыть сессию «" + profile.name + "»?");
+        if (target == null) { activity.showToast(WorkspaceText.tr("Сессия уже закрыта"), false); return; }
+        if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
+        AlertDialog.Builder dialog = WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Закрыть сессию «") + profile.name + "»?");
         if (profile.saved) {
-            dialog.setMessage("Процесс будет остановлен, вкладка терминала закрыта. Сохранённые настройки и история останутся.")
-                .setPositiveButton("Закрыть сессию", (d, which) -> finishClose(profile, target, true));
+            dialog.setMessage(WorkspaceText.tr("Процесс будет остановлен, вкладка терминала закрыта. Сохранённые настройки и история останутся."))
+                .setPositiveButton(WorkspaceText.tr("Закрыть сессию"), (d, which) -> finishClose(profile, target, true));
         } else {
-            dialog.setMessage("Сохранить настройки и историю команд Bash перед закрытием? История Codex остаётся в самом Codex.")
-                .setPositiveButton("Сохранить и закрыть", (d, which) -> finishClose(profile, target, true))
-                .setNegativeButton("Закрыть без сохранения", (d, which) -> finishClose(profile, target, false));
+            dialog.setMessage(WorkspaceText.tr("Сохранить настройки и историю команд Bash перед закрытием? История Codex остаётся в самом Codex."))
+                .setPositiveButton(WorkspaceText.tr("Сохранить и закрыть"), (d, which) -> finishClose(profile, target, true))
+                .setNegativeButton(WorkspaceText.tr("Закрыть без сохранения"), (d, which) -> finishClose(profile, target, false));
         }
         dialog.show();
     }
     private void finishClose(WorkspaceStore.Session profile, TerminalSession target, boolean save) {
+        if(WorkspaceStore.isBase(profile))return;
         if (liveFor(profile) != target) return;
+        if(save&&!profile.saved&&profile.environment.equals("codex")&&profile.codexChat.equals("new")&&target.isRunning()) {
+            if(codexLoading){activity.showToast(WorkspaceText.tr("Дождитесь обновления статуса и повторите закрытие"),false);return;}
+            loadCodexStatus(profile,()->{if(profile.codexChat.equals("id"))finishClose(profile,target,true);else activity.showToast(WorkspaceText.tr("ID чата ещё не получен. Дождитесь запуска либо выберите закрытие без сохранения."),true);});return;
+        }
         if (target.isRunning() && target.getPid() <= 0) {
-            activity.showToast("Дождитесь запуска сессии", false); return;
+            activity.showToast(WorkspaceText.tr("Дождитесь запуска сессии"), false); return;
         }
         if (save) { profile.saved = true; profile.updated = System.currentTimeMillis(); }
         store.save(); pendingRestarts.remove(target.mHandle);
@@ -1242,6 +1356,7 @@ public final class WorkspaceController {
     }
     /** Only after the process exits: it must not recreate the history while we remove it. */
     private void retireProfile(WorkspaceStore.Session profile) {
+        if(WorkspaceStore.isBase(profile))return;
         profile.handle = "";
         if (!profile.saved) { store.sessions.remove(profile); eraseSessionFiles(profile); }
         store.save();
@@ -1253,15 +1368,15 @@ public final class WorkspaceController {
             File[] files = dir.listFiles(); boolean removed = true;
             if (files != null) for (File f : files) if (!f.delete()) removed = false;
             if (dir.exists() && !dir.delete()) removed = false;
-            if (!removed) activity.runOnUiThread(() -> activity.showToast("Не удалось полностью удалить историю сессии", true));
+            if (!removed) activity.runOnUiThread(() -> activity.showToast(WorkspaceText.tr("Не удалось полностью удалить историю сессии"), true));
         });
     }
     private void confirm(String message, Runnable action) {
-        WorkspaceDialogs.builder(activity).setMessage(message).setPositiveButton("Продолжить", (d, w) -> action.run()).setNegativeButton("Отмена", null).show();
+        WorkspaceDialogs.builder(activity).setMessage(message).setPositiveButton(WorkspaceText.tr("Продолжить"), (d, w) -> action.run()).setNegativeButton(WorkspaceText.tr("Отмена"), null).show();
     }
     private void sendInput() {
         TerminalSession current = activity.getCurrentSession();
-        if (current == null || !current.isRunning() || current.getPid() <= 0) { activity.showToast("Нет работающего терминала", false); return; }
+        if (current == null || !current.isRunning() || current.getPid() <= 0) { activity.showToast(WorkspaceText.tr("Нет работающего терминала"), false); return; }
         String command = terminalInput.getText().toString();
         if (command.trim().isEmpty()) return;
         if (current.getEmulator() != null) {
@@ -1302,17 +1417,17 @@ public final class WorkspaceController {
         LinearLayout heading = column(); heading.setPadding(dp(20), dp(18), dp(20), dp(12));
         heading.setFocusableInTouchMode(true);
         LinearLayout tabs = row();
-        TextView commandTab = button("Сохранённые команды", true, () -> {});
-        TextView notesTab = button("Заметки", false, () -> {});
+        TextView commandTab = button(WorkspaceText.tr("Сохранённые команды"), true, () -> {});
+        TextView notesTab = button(WorkspaceText.tr("Заметки"), false, () -> {});
         commandTab.setMaxLines(2); notesTab.setMaxLines(2);
         commandTab.setPadding(dp(6), dp(8), dp(6), dp(8));
         LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams(0, -2, 1.5f); tabParams.setMarginEnd(dp(8));
         tabs.addView(commandTab, tabParams); tabs.addView(notesTab, new LinearLayout.LayoutParams(0, -2, 1)); heading.addView(tabs);
-        TextView hint = text("Нажми на команду, чтобы вставить", 12, MUTED); hint.setPadding(0, dp(8), 0, dp(12)); heading.addView(hint);
-        EditText search = field("Найти команду", "", false); search.setContentDescription("Поиск в меню звёздочки");
+        TextView hint = text(WorkspaceText.tr("Нажми на команду, чтобы вставить"), 12, MUTED); hint.setPadding(0, dp(8), 0, dp(12)); heading.addView(hint);
+        EditText search = field(WorkspaceText.tr("Найти команду"), "", false); search.setContentDescription(WorkspaceText.tr("Поиск в меню звёздочки"));
         search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH | android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI);
         search.setMinHeight(dp(48)); heading.addView(search, new LinearLayout.LayoutParams(-1, -2));
-        TextView empty = text(commands.isEmpty() ? "Сохраните команду в библиотеке или нажмите «Сохранить ввод»." : "Ничего не найдено", 12, MUTED);
+        TextView empty = text(commands.isEmpty() ? WorkspaceText.tr("Сохраните команду в библиотеке или нажмите «Сохранить ввод».") : WorkspaceText.tr("Ничего не найдено"), 12, MUTED);
         empty.setPadding(0, dp(12), 0, 0); empty.setVisibility(commands.isEmpty() ? View.VISIBLE : View.GONE); heading.addView(empty);
         AlertDialog.Builder builder = WorkspaceDialogs.builder(activity).setCustomTitle(heading)
             .setAdapter(adapter, (dialog, index) -> {
@@ -1322,9 +1437,9 @@ public final class WorkspaceController {
                     insertIntoCurrent(value);
                 } else insertIntoCurrent((WorkspaceStore.Command) item);
             })
-            .setNegativeButton("Закрыть", null);
+            .setNegativeButton(WorkspaceText.tr("Закрыть"), null);
         String input = terminalInput.getText().toString();
-        if (!input.trim().isEmpty() && store.isWritable()) builder.setNeutralButton("Сохранить ввод", (dialog, which) -> editCommand(null, input));
+        if (!input.trim().isEmpty() && store.isWritable()) builder.setNeutralButton(WorkspaceText.tr("Сохранить ввод"), (dialog, which) -> editCommand(null, input));
         Runnable refresh = () -> {
             String key = search.getText().toString().toLowerCase(java.util.Locale.ROOT); visible.clear();
             if (noteTab[0]) {
@@ -1335,10 +1450,10 @@ public final class WorkspaceController {
                     .toLowerCase(java.util.Locale.ROOT).contains(key)) visible.add(command);
             }
             boolean libraryEmpty = noteTab[0] ? notes.isEmpty() : commands.isEmpty();
-            empty.setText(libraryEmpty ? (noteTab[0] ? "Сохраните заметку в библиотеке." : "Сохраните команду в библиотеке или нажмите «Сохранить ввод».") : "Ничего не найдено");
+            empty.setText(libraryEmpty ? (noteTab[0] ? WorkspaceText.tr("Сохраните заметку в библиотеке.") : WorkspaceText.tr("Сохраните команду в библиотеке или нажмите «Сохранить ввод».")) : WorkspaceText.tr("Ничего не найдено"));
             empty.setVisibility(visible.isEmpty() ? View.VISIBLE : View.GONE); adapter.notifyDataSetChanged();
-            hint.setText(noteTab[0] ? "Нажми на заметку, чтобы вставить" : "Нажми на команду, чтобы вставить");
-            search.setHint(noteTab[0] ? "Найти заметку" : "Найти команду");
+            hint.setText(noteTab[0] ? WorkspaceText.tr("Нажми на заметку, чтобы вставить") : WorkspaceText.tr("Нажми на команду, чтобы вставить"));
+            search.setHint(noteTab[0] ? WorkspaceText.tr("Найти заметку") : WorkspaceText.tr("Найти команду"));
             for (TextView tab : new TextView[]{commandTab, notesTab}) {
                 boolean selected = (tab == notesTab) == noteTab[0]; tab.setSelected(selected);
                 tintButton(tab, selected ? ACCENT : TEXT);
@@ -1376,13 +1491,13 @@ public final class WorkspaceController {
     }
     private void terminalMenu() {
         TerminalSession live = activity.getCurrentSession(); WorkspaceStore.Session profile = live == null ? null : store.findByHandle(live.mHandle);
-        WorkspaceDialogs.builder(activity).setTitle(live == null ? "Терминал" : live.mSessionName).setItems(profile != null && profile.environment.equals("ssh") ? new String[]{"Клавиатура", "Дополнительные клавиши", "Интерактивный ввод: " + (interactiveInput ? "включён" : "выключен")} : new String[]{"Клавиатура", "Дополнительные клавиши", "Интерактивный ввод: " + (interactiveInput ? "включён" : "выключен"), "Отменить команды запуска"}, (d, which) -> {
+        WorkspaceDialogs.builder(activity).setTitle(live == null ? WorkspaceText.tr("Терминал") : live.mSessionName).setItems(profile != null && profile.environment.equals("ssh") ? new String[]{WorkspaceText.tr("Клавиатура"), WorkspaceText.tr("Дополнительные клавиши"), WorkspaceText.tr("Интерактивный ввод: ") + (interactiveInput ? WorkspaceText.tr("включён") : WorkspaceText.tr("выключен"))} : new String[]{WorkspaceText.tr("Клавиатура"), WorkspaceText.tr("Дополнительные клавиши"), WorkspaceText.tr("Интерактивный ввод: ") + (interactiveInput ? WorkspaceText.tr("включён") : WorkspaceText.tr("выключен")), WorkspaceText.tr("Отменить команды запуска")}, (d, which) -> {
             if (which == 0) toggleKeyboard();
             else if (which == 1) { activity.toggleTerminalToolbar(); toolbarVisibility = activity.getTerminalToolbarViewPager().getVisibility(); }
             else if (which == 2) setInteractiveInput(!interactiveInput);
             else if (which == 3 && profile != null) {
-                try { SessionShell.cancel(activity.getFilesDir(), profile.id); activity.showToast("Следующие команды отменены. Текущий процесс продолжает работу.", true); }
-                catch (IOException e) { activity.showToast("Не удалось отменить команды", true); }
+                try { SessionShell.cancel(activity.getFilesDir(), profile.id); activity.showToast(WorkspaceText.tr("Следующие команды отменены. Текущий процесс продолжает работу."), true); }
+                catch (IOException e) { activity.showToast(WorkspaceText.tr("Не удалось отменить команды"), true); }
             }
         }).show();
     }
@@ -1417,16 +1532,16 @@ public final class WorkspaceController {
             String[] labels = new String[targets.size()];
             for (int i = 0; i < targets.size(); i++) {
                 TerminalSession target = targets.get(i);
-                labels[i] = (target.mSessionName == null ? "Терминал " + (i + 1) : target.mSessionName)
+                labels[i] = (target.mSessionName == null ? WorkspaceText.tr("Терминал ") + (i + 1) : target.mSessionName)
                     + " · " + compact(target.getCwd());
             }
-            WorkspaceDialogs.builder(activity).setTitle("В какой терминал вставить?").setItems(labels, (dialog, index) -> {
+            WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("В какой терминал вставить?")).setItems(labels, (dialog, index) -> {
                 TerminalSession target = targets.get(index);
                 boolean present = false;
                 for (TermuxSession session : live()) if (session.getTerminalSession() == target) present = true;
-                if (!present || !target.isRunning()) { activity.showToast("Этот терминал уже завершён", false); return; }
+                if (!present || !target.isRunning()) { activity.showToast(WorkspaceText.tr("Этот терминал уже завершён"), false); return; }
                 activity.getTermuxTerminalSessionClient().setCurrentSession(target); insertIntoCurrent(command);
-            }).setNegativeButton("Отмена", null).show();
+            }).setNegativeButton(WorkspaceText.tr("Отмена"), null).show();
             return;
         }
         if (targets.size() == 1) activity.getTermuxTerminalSessionClient().setCurrentSession(targets.get(0));
@@ -1443,6 +1558,7 @@ public final class WorkspaceController {
         return directory.startsWith("~/") ? TermuxConstants.TERMUX_HOME_DIR_PATH + directory.substring(1) : directory;
     }
     private void launch(WorkspaceStore.Session s) {
+        if(WorkspaceStore.isBase(s))baseRestartFailures=0;
         TerminalSession existing = liveFor(s);
         if (existing != null && existing.isRunning()) {
             activity.getTermuxTerminalSessionClient().setCurrentSession(existing); show(Screen.TERMINAL, true); return;
@@ -1454,8 +1570,8 @@ public final class WorkspaceController {
         if (s.environment.equals("ssh") && s.sshAuth.equals("password") && s.sshEncryptedPassword.isEmpty() && !pendingSshPasswords.containsKey(s.id)) {
             requestSshPassword(s, add); return;
         }
-        if (activity.getTermuxService() == null) { activity.showToast("Терминальный сервис ещё запускается", false); return; }
-        if (!store.isWritable()) { activity.showToast("Библиотека недоступна для записи", true); return; }
+        if (activity.getTermuxService() == null) { activity.showToast(WorkspaceText.tr("Терминальный сервис ещё запускается"), false); return; }
+        if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
         activity.prepareWorkspaceBootstrap(() -> {
             if (closed || activity.isFinishing()) return;
             TerminalSession previous = liveFor(s);
@@ -1465,11 +1581,26 @@ public final class WorkspaceController {
     }
     /** Used by the original new-session action after bootstrap setup. */
     public TermuxSession createDefault(String name, String directory) {
-        WorkspaceStore.Session profile = new WorkspaceStore.Session(); profile.name = name == null || name.trim().isEmpty() ? "Bash" : name;
-        profile.directory = directory == null ? TermuxConstants.TERMUX_HOME_DIR_PATH : directory;
-        TerminalSession session = create(profile, true);
+        WorkspaceStore.Session profile=null;for(WorkspaceStore.Session stored:store.sessions)if(WorkspaceStore.isBase(stored)&&(liveFor(stored)==null||!liveFor(stored).isRunning())){profile=stored;break;}
+        boolean add=profile==null;if(add)profile=new WorkspaceStore.Session();
+        profile.name=name==null||name.trim().isEmpty()?"Bash":name;
+        if(!hasBaseProfile()||WorkspaceStore.isBase(profile)){profile.id=WorkspaceStore.BASE_TERMINAL_ID;profile.name="Terminal";profile.environment="termux";}
+        profile.directory=WorkspaceStore.isBase(profile)||directory==null?TermuxConstants.TERMUX_HOME_DIR_PATH:directory;
+        TerminalSession previous=liveFor(profile);TerminalSession session=create(profile,add,previous);
         if (session == null) return null;
         return activity.getTermuxService().getTermuxSession(activity.getTermuxService().getIndexOfSession(session));
+    }
+    private boolean hasBaseProfile(){for(WorkspaceStore.Session s:store.sessions)if(WorkspaceStore.isBase(s))return true;return false;}
+    public boolean isBaseTerminal(TerminalSession terminal){return terminal!=null&&WorkspaceStore.isBase(store.findByHandle(terminal.mHandle));}
+    public void ensureBaseTerminal() {
+        TermuxService service=activity.getTermuxService();
+        if(closed||creating||baseCreating||!store.isWritable()||service==null||service.wantsToStop()||!new File(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash").isFile())return;
+        WorkspaceStore.Session base=null;for(WorkspaceStore.Session s:store.sessions)if(WorkspaceStore.isBase(s)){base=s;break;}
+        if(base!=null&&liveFor(base)!=null)return;
+        if(service.getTermuxSessionsSize()>=8)return;
+        boolean add=base==null;if(add){base=new WorkspaceStore.Session();base.id=WorkspaceStore.BASE_TERMINAL_ID;}
+        base.name="Terminal";base.environment="termux";base.directory=TermuxConstants.TERMUX_HOME_DIR_PATH;base.saved=false;
+        baseCreating=true;try{TerminalSession created=create(base,add);if(created!=null&&activity.getCurrentSession()==null)activity.getTermuxTerminalSessionClient().setCurrentSession(created);}finally{baseCreating=false;}
     }
     private TerminalSession create(WorkspaceStore.Session profile, boolean add) {
         return create(profile, add, null);
@@ -1477,11 +1608,12 @@ public final class WorkspaceController {
     private TerminalSession create(WorkspaceStore.Session profile, boolean add, TerminalSession replaced) {
         TermuxService service = activity.getTermuxService();
         if (service == null) return null;
+        if(WorkspaceStore.isBase(profile))baseStartedAt=System.currentTimeMillis();
         boolean replacing = replaced != null && !replaced.isRunning() && service.getIndexOfSession(replaced) >= 0;
-        if (service.getTermuxSessionsSize() >= 8 && !replacing) { activity.showToast("Максимум 8 терминалов. Закройте завершённую сессию.", true); return null; }
+        if (service.getTermuxSessionsSize() >= 8 && !replacing) { activity.showToast(WorkspaceText.tr("Максимум 8 терминалов. Закройте завершённую сессию."), true); return null; }
         String directory = (profile.environment.equals("ubuntu") || profile.environment.equals("ssh") || (profile.environment.equals("codex") && profile.codexEnvironment.equals("ubuntu"))) ? TermuxConstants.TERMUX_HOME_DIR_PATH : resolve(profile.directory);
         if (!new File(directory).isDirectory() || !new File(directory).canExecute()) {
-            activity.showToast("Каталог недоступен: " + directory, true); return null;
+            activity.showToast(WorkspaceText.tr("Каталог недоступен: ") + directory, true); return null;
         }
         SshPasswordBroker broker = null;
         try {
@@ -1489,14 +1621,14 @@ public final class WorkspaceController {
             if (profile.environment.equals("ssh") && profile.sshAuth.equals("password")) {
                 char[] secret = pendingSshPasswords.remove(profile.id);
                 if (secret == null && !profile.sshEncryptedPassword.isEmpty()) secret = SshPasswordVault.decrypt(profile);
-                if (secret == null) { activity.showToast("Введите пароль в настройках сессии", true); return null; }
+                if (secret == null) { activity.showToast(WorkspaceText.tr("Введите пароль в настройках сессии"), true); return null; }
                 try {
                     askpass = SessionShell.prepareAskpass(activity.getFilesDir(), profile, activity.getApplicationInfo().sourceDir).getAbsolutePath();
                     broker = new SshPasswordBroker(activity, secret); socket = broker.address;
                 } finally { java.util.Arrays.fill(secret, '\0'); }
             }
             if (profile.environment.equals("codex")) { profile.codexSocketId = java.util.UUID.randomUUID().toString(); CodexSessionShell.prepareBridge(activity); }
-            if (profile.environment.equals("codex") && (profile.codexChat.equals("choose") || profile.codexChat.equals("last"))) { activity.showToast("Выберите конкретный чат или введите его ID в настройках сессии", true); return null; }
+            if (profile.environment.equals("codex") && (profile.codexChat.equals("choose") || profile.codexChat.equals("last"))) { activity.showToast(WorkspaceText.tr("Выберите конкретный чат или введите его ID в настройках сессии"), true); return null; }
             File rc = SessionShell.prepare(activity.getFilesDir(), profile, askpass, socket);
             codexStatuses.remove(profile.id);
             // service notifications are synchronous; register the new profile before they fire.
@@ -1506,7 +1638,7 @@ public final class WorkspaceController {
             try { created = service.createTermuxSession(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + "/bash",
                 new String[]{"--rcfile", rc.getAbsolutePath(), "-i"}, null, directory, false, profile.name);
             } finally { creating = false; }
-            if (created == null) { if (broker != null) broker.close(); if (add) store.sessions.remove(profile); activity.showToast("Не удалось создать терминал", true); return null; }
+            if (created == null) { if (broker != null) broker.close(); if (add) store.sessions.remove(profile); activity.showToast(WorkspaceText.tr("Не удалось создать терминал"), true); return null; }
             TerminalSession session = created.getTerminalSession();
             // The synchronous callback may have adopted it; discard that temporary record.
             WorkspaceStore.Session adopted = store.findByHandle(session.mHandle);
@@ -1518,9 +1650,9 @@ public final class WorkspaceController {
             if (profile.environment.equals("codex")) codexHandler.postDelayed(() -> { if (!closed) loadCodexStatus(profile, null); }, 1500);
             return session;
         } catch (java.security.GeneralSecurityException e) {
-            if (broker != null) broker.close(); activity.showToast("Сохранённый пароль недоступен. Введите его заново в настройках сессии.", true); return null;
+            if (broker != null) broker.close(); activity.showToast(WorkspaceText.tr("Сохранённый пароль недоступен. Введите его заново в настройках сессии."), true); return null;
         } catch (IOException | RuntimeException e) {
-            if (broker != null) broker.close(); activity.showToast("Не удалось подготовить сессию", true); return null;
+            if (broker != null) broker.close(); activity.showToast(WorkspaceText.tr("Не удалось подготовить сессию"), true); return null;
         }
     }
     public void refresh() {
@@ -1542,7 +1674,7 @@ public final class WorkspaceController {
         }
         if (activity.getTermuxService() != null && store.isWritable()) {
             for (WorkspaceStore.Session profile : new ArrayList<>(store.sessions)) {
-                if (!profile.saved && !profile.handle.isEmpty() && liveFor(profile) == null) {
+                if (!WorkspaceStore.isBase(profile) && !profile.saved && !profile.handle.isEmpty() && liveFor(profile) == null) {
                     store.sessions.remove(profile); eraseSessionFiles(profile); changed = true;
                 }
             }
@@ -1553,6 +1685,14 @@ public final class WorkspaceController {
     public boolean onFinished(TerminalSession session) {
         WorkspaceStore.Session profile = store.findByHandle(session.mHandle);
         if (profile != null) { store.save(); }
+        if(WorkspaceStore.isBase(profile)&&activity.getTermuxService()!=null&&!activity.getTermuxService().wantsToStop()) {
+            if(System.currentTimeMillis()-baseStartedAt<5000)baseRestartFailures++;else baseRestartFailures=0;
+            if(baseRestartFailures>3){activity.showToast(WorkspaceText.tr("Terminal сразу завершается. Проверьте shell-настройки и перезапустите вручную."),true);return true;}
+            boolean selected=activity.getCurrentSession()==session;
+            long delay=Math.max(300,3000-(System.currentTimeMillis()-lastBaseRestart));lastBaseRestart=System.currentTimeMillis();
+            codexHandler.postDelayed(()->{if(closed||activity.getTermuxService()==null||activity.getTermuxService().wantsToStop()||liveFor(profile)!=session)return;TerminalSession next=create(profile,false,session);if(next!=null){if(selected)activity.getTermuxTerminalSessionClient().setCurrentSession(next);refresh();}},delay);
+            return true;
+        }
         if (pendingCloses.remove(session.mHandle)) {
             if (profile != null) retireProfile(profile);
             activity.getTermuxTerminalSessionClient().removeFinishedSession(session); refresh(); return true;
@@ -1573,6 +1713,7 @@ public final class WorkspaceController {
     }
     public void close() {
         terminalDrafts.clear();
+        for(WorkspaceFileBrowser browser:fileBrowsers)browser.close();fileBrowsers.clear();
         for (char[] secret : pendingSshPasswords.values()) java.util.Arrays.fill(secret, '\0'); pendingSshPasswords.clear();
         closed = true; codexApplyGeneration++; if(codexApplyDialog!=null)codexApplyDialog.dismiss(); codexHandler.removeCallbacksAndMessages(null); codexReader.shutdown(); reader.shutdown(); store.close();
     }

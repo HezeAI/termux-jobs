@@ -33,7 +33,7 @@ public final class SessionShell {
             String cwd = session.directory.isEmpty() || session.directory.equals("~") ? "/root" : session.directory;
             if (cwd.startsWith("~/")) cwd = "/root/" + cwd.substring(2);
             script = buildRc(TermuxConstants.TERMUX_HOME_DIR_PATH, history.getAbsolutePath(), "")
-                + "printf '%s\\n' 'Ожидание оболочки Ubuntu…'\n"
+                + WorkspaceText.tr("printf '%s\\n' 'Ожидание оболочки Ubuntu…'\n")
                 + "proot-distro login --bind " + quote(dir.getAbsolutePath() + ":" + mount)
                 + (session.environment.equals("codex") ? " --bind " + quote(CodexSessionShell.socketDirectory(files).getAbsolutePath() + ":/tmp/termux-jobs-codex") : "")
                 + " --work-dir " + quote(cwd) + " ubuntu -- /bin/bash --rcfile " + quote(mount + "/ubuntu-bashrc") + " -i\n";
@@ -75,7 +75,7 @@ public final class SessionShell {
             script.append("eval -- ").append(quote(command)).append("\n");
             script.append("local _termux_workspace_status=$?\n");
             script.append("if [ \"$_termux_workspace_status\" -ne 0 ]; then printf '%s\\n' ")
-                .append(quote("Команда " + (i + 1) + " завершилась с ошибкой; запуск остановлен."))
+                .append(quote(WorkspaceText.tr("Команда ") + (i + 1) + WorkspaceText.tr(" завершилась с ошибкой; запуск остановлен.")))
                 .append(" >&2; return \"$_termux_workspace_status\"; fi\n");
         }
         script.append("}\n_termux_workspace_startup\nunset -f _termux_workspace_startup\n");
@@ -90,12 +90,12 @@ public final class SessionShell {
         script.append("_termux_workspace_ready() {\n")
             .append("[ \"${_termux_workspace_done:-0}\" = 1 ] && return 0\n_termux_workspace_done=1\n");
         for (int i = 0; i < commands.size(); i++) {
-            script.append("if [ -f ").append(quote(cancel)).append(" ]; then printf '%s\\n' 'Запуск команд отменён.'; return 0; fi\n");
-            script.append("printf '%s\\n' ").append(quote("Оболочка готова. Запуск команды " + (i + 1) + "/" + commands.size())).append("\n");
+            script.append("if [ -f ").append(quote(cancel)).append(WorkspaceText.tr(" ]; then printf '%s\\n' 'Запуск команд отменён.'; return 0; fi\n"));
+            script.append("printf '%s\\n' ").append(quote(WorkspaceText.tr("Оболочка готова. Запуск команды ") + (i + 1) + "/" + commands.size())).append("\n");
             script.append("history -s -- ").append(quote(commands.get(i))).append("\nhistory -a\n");
             script.append("eval -- ").append(quote(commands.get(i))).append("\nlocal _termux_workspace_status=$?\n")
                 .append("if [ \"$_termux_workspace_status\" -ne 0 ]; then printf '%s\\n' ")
-                .append(quote("Ошибка команды " + (i + 1) + "; дальнейший запуск остановлен."))
+                .append(quote(WorkspaceText.tr("Ошибка команды ") + (i + 1) + WorkspaceText.tr("; дальнейший запуск остановлен.")))
                 .append(" >&2; return 0; fi\n");
         }
         script.append("return 0\n}\nPROMPT_COMMAND+=('_termux_workspace_ready')\n");

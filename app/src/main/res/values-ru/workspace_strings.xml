@@ -1,0 +1,422 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workspace_text_000" formatted="false">"printf \'%s\\n\' \'Ожидание оболочки Ubuntu…\'\n"</string>
+    <string name="workspace_text_001" formatted="false">"Команда "</string>
+    <string name="workspace_text_002" formatted="false">" завершилась с ошибкой; запуск остановлен."</string>
+    <string name="workspace_text_003" formatted="false">" ]; then printf \'%s\\n\' \'Запуск команд отменён.\'; return 0; fi\n"</string>
+    <string name="workspace_text_004" formatted="false">"Оболочка готова. Запуск команды "</string>
+    <string name="workspace_text_005" formatted="false">"Ошибка команды "</string>
+    <string name="workspace_text_006" formatted="false">"; дальнейший запуск остановлен."</string>
+    <string name="workspace_text_007" formatted="false">"Введите команду…"</string>
+    <string name="workspace_text_008" formatted="false">"Вставить сохранённую команду"</string>
+    <string name="workspace_text_009" formatted="false">"Отправить в активный терминал"</string>
+    <string name="workspace_text_010" formatted="false">"Настройки приложения"</string>
+    <string name="workspace_text_011" formatted="false">"Меню терминала"</string>
+    <string name="workspace_text_012" formatted="false">"Сессии"</string>
+    <string name="workspace_text_013" formatted="false">"Поиск команд и/или заметок"</string>
+    <string name="workspace_text_014" formatted="false">"Поиск команд и заметок"</string>
+    <string name="workspace_text_015" formatted="false">"Новая команда"</string>
+    <string name="workspace_text_016" formatted="false">"Новая сессия"</string>
+    <string name="workspace_text_017" formatted="false">"Нет активной сессии"</string>
+    <string name="workspace_text_018" formatted="false">"⌂\nГлавная"</string>
+    <string name="workspace_text_019" formatted="false">"&gt;_\nКоманды/Заметки"</string>
+    <string name="workspace_text_020" formatted="false">"▣\nТерминал"</string>
+    <string name="workspace_text_021" formatted="false">"Файлы проекта"</string>
+    <string name="workspace_text_022" formatted="false">"Открытые сессии"</string>
+    <string name="workspace_text_023" formatted="false">"Сессия "</string>
+    <string name="workspace_text_024" formatted="false">"Нет открытых сессий. Нажмите +."</string>
+    <string name="workspace_text_025" formatted="false">"Долгий тап — действия сессии"</string>
+    <string name="workspace_text_026" formatted="false">"Сначала откройте сессию"</string>
+    <string name="workspace_text_027" formatted="false">"Адаптивная область списков"</string>
+    <string name="workspace_text_028" formatted="false">"Недавние команды"</string>
+    <string name="workspace_text_029" formatted="false">"Очистить"</string>
+    <string name="workspace_text_030" formatted="false">"Журнал недоступен для записи"</string>
+    <string name="workspace_text_031" formatted="false">"Очистить весь журнал недавних команд?"</string>
+    <string name="workspace_text_032" formatted="false">"Поиск по журналу"</string>
+    <string name="workspace_text_033" formatted="false">"Журнал последних 50 команд"</string>
+    <string name="workspace_text_034" formatted="false">"Сохранённые сессии"</string>
+    <string name="workspace_text_035" formatted="false">"Список сохранённых сессий"</string>
+    <string name="workspace_text_036" formatted="false">"Сохранённых сессий нет"</string>
+    <string name="workspace_text_037" formatted="false">"Нажмите +, чтобы подготовить команду запуска."</string>
+    <string name="workspace_text_038" formatted="false">"Команд пока нет"</string>
+    <string name="workspace_text_039" formatted="false">"Здесь появятся команды, отправленные из поля ввода терминала."</string>
+    <string name="workspace_text_040" formatted="false">"Ранее"</string>
+    <string name="workspace_text_041" formatted="false">"Ничего не найдено"</string>
+    <string name="workspace_text_042" formatted="false">" · найдено: "</string>
+    <string name="workspace_text_043" formatted="false">"Недавняя команда"</string>
+    <string name="workspace_text_044" formatted="false">"Закрыть"</string>
+    <string name="workspace_text_045" formatted="false">"Вставить в терминал"</string>
+    <string name="workspace_text_046" formatted="false">"Сохранить в команды"</string>
+    <string name="workspace_text_047" formatted="false">"Скопировать"</string>
+    <string name="workspace_text_048" formatted="false">"Команда"</string>
+    <string name="workspace_text_049" formatted="false">"Команда скопирована"</string>
+    <string name="workspace_text_050" formatted="false">"Полный текст команды"</string>
+    <string name="workspace_text_051" formatted="false">"Полный текст заметки"</string>
+    <string name="workspace_text_052" formatted="false">"Поиск: "</string>
+    <string name="workspace_text_053" formatted="false">"Список сохранённых команд"</string>
+    <string name="workspace_text_054" formatted="false">"Нажмите +, чтобы сохранить команду, или измените фильтры."</string>
+    <string name="workspace_text_055" formatted="false">"Список сохранённых заметок"</string>
+    <string name="workspace_text_056" formatted="false">"Заметок пока нет"</string>
+    <string name="workspace_text_057" formatted="false">"Нажмите +, чтобы сохранить заметку, или измените фильтры."</string>
+    <string name="workspace_text_058" formatted="false">"Фильтры заметок"</string>
+    <string name="workspace_text_059" formatted="false">"Фильтры команд"</string>
+    <string name="workspace_text_060" formatted="false">"Все заметки"</string>
+    <string name="workspace_text_061" formatted="false">"Все команды"</string>
+    <string name="workspace_text_062" formatted="false">"Избранное"</string>
+    <string name="workspace_text_063" formatted="false">"Категории"</string>
+    <string name="workspace_text_064" formatted="false">"Фильтр категорий заметок"</string>
+    <string name="workspace_text_065" formatted="false">"Фильтр категорий команд"</string>
+    <string name="workspace_text_066" formatted="false">"Новая заметка"</string>
+    <string name="workspace_text_067" formatted="false">"Все категории"</string>
+    <string name="workspace_text_068" formatted="false">"Категории заметок"</string>
+    <string name="workspace_text_069" formatted="false">"Отмена"</string>
+    <string name="workspace_text_070" formatted="false">"Заметка "</string>
+    <string name="workspace_text_071" formatted="false">"Действия с заметкой "</string>
+    <string name="workspace_text_072" formatted="false">"Убрать из избранного"</string>
+    <string name="workspace_text_073" formatted="false">"В избранное"</string>
+    <string name="workspace_text_074" formatted="false">"Редактировать"</string>
+    <string name="workspace_text_075" formatted="false">"Удалить"</string>
+    <string name="workspace_text_076" formatted="false">"Библиотека недоступна для записи"</string>
+    <string name="workspace_text_077" formatted="false">"Удалить заметку «"</string>
+    <string name="workspace_text_078" formatted="false">"Название"</string>
+    <string name="workspace_text_079" formatted="false">"Текст заметки"</string>
+    <string name="workspace_text_080" formatted="false">"Категория"</string>
+    <string name="workspace_text_081" formatted="false">"Добавить в избранное"</string>
+    <string name="workspace_text_082" formatted="false">"Редактировать заметку"</string>
+    <string name="workspace_text_083" formatted="false">"Сохранить"</string>
+    <string name="workspace_text_084" formatted="false">"Укажите название"</string>
+    <string name="workspace_text_085" formatted="false">"Укажите текст"</string>
+    <string name="workspace_text_086" formatted="false">"Общее"</string>
+    <string name="workspace_text_087" formatted="false">"Категории команд"</string>
+    <string name="workspace_text_088" formatted="false">"Активные"</string>
+    <string name="workspace_text_089" formatted="false">"Сохранённые"</string>
+    <string name="workspace_text_090" formatted="false">"Нет активных сессий"</string>
+    <string name="workspace_text_091" formatted="false">"Создайте сессию или запустите сохранённую."</string>
+    <string name="workspace_text_092" formatted="false">"+  Новая сессия"</string>
+    <string name="workspace_text_093" formatted="false">"Действия с командой "</string>
+    <string name="workspace_text_094" formatted="false">"● Активна"</string>
+    <string name="workspace_text_095" formatted="false">"Завершена"</string>
+    <string name="workspace_text_096" formatted="false">"Сохранена"</string>
+    <string name="workspace_text_097" formatted="false">"Открыть "</string>
+    <string name="workspace_text_098" formatted="false">"Запустить "</string>
+    <string name="workspace_text_099" formatted="false">"Действия с сессией "</string>
+    <string name="workspace_text_100" formatted="false">"Папка: "</string>
+    <string name="workspace_text_101" formatted="false">"Среда: "</string>
+    <string name="workspace_text_102" formatted="false">"Чат: "</string>
+    <string name="workspace_text_103" formatted="false">"Новый чат"</string>
+    <string name="workspace_text_104" formatted="false">"Новый чат не заменяет прежнюю историю. Сохранение — по вашему выбору."</string>
+    <string name="workspace_text_105" formatted="false">"Продолжить чат"</string>
+    <string name="workspace_text_106" formatted="false">"Начать чат"</string>
+    <string name="workspace_text_107" formatted="false">"Название, команда или каталог"</string>
+    <string name="workspace_text_108" formatted="false">"Поиск"</string>
+    <string name="workspace_text_109" formatted="false">"Найти"</string>
+    <string name="workspace_text_110" formatted="false">"Редактировать команду"</string>
+    <string name="workspace_text_111" formatted="false">"Укажите команду"</string>
+    <string name="workspace_text_112" formatted="false">"Некорректный каталог"</string>
+    <string name="workspace_text_113" formatted="false">"Используйте абсолютный путь или ~/каталог"</string>
+    <string name="workspace_text_114" formatted="false">"Название сессии"</string>
+    <string name="workspace_text_115" formatted="false">"Рабочий каталог"</string>
+    <string name="workspace_text_116" formatted="false">"Выбрать рабочий каталог"</string>
+    <string name="workspace_text_117" formatted="false">"Как раньше"</string>
+    <string name="workspace_text_118" formatted="false">"Termux · ждать Bash"</string>
+    <string name="workspace_text_119" formatted="false">"Ubuntu · ждать Bash"</string>
+    <string name="workspace_text_120" formatted="false">"SSH · сервер"</string>
+    <string name="workspace_text_121" formatted="false">"Сессия Codex"</string>
+    <string name="workspace_text_122" formatted="false">"Среда запуска"</string>
+    <string name="workspace_text_123" formatted="false">"Адрес сервера"</string>
+    <string name="workspace_text_124" formatted="false">"Пользователь"</string>
+    <string name="workspace_text_125" formatted="false">"Порт"</string>
+    <string name="workspace_text_126" formatted="false">"Автоматически"</string>
+    <string name="workspace_text_127" formatted="false">"Файл SSH-ключа"</string>
+    <string name="workspace_text_128" formatted="false">"По паролю"</string>
+    <string name="workspace_text_129" formatted="false">"Авторизация SSH"</string>
+    <string name="workspace_text_130" formatted="false">"Выбрать ключ"</string>
+    <string name="workspace_text_131" formatted="false">"Пароль"</string>
+    <string name="workspace_text_132" formatted="false">"Пароль SSH"</string>
+    <string name="workspace_text_133" formatted="false">"Сохранён; оставьте пустым, чтобы не менять"</string>
+    <string name="workspace_text_134" formatted="false">"Показать пароль"</string>
+    <string name="workspace_text_135" formatted="false">"Запомнить пароль"</string>
+    <string name="workspace_text_136" formatted="false">"Сохранение через Android Keystore. После удаления приложения пароль потребуется ввести заново."</string>
+    <string name="workspace_text_137" formatted="false">"Авторизация: "</string>
+    <string name="workspace_text_138" formatted="false">"Оставить подключение открытым"</string>
+    <string name="workspace_text_139" formatted="false">"Среда Codex"</string>
+    <string name="workspace_text_140" formatted="false">"Доступ Codex"</string>
+    <string name="workspace_text_141" formatted="false">"Чат Codex"</string>
+    <string name="workspace_text_142" formatted="false">"Полный доступ · без подтверждений"</string>
+    <string name="workspace_text_143" formatted="false">"В пределах проекта · с подтверждениями"</string>
+    <string name="workspace_text_144" formatted="false">"Только чтение · с подтверждениями"</string>
+    <string name="workspace_text_145" formatted="false">"Среда Codex: "</string>
+    <string name="workspace_text_146" formatted="false">"Доступ: "</string>
+    <string name="workspace_text_147" formatted="false">"Новый"</string>
+    <string name="workspace_text_148" formatted="false">"Выберите конкретный чат"</string>
+    <string name="workspace_text_149" formatted="false">"Выбрать при запуске"</string>
+    <string name="workspace_text_150" formatted="false">"Выбрать чат"</string>
+    <string name="workspace_text_151" formatted="false">"Ввести ID чата"</string>
+    <string name="workspace_text_152" formatted="false">"ID чата Codex"</string>
+    <string name="workspace_text_153" formatted="false">"Выбрать"</string>
+    <string name="workspace_text_154" formatted="false">"Некорректный ID"</string>
+    <string name="workspace_text_155" formatted="false">"Порт от 1 до 65535"</string>
+    <string name="workspace_text_156" formatted="false">"Авторизация и история берутся из выбранной среды. Если вход не выполнен, Codex предложит авторизоваться. Для карточки управления нужна версия Codex с app-server и --remote. Полный доступ действует в пределах доступных среде файлов. На Android ограничения sandbox зависят от поддержки Codex; при ошибке запуск остановится, права не повышаются автоматически."</string>
+    <string name="workspace_text_157" formatted="false">"Среда запуска: "</string>
+    <string name="workspace_text_158" formatted="false">"Команда 1 (необязательно)"</string>
+    <string name="workspace_text_159" formatted="false">"Команда 2"</string>
+    <string name="workspace_text_160" formatted="false">"Команда 3"</string>
+    <string name="workspace_text_161" formatted="false">"+ Команда"</string>
+    <string name="workspace_text_162" formatted="false">"Добавить команду запуска"</string>
+    <string name="workspace_text_163" formatted="false">"Termux / Ubuntu: команды запускаются после готовности Bash в выбранной среде. Вход в Ubuntu выполняется автоматически — команду proot-distro login вводить не нужно. До трёх шагов, при ошибке остановка. После запуска Codex следующие шаги ждут его выхода. SSH: каталог и все команды выполняются на сервере с Bash. Пароль и подтверждение ключа — в терминале; следующая команда ждёт завершения предыдущей."</string>
+    <string name="workspace_text_164" formatted="false">"Настройки сессии"</string>
+    <string name="workspace_text_165" formatted="false">"Создать и запустить"</string>
+    <string name="workspace_text_166" formatted="false">"Укажите адрес без пробелов, пользователя и порта"</string>
+    <string name="workspace_text_167" formatted="false">"Укажите пользователя SSH"</string>
+    <string name="workspace_text_168" formatted="false">"Укажите доступный файл ключа: /путь или ~/путь"</string>
+    <string name="workspace_text_169" formatted="false">"Пароль до 256 символов, без переносов строки"</string>
+    <string name="workspace_text_170" formatted="false">"Введите пароль для сохранения"</string>
+    <string name="workspace_text_171" formatted="false">"Keystore недоступен. Отключите запоминание или повторите."</string>
+    <string name="workspace_text_172" formatted="false">"Имя обновлено. Каталог и команда применятся при следующем запуске."</string>
+    <string name="workspace_text_173" formatted="false">"Укажите абсолютный рабочий каталог"</string>
+    <string name="workspace_text_174" formatted="false">"Загрузка истории…"</string>
+    <string name="workspace_text_175" formatted="false">"Найти чат или каталог"</string>
+    <string name="workspace_text_176" formatted="false">"Все чаты"</string>
+    <string name="workspace_text_177" formatted="false">"Чаты этой папки"</string>
+    <string name="workspace_text_178" formatted="false">"Выбрать чат Codex"</string>
+    <string name="workspace_text_179" formatted="false">"Продолжить выбранный чат"</string>
+    <string name="workspace_text_180" formatted="false">"Новый чат в этой папке"</string>
+    <string name="workspace_text_181" formatted="false">"Не удалось прочитать всю историю. Проверьте Codex и авторизацию в выбранной среде."</string>
+    <string name="workspace_text_182" formatted="false">" · новый каталог: "</string>
+    <string name="workspace_text_183" formatted="false">"\nСохранённых чатов пока нет."</string>
+    <string name="workspace_text_184" formatted="false">"Каталог неизвестен"</string>
+    <string name="workspace_text_185" formatted="false">"Чатов этой папки нет. Выберите «Все чаты»."</string>
+    <string name="workspace_text_186" formatted="false">"Нет подходящих чатов"</string>
+    <string name="workspace_text_187" formatted="false">"Продолжить чат в другой папке?"</string>
+    <string name="workspace_text_188" formatted="false">"Исходный каталог:\n"</string>
+    <string name="workspace_text_189" formatted="false">"\n\nНовый рабочий каталог:\n"</string>
+    <string name="workspace_text_190" formatted="false">"\n\nИстория останется прежней. В ней могут быть старые задачи и пути. Файлы не переносятся; права остаются выбранными в настройках сессии."</string>
+    <string name="workspace_text_191" formatted="false">"Продолжить в новой папке"</string>
+    <string name="workspace_text_192" formatted="false">"Проверка истории и каталога…"</string>
+    <string name="workspace_text_193" formatted="false">"Проверка чата"</string>
+    <string name="workspace_text_194" formatted="false">"Чат недоступен или исходный каталог неизвестен. Проверьте ID и выбранную среду."</string>
+    <string name="workspace_text_195" formatted="false">"Codex · подключение…"</string>
+    <string name="workspace_text_196" formatted="false">"Codex · нет данных ›"</string>
+    <string name="workspace_text_197" formatted="false">"Статус и модель Codex"</string>
+    <string name="workspace_text_198" formatted="false">"Обновится "</string>
+    <string name="workspace_text_199" formatted="false">"Время обновления недоступно"</string>
+    <string name="workspace_text_200" formatted="false">"Получение статуса Codex…"</string>
+    <string name="workspace_text_201" formatted="false">"Модель: "</string>
+    <string name="workspace_text_202" formatted="false">"нет данных"</string>
+    <string name="workspace_text_203" formatted="false">"Рассуждение: "</string>
+    <string name="workspace_text_204" formatted="false">"Пятичасовой лимит"</string>
+    <string name="workspace_text_205" formatted="false">"Недельный лимит"</string>
+    <string name="workspace_text_206" formatted="false">"Общий лимит аккаунта. Доступ: "</string>
+    <string name="workspace_text_207" formatted="false">"полный"</string>
+    <string name="workspace_text_208" formatted="false">"только чтение"</string>
+    <string name="workspace_text_209" formatted="false">"в пределах проекта"</string>
+    <string name="workspace_text_210" formatted="false">"\nСтатус обновляется раз в 30 секунд. Выбор модели и рассуждения применяется через штатное меню Codex только к этой сессии. Если Codex отвечает, приложение дождётся завершения. Поле ввода сохраняется."</string>
+    <string name="workspace_text_211" formatted="false">"Статус Codex"</string>
+    <string name="workspace_text_212" formatted="false">"Обновить"</string>
+    <string name="workspace_text_213" formatted="false">"Каталог моделей недоступен. После этого обновления запустите новый терминал Codex с прежним ID чата."</string>
+    <string name="workspace_text_214" formatted="false">"Модель Codex"</string>
+    <string name="workspace_text_215" formatted="false">"Без рассуждения"</string>
+    <string name="workspace_text_216" formatted="false">"Минимальный"</string>
+    <string name="workspace_text_217" formatted="false">"Низкий"</string>
+    <string name="workspace_text_218" formatted="false">"Средний"</string>
+    <string name="workspace_text_219" formatted="false">"Высокий"</string>
+    <string name="workspace_text_220" formatted="false">"Очень высокий"</string>
+    <string name="workspace_text_221" formatted="false">"Максимальный"</string>
+    <string name="workspace_text_222" formatted="false">"Ультра"</string>
+    <string name="workspace_text_223" formatted="false">"Codex не сообщил доступные уровни для этой модели"</string>
+    <string name="workspace_text_224" formatted="false">" · поведение"</string>
+    <string name="workspace_text_225" formatted="false">"Применить параметры Codex?"</string>
+    <string name="workspace_text_226" formatted="false">"\nПоведение: "</string>
+    <string name="workspace_text_227" formatted="false">"\n\nТолько для текущей сессии."</string>
+    <string name="workspace_text_228" formatted="false">"Применить"</string>
+    <string name="workspace_text_229" formatted="false">"Сессия уже завершена"</string>
+    <string name="workspace_text_230" formatted="false">"Эти параметры уже выбраны в Codex"</string>
+    <string name="workspace_text_231" formatted="false">"Параметры Codex"</string>
+    <string name="workspace_text_232" formatted="false">"Проверяем состояние сессии…"</string>
+    <string name="workspace_text_233" formatted="false">"Не удалось дождаться свободного Codex"</string>
+    <string name="workspace_text_234" formatted="false">"Статус Codex недоступен"</string>
+    <string name="workspace_text_235" formatted="false">"Ожидаем завершения ответа Codex…"</string>
+    <string name="workspace_text_236" formatted="false">"Применяем через штатное меню Codex…"</string>
+    <string name="workspace_text_237" formatted="false">"Сессия завершена"</string>
+    <string name="workspace_text_238" formatted="false">"Codex подтвердил: "</string>
+    <string name="workspace_text_239" formatted="false">"Ключей в ~/.ssh нет. Укажите путь к своему файлу в поле."</string>
+    <string name="workspace_text_240" formatted="false">"Подключиться"</string>
+    <string name="workspace_text_241" formatted="false">"Введите пароль"</string>
+    <string name="workspace_text_242" formatted="false">"Удалить команду «"</string>
+    <string name="workspace_text_243" formatted="false">"Terminal · базовая сессия"</string>
+    <string name="workspace_text_244" formatted="false">"Базовая вкладка не закрывается. Можно перезапустить оболочку."</string>
+    <string name="workspace_text_245" formatted="false">"Перезапустить"</string>
+    <string name="workspace_text_246" formatted="false">"Перезапустить базовую оболочку?"</string>
+    <string name="workspace_text_247" formatted="false">"Закрыть меню"</string>
+    <string name="workspace_text_248" formatted="false">"Сохранить сессию"</string>
+    <string name="workspace_text_249" formatted="false">"Настройки"</string>
+    <string name="workspace_text_250" formatted="false">"Закрыть сессию"</string>
+    <string name="workspace_text_251" formatted="false">"Удалить сессию"</string>
+    <string name="workspace_text_252" formatted="false">"Остановить текущий процесс и повторно выполнить стартовую команду?"</string>
+    <string name="workspace_text_253" formatted="false">"Откройте терминал и дождитесь запуска"</string>
+    <string name="workspace_text_254" formatted="false">"Удалить настройки и историю сессии «"</string>
+    <string name="workspace_text_255" formatted="false">"»? Активный терминал сначала нужно остановить."</string>
+    <string name="workspace_text_256" formatted="false">"Сначала остановите сессию"</string>
+    <string name="workspace_text_257" formatted="false">"Сохранённых сессий нет. Удерживайте вкладку терминала и выберите «Сохранить сессию»."</string>
+    <string name="workspace_text_258" formatted="false">"Дождитесь обновления статуса и повторите сохранение"</string>
+    <string name="workspace_text_259" formatted="false">"ID чата ещё не получен. Дождитесь запуска Codex и повторите сохранение; нужен помощник новой версии."</string>
+    <string name="workspace_text_260" formatted="false">"Сессия сохранена"</string>
+    <string name="workspace_text_261" formatted="false">"Сессия уже закрыта"</string>
+    <string name="workspace_text_262" formatted="false">"Закрыть сессию «"</string>
+    <string name="workspace_text_263" formatted="false">"Процесс будет остановлен, вкладка терминала закрыта. Сохранённые настройки и история останутся."</string>
+    <string name="workspace_text_264" formatted="false">"Сохранить настройки и историю команд Bash перед закрытием? История Codex остаётся в самом Codex."</string>
+    <string name="workspace_text_265" formatted="false">"Сохранить и закрыть"</string>
+    <string name="workspace_text_266" formatted="false">"Закрыть без сохранения"</string>
+    <string name="workspace_text_267" formatted="false">"Дождитесь обновления статуса и повторите закрытие"</string>
+    <string name="workspace_text_268" formatted="false">"ID чата ещё не получен. Дождитесь запуска либо выберите закрытие без сохранения."</string>
+    <string name="workspace_text_269" formatted="false">"Дождитесь запуска сессии"</string>
+    <string name="workspace_text_270" formatted="false">"Не удалось полностью удалить историю сессии"</string>
+    <string name="workspace_text_271" formatted="false">"Продолжить"</string>
+    <string name="workspace_text_272" formatted="false">"Нет работающего терминала"</string>
+    <string name="workspace_text_273" formatted="false">"Сохранённые команды"</string>
+    <string name="workspace_text_274" formatted="false">"Заметки"</string>
+    <string name="workspace_text_275" formatted="false">"Нажми на команду, чтобы вставить"</string>
+    <string name="workspace_text_276" formatted="false">"Найти команду"</string>
+    <string name="workspace_text_277" formatted="false">"Поиск в меню звёздочки"</string>
+    <string name="workspace_text_278" formatted="false">"Сохраните команду в библиотеке или нажмите «Сохранить ввод»."</string>
+    <string name="workspace_text_279" formatted="false">"Сохранить ввод"</string>
+    <string name="workspace_text_280" formatted="false">"Сохраните заметку в библиотеке."</string>
+    <string name="workspace_text_281" formatted="false">"Нажми на заметку, чтобы вставить"</string>
+    <string name="workspace_text_282" formatted="false">"Найти заметку"</string>
+    <string name="workspace_text_283" formatted="false">"Терминал"</string>
+    <string name="workspace_text_284" formatted="false">"Клавиатура"</string>
+    <string name="workspace_text_285" formatted="false">"Дополнительные клавиши"</string>
+    <string name="workspace_text_286" formatted="false">"Интерактивный ввод: "</string>
+    <string name="workspace_text_287" formatted="false">"включён"</string>
+    <string name="workspace_text_288" formatted="false">"выключен"</string>
+    <string name="workspace_text_289" formatted="false">"Отменить команды запуска"</string>
+    <string name="workspace_text_290" formatted="false">"Следующие команды отменены. Текущий процесс продолжает работу."</string>
+    <string name="workspace_text_291" formatted="false">"Не удалось отменить команды"</string>
+    <string name="workspace_text_292" formatted="false">"Терминал "</string>
+    <string name="workspace_text_293" formatted="false">"В какой терминал вставить?"</string>
+    <string name="workspace_text_294" formatted="false">"Этот терминал уже завершён"</string>
+    <string name="workspace_text_295" formatted="false">"Терминальный сервис ещё запускается"</string>
+    <string name="workspace_text_296" formatted="false">"Максимум 8 терминалов. Закройте завершённую сессию."</string>
+    <string name="workspace_text_297" formatted="false">"Каталог недоступен: "</string>
+    <string name="workspace_text_298" formatted="false">"Введите пароль в настройках сессии"</string>
+    <string name="workspace_text_299" formatted="false">"Выберите конкретный чат или введите его ID в настройках сессии"</string>
+    <string name="workspace_text_300" formatted="false">"Не удалось создать терминал"</string>
+    <string name="workspace_text_301" formatted="false">"Сохранённый пароль недоступен. Введите его заново в настройках сессии."</string>
+    <string name="workspace_text_302" formatted="false">"Не удалось подготовить сессию"</string>
+    <string name="workspace_text_303" formatted="false">"Terminal сразу завершается. Проверьте shell-настройки и перезапустите вручную."</string>
+    <string name="workspace_text_304" formatted="false">" — копия"</string>
+    <string name="workspace_text_305" formatted="false">"Не удалось прочитать библиотеку. Исходный файл сохранён."</string>
+    <string name="workspace_text_306" formatted="false">"Библиотека недоступна для записи; исходные данные сохранены."</string>
+    <string name="workspace_text_307" formatted="false">"Не удалось сохранить библиотеку."</string>
+    <string name="workspace_text_308" formatted="false">"Ошибка записи библиотеки. Проверьте свободное место."</string>
+    <string name="workspace_text_309" formatted="false">"избранное"</string>
+    <string name="workspace_text_310" formatted="false">"избранного"</string>
+    <string name="workspace_text_311" formatted="false">"Избранная команда"</string>
+    <string name="workspace_text_312" formatted="false">" || { printf \'%s\\n\' \'Не удалось открыть каталог на сервере.\' &gt;&amp;2; return 1; }\n"</string>
+    <string name="workspace_text_313" formatted="false">"Сервер: команда "</string>
+    <string name="workspace_text_314" formatted="false">"Проверка SSH-сервера"</string>
+    <string name="workspace_text_315" formatted="false">"Доверять"</string>
+    <string name="workspace_text_316" formatted="false">"(\ncommand -v codex &gt;/dev/null 2&gt;&amp;1 || { printf \'%s\\n\' \'Codex не установлен в выбранной среде.\' &gt;&amp;2; exit 127; }\n"</string>
+    <string name="workspace_text_317" formatted="false">"command -v node &gt;/dev/null 2&gt;&amp;1 || { printf \'%s\\n\' \'Для локального управления Codex нужен Node.js в выбранной среде.\' &gt;&amp;2; exit 127; }\n"</string>
+    <string name="workspace_text_318" formatted="false">" ] || { printf \'%s\\n\' \'Подключение Codex уже занято.\' &gt;&amp;2; exit 1; }\n"</string>
+    <string name="workspace_text_319" formatted="false">"kill -0 \"$_jobs_codex_pid\" 2&gt;/dev/null || { printf \'%s\\n\' \'Не удалось запустить app-server. Проверьте версию Codex.\' &gt;&amp;2; exit 1; }\n"</string>
+    <string name="workspace_text_320" formatted="false">"_jobs_codex_wait=$((_jobs_codex_wait+1)); [ \"$_jobs_codex_wait\" -lt 100 ] || { printf \'%s\\n\' \'Истекло ожидание Codex.\' &gt;&amp;2; exit 1; }; sleep 0.1\ndone\n"</string>
+    <string name="workspace_text_321" formatted="false">") || { printf \'%s\\n\' \'Не удалось продолжить чат с выбранными правами.\' &gt;&amp;2; exit 1; }\n"</string>
+    <string name="workspace_text_322" formatted="false">"Не удалось прочитать статус Codex ("</string>
+    <string name="workspace_text_323" formatted="false">"). Чат может продолжать работать."</string>
+    <string name="workspace_text_324" formatted="false">"В выбранной среде не найден Node.js"</string>
+    <string name="workspace_text_325" formatted="false">"Выбранная среда не видит файл адаптера"</string>
+    <string name="workspace_text_326" formatted="false">"Выбранная среда не видит сокет текущей сессии"</string>
+    <string name="workspace_text_327" formatted="false">"Не найден файл или сокет адаптера"</string>
+    <string name="workspace_text_328" formatted="false">"Сервер Codex не принимает подключение"</string>
+    <string name="workspace_text_329" formatted="false">"Отказ в доступе к адаптеру"</string>
+    <string name="workspace_text_330" formatted="false">"Не найдена программа для запуска адаптера"</string>
+    <string name="workspace_text_331" formatted="false">"Ошибка согласования локального протокола"</string>
+    <string name="workspace_text_332" formatted="false">"Статус Codex недоступен: "</string>
+    <string name="workspace_text_333" formatted="false">"). Чат и авторизация не изменены."</string>
+    <string name="workspace_text_334" formatted="false">"Помощник статуса ещё не запущен. Для сессии, созданной до v0.2.13, откройте новый терминал Codex с тем же ID чата."</string>
+    <string name="workspace_text_335" formatted="false">"Несколько чатов: выберите чат в терминале"</string>
+    <string name="workspace_text_336" formatted="false">": нет данных"</string>
+    <string name="workspace_text_337" formatted="false">"5ч"</string>
+    <string name="workspace_text_338" formatted="false">"7д"</string>
+    <string name="workspace_text_339" formatted="false">"Не удалось определить выделение в меню Codex. Завершите выбор в терминале."</string>
+    <string name="workspace_text_340" formatted="false">"Пункт не найден в меню Codex. Завершите выбор в терминале."</string>
+    <string name="workspace_text_341" formatted="false">"Не удалось выделить пункт Codex. Завершите выбор в терминале."</string>
+    <string name="workspace_text_342" formatted="false">"Ввод Codex занят или открыто другое меню. Освободите его и повторите выбор."</string>
+    <string name="workspace_text_343" formatted="false">"Codex не подтвердил смену. Проверьте меню терминала; настройки не считаются применёнными."</string>
+    <string name="workspace_text_344" formatted="false">"Codex не предлагает применение только к сессии для этой модели. Завершите выбор в терминале."</string>
+    <string name="workspace_text_345" formatted="false">"Открылось меню другой модели. Завершите выбор в терминале."</string>
+    <string name="workspace_text_346" formatted="false">"Эта версия Codex не предлагает применение только к сессии. Завершите выбор в терминале."</string>
+    <string name="workspace_text_347" formatted="false">"Для этого уровня Codex требует отдельное подтверждение. Завершите выбор в терминале."</string>
+    <string name="workspace_text_348" formatted="false">"Некорректный путь"</string>
+    <string name="workspace_text_349" formatted="false">"Некорректный список файлов"</string>
+    <string name="workspace_text_350" formatted="false">"Некорректное имя файла"</string>
+    <string name="workspace_text_351" formatted="false">"Некорректный размер файла"</string>
+    <string name="workspace_text_352" formatted="false">"Слишком много файлов; выберите вложенную папку"</string>
+    <string name="workspace_text_353" formatted="false">"Все"</string>
+    <string name="workspace_text_354" formatted="false">"Текст"</string>
+    <string name="workspace_text_355" formatted="false">"Изображения"</string>
+    <string name="workspace_text_356" formatted="false">"Введите имя одной папки без / и переносов"</string>
+    <string name="workspace_text_357" formatted="false">"Текст больше 256 КБ; используйте терминал или экспорт"</string>
+    <string name="workspace_text_358" formatted="false">"Бинарный файл; доступен экспорт"</string>
+    <string name="workspace_text_359" formatted="false">"Файл превышает лимит экспорта 256 МБ"</string>
+    <string name="workspace_text_360" formatted="false">"Укажите корректные параметры SSH"</string>
+    <string name="workspace_text_361" formatted="false">"Некорректный путь SSH-ключа"</string>
+    <string name="workspace_text_362" formatted="false">"Окно закрыто"</string>
+    <string name="workspace_text_363" formatted="false">"Введите пароль для просмотра файлов"</string>
+    <string name="workspace_text_364" formatted="false">"Операция отменена"</string>
+    <string name="workspace_text_365" formatted="false">"Файл или список слишком большой"</string>
+    <string name="workspace_text_366" formatted="false">"SSH недоступен: проверьте вход, пароль и доверенный ключ сервера в терминале"</string>
+    <string name="workspace_text_367" formatted="false">"Каталог или файл недоступен; проверьте путь и выбранную среду"</string>
+    <string name="workspace_text_368" formatted="false">"Родительская папка"</string>
+    <string name="workspace_text_369" formatted="false">"Домашний каталог"</string>
+    <string name="workspace_text_370" formatted="false">"Фильтр файлов: "</string>
+    <string name="workspace_text_371" formatted="false">", выбран"</string>
+    <string name="workspace_text_372" formatted="false">"Найти файл или папку"</string>
+    <string name="workspace_text_373" formatted="false">"Найти папку"</string>
+    <string name="workspace_text_374" formatted="false">"Загрузка…"</string>
+    <string name="workspace_text_375" formatted="false">"Файлы · "</string>
+    <string name="workspace_text_376" formatted="false">"Выбрать папку"</string>
+    <string name="workspace_text_377" formatted="false">"Создать папку"</string>
+    <string name="workspace_text_378" formatted="false">"Пароль SSH для файлов"</string>
+    <string name="workspace_text_379" formatted="false">"Не удалось открыть файлы"</string>
+    <string name="workspace_text_380" formatted="false">"Папка "</string>
+    <string name="workspace_text_381" formatted="false">"Файл "</string>
+    <string name="workspace_text_382" formatted="false">"Нет подходящих файлов или папок"</string>
+    <string name="workspace_text_383" formatted="false">"Открыт каталог выбранной среды · "</string>
+    <string name="workspace_text_384" formatted="false">"Название новой папки"</string>
+    <string name="workspace_text_385" formatted="false">"Новая пустая папка"</string>
+    <string name="workspace_text_386" formatted="false">"Создать"</string>
+    <string name="workspace_text_387" formatted="false">"Введите имя одной папки"</string>
+    <string name="workspace_text_388" formatted="false">"Просмотреть"</string>
+    <string name="workspace_text_389" formatted="false">"Поделиться"</string>
+    <string name="workspace_text_390" formatted="false">"Копировать путь"</string>
+    <string name="workspace_text_391" formatted="false">"В Download"</string>
+    <string name="workspace_text_392" formatted="false">"Путь файла"</string>
+    <string name="workspace_text_393" formatted="false">"Путь скопирован"</string>
+    <string name="workspace_text_394" formatted="false">"Изображение больше 16 МБ; используйте экспорт"</string>
+    <string name="workspace_text_395" formatted="false">"Не удалось прочитать изображение"</string>
+    <string name="workspace_text_396" formatted="false">"Просмотр: "</string>
+    <string name="workspace_text_397" formatted="false">"Не удалось создать временный файл"</string>
+    <string name="workspace_text_398" formatted="false">"Download недоступен; проверьте разрешение хранения"</string>
+    <string name="workspace_text_399" formatted="false">"Сохранено: "</string>
+    <string name="workspace_text_400" formatted="false">"Файл сохранён в Download"</string>
+    <string name="workspace_text_401" formatted="false">"Файл проекта"</string>
+    <string name="workspace_text_402" formatted="false">"Поделиться файлом"</string>
+    <string name="workspace_text_403" formatted="false">"Нет приложения для отправки файла"</string>
+    <string name="workspace_text_404" formatted="false">"Язык / Language"</string>
+    <string name="workspace_text_405" formatted="false">"Системный"</string>
+    <string name="workspace_text_406" formatted="false">"Русский"</string>
+    <string name="workspace_text_407" formatted="false">"English"</string>
+    <string name="workspace_text_408" formatted="false">"Главная"</string>
+    <string name="workspace_text_409" formatted="false">"Команды/Заметки"</string>
+    <string name="workspace_text_410" formatted="false">"Статус Codex недоступен внутри терминала ("</string>
+    <string name="workspace_text_411" formatted="false">"причина не распознана"</string>
+    <string name="workspace_text_412" formatted="false">"чат или хранилище уже заняты"</string>
+    <string name="workspace_text_413" formatted="false">"история чата не найдена сервером"</string>
+    <string name="workspace_text_414" formatted="false">"сервер отклонил параметры доступа"</string>
+    <string name="workspace_text_415" formatted="false">"ошибка базы истории"</string>
+    <string name="workspace_text_416" formatted="false">"несовместимый формат истории"</string>
+    <string name="workspace_text_417" formatted="false">"ошибка авторизации сервера"</string>
+    <string name="workspace_text_418" formatted="false">"Каталог чата изменился. Подтвердите исходную папку в настройках сессии."</string>
+</resources>

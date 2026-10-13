@@ -5,6 +5,7 @@ import org.json.JSONObject;
 
 /** Account limits are shared; thread model/effort belong to this dedicated Codex terminal. */
 final class CodexStatus {
+    String cwd = "", title = "";
     String thread = "", model = "", effort = "", state = "", error = "";
     long updated;
     JSONArray models = new JSONArray();
@@ -21,7 +22,7 @@ final class CodexStatus {
         if(value.optInt("schema")!=1)throw new java.io.IOException("Unsupported status format");
         CodexStatus result=new CodexStatus();result.updated=value.optLong("updated");
         if(System.currentTimeMillis()-result.updated>90000 || result.updated>System.currentTimeMillis()+5000)throw new java.io.IOException("Status helper stopped responding");
-        result.thread=value.optString("thread");result.model=value.optString("model");result.effort=value.optString("effort");result.state=value.optString("state");result.error=value.optString("error");
+        result.cwd=value.optString("cwd");result.title=value.optString("title");result.thread=value.optString("thread");result.model=value.optString("model");result.effort=value.optString("effort");result.state=value.optString("state");result.error=value.optString("error");
         JSONArray models=value.optJSONArray("models");if(models!=null)result.models=models;
         JSONObject limits=value.optJSONObject("limits");if(limits!=null)result.limits=limits;return result;
     }
@@ -32,7 +33,7 @@ final class CodexStatus {
         try(java.io.FileOutputStream request=new java.io.FileOutputStream(socket.getAbsolutePath()+".refresh")) {request.write(1);}
         long until=System.currentTimeMillis()+3000;
         while(state.lastModified()==previous && System.currentTimeMillis()<until)Thread.sleep(50);
-        if(!state.isFile()) {CodexStatus pending=new CodexStatus();pending.error="Помощник статуса ещё не запущен. Для сессии, созданной до v0.2.13, откройте новый терминал Codex с тем же ID чата.";return pending;}
+        if(!state.isFile()) {CodexStatus pending=new CodexStatus();pending.error=WorkspaceText.tr("Помощник статуса ещё не запущен. Для сессии, созданной до v0.2.13, откройте новый терминал Codex с тем же ID чата.");return pending;}
         return fromFile(state);
     }
     static CodexStatus read(CodexRpc rpc, String preferredThread) throws Exception {
@@ -47,7 +48,7 @@ final class CodexStatus {
             // Ignore agent descendants. One root chat is owned by this server/TUI.
             if (!thread.isNull("parentThreadId") && !thread.optString("parentThreadId").isEmpty()) continue;
             if (!preferredThread.isEmpty() && !id.equals(preferredThread)) continue;
-            if (!result.thread.isEmpty()) { result.thread = ""; result.error = "Несколько чатов: выберите чат в терминале"; break; }
+            if (!result.thread.isEmpty()) { result.thread = ""; result.error = WorkspaceText.tr("Несколько чатов: выберите чат в терминале"); break; }
             result.thread = id; result.model = thread.optString("model", ""); result.effort = thread.optString("reasoningEffort", "");
             JSONObject status = thread.optJSONObject("status"); result.state = status == null ? "" : status.optString("type");
         }
@@ -55,9 +56,9 @@ final class CodexStatus {
     }
     static String limit(JSONObject limits, String window, String label) {
         JSONObject value = limits == null ? null : limits.optJSONObject(window);
-        if (value == null || !value.has("usedPercent")) return label + ": нет данных";
+        if (value == null || !value.has("usedPercent")) return label + WorkspaceText.tr(": нет данных");
         int remaining = Math.max(0, Math.min(100, (int)Math.round(100 - value.optDouble("usedPercent", 100))));
         return label + ": " + remaining + "%";
     }
-    String summary() { return limit(limits, "primary", "5ч") + " · " + limit(limits, "secondary", "7д"); }
+    String summary() { return limit(limits, "primary", WorkspaceText.tr("5ч")) + " · " + limit(limits, "secondary", WorkspaceText.tr("7д")); }
 }

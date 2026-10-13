@@ -403,6 +403,7 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
     }
 
     public void removeFinishedSession(TerminalSession finishedSession) {
+        if(mActivity.isWorkspaceBaseTerminal(finishedSession))return;
         // Return pressed with finished session - remove it.
         TermuxService service = mActivity.getTermuxService();
         if (service == null) return;

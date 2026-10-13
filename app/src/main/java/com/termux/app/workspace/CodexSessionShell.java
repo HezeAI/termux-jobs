@@ -37,23 +37,23 @@ public final class CodexSessionShell {
         String stop = endpoint + ".stop", stopped = endpoint + ".stopped";
         String client = invocation(s, endpoint);
         if (!s.codexChat.equals("new")) client = "codex --remote " + SessionShell.quote("unix://" + endpoint) + " resume \"$_jobs_codex_thread\"";
-        return "(\ncommand -v codex >/dev/null 2>&1 || { printf '%s\\n' 'Codex не установлен в выбранной среде.' >&2; exit 127; }\n"
-            + "command -v node >/dev/null 2>&1 || { printf '%s\\n' 'Для локального управления Codex нужен Node.js в выбранной среде.' >&2; exit 127; }\n"
-            + "[ ! -e " + SessionShell.quote(endpoint) + " ] || { printf '%s\\n' 'Подключение Codex уже занято.' >&2; exit 1; }\n"
+        return WorkspaceText.tr("(\ncommand -v codex >/dev/null 2>&1 || { printf '%s\\n' 'Codex не установлен в выбранной среде.' >&2; exit 127; }\n")
+            + WorkspaceText.tr("command -v node >/dev/null 2>&1 || { printf '%s\\n' 'Для локального управления Codex нужен Node.js в выбранной среде.' >&2; exit 127; }\n")
+            + "[ ! -e " + SessionShell.quote(endpoint) + WorkspaceText.tr(" ] || { printf '%s\\n' 'Подключение Codex уже занято.' >&2; exit 1; }\n")
             + "umask 077\ncodex --no-daemon -c " + SessionShell.quote("sandbox_mode=\"" + sandbox(s.codexAccess) + "\"")
             + " -c " + SessionShell.quote("approval_policy=\"" + (s.codexAccess.equals("full") ? "never" : "on-request") + "\"")
             + " app-server --listen " + SessionShell.quote("unix://" + endpoint) + " >/dev/null 2>&1 &\n_jobs_codex_pid=$!\n"
             + "trap 'if [ -n \"${_jobs_codex_status_pid:-}\" ]; then kill \"$_jobs_codex_status_pid\" 2>/dev/null; wait \"$_jobs_codex_status_pid\" 2>/dev/null; fi; if [ -n \"${_jobs_codex_watch_pid:-}\" ]; then kill \"$_jobs_codex_watch_pid\" 2>/dev/null; fi; kill \"$_jobs_codex_pid\" 2>/dev/null; wait \"$_jobs_codex_pid\" 2>/dev/null' EXIT\n"
             + "trap 'exit 130' INT TERM HUP\n_jobs_codex_wait=0\nwhile [ ! -S " + SessionShell.quote(endpoint) + " ]; do\n"
-            + "kill -0 \"$_jobs_codex_pid\" 2>/dev/null || { printf '%s\\n' 'Не удалось запустить app-server. Проверьте версию Codex.' >&2; exit 1; }\n"
-            + "_jobs_codex_wait=$((_jobs_codex_wait+1)); [ \"$_jobs_codex_wait\" -lt 100 ] || { printf '%s\\n' 'Истекло ожидание Codex.' >&2; exit 1; }; sleep 0.1\ndone\n"
+            + WorkspaceText.tr("kill -0 \"$_jobs_codex_pid\" 2>/dev/null || { printf '%s\\n' 'Не удалось запустить app-server. Проверьте версию Codex.' >&2; exit 1; }\n")
+            + WorkspaceText.tr("_jobs_codex_wait=$((_jobs_codex_wait+1)); [ \"$_jobs_codex_wait\" -lt 100 ] || { printf '%s\\n' 'Истекло ожидание Codex.' >&2; exit 1; }; sleep 0.1\ndone\n")
             + "( while kill -0 \"$_jobs_codex_pid\" 2>/dev/null; do if [ -f " + SessionShell.quote(stop) + " ]; then kill \"$_jobs_codex_pid\" 2>/dev/null; printf x > " + SessionShell.quote(stopped) + "; exit; fi; sleep 0.1; done ) &\n_jobs_codex_watch_pid=$!\n"
             + "node " + SessionShell.quote(bridgePath(files,s)) + " status " + SessionShell.quote(endpoint) + " " + SessionShell.quote(s.codexChat.equals("id") ? s.codexThread : "") + " >/dev/null 2>&1 &\n_jobs_codex_status_pid=$!\n"
             + resumePreflight(files, s, endpoint) + client + "\n)";
     }
     public static void prepareBridge(android.content.Context context) throws IOException {
         File directory = socketDirectory(context.getFilesDir()); if (!directory.isDirectory() && !directory.mkdirs()) throw new IOException("Cannot create controls");
-        File bridge = new File(directory, "bridge-v0.2.15.js");
+        File bridge = new File(directory, "bridge-v0.2.19.js");
         if (bridge.isFile()) return;
         try (java.io.InputStream in = context.getAssets().open("codex-control.js"); java.io.FileOutputStream out = new java.io.FileOutputStream(bridge)) {
             byte[] bytes = new byte[8192]; int count; while ((count = in.read(bytes)) != -1) out.write(bytes, 0, count);
@@ -61,7 +61,7 @@ public final class CodexSessionShell {
         bridge.setReadable(false, false); bridge.setWritable(false, false); bridge.setReadable(true, true); bridge.setWritable(true, true);
     }
     private static String bridgePath(File files, WorkspaceStore.Session s) {
-        return s.codexEnvironment.equals("ubuntu") ? "/tmp/termux-jobs-codex/bridge-v0.2.15.js" : new File(socketDirectory(files), "bridge-v0.2.15.js").getAbsolutePath();
+        return s.codexEnvironment.equals("ubuntu") ? "/tmp/termux-jobs-codex/bridge-v0.2.19.js" : new File(socketDirectory(files), "bridge-v0.2.19.js").getAbsolutePath();
     }
     public static String resumePreflight(WorkspaceStore.Session s, String endpoint) {
         return resumePreflight(new File(TermuxConstants.TERMUX_FILES_DIR_PATH), s, endpoint);
@@ -73,8 +73,8 @@ public final class CodexSessionShell {
         String cwd = s.directory.isEmpty() || s.directory.equals("~") ? home : s.directory;
         if (cwd.startsWith("~/")) cwd = home + cwd.substring(1);
         return "_jobs_codex_thread=$(node " + SessionShell.quote(bridgePath(files, s)) + " resume " + SessionShell.quote(endpoint)
-            + " " + SessionShell.quote(s.codexAccess) + " " + SessionShell.quote(s.codexChat) + " " + SessionShell.quote(s.codexThread) + " " + SessionShell.quote(cwd)
-            + ") || { printf '%s\\n' 'Не удалось продолжить чат с выбранными правами.' >&2; exit 1; }\n";
+            + " " + SessionShell.quote(s.codexAccess) + " " + SessionShell.quote(s.codexChat) + " " + SessionShell.quote(s.codexThread) + " " + SessionShell.quote(cwd) + " " + SessionShell.quote(s.codexSourceDirectory)
+            + WorkspaceText.tr(") || { printf '%s\\n' 'Не удалось продолжить чат с выбранными правами.' >&2; exit 1; }\n");
     }
     public static String proxyCommand(File files, WorkspaceStore.Session s) {
         String sock = s.codexEnvironment.equals("ubuntu") ? "/tmp/termux-jobs-codex/" + socket(files, s).getName() : socket(files, s).getAbsolutePath();

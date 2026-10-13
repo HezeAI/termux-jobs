@@ -139,6 +139,13 @@
         </activity>
 
 
+        <provider android:name="androidx.core.content.FileProvider"
+            android:authorities="${TERMUX_PACKAGE_NAME}.workspace.files"
+            android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/workspace_share_paths" />
+        </provider>
+
         <provider
             android:name=".filepicker.TermuxDocumentsProvider"
             android:authorities="${TERMUX_PACKAGE_NAME}.documents"

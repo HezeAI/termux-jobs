@@ -22,6 +22,8 @@ jobs:
           mkdir -p .tools/sdk
           cp -R "$ANDROID_HOME/licenses" .tools/sdk/licenses
           sdkmanager --sdk_root="$GITHUB_WORKSPACE/.tools/sdk" "platforms;android-30" "build-tools;30.0.3" "ndk;22.1.7171670"
+      - name: Check locale resources
+        run: python3 scripts/check-localization.py
       - name: Unit tests
         run: ./scripts/check.sh
       - name: Build debug APK

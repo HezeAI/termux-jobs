@@ -44,9 +44,9 @@ public final class SshPasswordBroker implements AutoCloseable {
         main.post(() -> {
             Activity current = activity.get();
             if (closed.get() || current == null || current.isFinishing() || current.isDestroyed()) { done.countDown(); return; }
-            android.app.AlertDialog dialog = WorkspaceDialogs.builder(current).setTitle("Проверка SSH-сервера")
-                .setMessage(prompt).setPositiveButton("Доверять", (d, w) -> { accepted.set(true); done.countDown(); })
-                .setNegativeButton("Отмена", (d, w) -> done.countDown()).create();
+            android.app.AlertDialog dialog = WorkspaceDialogs.builder(current).setTitle(WorkspaceText.tr("Проверка SSH-сервера"))
+                .setMessage(prompt).setPositiveButton(WorkspaceText.tr("Доверять"), (d, w) -> { accepted.set(true); done.countDown(); })
+                .setNegativeButton(WorkspaceText.tr("Отмена"), (d, w) -> done.countDown()).create();
             dialog.setOnDismissListener(d -> done.countDown()); dialog.show();
             main.postDelayed(() -> { if (dialog.isShowing()) dialog.dismiss(); }, 90000);
         });

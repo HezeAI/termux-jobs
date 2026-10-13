@@ -25,20 +25,20 @@ final class CodexRpc implements AutoCloseable {
     private String stage = "launch";
     private Thread errors;
     static String diagnostic(Exception failure) {
-        return failure instanceof ControlFailure ? failure.getMessage() : "Не удалось прочитать статус Codex (" + failure.getClass().getSimpleName() + "). Чат может продолжать работать.";
+        return failure instanceof ControlFailure ? failure.getMessage() : WorkspaceText.tr("Не удалось прочитать статус Codex (") + failure.getClass().getSimpleName() + WorkspaceText.tr("). Чат может продолжать работать.");
     }
     private static final class ControlFailure extends IOException {
         ControlFailure(String message) { super(message); }
     }
     static String classify(String line) {
-        if (line.contains("JOBS_CONTROL:NO_NODE")) return "В выбранной среде не найден Node.js";
-        if (line.contains("JOBS_CONTROL:NO_BRIDGE")) return "Выбранная среда не видит файл адаптера";
-        if (line.contains("JOBS_CONTROL:NO_SOCKET")) return "Выбранная среда не видит сокет текущей сессии";
-        if (line.contains("ENOENT")) return "Не найден файл или сокет адаптера";
-        if (line.contains("ECONNREFUSED")) return "Сервер Codex не принимает подключение";
-        if (line.contains("EACCES") || line.contains("Permission denied")) return "Отказ в доступе к адаптеру";
-        if (line.contains("not found")) return "Не найдена программа для запуска адаптера";
-        if (line.contains("WebSocket")) return "Ошибка согласования локального протокола";
+        if (line.contains("JOBS_CONTROL:NO_NODE")) return WorkspaceText.tr("В выбранной среде не найден Node.js");
+        if (line.contains("JOBS_CONTROL:NO_BRIDGE")) return WorkspaceText.tr("Выбранная среда не видит файл адаптера");
+        if (line.contains("JOBS_CONTROL:NO_SOCKET")) return WorkspaceText.tr("Выбранная среда не видит сокет текущей сессии");
+        if (line.contains("ENOENT")) return WorkspaceText.tr("Не найден файл или сокет адаптера");
+        if (line.contains("ECONNREFUSED")) return WorkspaceText.tr("Сервер Codex не принимает подключение");
+        if (line.contains("EACCES") || line.contains("Permission denied")) return WorkspaceText.tr("Отказ в доступе к адаптеру");
+        if (line.contains("not found")) return WorkspaceText.tr("Не найдена программа для запуска адаптера");
+        if (line.contains("WebSocket")) return WorkspaceText.tr("Ошибка согласования локального протокола");
         return "";
     }
     private void drainErrors() {
@@ -57,7 +57,7 @@ final class CodexRpc implements AutoCloseable {
         if (failure instanceof ControlFailure) return (ControlFailure) failure;
         String exit = "";
         if (process != null) try { exit = ", exit=" + process.exitValue(); if (errors != null) errors.join(100); } catch (IllegalThreadStateException ignored) {} catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
-        return new ControlFailure("Статус Codex недоступен: " + (failureKind.isEmpty() ? failure.getClass().getSimpleName() : failureKind) + " (" + stage + exit + "). Чат и авторизация не изменены.");
+        return new ControlFailure(WorkspaceText.tr("Статус Codex недоступен: ") + (failureKind.isEmpty() ? failure.getClass().getSimpleName() : failureKind) + " (" + stage + exit + WorkspaceText.tr("). Чат и авторизация не изменены."));
     }
     private final SecureRandom random = new SecureRandom();
     private final java.util.concurrent.ScheduledExecutorService timeout = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
@@ -92,7 +92,7 @@ final class CodexRpc implements AutoCloseable {
     }
     private CodexRpc(boolean websocket) { this.websocket = websocket; }
     private void initialize() throws Exception {
-        call("initialize", new JSONObject().put("clientInfo", new JSONObject().put("name", "termux_jobs").put("version", "0.2.17"))
+        call("initialize", new JSONObject().put("clientInfo", new JSONObject().put("name", "termux_jobs").put("version", "0.2.19"))
             .put("capabilities", new JSONObject().put("experimentalApi", true)));
         send(new JSONObject().put("method", "initialized"));
     }

@@ -82,7 +82,7 @@ class Connection {
     const result=new Promise((resolve,reject)=> {const timer=setTimeout(()=>{this.pending.delete(id);reject(new Error('Codex request timeout'));},25000);this.pending.set(id,{resolve,reject,timer,method});});
     this.send({id,method,params});return result;
   }
-  async initialize() {await this.ready;await this.call('initialize',{clientInfo:{name:'termux_jobs_control',version:'0.2.15'},capabilities:{experimentalApi:true}});this.send({method:'initialized'});}
+  async initialize() {await this.ready;await this.call('initialize',{clientInfo:{name:'termux_jobs_control',version:'0.2.19'},capabilities:{experimentalApi:true}});this.send({method:'initialized'});}
 }
 function writeStatus(path, value) {
   const temporary = path+'.state.json.tmp-'+process.pid;
@@ -128,7 +128,7 @@ async function statusWorker(path, preferred) {
         const thread=response?.thread;
         if(!thread || thread.parentThreadId || (preferred && id!==preferred))continue;
         if(value.thread) {value.thread='';value.error='Несколько чатов: выберите чат в терминале';break;}
-        value.thread=id;value.model=thread.model || response.model || '';value.effort=thread.reasoningEffort || response.reasoningEffort || '';value.state=thread.status?.type || '';
+        value.thread=id;value.cwd=thread.cwd || '';value.title=String(thread.name || '').slice(0,256);value.model=thread.model || response.model || '';value.effort=thread.reasoningEffort || response.reasoningEffort || '';value.state=thread.status?.type || '';
       }
       writeStatus(path,value);
       // Poll every 30 seconds; a private marker requests an earlier refresh.
@@ -143,7 +143,7 @@ async function statusWorker(path, preferred) {
   } finally {connection.onFailure=null;connection.close();}
 }
 async function main() {
-  const [mode,path,access,chat,requested,cwd]=process.argv.slice(2);
+  const [mode,path,access,chat,requested,cwd,confirmedCwd]=process.argv.slice(2);
   if(!path || !['proxy','resume','status'].includes(mode))throw new Error('Invalid control arguments');
   if(mode==='status') {await statusWorker(path,access || '');return;}
   const connection=new Connection(path);
@@ -163,8 +163,12 @@ async function main() {
     if(!['full','project','read'].includes(access))throw new Error('Invalid access mode');
     const approvalPolicy=access==='full'?'never':'on-request';
     const sandbox=access==='full'?'danger-full-access':access==='read'?'read-only':'workspace-write';
+    const metadata=await connection.call('thread/read',{threadId:id,includeTurns:false});
+    const normalize=p=>require('path').posix.normalize(String(p || '')).replace(/\/$/,'') || '/';
+    if(!metadata.thread?.cwd || (normalize(metadata.thread.cwd)!==normalize(cwd) && (!confirmedCwd || normalize(metadata.thread.cwd)!==normalize(confirmedCwd))))throw new Error('Каталог чата изменился. Подтвердите исходную папку в настройках сессии.');
     const result=await connection.call('thread/resume',{threadId:id,approvalPolicy,sandbox,excludeTurns:true,cwd});
     const expected=access==='full'?'dangerFullAccess':access==='read'?'readOnly':'workspaceWrite';
+    if(!result.cwd || normalize(result.cwd)!==normalize(cwd))throw new Error('Codex did not confirm requested working directory');
     if(result.approvalPolicy!==approvalPolicy || result.sandbox?.type!==expected)throw new Error('Codex did not confirm requested permissions');
     process.stdout.write(id+'\n');
   } finally {connection.close();}

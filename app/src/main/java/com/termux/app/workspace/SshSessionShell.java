@@ -37,14 +37,14 @@ public final class SshSessionShell {
         String target = cwd.isEmpty() || cwd.equals("~") ? "\"$HOME\""
             : cwd.startsWith("~/") ? "\"$HOME\"/" + SessionShell.quote(cwd.substring(2)) : SessionShell.quote(cwd);
         StringBuilder script = new StringBuilder("_termux_remote_startup() {\ncd -- " + target
-            + " || { printf '%s\\n' 'Не удалось открыть каталог на сервере.' >&2; return 1; }\n");
+            + WorkspaceText.tr(" || { printf '%s\\n' 'Не удалось открыть каталог на сервере.' >&2; return 1; }\n"));
         int index = 0;
         for (String startup : session.startupCommands()) {
             index++;
-            script.append("printf '%s\\n' ").append(SessionShell.quote("Сервер: команда " + index + "/" + session.startupCommands().size())).append("\n")
+            script.append("printf '%s\\n' ").append(SessionShell.quote(WorkspaceText.tr("Сервер: команда ") + index + "/" + session.startupCommands().size())).append("\n")
                 .append("eval -- ").append(SessionShell.quote(startup)).append("\nlocal _termux_remote_status=$?\n")
                 .append("if [ \"$_termux_remote_status\" -ne 0 ]; then printf '%s\\n' ")
-                .append(SessionShell.quote("Ошибка команды " + index + "; дальнейший запуск остановлен."))
+                .append(SessionShell.quote(WorkspaceText.tr("Ошибка команды ") + index + WorkspaceText.tr("; дальнейший запуск остановлен.")))
                 .append(" >&2; return \"$_termux_remote_status\"; fi\n");
         }
         script.append("}\n_termux_remote_startup\n_termux_remote_result=$?\nunset -f _termux_remote_startup\n");

@@ -19,14 +19,16 @@ import java.util.concurrent.Executors;
 
 /** Small versioned workspace, separate from Termux settings and shell processes. */
 public final class WorkspaceStore {
+    public static final String BASE_TERMINAL_ID = "00000000-0000-4000-8000-000000000001";
+    public static boolean isBase(Session session) { return session != null && BASE_TERMINAL_ID.equals(session.id); }
     public static final int MAX_RECENT_COMMANDS = 50;
     public static final class Command {
         public String id = UUID.randomUUID().toString();
-        public String name = "", command = "", category = "Общее", directory = "";
+        public String name = "", command = "", category = WorkspaceText.tr("Общее"), directory = "";
         public boolean favorite;
         public Command copy() {
             Command c = new Command();
-            c.name = name + " — копия"; c.command = command; c.category = category;
+            c.name = name + WorkspaceText.tr(" — копия"); c.command = command; c.category = category;
             c.directory = directory; c.favorite = favorite;
             return c;
         }
@@ -40,6 +42,7 @@ public final class WorkspaceStore {
         public boolean sshKeepOpen = true;
         public String sshAuth = "auto", sshIdentity = "", sshEncryptedPassword = "";
         public String codexEnvironment = "ubuntu", codexAccess = "full", codexChat = "new", codexThread = "", codexThreadName = "", codexSocketId = UUID.randomUUID().toString();
+        public String codexSourceDirectory = "";
         public long updated;
         public boolean saved;
         public List<String> startupCommands() {
@@ -49,16 +52,16 @@ public final class WorkspaceStore {
         }
         public Session copy() {
             Session s = new Session();
-            s.name = name + " — копия"; s.directory = directory; s.startup = startup; s.startup2 = startup2; s.startup3 = startup3; s.environment = environment;
+            s.name = name + WorkspaceText.tr(" — копия"); s.directory = directory; s.startup = startup; s.startup2 = startup2; s.startup3 = startup3; s.environment = environment;
             s.sshHost = sshHost; s.sshUser = sshUser; s.sshPort = sshPort; s.sshKeepOpen = sshKeepOpen; s.sshAuth = sshAuth; s.sshIdentity = sshIdentity; // Password is bound to the original profile ID.
-            s.codexEnvironment = codexEnvironment; s.codexAccess = codexAccess; s.codexChat = codexChat; s.codexThread = codexThread; s.codexThreadName = codexThreadName;
+            s.codexEnvironment = codexEnvironment; s.codexAccess = codexAccess; s.codexChat = codexChat; s.codexThread = codexThread; s.codexThreadName = codexThreadName; s.codexSourceDirectory=codexSourceDirectory;
             // A duplicate starts with its own independent history.
             return s;
         }
     }
     public static final class Note {
         public String id = UUID.randomUUID().toString();
-        public String name = "", text = "", category = "Общее";
+        public String name = "", text = "", category = WorkspaceText.tr("Общее");
         public boolean favorite;
     }
     public interface ErrorListener { void onError(String message); }
@@ -85,7 +88,7 @@ public final class WorkspaceStore {
             catch (IOException | JSONException e) {
                 // Keep the original file; never overwrite an unreadable user's library.
                 writable = false;
-                main.post(() -> errors.onError("Не удалось прочитать библиотеку. Исходный файл сохранён."));
+                main.post(() -> errors.onError(WorkspaceText.tr("Не удалось прочитать библиотеку. Исходный файл сохранён.")));
             }
         }
     }
@@ -105,17 +108,17 @@ public final class WorkspaceStore {
         return null;
     }
     public void save() {
-        if (!writable) { errors.onError("Библиотека недоступна для записи; исходные данные сохранены."); return; }
+        if (!writable) { errors.onError(WorkspaceText.tr("Библиотека недоступна для записи; исходные данные сохранены.")); return; }
         final byte[] snapshot;
         try { snapshot = encode().toString().getBytes(StandardCharsets.UTF_8); }
-        catch (JSONException e) { errors.onError("Не удалось сохранить библиотеку."); return; }
+        catch (JSONException e) { errors.onError(WorkspaceText.tr("Не удалось сохранить библиотеку.")); return; }
         writer.execute(() -> {
             FileOutputStream out = null;
             try {
                 out = file.startWrite(); out.write(snapshot); file.finishWrite(out);
             } catch (IOException e) {
                 if (out != null) file.failWrite(out);
-                main.post(() -> errors.onError("Ошибка записи библиотеки. Проверьте свободное место."));
+                main.post(() -> errors.onError(WorkspaceText.tr("Ошибка записи библиотеки. Проверьте свободное место.")));
             }
         });
     }
@@ -128,7 +131,7 @@ public final class WorkspaceStore {
             .put("command", c.command).put("category", c.category).put("directory", c.directory).put("favorite", c.favorite));
         for (Session s : sessions) ss.put(new JSONObject().put("id", s.id).put("name", s.name)
             .put("directory", s.directory).put("startup", s.startup).put("startup2", s.startup2).put("startup3", s.startup3).put("sshAuth", s.sshAuth).put("sshIdentity", s.sshIdentity).put("sshEncryptedPassword", s.sshEncryptedPassword).put("sshHost", s.sshHost).put("sshUser", s.sshUser).put("sshPort", s.sshPort).put("sshKeepOpen", s.sshKeepOpen).put("environment", s.environment).put("handle", s.handle)
-            .put("codexEnvironment", s.codexEnvironment).put("codexAccess", s.codexAccess).put("codexChat", s.codexChat).put("codexThread", s.codexThread).put("codexThreadName", s.codexThreadName).put("codexSocketId", s.codexSocketId)
+            .put("codexEnvironment", s.codexEnvironment).put("codexAccess", s.codexAccess).put("codexChat", s.codexChat).put("codexThread", s.codexThread).put("codexThreadName", s.codexThreadName).put("codexSocketId", s.codexSocketId).put("codexSourceDirectory",s.codexSourceDirectory)
             .put("updated", s.updated).put("saved", s.saved));
         JSONArray ns = new JSONArray();
         for (Note n : notes) ns.put(new JSONObject().put("id", n.id).put("name", n.name)
@@ -149,7 +152,7 @@ public final class WorkspaceStore {
         for (int i = 0; i < ca.length(); i++) {
             JSONObject o = ca.getJSONObject(i); Command c = new Command();
             c.id = validId(o.getString("id")); c.name = o.getString("name"); c.command = o.getString("command");
-            c.category = o.optString("category", "Общее"); c.directory = o.optString("directory"); c.favorite = o.optBoolean("favorite");
+            c.category = o.optString("category", WorkspaceText.tr("Общее")); c.directory = o.optString("directory"); c.favorite = o.optBoolean("favorite");
             cs.add(c);
         }
         for (int i = 0; i < sa.length(); i++) {
@@ -170,6 +173,8 @@ public final class WorkspaceStore {
             if (s.environment.equals("codex") && (version < 8 || !(s.codexEnvironment.equals("ubuntu") || s.codexEnvironment.equals("termux"))
                 || !(s.codexAccess.equals("full") || s.codexAccess.equals("project") || s.codexAccess.equals("read"))
                 || !(s.codexChat.equals("new") || s.codexChat.equals("last") || s.codexChat.equals("choose") || (s.codexChat.equals("id") && CodexSessionShell.validThread(s.codexThread))))) throw new JSONException("Invalid Codex profile");
+            s.codexSourceDirectory=o.optString("codexSourceDirectory","");
+            if(!s.codexSourceDirectory.isEmpty()&&(!s.codexSourceDirectory.startsWith("/")||CodexProjects.directory(s.codexEnvironment,s.codexSourceDirectory).isEmpty()))throw new JSONException("Invalid confirmed chat directory");
             s.updated = o.optLong("updated"); s.saved = o.optBoolean("saved", true); ss.add(s);
         }
         List<Note> ns = new ArrayList<>();
@@ -178,7 +183,7 @@ public final class WorkspaceStore {
         if (na != null) for (int i = 0; i < na.length(); i++) {
             JSONObject o = na.getJSONObject(i); Note n = new Note();
             n.id = validId(o.getString("id")); n.name = o.getString("name"); n.text = o.getString("text");
-            n.category = o.optString("category", "Общее"); n.favorite = o.optBoolean("favorite"); ns.add(n);
+            n.category = o.optString("category", WorkspaceText.tr("Общее")); n.favorite = o.optBoolean("favorite"); ns.add(n);
         }
         List<RecentCommand> recent = new ArrayList<>();
         JSONArray history = root.optJSONArray("recentCommands");

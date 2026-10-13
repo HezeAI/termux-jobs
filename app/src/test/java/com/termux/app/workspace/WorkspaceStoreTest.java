@@ -263,6 +263,12 @@ public class WorkspaceStoreTest {
         try { store.decode(data.toString()); fail("old Codex schema accepted"); } catch (org.json.JSONException expected) {}
         store.close();
     }
+    @Test public void confirmedChatOriginRoundTripsAndOlderProfilesDefaultToNoConsent() throws Exception {
+        WorkspaceStore store=new WorkspaceStore(context,errors::add);WorkspaceStore.Session profile=new WorkspaceStore.Session();profile.environment="codex";profile.codexChat="id";profile.codexThread="thread-id";profile.directory="/root/project";profile.codexSourceDirectory="/root";store.sessions.add(profile);
+        org.json.JSONObject data=store.encode();store.decode(data.toString());assertEquals("/root",store.sessions.get(0).codexSourceDirectory);assertEquals("/root",store.sessions.get(0).copy().codexSourceDirectory);
+        data.getJSONArray("sessions").getJSONObject(0).remove("codexSourceDirectory");store.decode(data.toString());assertEquals("",store.sessions.get(0).codexSourceDirectory);
+        data.getJSONArray("sessions").getJSONObject(0).put("codexSourceDirectory","relative");try{store.decode(data.toString());fail("invalid origin accepted");}catch(org.json.JSONException expected){}assertEquals("",store.sessions.get(0).codexSourceDirectory);store.close();
+    }
     @Test public void corruptOrFutureFileIsNeverOverwritten() throws Exception {
         File file = new File(context.getFilesDir(), "workspace-v1.json");
         byte[] original = "{\"version\":99}".getBytes(StandardCharsets.UTF_8);
