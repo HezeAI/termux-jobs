@@ -24,6 +24,32 @@ public class WorkspaceStoreTest {
         new File(context.getFilesDir(), "workspace-v1.json").delete();
         new File(context.getFilesDir(), "workspace-v1.json.bak").delete();
     }
+    @Test public void passwordProfilesPersistOnlyCiphertextAndMigrateSshVersionSix() throws Exception {
+        WorkspaceStore store = new WorkspaceStore(context, errors::add); WorkspaceStore.Session s = new WorkspaceStore.Session();
+        s.environment = "ssh"; s.sshHost = "example.invalid"; s.sshAuth = "password"; s.sshEncryptedPassword = "1:iv:ciphertext";
+        store.sessions.add(s); store.decode(store.encode().toString());
+        assertEquals("password", store.sessions.get(0).sshAuth); assertEquals("1:iv:ciphertext", store.sessions.get(0).sshEncryptedPassword);
+        assertEquals("", store.sessions.get(0).copy().sshEncryptedPassword);
+        org.json.JSONObject old = store.encode(); old.put("version", 6);
+        org.json.JSONObject profile = old.getJSONArray("sessions").getJSONObject(0);
+        profile.remove("sshAuth"); profile.remove("sshIdentity"); profile.remove("sshEncryptedPassword");
+        store.decode(old.toString()); assertEquals("auto", store.sessions.get(0).sshAuth);
+        assertEquals("", store.sessions.get(0).sshEncryptedPassword); store.close();
+    }
+    @Test public void sshProfilesRoundTripAndCopyWithoutLosingExistingData() throws Exception {
+        WorkspaceStore store = new WorkspaceStore(context, errors::add);
+        WorkspaceStore.Session ssh = new WorkspaceStore.Session(); ssh.environment = "ssh";
+        ssh.sshHost = "example.invalid"; ssh.sshUser = "deploy"; ssh.sshPort = 2222;
+        ssh.sshKeepOpen = false; ssh.directory = "~/project"; ssh.startup = "pwd"; ssh.startup2 = "git status";
+        store.sessions.add(ssh); store.decode(store.encode().toString());
+        WorkspaceStore.Session restored = store.sessions.get(0).copy();
+        assertEquals("ssh", restored.environment); assertEquals("example.invalid", restored.sshHost);
+        assertEquals("deploy", restored.sshUser); assertEquals(2222, restored.sshPort);
+        assertFalse(restored.sshKeepOpen); assertEquals("git status", restored.startup2);
+        org.json.JSONObject old = store.encode(); old.put("version", 5); old.getJSONArray("sessions").getJSONObject(0).put("environment", "termux");
+        store.decode(old.toString()); assertEquals("termux", store.sessions.get(0).environment);
+        store.close();
+    }
     @Test public void explicitSavedFlagPersistsAndLegacySessionsRemainSaved() throws Exception {
         WorkspaceStore store = new WorkspaceStore(context, errors::add);
         WorkspaceStore.Session temporary = new WorkspaceStore.Session(); temporary.name = "Temporary";
@@ -215,11 +241,27 @@ public class WorkspaceStoreTest {
         WorkspaceStore.Note note = new WorkspaceStore.Note(); note.name = "Инструкция"; note.text = "Строка 1\nСтрока 2";
         note.category = "Сборка"; note.favorite = true; store.notes.add(note); store.save(); store.awaitWrites(); store.close();
         WorkspaceStore restored = new WorkspaceStore(context, errors::add);
-        assertEquals(5, restored.encode().getInt("version")); assertEquals(1, restored.notes.size());
+        assertEquals(8, restored.encode().getInt("version")); assertEquals(1, restored.notes.size());
         assertEquals(note.id, restored.notes.get(0).id); assertEquals(note.text, restored.notes.get(0).text);
         assertEquals("Сборка", restored.notes.get(0).category); assertTrue(restored.notes.get(0).favorite);
         assertEquals(command.command, restored.commands.get(0).command); assertEquals(session.id, restored.sessions.get(0).id);
         restored.close(); assertTrue(errors.isEmpty());
+    }
+    @Test public void codexProfilesPersistAndRejectInjectedThreadIds() throws Exception {
+        WorkspaceStore store = new WorkspaceStore(context, errors::add);
+        WorkspaceStore.Session profile = new WorkspaceStore.Session(); profile.environment = "codex";
+        profile.codexEnvironment = "ubuntu"; profile.codexAccess = "project"; profile.codexChat = "id";
+        profile.codexThread = "thread-123"; profile.codexThreadName = "Проект"; store.sessions.add(profile);
+        org.json.JSONObject data = store.encode(); store.decode(data.toString());
+        assertEquals(profile.codexSocketId, store.sessions.get(0).codexSocketId);
+        assertNotEquals(profile.codexSocketId, profile.copy().codexSocketId);
+        assertEquals("project", store.sessions.get(0).codexAccess); assertEquals("thread-123", store.sessions.get(0).copy().codexThread);
+        data.getJSONArray("sessions").getJSONObject(0).put("codexThread", "bad; command");
+        try { store.decode(data.toString()); fail("invalid thread accepted"); } catch (org.json.JSONException expected) {}
+        assertEquals("thread-123", store.sessions.get(0).codexThread);
+        data.getJSONArray("sessions").getJSONObject(0).put("codexThread", "thread-123"); data.put("version", 7);
+        try { store.decode(data.toString()); fail("old Codex schema accepted"); } catch (org.json.JSONException expected) {}
+        store.close();
     }
     @Test public void corruptOrFutureFileIsNeverOverwritten() throws Exception {
         File file = new File(context.getFilesDir(), "workspace-v1.json");

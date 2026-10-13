@@ -35,6 +35,11 @@ public final class WorkspaceStore {
         public String id = UUID.randomUUID().toString();
         public String name = "Bash", directory = "", startup = "", handle = "";
         public String startup2 = "", startup3 = "", environment = "legacy";
+        public String sshHost = "", sshUser = "root";
+        public int sshPort = 22;
+        public boolean sshKeepOpen = true;
+        public String sshAuth = "auto", sshIdentity = "", sshEncryptedPassword = "";
+        public String codexEnvironment = "ubuntu", codexAccess = "full", codexChat = "new", codexThread = "", codexThreadName = "", codexSocketId = UUID.randomUUID().toString();
         public long updated;
         public boolean saved;
         public List<String> startupCommands() {
@@ -45,6 +50,8 @@ public final class WorkspaceStore {
         public Session copy() {
             Session s = new Session();
             s.name = name + " — копия"; s.directory = directory; s.startup = startup; s.startup2 = startup2; s.startup3 = startup3; s.environment = environment;
+            s.sshHost = sshHost; s.sshUser = sshUser; s.sshPort = sshPort; s.sshKeepOpen = sshKeepOpen; s.sshAuth = sshAuth; s.sshIdentity = sshIdentity; // Password is bound to the original profile ID.
+            s.codexEnvironment = codexEnvironment; s.codexAccess = codexAccess; s.codexChat = codexChat; s.codexThread = codexThread; s.codexThreadName = codexThreadName;
             // A duplicate starts with its own independent history.
             return s;
         }
@@ -115,12 +122,13 @@ public final class WorkspaceStore {
     void awaitWrites() throws Exception { writer.submit(() -> {}).get(10, java.util.concurrent.TimeUnit.SECONDS); }
     public void close() { writer.shutdown(); } // Queued atomic writes finish after Activity destruction.
     JSONObject encode() throws JSONException {
-        JSONObject root = new JSONObject().put("version", 5);
+        JSONObject root = new JSONObject().put("version", 8);
         JSONArray cs = new JSONArray(), ss = new JSONArray();
         for (Command c : commands) cs.put(new JSONObject().put("id", c.id).put("name", c.name)
             .put("command", c.command).put("category", c.category).put("directory", c.directory).put("favorite", c.favorite));
         for (Session s : sessions) ss.put(new JSONObject().put("id", s.id).put("name", s.name)
-            .put("directory", s.directory).put("startup", s.startup).put("startup2", s.startup2).put("startup3", s.startup3).put("environment", s.environment).put("handle", s.handle)
+            .put("directory", s.directory).put("startup", s.startup).put("startup2", s.startup2).put("startup3", s.startup3).put("sshAuth", s.sshAuth).put("sshIdentity", s.sshIdentity).put("sshEncryptedPassword", s.sshEncryptedPassword).put("sshHost", s.sshHost).put("sshUser", s.sshUser).put("sshPort", s.sshPort).put("sshKeepOpen", s.sshKeepOpen).put("environment", s.environment).put("handle", s.handle)
+            .put("codexEnvironment", s.codexEnvironment).put("codexAccess", s.codexAccess).put("codexChat", s.codexChat).put("codexThread", s.codexThread).put("codexThreadName", s.codexThreadName).put("codexSocketId", s.codexSocketId)
             .put("updated", s.updated).put("saved", s.saved));
         JSONArray ns = new JSONArray();
         for (Note n : notes) ns.put(new JSONObject().put("id", n.id).put("name", n.name)
@@ -135,7 +143,7 @@ public final class WorkspaceStore {
     void decode(String json) throws JSONException {
         JSONObject root = new JSONObject(json);
         int version = root.getInt("version");
-        if (version != 1 && version != 2 && version != 3 && version != 4 && version != 5) throw new JSONException("Unsupported workspace version");
+        if (version != 1 && version != 2 && version != 3 && version != 4 && version != 5 && version != 6 && version != 7 && version != 8) throw new JSONException("Unsupported workspace version");
         List<Command> cs = new ArrayList<>(); List<Session> ss = new ArrayList<>();
         JSONArray ca = root.getJSONArray("commands"), sa = root.getJSONArray("sessions");
         for (int i = 0; i < ca.length(); i++) {
@@ -148,12 +156,25 @@ public final class WorkspaceStore {
             JSONObject o = sa.getJSONObject(i); Session s = new Session();
             s.id = validId(o.getString("id")); s.name = o.getString("name"); s.directory = o.optString("directory");
             s.startup = o.optString("startup"); s.startup2 = o.optString("startup2"); s.startup3 = o.optString("startup3"); s.environment = o.optString("environment", "legacy");
-            if (!s.environment.equals("legacy") && !s.environment.equals("termux") && !s.environment.equals("ubuntu")) throw new JSONException("Unknown environment"); s.handle = o.optString("handle");
+            if (!s.environment.equals("legacy") && !s.environment.equals("termux") && !s.environment.equals("ubuntu") && !s.environment.equals("ssh") && !s.environment.equals("codex")) throw new JSONException("Unknown environment"); s.handle = o.optString("handle");
+            s.sshHost = o.optString("sshHost", ""); s.sshUser = o.optString("sshUser", "root");
+            s.sshAuth = o.optString("sshAuth", "auto"); s.sshIdentity = o.optString("sshIdentity", "");
+            s.sshEncryptedPassword = o.optString("sshEncryptedPassword", "");
+            if (!s.sshAuth.equals("auto") && !s.sshAuth.equals("key") && !s.sshAuth.equals("password")) throw new JSONException("Unknown SSH authentication");
+            if (s.environment.equals("ssh") && s.sshAuth.equals("key") && !SshSessionShell.validIdentity(s.sshIdentity)) throw new JSONException("Invalid SSH identity");
+            s.sshPort = o.optInt("sshPort", 22); s.sshKeepOpen = o.optBoolean("sshKeepOpen", true);
+            if (s.environment.equals("ssh") && (version < 6 || !SshSessionShell.validHost(s.sshHost)
+                || !SshSessionShell.validUser(s.sshUser) || !SshSessionShell.validPort(s.sshPort))) throw new JSONException("Invalid SSH settings");
+            s.codexEnvironment = o.optString("codexEnvironment", "ubuntu"); s.codexAccess = o.optString("codexAccess", "full");
+            s.codexChat = o.optString("codexChat", "new"); s.codexThread = o.optString("codexThread", ""); s.codexThreadName = o.optString("codexThreadName", ""); s.codexSocketId = validId(o.optString("codexSocketId", s.codexSocketId));
+            if (s.environment.equals("codex") && (version < 8 || !(s.codexEnvironment.equals("ubuntu") || s.codexEnvironment.equals("termux"))
+                || !(s.codexAccess.equals("full") || s.codexAccess.equals("project") || s.codexAccess.equals("read"))
+                || !(s.codexChat.equals("new") || s.codexChat.equals("last") || s.codexChat.equals("choose") || (s.codexChat.equals("id") && CodexSessionShell.validThread(s.codexThread))))) throw new JSONException("Invalid Codex profile");
             s.updated = o.optLong("updated"); s.saved = o.optBoolean("saved", true); ss.add(s);
         }
         List<Note> ns = new ArrayList<>();
         JSONArray na = root.optJSONArray("notes");
-        if (version == 5 && na == null) throw new JSONException("Missing notes");
+        if (version >= 5 && na == null) throw new JSONException("Missing notes");
         if (na != null) for (int i = 0; i < na.length(); i++) {
             JSONObject o = na.getJSONObject(i); Note n = new Note();
             n.id = validId(o.getString("id")); n.name = o.getString("name"); n.text = o.getString("text");

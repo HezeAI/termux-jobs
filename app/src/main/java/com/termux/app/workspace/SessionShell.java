@@ -12,6 +12,9 @@ public final class SessionShell {
     public static String quote(String value) { return "'" + value.replace("'", "'\\''") + "'"; }
     public static File directory(File files, String id) { return new File(new File(files, "workspace-sessions"), id); }
     public static File prepare(File files, WorkspaceStore.Session session) throws IOException {
+        return prepare(files, session, null, null);
+    }
+    public static File prepare(File files, WorkspaceStore.Session session, String askpass, String socket) throws IOException {
         File dir = directory(files, session.id);
         if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("Cannot create session directory");
         File history = new File(dir, "history");
@@ -20,21 +23,41 @@ public final class SessionShell {
         File cancel = new File(dir, "cancel-startup");
         if (cancel.exists() && !cancel.delete()) throw new IOException("Cannot reset startup cancellation");
         String script;
-        if (session.environment.equals("ubuntu")) {
+        java.util.List<String> startup = session.startupCommands();
+        boolean guest = session.environment.equals("ubuntu") || (session.environment.equals("codex") && session.codexEnvironment.equals("ubuntu"));
+        if (session.environment.equals("codex")) startup = java.util.Collections.singletonList(CodexSessionShell.command(files, session));
+        if (guest) {
             String mount = "/tmp/termux-fork-session-" + session.id;
             File guestRc = new File(dir, "ubuntu-bashrc");
-            write(guestRc, buildReadyRc("$HOME", mount + "/history", mount + "/cancel-startup", session.startupCommands(), true).getBytes(StandardCharsets.UTF_8));
+            write(guestRc, buildReadyRc("$HOME", mount + "/history", mount + "/cancel-startup", startup, true).getBytes(StandardCharsets.UTF_8));
             String cwd = session.directory.isEmpty() || session.directory.equals("~") ? "/root" : session.directory;
             if (cwd.startsWith("~/")) cwd = "/root/" + cwd.substring(2);
             script = buildRc(TermuxConstants.TERMUX_HOME_DIR_PATH, history.getAbsolutePath(), "")
                 + "printf '%s\\n' 'Ожидание оболочки Ubuntu…'\n"
                 + "proot-distro login --bind " + quote(dir.getAbsolutePath() + ":" + mount)
+                + (session.environment.equals("codex") ? " --bind " + quote(CodexSessionShell.socketDirectory(files).getAbsolutePath() + ":/tmp/termux-jobs-codex") : "")
                 + " --work-dir " + quote(cwd) + " ubuntu -- /bin/bash --rcfile " + quote(mount + "/ubuntu-bashrc") + " -i\n";
-        } else if (session.environment.equals("termux")) {
-            script = buildReadyRc(TermuxConstants.TERMUX_HOME_DIR_PATH, history.getAbsolutePath(), cancel.getAbsolutePath(), session.startupCommands(), false);
+        } else if (session.environment.equals("ssh")) {
+            script = buildReadyRc(TermuxConstants.TERMUX_HOME_DIR_PATH, history.getAbsolutePath(), cancel.getAbsolutePath(),
+                java.util.Collections.singletonList((session.sshAuth.equals("password") && askpass != null && socket != null
+                    ? "LC_ALL=C SSH_ASKPASS=" + quote(askpass) + " SSH_ASKPASS_REQUIRE=force TERMUX_JOBS_SSH_SOCKET=" + quote(socket) + " " : "")
+                    + SshSessionShell.command(session)), false);
+        } else if ((session.environment.equals("termux") || session.environment.equals("codex"))) {
+            script = buildReadyRc(TermuxConstants.TERMUX_HOME_DIR_PATH, history.getAbsolutePath(), cancel.getAbsolutePath(), startup, false);
         } else script = buildRc(TermuxConstants.TERMUX_HOME_DIR_PATH, history.getAbsolutePath(), session.startupCommands());
         write(rc, script.getBytes(StandardCharsets.UTF_8));
         return rc;
+    }
+    public static File prepareAskpass(File files, WorkspaceStore.Session session, String apk) throws IOException {
+        File dir = directory(files, session.id);
+        if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("Cannot create session directory");
+        File helper = new File(dir, "ssh-askpass");
+        write(helper, ("#!/system/bin/sh\nexport CLASSPATH=" + quote(apk)
+            + "\nexec /system/bin/app_process /system/bin com.termux.app.workspace.SshAskpassMain \"$@\"\n").getBytes(StandardCharsets.UTF_8));
+        if (!helper.setReadable(false, false) || !helper.setWritable(false, false) || !helper.setExecutable(false, false)
+            || !helper.setReadable(true, true) || !helper.setWritable(true, true) || !helper.setExecutable(true, true))
+            throw new IOException("Cannot protect SSH helper");
+        return helper;
     }
     public static String buildRc(String home, String history, String startup) {
         return "if [ -f " + quote(home + "/.bashrc") + " ]; then . " + quote(home + "/.bashrc") + "; fi\n"

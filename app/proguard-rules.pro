@@ -15,3 +15,6 @@
 # https://issuetracker.google.com/issues/189001730
 # https://android-review.googlesource.com/c/platform/frameworks/support/+/1757630
 -keep class androidx.window.** { *; }
+
+# Entry point invoked by OpenSSH through app_process.
+-keep class com.termux.app.workspace.SshAskpassMain { public static void main(java.lang.String[]); }

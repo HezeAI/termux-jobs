@@ -52,10 +52,19 @@
                 android:gravity="center_vertical" />
         </HorizontalScrollView>
 
+        <LinearLayout
+            android:id="@+id/workspace_codex_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/workspace_tab_scroll"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:visibility="gone" />
+
         <androidx.drawerlayout.widget.DrawerLayout
             android:id="@+id/drawer_layout"
             android:layout_width="match_parent"
-            android:layout_below="@id/workspace_tab_scroll"
+            android:layout_below="@id/workspace_codex_status"
             android:layout_above="@+id/terminal_toolbar_view_pager"
             android:layout_height="match_parent">
 

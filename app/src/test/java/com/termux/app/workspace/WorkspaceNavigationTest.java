@@ -477,6 +477,58 @@ public class WorkspaceNavigationTest {
         }
         controller.close();
     }
+    @Test public void passwordEditorShowsMaskedInputAndNeverWritesOneShotPassword() throws Exception {
+        TermuxActivity activity = Robolectric.buildActivity(TermuxActivity.class).get();
+        activity.setTheme(R.style.Theme_Termux_Black); activity.setContentView(R.layout.activity_termux);
+        Field terminalView = TermuxActivity.class.getDeclaredField("mTerminalView");
+        terminalView.setAccessible(true); terminalView.set(activity, activity.findViewById(R.id.terminal_view));
+        WorkspaceController controller = new WorkspaceController(activity);
+        Field field = WorkspaceController.class.getDeclaredField("store"); field.setAccessible(true);
+        WorkspaceStore store = (WorkspaceStore) field.get(controller); store.sessions.clear();
+        java.lang.reflect.Method edit = WorkspaceController.class.getDeclaredMethod("editSession", WorkspaceStore.Session.class, boolean.class);
+        edit.setAccessible(true); edit.invoke(controller, null, false); shadowOf(Looper.getMainLooper()).idle();
+        AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
+        findDescription(dialog.getWindow().getDecorView(), "Среда запуска").performClick(); shadowOf(Looper.getMainLooper()).idle();
+        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 3, 3); shadowOf(Looper.getMainLooper()).idle();
+        findDescription(dialog.getWindow().getDecorView(), "Авторизация SSH").performClick(); shadowOf(Looper.getMainLooper()).idle();
+        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 2, 2); shadowOf(Looper.getMainLooper()).idle();
+        List<EditText> fields = new ArrayList<>(); collectEditors(dialog.getWindow().getDecorView(), fields);
+        fields.get(0).setText("Password server"); fields.get(2).setText("example.invalid");
+        EditText password = (EditText) findDescription(dialog.getWindow().getDecorView(), "Пароль SSH");
+        assertFalse(password.isSaveEnabled()); assertNotNull(password.getTransformationMethod());
+        password.setText("dummy-TEST-private"); findText(dialog.getWindow().getDecorView(), "Показать пароль").performClick();
+        assertNull(password.getTransformationMethod());
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); store.awaitWrites();
+        assertEquals("password", store.sessions.get(0).sshAuth); assertEquals("", store.sessions.get(0).sshEncryptedPassword);
+        assertFalse(store.encode().toString().contains("dummy-TEST-private")); assertEquals(0, password.length());
+        controller.close();
+    }
+    @Test public void sshSessionEditorValidatesPortAndPersistsConnectionOnlyWhenChosen() throws Exception {
+        TermuxActivity activity = Robolectric.buildActivity(TermuxActivity.class).get();
+        activity.setTheme(R.style.Theme_Termux_Black); activity.setContentView(R.layout.activity_termux);
+        Field terminalView = TermuxActivity.class.getDeclaredField("mTerminalView");
+        terminalView.setAccessible(true); terminalView.set(activity, activity.findViewById(R.id.terminal_view));
+        WorkspaceController controller = new WorkspaceController(activity);
+        Field field = WorkspaceController.class.getDeclaredField("store"); field.setAccessible(true);
+        WorkspaceStore store = (WorkspaceStore) field.get(controller); store.sessions.clear();
+        java.lang.reflect.Method edit = WorkspaceController.class.getDeclaredMethod("editSession", WorkspaceStore.Session.class, boolean.class);
+        edit.setAccessible(true); edit.invoke(controller, null, false); shadowOf(Looper.getMainLooper()).idle();
+        AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog(); List<EditText> fields = new ArrayList<>();
+        collectEditors(dialog.getWindow().getDecorView(), fields); assertEquals(3, fields.size());
+        findDescription(dialog.getWindow().getDecorView(), "Среда запуска").performClick(); shadowOf(Looper.getMainLooper()).idle();
+        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 3, 3);
+        shadowOf(Looper.getMainLooper()).idle(); fields.clear(); collectEditors(dialog.getWindow().getDecorView(), fields);
+        assertEquals(6, fields.size()); assertEquals("~", fields.get(1).getText().toString());
+        fields.get(0).setText("Server"); fields.get(2).setText("example.invalid"); fields.get(3).setText("deploy");
+        fields.get(4).setText("70000"); fields.get(5).setText("pwd");
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); assertTrue(store.sessions.isEmpty()); assertNotNull(fields.get(4).getError());
+        fields.get(4).setText("2222"); dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); store.awaitWrites();
+        assertEquals(1, store.sessions.size()); WorkspaceStore.Session ssh = store.sessions.get(0);
+        assertEquals("ssh", ssh.environment); assertEquals("example.invalid", ssh.sshHost);
+        assertEquals("deploy", ssh.sshUser); assertEquals(2222, ssh.sshPort); assertTrue(ssh.sshKeepOpen);
+        assertEquals("pwd", ssh.startup); assertTrue(ssh.saved); assertNull(activity.getCurrentSession());
+        controller.close();
+    }
     @Test public void noteEditorOpenEditFavoriteAndDeletePreserveCommands() throws Exception {
         TermuxActivity activity = Robolectric.buildActivity(TermuxActivity.class).get();
         activity.setTheme(R.style.Theme_Termux_Black); activity.setContentView(R.layout.activity_termux);
@@ -528,6 +580,9 @@ public class WorkspaceNavigationTest {
         AlertDialog picker = ShadowAlertDialog.getLatestAlertDialog();
         EditText search = (EditText) findDescription(picker.getWindow().getDecorView(), "Поиск в меню звёздочки");
         assertNotNull(search); assertFalse(search.hasFocus());
+        assertEquals(0,picker.getWindow().getAttributes().flags & android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
+        search.performClick();shadowOf(Looper.getMainLooper()).idle();assertTrue(search.hasFocus());
+        assertTrue(shadowOf((android.view.inputmethod.InputMethodManager)activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)).isSoftInputVisible());
         assertSame(beta, picker.getListView().getAdapter().getItem(0));
         search.setText("ALPHA"); assertEquals(1, picker.getListView().getAdapter().getCount()); assertSame(alpha, picker.getListView().getAdapter().getItem(0));
         search.setText("second"); assertSame(beta, picker.getListView().getAdapter().getItem(0));
@@ -537,6 +592,9 @@ public class WorkspaceNavigationTest {
         assertEquals("draft", composer.getText().toString()); search.setText("Custom");
         findText(picker.getWindow().getDecorView(), "Заметки").performClick();
         assertEquals("Найти заметку", search.getHint().toString()); assertEquals("", search.getText().toString());
+        ((android.view.inputmethod.InputMethodManager)activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(search.getWindowToken(),0);
+        search.performClick();shadowOf(Looper.getMainLooper()).idle();
+        assertTrue(shadowOf((android.view.inputmethod.InputMethodManager)activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)).isSoftInputVisible());
         assertSame(note, picker.getListView().getAdapter().getItem(0));
         search.setText("UBUNTU"); assertEquals(1, picker.getListView().getAdapter().getCount());
         search.setText("line two"); assertSame(note, picker.getListView().getAdapter().getItem(0));
@@ -559,6 +617,67 @@ public class WorkspaceNavigationTest {
         assertEquals(View.VISIBLE, findText(picker.getWindow().getDecorView(), "Сохраните заметку в библиотеке.").getVisibility()); picker.dismiss();
         controller.close();
     }
+    @Test public void switchingTerminalRestoresSeparateDraftsAndSelection() throws Exception {
+        TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();activity.setTheme(R.style.Theme_Termux_Black);activity.setContentView(R.layout.activity_termux);
+        Field field=TermuxActivity.class.getDeclaredField("mTerminalView");field.setAccessible(true);field.set(activity,activity.findViewById(R.id.terminal_view));
+        WorkspaceController controller=new WorkspaceController(activity);
+        EditText input=(EditText)((ViewGroup)activity.findViewById(R.id.workspace_input)).getChildAt(1);
+        // Constructor only, no attachSession/updateSize/JNI/service or shell process.
+        com.termux.terminal.TerminalSession a=new com.termux.terminal.TerminalSession("unused","unused",new String[0],new String[0],2000,null);
+        com.termux.terminal.TerminalSession b=new com.termux.terminal.TerminalSession("unused","unused",new String[0],new String[0],2000,null);
+        activity.getTerminalView().mTermSession=a;controller.refresh();input.setText("unsent in A");input.setSelection(2,5);
+        controller.refresh();assertEquals("unsent in A",input.getText().toString());
+        activity.getTerminalView().mTermSession=b;controller.refresh();assertEquals("",input.getText().toString());
+        input.setText("unsent in B");input.setSelection(4);controller.refresh();assertEquals("unsent in B",input.getText().toString());
+        activity.getTerminalView().mTermSession=a;controller.refresh();assertEquals("unsent in A",input.getText().toString());
+        assertEquals(2,input.getSelectionStart());assertEquals(5,input.getSelectionEnd());
+        input.setText("");
+        activity.getTerminalView().mTermSession=b;controller.refresh();assertEquals("unsent in B",input.getText().toString());assertEquals(4,input.getSelectionStart());
+        activity.getTerminalView().mTermSession=a;controller.refresh();assertEquals("",input.getText().toString());
+        controller.close();
+    }
+    @Test public void modelClickOpensBehaviorThenConfirmationWithoutApplyingEarly() throws Exception {
+        TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();activity.setTheme(R.style.Theme_Termux_Black);activity.setContentView(R.layout.activity_termux);
+        Field field=TermuxActivity.class.getDeclaredField("mTerminalView");field.setAccessible(true);field.set(activity,activity.findViewById(R.id.terminal_view));
+        WorkspaceController controller=new WorkspaceController(activity);WorkspaceStore.Session profile=new WorkspaceStore.Session();
+        CodexStatus status=new CodexStatus();status.model="gpt-6.1-sol";status.effort="low";
+        org.json.JSONObject model=new org.json.JSONObject().put("model","gpt-6.1-sol").put("displayName","GPT-6.1-Sol").put("defaultReasoningEffort","low")
+            .put("supportedReasoningEfforts",new org.json.JSONArray().put(new org.json.JSONObject().put("reasoningEffort","low")).put(new org.json.JSONObject().put("reasoningEffort","high")));
+        status.models.put(model);
+        java.lang.reflect.Method choose=WorkspaceController.class.getDeclaredMethod("chooseCodexModel",WorkspaceStore.Session.class,CodexStatus.class);choose.setAccessible(true);choose.invoke(controller,profile,status);
+        AlertDialog models=ShadowAlertDialog.getLatestAlertDialog();assertTrue(models.isShowing());assertEquals(View.GONE,models.getButton(AlertDialog.BUTTON_POSITIVE).getVisibility());
+        models.getListView().performItemClick(null,0,0);shadowOf(Looper.getMainLooper()).idle();
+        AlertDialog behavior=ShadowAlertDialog.getLatestAlertDialog();assertFalse(models.isShowing());assertTrue(behavior.isShowing());assertEquals(View.GONE,behavior.getButton(AlertDialog.BUTTON_POSITIVE).getVisibility());
+        behavior.getListView().performItemClick(null,1,1);shadowOf(Looper.getMainLooper()).idle();
+        AlertDialog confirmation=ShadowAlertDialog.getLatestAlertDialog();assertFalse(behavior.isShowing());assertTrue(confirmation.isShowing());
+        String message=((TextView)confirmation.findViewById(android.R.id.message)).getText().toString();assertTrue(message.contains("GPT-6.1-Sol"));assertTrue(message.contains("Высокий"));assertEquals("Применить",confirmation.getButton(AlertDialog.BUTTON_POSITIVE).getText().toString());
+        Field generation=WorkspaceController.class.getDeclaredField("codexApplyGeneration");generation.setAccessible(true);assertEquals(0,generation.getInt(controller));
+        confirmation.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals(0,generation.getInt(controller));assertNull(activity.getCurrentSession());controller.close();
+    }
+    @Test public void codexEditorHasAccessModesAndChatChoicesWithoutStartingProcesses() throws Exception {
+        TermuxActivity activity = Robolectric.buildActivity(TermuxActivity.class).get(); activity.setTheme(R.style.Theme_Termux_Black); activity.setContentView(R.layout.activity_termux);
+        Field terminalView = TermuxActivity.class.getDeclaredField("mTerminalView"); terminalView.setAccessible(true); terminalView.set(activity, activity.findViewById(R.id.terminal_view));
+        WorkspaceController controller = new WorkspaceController(activity);
+        java.lang.reflect.Method edit = WorkspaceController.class.getDeclaredMethod("editSession", WorkspaceStore.Session.class, boolean.class); edit.setAccessible(true); edit.invoke(controller, null, false);
+        AlertDialog form = ShadowAlertDialog.getLatestAlertDialog(); View decor = form.getWindow().getDecorView();
+        findDescription(decor, "Среда запуска").performClick(); AlertDialog environments = ShadowAlertDialog.getLatestAlertDialog();
+        assertEquals("Сессия Codex", environments.getListView().getAdapter().getItem(4)); environments.getListView().performItemClick(null,4,4);
+        assertNotNull(findText(decor,"Среда Codex: Ubuntu"));
+        assertEquals(View.GONE, findDescription(decor,"Добавить команду запуска").getVisibility());
+        findDescription(decor,"Доступ Codex").performClick(); AlertDialog access = ShadowAlertDialog.getLatestAlertDialog();
+        assertEquals(3,access.getListView().getAdapter().getCount()); access.getListView().performItemClick(null,2,2);
+        assertNotNull(findText(decor,"Доступ: Только чтение · с подтверждениями"));
+        findDescription(decor,"Чат Codex").performClick(); AlertDialog chat = ShadowAlertDialog.getLatestAlertDialog(); assertEquals(3,chat.getListView().getAdapter().getCount()); chat.getListView().performItemClick(null,2,2);
+        AlertDialog idPicker = ShadowAlertDialog.getLatestAlertDialog(); List<EditText> idFields = new ArrayList<>(); collectEditors(idPicker.getWindow().getDecorView(),idFields);
+        idFields.get(0).setText("thread-123"); shadowOf(Looper.getMainLooper()).idle(); idPicker.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        shadowOf(Looper.getMainLooper()).idle();
+        form.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        Field storeField = WorkspaceController.class.getDeclaredField("store"); storeField.setAccessible(true); WorkspaceStore store = (WorkspaceStore)storeField.get(controller);
+        assertEquals(1,store.sessions.size()); WorkspaceStore.Session profile = store.sessions.get(0);
+        assertEquals("codex",profile.environment); assertEquals("read",profile.codexAccess); assertEquals("id",profile.codexChat); assertEquals("thread-123",profile.codexThread); assertEquals("/root",profile.directory); assertTrue(profile.saved);
+        assertNull(activity.getCurrentSession()); assertEquals(View.GONE, activity.findViewById(R.id.workspace_codex_status).getVisibility());
+        store.awaitWrites(); controller.close();
+    }
     private static View findText(View root, String value) {
         if (root instanceof TextView && ((TextView) root).getText().toString().equals(value)) return root;
         if (root instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) root).getChildCount(); i++) {
@@ -574,6 +693,7 @@ public class WorkspaceNavigationTest {
         return null;
     }
     private static void collectEditors(View root, List<EditText> fields) {
+        if (root.getVisibility() != View.VISIBLE) return;
         if (root instanceof EditText) fields.add((EditText) root);
         else if (root instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) root).getChildCount(); i++) collectEditors(((ViewGroup) root).getChildAt(i), fields);
     }

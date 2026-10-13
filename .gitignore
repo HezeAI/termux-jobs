@@ -40,3 +40,6 @@ Thumbs.db
 # Isolated local verification tools; never use the installed Termux as build output.
 .tools/
 .verification/
+
+# Short Unix socket paths for isolated verification only
+/.cx/
