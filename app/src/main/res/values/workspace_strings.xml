@@ -419,4 +419,57 @@
     <string name="workspace_text_416" formatted="false">"incompatible history format"</string>
     <string name="workspace_text_417" formatted="false">"server authentication error"</string>
     <string name="workspace_text_418" formatted="false">"Chat directory changed. Confirm the original folder in session settings."</string>
+    <string name="workspace_text_419" formatted="false">Packages</string>
+    <string name="workspace_text_420" formatted="false">Installed</string>
+    <string name="workspace_text_421" formatted="false">Available</string>
+    <string name="workspace_text_422" formatted="false">Updates</string>
+    <string name="workspace_text_423" formatted="false">Search packages</string>
+    <string name="workspace_text_424" formatted="false">Installed packages remain in the selected environment and are available to all its sessions. Closing a session without saving does not remove packages.</string>
+    <string name="workspace_text_425" formatted="false">List from the local APT catalogue. Refresh the catalogue for current data.</string>
+    <string name="workspace_text_426" formatted="false">Refresh catalogue</string>
+    <string name="workspace_text_427" formatted="false">Loading packages…</string>
+    <string name="workspace_text_428" formatted="false">Install</string>
+    <string name="workspace_text_429" formatted="false">Upgrade package</string>
+    <string name="workspace_text_430" formatted="false">Remove package</string>
+    <string name="workspace_text_431" formatted="false">Show more</string>
+    <string name="workspace_text_432" formatted="false">Packages currently support Termux and Ubuntu only.</string>
+    <string name="workspace_text_433" formatted="false">The operation opens in a separate terminal of the selected environment. APT will show dependencies and ask for confirmation. Changes affect all sessions in this environment.</string>
+    <string name="workspace_text_434" formatted="false">Could not read packages. Check APT/dpkg and access to the selected environment.</string>
+    <string name="workspace_text_435" formatted="false">No packages found</string>
+    <string name="workspace_text_436" formatted="false">"Version: "</string>
+    <string name="workspace_text_437" formatted="false">"Packages · "</string>
+    <string name="workspace_text_438" formatted="false">"Session: "</string>
+    <string name="workspace_text_439" formatted="false">After installation, return here and refresh the list.</string>
+    <string name="workspace_text_440" formatted="false">Reload list</string>
+    <string name="workspace_text_441" formatted="false">Package catalogue is too large or invalid</string>
+    <string name="workspace_text_442" formatted="false">Invalid package name</string>
+    <string name="workspace_text_443" formatted="false">In selected session</string>
+    <string name="workspace_text_444" formatted="false">In a new session of the same environment</string>
+    <string name="workspace_text_445" formatted="false">The selected session must have an idle Bash with no unfinished input. If a command or Codex is running, open a new session of the same environment. You must check that the shell is idle.</string>
+    <string name="workspace_text_446" formatted="false">The selected session has closed or changed. Reopen its package menu or choose a new session.</string>
+    <string name="workspace_text_447" formatted="false">Choose version</string>
+    <string name="workspace_text_448" formatted="false">Loading versions…</string>
+    <string name="workspace_text_449" formatted="false">No versions are available in configured repositories. Refresh the catalogue.</string>
+    <string name="workspace_text_450" formatted="false">An older version was selected. Downgrading may require dependency changes; review the APT plan before confirming.</string>
+    <string name="workspace_text_451" formatted="false">Invalid package version</string>
+    <string name="workspace_text_452" formatted="false">Could not read available package versions. Check APT and the selected environment.</string>
+    <string name="workspace_text_453" formatted="false">Description</string>
+    <string name="workspace_text_454" formatted="false">More details</string>
+    <string name="workspace_text_455" formatted="false">Description from repository</string>
+    <string name="workspace_text_456" formatted="false">The description language depends on the repository.</string>
+    <string name="workspace_text_457" formatted="false">Loading description…</string>
+    <string name="workspace_text_458" formatted="false">Description unavailable. Refresh the catalogue or check the selected environment.</string>
+    <string name="workspace_text_459" formatted="false">Choose category</string>
+    <string name="workspace_text_460" formatted="false">No categories yet. Enter a new one in the field.</string>
+    <string name="workspace_text_461" formatted="false">The editor supports UTF-8 text up to 256 KB. Binary files and invalid text cannot be edited.</string>
+    <string name="workspace_text_462" formatted="false">Could not save the file. Check permissions and access to the environment; your text remains in the editor.</string>
+    <string name="workspace_text_463" formatted="false">The file changed after opening. Saving was cancelled: close the editor and reopen the file. Your text remains in the editor.</string>
+    <string name="workspace_text_464" formatted="false">File text</string>
+    <string name="workspace_text_465" formatted="false">UTF-8 · up to 256 KB · Enter inserts a new line</string>
+    <string name="workspace_text_466" formatted="false">Wait for saving to finish</string>
+    <string name="workspace_text_467" formatted="false">Close without saving?</string>
+    <string name="workspace_text_468" formatted="false">Text changes will be lost.</string>
+    <string name="workspace_text_469" formatted="false">Continue editing</string>
+    <string name="workspace_text_470" formatted="false">Saving…</string>
+    <string name="workspace_text_471" formatted="false">File saved</string>
 </resources>

@@ -59,6 +59,7 @@ public final class WorkspaceController {
         }
     }
     private final FrameLayout content;
+    private final List<WorkspacePackages> packageBrowsers=new ArrayList<>();
     private final List<WorkspaceFileBrowser> fileBrowsers=new ArrayList<>();
     private final ExecutorService reader = Executors.newSingleThreadExecutor();
     private final android.os.Handler codexHandler = new android.os.Handler(android.os.Looper.getMainLooper());
@@ -226,7 +227,7 @@ public final class WorkspaceController {
         top.addView(name, new LinearLayout.LayoutParams(0, -2, 1));
         TextView language=button("◎",false,()->WorkspaceLanguage.showPicker(activity,this::refreshLanguage));
         language.setContentDescription(WorkspaceText.tr("Язык / Language"));
-        LinearLayout.LayoutParams languageParams=new LinearLayout.LayoutParams(dp(48),dp(48));languageParams.setMarginEnd(dp(6));
+        LinearLayout.LayoutParams languageParams=new LinearLayout.LayoutParams(dp(48),dp(48));languageParams.setMarginEnd(dp(8));
         top.addView(language,languageParams);
         TextView action;
         if (screen == Screen.HOME || screen == Screen.SESSIONS) {
@@ -241,7 +242,7 @@ public final class WorkspaceController {
         action.setPadding(dp(10), dp(8), dp(10), dp(8)); action.setMinWidth(dp(48));
         for (android.graphics.drawable.Drawable drawable : action.getCompoundDrawables())
             if (drawable != null) drawable.setBounds(0, 0, dp(28), dp(28));
-        action.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd), shape(Color.BLACK, Color.BLACK, 10), null));
+        action.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd), shape(PANEL, BORDER, 12), null));
         top.addView(action, new LinearLayout.LayoutParams(dp(48), dp(48)));
         header.addView(top, new LinearLayout.LayoutParams(-1, dp(48)));
         LinearLayout.LayoutParams navigationParams = new LinearLayout.LayoutParams(-1, -2);
@@ -506,6 +507,13 @@ public final class WorkspaceController {
         AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(command.name)
             .setView(formScroll(body)).setPositiveButton(WorkspaceText.tr("Закрыть"), null).create();
         previewAction(body, WorkspaceText.tr("Вставить в терминал"), R.drawable.workspace_commands, () -> { dialog.dismiss(); insertCommand(command); });
+        previewAction(body,command.favorite?WorkspaceText.tr("Убрать из избранного"):WorkspaceText.tr("В избранное"),R.drawable.workspace_star,()->{
+            if(!store.isWritable()){activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"),true);return;}command.favorite=!command.favorite;store.save();dialog.dismiss();renderContent();
+        });
+        previewAction(body,WorkspaceText.tr("Редактировать"),R.drawable.workspace_edit,()->{dialog.dismiss();editCommand(command);});
+        previewAction(body,WorkspaceText.tr("Удалить"),R.drawable.workspace_delete,()->{
+            if(!store.isWritable()){activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"),true);return;}dialog.dismiss();confirm(WorkspaceText.tr("Удалить команду «")+command.name+"»?",()->{store.commands.remove(command);store.save();renderContent();});
+        });
         dialog.show();
     }
     private void chips(LinearLayout body, String[] options, String selected, java.util.function.Consumer<String> click) {
@@ -597,39 +605,25 @@ public final class WorkspaceController {
         cardLabels(card, note.name, note.text, note.category + (note.favorite ? "  ★" : ""), false);
         ((TextView) card.getChildAt(0)).setText("≡");
         card.setContentDescription(WorkspaceText.tr("Заметка ") + note.name); card.setOnClickListener(v -> openNote(note));
-        TextView more = button("⋮", false, () -> noteMenu(note));
-        more.setContentDescription(WorkspaceText.tr("Действия с заметкой ") + note.name); card.addView(more);
+
     }
     private void openNote(WorkspaceStore.Note note) {
-        hideDialogKeyboard(); LinearLayout body = previewBody(note.text, false); previewMetadata(body, note.category, note.favorite);
-        WorkspaceDialogs.builder(activity).setTitle(note.name).setView(formScroll(body)).setPositiveButton(WorkspaceText.tr("Закрыть"), null).show();
-    }
-    private LinearLayout contextHeading(String name, String command, String category, boolean favorite) {
-        LinearLayout heading = column(); heading.setPadding(dp(20), dp(18), dp(20), dp(12));
-        TextView title = text(name, 20, TEXT); title.setTypeface(null, Typeface.BOLD); heading.addView(title);
-        if (!command.isEmpty()) {
-            TextView preview = text(command, 12, MUTED); preview.setTypeface(Typeface.MONOSPACE);
-            preview.setMaxLines(2); preview.setEllipsize(TextUtils.TruncateAt.END);
-            preview.setPadding(0, dp(8), 0, 0); heading.addView(preview);
-        }
-        TextView label = text(category + (favorite ? "   ★" : ""), 12, MUTED);
-        label.setPadding(0, dp(8), 0, 0); heading.addView(label); return heading;
-    }
-    private void noteMenu(WorkspaceStore.Note note) {
-        WorkspaceDialogs.builder(activity).setCustomTitle(contextHeading(note.name, "", note.category, note.favorite))
-            .setItems(new String[]{note.favorite ? WorkspaceText.tr("Убрать из избранного") : WorkspaceText.tr("В избранное"), WorkspaceText.tr("Редактировать"), WorkspaceText.tr("Удалить")}, (d, which) -> {
-                if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
-                if (which == 0) { note.favorite = !note.favorite; store.save(); renderContent(); }
-                else if (which == 1) editNote(note);
-                else confirm(WorkspaceText.tr("Удалить заметку «") + note.name + "»?", () -> { store.notes.remove(note); store.save(); renderContent(); });
-            }).setNegativeButton(WorkspaceText.tr("Закрыть"), null).show();
+        hideDialogKeyboard();LinearLayout body=previewBody(note.text,false);previewMetadata(body,note.category,note.favorite);
+        AlertDialog dialog=WorkspaceDialogs.builder(activity).setTitle(note.name).setView(formScroll(body)).setPositiveButton(WorkspaceText.tr("Закрыть"),null).create();
+        previewAction(body,note.favorite?WorkspaceText.tr("Убрать из избранного"):WorkspaceText.tr("В избранное"),R.drawable.workspace_star,()->{
+            if(!store.isWritable()){activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"),true);return;}note.favorite=!note.favorite;store.save();dialog.dismiss();renderContent();
+        });
+        previewAction(body,WorkspaceText.tr("Редактировать"),R.drawable.workspace_edit,()->{dialog.dismiss();editNote(note);});
+        previewAction(body,WorkspaceText.tr("Удалить"),R.drawable.workspace_delete,()->{
+            if(!store.isWritable()){activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"),true);return;}dialog.dismiss();confirm(WorkspaceText.tr("Удалить заметку «")+note.name+"»?",()->{store.notes.remove(note);store.save();renderContent();});
+        });dialog.show();
     }
     private void editNote(WorkspaceStore.Note existing) {
         if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
         WorkspaceStore.Note draft = existing == null ? new WorkspaceStore.Note() : existing;
         LinearLayout form = column(); EditText name = labeled(form, WorkspaceText.tr("Название"), draft.name, false);
         EditText text = labeled(form, WorkspaceText.tr("Текст заметки"), draft.text, true);
-        EditText category = labeled(form, WorkspaceText.tr("Категория"), draft.category, false);
+        EditText category = categoryField(form,draft.category,noteCategories());
         CheckBox favorite = new CheckBox(activity); favorite.setText(WorkspaceText.tr("Добавить в избранное")); favorite.setTextColor(TEXT);
         favorite.setChecked(draft.favorite); form.addView(favorite);
         AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(existing == null ? WorkspaceText.tr("Новая заметка") : WorkspaceText.tr("Редактировать заметку"))
@@ -692,7 +686,7 @@ public final class WorkspaceController {
         LinearLayout card = card(parent); card.setBackground(shape(Color.BLACK, BORDER, 12));
         cardLabels(card, c.name, c.command, c.category + (c.favorite ? "  ★" : ""), false);
         card.setOnClickListener(v -> openCommand(c));
-        TextView more = button("⋮", false, () -> commandMenu(c)); more.setContentDescription(WorkspaceText.tr("Действия с командой ") + c.name); card.addView(more);
+        card.setContentDescription(WorkspaceText.tr("Команда ")+c.name);
     }
     private void sessionCard(LinearLayout parent, WorkspaceStore.Session s) {
         TerminalSession running = liveFor(s); boolean active = running != null && running.isRunning();
@@ -729,6 +723,22 @@ public final class WorkspaceController {
         TextView title = text(label, 12, MUTED); title.setPadding(0, dp(12), 0, dp(6)); form.addView(title);
         EditText e = field(label, value, multiline); form.addView(e, new LinearLayout.LayoutParams(-1, -2)); return e;
     }
+    private EditText categoryField(LinearLayout form,String value,List<String> categories){
+        TextView title=text(WorkspaceText.tr("Категория"),12,MUTED);title.setPadding(0,dp(12),0,dp(6));form.addView(title);
+        android.widget.AutoCompleteTextView input=new android.widget.AutoCompleteTextView(activity);input.setTextColor(TEXT);input.setHintTextColor(MUTED);input.setTextSize(14);input.setSingleLine(true);input.setThreshold(1);
+        input.setPadding(dp(12),dp(10),dp(12),dp(10));input.setBackground(shape(PANEL,BORDER,10));input.setDropDownBackgroundDrawable(shape(PANEL,BORDER,10));
+        input.setAdapter(new android.widget.ArrayAdapter<String>(activity,android.R.layout.simple_dropdown_item_1line,categories){
+            @Override public View getView(int position,View recycled,ViewGroup parent){TextView row=(TextView)super.getView(position,recycled,parent);row.setTextColor(TEXT);return row;}
+        });input.setText(value,false);input.setHint(WorkspaceText.tr("Категория"));input.setOnClickListener(v->{if(!categories.isEmpty())input.showDropDown();});
+        LinearLayout line=row();line.addView(input,new LinearLayout.LayoutParams(0,-2,1));
+        TextView choose=button("▾",false,()->{
+            input.dismissDropDown();((InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(),0);
+            AlertDialog.Builder picker=WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Выбрать категорию"));
+            if(categories.isEmpty())picker.setMessage(WorkspaceText.tr("Категорий пока нет. Введите новую в поле."));
+            else picker.setItems(categories.toArray(new String[0]),(dialog,index)->{input.setText(categories.get(index),false);input.setSelection(input.length());});
+            picker.setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
+        });choose.setContentDescription(WorkspaceText.tr("Выбрать категорию"));LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(dp(48),dp(48));params.setMarginStart(dp(8));line.addView(choose,params);form.addView(line,new LinearLayout.LayoutParams(-1,-2));return input;
+    }
     private ScrollView formScroll(LinearLayout form) {
         form.setPadding(dp(20), dp(4), dp(20), dp(18)); ScrollView scroll = new ScrollView(activity); scroll.addView(form); return scroll;
     }
@@ -741,7 +751,7 @@ public final class WorkspaceController {
         if (existing == null) draft.command = initialCommand;
         LinearLayout form = column(); EditText name = labeled(form, WorkspaceText.tr("Название"), draft.name, false);
         EditText command = labeled(form, WorkspaceText.tr("Команда"), draft.command, true);
-        EditText categoryInput = labeled(form, WorkspaceText.tr("Категория"), draft.category, false);
+        EditText categoryInput = categoryField(form,draft.category,commandCategories());
         CheckBox favorite = new CheckBox(activity); favorite.setText(WorkspaceText.tr("Добавить в избранное")); favorite.setTextColor(TEXT); favorite.setChecked(draft.favorite); form.addView(favorite);
         AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(existing == null ? WorkspaceText.tr("Новая команда") : WorkspaceText.tr("Редактировать команду"))
             .setView(formScroll(form)).setPositiveButton(WorkspaceText.tr("Сохранить"), null).setNegativeButton(WorkspaceText.tr("Отмена"), null).create();
@@ -1256,26 +1266,36 @@ public final class WorkspaceController {
             password.setText(""); dialog.dismiss(); launchNew(session, add);
         })); dialog.setOnDismissListener(d -> password.setText("")); dialog.show();
     }
-    private void commandMenu(WorkspaceStore.Command c) {
-        WorkspaceDialogs.builder(activity).setCustomTitle(contextHeading(c.name, c.command, c.category, c.favorite)).setItems(new String[]{c.favorite ? WorkspaceText.tr("Убрать из избранного") : WorkspaceText.tr("В избранное"), WorkspaceText.tr("Редактировать"), WorkspaceText.tr("Удалить")}, (d, which) -> {
-            if (which == 0) { c.favorite = !c.favorite; store.save(); renderContent(); }
-            else if (which == 1) editCommand(c);
-            else confirm(WorkspaceText.tr("Удалить команду «") + c.name + "»?", () -> { store.commands.remove(c); store.save(); renderContent(); });
-        }).setNegativeButton(WorkspaceText.tr("Закрыть"), null).show();
+    private void showPackages(WorkspaceStore.Session profile) {
+        String environment=ProjectFiles.environment(profile);
+        if(!environment.equals("termux")&&!environment.equals("ubuntu")){activity.showToast(WorkspaceText.tr("Пакеты пока доступны только для Termux и Ubuntu."),true);return;}
+        String heldHandle=profile.handle;
+        WorkspacePackages browser=new WorkspacePackages(activity,profile,(operation,selectedSession)->{
+            if(closed)return;
+            if(!selectedSession){launchNew(operation,true);return;}
+            TerminalSession target=liveFor(profile);
+            if(target==null||!target.isRunning()||!PackageCatalog.matchesTarget(profile,heldHandle,target.mHandle,operation.environment)){
+                activity.showToast(WorkspaceText.tr("Выбранная сессия закрыта или изменилась. Откройте меню пакетов заново либо выберите новую сессию."),true);return;
+            }
+            activity.getTermuxTerminalSessionClient().setCurrentSession(target);show(Screen.TERMINAL,true);
+            if(target.getEmulator()!=null){target.getEmulator().paste(operation.startup);target.write("\r");}else target.write(operation.startup+"\r");
+        });packageBrowsers.add(browser);browser.show();
     }
     private void sessionMenu(WorkspaceStore.Session s) { sessionMenu(s, false); }
     private void sessionMenu(WorkspaceStore.Session s, boolean terminalTab) {
         if(WorkspaceStore.isBase(s)) {
             WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Terminal · базовая сессия")).setMessage(WorkspaceText.tr("Базовая вкладка не закрывается. Можно перезапустить оболочку."))
                 .setPositiveButton(WorkspaceText.tr("Перезапустить"),(d,w)->confirm(WorkspaceText.tr("Перезапустить базовую оболочку?"),()->{TerminalSession current=liveFor(s);if(current!=null&&current.isRunning())current.finishIfRunning();else launch(s);}))
-                .setNegativeButton(WorkspaceText.tr("Закрыть меню"),null).show();return;
+                .setNeutralButton(WorkspaceText.tr("Пакеты"),(d,w)->showPackages(s)).setNegativeButton(WorkspaceText.tr("Закрыть меню"),null).show();return;
         }
         List<String> actions = new ArrayList<>();
         if (terminalTab && !s.saved) actions.add(WorkspaceText.tr("Сохранить сессию"));
         if (terminalTab) Collections.addAll(actions, WorkspaceText.tr("Перезапустить"), WorkspaceText.tr("Настройки"), WorkspaceText.tr("Закрыть сессию"));
         else Collections.addAll(actions, WorkspaceText.tr("Закрыть сессию"), WorkspaceText.tr("Настройки"), WorkspaceText.tr("Удалить сессию"));
+        if(terminalTab) actions.add(WorkspaceText.tr("Пакеты"));
         WorkspaceDialogs.builder(activity).setTitle(s.name).setItems(actions.toArray(new String[0]), (d, which) -> {
             String action = actions.get(which);
+            if(action.equals(WorkspaceText.tr("Пакеты"))){showPackages(s);return;}
             if (action.equals(WorkspaceText.tr("Сохранить сессию"))) {
                 if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
                 saveSessionProfile(s);return;
@@ -1713,6 +1733,7 @@ public final class WorkspaceController {
     }
     public void close() {
         terminalDrafts.clear();
+        for(WorkspacePackages browser:packageBrowsers)browser.close();packageBrowsers.clear();
         for(WorkspaceFileBrowser browser:fileBrowsers)browser.close();fileBrowsers.clear();
         for (char[] secret : pendingSshPasswords.values()) java.util.Arrays.fill(secret, '\0'); pendingSshPasswords.clear();
         closed = true; codexApplyGeneration++; if(codexApplyDialog!=null)codexApplyDialog.dismiss(); codexHandler.removeCallbacksAndMessages(null); codexReader.shutdown(); reader.shutdown(); store.close();

@@ -419,4 +419,57 @@
     <string name="workspace_text_416" formatted="false">"несовместимый формат истории"</string>
     <string name="workspace_text_417" formatted="false">"ошибка авторизации сервера"</string>
     <string name="workspace_text_418" formatted="false">"Каталог чата изменился. Подтвердите исходную папку в настройках сессии."</string>
+    <string name="workspace_text_419" formatted="false">Пакеты</string>
+    <string name="workspace_text_420" formatted="false">Установленные</string>
+    <string name="workspace_text_421" formatted="false">Доступные</string>
+    <string name="workspace_text_422" formatted="false">Обновления</string>
+    <string name="workspace_text_423" formatted="false">Поиск пакетов</string>
+    <string name="workspace_text_424" formatted="false">Установленные пакеты сохраняются в выбранном окружении и доступны всем его сессиям. Закрытие сессии без сохранения не удаляет пакеты.</string>
+    <string name="workspace_text_425" formatted="false">Список из локального каталога APT. Для свежих данных обновите каталог.</string>
+    <string name="workspace_text_426" formatted="false">Обновить каталог</string>
+    <string name="workspace_text_427" formatted="false">Загрузка пакетов…</string>
+    <string name="workspace_text_428" formatted="false">Установить</string>
+    <string name="workspace_text_429" formatted="false">Обновить пакет</string>
+    <string name="workspace_text_430" formatted="false">Удалить пакет</string>
+    <string name="workspace_text_431" formatted="false">Показать ещё</string>
+    <string name="workspace_text_432" formatted="false">Пакеты пока доступны только для Termux и Ubuntu.</string>
+    <string name="workspace_text_433" formatted="false">Операция откроется в отдельном терминале выбранного окружения. APT покажет зависимости и запросит подтверждение. Изменения затрагивают все сессии этого окружения.</string>
+    <string name="workspace_text_434" formatted="false">Не удалось прочитать пакеты. Проверьте наличие APT/dpkg и доступность выбранного окружения.</string>
+    <string name="workspace_text_435" formatted="false">Пакеты не найдены</string>
+    <string name="workspace_text_436" formatted="false">"Версия: "</string>
+    <string name="workspace_text_437" formatted="false">"Пакеты · "</string>
+    <string name="workspace_text_438" formatted="false">"Сессия: "</string>
+    <string name="workspace_text_439" formatted="false">После установки вернитесь сюда и обновите список.</string>
+    <string name="workspace_text_440" formatted="false">Перечитать список</string>
+    <string name="workspace_text_441" formatted="false">Каталог пакетов слишком большой или повреждён</string>
+    <string name="workspace_text_442" formatted="false">Некорректное имя пакета</string>
+    <string name="workspace_text_443" formatted="false">В выбранной сессии</string>
+    <string name="workspace_text_444" formatted="false">В новой сессии того же окружения</string>
+    <string name="workspace_text_445" formatted="false">В выбранной сессии должен быть свободный Bash без незавершённого ввода. Если выполняется команда или работает Codex, откройте в новой сессии того же окружения. Пользователь сам проверяет, свободна ли оболочка.</string>
+    <string name="workspace_text_446" formatted="false">Выбранная сессия закрыта или изменилась. Откройте меню пакетов заново либо выберите новую сессию.</string>
+    <string name="workspace_text_447" formatted="false">Выбрать версию</string>
+    <string name="workspace_text_448" formatted="false">Загрузка версий…</string>
+    <string name="workspace_text_449" formatted="false">В подключённых репозиториях нет доступных версий. Обновите каталог.</string>
+    <string name="workspace_text_450" formatted="false">Выбрана более старая версия. Понижение может потребовать изменения зависимостей; проверьте план APT перед подтверждением.</string>
+    <string name="workspace_text_451" formatted="false">Некорректная версия пакета</string>
+    <string name="workspace_text_452" formatted="false">Не удалось прочитать доступные версии пакета. Проверьте APT и выбранное окружение.</string>
+    <string name="workspace_text_453" formatted="false">Описание</string>
+    <string name="workspace_text_454" formatted="false">Подробнее</string>
+    <string name="workspace_text_455" formatted="false">Описание из репозитория</string>
+    <string name="workspace_text_456" formatted="false">Язык описания зависит от репозитория.</string>
+    <string name="workspace_text_457" formatted="false">Загрузка описания…</string>
+    <string name="workspace_text_458" formatted="false">Описание недоступно. Обновите каталог или проверьте выбранное окружение.</string>
+    <string name="workspace_text_459" formatted="false">Выбрать категорию</string>
+    <string name="workspace_text_460" formatted="false">Категорий пока нет. Введите новую в поле.</string>
+    <string name="workspace_text_461" formatted="false">Редактор поддерживает текст UTF-8 до 256 КБ. Бинарные файлы и повреждённый текст не редактируются.</string>
+    <string name="workspace_text_462" formatted="false">Не удалось сохранить файл. Проверьте права и доступность окружения; введённый текст сохранён в окне.</string>
+    <string name="workspace_text_463" formatted="false">Файл изменился после открытия. Сохранение отменено: закройте редактор и откройте файл заново. Ваш текст остался в окне.</string>
+    <string name="workspace_text_464" formatted="false">Текст файла</string>
+    <string name="workspace_text_465" formatted="false">UTF-8 · до 256 КБ · Enter переносит строку</string>
+    <string name="workspace_text_466" formatted="false">Дождитесь завершения сохранения</string>
+    <string name="workspace_text_467" formatted="false">Закрыть без сохранения?</string>
+    <string name="workspace_text_468" formatted="false">Изменения текста будут потеряны.</string>
+    <string name="workspace_text_469" formatted="false">Продолжить редактирование</string>
+    <string name="workspace_text_470" formatted="false">Сохранение…</string>
+    <string name="workspace_text_471" formatted="false">Файл сохранён</string>
 </resources>

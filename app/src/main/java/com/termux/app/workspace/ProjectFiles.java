@@ -72,6 +72,27 @@ final class ProjectFiles implements AutoCloseable {
         try(OutputStream out=new FileOutputStream(destination)) {run("test -f "+target(e.path)+" && exec cat -- "+target(e.path),out,max);}
         catch(Exception error){destination.delete();throw error;}
     }
+    TextFileEdits.Snapshot editRead(Entry entry) throws Exception {
+        if(entry.size>TextFileEdits.MAX_BYTES)throw new IOException(WorkspaceText.tr("Редактор поддерживает текст UTF-8 до 256 КБ. Бинарные файлы и повреждённый текст не редактируются."));
+        return TextFileEdits.parse(entry.path,bytes(TextFileEdits.readScript(entry.path),TextFileEdits.MAX_BYTES+513));
+    }
+    void editSave(TextFileEdits.Snapshot original,String value) throws Exception {
+        byte[] payload=TextFileEdits.encode(value);ByteArrayOutputStream output=new ByteArrayOutputStream();
+        try{run(TextFileEdits.saveScript(original),output,1024,payload);}catch(Exception error){throw new IOException(WorkspaceText.tr("Не удалось сохранить файл. Проверьте права и доступность окружения; введённый текст сохранён в окне."));}
+        if(!output.toString("UTF-8").equals("SAVED"))throw new IOException(WorkspaceText.tr("Файл изменился после открытия. Сохранение отменено: закройте редактор и откройте файл заново. Ваш текст остался в окне."));
+    }
+    byte[] packageDescription(PackageCatalog.Entry entry,boolean installed) throws Exception {
+        try{return bytes(PackageCatalog.descriptionQuery(entry,installed),256*1024);}
+        catch(Exception error){if(closed)throw error;throw new IOException(WorkspaceText.tr("Описание недоступно. Обновите каталог или проверьте выбранное окружение."));}
+    }
+    byte[] packageVersions(String name) throws Exception {
+        try {return bytes(PackageCatalog.versionsQuery(name),1024*1024);}
+        catch(Exception error){if(closed)throw error;throw new IOException(WorkspaceText.tr("Не удалось прочитать доступные версии пакета. Проверьте APT и выбранное окружение."));}
+    }
+    byte[] packageQuery(int tab) throws Exception {
+        try {return bytes(PackageCatalog.query(tab),PackageCatalog.MAX_BYTES);}
+        catch(Exception error){if(closed)throw error;throw new IOException(WorkspaceText.tr("Не удалось прочитать пакеты. Проверьте наличие APT/dpkg и доступность выбранного окружения."));}
+    }
     private byte[] bytes(String script,int max) throws Exception {ByteArrayOutputStream out=new ByteArrayOutputStream();run(script,out,max);return out.toByteArray();}
     static String command(WorkspaceStore.Session s,String script) {
         String e=environment(s);String bash="bash --noprofile --norc -c "+SessionShell.quote(script);
@@ -86,7 +107,8 @@ final class ProjectFiles implements AutoCloseable {
         options+=s.sshAuth.equals("password")?" -o BatchMode=no -o PreferredAuthentications=password -o PubkeyAuthentication=no -o KbdInteractiveAuthentication=no -o NumberOfPasswordPrompts=1":" -o BatchMode=yes";
         return "ssh -T"+options+" -p "+s.sshPort+" -l "+SessionShell.quote(s.sshUser)+" -- "+SessionShell.quote(s.sshHost)+" "+SessionShell.quote(bash);
     }
-    private synchronized void run(String script,OutputStream out,long max) throws Exception {
+    private void run(String script,OutputStream out,long max) throws Exception {run(script,out,max,null);}
+    private synchronized void run(String script,OutputStream out,long max,byte[] input) throws Exception {
         if(closed)throw new IOException(WorkspaceText.tr("Окно закрыто"));
         ProcessBuilder builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c","exec "+command(profile,script));
         builder.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));builder.environment().clear();
@@ -103,6 +125,7 @@ final class ProjectFiles implements AutoCloseable {
             }
             builder.redirectError(new File("/dev/null"));Process owned=builder.start();process=owned;
             timer.schedule(owned::destroy,90,TimeUnit.SECONDS);
+            try(OutputStream stdin=owned.getOutputStream()){if(input!=null)stdin.write(input);}
             try(InputStream in=owned.getInputStream()) {byte[] buffer=new byte[32768];int n;long total=0;while((n=in.read(buffer))!=-1){if(closed||Thread.currentThread().isInterrupted())throw new IOException(WorkspaceText.tr("Операция отменена"));total+=n;if(total>max)throw new IOException(WorkspaceText.tr("Файл или список слишком большой"));out.write(buffer,0,n);}}
             if(owned.waitFor()!=0)throw new IOException(environment(profile).equals("ssh")?WorkspaceText.tr("SSH недоступен: проверьте вход, пароль и доверенный ключ сервера в терминале"):WorkspaceText.tr("Каталог или файл недоступен; проверьте путь и выбранную среду"));
         } finally {if(process!=null)process.destroy();process=null;timer.shutdownNow();if(broker!=null)broker.close();}
