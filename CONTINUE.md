@@ -1,5 +1,9 @@
 # Termux Job’s — выпуск v1.0.18
 
+Опубликован как Latest: https://github.com/HezeAI/termux-jobs/releases/tag/v1.0.18
+Тег исходников e5bc875c9a6b12533d3f335dd2e0ff20143d3078. GitHub API: draft=false,
+prerelease=false. APK и SHA256SUMS скачаны обратно и совпали; публикация проверена.
+
 Пользователь прямо запросил GitHub-релиз со всеми изменениями после v1.0.4.
 Тег v1.0.18,1.0.18/code1055,com.termux,Android7+/ARM64, прежний сертификат,
 библиотекаv8. APK36637078 bytes, SHA256:

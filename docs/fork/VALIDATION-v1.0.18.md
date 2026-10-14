@@ -74,3 +74,12 @@ notes обновлены, AI Agents явно отмечены experimental. По
 всех устройств/агентов/диагностики от пользователя не получено.
 Доказательства: .verification/diagnostics-v1.0.18/artifact.json, build-complete.log,
 signature.txt, badging.txt, verify-final.py, test-results/.
+
+## Проверка публикации
+
+[GitHub v1.0.18](https://github.com/HezeAI/termux-jobs/releases/tag/v1.0.18)
+опубликован как Latest, draft=false/prerelease=false. Тег ссылается на
+e5bc875c9a6b12533d3f335dd2e0ff20143d3078. Оба asset скачаны обратно: APK SHA256
+совпал с указанным выше, SHA256SUMS побайтово совпал. Состояние uploaded и размер
+36637078 подтверждены API. Документационная запись публикации после тега
+не меняет исходники APK и не требует пересборки/переноса тега.
