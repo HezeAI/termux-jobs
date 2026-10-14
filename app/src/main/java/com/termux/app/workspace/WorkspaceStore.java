@@ -39,6 +39,7 @@ public final class WorkspaceStore {
         public String startup2 = "", startup3 = "", environment = "legacy";
         public String sshHost = "", sshUser = "root";
         public int sshPort = 22;
+        public boolean restoreReview;
         public boolean sshKeepOpen = true;
         public String sshAuth = "auto", sshIdentity = "", sshEncryptedPassword = "";
         public String codexEnvironment = "ubuntu", codexAccess = "full", codexChat = "new", codexThread = "", codexThreadName = "", codexSocketId = UUID.randomUUID().toString();
@@ -60,7 +61,7 @@ public final class WorkspaceStore {
             return result;
         }
         public Session copy() {
-            Session s = new Session();
+            Session s = new Session();s.restoreReview=restoreReview;
             s.extendedDebug=extendedDebug; s.name = name + WorkspaceText.tr(" — копия"); s.directory = directory; s.startup = startup; s.startup2 = startup2; s.startup3 = startup3; s.environment = environment;
             s.sshHost = sshHost; s.sshUser = sshUser; s.sshPort = sshPort; s.sshKeepOpen = sshKeepOpen; s.sshAuth = sshAuth; s.sshIdentity = sshIdentity; // Password is bound to the original profile ID.
             s.codexEnvironment = codexEnvironment; s.codexAccess = codexAccess; s.codexChat = codexChat; s.codexThread = codexThread; s.codexThreadName = codexThreadName; s.codexSourceDirectory=codexSourceDirectory;
@@ -147,7 +148,7 @@ public final class WorkspaceStore {
             .put("aiAgent",s.aiAgent).put("aiConnection",s.aiConnection).put("aiModel",s.aiModel).put("aiVariant",s.aiVariant).put("aiMode",s.aiMode).put("aiAccess",s.aiAccess).put("aiChat",s.aiChat).put("aiThread",s.aiThread).put("aiSavedThread",s.aiSavedThread)
             .put("claudeAgent",s.claudeAgent).put("claudeModel",s.claudeModel).put("claudeMode",s.claudeMode).put("claudeChat",s.claudeChat).put("claudeThread",s.claudeThread).put("claudeSocketId",s.claudeSocketId)
             .put("geminiAuth",s.geminiAuth).put("geminiAgent",s.geminiAgent).put("geminiModel",s.geminiModel).put("geminiMode",s.geminiMode).put("geminiChat",s.geminiChat).put("geminiThread",s.geminiThread).put("geminiSocketId",s.geminiSocketId)
-            .put("extendedDebug",s.extendedDebug).put("updated", s.updated).put("saved", s.saved));
+            .put("restoreReview",s.restoreReview).put("extendedDebug",s.extendedDebug).put("updated", s.updated).put("saved", s.saved));
         JSONArray ns = new JSONArray();
         for (Note n : notes) ns.put(new JSONObject().put("id", n.id).put("name", n.name)
             .put("text", n.text).put("category", n.category).put("favorite", n.favorite));
@@ -199,6 +200,7 @@ public final class WorkspaceStore {
             s.geminiAuth=o.optString("geminiAuth","auto");
             s.geminiAgent=o.optBoolean("geminiAgent",false); s.geminiModel=o.optString("geminiModel",""); s.geminiMode=o.optString("geminiMode","default"); s.geminiChat=o.optString("geminiChat","new"); s.geminiThread=o.optString("geminiThread",s.geminiThread); s.geminiSocketId=o.optString("geminiSocketId",s.geminiSocketId);
             if(s.geminiAgent&&!GeminiCli.valid(s))throw new JSONException("Invalid Gemini profile");
+            s.restoreReview=o.optBoolean("restoreReview",false);
             s.extendedDebug=o.optBoolean("extendedDebug",false); s.updated = o.optLong("updated"); s.saved = o.optBoolean("saved", true); ss.add(s);
         }
         List<Note> ns = new ArrayList<>();

@@ -132,6 +132,7 @@ public final class WorkspaceController {
         show(Screen.HOME, false);
         codexHandler.postDelayed(codexPoll, 1000);
     }
+    public void onResume(){WorkspaceUpdates.automatic(activity,()->{if(!closed)renderHeader();});}
     public void refreshLanguage() {
         terminalInput.setHint(WorkspaceText.tr("Введите команду…"));
         inputRow.getChildAt(0).setContentDescription(WorkspaceText.tr("Вставить сохранённую команду"));
@@ -239,6 +240,7 @@ public final class WorkspaceController {
             LinearLayout.LayoutParams keyParams=new LinearLayout.LayoutParams(dp(48),dp(48));keyParams.setMarginEnd(dp(8));top.addView(keys,keyParams);
         }
         TextView settings=button("⚙",false,this::globalSettings);settings.setContentDescription(WorkspaceText.tr("Настройки приложения"));
+        if(settings instanceof WorkspaceIconButton)((WorkspaceIconButton)settings).setBadge(WorkspaceUpdates.available(activity));
         top.addView(settings,new LinearLayout.LayoutParams(dp(48),dp(48)));
         header.addView(top, new LinearLayout.LayoutParams(-1, dp(48)));
         LinearLayout.LayoutParams navigationParams = new LinearLayout.LayoutParams(-1, -2);
@@ -794,7 +796,7 @@ public final class WorkspaceController {
     private void editSession(WorkspaceStore.Session existing, boolean launchAfterSave) {
         if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
         WorkspaceStore.Session draft = existing == null ? new WorkspaceStore.Session() : existing;
-        LinearLayout form = column(); EditText name = labeled(form, WorkspaceText.tr("Название сессии"), existing == null ? "" : draft.name, false);
+        LinearLayout form = column(); if(draft.restoreReview)form.addView(text(WorkspaceLanguage.code(activity).equals("ru")?"Импортированный пресет: проверьте среду, команды и пути. Отдельная восстановленная Ubuntu доступна своим пресетом запуска. Сохраните настройки перед запуском.":"Imported preset: review environment, commands and paths. A separate restored Ubuntu has its own launch preset. Save settings before launching.",14,MUTED)); EditText name = labeled(form, WorkspaceText.tr("Название сессии"), existing == null ? "" : draft.name, false);
         EditText directory = labeled(form, WorkspaceText.tr("Рабочий каталог"), existing == null ? TermuxConstants.TERMUX_HOME_DIR_PATH : draft.directory, false);
         String[] chosenEnvironment = {existing == null ? "termux" : (draft.aiAgent.equals("opencode") || draft.claudeAgent || draft.geminiAgent) ? "codex" : draft.environment.equals("legacy")?"termux":draft.environment};
         String[] chosenAgent={draft.geminiAgent?"gemini":draft.claudeAgent?"claude":draft.aiAgent.equals("opencode")?"opencode":"codex"};
@@ -1113,6 +1115,7 @@ public final class WorkspaceController {
             draft.startup2 = startupFields.size() > 1 ? startupFields.get(1).getText().toString() : "";
             draft.startup3 = startupFields.size() > 2 ? startupFields.get(2).getText().toString() : ""; if(draft.aiAgent.equals("opencode")||draft.claudeAgent||draft.geminiAgent){draft.startup="";draft.startup2="";draft.startup3="";}
             draft.updated = System.currentTimeMillis();
+            draft.restoreReview=false;
             if (existing == null) { draft.saved = !launchAfterSave; store.sessions.add(draft); }
             TerminalSession live = liveFor(draft); if (live != null) live.mSessionName = draft.name;
             store.save(); dialog.dismiss(); refresh();
@@ -1671,8 +1674,14 @@ public final class WorkspaceController {
         });picker.show();
     }
     private void globalSettings(){
+        String automatic=WorkspaceLanguage.code(activity).equals("ru")?"Автопроверка обновлений · 10 ч":"Automatic update checks · 10 h";
         WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Настройки приложения"))
-            .setItems(new String[]{WorkspaceText.tr("Язык / Language"),WorkspaceText.tr("Настройки приложения")},(d,w)->{if(w==0)WorkspaceLanguage.showPicker(activity,this::refreshLanguage);else activity.startActivity(new android.content.Intent(activity,SettingsActivity.class));})
+            .setItems(new String[]{WorkspaceText.tr("Язык / Language"),WorkspaceUpdates.menuLabel(activity),automatic+" · "+(WorkspaceUpdates.autoEnabled(activity)?"✓":"—"),WorkspaceBackupUi.label(activity),WorkspaceText.tr("Настройки приложения")},(d,w)->{
+                if(w==0)WorkspaceLanguage.showPicker(activity,this::refreshLanguage);
+                else if(w==1)WorkspaceUpdates.check(activity);
+                else if(w==2){WorkspaceUpdates.autoEnabled(activity,!WorkspaceUpdates.autoEnabled(activity));globalSettings();}
+                else if(w==3)WorkspaceBackupUi.show(activity,store,()->{refreshLanguage();},command->{WorkspaceStore.Session installation=new WorkspaceStore.Session();installation.name=WorkspaceLanguage.code(activity).equals("ru")?"Пакеты из бэкапа":"Backup packages";installation.environment="termux";installation.directory=TermuxConstants.TERMUX_HOME_DIR_PATH;installation.startup=command;launchNew(installation,true);});
+                else activity.startActivity(new android.content.Intent(activity,SettingsActivity.class));})
             .setNegativeButton(WorkspaceText.tr("Закрыть"),null).show();
     }
     private void showDiagnostics(WorkspaceStore.Session profile){WorkspaceDiagnostics.register(profile,false);WorkspaceDiagnosticsUi.show(activity,profile,()->liveFor(profile));}
@@ -1753,6 +1762,7 @@ public final class WorkspaceController {
         return directory.startsWith("~/") ? TermuxConstants.TERMUX_HOME_DIR_PATH + directory.substring(1) : directory;
     }
     private void launch(WorkspaceStore.Session s) {
+        if(s.restoreReview){editSession(s,false);return;}
         if(WorkspaceStore.isBase(s))baseRestartFailures=0;
         TerminalSession existing = liveFor(s);
         if (existing != null && existing.isRunning()) {
@@ -1801,6 +1811,7 @@ public final class WorkspaceController {
         return create(profile, add, null);
     }
     private TerminalSession create(WorkspaceStore.Session profile, boolean add, TerminalSession replaced) {
+        if(profile.restoreReview){editSession(profile,false);return null;}
         TermuxService service = activity.getTermuxService();
         if (service == null) return null;
         if(WorkspaceStore.isBase(profile))baseStartedAt=System.currentTimeMillis();

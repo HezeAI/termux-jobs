@@ -1,3 +1,49 @@
+# Текущая задача: v1.1.0 — релиз обновлений и backup beta
+
+Пользователь разрешил реализацию, сборку и публикацию на GitHub, хочет обновиться
+через установленную1.0.19. В релизе главный акцент на бета бэкапов из шестерёнки
+справа сверху; отдельно выделить in-app updater. Реальное restore/установку
+агенту не запускать. Исходные среды, пакеты и процессы не менять.
+
+Готовый код: auto check onResume10h + toggle/badge, ручная проверка сохраняется.
+Backup engine Python -I -S; create/inspect/selective restore (HOME/PREFIX staging,
+Ubuntu fresh native proot restore + isolated launch preset); libraries/aliases/
+scripts, per-preset history, safe defaults/review before launch/recovery snapshot.
+Package comparison Termux only, APT simulation then confirmed new terminal.
+Полные ограничения docs/fork/BACKUP-RESTORE.md, UPDATES.md и validation.
+
+Версия1.1.0/code1057/com.termux/v8, прежний signer. 302 JVM tests +24 Python tests
+прошли, BUILD SUCCESSFUL. APK37806077bytes SHA25680030ff0e099391840761fad13fc745a52810025233adfb29623a3f38772654b.
+Receipts .verification/backup-v1.1.0, update.json с compatibility text внутри
+RU/EN changes для старого v1.0.19 клиента. Документация обновлена, публикация
+следующим шагом. После публикации скачать обратно три assets и проверить Latest.
+Для всех будущих релизов обязательны update.json/повышенный code и предупреждения
+о несовместимости/потерях/очистке **до установки**. Ничего не очищать автоматически.
+
+---
+
+## Предыдущая локальная работа и история
+
+# Текущая работа: v1.0.19 — локальный APK для проверки
+
+Пользователь согласовал ручное обновление через общую шестерёнку, сначала APK в
+Download, GitHub после его проверки/отдельного указания. Ничего пока не публиковать.
+Добавлен WorkspaceUpdates, публичный latest+update.json, скачивание/проверки/Android
+installer confirmation; подробности docs/fork/UPDATES.md. Общий пункт аккаунтов/API
+OpenCode удалён; session/preset пути сохранены. Logger default OFF; прежний NORMAL
+однократно переводится в OFF при запуске новой версии, дальнейший выбор сохраняется.
+Журнал сессий независим. Код1056/1.0.19/com.termux, прежний сертификат, v8.
+295 тестов прошли; BUILD SUCCESSFUL; финальный APK34321240bytes, SHA256 e2aaaa7a55d0f0dd9fc7a5f80b2df42579669a8c4378fa11e96f75594d593843.
+Receipts .verification/updates-v1.0.19; manifest там же update.json для будущего
+релиза. Новый генератор scripts/create-update-manifest.py; notes RU/EN в
+UPDATE-NOTES-v1.0.19.json. Не создавать fake higher-version release для теста.
+Нужна пользовательская проверка UI; полный in-app upgrade — на следующем релизе.
+APK не устанавливался, исходная работающая среда/процессы не изменялись.
+
+---
+
+## Предыдущий опубликованный выпуск (история)
+
 # Termux Job’s — выпуск v1.0.18
 
 Опубликован как Latest: https://github.com/HezeAI/termux-jobs/releases/tag/v1.0.18

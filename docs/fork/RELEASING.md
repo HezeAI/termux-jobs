@@ -44,3 +44,34 @@
 
 Последующее исправление документации в основной ветке не требует пересборки
 неизменённого APK или переноса уже опубликованного тега.
+
+## In-app updater (since v1.0.19)
+
+Alongside APK and SHA256SUMS, upload **update.json** to each stable release.
+Generate it from the final verified APK, not a preliminary build:
+
+```sh
+python3 scripts/create-update-manifest.py \
+  --apk .verification/release-vVERSION/Termux-Jobs-vVERSION-arm64.apk \
+  --aapt2 /path/to/existing/aapt2 \
+  --notes docs/fork/UPDATE-NOTES-vVERSION.json \
+  --output .verification/release-vVERSION/update.json
+```
+
+Notes contain `ru`/`en` change arrays and a required `compatibility` object with
+`ru`/`en` arrays. The generator appends compatibility to highlights, up to20 total
+lines per language, so existing v1.0.19 clients display it before installation. Use the same
+APK/hash/version as the release assets. Upload metadata before publishing the
+release. Download all three assets back and verify consistency. The updater uses
+GitHub's latest stable release, requires increasing versionCode and exact current
+signer/package match, and never offers uninstall as an update workaround. Missing
+metadata produces an explicit unsupported-release message. A successful source
+build does not establish end-to-end Android installer or data-migration behavior.
+Do not publish an artificial higher-version release solely to test the updater.
+
+For every future stable release, explicitly document data compatibility in RU/EN
+update highlights as well as release notes. Include any required clearing of
+commands/presets, loss of data, incompatible formats or migrations and their
+reasons **before** installation. If no reset is required, say that explicitly.
+Keep the metadata schema readable by installed v1.0.19 clients. Never silently
+reset user data or publish without the updater assets.

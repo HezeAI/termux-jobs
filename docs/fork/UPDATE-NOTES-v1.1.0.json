@@ -1,0 +1,32 @@
+{
+  "ru": [
+    "Главное: бета-тест резервного копирования и импорта совместимых бэкапов Termux и его форков — через шестерёнку справа сверху.",
+    "Создание своего бэкапа: библиотеки и настройки приложения, Termux HOME/PREFIX и выбранные Ubuntu/proot, SHA-256, инструкция и restore.sh.",
+    "Проверка чужого архива до восстановления, выбор компонентов, отдельная новая Ubuntu или извлечение HOME/PREFIX в новую папку. Неизвестные форматы и неподтверждённая архитектура блокируются.",
+    "Выборочный импорт команд, заметок и пресетов; простые aliases и shell-скрипты можно добавить в команды. Импортированные пресеты требуют проверки перед первым запуском.",
+    "Сравнение пакетов Termux с бэкапом и предварительный план APT для выбранных версий; установка только после подтверждения в отдельном терминале.",
+    "Обновление через приложение: ручная проверка GitHub, загрузка с проверкой APK и подписи; автопроверка при открытии не чаще раза в 10 часов, точка на шестерёнке.",
+    "Убран дублирующий пункт подключений OpenCode из общих настроек. Стандартный лог приложения выключен по умолчанию; журнал сессий независим."
+  ],
+  "en": [
+    "Main feature: beta backup creation and import of compatible Termux/fork backups, available from the top-right settings gear.",
+    "Create backups of app libraries/settings, Termux HOME/PREFIX and selected Ubuntu/proot environments, with SHA-256, instructions and restore.sh.",
+    "Inspect foreign archives first, select components, restore Ubuntu separately or stage HOME/PREFIX in a new directory. Unknown formats and unconfirmed architectures are blocked.",
+    "Selectively import commands, notes and presets; add simple aliases and shell scripts to commands. Imported presets require review before their first launch.",
+    "Compare Termux package versions and preview an APT plan for selected versions; installation requires confirmation in a separate terminal.",
+    "In-app updates: manual GitHub checks, verified APK downloads and signature checks; optional checks when opening the app, at least 10 hours apart, with a gear badge.",
+    "Removed duplicate OpenCode connections entry from app settings. App logging defaults to off; session diagnostics remain independent."
+  ],
+  "compatibility": {
+    "ru": [
+      "Очистка команд, заметок, пресетов и истории для обновления не требуется. Пакет и сертификат прежние, формат библиотеки v8 сохранён.",
+      "Бэкапы — бета: HOME/PREFIX не заменяются поверх работающей среды; Ubuntu восстанавливается отдельно. Данные Android Keystore и процессы между чистыми установками не переносятся. Авторизацию и пути после восстановления нужно проверить.",
+      "Перед установкой завершите важные задачи: Android может остановить процессы приложения. Не удаляйте приложение для обновления."
+    ],
+    "en": [
+      "No clearing of commands, notes, presets or history is required. Package, signing identity and library format v8 are retained.",
+      "Backups are beta: HOME/PREFIX are staged instead of overwriting a live environment; Ubuntu is restored separately. Android Keystore keys and live processes cannot migrate across clean installs. Review authorization and paths after restore.",
+      "Finish important jobs before installing: Android may stop app processes. Do not uninstall the app to update it."
+    ]
+  }
+}

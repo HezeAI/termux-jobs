@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "Ручная проверка обновлений GitHub в общих настройках приложения.",
+    "Краткий список изменений, скачивание APK и проверка пакета, версии, подписи и SHA-256 перед открытием установщика Android.",
+    "Убран дублирующий пункт аккаунтов и API-ключей OpenCode из общих настроек; подключения доступны в настройках сессий и пресетов.",
+    "Стандартное журналирование приложения выключено по умолчанию. Собственный журнал сессий работает независимо."
+  ],
+  "en": [
+    "Manual GitHub update checks in the common app settings.",
+    "Release highlights, APK download, package/version/signature/SHA-256 verification before opening the Android installer.",
+    "Removed duplicate OpenCode accounts and API keys entry from app settings; connections remain in session and launch preset settings.",
+    "App logging is off by default. The session diagnostics journal works independently."
+  ],
+  "compatibility": {
+    "ru": [
+      "Очистка библиотек и истории не требуется. Это историческая локальная сборка, отдельно не публиковалась."
+    ],
+    "en": [
+      "No clearing of libraries/history required. Historical local build, not published separately."
+    ]
+  }
+}

@@ -11,7 +11,7 @@ stage.mkdir(parents=True, exist_ok=True)
 (stage / '.tools/test-home').mkdir(parents=True, exist_ok=True)
 for name in ['app', 'terminal-emulator', 'terminal-view', 'termux-shared', 'gradle']:
     shutil.copytree(root / name, stage / name, dirs_exist_ok=True,
-                    ignore=shutil.ignore_patterns('build', '.cxx', '.externalNativeBuild', 'bootstrap-*.zip'))
+                    ignore=shutil.ignore_patterns('build', '.cxx', '.externalNativeBuild', 'bootstrap-*.zip', '__pycache__', '*.pyc'))
 for name in ['settings.gradle', 'build.gradle', 'gradle.properties', 'gradlew', 'gradlew.bat']:
     shutil.copy2(root / name, stage / name)
 

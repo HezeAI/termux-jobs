@@ -57,10 +57,10 @@ public class WorkspaceNavigationTest {
 
     @Test public void commonSettingsIncludeLanguageOnAllThreeTabs() throws Exception {
         TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.setContentView(R.layout.activity_termux);
-        Field tv=TermuxActivity.class.getDeclaredField("mTerminalView");tv.setAccessible(true);tv.set(a,a.findViewById(R.id.terminal_view));WorkspaceController c=new WorkspaceController(a);
+        Field tv=TermuxActivity.class.getDeclaredField("mTerminalView");tv.setAccessible(true);tv.set(a,a.findViewById(R.id.terminal_view));WorkspaceLanguage.select(a,"ru");WorkspaceController c=new WorkspaceController(a);
         try{for(String label:new String[]{"Главная","Команды/Заметки","Терминал"}){
             findDescription(a.findViewById(R.id.workspace_navigation),label).performClick();View header=a.findViewById(R.id.workspace_header);assertNull(findDescription(header,"Язык / Language"));
-            findDescription(header,"Настройки приложения").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog menu=ShadowAlertDialog.getLatestAlertDialog();assertEquals("Язык / Language",menu.getListView().getItemAtPosition(0));assertEquals("Настройки приложения",menu.getListView().getItemAtPosition(1));menu.dismiss();
+            findDescription(header,"Настройки приложения").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog menu=ShadowAlertDialog.getLatestAlertDialog();assertEquals("Язык / Language",menu.getListView().getItemAtPosition(0));assertEquals("Проверить обновления",menu.getListView().getItemAtPosition(1));assertEquals("Резервное копирование · бета",menu.getListView().getItemAtPosition(3));assertEquals("Настройки приложения",menu.getListView().getItemAtPosition(4));menu.dismiss();
         }}finally{c.close();}
     }
 

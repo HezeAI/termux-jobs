@@ -1,4 +1,4 @@
-# Архитектура v1.0.4
+# Архитектура v1.1.0
 
 ## Модули
 
@@ -327,3 +327,33 @@ it never signals the current process. Only supported custom Termux/Ubuntu sequen
 expose the vector in the active selector. It is omitted from selector popup rows and
 hidden while the popup is open. Native SSH/legacy/auto-generated AI launch commands
 are not presented as cancellable sequences.
+
+## Manual updater (introduced in local v1.0.19)
+
+`WorkspaceUpdates` uses a single background worker per check/download, public
+GitHub HTTPS endpoints and a narrowly scoped FileProvider cache path. No shell
+commands or access to HOME/PREFIX/agent credentials. Package/version/signer checks
+precede explicit Android installer confirmation. Metadata schema, cancellation,
+logging migration and trust limits: [UPDATES](UPDATES.md).
+
+## Backup beta and automatic checks v1.1.0
+
+WorkspaceBackupUi owns explicit actions; WorkspaceBackupEngine runs only the
+embedded workspace-backup.py via isolated Python (-I -S), not a user PTY. A single
+owned worker communicates bounded JSON events, never copies arbitrary subprocess
+stderr into reports, and cancellation targets only that worker/its own tool child.
+Python uses streaming TAR validation, hashes and private archive copies; new
+files use no-follow dirfd traversal. PREFIX is never replaced live; rootfs is
+repacked under a fresh alias before native proot-distro restore. Foreign host
+config scripts/manifests are not executed.
+
+WorkspaceBackupImport validates library v1–8 before mutation, removes live handles
+and unportable SSH ciphertext, generates IDs/sockets, marks imported presets for
+review (optional v8 field restoreReview). Active/base sessions survive replacement.
+Original JSON is retained privately, then AtomicFile writes are checked. Restoring
+multiple components is not globally atomic; limitations in [BACKUP-RESTORE](BACKUP-RESTORE.md).
+
+WorkspaceUpdates stores auto enabled/last attempt/available code in app prefs;
+TermuxActivity.onResume calls the due check, ten-hour gate, no service/alarm. The
+icon draws a badge without altering navigation geometry. Terminal rendering and
+agent controller assets remain unchanged.

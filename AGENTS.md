@@ -84,3 +84,13 @@ Read-only access does not authorize modifications. Full-access sessions still
 must respect user instructions; do not install APKs, alter running sessions,
 send messages, or publish changes without task authorization. Do not print
 tokens, private keys or authorization file contents in reports.
+
+# In-app update compatibility
+
+Every future stable release must remain available to the in-app updater: include
+an update.json asset generated from the final APK, keep package/signing identity
+for compatible updates, and increase versionCode. Before publication, explicitly
+review data compatibility. Put required resets, lost/unportable data, migrations
+and other breaking changes with their reasons in BOTH localized update highlights
+and release notes, so the installed v1.0.19 updater also displays them before
+installation. Never clear user data automatically to make an update work.

@@ -26,7 +26,7 @@ public class Logger {
     public static final int LOG_LEVEL_DEBUG = 2; // start logging debug messages
     public static final int LOG_LEVEL_VERBOSE = 3; // start logging verbose messages
 
-    public static final int DEFAULT_LOG_LEVEL = LOG_LEVEL_NORMAL;
+    public static final int DEFAULT_LOG_LEVEL = LOG_LEVEL_OFF;
     public static final int MAX_LOG_LEVEL = LOG_LEVEL_VERBOSE;
     private static int CURRENT_LOG_LEVEL = DEFAULT_LOG_LEVEL;
 

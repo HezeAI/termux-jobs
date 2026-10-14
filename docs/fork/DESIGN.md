@@ -1,4 +1,4 @@
-# Интерфейс и поведение v1.0.18
+# Интерфейс и поведение v1.1.0
 
 Документ описывает текущий основной форк. Исходный [референс](reference.png) и ранние макеты отражают разработку, а не точный интерфейс релиза.
 
@@ -104,3 +104,20 @@ Enter в поле ввода переносит строку; отправка �
 не переносится в popup списка. Два вектора интерактивного ввода/дополнительных
 клавиш — только в терминале,48dp, selected-fill как у фильтров. Поле ввода неизменно.
 AI Agents имеют native режимы, отдельные подключения и явно экспериментальный статус.
+
+## Базовый updater (введён в локальной v1.0.19)
+
+Common settings adds Check for updates / Проверить обновления between Language
+and app settings. The update dialog shows localized highlights and download
+action; download shows percentage and cancel; successful verification presents
+a separate Install action. Android owns installation confirmation and unknown
+source permission. Session controls, input and diagnostics UI remain unchanged.
+
+## v1.1.0
+
+В общей шестерёнке добавлены автопроверка10ч и резервное копирование · бета.
+При доступном обновлении маленькая точка на gear; нет автоматического popup.
+Backup UI: создание → выбор состава/каталога/подтверждение секретов; проверка →
+компоненты/совместимость и пакеты; восстановление → выбор/план/подтверждение.
+Диалоги RU/EN, системные пути и имена пакетов не переводятся. Терминальный ввод
+и отображение агентов этим изменением не переделываются.

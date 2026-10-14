@@ -185,8 +185,17 @@ public class TermuxAppSharedPreferences {
 
 
 
+    /** One-time fork migration: the old normal default becomes off; later choices are preserved. */
+    public void migrateForkLogDefault() {
+        String key="jobs_log_off_default_v1";
+        if (!mSharedPreferences.getBoolean(key, false)) {
+            if (getLogLevel() == Logger.LOG_LEVEL_NORMAL) setLogLevel(null, Logger.LOG_LEVEL_OFF);
+            mSharedPreferences.edit().putBoolean(key, true).apply();
+        }
+    }
+
     public int getLogLevel() {
-        return SharedPreferenceUtils.getInt(mSharedPreferences, TERMUX_APP.KEY_LOG_LEVEL, Logger.DEFAULT_LOG_LEVEL);
+        return SharedPreferenceUtils.getInt(mSharedPreferences, TERMUX_APP.KEY_LOG_LEVEL, Logger.LOG_LEVEL_OFF);
     }
 
     public void setLogLevel(Context context, int logLevel) {

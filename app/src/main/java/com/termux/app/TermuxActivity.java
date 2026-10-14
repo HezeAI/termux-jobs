@@ -307,6 +307,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         if (mTermuxTerminalViewClient != null)
             mTermuxTerminalViewClient.onResume();
 
+        if(mWorkspace!=null)mWorkspace.onResume();
         isOnResumeAfterOnCreate = false;
     }
 

@@ -64,10 +64,6 @@ public class SettingsActivity extends AppCompatActivity {
 
             setPreferencesFromResource(R.xml.root_preferences, rootKey);
 
-            Preference aiProviders=new Preference(context);
-            aiProviders.setKey("ai-providers");aiProviders.setTitle(com.termux.app.workspace.WorkspaceLanguage.code(context).equals("ru")?"Аккаунты и API-ключи":"Accounts and API keys");
-            aiProviders.setSummary(com.termux.app.workspace.WorkspaceLanguage.code(context).equals("ru")?"Подключения OpenCode · Ubuntu":"OpenCode connections · Ubuntu");
-            aiProviders.setOnPreferenceClickListener(p->{com.termux.app.workspace.AiAgentsUi.showConnections(requireActivity());return true;});getPreferenceScreen().addPreference(aiProviders);
             configureTermuxAPIPreference(context);
             configureTermuxFloatPreference(context);
             configureTermuxTaskerPreference(context);
