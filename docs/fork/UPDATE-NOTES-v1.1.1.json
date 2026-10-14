@@ -1,0 +1,26 @@
+{
+  "ru": [
+    "Выборочный бэкап Termux и Ubuntu из шестерёнки: Codex с авторизацией и историей, проекты, SSH/Git, настройки, другие AI-агенты, система и инструменты выбираются отдельно.",
+    "Размеры до сжатия, выбор пользовательских папок и предупреждения о недостающей системе/Node.js перед созданием копии.",
+    "Проверка окружений принимающего телефона до восстановления. Без системы данные извлекаются отдельно; текущие HOME/PREFIX не заменяются.",
+    "SQLite Codex копируется согласованно по каждой базе; временные IPC, блокировки и WAL/SHM не переносятся."
+  ],
+  "en": [
+    "Selective Termux and Ubuntu backups from the settings gear: choose Codex authorization/history, projects, SSH/Git, settings, other AI agents, system and tools separately.",
+    "Pre-compression sizes, user folder selection and missing system/Node.js warnings before creating a backup.",
+    "Inspect receiving-device environments before restoring. Data-only backups are staged separately; current HOME/PREFIX are not replaced.",
+    "Codex SQLite databases use individual consistent online snapshots; temporary IPC, locks and WAL/SHM are excluded."
+  ],
+  "compatibility": {
+    "ru": [
+      "Очистка команд, заметок, пресетов и истории не требуется. Пакет, сертификат и библиотека v8 сохранены.",
+      "Выборочные бэкапы имеют manifest v2: принимающему приложению нужна v1.1.1 либо доверенный restore.sh из бэкапа. Старые полные бэкапы v1 поддерживаются.",
+      "Активация отдельно извлечённых данных ручная, зависимости и авторизацию нужно проверить. Процессы и Android Keystore не переносятся; перед обновлением завершите задачи."
+    ],
+    "en": [
+      "No clearing of commands, notes, presets or history is required. Package, signer and library v8 are retained.",
+      "Selective backups use manifest v2: receiving app must be v1.1.1 or use the trusted restore.sh supplied with the backup. Existing full v1 backups remain supported.",
+      "Staged data requires manual activation and dependency/auth checks. Processes and Android Keystore do not migrate; finish jobs before updating."
+    ]
+  }
+}

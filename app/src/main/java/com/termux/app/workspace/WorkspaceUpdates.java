@@ -33,17 +33,39 @@ final class WorkspaceUpdates {
     private static String text(Activity a,String ru,String en){return WorkspaceLanguage.code(a).equals("ru")?ru:en;}
     private static boolean alive(Activity a){return !a.isFinishing()&&!a.isDestroyed();}
     private static void message(Activity a,String value){if(alive(a))WorkspaceDialogs.builder(a).setTitle(label(a)).setMessage(value).setPositiveButton("OK",null).show();}
-    static final long CHECK_INTERVAL=10L*60*60*1000;
+    /** One attempt per foreground opening, including failed/disabled/busy openings. */
+    static final class Opening {
+        private boolean entered;
+        boolean enter(boolean enabled){if(entered)return false;entered=true;return enabled;}
+        void background(boolean changingConfiguration){if(!changingConfiguration)entered=false;}
+    }
+    private static final Opening OPENING=new Opening();
+    static void background(Activity a){OPENING.background(a.isChangingConfigurations());}
     private static android.content.SharedPreferences prefs(Activity a){return a.getSharedPreferences("workspace-updates",0);}
     static boolean autoEnabled(Activity a){return prefs(a).getBoolean("automatic",true);}
     static void autoEnabled(Activity a,boolean enabled){prefs(a).edit().putBoolean("automatic",enabled).apply();}
-    static boolean due(long now,long last){return last==0||now<last||now-last>=CHECK_INTERVAL;}
     static boolean available(Activity a){return prefs(a).getLong("availableCode",0)>com.termux.BuildConfig.VERSION_CODE;}
     static String menuLabel(Activity a){return label(a)+(available(a)?" · "+prefs(a).getString("availableName",""):"");}
+    static android.widget.LinearLayout menuRow(Activity a,Runnable manual){
+        android.widget.LinearLayout row=new android.widget.LinearLayout(a);row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setBackground(WorkspaceDialogs.background(a,false));
+        android.widget.TextView title=WorkspaceDialogs.action(a,menuLabel(a),0);title.setBackground(null);
+        android.widget.LinearLayout labels=new android.widget.LinearLayout(a);labels.setOrientation(1);
+        labels.addView(title);
+        android.widget.TextView hint=new android.widget.TextView(a);hint.setText(text(a,"Проверять при открытии приложения","Check when opening the app"));hint.setTextColor(WorkspaceDialogs.MUTED);hint.setTextSize(12);
+        int pad=WorkspaceDialogs.dp(a,16);hint.setPadding(pad,0,0,WorkspaceDialogs.dp(a,12));labels.addView(hint);
+        row.addView(labels,new android.widget.LinearLayout.LayoutParams(0,-2,1));
+        android.widget.CheckBox automatic=new android.widget.CheckBox(a);automatic.setChecked(autoEnabled(a));
+        automatic.setButtonTintList(android.content.res.ColorStateList.valueOf(WorkspaceDialogs.ACCENT));
+        automatic.setContentDescription(text(a,"Автопроверка при открытии приложения","Check automatically when opening the app"));
+        automatic.setText(text(a,"Авто","Auto"));automatic.setTextSize(12);automatic.setTextColor(WorkspaceDialogs.MUTED);
+        int size=WorkspaceDialogs.dp(a,54);row.addView(automatic,new android.widget.LinearLayout.LayoutParams(WorkspaceDialogs.dp(a,90),size));
+        automatic.setOnCheckedChangeListener((button,checked)->autoEnabled(a,checked));
+        title.setOnClickListener(v->manual.run());labels.setOnClickListener(v->manual.run());row.setOnClickListener(v->manual.run());return row;
+    }
     private static void remember(Activity a,Release r){prefs(a).edit().putLong("availableCode",r.code).putString("availableName",r.name).apply();}
     static void automatic(Activity a,Runnable changed){
-        long now=System.currentTimeMillis();if(!autoEnabled(a)||!due(now,prefs(a).getLong("attempt",0))||!BUSY.compareAndSet(false,true))return;
-        prefs(a).edit().putLong("attempt",now).apply();
+        if(!OPENING.enter(autoEnabled(a))||!BUSY.compareAndSet(false,true))return;
         new Thread(()->{try{Release release=latest(a,new AtomicBoolean());if(release!=null)remember(a,release);}catch(Exception ignored){}finally{BUSY.set(false);a.runOnUiThread(()->{if(alive(a))changed.run();});}},"jobs-update-auto").start();
     }
     private static Release latest(Activity a,AtomicBoolean cancelled)throws Exception{
@@ -86,8 +108,7 @@ final class WorkspaceUpdates {
     }
     static void check(Activity a){
         if(!BUSY.compareAndSet(false,true)){message(a,text(a,"Проверка или скачивание уже выполняется.","A check or download is already running."));return;}
-        prefs(a).edit().putLong("attempt",System.currentTimeMillis()).apply();
-        AtomicBoolean cancelled=new AtomicBoolean();AlertDialog wait=WorkspaceDialogs.builder(a).setTitle(label(a)).setMessage(text(a,"Проверка GitHub…","Checking GitHub…")).setNegativeButton(WorkspaceText.tr("Отмена"),(d,w)->cancelled.set(true)).create();wait.setOnCancelListener(d->cancelled.set(true));wait.show();
+        AtomicBoolean cancelled=new AtomicBoolean();UpdateProgress indicator=new UpdateProgress(a);AlertDialog wait=WorkspaceDialogs.builder(a).setTitle(label(a)).setView(indicator.view).setNegativeButton(WorkspaceText.tr("Отмена"),(d,w)->cancelled.set(true)).create();wait.setOnCancelListener(d->cancelled.set(true));wait.show();
         new Thread(()->{Runnable[] result={null};try{
             Release r=latest(a,cancelled);
             if(r==null){result[0]=()->message(a,text(a,"Последний релиз пока не содержит данных для встроенного обновления. Установлено: ","The latest release does not yet support in-app updates. Installed: ")+com.termux.BuildConfig.VERSION_NAME);return;}
@@ -102,9 +123,34 @@ final class WorkspaceUpdates {
         finally{BUSY.set(false);a.runOnUiThread(()->{if(alive(a)){wait.dismiss();if(!cancelled.get()&&result[0]!=null)result[0].run();}});}},"jobs-update-check").start();
     }
     private static String safeError(Exception e){return e instanceof IOException&&e.getMessage()!=null&&e.getMessage().matches("GitHub HTTP [0-9]{3}")?e.getMessage():e.getClass().getSimpleName();}
+    /** UI state only. Download authenticity and cancellation remain in their existing worker. */
+    static final class UpdateProgress {
+        final android.widget.LinearLayout view;
+        final android.widget.ProgressBar bar;
+        final android.widget.TextView status;
+        private final Activity activity;
+        UpdateProgress(Activity a){
+            activity=a;view=new android.widget.LinearLayout(a);view.setOrientation(1);
+            int pad=WorkspaceDialogs.dp(a,20);view.setPadding(pad,pad,pad,pad);
+            status=new android.widget.TextView(a);status.setTextColor(WorkspaceDialogs.TEXT);status.setTextSize(14);view.addView(status);
+            bar=new android.widget.ProgressBar(a,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(100);
+            android.content.res.ColorStateList tint=android.content.res.ColorStateList.valueOf(WorkspaceDialogs.ACCENT);
+            bar.setProgressTintList(tint);bar.setIndeterminateTintList(tint);
+            android.widget.LinearLayout.LayoutParams params=new android.widget.LinearLayout.LayoutParams(-1,WorkspaceDialogs.dp(a,6));params.topMargin=WorkspaceDialogs.dp(a,16);view.addView(bar,params);
+            checking();
+        }
+        void checking(){bar.setIndeterminate(true);status.setText(text(activity,"Проверка GitHub…","Checking GitHub…"));}
+        void downloaded(long bytes,long total){
+            if(total<=0){bar.setIndeterminate(true);status.setText(text(activity,"Подключение к загрузке…","Connecting to download…"));return;}
+            long count=Math.max(0,Math.min(bytes,total));int percent=(int)(count*100/total);
+            bar.setIndeterminate(false);bar.setProgress(percent);
+            status.setText(percent+"% · "+android.text.format.Formatter.formatFileSize(activity,count)+" / "+android.text.format.Formatter.formatFileSize(activity,total));
+        }
+        void verifying(){bar.setIndeterminate(true);status.setText(text(activity,"Загрузка завершена. Проверка APK и подписи…","Download complete. Verifying APK and signature…"));}
+    }
     private static void download(Activity a,Release r){
         if(!BUSY.compareAndSet(false,true))return;
-        AtomicBoolean cancelled=new AtomicBoolean();AlertDialog wait=WorkspaceDialogs.builder(a).setTitle(text(a,"Скачивание обновления","Downloading update")).setMessage("0%")
+        AtomicBoolean cancelled=new AtomicBoolean();UpdateProgress indicator=new UpdateProgress(a);indicator.downloaded(0,r.size);AlertDialog wait=WorkspaceDialogs.builder(a).setTitle(text(a,"Скачивание обновления","Downloading update")).setView(indicator.view)
             .setNegativeButton(WorkspaceText.tr("Отмена"),(d,w)->cancelled.set(true)).create();wait.setOnCancelListener(d->cancelled.set(true));wait.show();
         new Thread(()->{File output=null;boolean ready=false;try{
             File dir=new File(a.getCacheDir(),"workspace-updates");if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cache unavailable");
@@ -112,9 +158,10 @@ final class WorkspaceUpdates {
             File[] old=dir.listFiles();if(old!=null)for(File f:old)if(f.getName().startsWith("update-")&&f.isFile())f.delete();
             output=File.createTempFile("update-",".apk",dir);MessageDigest hash=MessageDigest.getInstance("SHA-256");long count=0;int shown=-1;
             HttpURLConnection c=connect(r.url);try(InputStream in=c.getInputStream();OutputStream out=new FileOutputStream(output)){
-                byte[] b=new byte[65536];int n;while((n=in.read(b))!=-1){if(cancelled.get())throw new InterruptedIOException();count+=n;if(count>r.size)throw new IOException("APK size mismatch");out.write(b,0,n);hash.update(b,0,n);int percent=(int)(count*100/r.size);if(percent!=shown){shown=percent;final int progress=percent;a.runOnUiThread(()->{if(alive(a)&&wait.isShowing())wait.setMessage(progress+"%");});}}
+                byte[] b=new byte[65536];int n;while((n=in.read(b))!=-1){if(cancelled.get())throw new InterruptedIOException();count+=n;if(count>r.size)throw new IOException("APK size mismatch");out.write(b,0,n);hash.update(b,0,n);int percent=(int)(count*100/r.size);if(percent!=shown){shown=percent;final long downloaded=count;a.runOnUiThread(()->{if(alive(a)&&wait.isShowing())indicator.downloaded(downloaded,r.size);});}}
             }finally{c.disconnect();}
             if(count!=r.size||!hex(hash.digest()).equals(r.hash))throw new IOException("APK checksum mismatch");
+            a.runOnUiThread(()->{if(alive(a)&&wait.isShowing())indicator.verifying();});
             verify(a,output,r);if(cancelled.get())throw new InterruptedIOException();ready=true;File apk=output;
             a.runOnUiThread(()->{if(alive(a)&&!cancelled.get())offerInstall(a,apk,r);});
         }catch(Exception e){if(!cancelled.get())a.runOnUiThread(()->message(a,text(a,"Обновление не прошло проверку или не скачалось. Установка заблокирована; данные не изменены.\n","Download or verification failed. Installation blocked; your data was not changed.\n")+safeError(e)));}

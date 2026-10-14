@@ -1,0 +1,46 @@
+{
+  "ru": [
+    "Главное обновление — улучшенный менеджер резервных копий (тестирование) в шестерёнке справа сверху.",
+    "Выборочный бэкап Termux и Ubuntu из шестерёнки: Codex с авторизацией и историей, проекты, SSH/Git, настройки, другие AI-агенты, система и инструменты выбираются отдельно.",
+    "Размеры до сжатия, выбор пользовательских папок и предупреждения о недостающей системе/Node.js перед созданием копии.",
+    "Проверка окружений целевого окружения до восстановления. Без системы данные извлекаются отдельно; текущие HOME/PREFIX не заменяются.",
+    "SQLite Codex копируется согласованно по каждой базе; временные IPC, блокировки и WAL/SHM не переносятся.",
+    "Режим называется «По выбору». При недоступном каталоге показываются проблемные компоненты, остальные можно выбрать; неполные копии не объявляются готовыми.",
+    "Кнопка создания в обоих режимах доступна только после согласия. Явная подпись «Папка создания резервной копии» над путём.",
+    "Проверка обновлений с индикатором; скачивание APK с полосой, процентом и объёмом, затем отдельная проверка подписи.",
+    "В бэкапе: время, полоса текущего этапа и сменяющееся имя файла; все его окна защищены от случайного закрытия снаружи.",
+    "gzip/pigz, уровни 1/3/9 (по умолчанию gzip3). Отсутствующий pigz устанавливается в фоне только после согласия; до 4 потоков. Legacy proot-distro использует штатное сжатие.",
+    "Названия «(тестирование)», описания переноса между окружениями; итог создания — подтверждение проверки и путь.",
+    "Обновления в одной плашке: ручная проверка и галочка «Авто» с пояснением. Одна фоновая попытка при каждом открытии; при ошибке следующая — после повторного открытия."
+  ],
+  "en": [
+    "Main update: improved backup manager (testing), available from the top-right settings gear.",
+    "Selective Termux and Ubuntu backups from the settings gear: choose Codex authorization/history, projects, SSH/Git, settings, other AI agents, system and tools separately.",
+    "Pre-compression sizes, user folder selection and missing system/Node.js warnings before creating a backup.",
+    "Inspect target environments before restoring. Data-only backups are staged separately; current HOME/PREFIX are not replaced.",
+    "Codex SQLite databases use individual consistent online snapshots; temporary IPC, locks and WAL/SHM are excluded.",
+    "The mode is called Custom selection. Unreadable directories are reported for affected components; other items remain selectable. Incomplete copies are never marked ready.",
+    "Both Create buttons require consent. The destination field is explicitly labelled Backup destination folder.",
+    "Update checks have a loading indicator; APK downloads show a progress bar, percentage and size, followed by signature verification.",
+    "Backups show elapsed time, stage progress and a replacing filename; every backup dialog ignores accidental outside taps.",
+    "gzip/pigz and levels 1/3/9 (default gzip3). Missing pigz installs in the background only after consent, up to 4 threads. Legacy proot-distro retains native compression.",
+    "Testing labels and environment migration wording; successful creation shows verification and destination path.",
+    "One update tile: manual check and explained Auto checkbox. One background attempt on each opening; a failed check retries only after reopening."
+  ],
+  "compatibility": {
+    "ru": [
+      "Очистка команд, заметок, пресетов и истории не требуется. Пакет, сертификат и библиотека v8 сохранены.",
+      "Выборочные бэкапы имеют manifest v2: принимающему приложению нужна v1.1.1 либо доверенный restore.sh из бэкапа. Старые полные бэкапы v1 поддерживаются.",
+      "Активация отдельно извлечённых данных ручная, зависимости и авторизацию нужно проверить. Процессы и Android Keystore не переносятся; перед обновлением завершите задачи.",
+      "Формат .tar.gz прежний; для восстановления pigz не нужен. Установка pigz добавляет пакет и возможные зависимости в общую среду Termux только с согласия.",
+      "Публичная v1.1.0 получит релиз через прежнюю проверку (до 10 часов) или вручную. Новая схема при каждом открытии действует после обновления."
+    ],
+    "en": [
+      "No clearing of commands, notes, presets or history is required. Package, signer and library v8 are retained.",
+      "Selective backups use manifest v2: receiving app must be v1.1.1 or use the trusted restore.sh supplied with the backup. Existing full v1 backups remain supported.",
+      "Staged data requires manual activation and dependency/auth checks. Processes and Android Keystore do not migrate; finish jobs before updating.",
+      "Standard .tar.gz format retained; restore does not need pigz. Installing pigz changes shared Termux packages/dependencies only with consent.",
+      "Public v1.1.0 discovers this release using its existing check (up to 10 hours) or manually. Per-opening checks apply after updating."
+    ]
+  }
+}

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Termux Job's backup beta. JSON protocol; never executes archive content."""
+"""Termux Job's backup (testing). JSON protocol; never executes archive content."""
 import argparse
 import bz2
 import copy
+from contextlib import contextmanager
 import gzip
 import hashlib
 import io
@@ -27,6 +28,8 @@ MAX_JSON = 8 * 1024 * 1024
 MAX_FILES = 500000
 MAX_BYTES = 512 * 1024 ** 3
 _last = 0
+_last_stage = ""
+_current = ""
 
 
 class BackupError(Exception):
@@ -37,11 +40,37 @@ def event(stage, **values):
     print(json.dumps(dict(stage=stage, **values), ensure_ascii=True), flush=True)
 
 
-def progress(stage, count=0):
-    global _last
-    if time.monotonic() - _last > .7:
-        _last = time.monotonic()
-        event(stage, processed=count)
+def progress(stage, count=0, total=0, current=None, unit='bytes', force=False):
+    global _last, _last_stage, _current
+    changed=stage!=_last_stage
+    if changed:_current=''
+    if current is not None:
+        # Only a bounded filename/path label, never file contents or tool output.
+        _current=''.join(c if c.isprintable() else ' ' for c in str(current))[-512:]
+    now=time.monotonic()
+    if force or changed or now-_last>.5:
+        _last=now;_last_stage=stage
+        event(stage,processed=max(0,count),total=max(0,total),current=_current,unit=unit)
+
+
+class ProgressReader:
+    def __init__(self,stream,callback):self.stream=stream;self.callback=callback
+    def read(self,size=-1):
+        data=self.stream.read(size);self.callback(len(data));return data
+
+
+def track_archive(tar,total=0):
+    """Observe the existing TAR writer's input stream; do not change archive layout."""
+    addfile=tar.addfile
+    processed=0
+    def tracked(info,fileobj=None):
+        nonlocal processed
+        progress('ARCHIVE',processed,total,current=info.name)
+        def read(count):
+            nonlocal processed
+            processed+=count;progress('ARCHIVE',processed,total,current=info.name)
+        addfile(info,ProgressReader(fileobj,read) if fileobj is not None else None)
+    tar.addfile=tracked
 
 
 def regular(path):
@@ -66,7 +95,7 @@ def digest(path):
             if not b:
                 break
             h.update(b)
-            progress('CHECKSUM', stream.tell())
+            progress('CHECKSUM',stream.tell(),path.stat().st_size,current=path.name)
     return h.hexdigest()
 
 
@@ -163,7 +192,7 @@ def scan_tar(path):
                 base = name.rsplit('/', 1)[-1]
                 if name.endswith('var/lib/dpkg/status') and m.size <= 32*1024*1024:
                     packages[name]=status_packages(content(tar,m,32*1024*1024).decode('utf-8','replace'))
-                elif base == 'workspace-v1.json':
+                elif name in ('workspace-v1.json','home/.termux/workspace-v1.json','data/data/com.termux/files/workspace-v1.json','data/user/0/com.termux/files/workspace-v1.json'):
                     workspace = libraries(json.loads(content(tar, m, MAX_JSON)))
                 elif base in ('.bashrc', '.zshrc', '.bash_aliases') and m.size <= 256 * 1024:
                     text = content(tar, m, 256 * 1024).decode('utf-8', 'replace')
@@ -186,7 +215,7 @@ def scan_tar(path):
                         elf[name] = arch
                     if name.endswith('.sh') and len(candidates) < 500:
                         candidates.append(dict(kind='script', name=base, source=name))
-            progress('SCAN', payload)
+            progress('SCAN',payload,current=name)
     # No archive member may write through a symlink, regardless of member ordering.
     for name in names:
         parts = name.split('/')
@@ -198,7 +227,7 @@ def scan_tar(path):
     opener = gzip.open if magic.startswith(b'\x1f\x8b') else bz2.open if magic.startswith(b'BZh') else lzma.open if magic.startswith(b'\xfd7zXZ') else None
     if opener:
         total = 0
-        with opener(path, 'rb') as f:
+        with regular(path).open('rb') as raw, opener(raw,'rb') as f:
             while True:
                 block = f.read(1024 * 1024)
                 if not block:
@@ -206,7 +235,7 @@ def scan_tar(path):
                 total += len(block)
                 if total > MAX_BYTES + 1024 ** 3:
                     raise BackupError('ARCHIVE_LIMIT')
-                progress('VERIFY_COMPRESSION', total)
+                progress('VERIFY_COMPRESSION',raw.tell(),path.stat().st_size,current=path.name)
     all_names = list(names)
     roots = []
     # Exact layout recognition, never infer compatibility from the file name.
@@ -233,6 +262,8 @@ def scan_tar(path):
         roots.append(('ubuntu', '', 'ubuntu', 'rootfs-bare'))
     if not roots and any(n in names for n in ('.bashrc', '.zshrc', '.bash_history', '.profile', '.ssh/config')):
         roots.append(('home', '', '', 'home-bare'))
+    if not roots and any(n=='payload' or n.startswith('payload/') for n in all_names):
+        roots.append(('data','payload','','selected-data'))
     if not roots and workspace:
         roots.append(('library', '', '', 'workspace-v8'))
     if not roots and any(n.startswith('workspace-sessions/') for n in all_names):
@@ -269,7 +300,7 @@ def environments(prefix):
             continue
         for path in sorted(folder.iterdir()):
             fs = path / 'rootfs' if modern else path
-            if path.is_symlink() or not re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}', path.name) or not fs.is_dir():
+            if path.is_symlink() or not re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}', path.name) or not fs.is_dir() or fs.is_symlink():
                 continue
             if not any(e['name'] == path.name for e in result):
                 result.append(dict(name=path.name, root=str(fs)))
@@ -284,7 +315,7 @@ def tree_bytes(path, excluded=()):
             p = Path(root, f)
             if not p.is_symlink() and p.is_file():
                 total += p.stat().st_size
-                progress('ESTIMATE',total)
+                progress('ESTIMATE',total,current=str(p))
     return total
 
 
@@ -312,7 +343,7 @@ def run_tool(args):
     p = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         while p.poll() is None:
-            progress('PROOT_DISTRO')
+            progress('PROOT_DISTRO',current=Path(args[-1]).name)
             time.sleep(.5)
         if p.returncode:
             raise BackupError('PROOT_DISTRO_FAILED')
@@ -326,10 +357,96 @@ def run_tool(args):
                 p.wait()
 
 
-def create_tar(path, source, root, exclude=()):
+def pigz_available(prefix):
+    return os.access(Path(prefix) / 'bin/pigz', os.X_OK)
+
+
+def compression_options(request):
+    level=request.get('compressionLevel',3)
+    engine=request.get('compressionEngine','gzip')
+    if type(level) is not int or level not in (1,3,9) or engine not in ('gzip','pigz'):
+        raise BackupError('INVALID_COMPRESSION')
+    if engine=='pigz' and not pigz_available(request['prefix']):
+        raise BackupError('PIGZ_REQUIRED')
+    return dict(level=level,engine=engine,prefix=request['prefix'])
+
+
+def compression_status(request):
+    return dict(pigz=pigz_available(request['prefix']))
+
+
+def install_pigz(request):
+    # Only the explicit install-pigz UI request reaches here. Never execute imported commands.
+    prefix=Path(request['prefix'])
+    if pigz_available(prefix):return dict(pigz=True)
+    executable=prefix/'bin/apt-get'
+    if not os.access(executable,os.X_OK):raise BackupError('PIGZ_INSTALL_FAILED')
+    # APT owns its locks. Do not disable them, stop other package managers or retry a broken dpkg.
+    p=subprocess.Popen([str(executable),'install','-y','pigz'],stdin=subprocess.DEVNULL,
+                       stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    try:
+        while p.poll() is None:
+            progress('INSTALL_PIGZ',current='pigz');time.sleep(.5)
+        if p.returncode or not pigz_available(prefix):raise BackupError('PIGZ_INSTALL_FAILED')
+    finally:
+        # The install dialog cannot be cancelled; wait rather than interrupt dpkg on a signal.
+        if p.poll() is None:p.wait()
+    return dict(pigz=True)
+
+
+def finish_owned(p):
+    if p.poll() is None:
+        p.terminate()
+        try:p.wait(timeout=5)
+        except subprocess.TimeoutExpired:p.kill();p.wait()
+
+
+@contextmanager
+def compressed_output(path, options=None):
+    options=options or dict(engine='gzip',level=3)
+    if options['engine']=='gzip':
+        with gzip.open(path,'xb',compresslevel=options['level']) as stream:yield stream
+    else:
+        # Bound parallelism to four workers; avoid using every core while terminals are active.
+        with open(path,'xb') as output:
+            p=subprocess.Popen([str(Path(options['prefix'])/'bin/pigz'),'-'+str(options['level']),
+                                '-p',str(min(4,os.cpu_count() or 1)),'-c'],stdin=subprocess.PIPE,
+                               stdout=output,stderr=subprocess.DEVNULL)
+            try:
+                yield p.stdin
+                p.stdin.close()
+                if p.wait()!=0:raise BackupError('COMPRESSION_FAILED')
+            finally:
+                finish_owned(p)
+                if not p.stdin.closed:p.stdin.close()
+
+
+def backup_ubuntu(prefix,alias,path,options):
+    if not proot_modern(prefix):
+        # Legacy proot-distro has no supported uncompressed stdout interface.
+        run_tool([str(prefix/'bin/proot-distro'),'backup','--output',str(path),alias])
+        return 'native'
+    p=subprocess.Popen([str(prefix/'bin/proot-distro'),'backup','--compress','none',alias],
+                       stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+    try:
+        count=0
+        with compressed_output(path,options) as output:
+            while True:
+                data=p.stdout.read(1024*1024)
+                if not data:break
+                output.write(data);count+=len(data)
+                progress('PROOT_DISTRO',count,current=alias)
+        if p.wait()!=0:raise BackupError('PROOT_DISTRO_FAILED')
+    finally:
+        finish_owned(p);p.stdout.close()
+    return options['engine']
+
+
+def create_tar(path, source, root, exclude=(), total=0, compression=None):
     excluded = {str(p) for p in exclude}
     skipped = 0
-    with tarfile.open(path, 'w:gz', dereference=False) as tar:
+    with compressed_output(path,compression) as output, tarfile.open(fileobj=output,mode='w|',dereference=False) as tar:
+        track_archive(tar,total)
         def include(info):
             nonlocal skipped
             relative = info.name[len(root):].lstrip('/')
@@ -338,30 +455,321 @@ def create_tar(path, source, root, exclude=()):
             if not (info.isfile() or info.isdir() or info.issym() or info.islnk()):
                 skipped += 1
                 return None
-            progress('ARCHIVE')
             return info
         tar.add(source, arcname=root or '.', filter=include)
     return skipped
 
 
+# Selective backups use a separate schema: v1 clients must refuse partial runtimes.
+# Selection identifiers never contain arbitrary host paths or shell commands.
+def selection_scopes(request):
+    prefix, home = Path(request['prefix']), Path(request['home'])
+    scopes = [dict(id='termux', root=str(home.parent), home='home', prefix='usr', type='termux')]
+    for env in environments(prefix):
+        scopes.append(dict(id='ubuntu:' + env['name'], root=env['root'], home='root', prefix='usr', type='ubuntu'))
+    return scopes
+
+
+def selection_layout(scope, custom=()):
+    root, h = Path(scope['root']), scope['home']
+    specs = []
+    def item(key, paths, needs=()):
+        paths = [p for p in paths if (root / p).exists() or (root / p).is_symlink()]
+        if paths:
+            specs.append(dict(id=key, paths=paths, requires=list(needs)))
+    item('codex', [h+'/.codex', 'usr/local/lib/node_modules/@openai/codex', 'usr/local/bin/codex',
+                  'usr/lib/node_modules/@openai/codex', 'usr/bin/codex', h+'/.npm-global/lib/node_modules/@openai/codex',
+                  h+'/.npm-global/bin/codex'], ['environment', 'node'])
+    item('agents', [h+'/'+p for p in ('.claude', '.claude.json', '.gemini', '.config/opencode', '.local/share/opencode',
+                 '.opencode', '.local/share/claude', '.local/bin/claude')] + ['usr/local/lib/node_modules/'+p for p in ('@anthropic-ai/claude-code', '@google/gemini-cli')]
+                 + ['usr/local/bin/'+p for p in ('claude', 'gemini', 'opencode')], ['environment', 'agent-runtime'])
+    item('ssh', [h+'/'+p for p in ('.ssh', '.gitconfig', '.git-credentials', '.config/gh', '.config/git')], ['environment'])
+    item('shell', [h+'/'+p for p in ('.bashrc', '.bash_aliases', '.profile', '.bash_profile', '.zshrc', '.bash_history',
+                 '.zsh_history', 'bin', 'scripts', '.local/bin')], ['environment'])
+    project_dirs = []
+    if (root/h).is_dir() and not (root/h).is_symlink():
+        for p in sorted((root/h).iterdir()):
+            if p.is_dir() and not p.is_symlink() and not p.name.startswith('.') and p.name not in ('bin', 'scripts', 'storage'):
+                project_dirs.append(p.relative_to(root).as_posix())
+    # Known build/tool trees are separately selectable; no generic filename exclusion.
+    builds = [h+'/'+p for p in ('.cache', '.npm', '.gradle', '.cargo/registry', '.cargo/git')]
+    for parent in project_dirs:
+        projects = [root/parent]
+        if Path(parent).name in ('projects', 'codex-workspaces'):
+            projects += [p for p in (root/parent).iterdir() if p.is_dir() and not p.is_symlink()]
+        for project in projects:
+            builds += [(project/p).relative_to(root).as_posix() for p in ('.tools', '.verification', 'build', 'target', '.gradle')]
+    item('builds', builds, ['environment'])
+    for value in custom:
+        relative = clean(value)
+        p = root / relative
+        # Only user directories, not arbitrary host/private app trees or symlink targets.
+        if not relative.startswith(h+'/') or not p.is_dir() or p.is_symlink() or root.resolve() not in p.resolve().parents:
+            raise BackupError('INVALID_SELECTION_PATH')
+        if any((root/Path(*PurePosixPath(relative).parts[:i])).is_symlink() for i in range(1,len(PurePosixPath(relative).parts)+1)):
+            raise BackupError('INVALID_SELECTION_PATH')
+        item('folder:'+relative, [relative], ['environment'])
+    for path in project_dirs:
+        item('project:'+path, [path], ['environment'])
+    specs.append(dict(id='other', paths=[h]+(['home'] if scope['type']=='ubuntu' else []), requires=['environment']))
+    specs.append(dict(id='system', paths=[''], requires=[]))
+    return specs
+
+
+def selection_issue(issues, root, path, error):
+    if issues is None:
+        raise BackupError('SOURCE_UNREADABLE')
+    try: relative=Path(path).relative_to(root).as_posix()
+    except ValueError: relative='.'
+    if len(issues)<100:
+        issues.append(dict(path=relative, errno=getattr(error,'errno',0) or 0))
+    elif not any(i['path']=='.' for i in issues):
+        issues.append(dict(path='.',errno=0))
+
+
+def selection_backing(root, path):
+    """Recognise proot's internal link2symlink files without following ordinary links.
+
+    Only marker-named backing files in the rootfs .l2s store or alongside the
+    original are accepted. Opening is descriptor-relative with O_NOFOLLOW;
+    changing an ancestor into a link cannot redirect the read outside rootfs.
+    No chmod or proot process is used. This is a portable regular-file copy,
+    rather than an absolute link back into the source environment's container.
+    """
+    if not path.is_symlink(): return None
+    target=os.readlink(path)
+    if not Path(target).name.startswith(('.proot.l2s.','.l2s.')): return None
+    try:
+        canonical_root=root.resolve(strict=True)
+        backing=(Path(target) if os.path.isabs(target) else path.parent/target).resolve(strict=True)
+        relative=backing.relative_to(canonical_root)
+        if not backing.name.startswith(('.proot.l2s.','.l2s.')) or not (relative.parts[0]=='.l2s' or backing.parent==path.parent.resolve(strict=True)):
+            raise BackupError('PROOT_LINK_UNSAFE')
+        return relative
+    except (ValueError,OSError) as error:
+        raise BackupError('PROOT_LINK_UNSAFE') from error
+
+
+def selection_open(root, relative):
+    parts=PurePosixPath(clean(str(relative))).parts
+    if not parts: raise BackupError('SOURCE_UNREADABLE')
+    fd=os.open(root,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+    try:
+        for part in parts[:-1]:
+            nxt=os.open(part,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=fd)
+            os.close(fd);fd=nxt
+        result=os.open(parts[-1],os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=fd)
+        try:
+            metadata=os.fstat(result)
+            if not stat.S_ISREG(metadata.st_mode):raise BackupError('SOURCE_UNREADABLE')
+            return result,metadata
+        except BaseException:
+            os.close(result);raise
+    except OSError as error:
+        raise BackupError('SOURCE_UNREADABLE') from error
+    finally:os.close(fd)
+
+
+def selection_size(root,path):
+    metadata=path.lstat()
+    if stat.S_ISREG(metadata.st_mode):return metadata.st_size,True
+    if stat.S_ISLNK(metadata.st_mode):
+        backing=selection_backing(root,path)
+        if backing is not None:
+            fd,metadata=selection_open(root,backing)
+            os.close(fd)
+            return metadata.st_size,True
+    return 0,False
+
+
+def selection_walk(scope, specs=None, chosen=None, issues=None):
+    root = Path(scope['root'])
+    starts = [root/'home', root/'usr'] if scope['type']=='termux' else [root]
+    excluded = {'.l2s','proc','sys','dev','run','tmp','mnt','media','sdcard','storage'} if scope['type']=='ubuntu' else {'usr/var/lib/proot-distro','usr/tmp','home/storage'}
+    def failed(error): selection_issue(issues,root,error.filename or root,error)
+    for start in starts:
+        if not start.is_dir() or start.is_symlink(): continue
+        for folder, dirs, files in os.walk(start, followlinks=False, onerror=failed):
+            # Transient Codex IPC, process locks and shell snapshots cannot be resumed on another device.
+            parent = Path(folder).relative_to(root).as_posix()
+            skip = {'tmp','app-server-control','app-server-daemon','thread-writer-locks','shell_snapshots','tui-thread-reference-capabilities'} if parent.endswith('/.codex') else set()
+            dirs[:] = [d for d in dirs if (Path(folder,d).relative_to(root).as_posix() not in excluded and d not in skip)]
+            if chosen is not None:
+                def wanted(relative):
+                    return selection_group(relative,specs) in chosen or any(p.startswith(relative+'/') for s in specs if s['id'] in chosen for p in s['paths'])
+                dirs[:] = [d for d in dirs if wanted(Path(folder,d).relative_to(root).as_posix())]
+            for name in dirs+files:
+                path = Path(folder,name)
+                relative = path.relative_to(root).as_posix()
+                if relative in excluded or '/.codex/' in '/'+relative and (name.endswith(('.sqlite-wal','.sqlite-shm')) or name=='.sqlite-maintenance.lock'):
+                    continue
+                if scope['type']=='ubuntu' and name.startswith(('.proot.l2s.','.l2s.')):continue
+                try:mode = path.lstat().st_mode
+                except OSError as error:
+                    selection_issue(issues,root,path,error);continue
+                if stat.S_ISREG(mode) or stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
+                    yield path, relative
+
+
+def selection_group(relative, specs):
+    matches = [(len(p), int(s['id'].startswith('folder:')), -i, s['id']) for i,s in enumerate(specs) for p in s['paths']
+               if not p or relative==p or relative.startswith(p+'/')]
+    return max(matches)[3] if matches else 'system'
+
+
+def selection_runtime(root):
+    root=Path(root)
+    return {name:any((root/p).is_file() for p in paths) for name,paths in dict(
+        node=('usr/bin/node','usr/local/bin/node','usr/bin/nodejs'),
+        git=('usr/bin/git','usr/local/bin/git'),ssh=('usr/bin/ssh','usr/local/bin/ssh')).items()}
+
+
+def selection_inventory(request):
+    result=[]
+    for scope in selection_scopes(request):
+        custom = request.get('folders',{}).get(scope['id'],[])
+        if not isinstance(custom,list) or len(custom)>30: raise BackupError('INVALID_SELECTION')
+        specs=selection_layout(scope, custom)
+        counts={s['id']:dict(bytes=0, files=0,unreadable=0) for s in specs}
+        issues=[]
+        for path,relative in selection_walk(scope,issues=issues):
+            c=counts[selection_group(relative,specs)]
+            try:
+                size,is_file=selection_size(Path(scope['root']),path)
+                c['bytes']+=size;c['files']+=int(is_file)
+            except (OSError,BackupError) as error:selection_issue(issues,Path(scope['root']),path,error)
+            progress('ESTIMATE',sum(v['bytes'] for v in counts.values()),current=relative)
+        root=Path(scope['root'])
+        for issue in issues:
+            for spec in specs:
+                if issue['path']=='.' or selection_group(issue['path'],specs)==spec['id'] or any(p.startswith(issue['path']+'/') for p in spec['paths']):
+                    counts[spec['id']]['unreadable']+=1
+        scope['issues']=issues
+        scope['items']=[dict(s,**counts[s['id']]) for s in specs]
+        scope['runtime']=selection_runtime(root)
+        result.append(scope)
+    return dict(scopes=result,libraryBytes=tree_bytes(Path(request['files'])/'workspace-sessions') if request.get('files') else 0)
+
+
+def selected_plan(request):
+    available={s['id']:s for s in selection_scopes(request)}
+    result=[]
+    selections=request.get('selections',[])
+    if not isinstance(selections,list) or len(selections)>30: raise BackupError('INVALID_SELECTION')
+    seen=set()
+    for selection in selections:
+        sid=selection.get('scope')
+        if sid not in available or sid in seen: raise BackupError('INVALID_SELECTION')
+        seen.add(sid); scope=available[sid]
+        folders=selection.get('folders',[])
+        if not isinstance(folders,list) or len(folders)>30 or len(set(folders))!=len(folders): raise BackupError('INVALID_SELECTION')
+        specs=selection_layout(scope,folders)
+        ids=selection.get('items',[])
+        if not isinstance(ids,list) or len(ids)!=len(set(ids)) or any(i not in {s['id'] for s in specs} for i in ids):
+            raise BackupError('INVALID_SELECTION')
+        if ids: result.append((scope,specs,set(ids)))
+    return result
+
+
+def create_selected_tar(file, scope, specs, chosen, work, total=0, compression=None):
+    import sqlite3
+    from contextlib import closing
+    root=Path(scope['root'])
+    wrapper='ubuntu/rootfs' if scope['type']=='ubuntu' and 'system' in chosen else 'payload'
+    entries=0
+    contains_codex=False
+    with compressed_output(file,compression) as output, tarfile.open(fileobj=output,mode='w|',dereference=False) as tar:
+        track_archive(tar,total)
+        base=tarfile.TarInfo(wrapper);base.type=tarfile.DIRTYPE;base.mode=0o700;tar.addfile(base)
+        if wrapper!='payload':
+            for name in ('proc','sys','dev','run','tmp','mnt','media','root','home'):
+                directory=tarfile.TarInfo(wrapper+'/'+name);directory.type=tarfile.DIRTYPE;directory.mode=0o1777 if name=='tmp' else 0o700 if name=='root' else 0o755;tar.addfile(directory)
+        for path, relative in selection_walk(scope,specs,chosen):
+            if selection_group(relative,specs) not in chosen: continue
+            contains_codex = contains_codex or relative.startswith(scope['home']+'/.codex/')
+            arcname=wrapper+'/'+relative
+            metadata=path.lstat()
+            info=tarfile.TarInfo(arcname);info.mode=stat.S_IMODE(metadata.st_mode);info.mtime=metadata.st_mtime;info.uid=metadata.st_uid;info.gid=metadata.st_gid
+            backing=selection_backing(root,path) if scope['type']=='ubuntu' and stat.S_ISLNK(metadata.st_mode) else None
+            if stat.S_ISDIR(metadata.st_mode):
+                info.type=tarfile.DIRTYPE;tar.addfile(info)
+            elif stat.S_ISLNK(metadata.st_mode) and backing is None:
+                info.type=tarfile.SYMTYPE;info.linkname=os.readlink(path);tar.addfile(info)
+            else:
+                fd,metadata=selection_open(root,backing if backing is not None else relative)
+                try:
+                    info.type=tarfile.REGTYPE;info.size=metadata.st_size;info.mode=stat.S_IMODE(metadata.st_mode);info.mtime=metadata.st_mtime
+                    if '/.codex/' in '/'+relative and path.name.endswith('.sqlite'):
+                        progress('DATABASE',current=relative,force=True)
+                        snapshot=Path(work)/(uuid.uuid4().hex+'.sqlite');deadline=time.monotonic()+60
+                        def progress_db(_status,_remaining,_total):
+                            progress('DATABASE',_total-_remaining,_total,current=relative,unit='pages')
+                            if time.monotonic()>deadline:raise BackupError('DATABASE_BUSY_RETRY')
+                        try:
+                            # Keep the usual database path so SQLite can see its live WAL.
+                            # The pinned regular file must still match before/after backup.
+                            current=path.stat()
+                            if (current.st_dev,current.st_ino)!=(metadata.st_dev,metadata.st_ino):raise BackupError('SOURCE_CHANGED_RETRY')
+                            with closing(sqlite3.connect(path.as_uri()+'?mode=ro',uri=True,timeout=5)) as source, closing(sqlite3.connect(snapshot)) as dest:
+                                source.backup(dest,pages=256,progress=progress_db,sleep=0.05)
+                                dest.commit();dest.execute('PRAGMA journal_mode=DELETE')
+                                if dest.execute('PRAGMA quick_check').fetchone()[0]!='ok':raise BackupError('DATABASE_CHECK_FAILED')
+                            current=path.stat()
+                            if (current.st_dev,current.st_ino)!=(metadata.st_dev,metadata.st_ino):raise BackupError('SOURCE_CHANGED_RETRY')
+                            info.size=snapshot.stat().st_size
+                            with snapshot.open('rb') as stream:tar.addfile(info,stream)
+                        finally:
+                            if snapshot.exists():snapshot.unlink()
+                    else:
+                        with os.fdopen(fd,'rb',closefd=False) as stream:tar.addfile(info,stream)
+                finally:os.close(fd)
+            entries+=1
+    # Selected data is not a bootable distro unless the base system was selected too.
+    return dict(scope=scope['id'], environment=scope['type'], items=sorted(chosen),
+                system='system' in chosen, **selection_runtime(root),
+                containsCodex=contains_codex or 'codex' in chosen,
+                historyOnlyWithoutProjects=(contains_codex or 'codex' in chosen) and not any(i.startswith(('project:','folder:')) for i in chosen))
+
+
+def selection_requirements(selection, request):
+    # Presence checks only; do not execute a foreign CLI or start a guest environment.
+    available=[]
+    for scope in selection_scopes(request):
+        if scope['type']!=selection.get('environment'): continue
+        root=Path(scope['root'])
+        available.append(dict(scope=scope['id'],**selection_runtime(root)))
+    return dict(candidates=available, needsNode=bool(selection.get('containsCodex')) or 'codex' in selection.get('items',[]),
+                needsSshGit='ssh' in selection.get('items',[]),scriptsRequireReview='shell' in selection.get('items',[]),
+                agentsRequireReview='agents' in selection.get('items',[]), stagingOnly=not(selection.get('environment')=='ubuntu' and selection.get('system')))
+
+
 def create(request):
+    compression=compression_options(request)
     prefix, home = Path(request['prefix']), Path(request['home'])
     parent = Path(request['destination']).resolve(strict=True)
     # Prevent archiving our output recursively; shared storage is intentionally supported.
     if parent == home or home in parent.parents or parent == prefix or prefix in parent.parents:
         raise BackupError('OUTPUT_INSIDE_SOURCE')
-    info = environment_info(request)
+    plans = selected_plan(request)
     wanted = request['components']
-    estimate = (info['homeBytes'] if 'home' in wanted else 0) + (info['prefixBytes'] if 'prefix' in wanted else 0)
+    needs_full = 'home' in wanted or 'prefix' in wanted or bool(request.get('environments'))
+    info = environment_info(request) if needs_full else dict(arch=current_arch(),environments=[],homeBytes=0,prefixBytes=0,ubuntuBytes={})
+    library_bytes = tree_bytes(Path(request['files'])/'workspace-sessions') if 'library' in wanted else 0
+    estimate = library_bytes + (info['homeBytes'] if 'home' in wanted else 0) + (info['prefixBytes'] if 'prefix' in wanted else 0)
     selected_envs = [e for e in info['environments'] if e['name'] in request.get('environments', [])]
     estimate += sum(info['ubuntuBytes'][e['name']] for e in selected_envs)
+    plan_sizes=[]
+    for scope,specs,chosen in plans:
+        value=sum(selection_size(Path(scope['root']),p)[0] for p,r in selection_walk(scope,specs,chosen) if selection_group(r,specs) in chosen)
+        plan_sizes.append(value);estimate+=value
     if shutil.disk_usage(parent).free < estimate + 64 * 1024 ** 2:
         raise BackupError('INSUFFICIENT_SPACE')
     out = parent / ('Termux-Jobs-' + time.strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:8])
     out.mkdir(mode=0o700)
     protected_write(out / 'INCOMPLETE', b'Not verified. Do not use as a complete backup.\n')
-    meta = dict(format='termux-jobs-backup', version=1, created=time.time(), live=True,
+    meta = dict(format='termux-jobs-backup', version=2 if plans else 1, created=time.time(), live=True,
                 consistency='Best effort live copy; user must finish writers before backup. No process memory.',
+                compression=dict(engine=compression['engine'],level=compression['level']),
                 source=dict(arch=info['arch'], packageId=request.get('packageId'), prefix=str(prefix), home=str(home), appVersion=request.get('appVersion')), components=[])
     def add(name, kind):
         file = out / name
@@ -376,13 +784,13 @@ def create(request):
         # Per-tab shell history survives separately; launch helper files are retained but not executed on import.
         sessions = Path(request['files']) / 'workspace-sessions'
         if sessions.is_dir():
-            create_tar(out / 'app-data.tar.gz', sessions, 'workspace-sessions')
+            create_tar(out / 'app-data.tar.gz', sessions, 'workspace-sessions',total=library_bytes,compression=compression)
             add('app-data.tar.gz', 'app-data')
     if 'home' in wanted:
-        create_tar(out / 'home.tar.gz', home, 'home')
+        create_tar(out / 'home.tar.gz', home, 'home',total=info['homeBytes'],compression=compression)
         add('home.tar.gz', 'home')
     if 'prefix' in wanted:
-        create_tar(out / 'prefix.tar.gz', prefix, 'usr', ('var/lib/proot-distro', 'tmp'))
+        create_tar(out / 'prefix.tar.gz', prefix, 'usr', ('var/lib/proot-distro', 'tmp'),total=info['prefixBytes'],compression=compression)
         add('prefix.tar.gz', 'prefix')
     dpkg = prefix / 'bin/dpkg-query'
     if dpkg.is_file():
@@ -393,8 +801,14 @@ def create(request):
         add('packages.txt', 'packages')
     for env in selected_envs:
         file = out / ('ubuntu-' + env['name'] + '.tar.gz')
-        run_tool([str(prefix / 'bin/proot-distro'), 'backup', '--output', str(file), env['name']])
+        actual=backup_ubuntu(prefix,env['name'],file,compression)
         add(file.name, 'ubuntu')
+        meta['components'][-1]['compressionEngine']=actual
+    for index,(scope,specs,chosen) in enumerate(plans):
+        file=out/('selected-'+str(index)+'.tar.gz')
+        details=create_selected_tar(file,scope,specs,chosen,request['work'],total=plan_sizes[index],compression=compression)
+        add(file.name,'ubuntu' if scope['type']=='ubuntu' and 'system' in chosen else 'data')
+        meta['components'][-1]['selection']=details
     # The helper is a known app asset; never copy a script from an imported archive for execution.
     shutil.copyfile(__file__, out / 'backup-tool.py')
     protected_write(out / 'restore.sh', b'''#!/data/data/com.termux/files/usr/bin/bash
@@ -403,7 +817,7 @@ cd -- "$(dirname -- "$0")"
 command -v python3 >/dev/null || { echo 'Install Python first: pkg install python'; exit 1; }
 exec python3 -I -S ./backup-tool.py --wizard ./manifest.json
 ''')
-    protected_write(out / 'README-RESTORE.txt', b'''Termux Job's backup beta. Contains private credentials; keep offline and protected.
+    protected_write(out / 'README-RESTORE.txt', b'''Termux Job's backup (testing). Contains private credentials; keep offline and protected.
 Install a trusted Termux (same architecture), run termux-setup-storage, then pkg install python proot-distro.
 Open Backup and restore in Termux Job's, select manifest.json, inspect compatibility and choose components.
 In ordinary Termux run: bash /sdcard/Download/<backup>/restore.sh
@@ -414,6 +828,10 @@ Install packages individually from packages.txt; package versions may be unavail
 Android UID is not restored; extracted files belong to the current UID. Permissions/mtime/links are preserved where possible.
 Android Keystore keys, permissions and live processes cannot be restored. Re-enter remembered SSH passwords.
 Live copying is not an atomic snapshot. Finish jobs/writers before backing up. External symlink targets and Android shared storage are NOT archived.
+Selective manifest v2 needs app v1.1.1+ or this trusted helper. Keep the WHOLE directory.
+Data-only payloads are staged, not activated. Prepare the environment/runtimes first; review README-SELECTED.txt after extraction.
+In payload, Ubuntu paths are relative to guest /; Termux paths are relative to files/ (home/ and usr/).
+Do not overwrite an active assistant directory. Chat history does not include unselected projects.
 ''')
     checks = ''.join(c['sha256'] + '  ' + c['file'] + '\n' for c in meta['components'])
     for name in ('backup-tool.py', 'restore.sh', 'README-RESTORE.txt'):
@@ -429,12 +847,13 @@ def inspect(request):
     fingerprints = {str(path): digest(path)}
     source = {}
     inputs = []
+    selections = {}
     settings = None
     workspace = None
     if path.name.endswith('.json'):
         value = read_json(path)
         if value.get('format') == 'termux-jobs-backup':
-            if value.get('version') != 1 or (path.parent / 'INCOMPLETE').exists():
+            if value.get('version') not in (1,2) or (path.parent / 'INCOMPLETE').exists():
                 raise BackupError('INCOMPLETE_OR_UNSUPPORTED_BACKUP')
             source = value.get('source', {})
             if len(value.get('components', [])) > 100:
@@ -448,6 +867,15 @@ def inspect(request):
                 if sha != c['sha256'] or f.stat().st_size != c['bytes']:
                     raise BackupError('CHECKSUM_MISMATCH')
                 fingerprints[str(f)] = sha
+                if 'selection' in c:
+                    details=c['selection']
+                    if not isinstance(details,dict) or details.get('environment') not in ('ubuntu','termux') or not isinstance(details.get('items'),list) or len(details['items'])>100 or any(not isinstance(i,str) or len(i)>4096 for i in details['items']):
+                        raise BackupError('INVALID_SELECTION')
+                    if any(not isinstance(details.get(key),bool) for key in ('system','node')):
+                        raise BackupError('INVALID_SELECTION')
+                    expected='ubuntu' if details['environment']=='ubuntu' and details['system'] else 'data'
+                    if c['kind']!=expected: raise BackupError('INVALID_SELECTION_ARCHIVE')
+                    selections[str(f)]=details
                 inputs.append((f, c['kind']))
         else:
             workspace = libraries(value)
@@ -469,17 +897,26 @@ def inspect(request):
             components.append(dict(kind='packages', file=str(f), root='', format='package-list', status='portable', unpacked=f.stat().st_size))
             continue
         scan = scan_tar(f)
+        if str(f) in selections and (len(scan['components'])!=1 or scan['components'][0]['kind']!=declared):
+            raise BackupError('INVALID_SELECTION_ARCHIVE')
+        if declared=='data' and (len(scan['components'])!=1 or scan['components'][0]['kind']!='data'):
+            raise BackupError('INVALID_SELECTION_ARCHIVE')
         if any(c['kind']=='prefix' for c in scan['components']): package_versions.update(scan['packages'])
         if scan['workspace']:
             workspace = scan['workspace']
         for c in scan['components']:
             # PREFIX is always staged; never applied to the running runtime.
-            c.update(file=str(f), unpacked=scan['unpacked'], status='portable' if c['kind'] in ('home', 'library', 'app-data') else 'review')
+            c.update(file=str(f), unpacked=scan['unpacked'], status='portable' if c['kind'] in ('home', 'library', 'app-data','data') else 'review')
             if c['kind'] == 'ubuntu':
                 c['status'] = 'compatible' if c['arch'] == current_arch() and proot_modern(Path(request['prefix'])) else 'blocked'
                 c['reason'] = '' if c['status'] == 'compatible' else 'ARCH_OR_PROOT_UNCONFIRMED'
             if c['kind'] == 'prefix':
                 c['reason'] = 'STAGING_ONLY_NOT_LIVE_PREFIX'
+            if str(f) in selections:
+                c['selection']=selections[str(f)]
+                c['requirements']=selection_requirements(c['selection'],request)
+                c['requirements']['architecture']=source.get('arch','')
+                c['requirements']['architectureMatches']=source.get('arch')==current_arch()
             components.append(c)
         for c in scan['candidates']:
             # Never import system package scripts as user commands.
@@ -558,7 +995,7 @@ def extract_new(path, root, destination):
                         os.fchmod(f.fileno(), m.mode & 0o777)
                     os.utime(parts[-1], (m.mtime, m.mtime), dir_fd=fd, follow_symlinks=False)
                     written += m.size
-                    progress('RESTORE_FILES', written)
+                    progress('RESTORE_FILES',written,current=name)
             finally:
                 os.close(fd)
     for parts, target, mode, mtime in hard:
@@ -613,7 +1050,7 @@ def restore_ubuntu(path, component, prefix, work):
             if not (item.isfile() or item.isdir() or item.issym() or item.islnk()):
                 continue
             dst.addfile(item, src.extractfile(m) if item.isfile() else None)
-            progress('PREPARE_UBUNTU')
+            progress('PREPARE_UBUNTU',current=name)
     scan_tar(rewritten)
     run_tool([str(prefix / 'bin/proot-distro'), 'restore', str(rewritten)])
     rewritten.unlink()
@@ -672,6 +1109,8 @@ def restore(request):
             target = destination / (c['kind'] + '-' + str(i))
             extract_new(path, c['root'], target)
             paths[str(i)] = str(target)
+    if any('selection' in c or c['kind']=='data' for c in selected):
+        protected_write(destination/'README-SELECTED.txt', b'Selected data is STAGED only. Existing files were NOT replaced.\nFor Ubuntu data, paths in payload are relative to the guest root (/); for Termux, relative to files/ (home/ and usr/).\nPrepare a compatible environment and runtime first. Review paths, scripts and authorization before manually copying files.\nDo not replace an active .codex directory. Stop the TARGET assistant first, retaining the original data.\nChat history does not include project files unless selected. Processes and Android Keystore cannot be restored.\n')
     (destination / 'INCOMPLETE').unlink()
     protected_write(destination / 'RESTORE-RESULT.json', json.dumps(dict(paths=paths, environments=environments_created)).encode())
     return dict(path=str(destination), paths=paths, environments=environments_created)
@@ -754,7 +1193,7 @@ def main():
         return
     request = read_json(args.request)
     operation = request['operation']
-    value = {'inventory': environment_info, 'create': create, 'inspect': inspect, 'restore': restore, 'packages': compare_packages, 'apt-plan': apt_plan}[operation](request)
+    value = {'compression-status': compression_status, 'install-pigz': install_pigz, 'inventory': environment_info, 'selection-inventory': selection_inventory, 'create': create, 'inspect': inspect, 'restore': restore, 'packages': compare_packages, 'apt-plan': apt_plan}[operation](request)
     event('DONE', result=value)
 
 

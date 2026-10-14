@@ -1,4 +1,4 @@
-# Архитектура v1.1.0
+# Архитектура v1.1.4
 
 ## Модули
 
@@ -353,7 +353,54 @@ review (optional v8 field restoreReview). Active/base sessions survive replaceme
 Original JSON is retained privately, then AtomicFile writes are checked. Restoring
 multiple components is not globally atomic; limitations in [BACKUP-RESTORE](BACKUP-RESTORE.md).
 
-WorkspaceUpdates stores auto enabled/last attempt/available code in app prefs;
-TermuxActivity.onResume calls the due check, ten-hour gate, no service/alarm. The
+WorkspaceUpdates stores auto enabled/available code in app prefs. A process-local
+Opening gate allows one attempt per foreground opening. onStop resets it unless
+configuration changes; onResume consumes it even when disabled/busy. Failure does
+not retry until reopening. The old persisted attempt timestamp is ignored. No
+service/alarm is scheduled. The
 icon draws a badge without altering navigation geometry. Terminal rendering and
 agent controller assets remain unchanged.
+
+## Выборочный бэкап v1.1.1
+
+Python selection-inventory классифицирует относительные пути внутри HOME/PREFIX
+Termux или rootfs Ubuntu. Более специфичный путь имеет приоритет; каждый файл
+учитывается один раз. Пользовательские пути ограничены HOME, без обхода symlinks.
+create пересобирает план по реальным корням, не доверяет путям из JSON UI.
+Полный режим остаётся native backup, выборочный сериализует только выбранные
+группы. Rootfs с системой регистрируется через прежний native restore; payload
+без системы только извлекается. Manifest v2 отделяет этот формат от прежнего v1.
+Codex SQLite online backup/quick_check выполняются в приватном job-каталоге,
+без остановки чужих процессов. Каждая база согласована отдельно, не весь бэкап.
+inspect проверяет descriptor против фактической структуры TAR и повторно ищет
+окружения/Node.js на целевом устройстве. Ничего из архива не запускается.
+
+### Исправления v1.1.2
+
+Инвентаризация собирает ограниченные issues и отключает затронутые группы;
+строгий обход копирования не подавляет ошибки. .l2s storage не обходится,
+поддерживаемые внутренние backing-файлы сохраняются regular entries с pinned
+O_NOFOLLOW-descriptors. Существующие native backup/restore не изменены.
+Общий bindConsent используется обеими формами создания. UpdateProgress содержит
+только состояние визуального индикатора; скачивание/доверие/установка остаются
+в прежних worker/verify/offerInstall путях.
+
+### v1.1.3: bounded progress and owned compression workers
+
+Backup JSON progress carries stage/processed/total/current/unit. Filenames are
+sanitized and bounded, not file contents or subprocess output. UI replaces one
+line and updates elapsed time; unknown totals remain indeterminate. Scoped
+WorkspaceDialogs.Builder.blockOutsideDismiss protects backup trees only.
+Streaming tar writes pass through gzip(level1/3/9) or an owned pigz pipe, capped
+at4 threads. Compression failure prevents completion. Modern native proot stdout
+is compressed directly; legacy uses its supported --output path. Only owned
+compression/proot child processes are terminated on worker cancellation.
+Explicit install-pigz uses a fixed argv, requires UI consent, retains APT locking
+and verifies the executable. Its UI does not expose cancellation: the worker waits
+for APT rather than deliberately killing dpkg. Android process death is not prevented.
+
+### v1.1.4 combined update tile
+
+Title and Auto checkbox have separate click paths: manual check vs persisted
+preference only. The inline hint describes the per-opening automatic behavior.
+The gate does not change installer/hash/signer validation or terminal lifecycle.

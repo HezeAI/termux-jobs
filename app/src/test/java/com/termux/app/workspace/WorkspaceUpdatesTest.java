@@ -54,6 +54,30 @@ public class WorkspaceUpdatesTest {
         prefs.setLogLevel(null,1);prefs.migrateForkLogDefault();assertEquals(1,prefs.getLogLevel());
         assertEquals(0,com.termux.shared.logger.Logger.DEFAULT_LOG_LEVEL);
     }
-    @Test public void automaticChecksRespectTenHoursAndClockRollback(){long now=100000000L;assertTrue(WorkspaceUpdates.due(now,0));assertFalse(WorkspaceUpdates.due(now,now));assertFalse(WorkspaceUpdates.due(now,now-WorkspaceUpdates.CHECK_INTERVAL+1));assertTrue(WorkspaceUpdates.due(now,now-WorkspaceUpdates.CHECK_INTERVAL));assertTrue(WorkspaceUpdates.due(now,now+1));}
+    @Test public void automaticChecksTryOncePerOpeningIncludingFailureAndConfigChanges(){
+        WorkspaceUpdates.Opening opening=new WorkspaceUpdates.Opening();
+        assertTrue(opening.enter(true));assertFalse(opening.enter(true));
+        opening.background(true);assertFalse(opening.enter(true));
+        opening.background(false);assertTrue(opening.enter(true));assertFalse(opening.enter(true));
+    }
+    @Test public void disabledOpeningDoesNotCheckOrRetryUntilNextOpening(){
+        WorkspaceUpdates.Opening opening=new WorkspaceUpdates.Opening();
+        assertFalse(opening.enter(false));assertFalse(opening.enter(true));
+        opening.background(false);assertTrue(opening.enter(true));
+    }
+    @Test public void updateRowCheckboxOnlyTogglesAutomaticAndTitleRunsManual(){
+        android.app.Activity a=org.robolectric.Robolectric.buildActivity(android.app.Activity.class).setup().get();
+        WorkspaceUpdates.autoEnabled(a,true);int[] checks={0};
+        android.widget.LinearLayout row=WorkspaceUpdates.menuRow(a,()->checks[0]++);
+        android.widget.CheckBox box=(android.widget.CheckBox)row.getChildAt(1);
+        assertTrue(box.isChecked());box.performClick();assertFalse(WorkspaceUpdates.autoEnabled(a));assertEquals(0,checks[0]);
+        ((android.widget.LinearLayout)row.getChildAt(0)).getChildAt(0).performClick();assertEquals(1,checks[0]);assertFalse(WorkspaceUpdates.autoEnabled(a));
+        android.widget.LinearLayout reopened=WorkspaceUpdates.menuRow(a,()->checks[0]++);assertFalse(((android.widget.CheckBox)reopened.getChildAt(1)).isChecked());
+        ((android.widget.CheckBox)reopened.getChildAt(1)).performClick();assertTrue(WorkspaceUpdates.autoEnabled(a));assertEquals(1,checks[0]);
+        WorkspaceLanguage.select(a,"en");android.widget.LinearLayout english=WorkspaceUpdates.menuRow(a,()->{});
+        assertEquals("Auto",((android.widget.CheckBox)english.getChildAt(1)).getText().toString());
+        assertEquals("Check when opening the app",((android.widget.TextView)((android.widget.LinearLayout)english.getChildAt(0)).getChildAt(1)).getText().toString());a.finish();
+    }
+
     @Test public void sha256IsLowercaseHex()throws Exception{assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",WorkspaceUpdates.hex(MessageDigest.getInstance("SHA-256").digest("abc".getBytes("UTF-8"))));}
 }

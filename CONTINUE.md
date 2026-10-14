@@ -1,3 +1,109 @@
+# Выпуск v1.1.4 — улучшенный менеджер резервных копий
+
+Пользователь одобрил v1.1.3 и явно разрешил публикацию. Добавлены: одна плашка
+проверки обновлений, checkbox «Авто»/Auto справа с пояснением, одна попытка при
+каждом foreground открытии/возврате, вместо10часов. Сбой без повтора до нового
+открытия; disabled/busy opening тоже потребляет gate. Configuration change не
+сбрасывает. Ручной check остаётся. Gate: WorkspaceUpdates.Opening, lifecycle
+через WorkspaceController.onStop +TermuxActivity.onStop. Сессии/PTY не менялись.
+
+Релиз com.termux/v1.1.4/code1061, прежний cert, libraryv8, manifestv1/v2 без resets.
+311 JVM passed; backup helper тот же, что при60 Python passed в1.1.3.
+APK 37851023bytes SHA256 ad05f1ea6e4bf5147a89a0eece568abb9be3bbd9495955e82c3657123d25bb0c.
+Receipts .verification/release-v1.1.4; docs/fork/VALIDATION-v1.1.4.md.
+Главный акцент README/релиза/update.json: улучшенный backup manager (тестирование).
+Публичный1.1.0 понимает metadata schema1; до update имеет прежнюю10h схему.
+Реальное обновление/новый UI не устанавливались агентом. Пакеты/APK не ставить,
+Bridge/процессы не трогать. Design PNGs остались untracked, не включать случайно.
+
+Статус GitHub публикации/обратной проверки будет записан после завершения.
+
+---
+
+# Локальная v1.1.3 — прогресс и сжатие бэкапа
+
+Публичная версия всё ещё v1.1.0. Новая сборка сначала пользователю в Download;
+GitHub только после проверки/новой авторизации. Не устанавливать APK, не менять
+сессии/Bridge/рабочую среду. Реальная установка pigz агентом НЕ запускалась.
+
+Добавлены WorkspaceBackupProgress, JSON byte/page/current progress, таймер,
+защита всех backup dialogs от outside taps через scoped Builder. Явная отмена
+сохранена, прочие меню приложения не меняются. gzip/pigz, уровни1/3/9 default3,
+pigz максимум4 потока. Предложение install-pigz только после согласия, фиксированный
+apt-get install -y pigz в worker; APT locks не обходятся. На время установки
+создание бэкапа блокируется; UI показывает статус. Не отменять dpkg автоматически.
+Архивы gzip совместимы; современный proot-distro backup --compress none stdout
+сжимается выбранным методом, legacy native compression остаётся без обещания уровня.
+
+Проверено: 309 JVM +60 Python, release успешен. APK 34381132bytes,
+SHA256 57cf072dbc55e50c438868a15ac32ca6e7d9c63cfbed321ccee71ca96a521473, прежний cert. ZIP/package/version/ABI/secret-pattern scan выполнены.
+Download: /sdcard/Download/Termux-Jobs-v1.1.3-arm64.apk.
+update.json подготовлен локально, НЕ опубликован. Физическая проверка нужна.
+Проверки/артефакт: docs/fork/VALIDATION-v1.1.3.md, receipts
+.verification/backup-progress-v1.1.3. Изменения до v1.1.2 ниже — история.
+
+---
+
+# Историческая локальная v1.1.2 — исправления «По выбору»
+
+Пользователь подтвердил SOURCE_UNREADABLE в1.1.1, полный бэкап проходит.
+Просил: название «По выбору», Create неактивна до согласия в ОБОИХ режимах,
+явный заголовок папки назначения, индикатор обновления. Всё реализовано.
+Сначала APK в Download, GitHub ТОЛЬКО после проверки пользователем; публикации нет.
+
+Inventory теперь collects issues, disabled неполные группы; копирование выбранного
+источника строго abort на ошибке, без скрытых пропусков/изменения прав. .l2s excluded,
+поддерживаемые backing files materialized regular с pinned O_NOFOLLOW descriptors;
+выходы за разрешённое хранилище blocked. Точный путь/errno из старого скриншота
+не установлен: не утверждать, что конкретно L2S вызвал этот SOURCE_UNREADABLE.
+Старое callback-поведение доказано, regression с ошибкой каталога покрыта тестами.
+Read-only directory scan из Ubuntu не воспроизвёл ошибку; реальная проверка в App
+нужна. Полный native backup/restore не переделан; ничего в работающих средах не
+восстанавливалось, Bridge и пользовательские процессы не трогались.
+
+bindConsent wired полная форма +финальное подтверждение, тесты toggle/reopen.
+UpdateProgress checking/download percent+bytes/verifying, отмена/hash/signer прежние.
+1.1.2/code1059/com.termux/v8/прежний cert. 306 JVM+46 Python checks, сборка прошла.
+APK34375592bytes SHA256e943e22e240ff3b616ae0fd63ffb50f7ff2868244fd9fe0e4b8f96da115ff2e8.
+Receipts .verification/selective-v1.1.2; update.json подготовлен НЕ опубликован.
+Проверки/ограничения docs/fork/VALIDATION-v1.1.2.md. Старые локальные APK не удалять.
+
+---
+
+# Историческая локальная v1.1.1 — выборочный бэкап
+
+Пользователь одобрил концепт и реализацию; договорились СНАЧАЛА APK в Download,
+ПОТОМ публикация на GitHub после проверки. Публикации этой задачи нет.
+Публичная версия остаётся v1.1.0. Не устанавливать APK и не восстанавливать
+пользовательскую среду самостоятельно; не останавливать сессии.
+
+Код: WorkspaceBackupUi режим полной/выборочной копии, раскрываемые карточки
+Termux/Ubuntu, группы/размеры/добавление папок HOME, подтверждение состава и
+зависимостей. workspace-backup.py: selection-inventory, классификация относительных
+путей, без следования symlinks; SQLite Codex online backup+quick_check; manifest2
+для выбранных данных, чтение1/2. Ubuntu с системой — fresh native proot restore;
+data-only/Termux — отдельное извлечение с ручной активацией, README-SELECTED.txt.
+Inspect перепроверяет целевые среды/наличие Node.js/архитектуру, без запуска CLI.
+Старые полные архивы/библиотекаv8 сохранены, очистка данных не требуется.
+
+1.1.1/code1058, прежние com.termux/сертификат. Сборка прошла, 302 JVM+40 Python
+checks. Подробнее docs/fork/VALIDATION-v1.1.1.md. Receipts и APK:
+.verification/selective-v1.1.1. update.json подготовлен, НЕ опубликован.
+Lint task завершён, но JNA на ARM64 выводит upstream Unsupported OS/arch;
+не считать это полностью чистым lint-анализом. Новые формы/реальное восстановление
+проверяет пользователь на втором телефоне. Не обещать автоматической активации
+частичной .codex поверх существующего окружения.
+
+APK37831238bytes; SHA2566f8f34abd90608f28a840a89714b162aa3b43b845387ca1a05f2592d0699c968.
+Группа Codex read-only на телефоне:555файлов/1305607540байт, auth/config/history/
+CLIpackage найдены; Node/Git/SSH найдены. Полный пересчёт из proot прекращён
+из-за длительности только для собственного worker, не считать полную инвентаризацию
+всех категорий проверенной. Данные пользователя не архивировались/не восстанавливались.
+
+История предыдущей публикации ниже сохранена как историческая.
+
+---
+
 # Текущий выпуск: v1.1.0 — обновления и backup beta
 
 Публикация: https://github.com/HezeAI/termux-jobs/releases/tag/v1.1.0

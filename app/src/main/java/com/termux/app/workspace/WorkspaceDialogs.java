@@ -25,7 +25,10 @@ final class WorkspaceDialogs {
     static int dp(Context c, float n) { return Math.round(c.getResources().getDisplayMetrics().density * n); }
     static Builder builder(Context c) { return new Builder(c); }
     static final class Builder extends AlertDialog.Builder {
+        private boolean blockOutside;
         Builder(Context c) { super(c, R.style.WorkspaceDialog); }
+        Builder blockOutsideDismiss(){blockOutside=true;return this;}
+        @Override public AlertDialog create(){AlertDialog dialog=super.create();if(blockOutside)dialog.setCanceledOnTouchOutside(false);return dialog;}
         @Override public AlertDialog.Builder setItems(CharSequence[] items, DialogInterface.OnClickListener listener) {
             return super.setAdapter(new Rows(getContext(), items, -1), listener);
         }

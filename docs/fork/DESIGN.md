@@ -1,4 +1,4 @@
-# Интерфейс и поведение v1.1.0
+# Интерфейс и поведение v1.1.4
 
 Документ описывает текущий основной форк. Исходный [референс](reference.png) и ранние макеты отражают разработку, а не точный интерфейс релиза.
 
@@ -121,3 +121,35 @@ Backup UI: создание → выбор состава/каталога/по�
 компоненты/совместимость и пакеты; восстановление → выбор/план/подтверждение.
 Диалоги RU/EN, системные пути и имена пакетов не переводятся. Терминальный ввод
 и отображение агентов этим изменением не переделываются.
+
+## Выборочный бэкап v1.1.1
+
+Полная/выборочная копия выбирается до формы. Выборочная форма — раскрываемые
+карточки Termux/каждой Ubuntu с чекбоксами и размерами до сжатия, добавление папки
+HOME, затем отдельное подтверждение состава/зависимостей. Добавление системы
+возвращает к обновлённому выбору для повторного просмотра размера. При импорте
+показываются обнаруженные целевые среды и предупреждения о runtime/архитектуре.
+Стили карточек/действий общие WorkspaceDialogs; тексты RU/EN, Android dp/sp.
+
+В локальной v1.1.2 режим называется «По выбору». Недоступные компоненты отключены
+с подписью неполного размера и причинами в карточке окружения. Кнопки создания
+неактивны/приглушены до согласия в обоих режимах. Над путём — «Папка создания
+резервной копии». Проверка обновления/проверка APK имеют indeterminate-индикатор,
+скачивание — горизонтальную полосу, процент и объём. Все новые подписи RU/EN.
+
+### v1.1.3 backup dialogs
+
+Backup titles use (тестирование)/(testing). All nested backup dialogs reject
+outside-tap dismissal; other menus retain their existing behavior. Progress shows
+stage, stage bar, one ellipsized current path, amount and elapsed time. No ETA or
+invented global percentage. Creation finishes with a verified message and path.
+Compression uses protected list dialogs rather than unprotected spinner popups;
+gzip/pigz explanations, levels1/3/9, optional confirmed pigz installation with
+inline status. Product descriptions refer to target environments, not test phones.
+
+### v1.1.4 update tile
+
+One settings tile replaces two update rows. Title opens a manual check; the right
+square checkbox, labelled Auto, persists the automatic preference without closing
+the menu or checking immediately. A muted inline hint says Check when opening
+the app. Both Russian and English are localized. Existing gear badge remains.

@@ -132,6 +132,7 @@ public final class WorkspaceController {
         show(Screen.HOME, false);
         codexHandler.postDelayed(codexPoll, 1000);
     }
+    public void onStop(){WorkspaceUpdates.background(activity);}
     public void onResume(){WorkspaceUpdates.automatic(activity,()->{if(!closed)renderHeader();});}
     public void refreshLanguage() {
         terminalInput.setHint(WorkspaceText.tr("Введите команду…"));
@@ -1673,16 +1674,15 @@ public final class WorkspaceController {
             heading.requestFocus();
         });picker.show();
     }
+    private void settingsRow(LinearLayout form,String label,Runnable action){TextView row=WorkspaceDialogs.action(activity,label,0);row.setOnClickListener(v->action.run());form.addView(row);}
     private void globalSettings(){
-        String automatic=WorkspaceLanguage.code(activity).equals("ru")?"Автопроверка обновлений · 10 ч":"Automatic update checks · 10 h";
-        WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Настройки приложения"))
-            .setItems(new String[]{WorkspaceText.tr("Язык / Language"),WorkspaceUpdates.menuLabel(activity),automatic+" · "+(WorkspaceUpdates.autoEnabled(activity)?"✓":"—"),WorkspaceBackupUi.label(activity),WorkspaceText.tr("Настройки приложения")},(d,w)->{
-                if(w==0)WorkspaceLanguage.showPicker(activity,this::refreshLanguage);
-                else if(w==1)WorkspaceUpdates.check(activity);
-                else if(w==2){WorkspaceUpdates.autoEnabled(activity,!WorkspaceUpdates.autoEnabled(activity));globalSettings();}
-                else if(w==3)WorkspaceBackupUi.show(activity,store,()->{refreshLanguage();},command->{WorkspaceStore.Session installation=new WorkspaceStore.Session();installation.name=WorkspaceLanguage.code(activity).equals("ru")?"Пакеты из бэкапа":"Backup packages";installation.environment="termux";installation.directory=TermuxConstants.TERMUX_HOME_DIR_PATH;installation.startup=command;launchNew(installation,true);});
-                else activity.startActivity(new android.content.Intent(activity,SettingsActivity.class));})
-            .setNegativeButton(WorkspaceText.tr("Закрыть"),null).show();
+        LinearLayout form=column();int padding=dp(12);form.setPadding(padding,padding,padding,padding);
+        AlertDialog[] menu={null};
+        settingsRow(form,WorkspaceText.tr("Язык / Language"),()->{menu[0].dismiss();WorkspaceLanguage.showPicker(activity,this::refreshLanguage);});
+        form.addView(WorkspaceUpdates.menuRow(activity,()->{menu[0].dismiss();WorkspaceUpdates.check(activity);}));
+        settingsRow(form,WorkspaceBackupUi.label(activity),()->{menu[0].dismiss();WorkspaceBackupUi.show(activity,store,()->{refreshLanguage();},command->{WorkspaceStore.Session installation=new WorkspaceStore.Session();installation.name=WorkspaceLanguage.code(activity).equals("ru")?"Пакеты из бэкапа":"Backup packages";installation.environment="termux";installation.directory=TermuxConstants.TERMUX_HOME_DIR_PATH;installation.startup=command;launchNew(installation,true);});});
+        settingsRow(form,WorkspaceText.tr("Настройки приложения"),()->{menu[0].dismiss();activity.startActivity(new android.content.Intent(activity,SettingsActivity.class));});
+        menu[0]=WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Настройки приложения")).setView(formScroll(form)).setNegativeButton(WorkspaceText.tr("Закрыть"),null).create();menu[0].show();
     }
     private void showDiagnostics(WorkspaceStore.Session profile){WorkspaceDiagnostics.register(profile,false);WorkspaceDiagnosticsUi.show(activity,profile,()->liveFor(profile));}
     private void confirmCancelStartup(WorkspaceStore.Session profile){

@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Own Python worker only; never writes input to, or stops, a user's terminal session. */
 final class WorkspaceBackupEngine {
-    interface Callback {void progress(String stage,long value);void done(JSONObject result);void error(String code);}
+    interface Callback {void progress(JSONObject event);void done(JSONObject result);void error(String code);}
     private static final AtomicBoolean BUSY=new AtomicBoolean();
     private volatile Process process;
     private volatile boolean cancelled;
@@ -31,7 +31,7 @@ final class WorkspaceBackupEngine {
             pb.directory(new File(home()));pb.environment().clear();for(String item:TermuxShellUtils.buildEnvironment(a,false,home())){int i=item.indexOf('=');if(i>0)pb.environment().put(item.substring(0,i),item.substring(i+1));}
             pb.redirectError(new File("/dev/null"));if(cancelled)throw new IOException("CANCELLED");process=pb.start();if(cancelled)process.destroy();
             JSONObject[] result={null};String[] failure={null};
-            try(BufferedReader reader=new BufferedReader(new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8))){String line;while((line=reader.readLine())!=null){if(line.length()>32*1024*1024)throw new IOException("RESULT_TOO_LARGE");JSONObject event=new JSONObject(line);String stage=event.getString("stage");if(stage.equals("DONE"))result[0]=event.getJSONObject("result");else if(stage.equals("ERROR"))failure[0]=event.optString("code","BACKUP_FAILED");else a.runOnUiThread(()->{if(!cancelled&&!a.isDestroyed())callback.progress(stage,event.optLong("processed"));});}}
+            try(BufferedReader reader=new BufferedReader(new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8))){String line;while((line=reader.readLine())!=null){if(line.length()>32*1024*1024)throw new IOException("RESULT_TOO_LARGE");JSONObject event=new JSONObject(line);String stage=event.getString("stage");if(stage.equals("DONE"))result[0]=event.getJSONObject("result");else if(stage.equals("ERROR"))failure[0]=event.optString("code","BACKUP_FAILED");else a.runOnUiThread(()->{if(!cancelled&&!a.isDestroyed())callback.progress(event);});}}
             int status=process.waitFor();if(cancelled)throw new IOException("CANCELLED");if(status!=0||result[0]==null)throw new IOException(failure[0]==null?"WORKER_FAILED":failure[0]);
             a.runOnUiThread(()->{if(!cancelled&&!a.isDestroyed())callback.done(result[0]);});
         }catch(Exception e){String code=cancelled?"CANCELLED":e.getMessage();if(code==null||!code.matches("[A-Z_]{1,80}"))code="BACKUP_FAILED";final String error=code;a.runOnUiThread(()->{if(!a.isDestroyed())callback.error(error);});}

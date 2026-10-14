@@ -319,6 +319,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
         if (mIsInvalidState) return;
 
+        if(mWorkspace!=null)mWorkspace.onStop();
         mIsVisible = false;
 
         if (mTermuxTerminalSessionClient != null)

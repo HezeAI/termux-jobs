@@ -1,6 +1,6 @@
 # Известные проблемы
 
-Текущий выпуск — v1.1.0. OpenCode использует адаптер v1.0.9, без screen/resize/
+Текущий выпуск — v1.1.4. OpenCode использует адаптер v1.0.9, без screen/resize/
 frontend экспериментов v1.0.10–12. Автоматическое продолжение истории восстановлено,
 ручного пункта сохранения чата нет. OC-001 не объявлен исправленным.
 
@@ -76,3 +76,30 @@ startup history остаётся, resize replay отключён. Native synthet
 подтверждает отсутствие повторного history output через6 resize; phone verification
 ещё нужна. Наблюдения про IME jump/выделение отдельно не считаются исправленными.
 Смена ширины может сохранить прежнее оформление сложных markdown/table блоков.
+
+## Выборочные бэкапы (локальная v1.1.1)
+
+Выборочная активация поверх существующей среды не автоматизирована: данные без
+системы только извлекаются. Обнаружение Node.js не проверяет версию или запуск;
+нестандартные установки AI-агентов требуют ручного включения папок и проверки
+зависимостей. Manifest v2 не читается v1.1.0. Базы согласованы по отдельности,
+не все одновременно с JSONL. Реальное восстановление на втором телефоне не
+проверено агентом; авторизация может потребовать повторного входа.
+
+## SOURCE_UNREADABLE при выборе компонентов (v1.1.1)
+
+Подтверждено скриншотом пользователя. Старый onerror прекращал весь расчёт,
+не сообщая путь. В локальной v1.1.2 проблемные группы отмечаются и отключаются,
+другие остаются доступными; исправление проверено на фикстурах, реальный повтор
+на телефоне ещё нужен. Это не обход Android-прав и не разрешение игнорировать
+ошибки уже выбранных данных. Полный режим пользователь сообщил работающим.
+
+### Local v1.1.3 backup verification limits
+
+Elapsed time is not ETA; unknown totals use indeterminate progress. Native full
+Ubuntu compression choices require modern proot-distro; legacy remains native.
+pigz installation needs network/repositories/free APT locks and may add dependencies.
+No foreground service or wake lock: keep the app open. Android process death can
+interrupt copying or APT. Fixture tests do not prove on-device cancellation,
+background installation, thermal behavior or restore compatibility; user verification
+is required. No actual package installation or real user-data restore was performed.
