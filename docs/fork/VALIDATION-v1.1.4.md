@@ -66,3 +66,12 @@ Gradle успешен, но полный чистый lint не заявляет
 
 Receipts: .verification/release-v1.1.4/ — build, JUnit XML, badging, signature,
 public baseline certificate, artifact.json, APK, SHA256SUMS, update.json.
+
+## Исправление документации после публикации
+
+Три ссылки в release body заменены на полные адреса blob/v1.1.4/docs/fork;
+все страницы проверены анонимными HTTPS GET: HTTP200. Body перечитан с GitHub
+и совпал с локальным документом. About теперь ведёт на releases/latest форка,
+вместо F-Droid оригинального Termux. Другие публичные release bodies проверены:
+таких относительных ссылок нет. APK/metadata/assets и тег не менялись;
+повторная сборка для исправления ссылок не выполнялась.

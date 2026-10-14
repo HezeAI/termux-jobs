@@ -75,3 +75,13 @@ commands/presets, loss of data, incompatible formats or migrations and their
 reasons **before** installation. If no reset is required, say that explicitly.
 Keep the metadata schema readable by installed v1.0.19 clients. Never silently
 reset user data or publish without the updater assets.
+
+## Ссылки в описании GitHub Release
+
+В публикуемом release body используйте полные HTTPS-ссылки на документацию,
+например https://github.com/HezeAI/termux-jobs/blob/vVERSION/docs/fork/BACKUP-RESTORE.md.
+Относительный BACKUP-RESTORE.md из страницы releases/tag не ведёт в docs/fork.
+Перед публикацией проверьте наличие файлов в соответствующем теге, после неё —
+публичную доступность каждой ссылки и совпадение release body с подготовленным.
+Для исправления только текста/ссылок редактируйте release notes и документацию,
+не пересобирайте APK, не передвигайте опубликованный тег и не меняйте update.json.

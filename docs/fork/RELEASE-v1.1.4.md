@@ -24,7 +24,7 @@
 Проверка чужого архива, SHA-256/структуры/сжатия, выбор компонентов, отдельное
 восстановление Ubuntu, импорт библиотек/aliases/scripts и сравнение пакетов сохранены.
 HOME/PREFIX/data-only извлекаются отдельно, работающая среда не заменяется.
-[Подробная инструкция](BACKUP-RESTORE.md).
+[Подробная инструкция](https://github.com/HezeAI/termux-jobs/blob/v1.1.4/docs/fork/BACKUP-RESTORE.md).
 
 ## Обновления — одна плашка
 
@@ -57,7 +57,7 @@ Android Keystore и внешние цели ссылок не переносят
 Оставляйте приложение открытым до окончания бэкапа/установки pigz: foreground
 service/wake lock нет. AI Agents экспериментальны; мерцание OpenCode не исправлялось.
 
-[Проверки и оставшиеся сценарии](VALIDATION-v1.1.4.md) · [Обновления](UPDATES.md).
+[Проверки и оставшиеся сценарии](https://github.com/HezeAI/termux-jobs/blob/v1.1.4/docs/fork/VALIDATION-v1.1.4.md) · [Обновления](https://github.com/HezeAI/termux-jobs/blob/v1.1.4/docs/fork/UPDATES.md).
 
 ## English highlights
 
