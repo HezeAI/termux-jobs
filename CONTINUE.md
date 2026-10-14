@@ -16,7 +16,13 @@ Receipts .verification/release-v1.1.4; docs/fork/VALIDATION-v1.1.4.md.
 Реальное обновление/новый UI не устанавливались агентом. Пакеты/APK не ставить,
 Bridge/процессы не трогать. Design PNGs остались untracked, не включать случайно.
 
-Статус GitHub публикации/обратной проверки будет записан после завершения.
+Опубликован stable Latest: https://github.com/HezeAI/termux-jobs/releases/tag/v1.1.4
+Source tag commit 8b395f6a10840ac27c840fb9e2e52cc13d19b1ee; тег не передвигать.
+Публичный latest API вернулv1.1.4; APK/SHA256SUMS/update.json скачаны обратно
+без GitHub auth и совпали побайтно. Published proof:
+.verification/release-v1.1.4/published/verification.json.
+APK также /sdcard/Download/Termux-Jobs-v1.1.4-arm64.apk. Публикация завершена.
+Проверка нового Auto UI/lifecycle и установки APK на Android остаётся пользователю.
 
 ---
 

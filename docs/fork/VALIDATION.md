@@ -1,5 +1,8 @@
 # Выпуск v1.1.4
 
+[Публичная Latest](https://github.com/HezeAI/termux-jobs/releases/tag/v1.1.4).
+APK, SHA256SUMS и update.json скачаны обратно и совпали.
+
 [Отчёт v1.1.4](VALIDATION-v1.1.4.md): улучшенный менеджер резервных копий,
 объединённая плашка обновлений и проверка при каждом открытии. 311 JVM checks,
 60 Python checks для неизменённого backup helper; release APK/пакет/подпись/
