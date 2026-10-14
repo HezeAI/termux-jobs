@@ -77,3 +77,15 @@ installed Termux/Ubuntu, пакеты или работающий Bridge.
 packages и удаление generated pycache из assets; финальные проверки выше прошли.
 Warning JNA filesystem layer unsupported Linux/aarch64 — предупреждение host lint,
 не тест Android-устройства; сборка завершилась успешно.
+
+## Проверка публикации
+
+Опубликован [v1.1.0](https://github.com/HezeAI/termux-jobs/releases/tag/v1.1.0) как Latest/stable: draft=false, prerelease=false.
+Тег исходников fd580488f4ca27a01b35fa2b832cb5c153a78e82. Дерево исходников GitHub API совпало с локальным
+5eb1f00e83ffd1c97ec7905b7c802551e1818abb; обычный GitHTTPS403/SSHtimeout
+обойдены штатным Git Database API. Это не обход пользовательских разрешений:
+публикация явно авторизована в текущей задаче. APK/SHA256SUMS/update.json скачаны
+обратно, побайтно совпали; hash/size/version metadata согласованы. Верифицирован
+статус всех assets и latest endpoint. Receipts в .verification/backup-v1.1.0/.
+Прямая загрузка/установка из Android-приложения всё ещё ожидает пользовательской
+проверки; успешная загрузка через gh не заменяет её.

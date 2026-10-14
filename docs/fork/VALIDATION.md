@@ -1,5 +1,8 @@
 # Текущий выпуск v1.1.0
 
+[Опубликован как Latest](https://github.com/HezeAI/termux-jobs/releases/tag/v1.1.0).
+APK, SHA256SUMS и update.json скачаны обратно и совпали.
+
 [Полный отчёт](VALIDATION-v1.1.0.md):302 JUnit/Robolectric tests и24 Python checks,
 release/lintVital, ZIP/package/version/ABI/сертификат/SHA256, update.json.
 Бэкапы — бета; реальные restore и in-app installer предстоит проверить пользователю.

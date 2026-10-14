@@ -1,4 +1,10 @@
-# Текущая задача: v1.1.0 — релиз обновлений и backup beta
+# Текущий выпуск: v1.1.0 — обновления и backup beta
+
+Публикация: https://github.com/HezeAI/termux-jobs/releases/tag/v1.1.0
+Тег исходников: fd580488f4ca27a01b35fa2b832cb5c153a78e82; draft=false, prerelease=false.
+Git HTTPS получил403/SSHtimeout; GitHub Git Database API загрузил точное дерево
+5eb1f00e83ffd1c97ec7905b7c802551e1818abb. Локальные commit/tag объекты согласованы
+с API; отличие сериализации конечного newline проверено, дерево исходников не менялось.
 
 Пользователь разрешил реализацию, сборку и публикацию на GitHub, хочет обновиться
 через установленную1.0.19. В релизе главный акцент на бета бэкапов из шестерёнки
@@ -15,8 +21,8 @@ Package comparison Termux only, APT simulation then confirmed new terminal.
 Версия1.1.0/code1057/com.termux/v8, прежний signer. 302 JVM tests +24 Python tests
 прошли, BUILD SUCCESSFUL. APK37806077bytes SHA25680030ff0e099391840761fad13fc745a52810025233adfb29623a3f38772654b.
 Receipts .verification/backup-v1.1.0, update.json с compatibility text внутри
-RU/EN changes для старого v1.0.19 клиента. Документация обновлена, публикация
-следующим шагом. После публикации скачать обратно три assets и проверить Latest.
+RU/EN changes для старого v1.0.19 клиента. Документация обновлена. Опубликован Latest, APK/SHA256SUMS/update.json скачаны
+обратно и побайтно совпали; latest API подтвердил stable v1.1.0.
 Для всех будущих релизов обязательны update.json/повышенный code и предупреждения
 о несовместимости/потерях/очистке **до установки**. Ничего не очищать автоматически.
 
