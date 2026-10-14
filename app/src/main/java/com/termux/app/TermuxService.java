@@ -102,7 +102,16 @@ public final class TermuxService extends Service implements TermuxTask.TermuxTas
     /** The basic implementation of the {@link TerminalSessionClient} interface to be used by {@link TerminalSession}
      * that does not hold activity references.
      */
-    final TermuxTerminalSessionClientBase mTermuxTerminalSessionClientBase = new TermuxTerminalSessionClientBase();
+    final TermuxTerminalSessionClientBase mTermuxTerminalSessionClientBase = new TermuxTerminalSessionClientBase() {
+        @Override public void onTextChanged(TerminalSession session) {
+            com.termux.app.workspace.WorkspaceDiagnostics.onOutput(session);
+            super.onTextChanged(session);
+        }
+        @Override public void onSessionFinished(TerminalSession session) {
+            com.termux.app.workspace.WorkspaceDiagnostics.finished(session);
+            super.onSessionFinished(session);
+        }
+    };
 
     /** The wake lock and wifi lock are always acquired and released together. */
     private PowerManager.WakeLock mWakeLock;

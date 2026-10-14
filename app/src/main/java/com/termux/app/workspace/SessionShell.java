@@ -25,6 +25,9 @@ public final class SessionShell {
         String script;
         java.util.List<String> startup = session.startupCommands();
         boolean guest = session.environment.equals("ubuntu") || (session.environment.equals("codex") && session.codexEnvironment.equals("ubuntu"));
+        if (session.geminiAgent) startup = java.util.Collections.singletonList(GeminiCli.command(files, session));
+        if (session.claudeAgent) startup = java.util.Collections.singletonList(ClaudeCode.command(files, session));
+        if (session.aiAgent.equals("opencode")) startup = java.util.Collections.singletonList(AiAgents.command(files, session));
         if (session.environment.equals("codex")) startup = java.util.Collections.singletonList(CodexSessionShell.command(files, session));
         if (guest) {
             String mount = "/tmp/termux-fork-session-" + session.id;
@@ -35,6 +38,9 @@ public final class SessionShell {
             script = buildRc(TermuxConstants.TERMUX_HOME_DIR_PATH, history.getAbsolutePath(), "")
                 + WorkspaceText.tr("printf '%s\\n' 'Ожидание оболочки Ubuntu…'\n")
                 + "proot-distro login --bind " + quote(dir.getAbsolutePath() + ":" + mount)
+                + (session.geminiAgent ? " --bind " + quote(GeminiCli.directory(files).getAbsolutePath() + ":" + GeminiCli.GUEST) : "")
+                + (session.claudeAgent ? " --bind " + quote(ClaudeCode.directory(files).getAbsolutePath() + ":" + ClaudeCode.GUEST) : "")
+                + (session.aiAgent.equals("opencode") ? " --bind " + quote(AiAgents.directory(files).getAbsolutePath() + ":/tmp/termux-jobs-ai") : "")
                 + (session.environment.equals("codex") ? " --bind " + quote(CodexSessionShell.socketDirectory(files).getAbsolutePath() + ":/tmp/termux-jobs-codex") : "")
                 + " --work-dir " + quote(cwd) + " ubuntu -- /bin/bash --rcfile " + quote(mount + "/ubuntu-bashrc") + " -i\n";
         } else if (session.environment.equals("ssh")) {
@@ -101,6 +107,7 @@ public final class SessionShell {
         script.append("return 0\n}\nPROMPT_COMMAND+=('_termux_workspace_ready')\n");
         return script.toString();
     }
+    static boolean hasCancellableStartup(WorkspaceStore.Session s){return s!=null&&(s.environment.equals("termux")||s.environment.equals("ubuntu"))&&!s.geminiAgent&&!s.claudeAgent&&s.aiAgent.isEmpty()&&!s.startupCommands().isEmpty();}
     public static void cancel(File files, String id) throws IOException {
         write(new File(directory(files, id), "cancel-startup"), new byte[0]);
     }

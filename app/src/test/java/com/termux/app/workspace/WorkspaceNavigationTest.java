@@ -40,26 +40,40 @@ public class WorkspaceNavigationTest {
         }controller.close();
     }
 
-    @Test public void languageAndGearHaveSeparateEqualHeaderTiles() throws Exception {
-        TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();activity.setTheme(R.style.Theme_Termux_Black);activity.setContentView(R.layout.activity_termux);
-        Field tv=TermuxActivity.class.getDeclaredField("mTerminalView");tv.setAccessible(true);tv.set(activity,activity.findViewById(R.id.terminal_view));WorkspaceController controller=new WorkspaceController(activity);
-        View header=activity.findViewById(R.id.workspace_header);View language=findDescription(header,"Язык / Language"),gear=findDescription(header,"Настройки приложения");assertNotNull(language);assertNotNull(gear);
-        ViewGroup.LayoutParams lp=language.getLayoutParams(),gp=gear.getLayoutParams();assertEquals(lp.width,gp.width);assertEquals(lp.height,gp.height);assertTrue(((ViewGroup.MarginLayoutParams)lp).getMarginEnd()>=WorkspaceDialogs.dp(activity,8));
-        assertTrue(gear.getBackground() instanceof android.graphics.drawable.RippleDrawable);assertTrue(language.getBackground() instanceof android.graphics.drawable.RippleDrawable);
-        android.graphics.drawable.GradientDrawable panel=(android.graphics.drawable.GradientDrawable)((android.graphics.drawable.RippleDrawable)gear.getBackground()).getDrawable(0);
-        assertEquals(WorkspaceDialogs.dp(activity,12),panel.getCornerRadius(),0.01);controller.close();
+    @Test public void terminalHeaderTogglesAreExclusiveToTerminalAndReflectEnabledState() throws Exception {
+        TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.setContentView(R.layout.activity_termux);
+        Field tv=TermuxActivity.class.getDeclaredField("mTerminalView");tv.setAccessible(true);tv.set(a,a.findViewById(R.id.terminal_view));WorkspaceController c=new WorkspaceController(a);
+        try {
+            View header=a.findViewById(R.id.workspace_header);
+            assertNull(findDescription(header,"Интерактивный ввод"));assertNull(findDescription(header,"Дополнительные клавиши"));
+            findDescription(a.findViewById(R.id.workspace_navigation),"Терминал").performClick();
+            View direct=findDescription(header,"Интерактивный ввод"),keys=findDescription(header,"Дополнительные клавиши");assertNotNull(direct);assertNotNull(keys);
+            View settings=findDescription(header,"Настройки приложения");assertEquals(settings.getLayoutParams().width,direct.getLayoutParams().width);assertEquals(settings.getLayoutParams().height,keys.getLayoutParams().height);assertNull(findDescription(header,"Меню терминала"));
+            boolean before=direct.isSelected();direct.performClick();assertEquals(!before,findDescription(header,"Интерактивный ввод").isSelected());
+            findDescription(a.findViewById(R.id.workspace_navigation),"Команды/Заметки").performClick();assertNull(findDescription(header,"Интерактивный ввод"));assertNull(findDescription(header,"Дополнительные клавиши"));
+            findDescription(a.findViewById(R.id.workspace_navigation),"Терминал").performClick();assertEquals(!before,findDescription(header,"Интерактивный ввод").isSelected());
+        } finally {c.close();}
     }
 
-    @Test public void packagesOnlyInHeldTerminalMenuIncludingBase() throws Exception {
+    @Test public void commonSettingsIncludeLanguageOnAllThreeTabs() throws Exception {
+        TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.setContentView(R.layout.activity_termux);
+        Field tv=TermuxActivity.class.getDeclaredField("mTerminalView");tv.setAccessible(true);tv.set(a,a.findViewById(R.id.terminal_view));WorkspaceController c=new WorkspaceController(a);
+        try{for(String label:new String[]{"Главная","Команды/Заметки","Терминал"}){
+            findDescription(a.findViewById(R.id.workspace_navigation),label).performClick();View header=a.findViewById(R.id.workspace_header);assertNull(findDescription(header,"Язык / Language"));
+            findDescription(header,"Настройки приложения").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog menu=ShadowAlertDialog.getLatestAlertDialog();assertEquals("Язык / Language",menu.getListView().getItemAtPosition(0));assertEquals("Настройки приложения",menu.getListView().getItemAtPosition(1));menu.dismiss();
+        }}finally{c.close();}
+    }
+
+    @Test public void packagesShortcutReplacesHeldMenuEntryIncludingBase() throws Exception {
         TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();activity.setTheme(R.style.Theme_Termux_Black);activity.setContentView(R.layout.activity_termux);
         Field tv=TermuxActivity.class.getDeclaredField("mTerminalView");tv.setAccessible(true);tv.set(activity,activity.findViewById(R.id.terminal_view));
         WorkspaceController controller=new WorkspaceController(activity);
         java.lang.reflect.Method menu=WorkspaceController.class.getDeclaredMethod("sessionMenu",WorkspaceStore.Session.class,boolean.class);menu.setAccessible(true);
         WorkspaceStore.Session profile=new WorkspaceStore.Session();profile.name="Held Ubuntu";profile.environment="ubuntu";profile.saved=true;
         menu.invoke(controller,profile,true);AlertDialog held=ShadowAlertDialog.getLatestAlertDialog();
-        assertEquals("Held Ubuntu",shadowOf(held).getTitle());boolean packages=false;for(int i=0;i<held.getListView().getCount();i++)if(held.getListView().getItemAtPosition(i).equals("Пакеты"))packages=true;assertTrue(packages);held.dismiss();
+        assertEquals("Held Ubuntu",shadowOf(held).getTitle());boolean packages=false;for(int i=0;i<held.getListView().getCount();i++)if(held.getListView().getItemAtPosition(i).equals("Пакеты"))packages=true;assertFalse(packages);held.dismiss();
         menu.invoke(controller,profile,false);AlertDialog home=ShadowAlertDialog.getLatestAlertDialog();for(int i=0;i<home.getListView().getCount();i++)assertNotEquals("Пакеты",home.getListView().getItemAtPosition(i));home.dismiss();
-        profile.id=WorkspaceStore.BASE_TERMINAL_ID;menu.invoke(controller,profile,true);AlertDialog base=ShadowAlertDialog.getLatestAlertDialog();assertEquals("Пакеты",base.getButton(AlertDialog.BUTTON_NEUTRAL).getText().toString());base.dismiss();controller.close();
+        profile.id=WorkspaceStore.BASE_TERMINAL_ID;menu.invoke(controller,profile,true);AlertDialog base=ShadowAlertDialog.getLatestAlertDialog();assertTrue(base.getButton(AlertDialog.BUTTON_NEUTRAL)==null || base.getButton(AlertDialog.BUTTON_NEUTRAL).getVisibility()==View.GONE);base.dismiss();controller.close();
     }
 
     @Test public void categoryFiltersAreExclusiveAndFolderPickerUsesVector() throws Exception {
@@ -158,26 +172,13 @@ public class WorkspaceNavigationTest {
         assertEquals("./gradlew assembleDebug", terminalInput.getText().toString());
         assertEquals(terminalInput.length(), terminalInput.getSelectionStart());
         assertNull(activity.getCurrentSession()); // Selection never launches a shell or sends input.
-        findDescription(activity.findViewById(R.id.workspace_header), "Меню терминала").performClick();
-        shadowOf(Looper.getMainLooper()).idle();
-        android.widget.ListAdapter menu = ShadowAlertDialog.getLatestAlertDialog().getListView().getAdapter();
-        assertEquals(4, menu.getCount());
-        assertEquals("Клавиатура", menu.getItem(0));
-        assertEquals("Дополнительные клавиши", menu.getItem(1));
-        assertEquals("Отменить команды запуска", menu.getItem(3));
-        for (int i = 0; i < menu.getCount(); i++) {
-            assertNotEquals("История", menu.getItem(i)); assertNotEquals("Сохранить снимок", menu.getItem(i));
-            assertNotEquals("Новая сессия", menu.getItem(i)); assertNotEquals("Настройки сессии", menu.getItem(i));
-            assertNotEquals("Закрыть сессию", menu.getItem(i));
-        }
-        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 2, 2);
+        assertNull(findDescription(activity.findViewById(R.id.workspace_header), "Меню терминала"));
+        findDescription(activity.findViewById(R.id.workspace_header),"Интерактивный ввод").performClick();
         shadowOf(Looper.getMainLooper()).idle();
         assertTrue(activity.getTerminalView().onCheckIsTextEditor());
         assertTrue(activity.getSharedPreferences("workspace-input", android.content.Context.MODE_PRIVATE)
             .getBoolean("interactive-input", false));
-        findDescription(activity.findViewById(R.id.workspace_header), "Меню терминала").performClick();
-        shadowOf(Looper.getMainLooper()).idle();
-        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 2, 2);
+        findDescription(activity.findViewById(R.id.workspace_header),"Интерактивный ввод").performClick();
         shadowOf(Looper.getMainLooper()).idle();
         assertFalse(activity.getTerminalView().onCheckIsTextEditor());
         assertNull(activity.getTerminalView().onCreateInputConnection(new android.view.inputmethod.EditorInfo()));
@@ -268,16 +269,17 @@ public class WorkspaceNavigationTest {
         ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick();
         shadowOf(Looper.getMainLooper()).idle(); store.awaitWrites();
         assertTrue(store.recentCommands.isEmpty()); assertEquals(2, store.commands.size());
-        assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Сохранённые сессии"));
+        assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Пресеты запуска"));
         java.lang.reflect.Method saveSession = WorkspaceController.class.getDeclaredMethod("editSession", WorkspaceStore.Session.class, boolean.class);
         saveSession.setAccessible(true); saveSession.invoke(controller, null, false);
         shadowOf(Looper.getMainLooper()).idle();
         AlertDialog sessionEditor = ShadowAlertDialog.getLatestAlertDialog();
+        assertEquals("Создать пресет", shadowOf(sessionEditor).getTitle());
         fields.clear(); collectEditors(sessionEditor.getWindow().getDecorView(), fields);
         findDescription(sessionEditor.getWindow().getDecorView(), "Среда запуска").performClick();
         shadowOf(Looper.getMainLooper()).idle();
         AlertDialog environmentChooser = ShadowAlertDialog.getLatestAlertDialog();
-        environmentChooser.getListView().performItemClick(null, 2, 2);
+        environmentChooser.getListView().performItemClick(null, 1, 1);
         shadowOf(Looper.getMainLooper()).idle();
         assertEquals("/root", fields.get(1).getText().toString());
         fields.get(0).setText("Codex / Ubuntu"); fields.get(2).setText("codex resume");
@@ -303,7 +305,7 @@ public class WorkspaceNavigationTest {
         homeContent.measure(View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(1600, View.MeasureSpec.EXACTLY));
         homeContent.layout(0, 0, 1080, 1600);
         android.widget.ScrollView journalPanel = (android.widget.ScrollView) findDescription(homeContent, "Журнал последних 50 команд");
-        android.widget.ScrollView sessionsPanel = (android.widget.ScrollView) findDescription(homeContent, "Список сохранённых сессий");
+        android.widget.ScrollView sessionsPanel = (android.widget.ScrollView) findDescription(homeContent, "Список пресетов запуска");
         assertTrue(journalPanel.getHeight() > 0); assertTrue(sessionsPanel.getHeight() > 0);
         assertTrue(journalPanel.getChildAt(0).getHeight() > journalPanel.getHeight());
         assertTrue(sessionsPanel.getChildAt(0).getHeight() > sessionsPanel.getHeight());
@@ -372,27 +374,27 @@ public class WorkspaceNavigationTest {
         assertEquals(1, store.sessions.size()); assertFalse(store.sessions.get(0).saved);
         ViewGroup content = activity.findViewById(R.id.workspace_content);
         assertNull(findText(content, "Temporary Bash"));
-        assertNotNull(findText(content, "Сохранённых сессий нет"));
+        assertNotNull(findText(content, "Пресетов запуска нет"));
         findDescription(activity.findViewById(R.id.workspace_navigation), "Терминал").performClick();
         View tab = findDescription(activity.findViewById(R.id.workspace_tabs), "Temporary Bash");
         assertNotNull(tab); assertTrue(tab.performLongClick());
         shadowOf(Looper.getMainLooper()).idle();
         AlertDialog menu = ShadowAlertDialog.getLatestAlertDialog();
         assertEquals(5, menu.getListView().getAdapter().getCount());
-        assertEquals("Сохранить сессию", menu.getListView().getAdapter().getItem(0));
+        assertEquals("Диагностика сессии",menu.getListView().getAdapter().getItem(4));
+        assertEquals("Добавить в пресеты запуска", menu.getListView().getAdapter().getItem(0));
         assertEquals("Перезапустить", menu.getListView().getAdapter().getItem(1));
         assertEquals("Настройки", menu.getListView().getAdapter().getItem(2));
         assertEquals("Закрыть сессию", menu.getListView().getAdapter().getItem(3));
-        assertEquals("Пакеты", menu.getListView().getAdapter().getItem(4));
         menu.getListView().performItemClick(null, 0, 0);
         store.awaitWrites(); assertTrue(store.sessions.get(0).saved); assertEquals(1, store.sessions.size());
         tab.performLongClick(); shadowOf(Looper.getMainLooper()).idle();
         menu = ShadowAlertDialog.getLatestAlertDialog();
         assertEquals(4, menu.getListView().getAdapter().getCount());
+        assertEquals("Диагностика сессии",menu.getListView().getAdapter().getItem(3));
         assertEquals("Перезапустить", menu.getListView().getAdapter().getItem(0));
         assertEquals("Настройки", menu.getListView().getAdapter().getItem(1));
         assertEquals("Закрыть сессию", menu.getListView().getAdapter().getItem(2));
-        assertEquals("Пакеты", menu.getListView().getAdapter().getItem(3));
         menu.getListView().performItemClick(null, 0, 0);
         shadowOf(Looper.getMainLooper()).idle();
         AlertDialog confirmation = ShadowAlertDialog.getLatestAlertDialog();
@@ -434,9 +436,13 @@ public class WorkspaceNavigationTest {
         WorkspaceStore.Session temporary = new WorkspaceStore.Session(); temporary.name = "Temporary";
         store.sessions.add(saved); store.sessions.add(temporary);
         findDescription(activity.findViewById(R.id.workspace_navigation), "Терминал").performClick();
-        findDescription(activity.findViewById(R.id.workspace_tabs), "Новая сессия").performClick();
+        ViewGroup sessionTabs=(ViewGroup)activity.findViewById(R.id.workspace_tabs);
+        java.lang.reflect.Method stack=WorkspaceController.class.getDeclaredMethod("showSessionStack",View.class);stack.setAccessible(true);
+        android.widget.PopupWindow open=(android.widget.PopupWindow)stack.invoke(controller,sessionTabs.getChildAt(0));
+        findDescription(open.getContentView(),"Создать новую сессию").performClick();
         shadowOf(Looper.getMainLooper()).idle(); AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
-        assertEquals("Сохранённые", dialog.getButton(AlertDialog.BUTTON_NEUTRAL).getText().toString());
+        assertEquals("Создать сессию", shadowOf(dialog).getTitle());
+        assertEquals("Пресеты", dialog.getButton(AlertDialog.BUTTON_NEUTRAL).getText().toString());
         assertEquals("Отмена", dialog.getButton(AlertDialog.BUTTON_NEGATIVE).getText().toString());
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).performClick(); shadowOf(Looper.getMainLooper()).idle();
         AlertDialog picker = ShadowAlertDialog.getLatestAlertDialog();
@@ -552,7 +558,7 @@ public class WorkspaceNavigationTest {
         edit.setAccessible(true); edit.invoke(controller, null, false); shadowOf(Looper.getMainLooper()).idle();
         AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
         findDescription(dialog.getWindow().getDecorView(), "Среда запуска").performClick(); shadowOf(Looper.getMainLooper()).idle();
-        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 3, 3); shadowOf(Looper.getMainLooper()).idle();
+        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 2, 2); shadowOf(Looper.getMainLooper()).idle();
         findDescription(dialog.getWindow().getDecorView(), "Авторизация SSH").performClick(); shadowOf(Looper.getMainLooper()).idle();
         ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 2, 2); shadowOf(Looper.getMainLooper()).idle();
         List<EditText> fields = new ArrayList<>(); collectEditors(dialog.getWindow().getDecorView(), fields);
@@ -579,7 +585,7 @@ public class WorkspaceNavigationTest {
         AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog(); List<EditText> fields = new ArrayList<>();
         collectEditors(dialog.getWindow().getDecorView(), fields); assertEquals(3, fields.size());
         findDescription(dialog.getWindow().getDecorView(), "Среда запуска").performClick(); shadowOf(Looper.getMainLooper()).idle();
-        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 3, 3);
+        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 2, 2);
         shadowOf(Looper.getMainLooper()).idle(); fields.clear(); collectEditors(dialog.getWindow().getDecorView(), fields);
         assertEquals(6, fields.size()); assertEquals("~", fields.get(1).getText().toString());
         fields.get(0).setText("Server"); fields.get(2).setText("example.invalid"); fields.get(3).setText("deploy");
@@ -724,7 +730,7 @@ public class WorkspaceNavigationTest {
         java.lang.reflect.Method edit = WorkspaceController.class.getDeclaredMethod("editSession", WorkspaceStore.Session.class, boolean.class); edit.setAccessible(true); edit.invoke(controller, null, false);
         AlertDialog form = ShadowAlertDialog.getLatestAlertDialog(); View decor = form.getWindow().getDecorView();
         findDescription(decor, "Среда запуска").performClick(); AlertDialog environments = ShadowAlertDialog.getLatestAlertDialog();
-        assertEquals("Сессия Codex", environments.getListView().getAdapter().getItem(4)); environments.getListView().performItemClick(null,4,4);
+        assertEquals(4,environments.getListView().getCount()); assertEquals("Termux",environments.getListView().getItemAtPosition(0)); assertEquals("Ubuntu",environments.getListView().getItemAtPosition(1)); assertEquals("AI Agents", environments.getListView().getAdapter().getItem(3)); environments.getListView().performItemClick(null,3,3);
         assertNotNull(findText(decor,"Среда Codex: Ubuntu"));
         assertEquals(View.GONE, findDescription(decor,"Добавить команду запуска").getVisibility());
         findDescription(decor,"Доступ Codex").performClick(); AlertDialog access = ShadowAlertDialog.getLatestAlertDialog();
@@ -740,11 +746,21 @@ public class WorkspaceNavigationTest {
         assertNull(activity.getCurrentSession()); assertEquals(View.GONE, activity.findViewById(R.id.workspace_codex_status).getVisibility());
         store.awaitWrites(); controller.close();
     }
+    @Test public void openCodeEditorStoresIndependentUbuntuProfileWithoutLegacyStartupCommands() throws Exception {
+        TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();activity.setTheme(R.style.Theme_Termux_Black);activity.setContentView(R.layout.activity_termux);
+        Field f=TermuxActivity.class.getDeclaredField("mTerminalView");f.setAccessible(true);f.set(activity,activity.findViewById(R.id.terminal_view));WorkspaceController controller=new WorkspaceController(activity);
+        java.lang.reflect.Method edit=WorkspaceController.class.getDeclaredMethod("editSession",WorkspaceStore.Session.class,boolean.class);edit.setAccessible(true);edit.invoke(controller,null,false);
+        AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();View decor=form.getWindow().getDecorView();findDescription(decor,"Среда запуска").performClick();ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null,3,3);
+        findText(decor,"Агент: Codex").performClick();ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null,1,1);
+        shadowOf(Looper.getMainLooper()).idle();assertNotNull(findText(decor,"Агент: OpenCode"));assertNotNull(findText(decor,"Подключение: Основное подключение"));assertEquals(View.GONE,findDescription(decor,"Добавить команду запуска").getVisibility());
+        form.getButton(-1).performClick();shadowOf(Looper.getMainLooper()).idle();Field sf=WorkspaceController.class.getDeclaredField("store");sf.setAccessible(true);WorkspaceStore store=(WorkspaceStore)sf.get(controller);assertEquals(1,store.sessions.size());WorkspaceStore.Session profile=store.sessions.get(0);
+        assertEquals("ubuntu",profile.environment);assertEquals("opencode",profile.aiAgent);assertEquals("new",profile.aiChat);assertTrue(profile.startupCommands().isEmpty());assertEquals("/root",profile.directory);assertNull(activity.getCurrentSession());store.awaitWrites();controller.close();
+    }
     @Test public void emptyTerminalRowRetainsAddAndFilesActions() throws Exception {
         TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();activity.setTheme(R.style.Theme_Termux_Black);activity.setContentView(R.layout.activity_termux);
         Field f=TermuxActivity.class.getDeclaredField("mTerminalView");f.setAccessible(true);f.set(activity,activity.findViewById(R.id.terminal_view));
         WorkspaceController controller=new WorkspaceController(activity);View tabs=activity.findViewById(R.id.workspace_tabs);
-        assertNotNull(findDescription(tabs,"Новая сессия"));assertNotNull(findDescription(tabs,"Файлы проекта"));assertNotNull(findDescription(tabs,"Сессии"));
+        assertNotNull(findDescription(tabs,"Пакеты"));assertNull(findDescription(tabs,"Новая сессия"));assertNotNull(findDescription(tabs,"Файлы проекта"));assertNotNull(findDescription(tabs,"Сессии"));
         assertEquals(3,((ViewGroup)tabs).getChildCount());controller.close();
     }
     @Test public void baseTerminalMenuCannotCloseDeleteOrChangeItsProfile() throws Exception {
@@ -752,7 +768,7 @@ public class WorkspaceNavigationTest {
         Field f=TermuxActivity.class.getDeclaredField("mTerminalView");f.setAccessible(true);f.set(activity,activity.findViewById(R.id.terminal_view));WorkspaceController controller=new WorkspaceController(activity);
         WorkspaceStore.Session profile=new WorkspaceStore.Session();profile.id=WorkspaceStore.BASE_TERMINAL_ID;profile.name="Terminal";
         java.lang.reflect.Method menu=WorkspaceController.class.getDeclaredMethod("sessionMenu",WorkspaceStore.Session.class,boolean.class);menu.setAccessible(true);menu.invoke(controller,profile,true);
-        AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();assertNull(dialog.getListView());assertEquals("Перезапустить",dialog.getButton(AlertDialog.BUTTON_POSITIVE).getText().toString());
+        AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();assertEquals("Диагностика сессии",dialog.getListView().getItemAtPosition(0));assertEquals("Перезапустить",dialog.getButton(AlertDialog.BUTTON_POSITIVE).getText().toString());
         assertNull(findText(dialog.getWindow().getDecorView(),"Закрыть сессию"));assertNull(findText(dialog.getWindow().getDecorView(),"Настройки"));dialog.dismiss();controller.close();
     }
     @Test public void savingBusyNewCodexDoesNotCreateFalseResumeAssociation() throws Exception {

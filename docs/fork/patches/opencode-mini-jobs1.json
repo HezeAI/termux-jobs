@@ -1,0 +1,9 @@
+{
+  "upstreamVersion": "2.0.28",
+  "upstreamCommit": "026b106bc5d41b679ffc413264229c340871e4d3",
+  "revision": "jobs1",
+  "binarySha256": "f02a7948fcc86b1a163243142eae5adb3318b07f238abc3de2c945f42d7e68ca",
+  "archiveSha256": "1ea9cec6e122ab0597a093862f0dcb654f2653c9192816c621415b890fb674fe",
+  "archiveBytes": 71048636,
+  "binaryBytes": 177588520
+}

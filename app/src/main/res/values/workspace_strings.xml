@@ -34,9 +34,9 @@
     <string name="workspace_text_031" formatted="false">"Clear the entire recent command log?"</string>
     <string name="workspace_text_032" formatted="false">"Search command log"</string>
     <string name="workspace_text_033" formatted="false">"Last 50 commands"</string>
-    <string name="workspace_text_034" formatted="false">"Saved sessions"</string>
-    <string name="workspace_text_035" formatted="false">"Saved session list"</string>
-    <string name="workspace_text_036" formatted="false">"No saved sessions"</string>
+    <string name="workspace_text_034" formatted="false">"Launch presets"</string>
+    <string name="workspace_text_035" formatted="false">"Launch preset list"</string>
+    <string name="workspace_text_036" formatted="false">"No launch presets"</string>
     <string name="workspace_text_037" formatted="false">"Tap + to prepare startup commands."</string>
     <string name="workspace_text_038" formatted="false">"No commands yet"</string>
     <string name="workspace_text_039" formatted="false">"Commands sent from the terminal input field will appear here."</string>
@@ -89,7 +89,7 @@
     <string name="workspace_text_086" formatted="false">"General"</string>
     <string name="workspace_text_087" formatted="false">"Command categories"</string>
     <string name="workspace_text_088" formatted="false">"Active"</string>
-    <string name="workspace_text_089" formatted="false">"Saved"</string>
+    <string name="workspace_text_089" formatted="false">"Presets"</string>
     <string name="workspace_text_090" formatted="false">"No active sessions"</string>
     <string name="workspace_text_091" formatted="false">"Create a session or launch a saved one."</string>
     <string name="workspace_text_092" formatted="false">"+  New session"</string>
@@ -248,7 +248,7 @@
     <string name="workspace_text_245" formatted="false">"Restart"</string>
     <string name="workspace_text_246" formatted="false">"Restart the base shell?"</string>
     <string name="workspace_text_247" formatted="false">"Close menu"</string>
-    <string name="workspace_text_248" formatted="false">"Save session"</string>
+    <string name="workspace_text_248" formatted="false">"Add to launch presets"</string>
     <string name="workspace_text_249" formatted="false">"Settings"</string>
     <string name="workspace_text_250" formatted="false">"Close session"</string>
     <string name="workspace_text_251" formatted="false">"Delete session"</string>
@@ -257,14 +257,14 @@
     <string name="workspace_text_254" formatted="false">"Delete settings and session history for “"</string>
     <string name="workspace_text_255" formatted="false">"”? Stop the active terminal first."</string>
     <string name="workspace_text_256" formatted="false">"Stop the session first"</string>
-    <string name="workspace_text_257" formatted="false">"No saved sessions. Long press a terminal tab and select “Save session”."</string>
+    <string name="workspace_text_257" formatted="false">"No launch presets. Long press a terminal tab and select “Add to launch presets”."</string>
     <string name="workspace_text_258" formatted="false">"Wait for status to refresh and try saving again"</string>
     <string name="workspace_text_259" formatted="false">"Chat ID is not available yet. Wait for Codex startup and try saving again; the new helper version is required."</string>
-    <string name="workspace_text_260" formatted="false">"Session saved"</string>
+    <string name="workspace_text_260" formatted="false">"Launch preset added"</string>
     <string name="workspace_text_261" formatted="false">"Session is already closed"</string>
     <string name="workspace_text_262" formatted="false">"Close session “"</string>
     <string name="workspace_text_263" formatted="false">"The process will stop and the terminal tab will close. Saved settings and history will remain."</string>
-    <string name="workspace_text_264" formatted="false">"Save settings and Bash command history before closing? Codex history is kept by Codex itself."</string>
+    <string name="workspace_text_264" formatted="false">"Add launch settings and Bash command history to presets before closing? Codex history is kept by Codex itself."</string>
     <string name="workspace_text_265" formatted="false">"Save and close"</string>
     <string name="workspace_text_266" formatted="false">"Close without saving"</string>
     <string name="workspace_text_267" formatted="false">"Wait for status to refresh and try closing again"</string>
@@ -472,4 +472,113 @@
     <string name="workspace_text_469" formatted="false">Continue editing</string>
     <string name="workspace_text_470" formatted="false">Saving…</string>
     <string name="workspace_text_471" formatted="false">File saved</string>
+    <string name="workspace_text_472">Main connection</string>
+    <string name="workspace_text_473">Checking environment and reading data…</string>
+    <string name="workspace_text_474">Not connected. Create and launch an OpenCode session first: components will install automatically in Ubuntu. Then retry model selection or connection setup. Codex works independently.</string>
+    <string name="workspace_text_475">OpenCode connection</string>
+    <string name="workspace_text_476">Accounts and API keys</string>
+    <string name="workspace_text_477">+ Connection</string>
+    <string name="workspace_text_478">New connection</string>
+    <string name="workspace_text_479">OpenCode · Ubuntu. Select a connection for each session. Codex sign-in stays independent.</string>
+    <string name="workspace_text_480">Provider</string>
+    <string name="workspace_text_481">API key (hidden)</string>
+    <string name="workspace_text_482">OpenCode stores the key locally in a separate connection. Saving does not check balance or model access and does not send an AI request. For your Codex subscription, choose Codex and use its normal sign-in.</string>
+    <string name="workspace_text_483">Model catalog</string>
+    <string name="workspace_text_484">Save key</string>
+    <string name="workspace_text_485">Enter an API key</string>
+    <string name="workspace_text_486">Key saved. Model access is checked when you use the provider.</string>
+    <string name="workspace_text_487">Search models</string>
+    <string name="workspace_text_488">The catalog does not guarantee account access. Confirm the model and behavior before applying.</string>
+    <string name="workspace_text_489">Choose model</string>
+    <string name="workspace_text_490">Default</string>
+    <string name="workspace_text_491">Model behavior</string>
+    <string name="workspace_text_492">Confirm selection</string>
+    <string name="workspace_text_493">No saved OpenCode chats in this connection.</string>
+    <string name="workspace_text_494">OpenCode chats</string>
+    <string name="workspace_text_495">Model applied</string>
+    <string name="workspace_text_496">Permissions and sign-in appear in the OpenCode terminal. Account quotas are not calculated here.</string>
+    <string name="workspace_text_497">Install OpenCode in Ubuntu</string>
+    <string name="workspace_text_498">A separate Ubuntu session will install OpenCode v2.0.28. Node.js 20+ and npm are required. Existing Codex is preserved.</string>
+    <string name="workspace_text_499">OpenCode runs in Ubuntu. Create and launch checks components and installs them in this tab if needed. Node.js is installed separately from the system runtime. Connections and history are separate from Codex; permissions appear in the terminal.</string>
+    <string name="workspace_text_500">"Connection: "</string>
+    <string name="workspace_text_501">"Mode: "</string>
+    <string name="workspace_text_502">with confirmations</string>
+    <string name="workspace_text_503">OpenCode mode</string>
+    <string name="workspace_text_504">"Agent: "</string>
+    <string name="workspace_text_505">Choose agent</string>
+    <string name="workspace_text_506">Claude Code · later</string>
+    <string name="workspace_text_507">Gemini CLI · later</string>
+    <string name="workspace_text_508">First phase: Codex and OpenCode. This agent will be added after verification.</string>
+    <string name="workspace_text_509">Close the session before changing its agent, connection or access level.</string>
+    <string name="workspace_text_510">Enter model ID</string>
+    <string name="workspace_text_511">OpenCode history has not been created yet or the connection is unavailable. Save only the settings for a new chat?</string>
+    <string name="workspace_text_512">Save settings</string>
+    <string name="workspace_text_513">Plan — analyze and prepare a plan. The mode does not replace access restrictions: choose Read only to prevent changes.</string>
+    <string name="workspace_text_514">Build — implement tasks: file changes, builds and commands. Available actions depend on the access level.</string>
+    <string name="workspace_text_515">Read only · no commands</string>
+    <string name="workspace_text_516">With confirmations</string>
+    <string name="workspace_text_517">OpenCode access</string>
+    <string name="workspace_text_518">Allowed tools may change files visible to Ubuntu and run commands without confirmation. This does not grant Android root or a separate sandbox. OpenCode policies may impose additional restrictions.</string>
+    <string name="workspace_text_519">Reading, file search and questions are allowed. Editing, shell, subagents, MCP and unknown tools are denied by OpenCode rules. These are tool restrictions, not filesystem isolation.</string>
+    <string name="workspace_text_520">OpenCode asks permission for actions. Choosing Allow always may save permission for the project. This mode does not create a filesystem sandbox.</string>
+    <string name="workspace_text_521">Change model and reopen OpenCode?</string>
+    <string name="workspace_text_522">OpenCode will reopen in this tab with the current chat history. The server and chat will stay alive. Unsent text inside OpenCode may be lost; the app input field stays unchanged. Model changes are unavailable during a response or while work is queued.</string>
+    <string name="workspace_text_523">Reopen</string>
+    <string name="workspace_text_524">OpenCode is busy or has queued work. Wait for completion and try changing the model again.</string>
+    <string name="workspace_text_525">Could not reopen OpenCode. Check the terminal; the selected model has not been confirmed.</string>
+    <string name="workspace_text_526">Model changed; OpenCode is reopening with chat history</string>
+    <string name="workspace_text_527">Create session</string>
+    <string name="workspace_text_528">Create preset</string>
+    <string name="workspace_text_529">Create new session</string>
+    <string name="workspace_text_530">No open sessions. Create a new session.</string>
+    <string name="workspace_ai_save_chat">Save session chat</string>
+    <string name="workspace_ai_chat_saved">Session chat saved</string>
+    <string name="workspace_ai_chat_not_ready">Start OpenCode and wait for the connection first</string>
+    <string name="workspace_claude_00">Confirm actions</string>
+    <string name="workspace_claude_01">Allow edits</string>
+    <string name="workspace_claude_02">Planning</string>
+    <string name="workspace_claude_03">Claude asks for action permissions in the terminal.</string>
+    <string name="workspace_claude_04">File edits and common filesystem commands are approved automatically; other actions require permission.</string>
+    <string name="workspace_claude_05">Analyze and plan without making changes. This is a Claude mode, not an operating system sandbox.</string>
+    <string name="workspace_claude_06">Claude Code model</string>
+    <string name="workspace_claude_07">Claude Code permissions</string>
+    <string name="workspace_claude_08">Claude Code chat</string>
+    <string name="workspace_claude_09">Claude Code chat ID</string>
+    <string name="workspace_claude_10">Claude Code runs in Ubuntu. Components are installed in a separate directory on first launch. A Claude subscription or paid API is required; ChatGPT Plus does not apply. Authentication and history are separate. Choose chat opens the Claude picker in the terminal. Model availability depends on your account.</string>
+    <string name="workspace_claude_11">This agent is not supported yet.</string>
+    <string name="workspace_claude_12">Model and permissions are set at launch. Current status: /status; change model: /model; permissions: /permissions; sign in: /login. Enter these commands in the Claude terminal. Claude saves its own history; choose a chat or enter its ID when starting again.</string>
+    <string name="workspace_claude_launch">"At launch: "</string>
+    <string name="workspace_gemini_00">Gemini asks for action permissions in the terminal.</string>
+    <string name="workspace_gemini_01">Gemini automatically approves editing tools; other actions require confirmation.</string>
+    <string name="workspace_gemini_02">Analyze and plan without changes. This is a Gemini mode, not an operating system sandbox.</string>
+    <string name="workspace_gemini_03">Gemini CLI model</string>
+    <string name="workspace_gemini_04">Gemini CLI permissions</string>
+    <string name="workspace_gemini_05">Gemini CLI chat</string>
+    <string name="workspace_gemini_06">Gemini CLI chat ID</string>
+    <string name="workspace_gemini_07">Gemini CLI runs in Ubuntu. Separate components are installed on first launch. To try the free tier, sign in with a personal Google account; availability depends on region and account. History is separate and tied to the project directory. Choose chat opens the terminal picker after sign-in. Select the original directory to resume.</string>
+    <string name="workspace_gemini_08">This card shows Gemini launch settings. See the current model in the terminal; /model changes the model, /stats shows statistics, /auth opens sign-in, /resume opens history. Use the same project directory to continue. Free quotas depend on your account; live limits are not read here.</string>
+    <string name="workspace_access_details_0">No Codex filesystem sandbox: files and commands are accessible within environment permissions, without approval prompts. This does not grant Android root.</string>
+    <string name="workspace_access_details_1">Codex can edit project files and run commands inside its sandbox; leaving its boundaries requires approval. Sandbox support depends on Android/proot.</string>
+    <string name="workspace_access_details_2">The Codex sandbox allows reading and inspection. Writing or exceeding restrictions requires approval. Sandbox support depends on Android/proot.</string>
+    <string name="workspace_gemini_auth_0">Google account</string>
+    <string name="workspace_gemini_auth_1">API key</string>
+    <string name="workspace_gemini_auth_2">Choose in terminal</string>
+    <string name="workspace_gemini_auth_3">Sign in with Google only. Switching to an API key in this session is blocked; Google sign-in errors remain visible.</string>
+    <string name="workspace_gemini_auth_4">Sign in with a Gemini API key only. API terms and billing are separate from Google sign-in.</string>
+    <string name="workspace_gemini_auth_5">Native Gemini menu. Uses the sign-in method saved by the CLI; you can change it in the terminal.</string>
+    <string name="workspace_gemini_auth_6">"Gemini sign-in: "</string>
+    <string name="workspace_gemini_auth_7">Gemini sign-in method</string>
+    <string name="workspace_diagnostics_extended">Extended debug journal</string>
+    <string name="workspace_diagnostics_hint">Basic collection is automatic. Extended: events and error codes; Gemini also enables native debug at launch. No input or conversation recording. Changes apply on next launch.</string>
+    <string name="workspace_diagnostics_title">Session diagnostics</string>
+    <string name="workspace_diagnostics_notice">Collected even while this window is closed. Updates automatically. Up to 2 MiB per session. Reports contain events and error codes, without conversations or secrets.</string>
+    <string name="workspace_diagnostics_resume">Resume collection</string>
+    <string name="workspace_diagnostics_pause">Stop collection</string>
+    <string name="workspace_diagnostics_copy_path">Copy report path</string>
+    <string name="workspace_diagnostics_download">Save to Download</string>
+    <string name="workspace_diagnostics_save_error">Could not save report</string>
+    <string name="workspace_interactive_toggle">Interactive input</string>
+    <string name="workspace_diagnostics_yes">Yes</string>
+    <string name="workspace_diagnostics_no">No</string>
+    <string name="workspace_cancel_startup_confirm">Cancel the following startup steps? All configured commands are listed below. The currently running command will continue.</string>
 </resources>

@@ -1,0 +1,32 @@
+--- a/packages/tui/src/mini/types.ts
++++ b/packages/tui/src/mini/types.ts
+@@ -122,6 +122,7 @@
+   version: string
+   terminal: {
+     stdin: NodeJS.ReadStream
++    replayOnResize?: boolean
+   }
+   platform: NodeJS.Platform
+   stdout: {
+--- a/packages/cli/src/mini-host.ts
++++ b/packages/cli/src/mini-host.ts
+@@ -139,7 +139,7 @@
+   }
+   return {
+     version: OPENCODE_VERSION,
+-    terminal: { stdin: input.terminal.stdin },
++    terminal: { stdin: input.terminal.stdin, replayOnResize: process.env.TERMUX_JOBS_DISABLE_RESIZE_REPLAY !== "1" },
+     platform: process.platform,
+     stdout: {
+       write(value) {
+--- a/packages/tui/src/mini/runtime.ts
++++ b/packages/tui/src/mini/runtime.ts
+@@ -843,7 +843,7 @@
+       }
+ 
+       shell.refreshTheme()
+-      if (!input.replay || !state.stream) {
++      if (!input.replay || !state.stream || input.host.terminal.replayOnResize === false) {
+         return
+       }
+ 

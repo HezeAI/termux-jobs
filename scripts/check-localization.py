@@ -15,7 +15,7 @@ en=strings(root/'app/src/main/res/values/workspace_strings.xml')
 ru=strings(root/'app/src/main/res/values-ru/workspace_strings.xml')
 assert en.keys()==ru.keys(),'Workspace locale keys differ'
 source=(root/'app/src/main/java/com/termux/app/workspace/WorkspaceText.java').read_text()
-ids=re.findall(r'ids\.put\(.*?, R\.string\.(workspace_text_\d+)\);',source)
+ids=re.findall(r'ids\.put\(.*?, R\.string\.(workspace_[a-z0-9_]+)\);',source)
 assert len(ids)==len(set(ids))==len(en),'Workspace text map differs from resources'
 assert set(ids)==set(en),'Workspace resource key is missing from text map'
 for name,value in en.items():

@@ -504,6 +504,7 @@ public class TermuxTerminalViewClient extends TermuxTerminalViewClientBase {
      * drawer or extra keys, or with ctrl+alt+k hardware keyboard shortcut.
      */
     public void onToggleSoftKeyboardRequest() {
+        if (mActivity.prepareWorkspaceKeyboardWindow()) {mActivity.toggleWorkspaceKeyboard();return;}
         if (!mActivity.getTerminalView().isSoftKeyboardInputEnabled()) {
             mActivity.toggleWorkspaceKeyboard(); return;
         }
@@ -545,6 +546,9 @@ public class TermuxTerminalViewClient extends TermuxTerminalViewClientBase {
     }
 
     public void setSoftKeyboardState(boolean isStartup, boolean isReloadTermuxProperties) {
+        // Workspace fields always need an IME-capable activity window. Terminal tapping
+        // is controlled separately by the Interactive input setting.
+        if (mActivity.prepareWorkspaceKeyboardWindow()) return;
         if (!mActivity.getTerminalView().isSoftKeyboardInputEnabled()) return;
         boolean noShowKeyboard = false;
 

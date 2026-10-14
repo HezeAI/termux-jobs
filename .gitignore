@@ -43,3 +43,10 @@ Thumbs.db
 
 # Short Unix socket paths for isolated verification only
 /.cx/
+
+# Generated private frontend; rebuild from docs/fork/patches.
+/app/src/main/assets/opencode-mini-v2.0.28-jobs1.bundle
+
+# Python verification caches
+__pycache__/
+*.pyc

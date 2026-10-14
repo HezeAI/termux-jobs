@@ -275,3 +275,55 @@ uid/gid/mode, повторяет revision, затем mv -fT в том же ка
 для внешних writers: возможна гонка check/rename. Не применяется глобальная блокировка.
 Отмена недоступна во время записи; lifecycle закрывает только собственный transport,
 уже выполненная rename при разрыве подключения не откатывается автоматически.
+
+## Локальное расширение AI Agents v1.0.5
+
+AiAgents/AiAgentsUi и ai-agents-control.js изолируют подключения OpenCode по UUID.
+WorkspaceStore сохраняет необязательные ai-поля в v8; environment=ubuntu для
+OpenCode позволяет старому reader открыть обычную Ubuntu без скрытого запуска.
+Codex остаётся environment=codex и использует прежний CodexSessionShell/Rpc.
+Каждая вкладка OpenCode имеет собственные сервер и Unix socket, запросы ограничены
+allowlist, ответы моделей очищены от secrets/settings. Подробные границы:
+[AI-AGENTS](AI-AGENTS.md).
+
+## Локальная v1.0.10: bounded output batching
+
+WorkspaceController включает optional SynchronizedOutputBuffer только в OpenCode
+профилях. TerminalSession не передаёт в emulator части DEC2026 frame до end/timeout;
+normal sessions используют прежний путь. Native input/ANSI байты не фильтруются.
+При resize объединяются несколько коротких выводов, с hard deadline и лимитом RAM.
+Same PTY geometry/metrics skip применяется только opt-in, а native replay/модель/БД
+OpenCode остались. Timer completion/reset/exit/disable рассмотрены в validation.
+
+Packages открываются отдельным tile через актуальный профиль. Session stack первым
+действием создаёт обычную сессию, Home + создаёт сохранённый пресет; format v8 прежний.
+
+
+## Local v1.0.18 diagnostics
+
+WorkspaceDiagnostics owns a structured in-process ring per workspace profile, keyed
+by profile ID and current terminal handle, 2MiB/profile,32MiB global and64-profile cap.
+Launch/exit/error classification is independent of dialog lifecycle. Both Activity
+and service-only TerminalSessionClient callbacks observe output; source scans are
+limited to100 rows,400 columns and once/2s. No output replays, PTY resize or writes,
+stdin interception, environment dumps or process control are added by diagnostics.
+Allowlisted categories and numeric HTTP codes are extracted; raw terminal text is
+never appended. A terminal quote can produce a signal, so signals are not treated as
+confirmed request failures. Extended mode adds activity heartbeat and native Gemini
+--debug; it does not promise internal HTTP traces for every agent.
+
+WorkspaceDiagnosticsUi refreshes only while visible, pauses collection independently
+from process execution, and saves private0600 reports on the diagnostics IO worker.
+Explicit Download exports have unique names and contain only the structured report.
+The memory ring does not survive application process death; explicitly saved files do.
+Session.extendedDebug is an optional v8 field; old profiles default false, copies
+inherit preference, changing preference does not mutate an already running agent.
+
+Shared settings gear on all tabs: language + existing SettingsActivity. Terminal-only
+vector switches use selected-filter fill and stable48dp slots. Diagnostics lives in
+long-press session context (base Terminal included). Startup cancellation uses the
+existing per-profile marker, with explicit Yes/No and visible configured commands;
+it never signals the current process. Only supported custom Termux/Ubuntu sequences
+expose the vector in the active selector. It is omitted from selector popup rows and
+hidden while the popup is open. Native SSH/legacy/auto-generated AI launch commands
+are not presented as cancellable sequences.

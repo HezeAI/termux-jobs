@@ -34,9 +34,9 @@
     <string name="workspace_text_031" formatted="false">"Очистить весь журнал недавних команд?"</string>
     <string name="workspace_text_032" formatted="false">"Поиск по журналу"</string>
     <string name="workspace_text_033" formatted="false">"Журнал последних 50 команд"</string>
-    <string name="workspace_text_034" formatted="false">"Сохранённые сессии"</string>
-    <string name="workspace_text_035" formatted="false">"Список сохранённых сессий"</string>
-    <string name="workspace_text_036" formatted="false">"Сохранённых сессий нет"</string>
+    <string name="workspace_text_034" formatted="false">"Пресеты запуска"</string>
+    <string name="workspace_text_035" formatted="false">"Список пресетов запуска"</string>
+    <string name="workspace_text_036" formatted="false">"Пресетов запуска нет"</string>
     <string name="workspace_text_037" formatted="false">"Нажмите +, чтобы подготовить команду запуска."</string>
     <string name="workspace_text_038" formatted="false">"Команд пока нет"</string>
     <string name="workspace_text_039" formatted="false">"Здесь появятся команды, отправленные из поля ввода терминала."</string>
@@ -89,7 +89,7 @@
     <string name="workspace_text_086" formatted="false">"Общее"</string>
     <string name="workspace_text_087" formatted="false">"Категории команд"</string>
     <string name="workspace_text_088" formatted="false">"Активные"</string>
-    <string name="workspace_text_089" formatted="false">"Сохранённые"</string>
+    <string name="workspace_text_089" formatted="false">"Пресеты"</string>
     <string name="workspace_text_090" formatted="false">"Нет активных сессий"</string>
     <string name="workspace_text_091" formatted="false">"Создайте сессию или запустите сохранённую."</string>
     <string name="workspace_text_092" formatted="false">"+  Новая сессия"</string>
@@ -248,7 +248,7 @@
     <string name="workspace_text_245" formatted="false">"Перезапустить"</string>
     <string name="workspace_text_246" formatted="false">"Перезапустить базовую оболочку?"</string>
     <string name="workspace_text_247" formatted="false">"Закрыть меню"</string>
-    <string name="workspace_text_248" formatted="false">"Сохранить сессию"</string>
+    <string name="workspace_text_248" formatted="false">"Добавить в пресеты запуска"</string>
     <string name="workspace_text_249" formatted="false">"Настройки"</string>
     <string name="workspace_text_250" formatted="false">"Закрыть сессию"</string>
     <string name="workspace_text_251" formatted="false">"Удалить сессию"</string>
@@ -257,14 +257,14 @@
     <string name="workspace_text_254" formatted="false">"Удалить настройки и историю сессии «"</string>
     <string name="workspace_text_255" formatted="false">"»? Активный терминал сначала нужно остановить."</string>
     <string name="workspace_text_256" formatted="false">"Сначала остановите сессию"</string>
-    <string name="workspace_text_257" formatted="false">"Сохранённых сессий нет. Удерживайте вкладку терминала и выберите «Сохранить сессию»."</string>
+    <string name="workspace_text_257" formatted="false">"Пресетов запуска нет. Удерживайте вкладку терминала и выберите «Добавить в пресеты запуска»."</string>
     <string name="workspace_text_258" formatted="false">"Дождитесь обновления статуса и повторите сохранение"</string>
     <string name="workspace_text_259" formatted="false">"ID чата ещё не получен. Дождитесь запуска Codex и повторите сохранение; нужен помощник новой версии."</string>
-    <string name="workspace_text_260" formatted="false">"Сессия сохранена"</string>
+    <string name="workspace_text_260" formatted="false">"Пресет запуска добавлен"</string>
     <string name="workspace_text_261" formatted="false">"Сессия уже закрыта"</string>
     <string name="workspace_text_262" formatted="false">"Закрыть сессию «"</string>
     <string name="workspace_text_263" formatted="false">"Процесс будет остановлен, вкладка терминала закрыта. Сохранённые настройки и история останутся."</string>
-    <string name="workspace_text_264" formatted="false">"Сохранить настройки и историю команд Bash перед закрытием? История Codex остаётся в самом Codex."</string>
+    <string name="workspace_text_264" formatted="false">"Добавить настройки запуска и историю команд Bash в пресеты перед закрытием? История Codex остаётся в самом Codex."</string>
     <string name="workspace_text_265" formatted="false">"Сохранить и закрыть"</string>
     <string name="workspace_text_266" formatted="false">"Закрыть без сохранения"</string>
     <string name="workspace_text_267" formatted="false">"Дождитесь обновления статуса и повторите закрытие"</string>
@@ -472,4 +472,113 @@
     <string name="workspace_text_469" formatted="false">Продолжить редактирование</string>
     <string name="workspace_text_470" formatted="false">Сохранение…</string>
     <string name="workspace_text_471" formatted="false">Файл сохранён</string>
+    <string name="workspace_text_472">Основное подключение</string>
+    <string name="workspace_text_473">Проверка окружения и чтение данных…</string>
+    <string name="workspace_text_474">Нет подключения. Сначала создайте и запустите сессию OpenCode: компоненты установятся в Ubuntu автоматически. Затем повторите выбор модели или настройку подключения. Codex работает независимо.</string>
+    <string name="workspace_text_475">Подключение OpenCode</string>
+    <string name="workspace_text_476">Аккаунты и API-ключи</string>
+    <string name="workspace_text_477">+ Подключение</string>
+    <string name="workspace_text_478">Новое подключение</string>
+    <string name="workspace_text_479">OpenCode · Ubuntu. Подключение выбирается отдельно для каждой сессии. Вход Codex не меняется.</string>
+    <string name="workspace_text_480">Провайдер</string>
+    <string name="workspace_text_481">API-ключ (не отображается)</string>
+    <string name="workspace_text_482">Ключ хранится локально средствами OpenCode в отдельном подключении. Сохранение не проверяет баланс или доступ к модели и не отправляет запрос к ИИ. Для подписки Codex используйте агент Codex и его обычный вход.</string>
+    <string name="workspace_text_483">Каталог моделей</string>
+    <string name="workspace_text_484">Сохранить ключ</string>
+    <string name="workspace_text_485">Введите API-ключ</string>
+    <string name="workspace_text_486">Ключ сохранён. Доступ к модели проверяется при обращении к провайдеру.</string>
+    <string name="workspace_text_487">Поиск моделей</string>
+    <string name="workspace_text_488">Каталог не гарантирует доступ аккаунта. Модель и поведение применяются после подтверждения.</string>
+    <string name="workspace_text_489">Выбрать модель</string>
+    <string name="workspace_text_490">По умолчанию</string>
+    <string name="workspace_text_491">Поведение модели</string>
+    <string name="workspace_text_492">Подтвердить выбор</string>
+    <string name="workspace_text_493">Сохранённых чатов OpenCode в этом подключении нет.</string>
+    <string name="workspace_text_494">Чаты OpenCode</string>
+    <string name="workspace_text_495">Модель применена</string>
+    <string name="workspace_text_496">Разрешения и авторизация отображаются в терминале OpenCode. Лимиты аккаунта здесь не вычисляются.</string>
+    <string name="workspace_text_497">Установить OpenCode в Ubuntu</string>
+    <string name="workspace_text_498">Откроется отдельная Ubuntu-сессия для установки OpenCode v2.0.28. Нужны Node.js 20+ и npm. Существующий Codex не меняется.</string>
+    <string name="workspace_text_499">OpenCode запускается в Ubuntu. При «Создать и запустить» компоненты проверяются и при необходимости устанавливаются в этой же вкладке. Node.js устанавливается отдельно от системного. Подключения и история отдельные от Codex; разрешения запрашиваются в терминале.</string>
+    <string name="workspace_text_500">"Подключение: "</string>
+    <string name="workspace_text_501">"Режим: "</string>
+    <string name="workspace_text_502">с подтверждениями</string>
+    <string name="workspace_text_503">Режим OpenCode</string>
+    <string name="workspace_text_504">"Агент: "</string>
+    <string name="workspace_text_505">Выбрать агента</string>
+    <string name="workspace_text_506">Claude Code · позже</string>
+    <string name="workspace_text_507">Gemini CLI · позже</string>
+    <string name="workspace_text_508">Первый этап: Codex и OpenCode. Этот агент будет добавлен после проверки.</string>
+    <string name="workspace_text_509">Сначала закройте сессию, чтобы сменить агента, подключение или уровень доступа.</string>
+    <string name="workspace_text_510">Ввести ID модели</string>
+    <string name="workspace_text_511">История OpenCode ещё не создана или подключение недоступно. Сохранить только настройки для нового чата?</string>
+    <string name="workspace_text_512">Сохранить настройки</string>
+    <string name="workspace_text_513">Plan — анализ и подготовка плана. Режим не заменяет ограничения доступа: для запрета изменений выберите «Только чтение».</string>
+    <string name="workspace_text_514">Build — реализация задач: правки файлов, сборки и команды. Возможные действия определяются уровнем доступа.</string>
+    <string name="workspace_text_515">Только чтение · без команд</string>
+    <string name="workspace_text_516">С подтверждениями</string>
+    <string name="workspace_text_517">Доступ OpenCode</string>
+    <string name="workspace_text_518">Разрешённые инструменты могут изменять видимые Ubuntu файлы и выполнять команды без подтверждений. Это не root Android и не отдельная песочница. Политики OpenCode могут дополнительно ограничивать действия.</string>
+    <string name="workspace_text_519">Чтение, поиск файлов и вопросы разрешены. Редактирование, shell, субагенты, MCP и неизвестные инструменты запрещены правилами OpenCode. Это ограничения инструментов, а не защита всей файловой системы.</string>
+    <string name="workspace_text_520">OpenCode запрашивает разрешение на действия. Если выбрать «Разрешать всегда», OpenCode может сохранить разрешение для проекта. Файловой песочницы этот режим не создаёт.</string>
+    <string name="workspace_text_521">Сменить модель и переоткрыть OpenCode?</string>
+    <string name="workspace_text_522">OpenCode переоткроется в этой же вкладке с историей текущего чата. Сервер и чат сохранятся. Неотправленный текст внутри OpenCode может потеряться; поле ввода приложения не изменится. Во время ответа или при наличии очереди смена недоступна.</string>
+    <string name="workspace_text_523">Переоткрыть</string>
+    <string name="workspace_text_524">OpenCode занят или есть очередь сообщений. Дождитесь завершения и повторите смену модели.</string>
+    <string name="workspace_text_525">Не удалось переоткрыть OpenCode. Проверьте терминал; выбранная модель не подтверждена.</string>
+    <string name="workspace_text_526">Модель изменена, OpenCode переоткрывается с историей чата</string>
+    <string name="workspace_text_527">Создать сессию</string>
+    <string name="workspace_text_528">Создать пресет</string>
+    <string name="workspace_text_529">Создать новую сессию</string>
+    <string name="workspace_text_530">Нет открытых сессий. Создайте новую сессию.</string>
+    <string name="workspace_ai_save_chat">Сохранить чат сессии</string>
+    <string name="workspace_ai_chat_saved">Чат сессии сохранён</string>
+    <string name="workspace_ai_chat_not_ready">Сначала запустите OpenCode и дождитесь подключения</string>
+    <string name="workspace_claude_00">Подтверждать действия</string>
+    <string name="workspace_claude_01">Разрешать редактирование</string>
+    <string name="workspace_claude_02">Планирование</string>
+    <string name="workspace_claude_03">Claude запрашивает разрешения на действия в терминале.</string>
+    <string name="workspace_claude_04">Правки файлов и обычные файловые команды разрешаются автоматически; остальные действия требуют разрешения.</string>
+    <string name="workspace_claude_05">Анализ и план без выполнения изменений. Это режим Claude, а не системная песочница.</string>
+    <string name="workspace_claude_06">Модель Claude Code</string>
+    <string name="workspace_claude_07">Доступ Claude Code</string>
+    <string name="workspace_claude_08">Чат Claude Code</string>
+    <string name="workspace_claude_09">ID чата Claude Code</string>
+    <string name="workspace_claude_10">Claude Code запускается в Ubuntu. Компоненты устанавливаются при первом запуске в отдельный каталог. Нужна подписка Claude или оплачиваемый API; ChatGPT Plus не подходит. Авторизация и история отдельные. «Выбрать чат» открывает список Claude в терминале. Доступность моделей зависит от аккаунта.</string>
+    <string name="workspace_claude_11">Этот агент пока не поддерживается.</string>
+    <string name="workspace_claude_12">Модель и разрешения задаются при запуске. Текущее состояние: /status; смена модели: /model; разрешения: /permissions; вход: /login. Эти команды вводятся в терминале Claude. История сохраняется самим Claude; выберите чат или укажите ID при новом запуске.</string>
+    <string name="workspace_claude_launch">"При запуске: "</string>
+    <string name="workspace_gemini_00">Gemini запрашивает разрешения на действия в терминале.</string>
+    <string name="workspace_gemini_01">Gemini автоматически разрешает инструменты редактирования; остальные действия требуют подтверждения.</string>
+    <string name="workspace_gemini_02">Анализ и план без выполнения изменений. Это режим Gemini, а не системная песочница.</string>
+    <string name="workspace_gemini_03">Модель Gemini CLI</string>
+    <string name="workspace_gemini_04">Доступ Gemini CLI</string>
+    <string name="workspace_gemini_05">Чат Gemini CLI</string>
+    <string name="workspace_gemini_06">ID чата Gemini CLI</string>
+    <string name="workspace_gemini_07">Gemini CLI запускается в Ubuntu. При первом запуске устанавливаются отдельные компоненты. Для бесплатной проверки выберите вход через личный Google-аккаунт; доступ зависит от региона и аккаунта. История отдельная и привязана к каталогу проекта. «Выбрать чат» открывает список в терминале после входа. Для продолжения выберите прежний каталог.</string>
+    <string name="workspace_gemini_08">Плашка показывает параметры запуска Gemini. Текущую модель смотрите в терминале; /model меняет модель, /stats показывает статистику, /auth открывает вход, /resume — историю. Для продолжения выберите тот же каталог проекта. Бесплатные квоты зависят от аккаунта; живые лимиты здесь не считываются.</string>
+    <string name="workspace_access_details_0">Без файловой песочницы Codex: доступны файлы и команды в пределах прав среды, без запросов подтверждения. Root Android этот режим не даёт.</string>
+    <string name="workspace_access_details_1">Codex может изменять файлы проекта и выполнять команды внутри песочницы; выход за её границы требует подтверждения. Поддержка песочницы зависит от Android/proot.</string>
+    <string name="workspace_access_details_2">В песочнице Codex доступны чтение и просмотр. Для записи или выхода за ограничения требуется подтверждение. Поддержка песочницы зависит от Android/proot.</string>
+    <string name="workspace_gemini_auth_0">Google-аккаунт</string>
+    <string name="workspace_gemini_auth_1">API-ключ</string>
+    <string name="workspace_gemini_auth_2">Выбрать в терминале</string>
+    <string name="workspace_gemini_auth_3">Вход только через Google. Переключение на API-ключ в этой сессии заблокировано; при ошибке Google покажет причину.</string>
+    <string name="workspace_gemini_auth_4">Вход только по Gemini API-ключу. Условия и оплата API отдельные от входа через Google.</string>
+    <string name="workspace_gemini_auth_5">Штатное меню Gemini. Используется сохранённый в CLI способ входа; его можно изменить в терминале.</string>
+    <string name="workspace_gemini_auth_6">"Вход Gemini: "</string>
+    <string name="workspace_gemini_auth_7">Способ входа Gemini</string>
+    <string name="workspace_diagnostics_extended">Расширенный дебаг-журнал</string>
+    <string name="workspace_diagnostics_hint">Базовый журнал ведётся автоматически. Расширенный: события и коды ошибок, для Gemini также штатный debug с запуска. Без записи ввода и диалога. Изменение действует при следующем запуске.</string>
+    <string name="workspace_diagnostics_title">Диагностика сессии</string>
+    <string name="workspace_diagnostics_notice">Журнал обновляется автоматически и собирается при закрытом окне. До 2 МБ на сессию. Отчёт содержит события и коды ошибок, без текста диалога и секретов.</string>
+    <string name="workspace_diagnostics_resume">Продолжить журнал</string>
+    <string name="workspace_diagnostics_pause">Остановить журнал</string>
+    <string name="workspace_diagnostics_copy_path">Скопировать путь к отчёту</string>
+    <string name="workspace_diagnostics_download">Сохранить в Download</string>
+    <string name="workspace_diagnostics_save_error">Не удалось сохранить отчёт</string>
+    <string name="workspace_interactive_toggle">Интерактивный ввод</string>
+    <string name="workspace_diagnostics_yes">Да</string>
+    <string name="workspace_diagnostics_no">Нет</string>
+    <string name="workspace_cancel_startup_confirm">Отменить следующие шаги запуска? Ниже все настроенные команды. Уже выполняемая команда продолжит работу.</string>
 </resources>

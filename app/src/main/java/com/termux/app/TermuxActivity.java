@@ -83,6 +83,11 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
     private com.termux.app.workspace.WorkspaceController mWorkspace;
 
+    public boolean prepareWorkspaceKeyboardWindow() {
+        if (mWorkspace == null) return false;
+        mWorkspace.prepareKeyboardWindow(); return true;
+    }
+
     public void toggleWorkspaceKeyboard() {
         if (mWorkspace != null) mWorkspace.toggleKeyboard();
     }
