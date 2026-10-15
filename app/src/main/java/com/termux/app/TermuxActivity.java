@@ -808,6 +808,11 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         TermuxInstaller.setupBootstrapIfNeeded(this, ready);
     }
 
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data) {
+        super.onActivityResult(requestCode,resultCode,data);
+        if(mWorkspace!=null)mWorkspace.onActivityResult(requestCode,resultCode,data);
+    }
+
     public void refreshWorkspace() {
         if (mWorkspace != null) { mWorkspace.refresh(); if(mIsVisible) mWorkspace.ensureBaseTerminal(); }
     }

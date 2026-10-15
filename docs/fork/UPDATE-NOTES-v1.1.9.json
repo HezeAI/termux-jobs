@@ -1,0 +1,26 @@
+{
+  "ru": [
+    "Карточки CPU / RAM / Диск с векторными иконками и полосами заполнения; график убран, разделы подняты выше.",
+    "Открытие папок и переключение разделов сохраняют страницу и позицию прокрутки без автоматического перехода к мониторингу.",
+    "Кнопка терминала сервера теперь центрированный вектор вместо текста. Описание ! обновлено.",
+    "Под списком серверов пояснено, что профиль подключения хранится на телефоне, а агент и данные остаются на сервере."
+  ],
+  "en": [
+    "CPU / RAM / Disk cards with vector icons and usage bars replace the chart; sections are placed higher.",
+    "Folder navigation and section switching keep the page and scroll position without automatically jumping to monitoring.",
+    "Server terminal action uses a centered vector instead of text. Updated ! explanation.",
+    "Below the server list: connection profiles are stored on the phone; the agent and data stay on the server."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние пакет/сертификат, code1066; библиотекаv8, профили, AI и окружения без сбросов.",
+      "Агент и частота опроса прежние; переустановка агента не нужна. Убран только график в интерфейсе.",
+      "Если новое содержимое короче, прокрутка ограничивается его реальной высотой. Реальные жесты/DPI проверяются на устройстве."
+    ],
+    "en": [
+      "Same package/certificate, code1066; libraryv8, profiles, AI and environments require no reset.",
+      "Agent and polling cadence unchanged; no agent reinstall. Only the UI chart is removed.",
+      "Shorter content naturally clamps scrolling to its height. Real gestures/DPI require device validation."
+    ]
+  }
+}

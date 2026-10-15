@@ -1,4 +1,30 @@
-# Архитектура v1.1.4
+# Архитектура v1.2.0
+
+## Серверный workspace v1.2.0
+
+WorkspaceServers координирует отдельный ServerProfiles AtomicFilev1, pinned
+ServerConnection/OpenSSH RPC и стабильные ServerScrollView/MetricCards. Profile
+не связан с WorkspaceStore/AI-сессиями; password ciphertext привязан к Android
+Keystore. Необязательные favorites/favoriteFiles/actions читают старые профили.
+
+workspace-server-agent.py — устанавливаемый с подтверждением агент, /proc metrics,
+SQLite history, собственные Popen задачи, user-level service operations и
+loopback media leases. Удаление/stop не используют сохранённый PID как право
+на сигнал. ServerSftp/Uploads/Downloads владеют отдельными SSH-процессами,
+поэтому отмена не закрывает активные терминалы или мониторинг.
+
+workspace-server-schedules.py передаётся pinned SSH без изменения agent.py;
+Cron/user-systemd и runner в отдельном приватном root. root/job flock защищают
+собственные изменения/overlap; внешние crontab-редакторы общей блокировки не имеют.
+workspace-server-search.py — read-only JSONstdin helper, bounded traversal имён,
+не shell interpolation. Диагностика probe не запускает агента.
+
+Media3 1.5.1 загружается при просмотре, системные кодеки; player close/onStop
+освобождают собственный туннель. Network security допускает cleartext только
+точному127.0.0.1, base deny. Серверный участок SSH, токен временный. Текстовый
+редактор использует прежние revision-guard scripts через pinned SSH, без autosave.
+Подробные границы/ограничения: [SERVERS](SERVERS.md), [SCHEDULES](SCHEDULES.md).
+
 
 ## Модули
 
@@ -399,7 +425,7 @@ Explicit install-pigz uses a fixed argv, requires UI consent, retains APT lockin
 and verifies the executable. Its UI does not expose cancellation: the worker waits
 for APT rather than deliberately killing dpkg. Android process death is not prevented.
 
-### v1.1.4 combined update tile
+### v1.2.0 combined update tile
 
 Title and Auto checkbox have separate click paths: manual check vs persisted
 preference only. The inline hint describes the per-opening automatic behavior.

@@ -1,0 +1,40 @@
+{
+  "ru": [
+    "Новый раздел Сервер + Agent: Linux-серверы, CPU/RAM/диск, проекты, задачи, файлы и службы.",
+    "Прежний вход Создать сессию → SSH · сервер сохранён и работает без агента.",
+    "Проверка/установка/удаление агента с подтверждением; отдельные профили и закреплённый ключ SSH.",
+    "Избранные папки/файлы, поиск имён в подпапках, просмотр и редактор UTF-8 с защитой записи.",
+    "SFTP-отправка и скачивание с прогрессом, отменой, скоростью и примерным временем.",
+    "Задачи и журналы, закреплённые команды с подтверждением, удаление завершённых записей.",
+    "Расписания Cron/systemd --user работают без приложения. Просмотр служб и журналов.",
+    "Media3-плеер: HTTP только127.0.0.1 внутри SSH-туннеля, внешний HTTP запрещён; временный токен и безопасные коды ошибок.",
+    "Исправлены мерцание серверного экрана, сброс прокрутки и положение кнопок. Диагностика подключения."
+  ],
+  "en": [
+    "New Server + Agent workspace: Linux servers, CPU/RAM/disk, projects, tasks, files and services.",
+    "Original New session → SSH server remains available without the agent.",
+    "Confirmed agent status/install/removal, separate profiles and pinned SSH host keys.",
+    "Favorite folders/files, recursive filename search, UTF-8 preview/editor with conflict protection.",
+    "SFTP uploads and downloads with progress, cancellation, speed and estimated remaining time.",
+    "Tasks/logs, confirmed pinned commands, and removal of finished task records.",
+    "Cron/systemd user schedules run without the app. Services and journal viewing.",
+    "Media3 player: HTTP only127.0.0.1 inside SSH; external HTTP denied, temporary tokens and sanitized error codes.",
+    "Fixed server-page flicker, scroll resets and button placement. Connection diagnostics."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние com.termux/подпись, code1071. Команды, заметки, пресеты, истории AI и окружения не требуют очистки. Обновление через приложение сохранено.",
+      "Перед установкой завершите важные задачи: Android может остановить процессы. Не удаляйте приложение.",
+      "Агент требует Linux/Bash/Python3.8+ и работает с правами SSH-пользователя. Root = полный доступ; пакеты/sudo/linger автоматически не меняются.",
+      "Расписания остаются после удаления агента/профиля; Cron требует daemon, user-systemd без linger может остановиться после выхода.",
+      "Профили вне экспорта библиотеки; старые версии могут потерять новые поля при перезаписи. Кодеки/UI/живойSSH требуют проверки."
+    ],
+    "en": [
+      "Same com.termux/signer, code1071. No reset of commands, notes, presets, AI history or environments required. In-app updates supported.",
+      "Finish important work before updating: Android may stop processes. Do not uninstall the app.",
+      "Agent requires Linux/Bash/Python3.8+ and uses SSH-user permissions. Root = full access; no automatic packages/sudo/linger changes.",
+      "Schedules remain after agent/profile deletion; Cron needs its daemon and user-systemd may stop after logout without linger.",
+      "Profiles are outside library exports; older apps may discard new fields on rewrite. Codecs/UI/live SSH need validation."
+    ]
+  }
+}

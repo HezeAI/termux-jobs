@@ -1,0 +1,63 @@
+package com.termux.app.workspace;
+
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+
+/** Small synchronous SFTP v3 client over the existing pinned SSH transport. No shell filenames. */
+final class ServerSftp implements AutoCloseable {
+    interface Progress {void sent(long bytes);}
+    private final DataInputStream in;private final DataOutputStream out;private final AutoCloseable transport;
+    private volatile String pendingTemp;
+    String pendingTemp(){return pendingTemp;}
+    void removeTemporary(String path)throws IOException{if(path==null||!path.startsWith("/")||path.indexOf(0)>=0||!new java.io.File(path).getName().matches("\\.termux-jobs-upload-[a-f0-9-]{36}"))throw new IOException("INVALID_PATH");if(stat(path).exists)ok(request(13,b->string(b,path)));}
+    private int sequence;private boolean posixRename;private volatile boolean closed;
+    static final long MAX_BYTES=2L*1024*1024*1024;
+    static final class Info {
+        final boolean exists;final long size;final int permissions,mtime;
+        Info(boolean e,long s,int p,int m){exists=e;size=s;permissions=p;mtime=m;}
+        boolean regular(){return (permissions&0170000)==0100000;}
+        boolean same(Info other){return exists==other.exists&&(!exists||size==other.size&&permissions==other.permissions&&mtime==other.mtime);}
+    }
+    ServerSftp(InputStream input,OutputStream output,AutoCloseable transport)throws Exception{
+        in=new DataInputStream(input);out=new DataOutputStream(output);this.transport=transport;
+        ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream b=new DataOutputStream(bytes);b.writeInt(3);packet(1,bytes.toByteArray());
+        DataInputStream version=response();if(version.readUnsignedByte()!=2||version.readInt()!=3)throw new IOException("SFTP_VERSION");
+        while(version.available()>0){String name=string(version),value=string(version);if(name.equals("posix-rename@openssh.com")&&value.equals("1"))posixRename=true;}
+    }
+    static boolean validName(String name){if(name==null||name.isEmpty()||name.equals(".")||name.equals("..")||name.getBytes(StandardCharsets.UTF_8).length>255)return false;for(int i=0;i<name.length();i++)if(name.charAt(i)=='/'||Character.isISOControl(name.charAt(i))||Character.isSurrogate(name.charAt(i))&&(i+1>=name.length()||!Character.isSurrogatePair(name.charAt(i),name.charAt(++i))))return false;return true;}
+    private static void string(DataOutputStream b,String value)throws IOException{blob(b,value.getBytes(StandardCharsets.UTF_8));}
+    private static void blob(DataOutputStream b,byte[] value)throws IOException{b.writeInt(value.length);b.write(value);}
+    private static byte[] blob(DataInputStream b)throws IOException{int n=b.readInt();if(n<0||n>65536||n>b.available())throw new IOException("SFTP_PACKET");byte[] bytes=new byte[n];b.readFully(bytes);return bytes;}
+    private static String string(DataInputStream b)throws IOException{return new String(blob(b),StandardCharsets.UTF_8);}
+    private void packet(int type,byte[] data)throws IOException{if(closed)throw new IOException("CANCELLED");out.writeInt(data.length+1);out.writeByte(type);out.write(data);out.flush();}
+    private DataInputStream response()throws IOException{int n=in.readInt();if(n<1||n>262144)throw new IOException("SFTP_PACKET");byte[] data=new byte[n];in.readFully(data);return new DataInputStream(new ByteArrayInputStream(data));}
+    private interface Body {void write(DataOutputStream b)throws IOException;}
+    private DataInputStream request(int type,Body body)throws IOException{ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream b=new DataOutputStream(bytes);int id=++sequence;b.writeInt(id);body.write(b);packet(type,bytes.toByteArray());DataInputStream r=response();int responseType=r.readUnsignedByte();if(r.readInt()!=id)throw new IOException("SFTP_ID");ByteArrayOutputStream answer=new ByteArrayOutputStream();answer.write(responseType);byte[] rest=new byte[r.available()];r.readFully(rest);answer.write(rest);return new DataInputStream(new ByteArrayInputStream(answer.toByteArray()));}
+    private static void ok(DataInputStream r)throws IOException{if(r.readUnsignedByte()!=101||r.readInt()!=0)throw new IOException("SFTP_FAILED");}
+    String canonical(String directory)throws IOException{DataInputStream r=request(16,b->string(b,directory));if(r.readUnsignedByte()!=104||r.readInt()!=1)throw new IOException("SFTP_DIRECTORY");String path=string(r);if(!path.startsWith("/")||path.indexOf('\0')>=0)throw new IOException("SFTP_DIRECTORY");return path;}
+    Info stat(String path)throws IOException{
+        DataInputStream r=request(7,b->string(b,path));int type=r.readUnsignedByte();if(type==101){if(r.readInt()==2)return new Info(false,0,0,0);throw new IOException("SFTP_STAT");}if(type!=105)throw new IOException("SFTP_STAT");
+        int flags=r.readInt();long size=(flags&1)!=0?r.readLong():0;if((flags&2)!=0){r.readInt();r.readInt();}int mode=(flags&4)!=0?r.readInt():0;int modified=0;if((flags&8)!=0){r.readInt();modified=r.readInt();}return new Info(true,size,mode,modified);
+    }
+    boolean canReplace(){return posixRename;}
+    void upload(InputStream source,String directory,String name,Info expected,Progress progress)throws Exception{
+        if(!validName(name)||!directory.startsWith("/"))throw new IOException("INVALID_PATH");if(expected.exists&&(!expected.regular()||!posixRename))throw new IOException("SFTP_REPLACE_UNSUPPORTED");
+        String target=directory+(directory.equals("/")?"":"/")+name,temp=directory+(directory.equals("/")?"":"/")+".termux-jobs-upload-"+UUID.randomUUID();
+        pendingTemp=temp;byte[] handle=null;boolean published=false;
+        try{
+            DataInputStream r=request(3,b->{string(b,temp);b.writeInt(2|8|32);b.writeInt(4);b.writeInt(0600);});if(r.readUnsignedByte()!=102)throw new IOException("SFTP_OPEN");handle=blob(r);final byte[] h=handle;
+            byte[] buffer=new byte[32768];long total=0;int count;while((count=source.read(buffer))!=-1){if(closed)throw new IOException("CANCELLED");if(count==0)continue;if(total+count>MAX_BYTES)throw new IOException("FILE_LIMIT");final long offset=total;final int n=count;ok(request(6,b->{blob(b,h);b.writeLong(offset);b.writeInt(n);b.write(buffer,0,n);}));total+=count;progress.sent(total);}
+            if(expected.exists)ok(request(10,b->{blob(b,h);b.writeInt(4);b.writeInt(expected.permissions&0777);}));
+            ok(request(4,b->blob(b,h)));handle=null;
+            if(!expected.same(stat(target)))throw new IOException("REMOTE_CHANGED");
+            if(expected.exists)ok(request(200,b->{string(b,"posix-rename@openssh.com");string(b,temp);string(b,target);}));
+            else ok(request(18,b->{string(b,temp);string(b,target);}));
+            published=true;pendingTemp=null;
+        }finally{
+            if(handle!=null&&!closed){final byte[] h=handle;try{ok(request(4,b->blob(b,h)));}catch(Exception ignored){}}
+            if(!published&&!closed)try{ok(request(13,b->string(b,temp)));pendingTemp=null;}catch(Exception ignored){}
+        }
+    }
+    @Override public void close(){closed=true;try{transport.close();}catch(Exception ignored){}try{in.close();}catch(Exception ignored){}try{out.close();}catch(Exception ignored){}}
+}

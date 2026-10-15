@@ -38,6 +38,7 @@
 
     <application
         android:name=".app.TermuxApplication"
+        android:networkSecurityConfig="@xml/workspace_network_security"
         android:allowBackup="false"
         android:banner="@drawable/banner"
         android:extractNativeLibs="true"

@@ -1,0 +1,18 @@
+{
+  "ru": [
+    "Кнопка Сервер + Agent видна справа под пакетами и папкой, напротив модели и лимитов AI."
+  ],
+  "en": [
+    "Server + Agent is visible below packages and files, opposite the AI model and limits."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние пакет и подпись, code1069. Сброс данных не требуется.",
+      "Раскладку на Android нужно проверить после установки."
+    ],
+    "en": [
+      "Same package and signing certificate, code1069. No data reset required.",
+      "Android layout requires manual verification after installation."
+    ]
+  }
+}

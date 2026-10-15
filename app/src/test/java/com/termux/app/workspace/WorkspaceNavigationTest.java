@@ -761,7 +761,12 @@ public class WorkspaceNavigationTest {
         Field f=TermuxActivity.class.getDeclaredField("mTerminalView");f.setAccessible(true);f.set(activity,activity.findViewById(R.id.terminal_view));
         WorkspaceController controller=new WorkspaceController(activity);View tabs=activity.findViewById(R.id.workspace_tabs);
         assertNotNull(findDescription(tabs,"Пакеты"));assertNull(findDescription(tabs,"Новая сессия"));assertNotNull(findDescription(tabs,"Файлы проекта"));assertNotNull(findDescription(tabs,"Сессии"));
-        assertEquals(3,((ViewGroup)tabs).getChildCount());controller.close();
+        assertEquals(2,((ViewGroup)tabs).getChildCount());assertNull(tabs.findViewWithTag("server-entry"));
+        ViewGroup statusRow=activity.findViewById(R.id.workspace_terminal_tools);View server=statusRow.findViewWithTag("server-entry");assertNotNull(server);
+        assertSame(statusRow,activity.findViewById(R.id.workspace_codex_status).getParent());
+        assertEquals(WorkspaceDialogs.dp(activity,106),server.getLayoutParams().width);
+        assertEquals(WorkspaceDialogs.dp(activity,112),((android.widget.FrameLayout.LayoutParams)activity.findViewById(R.id.workspace_codex_status).getLayoutParams()).getMarginEnd());
+        View icons=((ViewGroup)tabs).getChildAt(1);assertEquals(2,((ViewGroup)icons).getChildCount());assertNotNull(findDescription(icons,"Пакеты"));assertNotNull(findDescription(icons,"Файлы проекта"));controller.close();
     }
     @Test public void baseTerminalMenuCannotCloseDeleteOrChangeItsProfile() throws Exception {
         TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();activity.setTheme(R.style.Theme_Termux_Black);activity.setContentView(R.layout.activity_termux);

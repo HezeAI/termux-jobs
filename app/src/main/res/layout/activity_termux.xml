@@ -52,21 +52,29 @@
                 android:gravity="center_vertical" />
         </FrameLayout>
 
-        <LinearLayout
-            android:id="@+id/workspace_codex_status"
+        <FrameLayout
+            android:id="@+id/workspace_terminal_tools"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@id/workspace_tab_scroll"
-            android:orientation="horizontal"
-            android:gravity="start|center_vertical"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:visibility="gone" />
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:visibility="gone">
+            <LinearLayout
+                android:id="@+id/workspace_codex_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="112dp"
+                android:layout_gravity="start|center_vertical"
+                android:orientation="horizontal"
+                android:gravity="start|center_vertical"
+                android:visibility="gone" />
+        </FrameLayout>
 
         <androidx.drawerlayout.widget.DrawerLayout
             android:id="@+id/drawer_layout"
             android:layout_width="match_parent"
-            android:layout_below="@id/workspace_codex_status"
+            android:layout_below="@id/workspace_terminal_tools"
             android:layout_above="@+id/terminal_toolbar_view_pager"
             android:layout_height="match_parent">
 

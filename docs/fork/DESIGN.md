@@ -1,4 +1,16 @@
-# Интерфейс и поведение v1.1.4
+# Интерфейс и поведение v1.2.0
+
+## Сервер + Agent
+
+Кнопка106dp под пакетами/папкой справа от AI-карточки в общей строке, видна и без
+AI. Основные плитки навигации не меняются. Экран сервера: профиль, CPU/RAM/диск
+без графиков, четыре раздела с отступами, стабильные контейнеры/прокрутка.
+Опрос меняет значения на месте. Векторные кнопки файлов48dp; звёздочка и лупа,
+горизонтальная прокрутка узкой панели. Избранное/поиск/просмотр/действия — диалоги.
+Журнал задачи обновляет текст и доступные действия без пересоздания страницы.
+Передача показывает объём/скорость/ETA с отменой, сообщения об ошибках не выводят
+URL медиатокена. Названия/пояснения доступны RU/EN.
+
 
 Документ описывает текущий основной форк. Исходный [референс](reference.png) и ранние макеты отражают разработку, а не точный интерфейс релиза.
 
@@ -147,7 +159,7 @@ Compression uses protected list dialogs rather than unprotected spinner popups;
 gzip/pigz explanations, levels1/3/9, optional confirmed pigz installation with
 inline status. Product descriptions refer to target environments, not test phones.
 
-### v1.1.4 update tile
+### v1.2.0 update tile
 
 One settings tile replaces two update rows. Title opens a manual check; the right
 square checkbox, labelled Auto, persists the automatic preference without closing

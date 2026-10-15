@@ -1,0 +1,30 @@
+{
+  "ru": [
+    "Метрики сервера обновляются без плашки подключения и пересоздания экрана; прокрутка и файловые кнопки сохраняются.",
+    "Автоопрос не блокирует ручные действия; ошибки метрик показываются в отдельной строке со старым снимком.",
+    "Разделы Проекты/Задачи/Файлы/Службы разделены отступами; выбранный раздел сохраняет скруглённую подсветку.",
+    "Навигация файлов: одинаковые центрированные векторные кнопки вверх, домой, путь и обновление.",
+    "Лишний верхний плюс и плюс в кнопке Добавить сервер убраны."
+  ],
+  "en": [
+    "Server metrics update without a connecting banner or rebuilding the screen; scroll and file controls are retained.",
+    "Automatic polling does not block manual actions; metric errors use a separate status line and preserve the last snapshot.",
+    "Projects/Tasks/Files/Services have spacing and rounded selection styling.",
+    "File navigation uses equal-sized centered vector controls for parent, home, path and refresh.",
+    "Removed the redundant top plus and plus prefix on Add server."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежний com.termux/сертификат, code1063; команды, пресеты, SSH и серверные профили без сброса.",
+      "Агент не менялся относительно v1.1.5: переустановка не нужна.",
+      "SSH-запросы метрик по-прежнему выполняются раз в10с/30с; постоянный SSH-канал не добавлялся.",
+      "Проверка реальных жестов/DPI/сети требуется на устройстве."
+    ],
+    "en": [
+      "Same com.termux/certificate, code1063; commands, presets, SSH and server profiles require no reset.",
+      "Agent unchanged from v1.1.5: no reinstall required.",
+      "Metric SSH requests still run every10s/30s; no persistent SSH channel added.",
+      "Real gestures/DPI/network require device validation."
+    ]
+  }
+}

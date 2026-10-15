@@ -15,6 +15,8 @@ final class ProjectFiles implements AutoCloseable {
     final Activity activity; final WorkspaceStore.Session profile;
     private volatile Process process; private volatile boolean closed;
     private char[] password;
+    private File serverKnownHosts;
+    void setServerKnownHosts(File file){serverKnownHosts=file;}
     ProjectFiles(Activity activity, WorkspaceStore.Session profile) {this.activity=activity;this.profile=profile.copy();this.profile.id=profile.id;
         this.profile.name=profile.name;this.profile.handle=profile.handle;this.profile.codexSocketId=profile.codexSocketId;
         this.profile.sshEncryptedPassword=profile.sshEncryptedPassword;}
@@ -110,7 +112,9 @@ final class ProjectFiles implements AutoCloseable {
     private void run(String script,OutputStream out,long max) throws Exception {run(script,out,max,null);}
     private synchronized void run(String script,OutputStream out,long max,byte[] input) throws Exception {
         if(closed)throw new IOException(WorkspaceText.tr("Окно закрыто"));
-        ProcessBuilder builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c","exec "+command(profile,script));
+        String invocation=command(profile,script);
+        if(serverKnownHosts!=null&&environment(profile).equals("ssh"))invocation=invocation.replaceFirst("ssh -T",java.util.regex.Matcher.quoteReplacement("ssh -T -o "+SessionShell.quote("UserKnownHostsFile="+serverKnownHosts.getAbsolutePath())+" -o GlobalKnownHostsFile=/dev/null"));
+        ProcessBuilder builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c","exec "+invocation);
         builder.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));builder.environment().clear();
         for(String item:TermuxShellUtils.buildEnvironment(activity,false,TermuxConstants.TERMUX_HOME_DIR_PATH)) {int eq=item.indexOf('=');if(eq>0)builder.environment().put(item.substring(0,eq),item.substring(eq+1));}
         SshPasswordBroker broker=null;

@@ -1,0 +1,26 @@
+{
+  "ru": [
+    "Плеер: исправлено разрешение HTTP только127.0.0.1 внутри SSH-туннеля; внешний HTTP запрещён. Добавлены коды ошибок без URL/токенов.",
+    "Задачи Cron/systemd --user: создание, время, журнал, отключение и удаление с подтверждением.",
+    "Сервер + Agent перемещён под пакеты и папку во вкладке терминала."
+  ],
+  "en": [
+    "Player: allow HTTP only to127.0.0.1 inside the SSH tunnel; external HTTP remains denied. Sanitized error codes added.",
+    "Cron/systemd user schedules: creation, timing, logs, disable and confirmed deletion.",
+    "Server + Agent moved below packages and files on the Terminal tab."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние пакет/сертификат, code1068; данные/окружения/истории без сброса, агент прежний.",
+      "Расписания работают независимо от агента/телефона и остаются после удаления агента/профиля. Отключение не останавливает текущую задачу.",
+      "Нужен cron daemon или user-systemd; без linger таймеры могут остановиться после выхода. Пакеты/права автоматически не меняются.",
+      "Android-плеер/UI и настоящий Cron/systemd требуют ручной проверки."
+    ],
+    "en": [
+      "Same package/certificate, code1068; no data/environment/history reset, server agent unchanged.",
+      "Schedules run independently and remain after agent/profile removal. Disabling does not stop a running job.",
+      "Requires cron daemon or user-systemd; without linger timers may stop after logout. No automatic package or privilege changes.",
+      "Android playback/UI and real Cron/systemd still require manual testing."
+    ]
+  }
+}

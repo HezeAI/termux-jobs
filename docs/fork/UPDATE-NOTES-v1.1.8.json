@@ -1,0 +1,30 @@
+{
+  "ru": [
+    "Сервер: просмотр UTF-8/Markdown с переходом в безопасный редактор до 256 КБ.",
+    "Встроенный Media3-плеер видео/аудио через SSH; при закрытии/фоне освобождаются ресурсы.",
+    "Отправка 1–20 файлов в текущий каталог сервера по SFTP: подтверждение, прогресс, остановка, выбор при совпадении имён.",
+    "Список служб и журналы обновляются без пересоздания страницы; неизменившийся текст не назначается повторно."
+  ],
+  "en": [
+    "Server: UTF-8/Markdown viewer with a safe editor, up to 256 KB.",
+    "Built-in Media3 audio/video player over SSH; resources released on close/background.",
+    "Upload 1–20 documents to the current server directory over SFTP: confirmation, progress, stop, collision review.",
+    "Services and logs update without rebuilding the page; unchanged text is not reassigned."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние пакет/сертификат, code1065; библиотекаv8, профили, AI и окружения без сбросов.",
+      "Агент не менялся; для отправки нужен серверный SFTP. Лимит 2 ГБ на файл; обычные новые файлы создаются mode0600.",
+      "Явная замена создаёт файл от SSH-пользователя и не копирует ACL/xattrs/владельца; сторонние редакторы не блокируются.",
+      "Обрыв при публикации требует проверки каталога. При недоступном сервере/убийстве приложения может остаться временный файл.",
+      "Кодеки зависят от Android-устройства; проигрывание/пикер/жесты требуют проверки на устройстве."
+    ],
+    "en": [
+      "Same package/certificate, code1065; libraryv8, profiles, AI and environments require no reset.",
+      "Agent unchanged; uploads require server-side SFTP. Limit 2 GB/file; new files use mode0600.",
+      "Explicit replacement creates a file owned by the SSH user; ACLs/xattrs/ownership are not copied, external writers are not locked.",
+      "An interrupted publication requires checking the directory. Lost connectivity/app termination may leave a temporary file.",
+      "Codec support depends on the Android device; playback/picker/gestures need device validation."
+    ]
+  }
+}

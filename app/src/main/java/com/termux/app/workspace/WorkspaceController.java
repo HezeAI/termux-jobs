@@ -45,9 +45,10 @@ import java.util.concurrent.Executors;
 public final class WorkspaceController {
     private static final int ACCENT = 0xff79dfcd, TEXT = 0xffedf5f6, MUTED = 0xff91a6af;
     private static final int PANEL = 0xff0b1319, BORDER = 0xff213039;
-    private enum Screen { HOME, SESSIONS, COMMANDS, TERMINAL }
+    private enum Screen { HOME, SESSIONS, COMMANDS, TERMINAL, SERVERS }
     private final TermuxActivity activity;
     private final WorkspaceStore store;
+    private final WorkspaceServers servers;
     private final LinearLayout header, navigation, tabs, inputRow, codexStatus;
     private final EditText terminalInput;
     private String terminalInputHandle;
@@ -93,6 +94,11 @@ public final class WorkspaceController {
         this.activity = activity;
         prepareKeyboardWindow();
         store = new WorkspaceStore(activity, message -> activity.showToast(message, true));
+        servers = new WorkspaceServers(activity, (name, command) -> {
+            WorkspaceStore.Session s = new WorkspaceStore.Session(); s.name = name + " · SSH";
+            s.environment = "termux"; s.directory = TermuxConstants.TERMUX_HOME_DIR_PATH;
+            s.startup = command; launchNew(s, true);
+        });
         interactiveInput = activity.getSharedPreferences("workspace-input", Context.MODE_PRIVATE)
             .getBoolean("interactive-input", false);
         activity.getTerminalView().setSoftKeyboardInputEnabled(interactiveInput);
@@ -132,8 +138,9 @@ public final class WorkspaceController {
         show(Screen.HOME, false);
         codexHandler.postDelayed(codexPoll, 1000);
     }
-    public void onStop(){WorkspaceUpdates.background(activity);}
-    public void onResume(){WorkspaceUpdates.automatic(activity,()->{if(!closed)renderHeader();});}
+    public boolean onActivityResult(int request,int result,android.content.Intent intent){return servers.onActivityResult(request,result,intent);}
+    public void onStop(){WorkspaceUpdates.background(activity);servers.pause();}
+    public void onResume(){servers.resume();WorkspaceUpdates.automatic(activity,()->{if(!closed)renderHeader();});}
     public void refreshLanguage() {
         terminalInput.setHint(WorkspaceText.tr("Введите команду…"));
         inputRow.getChildAt(0).setContentDescription(WorkspaceText.tr("Вставить сохранённую команду"));
@@ -213,6 +220,7 @@ public final class WorkspaceController {
             header.setFocusableInTouchMode(true); header.requestFocus();
         }
         screen = target;
+        servers.visibility(screen == Screen.SERVERS);
         boolean terminal = screen == Screen.TERMINAL;
         activity.getDrawer().setVisibility(terminal ? View.VISIBLE : View.INVISIBLE);
         activity.getTerminalToolbarViewPager().setVisibility(terminal ? toolbarVisibility : View.GONE);
@@ -339,7 +347,7 @@ public final class WorkspaceController {
     }
     private void renderTabs() {
         syncTerminalInput(); renderCodexStatus(); tabs.removeAllViews();
-        tabs.setPadding(dp(10),dp(4),dp(10),dp(8));
+        tabs.setPadding(dp(10),dp(4),dp(10),dp(8));tabs.setGravity(Gravity.TOP);
         TerminalSession current=activity.getCurrentSession();
         String name=current==null?WorkspaceText.tr("Сессии"):current.mSessionName==null?"Bash":current.mSessionName;
         WorkspaceStore.Session profile=current==null?null:store.findByHandle(current.mHandle);
@@ -356,10 +364,17 @@ public final class WorkspaceController {
             cancel.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),shape(Color.TRANSPARENT,Color.TRANSPARENT,12),null));
             panel.addView(cancel,new FrameLayout.LayoutParams(dp(48),dp(48),Gravity.END|Gravity.CENTER_VERTICAL));tabs.addView(panel,new LinearLayout.LayoutParams(0,dp(48),1));
         }else tabs.addView(selector,new LinearLayout.LayoutParams(0,dp(48),1));
-        TextView packages=button("📦",false,this::showCurrentPackages);packages.setContentDescription(WorkspaceText.tr("Пакеты"));
-        LinearLayout.LayoutParams packageParams=new LinearLayout.LayoutParams(dp(48),dp(48));packageParams.setMarginStart(dp(6));tabs.addView(packages,packageParams);
-        TextView files=button("▱",false,this::showProjectFiles);files.setContentDescription(WorkspaceText.tr("Файлы проекта"));
-        LinearLayout.LayoutParams fileParams=new LinearLayout.LayoutParams(dp(48),dp(48));fileParams.setMarginStart(dp(10));tabs.addView(files,fileParams);
+        LinearLayout serverTools=row();LinearLayout toolIcons=serverTools;
+        TextView packages=button("📦",false,this::showCurrentPackages);packages.setContentDescription(WorkspaceText.tr("Пакеты"));toolIcons.addView(packages,new LinearLayout.LayoutParams(dp(48),dp(48)));
+        TextView files=button("▱",false,this::showProjectFiles);files.setContentDescription(WorkspaceText.tr("Файлы проекта"));LinearLayout.LayoutParams fileParams=new LinearLayout.LayoutParams(dp(48),dp(48));fileParams.setMarginStart(dp(10));toolIcons.addView(files,fileParams);
+        String serverLabel=WorkspaceLanguage.code(activity).equals("ru")?"Сервер + Agent":"Server + Agent";
+        FrameLayout statusRow=activity.findViewById(R.id.workspace_terminal_tools);
+        statusRow.setVisibility(screen==Screen.TERMINAL?View.VISIBLE:View.GONE);
+        View oldServer=statusRow.findViewWithTag("server-entry");if(oldServer!=null)statusRow.removeView(oldServer);
+        TextView server=button(serverLabel,false,()->show(Screen.SERVERS,true));server.setTextSize(12);server.setPadding(dp(4),0,dp(4),0);server.setContentDescription(serverLabel);server.setTag("server-entry");
+        FrameLayout.LayoutParams serverParams=new FrameLayout.LayoutParams(dp(106),dp(48),Gravity.END|Gravity.CENTER_VERTICAL);statusRow.addView(server,serverParams);
+
+        LinearLayout.LayoutParams toolsParams=new LinearLayout.LayoutParams(dp(106),-2);toolsParams.setMarginStart(dp(6));tabs.addView(serverTools,toolsParams);
     }
     private android.widget.PopupWindow showSessionStack(View anchor) {
         LinearLayout body=column();body.setPadding(dp(8),dp(8),dp(8),dp(8));body.setBackground(shape(PANEL,BORDER,14));
@@ -403,6 +418,9 @@ public final class WorkspaceController {
         if (screen == Screen.TERMINAL) return;
         content.removeAllViews();
         LinearLayout body = column(); body.setPadding(dp(16), 0, dp(16), dp(12));
+        if (screen == Screen.SERVERS) {
+            content.addView(body, new FrameLayout.LayoutParams(-1,-1)); servers.attach(body); return;
+        }
         if (screen == Screen.HOME || screen == Screen.COMMANDS) {
             AdaptiveWorkspaceLayout viewport = new AdaptiveWorkspaceLayout(activity);
             viewport.setContentDescription(WorkspaceText.tr("Адаптивная область списков"));
@@ -1892,7 +1910,7 @@ public final class WorkspaceController {
         }
         for(WorkspaceStore.Session profile:store.sessions)if(!profile.handle.isEmpty())WorkspaceDiagnostics.register(profile,false);
         if (changed) store.save();
-        renderTabs(); renderHeader(); renderContent();
+        renderTabs(); renderHeader(); if(screen!=Screen.SERVERS)renderContent();
     }
     public boolean onFinished(TerminalSession session) {
         WorkspaceStore.Session profile = store.findByHandle(session.mHandle);
@@ -1921,10 +1939,12 @@ public final class WorkspaceController {
         return true;
     }
     public boolean onBack() {
+        if (screen == Screen.SERVERS && servers.back()) return true;
         if (screen == Screen.HOME) return false;
         show(Screen.HOME, true); return true;
     }
     public void close() {
+        servers.close();
         terminalDrafts.clear();
         for(WorkspacePackages browser:packageBrowsers)browser.close();packageBrowsers.clear();
         for(WorkspaceFileBrowser browser:fileBrowsers)browser.close();fileBrowsers.clear();

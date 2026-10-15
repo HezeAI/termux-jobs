@@ -32,5 +32,5 @@ for name in ['app', 'terminal-emulator', 'terminal-view', 'termux-shared']:
     text = text.replace('android {', 'android {\n    buildToolsVersion "30.0.3"', 1)
     p.write_text(text)
 p = stage / 'gradle.properties'
-# Match the production compile SDK (30).
+# Match the production compile SDK; keep target/min SDK unchanged.
 print(stage)

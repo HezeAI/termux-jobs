@@ -1,0 +1,32 @@
+{
+  "ru": [
+    "Векторные папки/файлы и отдельная стрелка перехода в файловом списке сервера, без сплющенных текстовых символов.",
+    "Свойства: понятные имя/путь/размер и дата с часовым поясом; для обычных файлов не запускается ffprobe.",
+    "Компоненты агента в троеточии сервера: состояние FFmpeg/ffprobe и установка отдельной серверной задачей после подтверждения.",
+    "Плашка просмотра появляется только для живого SSH-туннеля, показывает имя файла и останавливает только этот туннель.",
+    "Открытие папки/свойств не пересоздаёт всю страницу; график не перерисовывается при прежней истории.",
+    "Значок ! убран с верхней кнопки Сервер + Agent; пояснение остаётся внутри раздела."
+  ],
+  "en": [
+    "Vector folder/file icons and a separate folder chevron replace flattened text symbols.",
+    "Readable properties: name/path/size and timezone-aware date; ordinary files do not invoke ffprobe.",
+    "Agent components in server overflow: FFmpeg/ffprobe status and installation as a confirmed server task.",
+    "Playback panel appears only for a live SSH tunnel, shows the file name and stops only that tunnel.",
+    "Opening folders/properties no longer rebuilds the page; identical chart history does not trigger redraw.",
+    "Removed ! from the top Server + Agent tile; explanation remains inside the section."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние com.termux/сертификат, code1064; библиотекаv8/профили/SSH без сбросов.",
+      "Агент остаётся прежним: переустановка не нужна, FFmpeg устанавливается отдельно только с согласия.",
+      "Автоустановка FFmpeg поддерживает APT и требует root либо настроенный sudo -n; пакеты остаются после удаления агента.",
+      "Реальные жесты/DPI/медиаплеер/установка FFmpeg проверяются пользователем."
+    ],
+    "en": [
+      "Same com.termux/certificate, code1064; libraryv8/profiles/SSH require no reset.",
+      "Agent unchanged: no reinstall required; FFmpeg installation is a separate opt-in action.",
+      "Automatic FFmpeg install supports APT and needs root or configured sudo -n; packages remain after agent removal.",
+      "Real gestures/DPI/media player/FFmpeg installation require user validation."
+    ]
+  }
+}

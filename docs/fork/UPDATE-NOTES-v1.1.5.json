@@ -1,0 +1,34 @@
+{
+  "ru": [
+    "Сервер + Agent (тестирование): отдельный экран и пояснение по значку ! в шапке.",
+    "Собственные SSH-профили, подтверждение отпечатка хоста, ключи или пароль Android Keystore.",
+    "Метрики CPU/RAM/диска, графики, проекты и фоновые серверные задачи с журналами.",
+    "Установка и удаление опционального агента только после подтверждения; без публичного порта и sudo.",
+    "Файлы сервера: просмотр, скачивание, переименование, удаление; видео через временный SSH-туннель.",
+    "Обычный SSH · сервер в создании сессий сохранён."
+  ],
+  "en": [
+    "Server + Agent (testing): dedicated screen and an explanatory ! button in the header.",
+    "Separate SSH profiles, host fingerprint verification, keys or Android Keystore-encrypted passwords.",
+    "CPU/RAM/disk metrics, charts, projects and independent server tasks with logs.",
+    "Optional agent installation/removal requires confirmation; no public port or sudo.",
+    "Server files: browse, download, rename, delete; video through a temporary SSH tunnel.",
+    "Existing SSH server session creation is retained."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежний пакет/сертификат, code1062; библиотекаv8 и прежние SSH-пресеты без сброса данных.",
+      "Агент требует Linux/Bash/Python3.8+ и получает права SSH-пользователя (root = полный доступ).",
+      "Задачи не переживают перезагрузку сервера; графики возобновляются при подключении. Мониторинг телефона в фоне приостановлен.",
+      "Профили серверов пока не входят в экспорт библиотеки; Keystore-пароли непереносимы, после переноса их нужно ввести заново.",
+      "Первичная проверка на Android нужна: SSH/плеер/жесты/установка агента. Смена сертификата хоста требует отдельного подтверждения."
+    ],
+    "en": [
+      "Same package/certificate, code1062; libraryv8 and existing SSH presets need no data reset.",
+      "Agent requires Linux/Bash/Python3.8+ and inherits SSH-user permissions (root = full access).",
+      "Tasks do not survive server reboot; charts resume on connection. Phone background monitoring pauses.",
+      "Server profiles are not included in library exports yet; Keystore passwords are not portable and need re-entry after transfer.",
+      "Android validation is required: SSH/player/gestures/agent installation. Changed host keys require separate confirmation."
+    ]
+  }
+}

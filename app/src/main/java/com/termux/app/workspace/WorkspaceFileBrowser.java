@@ -31,6 +31,7 @@ final class WorkspaceFileBrowser {
     WorkspaceFileBrowser(TermuxActivity activity,WorkspaceStore.Session profile,String path,DirectoryChoice choice) {
         this.activity=activity;this.files=new ProjectFiles(activity,profile);this.path=path;this.choice=choice;
     }
+    void setServerKnownHosts(File file){files.setServerKnownHosts(file);}
     private int dp(int n){return WorkspaceDialogs.dp(activity,n);}
     private LinearLayout column(){LinearLayout v=new LinearLayout(activity);v.setOrientation(LinearLayout.VERTICAL);return v;}
     private LinearLayout row(){LinearLayout v=new LinearLayout(activity);v.setOrientation(LinearLayout.HORIZONTAL);v.setGravity(Gravity.CENTER_VERTICAL);return v;}

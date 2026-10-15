@@ -1,0 +1,24 @@
+{
+  "ru": [
+    "Избранные папки и файлы сервера через звёздочку; поиск имён в каталоге и подпапках через лупу.",
+    "Закреплённые команды запускаются с подтверждением. Завершённые записи задач можно удалить вместе с журналом.",
+    "Скорость и примерное время передачи; отдельное окно прогресса скачивания и отмена. Диагностика подключения в меню сервера."
+  ],
+  "en": [
+    "Server favorite folders/files via the star; recursive filename search via the magnifier.",
+    "Pinned commands require confirmation. Finished task records and their logs can be removed.",
+    "Transfer speed and estimated remaining time; dedicated download progress and cancellation. Connection diagnostics in the server menu."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние пакет/подпись, code1070. Сброса данных нет, агент обновлять не нужно.",
+      "Избранное/команды хранятся в локальном профиле; старые версии могут потерять новые поля при перезаписи профиля.",
+      "Поиск ограничен по времени/объёму и показывает неполный результат. Новые UI/SSH-сценарии требуют ручной проверки."
+    ],
+    "en": [
+      "Same package/signing identity, code1070. No data reset or agent update required.",
+      "Favorites/commands are stored in the local profile; older versions may discard new fields when rewriting profiles.",
+      "Search is bounded and reports partial results. New UI/SSH scenarios require manual testing."
+    ]
+  }
+}

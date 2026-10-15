@@ -1,0 +1,28 @@
+{
+  "ru": [
+    "Настройки агента — первый пункт меню сервера: проверить состояние, удалить агента, компоненты.",
+    "Проверка различает установленный/отсутствующий агент и ошибку связи. Установка доступна только после подтверждения отсутствия и проверки Python.",
+    "Удаление остаётся отдельным пунктом настроек и сохраняет подтверждение/защиту активных задач.",
+    "Пункт переименован в Отключиться, между ! и троеточием добавлен отступ."
+  ],
+  "en": [
+    "Agent settings is the first server menu item: check status, remove agent, components.",
+    "Status checks distinguish installed/missing agents from connection errors. Installation is offered only after confirmed absence and a Python check.",
+    "Removal remains a separate settings item with confirmation and active-task protection.",
+    "Renamed the action to Disconnect and added spacing between ! and overflow."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние пакет/сертификат, code1067; библиотекаv8, профили, AI и окружения без сбросов.",
+      "Агент не менялся, переустановка не нужна. Открытие настроек ничего не устанавливает/удаляет.",
+      "Отключиться закрывает опрос и медиатуннель; агент, серверные задачи/службы и отдельные SSH-терминалы продолжают работать.",
+      "Живой SSH/Python и Android UI требуют ручной проверки."
+    ],
+    "en": [
+      "Same package/certificate, code1067; libraryv8, profiles, AI and environments require no reset.",
+      "Agent unchanged; no reinstall needed. Opening settings does not install or remove anything.",
+      "Disconnect stops polling and the media tunnel; the agent, server tasks/services and separate SSH terminals continue.",
+      "Live SSH/Python and Android UI require manual validation."
+    ]
+  }
+}
