@@ -4,7 +4,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-/** Small synchronous SFTP v3 client over the existing pinned SSH transport. No shell filenames. */
+/** Bounded-window SFTP v3 client over the existing pinned SSH transport. No shell filenames. */
 final class ServerSftp implements AutoCloseable {
     interface Progress {void sent(long bytes);}
     private final DataInputStream in;private final DataOutputStream out;private final AutoCloseable transport;
@@ -12,6 +12,7 @@ final class ServerSftp implements AutoCloseable {
     String pendingTemp(){return pendingTemp;}
     void removeTemporary(String path)throws IOException{if(path==null||!path.startsWith("/")||path.indexOf(0)>=0||!new java.io.File(path).getName().matches("\\.termux-jobs-upload-[a-f0-9-]{36}"))throw new IOException("INVALID_PATH");if(stat(path).exists)ok(request(13,b->string(b,path)));}
     private int sequence;private boolean posixRename;private volatile boolean closed;
+    static final int WRITE_WINDOW=8;
     static final long MAX_BYTES=2L*1024*1024*1024;
     static final class Info {
         final boolean exists;final long size;final int permissions,mtime;
@@ -33,7 +34,31 @@ final class ServerSftp implements AutoCloseable {
     private void packet(int type,byte[] data)throws IOException{if(closed)throw new IOException("CANCELLED");out.writeInt(data.length+1);out.writeByte(type);out.write(data);out.flush();}
     private DataInputStream response()throws IOException{int n=in.readInt();if(n<1||n>262144)throw new IOException("SFTP_PACKET");byte[] data=new byte[n];in.readFully(data);return new DataInputStream(new ByteArrayInputStream(data));}
     private interface Body {void write(DataOutputStream b)throws IOException;}
-    private DataInputStream request(int type,Body body)throws IOException{ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream b=new DataOutputStream(bytes);int id=++sequence;b.writeInt(id);body.write(b);packet(type,bytes.toByteArray());DataInputStream r=response();int responseType=r.readUnsignedByte();if(r.readInt()!=id)throw new IOException("SFTP_ID");ByteArrayOutputStream answer=new ByteArrayOutputStream();answer.write(responseType);byte[] rest=new byte[r.available()];r.readFully(rest);answer.write(rest);return new DataInputStream(new ByteArrayInputStream(answer.toByteArray()));}
+    private int send(int type,Body body)throws IOException{ByteArrayOutputStream bytes=new ByteArrayOutputStream();DataOutputStream b=new DataOutputStream(bytes);int id=++sequence;b.writeInt(id);body.write(b);try{packet(type,bytes.toByteArray());}catch(IOException failure){close();throw failure;}return id;}
+    private DataInputStream request(int type,Body body)throws IOException{int id=send(type,body);DataInputStream r=response();int responseType=r.readUnsignedByte();if(r.readInt()!=id)throw new IOException("SFTP_ID");ByteArrayOutputStream answer=new ByteArrayOutputStream();answer.write(responseType);byte[] rest=new byte[r.available()];r.readFully(rest);answer.write(rest);return new DataInputStream(new ByteArrayInputStream(answer.toByteArray()));}
+    private int acknowledgeWrite(Map<Integer,Integer> pending)throws IOException{
+        final int count,status;
+        try{DataInputStream r=response();int type=r.readUnsignedByte(),id=r.readInt();Integer size=pending.remove(id);if(type!=101||size==null)throw new IOException("SFTP_ID");count=size;status=r.readInt();}
+        catch(IOException broken){close();throw broken;}
+        if(status!=0)throw new IOException("SFTP_WRITE_FAILED");return count;
+    }
+    private void writeFile(InputStream source,byte[] handle,Progress progress)throws Exception{
+        Map<Integer,Integer> pending=new LinkedHashMap<>();byte[] buffer=new byte[32768];long sent=0,acknowledged=0;boolean eof=false;
+        try{
+            while(!eof||!pending.isEmpty()){
+                while(!eof&&pending.size()<WRITE_WINDOW){
+                    if(closed)throw new IOException("CANCELLED");int count=source.read(buffer);if(count<0){eof=true;break;}if(count==0)continue;if(sent+count>MAX_BYTES)throw new IOException("FILE_LIMIT");
+                    final long offset=sent;final int size=count;
+                    int id=send(6,b->{blob(b,handle);b.writeLong(offset);b.writeInt(size);b.write(buffer,0,size);});pending.put(id,size);sent+=size;
+                }
+                if(!pending.isEmpty()){acknowledged+=acknowledgeWrite(pending);progress.sent(acknowledged);}
+            }
+        }catch(Exception failure){
+            // Consume every known outstanding reply before CLOSE/REMOVE. Never reuse a corrupt stream.
+            while(!closed&&!pending.isEmpty())try{acknowledgeWrite(pending);}catch(IOException drain){failure.addSuppressed(drain);}
+            throw failure;
+        }
+    }
     private static void ok(DataInputStream r)throws IOException{if(r.readUnsignedByte()!=101||r.readInt()!=0)throw new IOException("SFTP_FAILED");}
     String canonical(String directory)throws IOException{DataInputStream r=request(16,b->string(b,directory));if(r.readUnsignedByte()!=104||r.readInt()!=1)throw new IOException("SFTP_DIRECTORY");String path=string(r);if(!path.startsWith("/")||path.indexOf('\0')>=0)throw new IOException("SFTP_DIRECTORY");return path;}
     Info stat(String path)throws IOException{
@@ -47,7 +72,7 @@ final class ServerSftp implements AutoCloseable {
         pendingTemp=temp;byte[] handle=null;boolean published=false;
         try{
             DataInputStream r=request(3,b->{string(b,temp);b.writeInt(2|8|32);b.writeInt(4);b.writeInt(0600);});if(r.readUnsignedByte()!=102)throw new IOException("SFTP_OPEN");handle=blob(r);final byte[] h=handle;
-            byte[] buffer=new byte[32768];long total=0;int count;while((count=source.read(buffer))!=-1){if(closed)throw new IOException("CANCELLED");if(count==0)continue;if(total+count>MAX_BYTES)throw new IOException("FILE_LIMIT");final long offset=total;final int n=count;ok(request(6,b->{blob(b,h);b.writeLong(offset);b.writeInt(n);b.write(buffer,0,n);}));total+=count;progress.sent(total);}
+            writeFile(source,h,progress);
             if(expected.exists)ok(request(10,b->{blob(b,h);b.writeInt(4);b.writeInt(expected.permissions&0777);}));
             ok(request(4,b->blob(b,h)));handle=null;
             if(!expected.same(stat(target)))throw new IOException("REMOTE_CHANGED");

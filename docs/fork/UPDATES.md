@@ -1,4 +1,4 @@
-# GitHub updates — v1.2.0
+# GitHub updates — v1.2.1
 
 Публичнаяv1.2.0/code1071 доступна через прежний schema1 updater. Пакет и сертификат
 сохранены, данные не сбрасываются. RU/EN highlights описывают Сервер + Agent,
@@ -88,3 +88,9 @@ After updating, automatic checks use the per-opening behavior. No library/histor
 reset, no package/env replacement. Finishing jobs before APK installation remains
 necessary because Android can stop app processes. Public GitHub API limits or
 network outages may fail a check; automatic errors are silent, manual errors visible.
+
+## v1.2.1
+
+Latest v1.2.1/code1072, schema1, прежние пакет/сертификат, сброс данных не нужен.
+Ускорение SFTP и очереди описаны в RU/EN update highlights. Ручная и отключаемая
+автопроверка сохранены; скачивание/установка требуют действий пользователя.

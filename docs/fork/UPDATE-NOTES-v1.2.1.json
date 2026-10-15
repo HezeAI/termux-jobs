@@ -1,0 +1,24 @@
+{
+  "ru": [
+    "Разработчик подтвердил ускорение SFTP-отправки примерно4–5раз на своём подключении; выигрыш зависит от сети и сервера.",
+    "Поиск/диагностика и мониторинг получили отдельные ограниченные очереди и SSH-соединения.",
+    "SFTP: до8блоков в полёте по одному соединению, подтверждения каждого WRITE, прежняя защита замены и отмены.",
+    "Устаревшие ответы мониторинга после ручного действия не перезаписывают новые данные."
+  ],
+  "en": [
+    "The developer observed about4–5x faster SFTP uploads on his connection; gains depend on network and server.",
+    "Search/diagnostics and monitoring use separate bounded queues and owned SSH connections.",
+    "SFTP: up to8blocks in flight on one connection, each WRITE acknowledged, existing replace/cancel protections retained.",
+    "Stale monitoring replies cannot overwrite newer manual-operation results."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние пакет/подпись, code1072. Очистка данных и миграции не требуются, агент обновлять не нужно.",
+      "Скачивание не менялось. Ускорение отправки зависит от сети; нагрузка и батарея требуют проверки на устройстве."
+    ],
+    "en": [
+      "Same package/signer, code1072. No data reset or migration required; no agent update needed.",
+      "Download transport unchanged. Upload gains depend on the network; load/battery need device testing."
+    ]
+  }
+}
