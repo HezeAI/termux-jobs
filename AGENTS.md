@@ -94,3 +94,12 @@ review data compatibility. Put required resets, lost/unportable data, migrations
 and other breaking changes with their reasons in BOTH localized update highlights
 and release notes, so the installed v1.0.19 updater also displays them before
 installation. Never clear user data automatically to make an update work.
+
+# Authorship and validation wording
+
+HezeAI (the user) is the developer of this fork; Codex is an AI assistant helping
+with development. Public documentation must not describe the developer as having
+not installed the APK merely because the assistant did not install it. Attribute
+reported device checks to the developer, distinguish them from automated tests,
+and identify specific unverified scenarios without claiming exhaustive testing.
+Do not add statements about the assistant not installing APKs to release reports.

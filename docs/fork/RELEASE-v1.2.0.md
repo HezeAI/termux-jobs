@@ -156,6 +156,6 @@ older versions may discard newly added optional profile fields when rewriting it
 - [Руководство](https://github.com/HezeAI/termux-jobs/blob/v1.2.0/docs/fork/USAGE.md)
 - [Серверы и агент](https://github.com/HezeAI/termux-jobs/blob/v1.2.0/docs/fork/SERVERS.md)
 - [Расписания](https://github.com/HezeAI/termux-jobs/blob/v1.2.0/docs/fork/SCHEDULES.md)
-- [Проверки](https://github.com/HezeAI/termux-jobs/blob/v1.2.0/docs/fork/VALIDATION-v1.2.0.md)
+- [Проверки](https://github.com/HezeAI/termux-jobs/blob/fork/base/docs/fork/VALIDATION-v1.2.0.md)
 - [Обновление](https://github.com/HezeAI/termux-jobs/blob/v1.2.0/docs/fork/UPDATES.md)
 - [Бэкап и восстановление](https://github.com/HezeAI/termux-jobs/blob/v1.2.0/docs/fork/BACKUP-RESTORE.md)
