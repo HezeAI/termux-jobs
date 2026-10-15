@@ -212,4 +212,24 @@ public class ServerWorkspaceTest {
     @Test public void staleMonitorReplyCannotOverwriteManualStateOrDifferentProfile()throws Exception{
         WorkspaceServers s=serverScreen(new LinearLayout(activity()));try{ServerProfiles.Profile p=(ServerProfiles.Profile)get(s,"selected");Map<String,org.json.JSONObject> snapshots=(Map<String,org.json.JSONObject>)get(s,"snapshots");org.json.JSONObject original=snapshots.get(p.id),updated=snapshot(99);int generation=(int)get(s,"generation");set(s,"manualEpoch",4);s.applyMonitor(p,generation,3,updated,null);assertSame(original,snapshots.get(p.id));s.applyMonitor(p,generation-1,4,updated,null);assertSame(original,snapshots.get(p.id));s.applyMonitor(profile(),generation,4,updated,null);assertSame(original,snapshots.get(p.id));s.applyMonitor(p,generation,4,updated,null);assertSame(updated,snapshots.get(p.id));}finally{s.close();}
     }
+
+    @Test public void diagnosticHeaderButtonIsWideAndBeforeInfoWithoutRemoteWork()throws Exception{LinearLayout root=new LinearLayout(activity());WorkspaceServers server=serverScreen(root);try{View diagnostics=description(root,"Диагностика сервера"),info=description(root,"Об агенте сервера");assertNotNull(diagnostics);assertSame(info.getParent(),diagnostics.getParent());ViewGroup row=(ViewGroup)info.getParent();assertTrue(row.indexOfChild(diagnostics)<row.indexOfChild(info));assertEquals(WorkspaceDialogs.dp(root.getContext(),106),diagnostics.getLayoutParams().width);diagnostics.performClick();assertTrue(((Map<?,?>)get(server,"connections")).isEmpty());}finally{server.close();}}
+
+    @Test public void agentStatusDoesNotConfuseCachedConnectionWithLiveServerState()throws Exception{WorkspaceServers server=new WorkspaceServers(activity(),(name,command)->fail());try{WorkspaceLanguage.select(activity(),"ru");ServerProfiles.Profile profile=profile();assertTrue(server.agentLabel(profile).contains("не проверено"));((java.util.Set<String>)get(server,"connected")).add(profile.id);assertTrue(server.agentLabel(profile).contains("не проверено"));((Map<String,Boolean>)get(server,"agentPresence")).put(profile.id,true);assertTrue(server.agentLabel(profile).contains("по последней проверке"));assertFalse(server.agentLabel(profile).contains("Включён"));}finally{server.close();}}
+    @SuppressWarnings("unchecked") @Test public void pollingPreferenceAndListRepliesAreIndependentOfAgentState()throws Exception{
+        TermuxActivity a=activity();WorkspaceServers server=new WorkspaceServers(a,(n,c)->fail());try{
+            ServerProfiles.Profile p=profile();server.store.profiles.add(p);assertFalse(p.backgroundPolling);
+            ((Set<String>)get(server,"connected")).add(p.id);assertFalse(server.pollingEnabled(p));
+            p.backgroundPolling=true;assertTrue(server.pollingEnabled(p));assertEquals(30000,server.pollingInterval(p));
+            server.store.save();assertTrue(new ServerProfiles(a).profiles.get(0).backgroundPolling);
+            set(server,"selected",p);set(server,"visible",true);assertEquals(10000,server.pollingInterval(p));
+            p.backgroundPolling=false;assertTrue(server.pollingEnabled(p));set(server,"visible",false);assertFalse(server.pollingEnabled(p));
+            p.backgroundPolling=true;set(server,"selected",null);org.json.JSONObject result=snapshot(42);
+            server.applyMonitor(p,(int)get(server,"generation"),(int)get(server,"manualEpoch"),result,null);
+            assertSame(result,((Map<String,org.json.JSONObject>)get(server,"snapshots")).get(p.id));
+            ((Set<String>)get(server,"connected")).remove(p.id);server.applyMonitor(p,(int)get(server,"generation"),(int)get(server,"manualEpoch"),snapshot(43),null);
+            assertSame(result,((Map<String,org.json.JSONObject>)get(server,"snapshots")).get(p.id));assertFalse(server.pollingEnabled(p));
+        }finally{server.close();}
+    }
+
 }

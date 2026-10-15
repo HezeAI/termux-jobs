@@ -16,7 +16,7 @@ final class ServerConnection implements AutoCloseable {
     private final Activity activity;final ServerProfiles.Profile profile;
     private volatile Process process,tunnel;private volatile boolean closed;
     private final ScheduledExecutorService watchdog=Executors.newSingleThreadScheduledExecutor();
-    ServerConnection(Activity a,ServerProfiles.Profile p){activity=a;profile=p;}
+    ServerConnection(Activity a,ServerProfiles.Profile p){activity=a;profile=p;ServerDiagnostics.configure(p);}
     File knownHosts(){return new File(activity.getFilesDir(),"server-host-"+profile.id);}
     boolean trusted(){return knownHosts().isFile();}
     private String bin(String name){return TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/"+name;}
@@ -65,9 +65,14 @@ final class ServerConnection implements AutoCloseable {
         if(keys.length()==0)throw new IOException("HOST_KEY_UNAVAILABLE");return new String[]{keys.toString(),prints.toString()};
     }
     void trust(String keys)throws Exception{try(OutputStream out=new FileOutputStream(knownHosts())){out.write(keys.getBytes(StandardCharsets.UTF_8));}knownHosts().setReadable(false,false);knownHosts().setReadable(true,true);knownHosts().setWritable(false,false);knownHosts().setWritable(true,true);}
-    JSONObject remote(String command,byte[] input,int limit)throws Exception{
-        if(!trusted())throw new IOException("TRUST_REQUIRED");List<String> args=ssh();args.add("--");args.add(profile.host);args.add(command);
-        byte[] data=execute(args,input,limit,40);try{return new JSONObject(new String(data,StandardCharsets.UTF_8));}catch(JSONException e){throw new IOException("PYTHON_OR_AGENT_UNAVAILABLE");}
+    JSONObject remote(ServerDiagnostics.Op op,String command,byte[] input,int limit)throws Exception{
+        ServerDiagnostics.Trace trace=ServerDiagnostics.begin(profile,op);long network=0,parse=0,size=-1,networkStart=0,parseStart=0;Exception failure=null;
+        try{
+            if(!trusted())throw new IOException("TRUST_REQUIRED");List<String> args=ssh();args.add("--");args.add(profile.host);args.add(command);
+            networkStart=System.nanoTime();byte[] data=execute(args,input,limit,40);network=(System.nanoTime()-networkStart)/1000000;networkStart=0;size=data.length;parseStart=System.nanoTime();
+            JSONObject result;try{result=new JSONObject(new String(data,StandardCharsets.UTF_8));}catch(JSONException e){throw new IOException("PYTHON_OR_AGENT_UNAVAILABLE");}
+            if(result.has("ok")&&!result.optBoolean("ok"))throw new IOException(result.optString("error","AGENT_ERROR"));return result;
+        }catch(Exception e){failure=e;throw e;}finally{if(networkStart!=0)network=(System.nanoTime()-networkStart)/1000000;if(parseStart!=0)parse=(System.nanoTime()-parseStart)/1000000;trace.finish(network,parse,size,closed?new CancellationException():failure);}
     }
     JSONObject diagnose()throws Exception{
         JSONObject result=new JSONObject();
@@ -77,30 +82,30 @@ final class ServerConnection implements AutoCloseable {
     }
     JSONObject probe()throws Exception{
         String script="import json,os,platform,shutil,sys; print(json.dumps({'supported':sys.version_info >= (3,8),'python':platform.python_version(),'home':os.path.expanduser('~'),'user':os.getuid(),'agent':os.path.isfile(os.path.expanduser('~/.local/share/termux-jobs-server/agent.py'))}))";
-        return remote("python3 -I -c "+SessionShell.quote(script),null,16384);
+        return remote(ServerDiagnostics.Op.PROBE,"python3 -I -c "+SessionShell.quote(script),null,16384);
     }
     JSONObject rpc(JSONObject request)throws Exception{
-        JSONObject r=remote("python3 -I \"$HOME/.local/share/termux-jobs-server/agent.py\" --rpc",request.toString().getBytes(StandardCharsets.UTF_8),2*1024*1024);
+        JSONObject r=remote(ServerDiagnostics.operation(request.optString("op")),"python3 -I \"$HOME/.local/share/termux-jobs-server/agent.py\" --rpc",request.toString().getBytes(StandardCharsets.UTF_8),2*1024*1024);
         if(!r.optBoolean("ok"))throw new IOException(r.optString("error","AGENT_ERROR"));return r.getJSONObject("result");
     }
     JSONObject schedules(JSONObject request)throws Exception{
         String code;try(InputStream in=activity.getAssets().open("workspace-server-schedules.py")){ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);code=out.toString("UTF-8");}
-        JSONObject reply=remote("python3 -I -c "+SessionShell.quote(code),request.toString().getBytes(StandardCharsets.UTF_8),2*1024*1024);
+        JSONObject reply=remote(ServerDiagnostics.Op.SCHEDULE,"python3 -I -c "+SessionShell.quote(code),request.toString().getBytes(StandardCharsets.UTF_8),2*1024*1024);
         if(!reply.optBoolean("ok"))throw new IOException(reply.optString("error","SCHEDULE_ERROR"));return reply.getJSONObject("result");
     }
     JSONObject search(String path,String query)throws Exception{
         String code;try(InputStream in=activity.getAssets().open("workspace-server-search.py")){ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int n;while((n=in.read(buffer))!=-1)out.write(buffer,0,n);code=out.toString("UTF-8");}
-        JSONObject reply=remote("python3 -I -c "+SessionShell.quote(code),new JSONObject().put("path",path).put("query",query).toString().getBytes(StandardCharsets.UTF_8),2*1024*1024);
+        JSONObject reply=remote(ServerDiagnostics.Op.SEARCH,"python3 -I -c "+SessionShell.quote(code),new JSONObject().put("path",path).put("query",query).toString().getBytes(StandardCharsets.UTF_8),2*1024*1024);
         if(!reply.optBoolean("ok"))throw new IOException("SEARCH_FAILED");return reply.getJSONObject("result");
     }
     JSONObject components()throws Exception{
         String code="import json,os,shutil; print(json.dumps({'ffmpeg':bool(shutil.which('ffmpeg')),'ffprobe':bool(shutil.which('ffprobe')),'apt':bool(shutil.which('apt-get')),'sudo':bool(shutil.which('sudo')),'uid':os.getuid(),'home':os.path.expanduser('~'),'agent':os.path.isfile(os.path.expanduser('~/.local/share/termux-jobs-server/agent.py'))}))";
-        return remote("python3 -I -c "+SessionShell.quote(code),null,16384);
+        return remote(ServerDiagnostics.Op.COMPONENTS,"python3 -I -c "+SessionShell.quote(code),null,16384);
     }
     JSONObject properties(String path)throws Exception{
         if(ServerFileInfo.media(path)){JSONObject result=rpc(new JSONObject().put("op","properties").put("path",path));result.put("components",components());return result;}
         String code="import json,os,sys; p=os.path.realpath(os.path.expanduser(sys.argv[1])); s=os.stat(p); print(json.dumps({'path':p,'size':s.st_size,'modified':s.st_mtime}))";
-        return remote("python3 -I -c "+SessionShell.quote(code)+" "+SessionShell.quote(path),null,16384);
+        return remote(ServerDiagnostics.Op.PROPERTIES,"python3 -I -c "+SessionShell.quote(code)+" "+SessionShell.quote(path),null,16384);
     }
     boolean tunnelActive(){Process owned=tunnel;if(owned==null)return false;try{owned.exitValue();return false;}catch(IllegalThreadStateException e){return true;}}
     void install()throws Exception{
@@ -113,7 +118,7 @@ final class ServerConnection implements AutoCloseable {
             +"print(json.dumps({'installed':True}))";
         byte[] data;try(InputStream in=activity.getAssets().open("workspace-server-agent.py")){ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);data=out.toByteArray();}
         StringBuilder digest=new StringBuilder();for(byte b:MessageDigest.getInstance("SHA-256").digest(data))digest.append(String.format(Locale.ROOT,"%02x",b&255));
-        remote("python3 -I -c "+SessionShell.quote(setup)+" "+data.length+" "+digest,data,16384);rpc(new JSONObject().put("op","status"));
+        remote(ServerDiagnostics.Op.INSTALL,"python3 -I -c "+SessionShell.quote(setup)+" "+data.length+" "+digest,data,16384);rpc(new JSONObject().put("op","status"));
     }
     Process openTunnel(int remotePort,int[] localPort)throws Exception{
         if(remotePort<1||remotePort>65535)throw new IOException("INVALID_PORT");stopTunnel();
@@ -139,9 +144,12 @@ final class ServerConnection implements AutoCloseable {
         }catch(Exception e){target.delete();throw e;}finally{if(timer!=null)timer.cancel(false);if(owned!=null)owned.destroy();process=null;if(broker!=null)broker.close();}
     }
     ServerSftp sftp()throws Exception{
+        ServerDiagnostics.Trace trace=ServerDiagnostics.begin(profile,ServerDiagnostics.Op.SFTP_CONNECT);Exception failure=null;
+        try{
         if(!trusted())throw new IOException("TRUST_REQUIRED");List<String> args=ssh();args.addAll(Arrays.asList("-s","--",profile.host,"sftp"));ProcessBuilder b=builder(args);SshPasswordBroker broker=password(b);Process child=null;
         try{child=b.start();process=child;final Process owned=child;ScheduledFuture<?> timer=watchdog.schedule(owned::destroy,30,TimeUnit.MINUTES);return new ServerSftp(owned.getInputStream(),owned.getOutputStream(),()->{timer.cancel(false);owned.destroy();if(broker!=null)broker.close();});}
         catch(Exception e){if(child!=null)child.destroy();if(broker!=null)broker.close();throw e;}
+        }catch(Exception e){failure=e;throw e;}finally{trace.finish(trace.elapsed(),0,-1,closed?new CancellationException():failure);}
     }
     public void close(){closed=true;Process owned=process;if(owned!=null)owned.destroy();stopTunnel();watchdog.shutdownNow();}
 }

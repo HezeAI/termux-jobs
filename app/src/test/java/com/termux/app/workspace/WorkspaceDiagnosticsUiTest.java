@@ -18,7 +18,7 @@ import static org.robolectric.Shadows.shadowOf;
 public class WorkspaceDiagnosticsUiTest {
     private View find(View root,String text){if(root instanceof TextView&&((TextView)root).getText().toString().equals(text))return root;if(root instanceof ViewGroup)for(int i=0;i<((ViewGroup)root).getChildCount();i++){View child=find(((ViewGroup)root).getChildAt(i),text);if(child!=null)return child;}return null;}
     @Test public void editorsOfferFlagAndDialogPauseSurvivesWindowClose() throws Exception {
-        TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.setContentView(R.layout.activity_termux);
+        TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);WorkspaceLanguage.select(a,"ru");a.setContentView(R.layout.activity_termux);
         Field view=TermuxActivity.class.getDeclaredField("mTerminalView");view.setAccessible(true);view.set(a,a.findViewById(R.id.terminal_view));WorkspaceController c=new WorkspaceController(a);
         try{
             Method edit=WorkspaceController.class.getDeclaredMethod("editSession",WorkspaceStore.Session.class,boolean.class);edit.setAccessible(true);
@@ -30,7 +30,13 @@ public class WorkspaceDiagnosticsUiTest {
             WorkspaceStore.Session s=new WorkspaceStore.Session();WorkspaceDiagnostics.register(s,true);
             WorkspaceDiagnosticsUi.show(a,s,()->null);shadowOf(Looper.getMainLooper()).idle();AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();
             assertTrue(find(dialog.getWindow().getDecorView(),WorkspaceText.tr("Остановить журнал")).performClick());assertTrue(WorkspaceDiagnostics.paused(s.id));dialog.dismiss();
-            WorkspaceDiagnosticsUi.show(a,s,()->null);shadowOf(Looper.getMainLooper()).idle();dialog=ShadowAlertDialog.getLatestAlertDialog();assertNotNull(find(dialog.getWindow().getDecorView(),WorkspaceText.tr("Продолжить журнал")));assertNotNull(find(dialog.getWindow().getDecorView(),WorkspaceText.tr("Скопировать путь к отчёту")));assertNotNull(find(dialog.getWindow().getDecorView(),WorkspaceText.tr("Сохранить в Download")));dialog.dismiss();
+            WorkspaceDiagnosticsUi.show(a,s,()->null);shadowOf(Looper.getMainLooper()).idle();dialog=ShadowAlertDialog.getLatestAlertDialog();assertNotNull(find(dialog.getWindow().getDecorView(),"Возобновить журнал"));assertNotNull(find(dialog.getWindow().getDecorView(),"Скопировать путь"));assertNotNull(find(dialog.getWindow().getDecorView(),"В Download"));dialog.dismiss();
         }finally{c.close();}
+    }
+
+    @Test public void runtimeModesWorkForTermuxUbuntuSshAndAiWithoutChangingLaunchConfiguration(){
+        TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);WorkspaceLanguage.select(a,"ru");
+        for(String environment:new String[]{"termux","ubuntu","ssh","codex"}){WorkspaceStore.Session session=new WorkspaceStore.Session();session.environment=environment;session.extendedDebug=false;WorkspaceDiagnostics.register(session,true);WorkspaceDiagnosticsUi.show(a,session,()->null);AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();assertNotNull(find(d.getWindow().getDecorView(),"Подробный"));find(d.getWindow().getDecorView(),"Подробный").performClick();assertTrue(WorkspaceDiagnostics.extended(session.id));assertFalse(session.extendedDebug);find(d.getWindow().getDecorView(),"Обычный").performClick();assertFalse(WorkspaceDiagnostics.extended(session.id));d.dismiss();}
+        WorkspaceLanguage.select(a,"en");WorkspaceStore.Session session=new WorkspaceStore.Session();WorkspaceDiagnostics.register(session,true);WorkspaceDiagnosticsUi.show(a,session,()->null);AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();assertNotNull(find(d.getWindow().getDecorView(),"Detailed"));assertNotNull(find(d.getWindow().getDecorView(),"Stop journal"));d.dismiss();
     }
 }

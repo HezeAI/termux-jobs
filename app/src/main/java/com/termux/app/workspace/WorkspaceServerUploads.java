@@ -52,7 +52,8 @@ final class WorkspaceServerUploads implements AutoCloseable {
             // A skip decision is handled before any local input or remote output is opened.
             if(skipCurrent){skipCurrent=false;continue;}
             final Document current=doc;lastUpdate=0;startedAt=SystemClock.uptimeMillis();postProgress(current,0);source=activity.getContentResolver().openInputStream(doc.uri);if(source==null)throw new IOException("DOCUMENT_UNAVAILABLE");
-            try(InputStream input=source){sftp.upload(input,target,doc.name,expected,bytes->{if(cancelled)throw new CancellationException();postProgress(current,bytes);});}finally{source=null;}uploaded++;
+            ServerDiagnostics.Trace trace=ServerDiagnostics.begin(profile,ServerDiagnostics.Op.UPLOAD);long[] acknowledged={0};Exception failure=null;
+            try(InputStream input=source){sftp.upload(input,target,doc.name,expected,bytes->{acknowledged[0]=bytes;if(cancelled)throw new CancellationException();postProgress(current,bytes);});}catch(Exception e){failure=cancelled?new CancellationException():e;throw e;}finally{source=null;trace.finish(trace.elapsed(),0,acknowledged[0],failure);}uploaded++;
         }
     }catch(Exception e){failed=!cancelled;}finally{
         ServerSftp channel=sftp;if(channel!=null)leftover=channel.pendingTemp();if(channel!=null)channel.close();ServerConnection c=connection;if(c!=null)c.close();sftp=null;connection=null;

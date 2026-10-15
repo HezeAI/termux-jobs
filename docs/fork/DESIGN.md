@@ -165,3 +165,8 @@ One settings tile replaces two update rows. Title opens a manual check; the righ
 square checkbox, labelled Auto, persists the automatic preference without closing
 the menu or checking immediately. A muted inline hint says Check when opening
 the app. Both Russian and English are localized. Existing gear badge remains.
+
+
+## Диагностика v1.2.2
+
+Общий DiagnosticsPanel для сессий и серверов: сводка/события, ограниченное кольцо, пауза и экспорт. Серверные события типизированы, без команд/путей/полезной нагрузки; получение отчёта не создаёт RPC. Состояние паузы и опроса вне вкладки сохраняется отдельно в профиле. [Подробности](DIAGNOSTICS.md).

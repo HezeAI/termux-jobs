@@ -1,63 +1,29 @@
 package com.termux.app.workspace;
 
-import android.app.AlertDialog;
-import android.content.*;
-import android.os.*;
-import android.graphics.Typeface;
-import android.widget.*;
 import com.termux.app.TermuxActivity;
 import com.termux.terminal.TerminalSession;
-import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.function.Supplier;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
-/** Read-only view; collection is independent from this dialog's lifecycle. */
+/** Same structured collector for Termux/Ubuntu/SSH/AI; no process control or new requests. */
 final class WorkspaceDiagnosticsUi {
-    private WorkspaceDiagnosticsUi() {}
+    private WorkspaceDiagnosticsUi(){}
     static void show(TermuxActivity activity,WorkspaceStore.Session profile,Supplier<TerminalSession> terminal){
-        Handler handler=new Handler(Looper.getMainLooper());
-        LinearLayout body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(24,12,24,12);
-        TextView notice=new TextView(activity);notice.setText(WorkspaceText.tr("Журнал обновляется автоматически и собирается при закрытом окне. До 2 МБ на сессию. Отчёт содержит события и коды ошибок, без текста диалога и секретов."));body.addView(notice);
-        Button pause=new Button(activity);body.addView(pause);
-        Button copy=new Button(activity);copy.setText(WorkspaceText.tr("Скопировать путь к отчёту"));body.addView(copy);
-        Button download=new Button(activity);download.setText(WorkspaceText.tr("Сохранить в Download"));body.addView(download);
-        TextView status=new TextView(activity);body.addView(status);
-        ScrollView scroll=new ScrollView(activity);scroll.setMinimumHeight((int)(activity.getResources().getDisplayMetrics().heightPixels*.35));TextView output=new TextView(activity);output.setTypeface(Typeface.MONOSPACE);output.setTextSize(11);output.setTextIsSelectable(true);scroll.addView(output);body.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        int height=(int)(activity.getResources().getDisplayMetrics().heightPixels*.65);body.setMinimumHeight(height);
-        AlertDialog dialog=WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Диагностика сессии"))
-            .setView(body).setPositiveButton(WorkspaceText.tr("Закрыть"),null).create();
-        boolean[] dismissed={false},busy={false};
-        Runnable refresh=()->{
-            pause.setText(WorkspaceText.tr(WorkspaceDiagnostics.paused(profile.id)?"Продолжить журнал":"Остановить журнал"));
-            TerminalSession live=terminal.get();if(live!=null)WorkspaceDiagnostics.onOutput(live);
-            String report=WorkspaceDiagnostics.report(profile,live).replaceFirst("Generated: [^\n]*\n", "");
-            // Bound UI layout work even when the full saved report is much larger.
-            String visible=report.length()>65536?report.substring(0,Math.min(1600,report.length()))+"\n[…]\n"+report.substring(report.length()-62000):report;
-            if(!visible.contentEquals(output.getText()))output.setText(visible);
-        };
-        Runnable poll=new Runnable(){public void run(){if(dismissed[0])return;refresh.run();handler.postDelayed(this,2000);}};
-        pause.setOnClickListener(v->{WorkspaceDiagnostics.pause(profile.id,!WorkspaceDiagnostics.paused(profile.id));refresh.run();});
-        dialog.setOnShowListener(v->{
-            copy.setOnClickListener(w->{
-                if(busy[0])return;busy[0]=true;
-                WorkspaceDiagnostics.save(activity.getFilesDir(),profile.id,WorkspaceDiagnostics.report(profile,terminal.get()),file->activity.runOnUiThread(()->{busy[0]=false;if(dismissed[0])return;((ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("diagnostics",file.getAbsolutePath()));status.setText(WorkspaceText.tr("Путь скопирован"));}),error->activity.runOnUiThread(()->{busy[0]=false;if(!dismissed[0])status.setText(WorkspaceText.tr("Не удалось сохранить отчёт"));}));
-            });
-            download.setOnClickListener(w->{
-                if(busy[0])return;busy[0]=true;
-                WorkspaceDiagnostics.save(activity.getFilesDir(),profile.id,WorkspaceDiagnostics.report(profile,terminal.get()),file->{
-                    File dest=null;
-                    try{
-                        File dir=Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                        if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Download unavailable");
-                        dest=File.createTempFile("Termux-Jobs-diagnostics-",".txt",dir);
-                        try(InputStream in=new FileInputStream(file);OutputStream out=new FileOutputStream(dest)){byte[] buf=new byte[16384];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);}
-                        final File saved=dest;
-                        activity.runOnUiThread(()->{busy[0]=false;if(!dismissed[0])status.setText(WorkspaceText.tr("Сохранено: ")+saved.getAbsolutePath());});
-                    }catch(Exception error){if(dest!=null)dest.delete();activity.runOnUiThread(()->{busy[0]=false;if(!dismissed[0])status.setText(WorkspaceText.tr("Download недоступен; проверьте разрешение хранения"));});}
-                },error->activity.runOnUiThread(()->{busy[0]=false;if(!dismissed[0])status.setText(WorkspaceText.tr("Не удалось сохранить отчёт"));}));
-            });
-            poll.run();
+        DiagnosticsPanel.show(activity,new DiagnosticsPanel.Source(){
+            WorkspaceDiagnostics.Snapshot data=WorkspaceDiagnostics.snapshot(profile);TerminalSession live;
+            boolean ru(){return WorkspaceLanguage.code(activity).equals("ru");}
+            String t(String a,String b){return ru()?a:b;}
+            public void refresh(){live=terminal.get();data=WorkspaceDiagnostics.snapshot(profile);}
+            public String title(){return t("Диагностика сессии","Session diagnostics");}
+            public String id(){return profile.id;}
+            public String summary(){String state=live==null?t("Нет сведений о процессе","Process unavailable"):live.isRunning()?t("Работает · PID ","Running · PID ")+live.getPid():t("Завершён · код ","Exited · status ")+live.getExitStatus();
+                return t("Приложение: ","App: ")+com.termux.BuildConfig.VERSION_NAME+"\n"+t("Среда: ","Environment: ")+profile.environment+"\n"+state+"\n"+t("Время работы: ","Uptime: ")+(data.uptime<0?t("неизвестно, процесс подключён ранее","unknown; process attached earlier"):data.uptime/60+t(" мин "," min ")+data.uptime%60+t(" с"," s"))+"\n"+t("Журнал: ","Journal: ")+(data.extended?t("подробный","detailed"):t("обычный","normal"))+" · "+(data.paused?t("остановлен","paused"):t("сбор включён","collecting"))+"\n"+t("Последнее событие: ","Last event: ")+(data.lastEvent==0?"—":new SimpleDateFormat("HH:mm:ss",Locale.ROOT).format(new Date(data.lastEvent)))+"\n"+t("Запусков в этом журнале: ","Launches observed: ")+data.launches+"\n"+t("Наблюдений ошибок: ","Error observations: ")+data.errors+"\n\n"+t("Состав зависит от среды и агента. Работающий процесс не доказывает успешный вход. Пауза событий не означает зависание.","Available details depend on the environment and agent. A running process does not prove authentication. Event silence does not imply a hang.")+"\n"+t("Нативный verbose Gemini задаётся при запуске. Переключение здесь меняет сбор новых событий, без перезапуска и изменения прав.","Gemini native verbose is set at launch. This switch changes future event collection, without restarting or changing permissions.");}
+            public String events(){StringBuilder text=new StringBuilder();for(String line:data.events)text.append(WorkspaceDiagnostics.friendly(line,ru())).append('\n');return text.toString();}
+            public String report(){return WorkspaceDiagnostics.report(profile,terminal.get());}
+            public int bytes(){return data.bytes;}public int dropped(){return data.dropped;}
+            public boolean paused(){return WorkspaceDiagnostics.paused(profile.id);}public void paused(boolean value){WorkspaceDiagnostics.pause(profile.id,value);}
+            public boolean hasMode(){return true;}public boolean extended(){return WorkspaceDiagnostics.extended(profile.id);}public void extended(boolean value){WorkspaceDiagnostics.extended(profile.id,value);}
         });
-        dialog.setOnDismissListener(v->{dismissed[0]=true;handler.removeCallbacks(poll);});dialog.show();
     }
 }

@@ -1,0 +1,24 @@
+{
+  "ru": [
+    "Новая диагностика всех типов сессий: сводка, события, обычный/подробный режим без перезапуска.",
+    "Диагностика серверов: длительности операций и очередей, результаты и передачи без дополнительных запросов.",
+    "Остановка/возобновление журнала, копирование и экспорт отчёта в Download.",
+    "Галочка в карточке сервера: продолжение опроса вне вкладки каждые 30 секунд. Внутри — 10 секунд; в фоне приложения пауза."
+  ],
+  "en": [
+    "New diagnostics for all session types: overview, events and runtime Normal/Detailed modes.",
+    "Server diagnostics: operation/queue timing, results and transfers without extra requests.",
+    "Stop/resume journal, copy and export reports to Download.",
+    "Server card checkbox: keep polling outside the server tab every 30 seconds. Inside: 10 seconds; paused in the app background."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежний пакет и сертификат, versionCode 1073. Очистка пользовательских данных не требуется.",
+      "Новые настройки сервера необязательны; обновление агента не требуется. Выбор подробного режима в окне действует для текущего процесса сессии."
+    ],
+    "en": [
+      "Same package and certificate, versionCode 1073. No user data reset required.",
+      "New server preferences are optional; no agent update required. Runtime detail mode applies to the current session process."
+    ]
+  }
+}

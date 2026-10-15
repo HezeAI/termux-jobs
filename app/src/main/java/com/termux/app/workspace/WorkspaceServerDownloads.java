@@ -25,7 +25,7 @@ final class WorkspaceServerDownloads implements AutoCloseable {
         ProgressBar bar=new ProgressBar(activity,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(1000);bar.setIndeterminate(true);body.addView(bar);
         progress=WorkspaceDialogs.builder(activity).setTitle(t("Скачивание файла","Downloading file")).setView(body).setNegativeButton(t("Остановить","Stop"),null).create();progress.setCancelable(false);progress.setCanceledOnTouchOutside(false);progress.show();progress.getButton(-2).setOnClickListener(v->{status.setText(t("Остановка…","Stopping…"));progress.getButton(-2).setEnabled(false);cancel();});
         worker.execute(()->{
-            File dest=null;boolean success=false;String error="";ServerConnection owned=null;
+            File dest=null;boolean success=false;String error="";ServerConnection owned=null;ServerDiagnostics.Trace trace=ServerDiagnostics.begin(profile,ServerDiagnostics.Op.DOWNLOAD);long[] received={0};Exception failure=null;
             try{
                 if(cancelled)throw new IOException("CANCELLED");
                 File folder=new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"Termux-Jobs-Server");if(!folder.isDirectory()&&!folder.mkdirs())throw new IOException("DOWNLOAD_PERMISSION");
@@ -33,10 +33,10 @@ final class WorkspaceServerDownloads implements AutoCloseable {
                 dest=new File(folder,UUID.randomUUID().toString()+"-"+name);if(!dest.createNewFile())throw new IOException("DOWNLOAD_FAILED");
                 owned=new ServerConnection(activity,profile);connection=owned;if(cancelled)throw new IOException("CANCELLED");
                 long total=entry.has("size")?entry.optLong("size",-1):-1;
-                owned.download(entry.getString("path"),dest,2L*1024*1024*1024,bytes->{if(cancelled)throw new CancellationException();long now=SystemClock.uptimeMillis();if(now-lastUpdate<150&&bytes!=total)return;lastUpdate=now;String line=ServerTransferProgress.describe(bytes,total,now-started,WorkspaceLanguage.code(activity).equals("ru"));main.post(()->{if(closed||cancelled)return;status.setText(entry.optString("name")+"\n"+line);bar.setIndeterminate(total<=0);if(total>0)bar.setProgress((int)Math.min(1000,bytes*1000.0/total));});});
+                owned.download(entry.getString("path"),dest,2L*1024*1024*1024,bytes->{received[0]=bytes;if(cancelled)throw new CancellationException();long now=SystemClock.uptimeMillis();if(now-lastUpdate<150&&bytes!=total)return;lastUpdate=now;String line=ServerTransferProgress.describe(bytes,total,now-started,WorkspaceLanguage.code(activity).equals("ru"));main.post(()->{if(closed||cancelled)return;status.setText(entry.optString("name")+"\n"+line);bar.setIndeterminate(total<=0);if(total>0)bar.setProgress((int)Math.min(1000,bytes*1000.0/total));});});
                 success=!cancelled;
-            }catch(Exception e){error=e instanceof IOException&&"DOWNLOAD_PERMISSION".equals(e.getMessage())?"DOWNLOAD_PERMISSION":"DOWNLOAD_FAILED";}
-            finally{if(owned!=null)owned.close();connection=null;}
+            }catch(Exception e){failure=cancelled?new CancellationException():e;error=e instanceof IOException&&"DOWNLOAD_PERMISSION".equals(e.getMessage())?"DOWNLOAD_PERMISSION":"DOWNLOAD_FAILED";}
+            finally{trace.finish(trace.elapsed(),0,received[0],failure==null&&cancelled?new CancellationException():failure);if(owned!=null)owned.close();connection=null;}
             boolean cleanupFailed=false;if(!success&&dest!=null&&dest.exists())cleanupFailed=!dest.delete();
             final boolean done=success,dirty=cleanupFailed;final String path=dest==null?"":dest.getAbsolutePath(),code=error;
             main.post(()->{running=false;if(progress!=null)progress.dismiss();progress=null;if(closed)return;

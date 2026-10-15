@@ -440,3 +440,8 @@ for APT rather than deliberately killing dpkg. Android process death is not prev
 Title and Auto checkbox have separate click paths: manual check vs persisted
 preference only. The inline hint describes the per-opening automatic behavior.
 The gate does not change installer/hash/signer validation or terminal lifecycle.
+
+
+## Диагностика v1.2.2
+
+Общий DiagnosticsPanel для сессий и серверов: сводка/события, ограниченное кольцо, пауза и экспорт. Серверные события типизированы, без команд/путей/полезной нагрузки; получение отчёта не создаёт RPC. Состояние паузы и опроса вне вкладки сохраняется отдельно в профиле. [Подробности](DIAGNOSTICS.md).
