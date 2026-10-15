@@ -1,11 +1,16 @@
-# Termux Job’s v1.2.0 — подготовка публикации
+# Termux Job’s v1.2.0 опубликован
 
-Пользователь явно разрешил GitHub release с полным changelog отv1.1.4,
-акцент Сервер + Agent и сохранённый старый SSH-вход; выбрал номерv1.2.0.
-Финальный code1071, APK в Download и build/apk, SHA256 d270bfd36a7515ab6facbb21586db7087ea2870a253b227cb315cbe4202a70e8.
-Прежняя подпись, без сброса. Документы RELEASE/VALIDATION-v1.2.0 и update.json
-готовы. Проверки379JVM+6search+20agent+15schedules. GitHub draft/uploads/latest
-нужно завершить и проверить; не устанавливать APK, не менять сервер/Ubuntu/сессии.
-Непроверенные device/realSSH/Cron/systemd сценарии в VALIDATION.
-Локальныеv1.1.5–13 исторические. Design/ — посторонние неотслеживаемые макеты,
-не включать в коммит. Следующие релизы обязательно README/docs/update.json.
+Latest stable: https://github.com/HezeAI/termux-jobs/releases/tag/v1.2.0
+Tag source d4bca3e5. com.termux, code1071, прежний cert, без сброса данных.
+APK: /sdcard/Download/Termux-Jobs-v1.2.0-arm64.apk
+SHA256 d270bfd36a7515ab6facbb21586db7087ea2870a253b227cb315cbe4202a70e8
+Assets APK/SHA256SUMS/update.json downloaded back and matched. Public Latest API
+and unauthenticated update.json checked. Full changelog vs publicv1.1.4 with
+Server+Agent emphasis and old New session→SSH server retained. README/docs updated.
+379JVM+6search+20agent+15schedules verified; JVM unchangedv1.1.13 reused, version-only
+release rebuild. Agent unchanged from localv1.1.13, native frompublicv1.1.4.
+See docs/fork/PUBLICATION-v1.2.0.md and VALIDATION-v1.2.0.md for device/SSH/codec/
+Cron/systemd untested scenarios. Do not install APK or alter installed apps/Ubuntu/
+servers/sessions without new authorization. Future releases update README/docs
+and schema1 update.json with RU/EN compatibility. Design/ untracked predates task;
+leave it untouched, do not include in commits. Public tag/APK remain unchanged.

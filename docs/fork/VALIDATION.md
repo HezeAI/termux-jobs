@@ -59,4 +59,4 @@ update.json, автоматически проверяется при откры
 
 ## Исторические проверки
 
-[v1.1.4](VALIDATION-v1.1.4.md) · [v1.1.13](VALIDATION-v1.1.13.md).
+[v1.1.4](https://github.com/HezeAI/termux-jobs/blob/v1.1.4/docs/fork/VALIDATION.md) · [v1.1.13](VALIDATION-v1.1.13.md).
