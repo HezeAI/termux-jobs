@@ -1,6 +1,9 @@
 # Релиз v1.3.2/code1085
 
-Пользователь разрешил публикацию. APK неизменён относительно переданного в Download.
+Опубликовано: https://github.com/HezeAI/termux-jobs/releases/tag/v1.3.2
+Source/tag ae002f7e; latest stable, draft=false/prerelease=false.
+APK, SHA256SUMS и update.json скачаны обратно и совпали. Публичные metadata/документы проверены.
+APK неизменён относительно переданного в Download.
 437 JVM-тестов прошли. Данные без миграций/сброса; пакет/подпись прежние.
 Синхронизация отложена. Новой rollback-сборки не создавать.
 Публикация: .verification/release-v1.3.2; исходные проверки .verification/xda-v1.3.2.
