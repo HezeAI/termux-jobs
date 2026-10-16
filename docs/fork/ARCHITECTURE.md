@@ -477,3 +477,12 @@ its ListView position. Tab/query state stays in that picker; no persistent data
 or PTY calls are added. Positive Back and preview cancellation share this path.
 Insert/edit/delete retain their existing separate actions. The catalog adds
 three sourced static entries; no runtime internet search or automatic fixes.
+
+### Runtime dependency gate (v1.3.3)
+
+Android8.0/API26 minimum. Guava requests use the same JRE variant, including
+Media3 transitive edges, because upstream FileUtils uses MoreFiles. preBuild
+checks debug/release runtime jars; the APK gate inspects DEX definitions and
+inventories unresolved types against compileSDK. Explicit optional-type review
+notes are not proof of method/API/device compatibility. Data schemas and the
+upstream FileUtils implementation are unchanged.

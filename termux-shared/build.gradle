@@ -9,7 +9,14 @@ android {
         implementation "androidx.annotation:annotation:1.3.0"
         implementation "androidx.core:core:1.6.0"
         implementation 'com.google.android.material:material:1.4.0'
-        implementation "com.google.guava:guava:24.1-jre"
+        // MoreFiles requires the JRE flavor; Android 8+ provides the needed Java APIs.
+        implementation("com.google.guava:guava:33.3.1-jre") {
+            attributes {
+                attribute(org.gradle.api.attributes.java.TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE,
+                    objects.named(org.gradle.api.attributes.java.TargetJvmEnvironment,
+                        org.gradle.api.attributes.java.TargetJvmEnvironment.STANDARD_JVM))
+            }
+        }
         implementation "io.noties.markwon:core:$markwonVersion"
         implementation "io.noties.markwon:ext-strikethrough:$markwonVersion"
         implementation "io.noties.markwon:linkify:$markwonVersion"

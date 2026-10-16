@@ -1,0 +1,20 @@
+{
+  "ru": [
+    "Обязательное обновление: исправлена наша ошибка зависимостей Guava, вызывавшая вылеты при очистке временных файлов и обработке crash-log.",
+    "Добавлены проверки состава APK и тесты файловых операций."
+  ],
+  "en": [
+    "Required update: fixed our Guava dependency packaging error causing crashes during temporary-file cleanup and crash-log processing.",
+    "Added packaged-class checks and file-operation regression tests."
+  ],
+  "compatibility": {
+    "ru": [
+      "Теперь требуется Android8.0+ (API26); Android7.0/7.1 больше не поддерживается.",
+      "Обновляйте поверх: прежние com.termux и сертификат, code1086. Очистка данных не требуется, форматы данных и среды не меняются."
+    ],
+    "en": [
+      "Now requires Android8.0+ (API26); Android7.0/7.1 are no longer supported.",
+      "Update in place: same com.termux package and certificate, code1086. No data reset, data-format migration or environment replacement."
+    ]
+  }
+}

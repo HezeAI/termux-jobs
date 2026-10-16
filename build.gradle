@@ -19,3 +19,25 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+// Align transitive Guava requests (including Media3) with FileUtils' JRE APIs.
+// Do not alter the Android variants of other dependencies.
+allprojects {
+    dependencies {
+        components {
+            all { details ->
+                details.allVariants {
+                    withDependencies { deps ->
+                        deps.findAll { it.group == "com.google.guava" && it.name == "guava" }.each { dep ->
+                            dep.attributes {
+                                attribute(org.gradle.api.attributes.java.TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE,
+                                    objects.named(org.gradle.api.attributes.java.TargetJvmEnvironment,
+                                        org.gradle.api.attributes.java.TargetJvmEnvironment.STANDARD_JVM))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

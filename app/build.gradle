@@ -18,7 +18,14 @@ android {
         implementation "androidx.drawerlayout:drawerlayout:1.1.1"
         implementation "androidx.preference:preference:1.1.1"
         implementation "androidx.viewpager:viewpager:1.0.0"
-        implementation "com.google.guava:guava:33.3.1-android"
+        // MoreFiles requires the JRE flavor; Android 8+ provides the needed Java APIs.
+        implementation("com.google.guava:guava:33.3.1-jre") {
+            attributes {
+                attribute(org.gradle.api.attributes.java.TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE,
+                    objects.named(org.gradle.api.attributes.java.TargetJvmEnvironment,
+                        org.gradle.api.attributes.java.TargetJvmEnvironment.STANDARD_JVM))
+            }
+        }
         implementation "io.noties.markwon:core:$markwonVersion"
         implementation "io.noties.markwon:ext-strikethrough:$markwonVersion"
         implementation "io.noties.markwon:linkify:$markwonVersion"
@@ -32,8 +39,8 @@ android {
         applicationId "com.termux"
         minSdkVersion project.properties.minSdkVersion.toInteger()
         targetSdkVersion project.properties.targetSdkVersion.toInteger()
-        versionCode 1085
-        versionName "1.3.2"
+        versionCode 1086
+        versionName "1.3.3"
 
         if (appVersionName) versionName = appVersionName
         validateVersionName(versionName)
@@ -223,3 +230,25 @@ configurations.configureEach {
     attributes.attribute(org.gradle.api.attributes.java.TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE,
         objects.named(org.gradle.api.attributes.java.TargetJvmEnvironment, org.gradle.api.attributes.java.TargetJvmEnvironment.ANDROID))
 }
+
+// Check the production configuration: Robolectric may resolve a different JVM variant.
+tasks.register("verifyGuavaRuntime") {
+    doLast {
+        ["debugRuntimeClasspath", "releaseRuntimeClasspath"].each { name ->
+            def artifacts = configurations.getByName(name).incoming.artifactView {
+                attributes { attribute(org.gradle.api.attributes.Attribute.of("artifactType", String), "jar") }
+                componentFilter { id -> id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier &&
+                    id.group == "com.google.guava" && id.module == "guava" }
+            }.artifacts.artifacts
+            if (artifacts.size() != 1) throw new GradleException("Expected one Guava runtime artifact in " + name)
+            def jar = new java.util.zip.ZipFile(artifacts.first().file)
+            try {
+                ["com/google/common/io/MoreFiles.class", "com/google/common/io/RecursiveDeleteOption.class", "com/google/common/collect/ImmutableBiMap.class"].each {
+                    if (jar.getEntry(it) == null) throw new GradleException("Missing runtime class: " + it + " in " + name)
+                }
+            } finally { jar.close() }
+            logger.lifecycle("Verified Guava file APIs in " + name + ": " + artifacts.first().file.name)
+        }
+    }
+}
+tasks.named("preBuild").configure { dependsOn("verifyGuavaRuntime") }

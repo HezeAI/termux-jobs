@@ -10,6 +10,12 @@ stage = root / ('.verification/arm64' if '--arm64' in sys.argv else '.verificati
 stage.mkdir(parents=True, exist_ok=True)
 (stage / '.tools/test-home').mkdir(parents=True, exist_ok=True)
 for name in ['app', 'terminal-emulator', 'terminal-view', 'termux-shared', 'gradle']:
+    # copytree alone retains deleted Java sources from an earlier verification stage.
+    staged_src = stage / name / 'src'
+    if staged_src.exists():
+        for old_source in staged_src.rglob('*.java'):
+            if not (root / old_source.relative_to(stage)).exists():
+                old_source.unlink()
     shutil.copytree(root / name, stage / name, dirs_exist_ok=True,
                     ignore=shutil.ignore_patterns('build', '.cxx', '.externalNativeBuild', 'bootstrap-*.zip', '__pycache__', '*.pyc'))
 for name in ['settings.gradle', 'build.gradle', 'gradle.properties', 'gradlew', 'gradlew.bat']:
