@@ -20,6 +20,18 @@ import java.util.concurrent.*;
 /** Project viewer and directory picker share one environment-aware backend. */
 final class WorkspaceFileBrowser {
     interface DirectoryChoice {void selected(String path);}
+    interface FileChoice {void selected(WorkspaceStore.Session source,ProjectFiles.Entry entry);}
+    private FileChoice fileChoice;
+    private java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> fileChoices;
+    private final LinkedHashMap<String,ProjectFiles.Entry> selectedFiles=new LinkedHashMap<>();
+    void setFileChoices(java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> value){fileChoices=value;}
+    private String t(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
+    private void updateSelection(){if(dialog!=null&&fileChoices!=null){Button select=dialog.getButton(AlertDialog.BUTTON_POSITIVE);select.setText(t("Загрузить выбранные","Upload selected")+" ("+selectedFiles.size()+")");select.setEnabled(!selectedFiles.isEmpty()&&!busy);}}
+    private void chooseFile(ProjectFiles.Entry entry){
+        if(fileChoices!=null){if(selectedFiles.containsKey(entry.path))selectedFiles.remove(entry.path);else if(selectedFiles.size()<50)selectedFiles.put(entry.path,entry);else{message.setText(t("Можно выбрать до 50 файлов","Select up to 50 files"));return;}ScrollView viewport=(ScrollView)rows.getParent();int y=viewport.getScrollY();render();viewport.post(()->viewport.scrollTo(0,y));updateSelection();}
+        else if(fileChoice!=null){fileChoice.selected(files.profile,entry);dialog.dismiss();}else openFile(entry);
+    }
+    void setFileChoice(FileChoice value){fileChoice=value;}
     private final TermuxActivity activity;
     private final ProjectFiles files;
     private final DirectoryChoice choice;
@@ -60,24 +72,27 @@ final class WorkspaceFileBrowser {
         message=text(WorkspaceText.tr("Загрузка…"),12);body.addView(message);rows=column();ScrollView scroll=new ScrollView(activity);scroll.addView(rows);
         body.addView(scroll,new LinearLayout.LayoutParams(-1,Math.max(dp(160),Math.min(dp(400),activity.getResources().getDisplayMetrics().heightPixels/2))));
         AlertDialog.Builder builder=WorkspaceDialogs.builder(activity).setTitle(choice==null?WorkspaceText.tr("Файлы · ")+files.profile.name:WorkspaceText.tr("Рабочий каталог")).setView(body).setNegativeButton(WorkspaceText.tr("Закрыть"),null);
+        if(fileChoices!=null)builder.setPositiveButton(t("Загрузить выбранные","Upload selected"),null);
         if(choice!=null)builder.setPositiveButton(WorkspaceText.tr("Выбрать папку"),null).setNeutralButton(WorkspaceText.tr("Создать папку"),null);
         dialog=builder.create();dialog.setOnDismissListener(d->{closed=true;for(WorkspaceTextEditor editor:editors)editor.close();editors.clear();files.close();worker.shutdownNow();});dialog.setOnShowListener(d->{
             if(choice!=null){dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{if(!busy&&listing!=null){choice.selected(listing.path);dialog.dismiss();}});dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v->createFolder());}
+            if(fileChoices!=null){dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{if(!busy&&!selectedFiles.isEmpty()){fileChoices.accept(files.profile,new ArrayList<>(selectedFiles.values()));dialog.dismiss();}});updateSelection();}
         });dialog.show();
         if(ProjectFiles.environment(files.profile).equals("ssh")&&files.profile.sshAuth.equals("password")&&files.profile.sshEncryptedPassword.isEmpty())askPassword();else load(path);
     }
     private void askPassword(){EditText input=new EditText(activity);input.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);input.setSaveEnabled(false);
         WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Пароль SSH для файлов")).setView(input).setPositiveButton(WorkspaceText.tr("Подключиться"),(d,w)->{char[] secret=new char[input.length()];TextUtils.getChars(input.getText(),0,input.length(),secret,0);files.setPassword(secret);Arrays.fill(secret,'\0');input.setText("");load(path);}).setNegativeButton(WorkspaceText.tr("Отмена"),(d,w)->dialog.dismiss()).show();}
     private interface Work {void run() throws Exception;}
-    private void execute(Work work){if(closed||busy)return;busy=true;message.setText(WorkspaceText.tr("Загрузка…"));if(choice!=null)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
-        worker.execute(()->{try{work.run();}catch(Exception e){activity.runOnUiThread(()->{if(!closed)message.setText(e.getMessage()==null?WorkspaceText.tr("Не удалось открыть файлы"):e.getMessage());});}finally{activity.runOnUiThread(()->{busy=false;if(!closed&&choice!=null)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(listing!=null);});}});}
+    private void execute(Work work){if(closed||busy)return;busy=true;updateSelection();message.setText(WorkspaceText.tr("Загрузка…"));if(choice!=null)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+        worker.execute(()->{try{work.run();}catch(Exception e){activity.runOnUiThread(()->{if(!closed)message.setText(e.getMessage()==null?WorkspaceText.tr("Не удалось открыть файлы"):e.getMessage());});}finally{activity.runOnUiThread(()->{busy=false;if(!closed&&choice!=null)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(listing!=null);if(!closed)updateSelection();});}});}
     private void load(String requested){if(busy)return;listing=null;rows.removeAllViews();execute(()->{ProjectFiles.Listing result=files.list(requested);activity.runOnUiThread(()->{if(closed)return;listing=result;path=result.path;pathLabel.setText(path);render();});});}
     static String parent(String path){int slash=path.lastIndexOf('/');return slash<=0?"/":path.substring(0,slash);}
     private void render(){
         if(filters!=null)for(int i=0;i<filters.getChildCount();i++){TextView t=(TextView)filters.getChildAt(i);styleFilter(activity,t,t.getText().toString().equals(filter));}
         if(rows==null||listing==null)return;rows.removeAllViews();int count=0;String q=search.getText().toString().toLowerCase(Locale.ROOT);
         for(ProjectFiles.Entry e:listing.entries){if(choice!=null&&!e.directory||!ProjectFiles.visible(e,filter)||!e.name.toLowerCase(Locale.ROOT).contains(q))continue;
-            TextView item=action((e.directory?"▸  ":"▤  ")+e.name+(e.directory?"":"\n"+android.text.format.Formatter.formatShortFileSize(activity,e.size)),()->{if(e.directory)load(e.path);else openFile(e);});
+            TextView item=action((e.directory?"▸  ":"▤  ")+e.name+(e.directory?"":"\n"+android.text.format.Formatter.formatShortFileSize(activity,e.size)),()->{if(e.directory)load(e.path);else chooseFile(e);});
+            if(!e.directory&&fileChoices!=null){item.setText((selectedFiles.containsKey(e.path)?"☑  ":"☐  ")+e.name+"\n"+android.text.format.Formatter.formatShortFileSize(activity,e.size));item.setSelected(selectedFiles.containsKey(e.path));item.setBackground(WorkspaceDialogs.background(activity,item.isSelected()));}
             item.setContentDescription((e.directory?WorkspaceText.tr("Папка "):WorkspaceText.tr("Файл "))+e.name);rows.addView(item);count++;}
         message.setText(count==0?WorkspaceText.tr("Нет подходящих файлов или папок"):WorkspaceText.tr("Открыт каталог выбранной среды · ")+count);
     }

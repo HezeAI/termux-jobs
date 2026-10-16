@@ -1,0 +1,26 @@
+{
+  "ru": [
+    "Новое: «Ошибки и решения» в общих настройках —114 офлайн-карточек RU/EN с поиском, фильтрами и источниками. База будет пополняться с обновлениями.",
+    "Улучшенный общий выбор файлов: Termux, установленные proot-distro и память устройства с проверкой доступа. Отправка до50 файлов.",
+    "Выбор SSH-ключа менеджером, подтверждаемый импорт и passphrase с защищённым хранением.",
+    "Скачивание с сервера: быстрый Download сохранён, добавлен выбор другой папки/окружения."
+  ],
+  "en": [
+    "New: Errors and solutions in general settings —114 offline RU/EN entries with search, filters and sources. The library will grow with app updates.",
+    "Improved shared file picker: Termux, installed proot-distro environments and device storage with permission checks. Upload up to50 files.",
+    "Browse for SSH keys, confirm private imports and store key passphrases securely.",
+    "Server downloads retain the Download shortcut and add another destination folder/environment."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние пакет com.termux и сертификат, code1083. Форматы данных не меняются; очистка не требуется.",
+      "Импортированные ключи в files/server-keys не входят в архив только HOME. Keystore-секреты при переносе могут требовать повторного ввода.",
+      "Передача требует доступной среды и прав записи; скачивание до2ГБ/10минут."
+    ],
+    "en": [
+      "Same com.termux package and signing certificate, code1083. No data format changes or reset required.",
+      "Imported keys in files/server-keys are outside HOME-only backups. Keystore secrets may require re-entry after migration.",
+      "The destination environment must be available and writable; downloads remain limited to2GB/10minutes."
+    ]
+  }
+}

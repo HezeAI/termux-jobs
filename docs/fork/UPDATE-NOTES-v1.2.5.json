@@ -1,0 +1,20 @@
+{
+  "ru": [
+    "Ошибки и решения: 78 карточек RU/EN, добавлены 8 недостающих случаев.",
+    "Сверка Reddit с подтверждениями авторов и официальной документацией; нет автоматического выполнения."
+  ],
+  "en": [
+    "Errors and solutions: 78 bilingual entries, including 8 additional cases.",
+    "Reddit reports checked for author confirmations and primary documentation; no automatic execution."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежний пакет и сертификат, code1076. Очистка данных и миграции не требуются.",
+      "Резерв без библиотеки: v1.2.6/code1077. Ставить только для отката; следующее обновление требует code>1077. Старый резерв code1075 не установится поверх этой версии."
+    ],
+    "en": [
+      "Same package and certificate, code1076. No data reset or migration required.",
+      "Rollback without the library: v1.2.6/code1077. Install only for rollback; the next update needs code>1077. Previous rollback code1075 cannot update this version."
+    ]
+  }
+}

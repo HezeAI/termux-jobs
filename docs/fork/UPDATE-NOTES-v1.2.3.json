@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "Библиотека «Ошибки и решения» в общих настройках: 70 карточек RU/EN.",
+    "Поиск, фильтры ОС и способа запуска, категории, условия и официальные источники.",
+    "Копирование и подтверждаемая вставка команд проверки без автоматического выполнения."
+  ],
+  "en": [
+    "Errors and solutions in general settings: 70 bilingual entries.",
+    "Search, OS/launch-method/category filters, conditions and official references.",
+    "Copy and confirmed insertion of diagnostic commands without automatic execution."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежний пакет/подпись, code1074. Очистка данных и миграции не требуются.",
+      "Локальный резерв v1.2.4/code1075 удаляет библиотеку; устанавливать только при необходимости отката. После него для обновления нужен code>1075."
+    ],
+    "en": [
+      "Same package and certificate, code1074. No data reset or migration needed.",
+      "Local rollback v1.2.4/code1075 removes the library; install only if rollback is needed. Subsequent updates require code>1075."
+    ]
+  }
+}

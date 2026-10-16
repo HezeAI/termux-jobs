@@ -1,19 +1,19 @@
-# v1.2.2 опубликована
+# v1.3.0 — подготовлен к разрешённой публикации
 
-User authorized stable GitHub publication. APK 1.2.2/code1073/com.termux,
-same certificate, no reset; native libraries and server agent unchanged.
-402 JVM tests pass; final APK audit/source-stage match pass.
-SHA256 ed6966a67329b0cc81bb697cfce57ffec971d184ce44626f8660949faf466180
-See docs/fork/DIAGNOSTICS.md, RELEASE-v1.2.2.md, VALIDATION-v1.2.2.md.
-Polling checkbox persists per profile; outside selected screen 30s, inside 10s,
-background paused. Session runtime detail switch does not change native flags.
-Export/pause/summary/events shared panel; server logging pause persists.
-No APK install, no user process/Bridge/Ubuntu/SDK/server modification authorized.
-HezeAI is developer; Codex assistant. Device-dependent checks remain explicitly
-listed. Untracked design/ predates task; leave untouched. No card-tool concept
-implementation and no Toast redesign requested. Future stable releases require
-update.json and localized compatibility before installation.
-Published https://github.com/HezeAI/termux-jobs/releases/tag/v1.2.2
-Source tag commit 8ae6ec9c. APK/SHA256SUMS/update.json downloaded back and matched;
-unauthenticated latest, public update metadata and release document links verified.
-See docs/fork/PUBLICATION-v1.2.2.md.
+HezeAI разрешил GitHub-релиз, затем запросил номер1.3.0 для обновления поверх.
+APK1.3.0/code1083, прежние com.termux/сертификат, выше локальной1.2.11/1082.
+Публичная предыдущая1.2.2/1073. release/update notes содержат полный набор
+изменений после неё: библиотека114 карточек, общий файловый выбор, ключ/passphrase,
+upload до50, download destination с сохранённым Download. База будет пополняться
+с APK; источники проекта/статусы выделены, OC001 открыт. Схемы/данные не очищаются.
+
+Доказательства .verification/release-v1.3.0/; 432 JVM из локальной1.2.11 на том же
+функциональном коде, отдельная сборка/аудит1.3.0. Native/agent прежние. Полный Lint
+не заявлен; реальные Android permissions/proot/diskfull/cancel требуют проверки.
+Новый резервный APK НЕ создавать, старые файлы сохранять.
+
+Публикация: commit/tag v1.3.0, APK+SHA256SUMS+update.json, сверка скачанных assets
+и ссылок. После публикации записать receipt/результат. Прочитать RELEASING.md.
+Не менять установленную среду/общий SDK/Bridge/пользовательские процессы,
+не устанавливать APK. design/ предшествует задаче и не включается в релиз.
+HezeAI разработчик, Codex помощник.

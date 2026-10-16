@@ -24,10 +24,15 @@ public final class SshPasswordBroker implements AutoCloseable {
     private final LocalServerSocket server;
     private final WeakReference<Activity> activity;
     private char[] password;
+    private final String keyPath;
     private final AtomicBoolean closed = new AtomicBoolean();
     private final Handler main = new Handler(Looper.getMainLooper());
     private final Runnable expiry = this::close;
     public SshPasswordBroker(Activity activity, char[] password) throws IOException {
+        this(activity,password,null);
+    }
+    public SshPasswordBroker(Activity activity,char[] password,String keyPath)throws IOException {
+        this.keyPath=keyPath;
         this.activity = new WeakReference<>(activity);
         server = new LocalServerSocket(address); this.password = password.clone();
         main.postDelayed(expiry, 120000);
@@ -35,6 +40,13 @@ public final class SshPasswordBroker implements AutoCloseable {
     }
     static boolean isPasswordPrompt(String hint, String prompt) {
         return hint.isEmpty() && prompt.trim().endsWith("password:");
+    }
+    static boolean isKeyPassphrasePrompt(String keyPath,String hint,String prompt){
+        if(keyPath==null||!hint.isEmpty())return false;
+        // OpenSSH formats this prompt with %.100s (bytes, not Java characters).
+        byte[] path=keyPath.getBytes(StandardCharsets.UTF_8);
+        String shown=new String(path,0,Math.min(100,path.length),StandardCharsets.UTF_8);
+        return prompt.trim().equals("Enter passphrase for key '"+shown+"':");
     }
     static boolean isHostPrompt(String hint, String prompt) {
         return hint.equals("confirm") || prompt.contains("Are you sure you want to continue connecting");
@@ -65,7 +77,7 @@ public final class SshPasswordBroker implements AutoCloseable {
                         byte[] answer = (confirm(prompt) ? "yes" : "no").getBytes(StandardCharsets.UTF_8);
                         output.writeInt(answer.length); output.write(answer); output.flush();
                         if (answer[0] == 'n') break;
-                    } else if (isPasswordPrompt(hint, prompt)) {
+                    } else if (keyPath==null ? isPasswordPrompt(hint,prompt) : isKeyPassphrasePrompt(keyPath,hint,prompt)) {
                         byte[] answer;
                         synchronized (this) {
                             if (password == null || closed.get()) { output.writeInt(-1); output.flush(); break; }

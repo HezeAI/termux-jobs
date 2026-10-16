@@ -2,10 +2,7 @@ package com.termux.app.workspace;
 
 import android.app.*;
 import android.content.*;
-import android.database.Cursor;
-import android.net.Uri;
 import android.os.*;
-import android.provider.OpenableColumns;
 import android.widget.*;
 import com.termux.app.TermuxActivity;
 import java.io.*;
@@ -14,32 +11,30 @@ import java.util.concurrent.*;
 
 /** User-selected documents stream directly into private remote temporaries over SFTP. */
 final class WorkspaceServerUploads implements AutoCloseable {
-    static final int REQUEST=0x5346;
     private final TermuxActivity activity;private final Runnable completed;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();private final Handler main=new Handler(Looper.getMainLooper());
+    private final WorkspaceLocalFilePicker picker;
     private final List<AlertDialog> dialogs=new ArrayList<>();private final List<Document> documents=new ArrayList<>();
-    private ServerProfiles.Profile profile;private String directory;private boolean picking,running,closed;private volatile boolean cancelled;
+    private ServerProfiles.Profile profile;private String directory;private boolean running,closed;private volatile boolean cancelled;
     private volatile ServerConnection connection;private volatile ServerSftp sftp;private volatile InputStream source;
     private CompletableFuture<String> decision;private AlertDialog progress;private TextView status;private ProgressBar bar;
     private int index,uploaded,skipped;private long lastUpdate,startedAt;
-    private static final class Document {final Uri uri;String name;final long size;Document(Uri u,String n,long s){uri=u;name=n;size=s;}}
-    WorkspaceServerUploads(TermuxActivity a,Runnable done){activity=a;completed=done;}
+    private static final class Document {final WorkspaceStore.Session location;final ProjectFiles.Entry entry;String name;final long size;Document(WorkspaceStore.Session s,ProjectFiles.Entry e){location=s.copy();entry=e;name=e.name;size=e.size;}}
+    WorkspaceServerUploads(TermuxActivity a,Runnable done){activity=a;completed=done;picker=new WorkspaceLocalFilePicker(a);}
     private String t(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
     private void show(AlertDialog d){dialogs.add(d);d.setCanceledOnTouchOutside(false);d.setOnDismissListener(x->dialogs.remove(d));d.show();}
     private void error(String message){if(!closed)show(WorkspaceDialogs.builder(activity).setTitle(t("Отправка файлов","Upload files")).setMessage(message).setPositiveButton("OK",null).create());}
-    boolean active(){return picking||running;}
+    boolean active(){return running;}
     void pick(ServerProfiles.Profile p,String path){
         if(closed||active())return;if(path==null||!path.startsWith("/")){error(t("Сначала откройте каталог сервера.","Open a server directory first."));return;}
-        profile=new ServerProfiles.Profile();profile.id=p.id;profile.name=p.name;profile.host=p.host;profile.port=p.port;profile.user=p.user;profile.auth=p.auth;profile.identity=p.identity;profile.encrypted=p.encrypted;directory=path;
-        Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        try{picking=true;activity.startActivityForResult(intent,REQUEST);}catch(ActivityNotFoundException e){picking=false;error(t("Нет приложения для выбора файлов.","No document picker available."));}
-    }
-    boolean result(int request,int result,Intent intent){if(request!=REQUEST)return false;if(!picking||closed)return true;picking=false;if(result!=Activity.RESULT_OK||intent==null)return true;
-        LinkedHashSet<Uri> uris=new LinkedHashSet<>();if(intent.getData()!=null)uris.add(intent.getData());if(intent.getClipData()!=null)for(int i=0;i<intent.getClipData().getItemCount();i++){uris.add(intent.getClipData().getItemAt(i).getUri());if(uris.size()>20)break;}
-        if(uris.isEmpty()||uris.size()>20){error(t("Выберите от 1 до 20 файлов.","Select 1 to 20 files."));return true;}running=true;
-        worker.execute(()->{try{List<Document> values=new ArrayList<>();for(Uri uri:uris){if(!"content".equals(uri.getScheme()))throw new IOException();String name=null;long size=-1;try(Cursor cursor=activity.getContentResolver().query(uri,new String[]{OpenableColumns.DISPLAY_NAME,OpenableColumns.SIZE},null,null,null)){if(cursor!=null&&cursor.moveToFirst()){int n=cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME),s=cursor.getColumnIndex(OpenableColumns.SIZE);if(n>=0)name=cursor.getString(n);if(s>=0&&!cursor.isNull(s))size=cursor.getLong(s);}}if(!ServerSftp.validName(name)||size>ServerSftp.MAX_BYTES)throw new IOException();values.add(new Document(uri,name,size));}
-            main.post(()->{if(closed)return;running=false;documents.clear();documents.addAll(values);confirm();});
-        }catch(Exception e){main.post(()->{running=false;error(t("Не удалось прочитать выбранные файлы. Лимит — 2 ГБ на файл; имя не должно содержать управляющие символы или /.","Cannot read the selected documents. Limit: 2 GB per file; names cannot contain control characters or /."));});}});return true;
+        profile=new ServerProfiles.Profile();profile.id=p.id;profile.name=p.name;profile.host=p.host;profile.port=p.port;profile.user=p.user;profile.auth=p.auth;profile.identity=p.identity;profile.encrypted=p.encrypted;profile.diagnosticsPaused=p.diagnosticsPaused;directory=path;
+        picker.chooseMultiple(t("Выбрать файлы для загрузки","Choose files to upload"),(location,entries)->{
+            if(closed)return;
+            if(entries.isEmpty()||entries.size()>50){error(t("Выберите от 1 до 50 файлов.","Select 1 to 50 files."));return;}
+            List<Document> selected=new ArrayList<>();
+            for(ProjectFiles.Entry entry:entries){if(entry.directory||!ServerSftp.validName(entry.name)||entry.size<0||entry.size>ServerSftp.MAX_BYTES){error(t("Недопустимый файл. Лимит — 2 ГБ на файл.","Invalid file. Limit: 2 GB per file."));return;}selected.add(new Document(location,entry));}
+            documents.clear();documents.addAll(selected);confirm();
+        });
     }
     private void confirm(){StringBuilder body=new StringBuilder(profile.name+"\n"+profile.user+"@"+profile.host+":"+profile.port+"\n"+directory+"\n\n");for(Document d:documents)body.append(d.name).append(" · ").append(d.size<0?t("размер неизвестен","unknown size"):ServerFileInfo.size(d.size,WorkspaceLanguage.code(activity).equals("ru"))).append('\n');body.append(t("\nСовпавшие имена будут запрошены отдельно. Передача по SFTP в правах выбранной SSH-учётной записи.","\nConflicting names are reviewed separately. SFTP uses the selected SSH account's permissions."));
         show(WorkspaceDialogs.builder(activity).setTitle(t("Отправить на сервер?","Upload to server?")).setMessage(body).setPositiveButton(t("Отправить","Upload"),(d,w)->start()).setNegativeButton(t("Отмена","Cancel"),null).create());}
@@ -51,7 +46,7 @@ final class WorkspaceServerUploads implements AutoCloseable {
             while(true){expected=sftp.stat(target+(target.equals("/")?"":"/")+doc.name);if(!expected.exists)break;String answer=choose(doc,expected,sftp.canReplace());if(answer.equals("skip")){skipped++;break;}if(answer.equals("replace"))break;doc.name=answer.substring(5);}
             // A skip decision is handled before any local input or remote output is opened.
             if(skipCurrent){skipCurrent=false;continue;}
-            final Document current=doc;lastUpdate=0;startedAt=SystemClock.uptimeMillis();postProgress(current,0);source=activity.getContentResolver().openInputStream(doc.uri);if(source==null)throw new IOException("DOCUMENT_UNAVAILABLE");
+            final Document current=doc;lastUpdate=0;startedAt=SystemClock.uptimeMillis();postProgress(current,0);ProjectFiles local=new ProjectFiles(activity,doc.location);try{source=local.openUpload(doc.entry);}catch(Exception e){local.close();throw e;}
             ServerDiagnostics.Trace trace=ServerDiagnostics.begin(profile,ServerDiagnostics.Op.UPLOAD);long[] acknowledged={0};Exception failure=null;
             try(InputStream input=source){sftp.upload(input,target,doc.name,expected,bytes->{acknowledged[0]=bytes;if(cancelled)throw new CancellationException();postProgress(current,bytes);});}catch(Exception e){failure=cancelled?new CancellationException():e;throw e;}finally{source=null;trace.finish(trace.elapsed(),0,acknowledged[0],failure);}uploaded++;
         }
@@ -67,5 +62,5 @@ final class WorkspaceServerUploads implements AutoCloseable {
         String answer;try{answer=choice.get();}finally{decision=null;}skipCurrent=answer.equals("skip");return answer;
     }
     private void postProgress(Document doc,long bytes){long now=SystemClock.uptimeMillis();if(bytes!=0&&now-lastUpdate<150)return;lastUpdate=now;int number=index+1;main.post(()->{if(closed||cancelled||progress==null)return;status.setText(number+"/"+documents.size()+" · "+doc.name+"\n"+ServerTransferProgress.describe(bytes,doc.size,Math.max(0,now-startedAt),WorkspaceLanguage.code(activity).equals("ru")));bar.setIndeterminate(doc.size<=0);if(doc.size>0)bar.setProgress((int)Math.min(1000,bytes*1000/doc.size));});}
-    @Override public void close(){if(closed)return;closed=true;cancel();for(AlertDialog d:new ArrayList<>(dialogs))d.dismiss();worker.shutdownNow();main.removeCallbacksAndMessages(null);}
+    @Override public void close(){if(closed)return;closed=true;picker.close();cancel();for(AlertDialog d:new ArrayList<>(dialogs))d.dismiss();worker.shutdownNow();main.removeCallbacksAndMessages(null);}
 }

@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "Выбор ключей и загрузка на сервер: общий файловый менеджер с Termux, установленными окружениями и памятью устройства.",
+    "Проверка и запрос доступа к хранилищу; выбор до 50 файлов с отметками между папками. Системный выбор из загрузки убран.",
+    "Прямая передача через существующую очередь SFTP, без промежуточного архива."
+  ],
+  "en": [
+    "Shared file browser for SSH keys and uploads: Termux, installed environments and device storage.",
+    "Storage permission checks and requests; select up to 50 files across folders. System upload picker removed.",
+    "Direct streaming through the existing SFTP queue, with no intermediate archive."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежний пакет/сертификат, code1080. Форматы данных не меняются, очистка не требуется.",
+      "Резерв1.2.10/code1081 — прежняя версия без библиотеки ошибок и новых SSH-функций. Только для отката; следующее обновление требует code>1081."
+    ],
+    "en": [
+      "Same package and certificate, code1080. No data format changes or reset required.",
+      "Rollback1.2.10/code1081 retains the previous build without the error library and new SSH features. Rollback only; subsequent updates need code>1081."
+    ]
+  }
+}

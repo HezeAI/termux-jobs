@@ -339,6 +339,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         super.onDestroy();
 
         Logger.logDebug(LOG_TAG, "onDestroy");
+        if(mWorkspaceStorageAccess!=null)mWorkspaceStorageAccess.close();
         if (mWorkspace != null) mWorkspace.close();
 
         if (mIsInvalidState) return;
@@ -734,6 +735,11 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
     /**
      * For processes to access shared internal storage (/sdcard) we need this permission.
      */
+    private com.termux.app.workspace.WorkspaceStorageAccess mWorkspaceStorageAccess;
+    public void requestWorkspaceStorageAccess(Runnable ready){
+        if(mWorkspaceStorageAccess==null)mWorkspaceStorageAccess=new com.termux.app.workspace.WorkspaceStorageAccess(this);
+        mWorkspaceStorageAccess.request(ready);
+    }
     public boolean ensureStoragePermissionGranted() {
         if (PermissionUtils.checkPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
             return true;
@@ -746,6 +752,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if(mWorkspaceStorageAccess!=null&&mWorkspaceStorageAccess.permissionResult(requestCode))return;
         if (requestCode == PermissionUtils.REQUEST_GRANT_STORAGE_PERMISSION && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Logger.logInfo(LOG_TAG, "Storage permission granted by user on request.");
             TermuxInstaller.setupStorageSymlinks(this);
@@ -810,7 +817,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data) {
         super.onActivityResult(requestCode,resultCode,data);
-        if(mWorkspace!=null)mWorkspace.onActivityResult(requestCode,resultCode,data);
+        if(mWorkspaceStorageAccess!=null&&mWorkspaceStorageAccess.activityResult(requestCode))return;
     }
 
     public void refreshWorkspace() {

@@ -22,7 +22,7 @@ final class ProjectFiles implements AutoCloseable {
         this.profile.sshEncryptedPassword=profile.sshEncryptedPassword;}
     void setPassword(char[] value) {if(password!=null)Arrays.fill(password,'\0');password=value.clone();}
     static String environment(WorkspaceStore.Session s) {return s.environment.equals("codex")?s.codexEnvironment:s.environment.equals("legacy")?"termux":s.environment;}
-    static String environmentLabel(WorkspaceStore.Session s) {String e=environment(s);return e.equals("ubuntu")?"Ubuntu":e.equals("ssh")?"SSH · "+s.sshHost:"Termux";}
+    static String environmentLabel(WorkspaceStore.Session s) {String e=environment(s);return e.startsWith("proot:")?s.name:e.equals("ubuntu")?"Ubuntu":e.equals("ssh")?"SSH · "+s.sshHost:"Termux";}
     static String target(String path) {
         if(path==null || path.indexOf('\0')>=0 || path.contains("\n") || path.contains("\r"))throw new IllegalArgumentException(WorkspaceText.tr("Некорректный путь"));
         if(path.isEmpty() || path.equals("~"))return "\"$HOME\"";
@@ -58,7 +58,8 @@ final class ProjectFiles implements AutoCloseable {
         return "application/octet-stream";
     }
     static boolean visible(Entry e,String filter) {return e.directory || filter.equals(WorkspaceText.tr("Все")) || filter.equals(WorkspaceText.tr("Текст"))&&mime(e.name).equals("text/plain") || filter.equals(WorkspaceText.tr("Изображения"))&&mime(e.name).startsWith("image/") || filter.equals("APK")&&e.name.toLowerCase(Locale.ROOT).endsWith(".apk");}
-    Listing list(String path) throws Exception {return parse(bytes(listScript(path),MAX_LIST));}
+    static String portableListScript(String path){return "cd -- "+target(path)+" || exit 2; printf '%s\\0' \"$(pwd -P)\"; for p in ./* ./.[!.]* ./..?*; do if [ -d \"$p\" ]; then kind=d; size=0; elif [ -f \"$p\" ]; then kind=f; size=$(stat -L -c %s -- \"$p\") || exit 2; else continue; fi; printf '%s\\0%s\\0%s\\0' \"$kind\" \"${p#./}\" \"$size\"; done";}
+    Listing list(String path) throws Exception {return parse(bytes(environment(profile).startsWith("proot:")?portableListScript(path):listScript(path),MAX_LIST));}
     Listing createDirectory(String parent,String name) throws Exception {
         if(name.trim().isEmpty()||name.equals(".")||name.equals("..")||name.contains("/")||name.contains("\n")||name.contains("\r")||name.indexOf('\0')>=0)throw new IOException(WorkspaceText.tr("Введите имя одной папки без / и переносов"));
         bytes("cd -- "+target(parent)+" && mkdir -- "+SessionShell.quote(name),1024);
@@ -98,6 +99,7 @@ final class ProjectFiles implements AutoCloseable {
     private byte[] bytes(String script,int max) throws Exception {ByteArrayOutputStream out=new ByteArrayOutputStream();run(script,out,max);return out.toByteArray();}
     static String command(WorkspaceStore.Session s,String script) {
         String e=environment(s);String bash="bash --noprofile --norc -c "+SessionShell.quote(script);
+        if(e.startsWith("proot:")){String alias=e.substring(6);if(!WorkspaceLocalFilePicker.validAlias(alias))throw new IllegalArgumentException("INVALID_ENVIRONMENT");return "proot-distro login "+SessionShell.quote(alias)+" -- /bin/sh -c "+SessionShell.quote(script);}
         if(e.equals("ubuntu"))return "proot-distro login ubuntu -- /bin/"+bash;
         if(!e.equals("ssh"))return bash;
         if(!SshSessionShell.validHost(s.sshHost)||!SshSessionShell.validUser(s.sshUser)||!SshSessionShell.validPort(s.sshPort))throw new IllegalArgumentException(WorkspaceText.tr("Укажите корректные параметры SSH"));
@@ -106,7 +108,8 @@ final class ProjectFiles implements AutoCloseable {
             if(!SshSessionShell.validIdentity(s.sshIdentity))throw new IllegalArgumentException(WorkspaceText.tr("Некорректный путь SSH-ключа"));
             options+=" -o IdentitiesOnly=yes -i "+target(s.sshIdentity);
         }
-        options+=s.sshAuth.equals("password")?" -o BatchMode=no -o PreferredAuthentications=password -o PubkeyAuthentication=no -o KbdInteractiveAuthentication=no -o NumberOfPasswordPrompts=1":" -o BatchMode=yes";
+        if(s.sshAuth.equals("key")&&!s.sshEncryptedPassword.isEmpty())options+=" -o PreferredAuthentications=publickey -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o NumberOfPasswordPrompts=1";
+        options+=s.sshAuth.equals("key")&&!s.sshEncryptedPassword.isEmpty()?" -o BatchMode=no":s.sshAuth.equals("password")?" -o BatchMode=no -o PreferredAuthentications=password -o PubkeyAuthentication=no -o KbdInteractiveAuthentication=no -o NumberOfPasswordPrompts=1":" -o BatchMode=yes";
         return "ssh -T"+options+" -p "+s.sshPort+" -l "+SessionShell.quote(s.sshUser)+" -- "+SessionShell.quote(s.sshHost)+" "+SessionShell.quote(bash);
     }
     private void run(String script,OutputStream out,long max) throws Exception {run(script,out,max,null);}
@@ -120,10 +123,10 @@ final class ProjectFiles implements AutoCloseable {
         SshPasswordBroker broker=null;
         ScheduledExecutorService timer=Executors.newSingleThreadScheduledExecutor();
         try {
-            if(environment(profile).equals("ssh")&&profile.sshAuth.equals("password")) {
+            if(environment(profile).equals("ssh")&&(profile.sshAuth.equals("password")||profile.sshAuth.equals("key")&&!profile.sshEncryptedPassword.isEmpty())) {
                 char[] secret=password==null?profile.sshEncryptedPassword.isEmpty()?null:SshPasswordVault.decrypt(profile):password.clone();
                 if(secret==null)throw new IOException(WorkspaceText.tr("Введите пароль для просмотра файлов"));
-                try {broker=new SshPasswordBroker(activity,secret);}finally{Arrays.fill(secret,'\0');}
+                try {broker=new SshPasswordBroker(activity,secret,profile.sshAuth.equals("key")?SshKeyFiles.identity(profile.sshIdentity):null);}finally{Arrays.fill(secret,'\0');}
                 File askpass=SessionShell.prepareAskpass(activity.getFilesDir(),profile,activity.getApplicationInfo().sourceDir);
                 builder.environment().put("SSH_ASKPASS",askpass.getAbsolutePath());builder.environment().put("SSH_ASKPASS_REQUIRE","force");builder.environment().put("DISPLAY",":0");builder.environment().put("TERMUX_JOBS_SSH_SOCKET",broker.address);builder.environment().put("LC_ALL","C");
             }
@@ -133,6 +136,22 @@ final class ProjectFiles implements AutoCloseable {
             try(InputStream in=owned.getInputStream()) {byte[] buffer=new byte[32768];int n;long total=0;while((n=in.read(buffer))!=-1){if(closed||Thread.currentThread().isInterrupted())throw new IOException(WorkspaceText.tr("Операция отменена"));total+=n;if(total>max)throw new IOException(WorkspaceText.tr("Файл или список слишком большой"));out.write(buffer,0,n);}}
             if(owned.waitFor()!=0)throw new IOException(environment(profile).equals("ssh")?WorkspaceText.tr("SSH недоступен: проверьте вход, пароль и доверенный ключ сервера в терминале"):WorkspaceText.tr("Каталог или файл недоступен; проверьте путь и выбранную среду"));
         } finally {if(process!=null)process.destroy();process=null;timer.shutdownNow();if(broker!=null)broker.close();}
+    }
+    void localOperation(String script)throws Exception{if(environment(profile).equals("ssh"))throw new IOException("LOCAL_DESTINATION_REQUIRED");bytes(script,1024);}
+    InputStream openUpload(Entry entry)throws Exception {
+        String env=environment(profile);if(env.equals("ssh"))throw new IOException("LOCAL_SOURCE_REQUIRED");
+        if(entry.directory||entry.size<0||entry.size>ServerSftp.MAX_BYTES)throw new IOException("FILE_LIMIT");
+        ProcessBuilder builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c","exec "+command(profile,"test -f "+target(entry.path)+" && exec cat -- "+target(entry.path)));
+        builder.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));builder.environment().clear();
+        for(String item:TermuxShellUtils.buildEnvironment(activity,false,TermuxConstants.TERMUX_HOME_DIR_PATH)){int eq=item.indexOf('=');if(eq>0)builder.environment().put(item.substring(0,eq),item.substring(eq+1));}
+        builder.redirectError(new File("/dev/null"));Process owned=builder.start();process=owned;owned.getOutputStream().close();
+        if(closed){owned.destroy();throw new IOException("CANCELLED");}
+        return new FilterInputStream(owned.getInputStream()){
+            private int checked(int count)throws IOException{if(count<0)try{if(owned.waitFor()!=0)throw new IOException("SOURCE_UNAVAILABLE");}catch(InterruptedException e){Thread.currentThread().interrupt();throw new IOException("CANCELLED");}return count;}
+            @Override public int read()throws IOException{return checked(in.read());}
+            @Override public int read(byte[] b,int off,int len)throws IOException{return checked(in.read(b,off,len));}
+            @Override public void close()throws IOException{owned.destroy();try{super.close();}finally{ProjectFiles.this.close();}}
+        };
     }
     public void close() {closed=true;Process owned=process;if(owned!=null)owned.destroy();if(password!=null)Arrays.fill(password,'\0');}
 }

@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "Ошибки и решения:114 карточек, включая36 новых случаев разработки;4 прежние карточки расширены альтернативными решениями.",
+    "Источники проекта и статус проверки обозначены отдельно; нерешённые случаи содержат диагностику.",
+    "Скачивание с сервера: сохранён быстрый Download, добавлен выбор папки в Termux, установленных окружениях и памяти устройства."
+  ],
+  "en": [
+    "Errors and solutions:114 entries, including36 new development cases;4 existing entries expanded with alternative solutions.",
+    "Project sources and evidence status are explicit; unresolved cases provide diagnostics.",
+    "Server downloads retain the Download shortcut and add a destination picker for Termux, installed environments and device storage."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние пакет com.termux и сертификат, code1082. Форматы данных не меняются; очистка не требуется.",
+      "Передача в выбранную среду требует доступного окружения и прав записи; ограничения2ГБ/10минут сохранены."
+    ],
+    "en": [
+      "Same com.termux package and signing certificate, code1082. No data format changes or reset required.",
+      "The destination environment must be available and writable; existing2GB/10-minute limits remain."
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "Выбор SSH-ключа серверного профиля через файловый менеджер: Termux, Ubuntu и память устройства.",
+    "Подтверждаемый приватный импорт ключа и поле Passphrase (если требуется), шифрование Android Keystore."
+  ],
+  "en": [
+    "Choose server SSH keys using the file browser: Termux, Ubuntu and device storage.",
+    "Confirmed private key import and an optional passphrase field encrypted with Android Keystore."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежний пакет и сертификат, code1078. Данные не очищаются, формат профилей сохранён.",
+      "Сохранённые секреты Android Keystore могут потребовать повторного ввода при переносе. Отдельный интерактивный SSH-терминал запрашивает passphrase сам.",
+      "Резерв v1.2.8/code1079 убирает библиотеку ошибок и новые изменения SSH. Ставить только для отката; следующее обновление после него требует code>1079."
+    ],
+    "en": [
+      "Same package and certificate, code1078. No data reset; profile format retained.",
+      "Moving Android Keystore secrets may require re-entry. Separate interactive SSH terminals prompt for a passphrase themselves.",
+      "Rollback v1.2.8/code1079 removes the error library and new SSH changes. Install only for rollback; a subsequent update requires code>1079."
+    ]
+  }
+}

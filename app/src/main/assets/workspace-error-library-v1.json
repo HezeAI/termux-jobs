@@ -1,0 +1,4900 @@
+{
+  "schema": 1,
+  "version": "2026.10.16-project-cases-1",
+  "entries": [
+    {
+      "id": "termux-shared-exec",
+      "environments": [
+        "termux"
+      ],
+      "category": "files",
+      "context": "all",
+      "title": {
+        "ru": "Permission denied: скрипт в Download",
+        "en": "Permission denied: script in Download"
+      },
+      "symptom": {
+        "ru": "Bash-скрипт не запускается напрямую из общей памяти.",
+        "en": "Direct execution of a Bash script in shared storage fails."
+      },
+      "check": {
+        "ru": "Уточните путь и язык скрипта. Эта карточка не про файл в HOME.",
+        "en": "Check the path and interpreter. This entry is not for a file in HOME."
+      },
+      "solution": {
+        "ru": "Для доверенного Bash-скрипта используйте bash с путём к файлу либо скопируйте его в HOME. chmod на общей памяти не снимает noexec.",
+        "en": "For a trusted Bash script, use bash with its path or copy it into HOME. chmod cannot remove shared-storage noexec."
+      },
+      "caution": {
+        "ru": "Запуск скрипта выполняет его содержимое. Сначала прочитайте файл.",
+        "en": "Running the script executes its contents. Read the file first."
+      },
+      "command": "pwd",
+      "sources": [
+        {
+          "url": "https://github.com/termux/termux-packages/wiki/Termux-execution-environment",
+          "kind": "official"
+        },
+        {
+          "url": "https://www.reddit.com/r/termux/comments/klr84y/",
+          "kind": "community"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-storage",
+      "environments": [
+        "termux"
+      ],
+      "category": "files",
+      "context": "all",
+      "title": {
+        "ru": "Нет доступа к общей памяти",
+        "en": "Shared storage access denied"
+      },
+      "symptom": {
+        "ru": "Не открываются Download или ~/storage/shared.",
+        "en": "Download or ~/storage/shared is inaccessible."
+      },
+      "check": {
+        "ru": "Проверьте разрешение доступа к файлам в настройках Android и существование пути.\n\nВ выборе «Память устройства» проверьте Android-разрешение; из Ubuntu уточните bind-путь /sdcard, не предполагая видимость /storage напрямую.",
+        "en": "Check Android file permissions and whether the path exists.\n\nIn Device storage selection, check Android permission; inside Ubuntu verify the /sdcard bind rather than assuming /storage is visible."
+      },
+      "solution": {
+        "ru": "Запустите termux-setup-storage в Termux и подтвердите Android-разрешение. Приватные каталоги других приложений это не открывает.\n\nЛокальная v1.2.9 проверяет доступ и продолжает выбор после grant; отказ открывает пояснение/настройки. Это относится к ключам и передаче, а не только к termux-setup-storage.",
+        "en": "Run termux-setup-storage in Termux and grant the Android permission. Other apps’ private directories remain protected.\n\nLocal v1.2.9 checks access and continues selection after a grant; denial shows explanation/settings. Applies to keys/transfers, not only termux-setup-storage."
+      },
+      "caution": {
+        "ru": "Не удаляйте ~/storage вслепую; там могут быть собственные файлы.\n\nРазрешение не открывает приватные папки других приложений. Проверка на fixtures не подтверждает все OEM Android.",
+        "en": "Do not blindly delete ~/storage; it may contain user files.\n\nPermission does not expose other apps’ private directories. Fixture checks do not cover every Android OEM."
+      },
+      "command": "ls -ld \"$HOME/storage\" /sdcard",
+      "sources": [
+        {
+          "url": "https://github.com/termux/termux-packages/wiki/Termux-execution-environment",
+          "kind": "official"
+        },
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "verified-code",
+      "projectEvidence": {
+        "ru": "Наш дефект: /sdcard открывался без gate; исправление v1.2.9 подтверждено кодом/моками, проверка на устройстве отдельно.",
+        "en": "Our defect: /sdcard opened without a gate; v1.2.9 fix checked in code/mocks, device validation separate."
+      }
+    },
+    {
+      "id": "termux-linker",
+      "environments": [
+        "termux"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "CANNOT LINK EXECUTABLE",
+        "en": "CANNOT LINK EXECUTABLE"
+      },
+      "symptom": {
+        "ru": "Библиотека не найдена или отсутствует символ.",
+        "en": "A library or symbol cannot be found."
+      },
+      "check": {
+        "ru": "Запишите полное имя библиотеки, команду и недавние обновления.",
+        "en": "Record the library name, command and recent updates."
+      },
+      "solution": {
+        "ru": "Несогласованные версии пакетов могут требовать полного pkg upgrade после проверки репозитория. Чужие glibc-бинарники требуют другого решения.",
+        "en": "Inconsistent package versions may require a full pkg upgrade after checking repositories. Foreign glibc binaries need a different approach."
+      },
+      "caution": {
+        "ru": "Не копируйте случайные .so и не создавайте ссылки между разными ABI.",
+        "en": "Do not copy random .so files or symlink incompatible ABIs."
+      },
+      "command": "termux-info",
+      "sources": [
+        {
+          "url": "https://github.com/termux/termux-packages/wiki/Termux-execution-environment",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-repo",
+      "environments": [
+        "termux"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "Репозиторий не имеет Release file",
+        "en": "Repository has no Release file"
+      },
+      "symptom": {
+        "ru": "APT сообщает об отсутствии Release или старом зеркале.",
+        "en": "APT reports a missing Release file or obsolete mirror."
+      },
+      "check": {
+        "ru": "Проверьте URL репозитория и доступ к сети.",
+        "en": "Check repository URL and connectivity."
+      },
+      "solution": {
+        "ru": "Для устаревшего зеркала используйте termux-change-repo. Не отключайте проверку подлинности.",
+        "en": "Use termux-change-repo for an obsolete mirror. Keep authenticity verification enabled."
+      },
+      "caution": {
+        "ru": "Старая wiki содержит исторические URL: не копируйте их как актуальные.",
+        "en": "The older wiki contains historical URLs: do not copy them as current."
+      },
+      "command": "termux-info",
+      "sources": [
+        {
+          "url": "https://github.com/termux/termux-packages/wiki/Package-Management",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-package-missing",
+      "environments": [
+        "termux"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "Unable to locate package",
+        "en": "Unable to locate package"
+      },
+      "symptom": {
+        "ru": "Пакет не найден через pkg/apt в Termux.",
+        "en": "pkg/apt cannot find a Termux package."
+      },
+      "check": {
+        "ru": "Проверьте название, архитектуру и включённые официальные репозитории.",
+        "en": "Check spelling, architecture and enabled official repositories."
+      },
+      "solution": {
+        "ru": "Обновите индексы через pkg update и ищите пакет через pkg search. Названия Debian могут отличаться.",
+        "en": "Refresh indexes with pkg update and search with pkg search. Debian package names may differ."
+      },
+      "caution": {
+        "ru": "Не подключайте репозитории Ubuntu к PREFIX Termux.",
+        "en": "Do not add Ubuntu repositories to the Termux PREFIX."
+      },
+      "command": "dpkg --print-architecture",
+      "sources": [
+        {
+          "url": "https://github.com/termux/termux-packages/wiki/Package-Management",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-glibc",
+      "environments": [
+        "termux"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "Файл существует, но не запускается",
+        "en": "File exists but cannot execute"
+      },
+      "symptom": {
+        "ru": "No such file or directory при запуске скачанного Linux-бинарника.",
+        "en": "No such file or directory when launching a downloaded Linux binary."
+      },
+      "check": {
+        "ru": "Проверьте архитектуру и требуемый ELF-загрузчик.",
+        "en": "Check architecture and required ELF loader."
+      },
+      "solution": {
+        "ru": "Предпочтите пакет Termux; glibc-программу можно запускать в совместимой Linux-среде.",
+        "en": "Prefer a Termux package; run glibc software in a compatible Linux environment."
+      },
+      "caution": {
+        "ru": "Это не обязательно отсутствие самого файла; Android использует Bionic.",
+        "en": "The file itself may exist; Android uses Bionic."
+      },
+      "command": "uname -m",
+      "sources": [
+        {
+          "url": "https://github.com/termux/termux-packages/wiki/Termux-execution-environment",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "ubuntu-apt-search",
+      "environments": [
+        "ubuntu"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "APT: пакет не найден",
+        "en": "APT: package not found"
+      },
+      "symptom": {
+        "ru": "Unable to locate package или no installation candidate.",
+        "en": "Unable to locate package or no installation candidate."
+      },
+      "check": {
+        "ru": "Проверьте выпуск, название и список источников.",
+        "en": "Check release, spelling and configured sources."
+      },
+      "solution": {
+        "ru": "После проверки источников обновите индексы apt update; найдите правильное имя через apt search.",
+        "en": "After reviewing sources, refresh indexes with apt update; find the correct name with apt search."
+      },
+      "caution": {
+        "ru": "Не смешивайте выпуски и чужие дистрибутивы для одного пакета.",
+        "en": "Do not mix releases or distribution repositories to obtain one package."
+      },
+      "command": "cat /etc/os-release",
+      "sources": [
+        {
+          "url": "https://ubuntu.com/server/docs/how-to/software/package-management/",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "ubuntu-dpkg-interrupted",
+      "environments": [
+        "ubuntu"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "dpkg was interrupted",
+        "en": "dpkg was interrupted"
+      },
+      "symptom": {
+        "ru": "APT требует завершить настройку пакетов.",
+        "en": "APT asks to finish package configuration."
+      },
+      "check": {
+        "ru": "Убедитесь, что другой менеджер пакетов не работает. Сохраните вывод dpkg.",
+        "en": "Ensure no other package manager is running. Keep dpkg output."
+      },
+      "solution": {
+        "ru": "После остановки конкурирующих операций штатным способом: dpkg --configure -a с нужными правами; при ошибке зависимости сначала изучите apt-get -s -f install.",
+        "en": "Once competing operations finish normally, run dpkg --configure -a with appropriate privileges; inspect apt-get -s -f install for dependency problems."
+      },
+      "caution": {
+        "ru": "Настройка запускает скрипты пакетов; симуляция не гарантирует успех реальной операции.",
+        "en": "Configuration executes package scripts; a simulation does not guarantee success."
+      },
+      "command": "dpkg --audit",
+      "sources": [
+        {
+          "url": "https://ubuntu.com/server/docs/how-to/software/package-management/",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "ubuntu-apt-lock",
+      "environments": [
+        "ubuntu"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "Could not get lock: APT занят",
+        "en": "Could not get lock: APT is busy"
+      },
+      "symptom": {
+        "ru": "Не удаётся захватить блокировку APT/dpkg.",
+        "en": "APT/dpkg cannot acquire its lock."
+      },
+      "check": {
+        "ru": "Найдите уже работающие apt/dpkg и дождитесь их завершения.",
+        "en": "Look for running apt/dpkg and let them finish."
+      },
+      "solution": {
+        "ru": "На обычной системе причиной может быть фоновое обновление. В proot проверьте другие вкладки того же окружения.",
+        "en": "On a regular system a background update may own the lock; in proot check other tabs of the same environment."
+      },
+      "caution": {
+        "ru": "Не удаляйте lock-файлы и не убивайте dpkg как универсальное исправление.",
+        "en": "Do not delete lock files or kill dpkg as a general fix."
+      },
+      "command": "ps -ef | grep -E '[a]pt|[d]pkg'",
+      "sources": [
+        {
+          "url": "https://ubuntu.com/server/docs/how-to/software/package-management/",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "debian-apt-search",
+      "environments": [
+        "debian"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "APT: пакет не найден",
+        "en": "APT: package not found"
+      },
+      "symptom": {
+        "ru": "Unable to locate package или no installation candidate.",
+        "en": "Unable to locate package or no installation candidate."
+      },
+      "check": {
+        "ru": "Проверьте выпуск, название и список источников.",
+        "en": "Check release, spelling and configured sources."
+      },
+      "solution": {
+        "ru": "После проверки источников обновите индексы apt update; найдите правильное имя через apt search.",
+        "en": "After reviewing sources, refresh indexes with apt update; find the correct name with apt search."
+      },
+      "caution": {
+        "ru": "Не смешивайте выпуски и чужие дистрибутивы для одного пакета.",
+        "en": "Do not mix releases or distribution repositories to obtain one package."
+      },
+      "command": "cat /etc/os-release",
+      "sources": [
+        {
+          "url": "https://www.debian.org/doc/manuals/debian-reference/ch02.en.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "debian-dpkg-interrupted",
+      "environments": [
+        "debian"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "dpkg was interrupted",
+        "en": "dpkg was interrupted"
+      },
+      "symptom": {
+        "ru": "APT требует завершить настройку пакетов.",
+        "en": "APT asks to finish package configuration."
+      },
+      "check": {
+        "ru": "Убедитесь, что другой менеджер пакетов не работает. Сохраните вывод dpkg.",
+        "en": "Ensure no other package manager is running. Keep dpkg output."
+      },
+      "solution": {
+        "ru": "После остановки конкурирующих операций штатным способом: dpkg --configure -a с нужными правами; при ошибке зависимости сначала изучите apt-get -s -f install.",
+        "en": "Once competing operations finish normally, run dpkg --configure -a with appropriate privileges; inspect apt-get -s -f install for dependency problems."
+      },
+      "caution": {
+        "ru": "Настройка запускает скрипты пакетов; симуляция не гарантирует успех реальной операции.",
+        "en": "Configuration executes package scripts; a simulation does not guarantee success."
+      },
+      "command": "dpkg --audit",
+      "sources": [
+        {
+          "url": "https://www.debian.org/doc/manuals/debian-reference/ch02.en.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "debian-apt-lock",
+      "environments": [
+        "debian"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "Could not get lock: APT занят",
+        "en": "Could not get lock: APT is busy"
+      },
+      "symptom": {
+        "ru": "Не удаётся захватить блокировку APT/dpkg.",
+        "en": "APT/dpkg cannot acquire its lock."
+      },
+      "check": {
+        "ru": "Найдите уже работающие apt/dpkg и дождитесь их завершения.",
+        "en": "Look for running apt/dpkg and let them finish."
+      },
+      "solution": {
+        "ru": "На обычной системе причиной может быть фоновое обновление. В proot проверьте другие вкладки того же окружения.",
+        "en": "On a regular system a background update may own the lock; in proot check other tabs of the same environment."
+      },
+      "caution": {
+        "ru": "Не удаляйте lock-файлы и не убивайте dpkg как универсальное исправление.",
+        "en": "Do not delete lock files or kill dpkg as a general fix."
+      },
+      "command": "ps -ef | grep -E '[a]pt|[d]pkg'",
+      "sources": [
+        {
+          "url": "https://www.debian.org/doc/manuals/debian-reference/ch02.en.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "arch-target",
+      "environments": [
+        "arch"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "pacman: target not found",
+        "en": "pacman: target not found"
+      },
+      "symptom": {
+        "ru": "Pacman не находит указанную цель.",
+        "en": "Pacman cannot find the requested target."
+      },
+      "check": {
+        "ru": "Проверьте название и доступные пакеты в синхронизированных базах.",
+        "en": "Check spelling and packages in synchronized databases."
+      },
+      "solution": {
+        "ru": "Используйте поиск pacman -Ss. Перед установкой обновлений нужна согласованная система; не делайте отдельный pacman -Sy с установкой старых зависимостей.",
+        "en": "Search with pacman -Ss. Keep the system consistent; avoid a standalone pacman -Sy followed by installs against old dependencies."
+      },
+      "caution": {
+        "ru": "AUR и официальные репозитории — разные источники.",
+        "en": "AUR and official repositories are separate sources."
+      },
+      "command": "pacman -Sl",
+      "sources": [
+        {
+          "url": "https://man.archlinux.org/man/pacman.8.en",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "arch-files",
+      "environments": [
+        "arch"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "pacman: exists in filesystem",
+        "en": "pacman: exists in filesystem"
+      },
+      "symptom": {
+        "ru": "Обновление блокируется конфликтом файлов.",
+        "en": "An upgrade is blocked by conflicting files."
+      },
+      "check": {
+        "ru": "Для каждого пути проверьте владельца: pacman -Qo с точным путём.",
+        "en": "Query each exact path using pacman -Qo."
+      },
+      "solution": {
+        "ru": "Выясните, принадлежит ли файл пакету или создан вручную; сохраните копию перед точечным исправлением.",
+        "en": "Determine whether the file is packaged or user-created; keep a backup before a targeted correction."
+      },
+      "caution": {
+        "ru": "Не используйте --overwrite \"*\" и не удаляйте каталоги целиком.",
+        "en": "Do not use --overwrite \"*\" or delete whole directories."
+      },
+      "command": "pacman -Qk",
+      "sources": [
+        {
+          "url": "https://man.archlinux.org/man/pacman.8.en",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "arch-db-lock",
+      "environments": [
+        "arch"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "pacman: unable to lock database",
+        "en": "pacman: unable to lock database"
+      },
+      "symptom": {
+        "ru": "База пакетов заблокирована.",
+        "en": "The package database is locked."
+      },
+      "check": {
+        "ru": "Проверьте другие процессы pacman.",
+        "en": "Check for other pacman processes."
+      },
+      "solution": {
+        "ru": "Дождитесь окончания операции. Остаточную блокировку можно разбирать только после подтверждения, что владельца процесса нет.",
+        "en": "Wait for the operation to finish. Investigate a stale lock only after confirming there is no owning process."
+      },
+      "caution": {
+        "ru": "Удаление блокировки во время работы может повредить базу.",
+        "en": "Removing an active lock can damage the database."
+      },
+      "command": "ps -ef | grep '[p]acman'",
+      "sources": [
+        {
+          "url": "https://man.archlinux.org/man/pacman.8.en",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "alpine-missing",
+      "environments": [
+        "alpine"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "apk: no such package",
+        "en": "apk: no such package"
+      },
+      "symptom": {
+        "ru": "unable to select packages или no such package.",
+        "en": "unable to select packages or no such package."
+      },
+      "check": {
+        "ru": "Проверьте выпуск и main/community в /etc/apk/repositories.",
+        "en": "Check release and main/community in /etc/apk/repositories."
+      },
+      "solution": {
+        "ru": "Найдите точное имя через apk search; обновите индексы apk update после проверки источников.",
+        "en": "Find the exact name with apk search; refresh indexes with apk update after checking sources."
+      },
+      "caution": {
+        "ru": "Не смешивайте stable с edge/testing для обхода ошибки.",
+        "en": "Do not mix stable with edge/testing to bypass the error."
+      },
+      "command": "cat /etc/apk/repositories",
+      "sources": [
+        {
+          "url": "https://docs.alpinelinux.org/user-handbook/0.1a/Working/apk.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "alpine-config",
+      "environments": [
+        "alpine"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "После обновления появился .apk-new",
+        "en": "An upgrade created .apk-new"
+      },
+      "symptom": {
+        "ru": "Новая конфигурация сохранена рядом со старой.",
+        "en": "A new configuration was saved beside the existing one."
+      },
+      "check": {
+        "ru": "Сравните старый файл с .apk-new.",
+        "en": "Compare the existing configuration with .apk-new."
+      },
+      "solution": {
+        "ru": "Объедините изменения вручную либо через update-conf, сохранив свои параметры.",
+        "en": "Merge manually or with update-conf, preserving your settings."
+      },
+      "caution": {
+        "ru": "Не заменяйте конфигурацию вслепую: могут потеряться сетевые настройки.",
+        "en": "Do not replace blindly; network settings could be lost."
+      },
+      "command": "apk info -h",
+      "sources": [
+        {
+          "url": "https://docs.alpinelinux.org/user-handbook/0.1a/Working/apk.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "fedora-deps",
+      "environments": [
+        "fedora"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "DNF: conflicting requests / зависимости",
+        "en": "DNF: conflicting requests / dependencies"
+      },
+      "symptom": {
+        "ru": "DNF не может согласовать установленные пакеты.",
+        "en": "DNF cannot resolve the installed package state."
+      },
+      "check": {
+        "ru": "В DNF5 выполните dnf5 check, прочитайте имена конфликтов.",
+        "en": "For DNF5 run dnf5 check and inspect conflict names."
+      },
+      "solution": {
+        "ru": "Проверьте выпуск и источник пакетов. Не включайте удаление пакетов до просмотра плана транзакции. Для DNF4 используйте его собственную справку.",
+        "en": "Check release and package origins. Do not permit removals before reviewing the transaction plan. Consult DNF4 help for DNF4 systems."
+      },
+      "caution": {
+        "ru": "DNF4 и DNF5 различаются; универсального --allowerasing нет.",
+        "en": "DNF4 and DNF5 differ; --allowerasing is not a universal fix."
+      },
+      "command": "dnf5 check",
+      "sources": [
+        {
+          "url": "https://dnf5.readthedocs.io/en/latest/commands/check.8.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "opensuse-repos",
+      "environments": [
+        "opensuse"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "Zypper: пакет не найден",
+        "en": "Zypper: package not found"
+      },
+      "symptom": {
+        "ru": "No provider of ... found.",
+        "en": "No provider of ... found."
+      },
+      "check": {
+        "ru": "Проверьте включённые репозитории и выпуск системы.",
+        "en": "Check enabled repositories and system release."
+      },
+      "solution": {
+        "ru": "Используйте zypper search с именем пакета, затем обновление метаданных zypper refresh при необходимости.",
+        "en": "Use zypper search with the package name, then zypper refresh if metadata needs updating."
+      },
+      "caution": {
+        "ru": "Не переключайте vendor и не добавляйте случайный репозиторий автоматически.",
+        "en": "Do not switch vendors or add arbitrary repositories automatically."
+      },
+      "command": "zypper repos",
+      "sources": [
+        {
+          "url": "https://doc.opensuse.org/documentation/leap/reference/html/book-reference/cha-sw-cl.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "opensuse-conflicts",
+      "environments": [
+        "opensuse"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "Zypper: конфликт зависимостей",
+        "en": "Zypper: dependency conflict"
+      },
+      "symptom": {
+        "ru": "Solver предлагает удалить или заменить пакеты.",
+        "en": "The solver proposes removing or replacing packages."
+      },
+      "check": {
+        "ru": "Прочитайте все варианты и происхождение пакетов.",
+        "en": "Review all choices and package origins."
+      },
+      "solution": {
+        "ru": "Предпочтите отмену и согласование репозиториев, если последствия неизвестны.",
+        "en": "Cancel and reconcile repository configuration if consequences are unclear."
+      },
+      "caution": {
+        "ru": "Не подтверждайте удаление системных компонентов ради одного пакета.",
+        "en": "Do not remove system components just to install one package."
+      },
+      "command": "zypper verify --dry-run",
+      "sources": [
+        {
+          "url": "https://doc.opensuse.org/documentation/leap/reference/html/book-reference/cha-sw-cl.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "proot-systemd",
+      "environments": [
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "proot",
+      "title": {
+        "ru": "System has not been booted with systemd",
+        "en": "System has not been booted with systemd"
+      },
+      "symptom": {
+        "ru": "systemctl не видит systemd как PID 1 в proot.",
+        "en": "systemctl cannot find systemd as PID 1 inside proot."
+      },
+      "check": {
+        "ru": "Уточните, что это proot, а не сервер с обычным init.",
+        "en": "Confirm this is proot, not a server using a regular init system."
+      },
+      "solution": {
+        "ru": "Запускайте нужную службу её командой переднего плана или используйте совместимый supervisor. Установка systemd не превращает proot в полноценную загрузку системы.",
+        "en": "Run the service in foreground or use a suitable supervisor. Installing systemd does not turn proot into a full system boot."
+      },
+      "caution": {
+        "ru": "Не применяйте этот вывод к обычному SSH-серверу с systemd.",
+        "en": "This conclusion does not apply to an ordinary systemd SSH server."
+      },
+      "command": "ps -p 1 -o comm=",
+      "sources": [
+        {
+          "url": "https://github.com/termux/proot-distro#limitations",
+          "kind": "official"
+        },
+        {
+          "url": "https://github.com/termux/termux-packages/discussions/17585",
+          "kind": "community"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "proot-root",
+      "environments": [
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "proot",
+      "title": {
+        "ru": "Operation not permitted в proot",
+        "en": "Operation not permitted in proot"
+      },
+      "symptom": {
+        "ru": "mount, сетевые или привилегированные операции запрещены даже для root.",
+        "en": "mount, networking or privileged operations fail even as root."
+      },
+      "check": {
+        "ru": "Проверьте способ запуска окружения и требуемую возможность ядра.",
+        "en": "Check the environment launch method and required kernel capability."
+      },
+      "solution": {
+        "ru": "Root внутри proot — эмуляция UID. Нужен режим программы без привилегий либо другая среда для требуемых возможностей.",
+        "en": "Root inside proot is simulated identity. Use an unprivileged mode or a different environment for the required capabilities."
+      },
+      "caution": {
+        "ru": "sudo не выдаёт Android root.",
+        "en": "sudo does not grant Android root."
+      },
+      "command": "id",
+      "sources": [
+        {
+          "url": "https://github.com/termux/proot-distro#limitations",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "proot-nested",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "Нельзя запустить proot внутри proot",
+        "en": "Cannot run proot inside proot"
+      },
+      "symptom": {
+        "ru": "PRoot-Distro сообщает о вложенном proot.",
+        "en": "PRoot-Distro reports a nested proot environment."
+      },
+      "check": {
+        "ru": "Проверьте, из какой оболочки запускается proot-distro.",
+        "en": "Check which shell runs proot-distro."
+      },
+      "solution": {
+        "ru": "Откройте отдельную сессию Termux и войдите в нужное окружение оттуда.",
+        "en": "Open a separate Termux session and enter the desired environment there."
+      },
+      "caution": {
+        "ru": "Не завершайте рабочую сессию ради перехода.",
+        "en": "Do not terminate a working session merely to switch environments."
+      },
+      "command": "pwd",
+      "sources": [
+        {
+          "url": "https://github.com/termux/proot-distro#limitations",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "proot-version",
+      "environments": [
+        "termux"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "Неизвестный дистрибутив или аргумент proot-distro",
+        "en": "Unknown proot-distro distribution or argument"
+      },
+      "symptom": {
+        "ru": "Инструкция из интернета не совпадает с установленной версией.",
+        "en": "An online instruction does not match the installed version."
+      },
+      "check": {
+        "ru": "Прочитайте локальную справку и список установленных окружений.\n\nПри backup/restore сверяйте classic installed-rootfs и modern containers/rootfs, alias и поддерживаемые параметры команды.",
+        "en": "Read local help and the installed environment list.\n\nFor backup/restore, distinguish classic installed-rootfs from modern containers/rootfs, aliases and supported command options."
+      },
+      "solution": {
+        "ru": "Используйте синтаксис именно установленной версии. Новая документация OCI не описывает все старые версии v4.\n\nИспользуйте механизм backup/restore своей версии proot-distro; современное отдельное восстановление не переносите слепо на legacy. Наличие каталога не доказывает совместимость архива.",
+        "en": "Use the syntax of your installed version. New OCI documentation does not describe every older v4 version.\n\nUse your proot-distro version’s supported backup/restore mechanism; do not blindly apply modern isolated restore to legacy. A directory does not prove archive compatibility."
+      },
+      "caution": {
+        "ru": "reset/remove уничтожают данные окружения: это не способ диагностики.\n\nНе переустанавливайте рабочую Ubuntu ради изменения формата бэкапа.",
+        "en": "reset/remove destroy environment data; they are not diagnostic commands.\n\nDo not reinstall working Ubuntu just to change backup format."
+      },
+      "command": "proot-distro --help",
+      "sources": [
+        {
+          "url": "https://github.com/termux/proot-distro#limitations",
+          "kind": "official"
+        },
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "verified-code",
+      "projectEvidence": {
+        "ru": "Различия учтены в нашем backup manager и обнаружении файловых источников; real-device restore не подтверждается одним чтением metadata.",
+        "en": "Differences are handled in our backup manager and local-source discovery; metadata reads alone do not prove real-device restore."
+      }
+    },
+    {
+      "id": "ssh-publickey",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "Permission denied (publickey)",
+        "en": "Permission denied (publickey)"
+      },
+      "symptom": {
+        "ru": "SSH-сервер отвергает ключ.",
+        "en": "The SSH server rejects key authentication."
+      },
+      "check": {
+        "ru": "Проверьте пользователя, выбранный ключ и регистрацию его публичной части на сервере.\n\nОтличите публичный .pub от приватного файла, отсутствие файла у Termux SSH и зашифрованный ключ без passphrase.",
+        "en": "Check username, selected identity and the public key registered on the server.\n\nSeparate a public .pub file from a private key, a file unavailable to Termux SSH, and an encrypted key missing its passphrase."
+      },
+      "solution": {
+        "ru": "Для GitHub используется пользователь git. Проверьте доступные ключи ssh-agent; не передавайте никому приватную часть.\n\nВ профиле сервера выберите приватный ключ. Для Ubuntu/общей памяти подтвердите копию в приватный каталог Termux; если ключ зашифрован, введите passphrase. Регистрация публичного ключа на сервере проверяется отдельно.",
+        "en": "GitHub uses the git user. Check ssh-agent identities; never share private key material.\n\nSelect a private key in the server profile. For Ubuntu/shared storage, confirm importing into private Termux storage; enter a passphrase if encrypted. Check server-side public-key registration separately."
+      },
+      "caution": {
+        "ru": "В подробном SSH-отчёте могут быть адреса и пути: очистите их перед публикацией.\n\nПароль SSH-пользователя и passphrase — разные секреты. Не отправляйте приватный ключ/секреты в отчёт и не ослабляйте0600.",
+        "en": "Verbose SSH reports may contain addresses and paths; redact before sharing.\n\nSSH-user password and key passphrase are distinct secrets. Do not include private keys/secrets in reports or relax0600."
+      },
+      "command": "ssh-add -l",
+      "sources": [
+        {
+          "url": "https://docs.github.com/en/authentication/troubleshooting-ssh/error-permission-denied-publickey",
+          "kind": "official"
+        },
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "verified-code",
+      "projectEvidence": {
+        "ru": "Локальная v1.2.7: отдельный passphrase broker, private import и проверки; реальный вход новым путём требует проверки на устройстве.",
+        "en": "Local v1.2.7: separate passphrase broker, private import and checks; actual new-path authentication needs device verification."
+      }
+    },
+    {
+      "id": "ssh-host-key",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "REMOTE HOST IDENTIFICATION HAS CHANGED",
+        "en": "REMOTE HOST IDENTIFICATION HAS CHANGED"
+      },
+      "symptom": {
+        "ru": "Отпечаток сервера отличается от сохранённого.",
+        "en": "The host key differs from the saved fingerprint."
+      },
+      "check": {
+        "ru": "Сверьте новый отпечаток с администратором по независимому каналу.",
+        "en": "Verify the new fingerprint with the administrator over an independent channel."
+      },
+      "solution": {
+        "ru": "Только после проверки обновите запись конкретного хоста.",
+        "en": "Only after verification update that specific host entry."
+      },
+      "caution": {
+        "ru": "Не отключайте StrictHostKeyChecking и не удаляйте весь known_hosts.",
+        "en": "Do not disable StrictHostKeyChecking or delete all known_hosts."
+      },
+      "command": "ssh -V",
+      "sources": [
+        {
+          "url": "https://man.openbsd.org/ssh",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "ssh-refused",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "Connection refused",
+        "en": "Connection refused"
+      },
+      "symptom": {
+        "ru": "TCP-соединение на выбранный порт отвергнуто.",
+        "en": "The TCP connection to the selected port was refused."
+      },
+      "check": {
+        "ru": "Проверьте адрес, порт и слушает ли SSH-служба на сервере.",
+        "en": "Check host, port and whether the SSH service listens on the server."
+      },
+      "solution": {
+        "ru": "Исправьте профиль или проверьте службу через доступную консоль сервера. Это ещё не ошибка пароля.",
+        "en": "Correct the profile or inspect the service through an available server console. This is not yet a password error."
+      },
+      "caution": {
+        "ru": "Повтор пароля не исправляет недоступный порт.",
+        "en": "Repeating a password cannot fix a refused port."
+      },
+      "command": "ssh -V",
+      "sources": [
+        {
+          "url": "https://man.openbsd.org/ssh",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "ssh-timeout",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "Connection timed out",
+        "en": "Connection timed out"
+      },
+      "symptom": {
+        "ru": "SSH не получает ответ за отведённое время.",
+        "en": "SSH receives no response within its timeout."
+      },
+      "check": {
+        "ru": "Проверьте маршрут, сеть, VPN, адрес, порт и правила доступа на сервере.",
+        "en": "Check routing, connectivity, VPN, host, port and server access rules."
+      },
+      "solution": {
+        "ru": "Уточните доступность сервера через независимую консоль. Увеличение тайм-аута полезно только для действительно медленной сети.",
+        "en": "Check the server from an independent console. A longer timeout only helps an actually slow network."
+      },
+      "caution": {
+        "ru": "Не отключайте firewall целиком для проверки.",
+        "en": "Do not disable the whole firewall just to test."
+      },
+      "command": "ssh -V",
+      "sources": [
+        {
+          "url": "https://man.openbsd.org/ssh",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "gradle-java",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "build",
+      "context": "all",
+      "title": {
+        "ru": "JAVA_HOME is not set / invalid directory",
+        "en": "JAVA_HOME is not set / invalid directory"
+      },
+      "symptom": {
+        "ru": "Gradle не находит подходящую Java.",
+        "en": "Gradle cannot locate a suitable Java runtime."
+      },
+      "check": {
+        "ru": "Сопоставьте версию Wrapper, JDK и Android Gradle Plugin.",
+        "en": "Match Wrapper, JDK and Android Gradle Plugin versions."
+      },
+      "solution": {
+        "ru": "Укажите JAVA_HOME на установленную совместимую JDK или выберите её в настройках запуска.",
+        "en": "Point JAVA_HOME at an installed compatible JDK or select it in launch configuration."
+      },
+      "caution": {
+        "ru": "Не устанавливайте последнюю JDK вслепую; старый Gradle может её не поддерживать.",
+        "en": "Do not blindly install the newest JDK; an older Gradle may not support it."
+      },
+      "command": "java -version\nprintf '%s\\n' \"$JAVA_HOME\"",
+      "sources": [
+        {
+          "url": "https://docs.gradle.org/current/userguide/compatibility.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "gradle-class-version",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "build",
+      "context": "all",
+      "title": {
+        "ru": "Unsupported class file major version",
+        "en": "Unsupported class file major version"
+      },
+      "symptom": {
+        "ru": "Версии Java, Gradle или плагинов несовместимы.",
+        "en": "Java, Gradle or plugin versions are incompatible."
+      },
+      "check": {
+        "ru": "Проверьте требуемые версии в проекте и таблицу совместимости.",
+        "en": "Check project requirements and the compatibility matrix."
+      },
+      "solution": {
+        "ru": "Выберите совместимую JDK; обновление Wrapper — отдельное изменение проекта.",
+        "en": "Choose a compatible JDK; upgrading the Wrapper is a separate project change."
+      },
+      "caution": {
+        "ru": "Удаление всех кэшей не исправляет несовместимую Java.",
+        "en": "Deleting all caches does not fix an incompatible Java runtime."
+      },
+      "command": "java -version",
+      "sources": [
+        {
+          "url": "https://docs.gradle.org/current/userguide/compatibility.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "sdk-location",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "build",
+      "context": "all",
+      "title": {
+        "ru": "SDK location not found",
+        "en": "SDK location not found"
+      },
+      "symptom": {
+        "ru": "Android-сборка не знает расположение SDK.",
+        "en": "The Android build cannot locate its SDK."
+      },
+      "check": {
+        "ru": "Проверьте ANDROID_HOME и sdk.dir в local.properties проекта.",
+        "en": "Check ANDROID_HOME and project local.properties sdk.dir."
+      },
+      "solution": {
+        "ru": "Укажите существующий SDK для текущего окружения. Не копируйте чужой абсолютный путь.",
+        "en": "Point to an existing SDK visible to this environment. Do not copy someone else’s absolute path."
+      },
+      "caution": {
+        "ru": "Автоустановка SDK может менять общий каталог; сначала выберите место установки.",
+        "en": "Automatic SDK installation may change a shared directory; choose its location first."
+      },
+      "command": "printf '%s\\n' \"$ANDROID_HOME\" \"$ANDROID_SDK_ROOT\"",
+      "sources": [
+        {
+          "url": "https://developer.android.com/tools/variables",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "git-identity",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "git",
+      "context": "all",
+      "title": {
+        "ru": "Author identity unknown",
+        "en": "Author identity unknown"
+      },
+      "symptom": {
+        "ru": "Git не знает имя и email автора коммита.",
+        "en": "Git lacks the commit author name and email."
+      },
+      "check": {
+        "ru": "Проверьте настройки репозитория.",
+        "en": "Inspect repository configuration."
+      },
+      "solution": {
+        "ru": "Задайте user.name и user.email для нужного репозитория; глобальная настройка влияет на другие проекты.",
+        "en": "Set user.name and user.email for the intended repository; global settings affect other projects."
+      },
+      "caution": {
+        "ru": "Указанный email может стать публичным в коммите.",
+        "en": "The email may become public in a commit."
+      },
+      "command": "git config --get user.name\ngit config --get user.email",
+      "sources": [
+        {
+          "url": "https://git-scm.com/docs/git-config",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "git-dubious",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "git",
+      "context": "all",
+      "title": {
+        "ru": "detected dubious ownership",
+        "en": "detected dubious ownership"
+      },
+      "symptom": {
+        "ru": "Владелец репозитория отличается от ожидаемого.",
+        "en": "Repository ownership differs from the expected owner."
+      },
+      "check": {
+        "ru": "Проверьте владельца и доверие к каталогу, особенно после восстановления.",
+        "en": "Verify ownership and trust, especially after restoration."
+      },
+      "solution": {
+        "ru": "Для доверенного репозитория разрешайте только его конкретный путь через safe.directory.",
+        "en": "For a trusted repository allow only that exact path through safe.directory."
+      },
+      "caution": {
+        "ru": "Не используйте safe.directory=* как универсальное решение.",
+        "en": "Do not use safe.directory=* as a general solution."
+      },
+      "command": "ls -ld . .git",
+      "sources": [
+        {
+          "url": "https://git-scm.com/docs/git-config",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "git-not-repo",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "git",
+      "context": "all",
+      "title": {
+        "ru": "not a git repository",
+        "en": "not a git repository"
+      },
+      "symptom": {
+        "ru": "Git запущен вне рабочей папки репозитория.",
+        "en": "Git was invoked outside a repository working directory."
+      },
+      "check": {
+        "ru": "Проверьте текущий каталог и наличие .git.",
+        "en": "Check the working directory and .git."
+      },
+      "solution": {
+        "ru": "Перейдите в существующий проект. Не выполняйте git init в случайной папке.",
+        "en": "Change to the existing project. Do not run git init in an arbitrary directory."
+      },
+      "caution": {
+        "ru": "У linked worktree .git может быть файлом — это нормально.",
+        "en": "A linked worktree can have a .git file; that is normal."
+      },
+      "command": "pwd\nls -ld .git",
+      "sources": [
+        {
+          "url": "https://git-scm.com/docs/git-config",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "python-managed",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "python",
+      "context": "all",
+      "title": {
+        "ru": "externally-managed-environment",
+        "en": "externally-managed-environment"
+      },
+      "symptom": {
+        "ru": "pip отказывается менять системный Python.",
+        "en": "pip refuses to modify a distributor-managed Python."
+      },
+      "check": {
+        "ru": "Проверьте активный интерпретатор и наличие venv.",
+        "en": "Check the selected interpreter and virtual environment."
+      },
+      "solution": {
+        "ru": "Для проекта создайте отдельную среду python3 -m venv .venv, активируйте её и используйте python -m pip. В Debian/Ubuntu может понадобиться пакет python3-venv.",
+        "en": "Create a project environment with python3 -m venv .venv, activate it and use python -m pip. Debian/Ubuntu may require python3-venv."
+      },
+      "caution": {
+        "ru": "Не удаляйте EXTERNALLY-MANAGED и не используйте --break-system-packages как первый шаг.",
+        "en": "Do not remove EXTERNALLY-MANAGED or use --break-system-packages as the first step."
+      },
+      "command": "python3 -m pip --version",
+      "sources": [
+        {
+          "url": "https://packaging.python.org/en/latest/specifications/externally-managed-environments/",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "python-module",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "python",
+      "context": "all",
+      "title": {
+        "ru": "ModuleNotFoundError: No module named",
+        "en": "ModuleNotFoundError: No module named"
+      },
+      "symptom": {
+        "ru": "Модуль недоступен выбранному Python.",
+        "en": "A module is unavailable to the selected Python."
+      },
+      "check": {
+        "ru": "Сравните python и pip: они могут принадлежать разным окружениям.",
+        "en": "Compare python and pip; they may belong to different environments."
+      },
+      "solution": {
+        "ru": "Активируйте нужное venv, установите зависимости из проверенного файла проекта. Имя импорта не всегда равно имени пакета PyPI.",
+        "en": "Activate the intended venv and install reviewed project dependencies. Import names can differ from PyPI package names."
+      },
+      "caution": {
+        "ru": "Не устанавливайте случайный пакет по похожему имени.",
+        "en": "Do not install an arbitrary similarly named package."
+      },
+      "command": "python3 -m pip --version\ncommand -v python3",
+      "sources": [
+        {
+          "url": "https://docs.python.org/3/library/venv.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "python-venv-moved",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "python",
+      "context": "all",
+      "title": {
+        "ru": "venv перестал работать после переноса",
+        "en": "venv stopped working after relocation"
+      },
+      "symptom": {
+        "ru": "Интерпретатор venv указывает на старый путь.",
+        "en": "The venv interpreter references an old path."
+      },
+      "check": {
+        "ru": "Проверьте путь проекта и базовую версию Python.",
+        "en": "Check project location and the base Python version."
+      },
+      "solution": {
+        "ru": "Создайте новое venv и восстановите зависимости из файла проекта; среды содержат абсолютные пути и не предназначены для простого перемещения.",
+        "en": "Create a new venv and restore project dependencies; environments contain absolute paths and are not intended to be moved directly."
+      },
+      "caution": {
+        "ru": "Старое venv не удаляйте до проверки новой среды.",
+        "en": "Keep the old venv until the replacement is verified."
+      },
+      "command": "command -v python3\npython3 --version",
+      "sources": [
+        {
+          "url": "https://docs.python.org/3/library/venv.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "npm-eacces",
+      "environments": [
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "node",
+      "context": "all",
+      "title": {
+        "ru": "npm: EACCES при глобальной установке",
+        "en": "npm: EACCES during global installation"
+      },
+      "symptom": {
+        "ru": "Нет права записи в глобальный prefix npm.",
+        "en": "The global npm prefix is not writable."
+      },
+      "check": {
+        "ru": "Уточните пользователя и prefix.",
+        "en": "Check user identity and prefix."
+      },
+      "solution": {
+        "ru": "Используйте менеджер версий Node или пользовательский prefix по документации npm. Для проекта предпочитайте локальную зависимость.",
+        "en": "Use a Node version manager or user-owned prefix as described by npm. Prefer local project dependencies where appropriate."
+      },
+      "caution": {
+        "ru": "Не делайте рекурсивный chmod/chown /usr и не запускайте все npm-скрипты через sudo.",
+        "en": "Do not recursively chmod/chown /usr or run all npm scripts via sudo."
+      },
+      "command": "npm config get prefix",
+      "sources": [
+        {
+          "url": "https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally/",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "linux-exec-format",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "Exec format error",
+        "en": "Exec format error"
+      },
+      "symptom": {
+        "ru": "Формат исполняемого файла не поддерживается.",
+        "en": "The executable format is unsupported."
+      },
+      "check": {
+        "ru": "Сравните архитектуру программы и uname -m. Проверьте корректный shebang у скрипта.\n\nДля Android-сборки проверьте ABI инструмента: x86_64 aapt2/NDK-host утилита не становится ARM64 от запуска внутри Ubuntu.",
+        "en": "Compare executable architecture with uname -m; check script shebang.\n\nFor Android builds, check tool ABI: x86_64 aapt2/NDK-host tools do not become ARM64 inside Ubuntu."
+      },
+      "solution": {
+        "ru": "Скачайте сборку нужной архитектуры и ABI. Скрипт запускайте совместимым интерпретатором.\n\nИспользуйте совместимый ARM64 host toolchain и изолированную SDK-копию; Android-target ABI и ABI хостового инструмента проверяются отдельно.",
+        "en": "Obtain the correct architecture and ABI build. Use a compatible script interpreter.\n\nUse compatible ARM64 host tooling and an isolated SDK copy; Android-target ABI and host-tool ABI are separate checks."
+      },
+      "caution": {
+        "ru": "Переименование x86_64-файла не делает его ARM64-программой.\n\nНе заменяйте общий SDK или пакеты работающего окружения без отдельной задачи.",
+        "en": "Renaming an x86_64 file does not turn it into an ARM64 executable.\n\nDo not replace shared SDK or working-environment packages without an explicit task."
+      },
+      "command": "uname -m",
+      "sources": [
+        {
+          "url": "https://man7.org/linux/man-pages/man2/execve.2.html",
+          "kind": "official"
+        },
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "verified-code",
+      "projectEvidence": {
+        "ru": "Наша сборка использует локальный ARM64 aapt2 и читает общий sysroot без изменения; проверка APK ABI отдельно.",
+        "en": "Our build uses local ARM64 aapt2 and reads the shared sysroot without modification; APK ABI is checked separately."
+      }
+    },
+    {
+      "id": "linux-bad-interpreter",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "bad interpreter / No such file or directory",
+        "en": "bad interpreter / No such file or directory"
+      },
+      "symptom": {
+        "ru": "Скрипт указывает на отсутствующий интерпретатор.",
+        "en": "A script references an unavailable interpreter."
+      },
+      "check": {
+        "ru": "Проверьте первую строку и окончания строк: CRLF может добавить символ ^M.",
+        "en": "Check the first line and line endings; CRLF may add ^M."
+      },
+      "solution": {
+        "ru": "В копии скрипта исправьте shebang или окончания строк; проверьте наличие нужного интерпретатора.",
+        "en": "Fix shebang or line endings in a copy; check interpreter availability."
+      },
+      "caution": {
+        "ru": "Нельзя запускать любой скрипт через bash: язык может быть другим.",
+        "en": "Not every script is Bash; it may use another language."
+      },
+      "command": "command -v bash\ncommand -v python3",
+      "sources": [
+        {
+          "url": "https://man7.org/linux/man-pages/man2/execve.2.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "linux-space",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "files",
+      "context": "all",
+      "title": {
+        "ru": "No space left on device",
+        "en": "No space left on device"
+      },
+      "symptom": {
+        "ru": "Не удаётся записать файл, архив или пакет.",
+        "en": "A file, archive or package cannot be written."
+      },
+      "check": {
+        "ru": "Проверьте свободные блоки и inode в каталоге операции.",
+        "en": "Check free blocks and inodes on the target filesystem."
+      },
+      "solution": {
+        "ru": "Найдите ненужные данные и проверьте их назначение до удаления. Бэкап требует места и для временных файлов.",
+        "en": "Identify unneeded data and inspect it before removal. Backups also need room for temporary files."
+      },
+      "caution": {
+        "ru": "df -i может быть недоступен на отдельных Android-файловых системах; это не доказательство повреждения.",
+        "en": "df -i can be unavailable on some Android filesystems; that alone does not indicate corruption."
+      },
+      "command": "df -h .\ndf -i .",
+      "sources": [
+        {
+          "url": "https://man7.org/linux/man-pages/man1/df.1.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "linux-permission",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "files",
+      "context": "all",
+      "title": {
+        "ru": "Permission denied: обычный Linux-файл",
+        "en": "Permission denied: regular Linux file"
+      },
+      "symptom": {
+        "ru": "Не удаётся читать, писать или запускать файл.",
+        "en": "Reading, writing or executing a file fails."
+      },
+      "check": {
+        "ru": "Проверьте владельца, права файла и доступ ко всем родительским каталогам.",
+        "en": "Check ownership, file permissions and access to parent directories."
+      },
+      "solution": {
+        "ru": "Изменяйте только нужное право для конкретного доверенного файла. Для общей памяти Android используйте отдельную карточку Termux.",
+        "en": "Change only the required permission on a specific trusted file. For Android shared storage use the dedicated Termux entry."
+      },
+      "caution": {
+        "ru": "chmod 777 и рекурсивные изменения всего проекта не являются универсальным решением.",
+        "en": "chmod 777 and recursive changes across a project are not universal fixes."
+      },
+      "command": "id\nls -ld .",
+      "sources": [
+        {
+          "url": "https://man7.org/linux/man-pages/man2/execve.2.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "curl-cert",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "curl: (60) SSL certificate problem",
+        "en": "curl: (60) SSL certificate problem"
+      },
+      "symptom": {
+        "ru": "Не удалось проверить сертификат HTTPS-сервера.",
+        "en": "The HTTPS server certificate could not be verified."
+      },
+      "check": {
+        "ru": "Проверьте время устройства, CA-хранилище и доверенный корпоративный proxy.",
+        "en": "Check device time, CA store and a trusted corporate proxy."
+      },
+      "solution": {
+        "ru": "Обновите доверенное CA-хранилище штатным способом выбранной системы; сертификат proxy добавляйте только после независимой проверки.",
+        "en": "Update the OS trust store through its supported tools; add a proxy certificate only after independent verification."
+      },
+      "caution": {
+        "ru": "Не заменяйте решение постоянным curl -k или отключением TLS-проверки.",
+        "en": "Do not permanently use curl -k or disable TLS verification."
+      },
+      "command": "date -u\ncurl --version",
+      "sources": [
+        {
+          "url": "https://curl.se/docs/sslcerts.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "arch-signature",
+      "environments": [
+        "arch"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "pacman: unknown trust / invalid signature",
+        "en": "pacman: unknown trust / invalid signature"
+      },
+      "symptom": {
+        "ru": "Проверка подписи пакета не прошла.",
+        "en": "Package signature verification failed."
+      },
+      "check": {
+        "ru": "Проверьте системное время и источник пакета.",
+        "en": "Check system time and package origin."
+      },
+      "solution": {
+        "ru": "Для официального репозитория проверьте актуальность archlinux-keyring и процедуру pacman-key. Если пакет не из доверенного источника — отмените установку.",
+        "en": "For official repositories inspect archlinux-keyring freshness and pacman-key procedures. Cancel installs from untrusted sources."
+      },
+      "caution": {
+        "ru": "Не меняйте SigLevel на Never; не доверяйте неизвестному ключу автоматически.",
+        "en": "Do not set SigLevel to Never or automatically trust unknown keys."
+      },
+      "command": "date -u",
+      "sources": [
+        {
+          "url": "https://man.archlinux.org/man/pacman-key.8.en",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "arch-missing-files",
+      "environments": [
+        "arch"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "pacman: установленные файлы отсутствуют",
+        "en": "pacman: installed files are missing"
+      },
+      "symptom": {
+        "ru": "Пакет числится установленным, но часть файлов потеряна.",
+        "en": "A package is installed but files are missing."
+      },
+      "check": {
+        "ru": "Запустите проверку файлов пакетов; учтите намеренно изменённые настройки.",
+        "en": "Check package files; account for intentionally edited configuration."
+      },
+      "solution": {
+        "ru": "Переустанавливайте только определённый повреждённый пакет из доверенного репозитория после сохранения пользовательских настроек.",
+        "en": "Reinstall only the identified damaged package from a trusted repository after backing up user configuration."
+      },
+      "caution": {
+        "ru": "Проверка не восстанавливает файлы и не доказывает целостность содержимого каждого файла.",
+        "en": "This check does not restore files or verify every file’s contents."
+      },
+      "command": "pacman -Qk",
+      "sources": [
+        {
+          "url": "https://man.archlinux.org/man/pacman.8.en",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "alpine-world",
+      "environments": [
+        "alpine"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "apk: breaks world / конфликт версий",
+        "en": "apk: breaks world / version conflict"
+      },
+      "symptom": {
+        "ru": "Установку блокируют ограничения world.",
+        "en": "World constraints prevent package selection."
+      },
+      "check": {
+        "ru": "Проверьте закреплённые версии и ветки репозиториев.",
+        "en": "Check pinned versions and repository branches."
+      },
+      "solution": {
+        "ru": "Согласуйте ограничения в /etc/apk/world с выбранным выпуском, предварительно сохранив файл.",
+        "en": "Reconcile /etc/apk/world constraints with the selected release after backing it up."
+      },
+      "caution": {
+        "ru": "Не удаляйте весь world: это список явно выбранных пакетов.",
+        "en": "Do not delete the entire world file: it lists explicitly selected packages."
+      },
+      "command": "cat /etc/apk/world",
+      "sources": [
+        {
+          "url": "https://docs.alpinelinux.org/user-handbook/0.1a/Working/apk.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "alpine-musl",
+      "environments": [
+        "alpine"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "Alpine: glibc-программа не запускается",
+        "en": "Alpine: glibc program cannot start"
+      },
+      "symptom": {
+        "ru": "Есть файл ARM64, но его загрузчик не найден.",
+        "en": "An ARM64 file exists but its loader cannot be found."
+      },
+      "check": {
+        "ru": "Проверьте, собран ли бинарник для musl или glibc.",
+        "en": "Check whether the binary targets musl or glibc."
+      },
+      "solution": {
+        "ru": "Предпочтите пакет Alpine или официальную musl-сборку приложения. Совпадения архитектуры недостаточно для совместимости libc.",
+        "en": "Prefer an Alpine package or the app’s official musl build. Matching architecture alone does not ensure libc compatibility."
+      },
+      "caution": {
+        "ru": "Не подменяйте системный загрузчик случайным symlink.",
+        "en": "Do not replace the system loader with an arbitrary symlink."
+      },
+      "command": "uname -m",
+      "sources": [
+        {
+          "url": "https://wiki.alpinelinux.org/wiki/Running_glibc_programs",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "fedora-not-found",
+      "environments": [
+        "fedora"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "DNF: No match for argument",
+        "en": "DNF: No match for argument"
+      },
+      "symptom": {
+        "ru": "Имя пакета не найдено.",
+        "en": "The package name was not found."
+      },
+      "check": {
+        "ru": "Проверьте выпуск, архитектуру и репозиторий; различайте DNF4/5.",
+        "en": "Check release, architecture and repositories; distinguish DNF4/5."
+      },
+      "solution": {
+        "ru": "Ищите имя через dnf5 search или поставщика файла через repoquery --whatprovides с конкретным именем.",
+        "en": "Search with dnf5 search or use repoquery --whatprovides with a specific filename."
+      },
+      "caution": {
+        "ru": "Не отключайте проверку подписи ради отсутствующего пакета.",
+        "en": "Do not disable signature verification to obtain a missing package."
+      },
+      "command": "dnf5 --version",
+      "sources": [
+        {
+          "url": "https://dnf5.readthedocs.io/en/latest/commands/repoquery.8.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "fedora-metadata",
+      "environments": [
+        "fedora"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "DNF: Failed to download metadata",
+        "en": "DNF: Failed to download metadata"
+      },
+      "symptom": {
+        "ru": "Не загружаются repomd.xml или метаданные репозитория.",
+        "en": "repomd.xml or repository metadata cannot be downloaded."
+      },
+      "check": {
+        "ru": "Проверьте сеть, сертификаты и доступность зеркала именно вашего выпуска.",
+        "en": "Check connectivity, certificates and mirrors for this exact release."
+      },
+      "solution": {
+        "ru": "Если сеть исправна, изучите выборочную очистку метаданных DNF5; следующая операция загрузит их заново.",
+        "en": "If connectivity is healthy, consider targeted DNF5 metadata cleanup; the next operation downloads them again."
+      },
+      "caution": {
+        "ru": "Очистка кэша не исправляет закрытый или EOL-репозиторий и потребует сети.",
+        "en": "Cache cleanup cannot fix a closed or EOL repository and requires network access."
+      },
+      "command": "date -u",
+      "sources": [
+        {
+          "url": "https://dnf5.readthedocs.io/en/latest/commands/clean.8.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "suse-lock",
+      "environments": [
+        "opensuse"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "Zypper: system management is locked",
+        "en": "Zypper: system management is locked"
+      },
+      "symptom": {
+        "ru": "Другой процесс управляет пакетами.",
+        "en": "Another process manages software packages."
+      },
+      "check": {
+        "ru": "Найдите работающие zypper/YaST/PackageKit.",
+        "en": "Identify running zypper/YaST/PackageKit operations."
+      },
+      "solution": {
+        "ru": "Дождитесь штатного завершения операции и повторите запрос.",
+        "en": "Let the operation finish normally, then retry."
+      },
+      "caution": {
+        "ru": "Не удаляйте блокировку и не прерывайте установку пакетов вслепую.",
+        "en": "Do not remove locks or blindly interrupt package installation."
+      },
+      "command": "ps -ef | grep -E '[z]ypper|[p]ackagekit'",
+      "sources": [
+        {
+          "url": "https://doc.opensuse.org/documentation/leap/reference/html/book-reference/cha-sw-cl.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "suse-signature",
+      "environments": [
+        "opensuse"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "Zypper: проверка подписи / новый ключ",
+        "en": "Zypper: signature failure / new key"
+      },
+      "symptom": {
+        "ru": "Репозиторий запрашивает доверие новому ключу.",
+        "en": "A repository requests trust for a new key."
+      },
+      "check": {
+        "ru": "Проверьте URL и отпечаток по официальному каналу.",
+        "en": "Verify repository URL and fingerprint through an official channel."
+      },
+      "solution": {
+        "ru": "Принимайте ключ только для ожидаемого источника после сверки. Для неожиданной смены отмените транзакцию.",
+        "en": "Accept a key only for the intended source after verification. Cancel unexpected changes."
+      },
+      "caution": {
+        "ru": "Не используйте --no-gpg-checks как универсальный обход.",
+        "en": "Do not use --no-gpg-checks as a general workaround."
+      },
+      "command": "zypper repos",
+      "sources": [
+        {
+          "url": "https://doc.opensuse.org/documentation/leap/reference/html/book-reference/cha-sw-cl.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "ubuntu-apt-404",
+      "environments": [
+        "ubuntu"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "APT: 404 Not Found при скачивании",
+        "en": "APT: 404 Not Found during download"
+      },
+      "symptom": {
+        "ru": "Метаданные ссылаются на отсутствующий пакет или зеркало.",
+        "en": "Metadata references a missing package or mirror."
+      },
+      "check": {
+        "ru": "Проверьте выпуск и дату обновления индексов.",
+        "en": "Check release and index freshness."
+      },
+      "solution": {
+        "ru": "Для поддерживаемого выпуска обновите индексы apt update. Для EOL сначала прочитайте официальный порядок перехода; не подставляйте другой codename.",
+        "en": "For a supported release refresh indexes with apt update. For EOL read the official upgrade path; do not substitute another codename."
+      },
+      "caution": {
+        "ru": "Не смешивайте источники Ubuntu и Debian.",
+        "en": "Do not mix Ubuntu and Debian repositories."
+      },
+      "command": "cat /etc/os-release",
+      "sources": [
+        {
+          "url": "https://ubuntu.com/server/docs/how-to/software/package-management/",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "ubuntu-apt-broken",
+      "environments": [
+        "ubuntu"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "APT: unmet dependencies / held broken packages",
+        "en": "APT: unmet dependencies / held broken packages"
+      },
+      "symptom": {
+        "ru": "Версии зависимостей не согласуются.",
+        "en": "Dependency versions cannot be resolved."
+      },
+      "check": {
+        "ru": "Проверьте удержанные пакеты и источники; прочитайте план исправления.",
+        "en": "Check held packages and repositories; inspect a proposed repair plan."
+      },
+      "solution": {
+        "ru": "Сначала изучите apt-get -s -f install. Реальная операция требует отдельного решения с учётом удаления или изменения пакетов.",
+        "en": "Inspect apt-get -s -f install first. A real operation needs a separate decision considering removals and changes."
+      },
+      "caution": {
+        "ru": "Не используйте --force и не подтверждайте удаление критических пакетов автоматически.",
+        "en": "Do not use --force or automatically approve critical package removals."
+      },
+      "command": "apt-mark showhold",
+      "sources": [
+        {
+          "url": "https://ubuntu.com/server/docs/how-to/software/package-management/",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "debian-apt-404",
+      "environments": [
+        "debian"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "APT: 404 Not Found при скачивании",
+        "en": "APT: 404 Not Found during download"
+      },
+      "symptom": {
+        "ru": "Метаданные ссылаются на отсутствующий пакет или зеркало.",
+        "en": "Metadata references a missing package or mirror."
+      },
+      "check": {
+        "ru": "Проверьте выпуск и дату обновления индексов.",
+        "en": "Check release and index freshness."
+      },
+      "solution": {
+        "ru": "Для поддерживаемого выпуска обновите индексы apt update. Для EOL сначала прочитайте официальный порядок перехода; не подставляйте другой codename.",
+        "en": "For a supported release refresh indexes with apt update. For EOL read the official upgrade path; do not substitute another codename."
+      },
+      "caution": {
+        "ru": "Не смешивайте источники Ubuntu и Debian.",
+        "en": "Do not mix Ubuntu and Debian repositories."
+      },
+      "command": "cat /etc/os-release",
+      "sources": [
+        {
+          "url": "https://www.debian.org/doc/manuals/debian-reference/ch02.en.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "debian-apt-broken",
+      "environments": [
+        "debian"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "APT: unmet dependencies / held broken packages",
+        "en": "APT: unmet dependencies / held broken packages"
+      },
+      "symptom": {
+        "ru": "Версии зависимостей не согласуются.",
+        "en": "Dependency versions cannot be resolved."
+      },
+      "check": {
+        "ru": "Проверьте удержанные пакеты и источники; прочитайте план исправления.",
+        "en": "Check held packages and repositories; inspect a proposed repair plan."
+      },
+      "solution": {
+        "ru": "Сначала изучите apt-get -s -f install. Реальная операция требует отдельного решения с учётом удаления или изменения пакетов.",
+        "en": "Inspect apt-get -s -f install first. A real operation needs a separate decision considering removals and changes."
+      },
+      "caution": {
+        "ru": "Не используйте --force и не подтверждайте удаление критических пакетов автоматически.",
+        "en": "Do not use --force or automatically approve critical package removals."
+      },
+      "command": "apt-mark showhold",
+      "sources": [
+        {
+          "url": "https://www.debian.org/doc/manuals/debian-reference/ch02.en.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "git-merge-conflict",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "git",
+      "context": "all",
+      "title": {
+        "ru": "CONFLICT: конфликт слияния",
+        "en": "CONFLICT: merge conflict"
+      },
+      "symptom": {
+        "ru": "Git не может автоматически объединить изменения.",
+        "en": "Git cannot automatically combine changes."
+      },
+      "check": {
+        "ru": "Посмотрите git status и список конфликтующих файлов.",
+        "en": "Inspect git status and conflicting files."
+      },
+      "solution": {
+        "ru": "Согласуйте изменения в каждом конфликте; при отказе от операции используйте соответствующий abort после проверки сохранности незакоммиченных правок.",
+        "en": "Resolve each conflict; if abandoning the operation, use its matching abort after protecting uncommitted work."
+      },
+      "caution": {
+        "ru": "Не используйте reset --hard для очистки неизвестных правок.",
+        "en": "Do not use reset --hard to discard unknown changes."
+      },
+      "command": "git status --short",
+      "sources": [
+        {
+          "url": "https://git-scm.com/docs/git-merge",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "git-non-fast-forward",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "git",
+      "context": "all",
+      "title": {
+        "ru": "Git push: non-fast-forward / rejected",
+        "en": "Git push: non-fast-forward / rejected"
+      },
+      "symptom": {
+        "ru": "Удалённая ветка содержит другие изменения.",
+        "en": "The remote branch contains different changes."
+      },
+      "check": {
+        "ru": "Сравните локальную и удалённую историю после fetch.",
+        "en": "Compare local and remote history after fetching."
+      },
+      "solution": {
+        "ru": "Согласуйте merge/rebase с процессом проекта; сначала сохраните рабочие изменения.",
+        "en": "Choose merge/rebase according to project workflow; protect working changes first."
+      },
+      "caution": {
+        "ru": "Не делайте force push в общую ветку как первое исправление.",
+        "en": "Do not force-push a shared branch as the first fix."
+      },
+      "command": "git status --short",
+      "sources": [
+        {
+          "url": "https://git-scm.com/docs/git-push",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "git-index-lock",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "git",
+      "context": "all",
+      "title": {
+        "ru": "Git: Unable to create index.lock",
+        "en": "Git: Unable to create index.lock"
+      },
+      "symptom": {
+        "ru": "Git не может создать блокировку индекса.",
+        "en": "Git cannot create its index lock."
+      },
+      "check": {
+        "ru": "Проверьте параллельные git-процессы и работу IDE.",
+        "en": "Check concurrent git processes and IDE operations."
+      },
+      "solution": {
+        "ru": "Дождитесь окончания операции. Остаточный lock разбирайте только после подтверждения отсутствия владельца.",
+        "en": "Let the operation finish. Investigate a stale lock only after confirming its owner is gone."
+      },
+      "caution": {
+        "ru": "Удаление активной блокировки может нарушить работу другого процесса.",
+        "en": "Removing an active lock can disrupt another process."
+      },
+      "command": "ps -ef | grep '[g]it'",
+      "sources": [
+        {
+          "url": "https://git-scm.com/docs/git-update-index",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "npm-ci-lock",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "node",
+      "context": "all",
+      "title": {
+        "ru": "npm ci: package-lock не совпадает",
+        "en": "npm ci: package-lock mismatch"
+      },
+      "symptom": {
+        "ru": "npm ci требует согласованных package.json и lockfile.",
+        "en": "npm ci needs matching package.json and lockfile."
+      },
+      "check": {
+        "ru": "Проверьте изменения зависимостей в Git.",
+        "en": "Review dependency changes in Git."
+      },
+      "solution": {
+        "ru": "Обновляйте lockfile через согласованную версию npm и проверяйте diff; затем повторите ci.",
+        "en": "Regenerate the lockfile with the agreed npm version, review the diff, then retry ci."
+      },
+      "caution": {
+        "ru": "Не удаляйте lockfile для обхода воспроизводимости. npm ci удаляет существующий node_modules.",
+        "en": "Do not delete the lockfile to bypass reproducibility. npm ci removes existing node_modules."
+      },
+      "command": "npm --version",
+      "sources": [
+        {
+          "url": "https://docs.npmjs.com/cli/v11/commands/npm-ci/",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "npm-peer",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "node",
+      "context": "all",
+      "title": {
+        "ru": "npm: ERESOLVE unable to resolve dependency tree",
+        "en": "npm: ERESOLVE unable to resolve dependency tree"
+      },
+      "symptom": {
+        "ru": "Peer-зависимости требуют несовместимые версии.",
+        "en": "Peer dependencies require incompatible versions."
+      },
+      "check": {
+        "ru": "Прочитайте конфликтующие диапазоны версий в сообщении.",
+        "en": "Read the conflicting version ranges."
+      },
+      "solution": {
+        "ru": "Выберите совместимые версии пакетов. legacy-peer-deps игнорирует контракт peer-зависимостей, а не исправляет его.",
+        "en": "Choose compatible package versions. legacy-peer-deps ignores rather than repairs the peer dependency contract."
+      },
+      "caution": {
+        "ru": "Не добавляйте --force без анализа последствий и тестов проекта.",
+        "en": "Do not add --force without reviewing consequences and testing the project."
+      },
+      "command": "node --version\nnpm --version",
+      "sources": [
+        {
+          "url": "https://docs.npmjs.com/cli/v11/using-npm/config/",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "npm-node-version",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "node",
+      "context": "all",
+      "title": {
+        "ru": "npm: EBADENGINE / Unsupported engine",
+        "en": "npm: EBADENGINE / Unsupported engine"
+      },
+      "symptom": {
+        "ru": "Пакет требует другую версию Node.js или npm.",
+        "en": "A package requires a different Node.js or npm version."
+      },
+      "check": {
+        "ru": "Сравните engines в package.json с текущими версиями.",
+        "en": "Compare package.json engines with current versions."
+      },
+      "solution": {
+        "ru": "Выберите поддерживаемый Node для проекта; проверьте нативные модули после смены версии.",
+        "en": "Select a supported project Node version; check native modules after switching."
+      },
+      "caution": {
+        "ru": "Игнорирование engines не гарантирует совместимость.",
+        "en": "Ignoring engines does not guarantee compatibility."
+      },
+      "command": "node --version\nnpm --version",
+      "sources": [
+        {
+          "url": "https://docs.npmjs.com/cli/v11/configuring-npm/package-json/",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "python-syntax",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "python",
+      "context": "all",
+      "title": {
+        "ru": "SyntaxError / IndentationError",
+        "en": "SyntaxError / IndentationError"
+      },
+      "symptom": {
+        "ru": "Python не может разобрать исходный файл.",
+        "en": "Python cannot parse the source file."
+      },
+      "check": {
+        "ru": "Проверьте строку ошибки, предыдущую строку и версию Python.",
+        "en": "Check the reported line, preceding line and Python version."
+      },
+      "solution": {
+        "ru": "Исправьте синтаксис или отступы в копии/ветке проекта. Новая конструкция может требовать другой версии Python.",
+        "en": "Fix syntax or indentation in a project copy/branch. New syntax may need another Python version."
+      },
+      "caution": {
+        "ru": "Повторная установка всех пакетов не исправляет синтаксис исходника.",
+        "en": "Reinstalling every package does not repair source syntax."
+      },
+      "command": "python3 --version",
+      "sources": [
+        {
+          "url": "https://docs.python.org/3/library/exceptions.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "python-encoding",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "python",
+      "context": "all",
+      "title": {
+        "ru": "UnicodeDecodeError",
+        "en": "UnicodeDecodeError"
+      },
+      "symptom": {
+        "ru": "Данные прочитаны в неподходящей кодировке.",
+        "en": "Data was decoded with an unsuitable encoding."
+      },
+      "check": {
+        "ru": "Уточните реальную кодировку входного файла.",
+        "en": "Determine the input file’s actual encoding."
+      },
+      "solution": {
+        "ru": "Используйте явную корректную encoding при чтении, сохраните исходные байты до преобразования.",
+        "en": "Use the correct explicit encoding when reading; preserve original bytes before conversion."
+      },
+      "caution": {
+        "ru": "errors=ignore может незаметно потерять данные.",
+        "en": "errors=ignore may silently lose data."
+      },
+      "command": "python3 --version",
+      "sources": [
+        {
+          "url": "https://docs.python.org/3/library/exceptions.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "gradle-download",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "build",
+      "context": "all",
+      "title": {
+        "ru": "Gradle: Could not resolve / download dependency",
+        "en": "Gradle: Could not resolve / download dependency"
+      },
+      "symptom": {
+        "ru": "Не загружается плагин или зависимость сборки.",
+        "en": "A build dependency or plugin cannot be downloaded."
+      },
+      "check": {
+        "ru": "Различайте DNS, TLS, 401/403, 404 и offline mode.",
+        "en": "Distinguish DNS, TLS, 401/403, 404 and offline mode."
+      },
+      "solution": {
+        "ru": "Проверьте координаты артефакта и репозитории. --refresh-dependencies нужен для устаревших метаданных, а не для обхода авторизации.",
+        "en": "Check artifact coordinates and repositories. --refresh-dependencies helps stale metadata, not authentication failures."
+      },
+      "caution": {
+        "ru": "Не публикуйте токены репозиториев и не удаляйте все кэши первым шагом.",
+        "en": "Do not publish repository tokens or delete all caches as the first step."
+      },
+      "command": "date -u",
+      "sources": [
+        {
+          "url": "https://docs.gradle.org/current/userguide/dependency_caching.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "gradle-wrapper",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "build",
+      "context": "all",
+      "title": {
+        "ru": "Could not find GradleWrapperMain",
+        "en": "Could not find GradleWrapperMain"
+      },
+      "symptom": {
+        "ru": "Wrapper JAR отсутствует или повреждён.",
+        "en": "The Wrapper JAR is missing or damaged."
+      },
+      "check": {
+        "ru": "Проверьте отслеживаемые файлы gradle/wrapper и источник проекта.",
+        "en": "Check tracked gradle/wrapper files and project origin."
+      },
+      "solution": {
+        "ru": "Восстановите Wrapper из доверенной истории проекта или штатно сгенерируйте с согласованной версией Gradle.",
+        "en": "Restore the Wrapper from trusted project history or regenerate it using the agreed Gradle version."
+      },
+      "caution": {
+        "ru": "Не скачивайте gradle-wrapper.jar из случайного ответа форума.",
+        "en": "Do not download gradle-wrapper.jar from a random forum answer."
+      },
+      "command": "ls -l gradle/wrapper",
+      "sources": [
+        {
+          "url": "https://docs.gradle.org/current/userguide/gradle_wrapper.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "cargo-target",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "build",
+      "context": "all",
+      "title": {
+        "ru": "Rust: can’t find crate for std / target missing",
+        "en": "Rust: cannot find crate for std / target missing"
+      },
+      "symptom": {
+        "ru": "Не установлен или не подходит target Rust.",
+        "en": "The Rust target is missing or unsuitable."
+      },
+      "check": {
+        "ru": "Сопоставьте target triple, ОС, libc и toolchain проекта.",
+        "en": "Match target triple, OS, libc and project toolchain."
+      },
+      "solution": {
+        "ru": "Для управляемого rustup toolchain добавьте нужный поддерживаемый target. Для системного Rust следуйте пакету дистрибутива.",
+        "en": "For rustup-managed toolchains add the supported target. For distribution-managed Rust follow its packages."
+      },
+      "caution": {
+        "ru": "Android ARM64 и Linux GNU ARM64 — разные targets.",
+        "en": "Android ARM64 and Linux GNU ARM64 are different targets."
+      },
+      "command": "rustc -vV",
+      "sources": [
+        {
+          "url": "https://doc.rust-lang.org/cargo/commands/cargo-build.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "cargo-linker",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "build",
+      "context": "all",
+      "title": {
+        "ru": "Rust: linker not found / linking failed",
+        "en": "Rust: linker not found / linking failed"
+      },
+      "symptom": {
+        "ru": "Cargo не может найти или запустить подходящий linker.",
+        "en": "Cargo cannot locate or run a suitable linker."
+      },
+      "check": {
+        "ru": "Проверьте первую ошибку линковщика и target в .cargo/config.toml.",
+        "en": "Check the first linker error and target settings in .cargo/config.toml."
+      },
+      "solution": {
+        "ru": "Настройте linker для выбранного target и установите его через менеджер выбранной системы при необходимости.",
+        "en": "Configure the linker for the target and install it via the selected OS package manager if needed."
+      },
+      "caution": {
+        "ru": "Нельзя подменить Android linker любым Linux gcc.",
+        "en": "An arbitrary Linux gcc cannot replace an Android linker."
+      },
+      "command": "rustc -vV\ncommand -v cc",
+      "sources": [
+        {
+          "url": "https://doc.rust-lang.org/cargo/reference/config.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "cmake-cache",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "build",
+      "context": "all",
+      "title": {
+        "ru": "CMakeCache: другой source/build directory",
+        "en": "CMakeCache: different source/build directory"
+      },
+      "symptom": {
+        "ru": "Кэш создан для другой папки или генератора.",
+        "en": "The cache was created for a different directory or generator."
+      },
+      "check": {
+        "ru": "Проверьте source/build пути и команду конфигурации.",
+        "en": "Check source/build paths and configure command."
+      },
+      "solution": {
+        "ru": "Создайте отдельный новый build-каталог и настройте проект там; старый оставьте до проверки результата.",
+        "en": "Configure in a separate new build directory; keep the old one until the result is verified."
+      },
+      "caution": {
+        "ru": "Не удаляйте исходники или весь проект ради очистки build-кэша.",
+        "en": "Do not delete sources or the whole project to clear a build cache."
+      },
+      "command": "cmake --version",
+      "sources": [
+        {
+          "url": "https://cmake.org/cmake/help/latest/manual/cmake.1.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "tls-time",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "certificate is not yet valid / has expired",
+        "en": "certificate is not yet valid / has expired"
+      },
+      "symptom": {
+        "ru": "Срок сертификата не соответствует времени проверки.",
+        "en": "Certificate validity does not match verification time."
+      },
+      "check": {
+        "ru": "Проверьте дату устройства и срок именно сертификата сервера.",
+        "en": "Check device time and the server certificate’s validity period."
+      },
+      "solution": {
+        "ru": "Исправьте системное время либо сообщите владельцу о просроченном сертификате.",
+        "en": "Correct system time or notify the owner of an expired certificate."
+      },
+      "caution": {
+        "ru": "Не отключайте TLS-проверку; неверное время может влиять и на менеджеры пакетов.",
+        "en": "Do not disable TLS verification; incorrect time also affects package managers."
+      },
+      "command": "date -u",
+      "sources": [
+        {
+          "url": "https://curl.se/docs/sslcerts.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "linux-readonly",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "files",
+      "context": "all",
+      "title": {
+        "ru": "Read-only file system",
+        "en": "Read-only file system"
+      },
+      "symptom": {
+        "ru": "Запись запрещена свойствами файловой системы.",
+        "en": "Filesystem properties prevent writes."
+      },
+      "check": {
+        "ru": "Проверьте целевой путь: системный раздел, read-only mount или недоступное хранилище.",
+        "en": "Check the target path: system partition, read-only mount or unavailable storage."
+      },
+      "solution": {
+        "ru": "Выберите доступный пользовательский каталог; на сервере причину read-only должен проверить администратор.",
+        "en": "Choose a writable user directory; a server administrator should investigate an unexpected read-only filesystem."
+      },
+      "caution": {
+        "ru": "chmod не меняет режим монтирования. Не перемонтируйте Android-разделы вслепую.",
+        "en": "chmod does not change mount mode. Do not blindly remount Android partitions."
+      },
+      "command": "df -h .",
+      "sources": [
+        {
+          "url": "https://man7.org/linux/man-pages/man2/execve.2.html",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-pip-upgrade",
+      "environments": [
+        "termux"
+      ],
+      "category": "python",
+      "context": "all",
+      "title": {
+        "ru": "Installing pip is forbidden: обновление pip",
+        "en": "Installing pip is forbidden: upgrading pip"
+      },
+      "symptom": {
+        "ru": "pip отказывается обновлять сам себя.",
+        "en": "pip refuses to upgrade itself."
+      },
+      "check": {
+        "ru": "Уточните, что это Termux Python, а не Python внутри Ubuntu/venv.",
+        "en": "Confirm this is Termux Python, not Ubuntu/venv Python."
+      },
+      "solution": {
+        "ru": "Обновляйте системный pip через pkg upgrade python-pip; библиотеки устанавливайте отдельно.",
+        "en": "Update system pip with pkg upgrade python-pip; install libraries separately."
+      },
+      "caution": {
+        "ru": "Не удаляйте защитный патч и не заменяйте системный pip через get-pip.py.",
+        "en": "Do not remove the guard or replace system pip using get-pip.py."
+      },
+      "command": "python -m pip --version",
+      "sources": [
+        {
+          "url": "https://github.com/termux/termux-packages/blob/master/packages/python-pip/install_py_preventing_pip_from_installing.patch",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-signal-nine",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "Process completed (signal 9): сессия внезапно завершилась",
+        "en": "Process completed (signal 9): session terminated"
+      },
+      "symptom": {
+        "ru": "Процесс убит SIGKILL, в том числе внутри proot.",
+        "en": "A process was killed with SIGKILL, including inside proot."
+      },
+      "check": {
+        "ru": "Проверьте журналы Android, память и совпадение со сворачиванием приложения.",
+        "en": "Check Android logs, memory pressure and whether backgrounding triggers termination."
+      },
+      "solution": {
+        "ru": "Для Termux на Android проверьте ограничения фоновой работы и phantom processes по инструкции авторов для вашей версии ОС.",
+        "en": "For Termux on Android, review background and phantom-process limits using the authors’ version-specific instructions."
+      },
+      "caution": {
+        "ru": "SIGKILL также бывает при нехватке памяти или ручной остановке. Wake lock не устраняет все причины; для обычного Linux нужен другой разбор.",
+        "en": "SIGKILL also occurs under memory pressure or manual termination. A wake lock does not address every cause; ordinary Linux needs separate investigation."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/termux/termux-app#installation",
+          "kind": "official"
+        },
+        {
+          "url": "https://www.reddit.com/r/termux/comments/1msr3ew/",
+          "kind": "community"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-api-companion",
+      "environments": [
+        "termux"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "Termux:API: команды отсутствуют или нет ответа",
+        "en": "Termux:API: commands missing or no response"
+      },
+      "symptom": {
+        "ru": "Приложение установлено, но termux-battery-status не найден или зависает.",
+        "en": "The app is installed but termux-battery-status is missing or hangs."
+      },
+      "check": {
+        "ru": "Проверьте CLI-пакет, Android-разрешения и сертификаты приложения и дополнения.",
+        "en": "Check the CLI package, Android permissions and app/add-on signing certificates."
+      },
+      "solution": {
+        "ru": "В Termux нужен pkg install termux-api и совместимое Android-дополнение. У форка с собственной подписью нужен дополнительно подписанный тем же ключом APK.",
+        "en": "Termux needs pkg install termux-api and a compatible Android add-on. A fork with its own certificate needs an add-on APK signed with the same key."
+      },
+      "caution": {
+        "ru": "Не удаляйте Termux ради дополнения без резервной копии. Совпадения названия пакета недостаточно.",
+        "en": "Back up before removing Termux for an add-on. Matching package names alone is insufficient."
+      },
+      "command": "command -v termux-battery-status",
+      "sources": [
+        {
+          "url": "https://github.com/termux/termux-api#installation",
+          "kind": "official"
+        },
+        {
+          "url": "https://www.reddit.com/r/termux/comments/1vnh4qy/termuxapi_not_working_properly/",
+          "kind": "community"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "shell-command-path",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "command not found: скрипт есть, но команда не найдена",
+        "en": "command not found: script exists but cannot be found"
+      },
+      "symptom": {
+        "ru": "По полному пути скрипт работает, по имени — нет.",
+        "en": "A script works by full path but not by name."
+      },
+      "check": {
+        "ru": "Сравните каталог скрипта с PATH, проверьте интерпретатор и права.",
+        "en": "Compare its directory with PATH; check interpreter and permissions."
+      },
+      "solution": {
+        "ru": "Используйте явный путь либо добавьте доверенный каталог в PATH в настройке своей оболочки, сохранив прежний PATH.",
+        "en": "Use an explicit path or add a trusted directory to PATH in your shell configuration, preserving the existing PATH."
+      },
+      "caution": {
+        "ru": "Не добавляйте общедоступные каталоги или точку в начало PATH. Для Termux не копируйте /bin/bash из обычного Linux.",
+        "en": "Do not prepend shared directories or a dot to PATH. Do not copy a regular Linux /bin/bash shebang into Termux."
+      },
+      "command": "printf '%s\\n' \"$PATH\"",
+      "sources": [
+        {
+          "url": "https://www.gnu.org/software/bash/manual/html_node/Command-Search-and-Execution.html",
+          "kind": "official"
+        },
+        {
+          "url": "https://www.reddit.com/r/termux/comments/pyesqt/",
+          "kind": "community"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "shell-unclosed-quote",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "Bash: вместо команды появилось приглашение >",
+        "en": "Bash: a > prompt appeared instead of execution"
+      },
+      "symptom": {
+        "ru": "Enter переносит строку; оболочка ждёт продолжение.",
+        "en": "Enter continues input; the shell waits for more text."
+      },
+      "check": {
+        "ru": "Проверьте незакрытые кавычки, скобки и heredoc в уже введённом тексте.",
+        "en": "Check for unclosed quotes, brackets and heredocs in the entered text."
+      },
+      "solution": {
+        "ru": "Если ввод ошибочен, отмените текущую строку Ctrl+C и введите исправленную команду.",
+        "en": "If input is wrong, cancel the pending input with Ctrl+C and enter the corrected command."
+      },
+      "caution": {
+        "ru": "Это совет только для ожидающего Bash. В работающем приложении Ctrl+C может прервать задачу.",
+        "en": "This advice is for a waiting Bash prompt only. Ctrl+C in a running application can interrupt its task."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://www.gnu.org/software/bash/manual/html_node/Quoting.html",
+          "kind": "official"
+        },
+        {
+          "url": "https://www.reddit.com/r/termux/comments/pyesqt/",
+          "kind": "community"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "proot-x11-display",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "proot",
+      "title": {
+        "ru": "Termux:X11 в proot: Cannot open display",
+        "en": "Termux:X11 in proot: Cannot open display"
+      },
+      "symptom": {
+        "ru": "Графическое приложение не подключается к X-серверу.",
+        "en": "A graphical application cannot connect to the X server."
+      },
+      "check": {
+        "ru": "Сверьте DISPLAY, запущенный X-сервер и доступ к его сокету из proot.",
+        "en": "Check DISPLAY, the running X server and access to its socket from proot."
+      },
+      "solution": {
+        "ru": "Для Termux:X11 используйте общий tmp при входе в proot и тот же DISPLAY, что у сервера; проверьте синтаксис своей версии proot-distro.",
+        "en": "For Termux:X11, share tmp when entering proot and match the server DISPLAY; check your proot-distro version’s syntax."
+      },
+      "caution": {
+        "ru": "Не отключайте X-аутентификацию и не открывайте TCP-доступ как универсальное исправление.",
+        "en": "Do not disable X authentication or expose TCP as a universal fix."
+      },
+      "command": "printf 'DISPLAY=%s\\n' \"$DISPLAY\"",
+      "sources": [
+        {
+          "url": "https://github.com/termux/termux-x11#using-with-proot-environment",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-x11-window-manager",
+      "environments": [
+        "termux"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "X11: окно маленькое, не разворачивается",
+        "en": "X11: a small window cannot be maximized"
+      },
+      "symptom": {
+        "ru": "Изменение разрешения не растягивает окно приложения.",
+        "en": "Changing resolution does not enlarge an application window."
+      },
+      "check": {
+        "ru": "Проверьте, работает ли оконный менеджер, а не только X-сервер.",
+        "en": "Check whether a window manager is running alongside the X server."
+      },
+      "solution": {
+        "ru": "Запустите подходящий оконный менеджер/рабочий стол по инструкции Termux:X11 и используйте его действие разворачивания.",
+        "en": "Start a suitable window manager/desktop using the Termux:X11 instructions and use its maximize action."
+      },
+      "caution": {
+        "ru": "Полноэкранный режим Android и разворачивание X11-окна — разные настройки.",
+        "en": "Android fullscreen and maximizing an X11 window are separate settings."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/termux/termux-x11#running-graphical-applications",
+          "kind": "official"
+        },
+        {
+          "url": "https://www.reddit.com/r/termux/comments/1wjh3q5/please_help_termuxx11/",
+          "kind": "community"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "ssh-tmux-stale-display",
+      "environments": [
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "ssh",
+      "title": {
+        "ru": "tmux после SSH: старый DISPLAY или SSH_AUTH_SOCK",
+        "en": "tmux after SSH: stale DISPLAY or SSH_AUTH_SOCK"
+      },
+      "symptom": {
+        "ru": "После переподключения X11/ssh-agent работает вне tmux, но не в старом pane.",
+        "en": "After reconnecting, X11/ssh-agent works outside tmux but not in an old pane."
+      },
+      "check": {
+        "ru": "Сравните переменные нового SSH-входа, tmux и оболочки внутри pane.",
+        "en": "Compare variables in the new SSH login, tmux and the pane shell."
+      },
+      "solution": {
+        "ru": "Проверьте update-environment в tmux. Уже работающей оболочке может понадобиться отдельно обновить только проверенные переменные текущего соединения.",
+        "en": "Review tmux update-environment. An existing shell may also need selected, verified variables refreshed from the current connection."
+      },
+      "caution": {
+        "ru": "Не выполняйте eval всего окружения вслепую и не угадывайте DISPLAY другого подключения.",
+        "en": "Do not blindly eval the whole environment or guess another connection’s DISPLAY."
+      },
+      "command": "tmux show-environment DISPLAY\ntmux show-environment SSH_AUTH_SOCK",
+      "sources": [
+        {
+          "url": "https://man.openbsd.org/tmux",
+          "kind": "official"
+        },
+        {
+          "url": "https://www.reddit.com/r/ssh/comments/1aurs0x/",
+          "kind": "community"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "jobs-keyboard-window",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "Клавиатура работает в диалогах, но не в терминале",
+        "en": "Keyboard works in dialogs but not the terminal"
+      },
+      "symptom": {
+        "ru": "Поля основной Activity не вызывают IME, отдельные окна работают.",
+        "en": "Main Activity inputs cannot show IME while separate dialogs can."
+      },
+      "check": {
+        "ru": "Различите фокус поля, интерактивный ввод и блокирующий флаг окна.",
+        "en": "Distinguish field focus, interactive input and window flags."
+      },
+      "solution": {
+        "ru": "Обновите сборку с исправлением IME: Workspace снимает FLAG_ALT_FOCUSABLE_IM. В поиске звёздочки фокус и показ клавиатуры проверяются отдельно.",
+        "en": "Use a build with the IME fix: Workspace clears FLAG_ALT_FOCUSABLE_IM. Star-menu search needs its own focus/keyboard handling."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/VALIDATION-v1.0.7.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "verified-code",
+      "projectEvidence": {
+        "ru": "v1.0.7: найден путь блокировки Activity; отдельный поиск звёздочки исправлялся позднее. Это разные причины сходного симптома.",
+        "en": "v1.0.7: Activity blocking path identified; star-search focus was addressed separately later. Similar symptoms have different causes."
+      }
+    },
+    {
+      "id": "jobs-draft-per-tab",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "Текст ввода переносится в другую вкладку или пропадает",
+        "en": "Input draft leaks to another tab or disappears"
+      },
+      "symptom": {
+        "ru": "Несколько терминалов показывают общий текст; при возврате черновика нет.",
+        "en": "Terminals share input text, or a draft disappears when returning."
+      },
+      "check": {
+        "ru": "Сравните ввод двух живых вкладок и возврат в первую без отправки.",
+        "en": "Compare two live tabs and return without sending."
+      },
+      "solution": {
+        "ru": "Нужна сборка с отдельным черновиком на ID терминала: сохранять перед переключением и восстанавливать после. Простая очистка при переключении решает утечку, но теряет черновик.",
+        "en": "Use per-terminal-ID drafts saved before switching and restored afterward. Clearing on switch prevents leakage but loses the draft."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "В переписке сначала исправляли общий ввод, затем отдельно восстановление. Хранение черновика не обещает пережить убийство app-процесса.",
+        "en": "Conversation identified shared input first, then missing restoration. Draft state does not promise survival of app-process death."
+      }
+    },
+    {
+      "id": "jobs-nested-scroll",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "Прокрутка списков перехватывается общим экраном",
+        "en": "Outer page intercepts list scrolling"
+      },
+      "symptom": {
+        "ru": "При клавиатуре/DPI прокручивается вся главная вместо внутренней панели.",
+        "en": "With the keyboard/DPI, the outer page moves instead of an inner panel."
+      },
+      "check": {
+        "ru": "Сверьте доступную высоту, клавиатуру и вложенный scroll; сравните без IME.",
+        "en": "Check available height, keyboard and nested scrolling; compare without IME."
+      },
+      "solution": {
+        "ru": "Проверяйте сборку с корректной высотой панелей и передачей жеста. При очень низком окне общая прокрутка может быть намеренной адаптацией.",
+        "en": "Use corrected panel sizing and gesture dispatch. Outer scrolling can be intentional in a very short window."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Пользователь повторно проверял вложенные списки после SSH-изменений. USAGE описывает fallback при малой высоте; это не универсальный дефект свайпа.",
+        "en": "User retested nested lists after SSH changes. USAGE documents the short-window fallback; not every outer scroll is a swipe defect."
+      }
+    },
+    {
+      "id": "jobs-filter-highlight",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "Категория и «Все/Избранное» подсвечены одновременно",
+        "en": "Category and All/Favorites are highlighted together"
+      },
+      "symptom": {
+        "ru": "Выбранный фильтр непонятен из-за нескольких активных плашек.",
+        "en": "Multiple active chips obscure the selected filter."
+      },
+      "check": {
+        "ru": "Проверьте категорию и состояние «Все/Избранное» отдельно от содержимого.",
+        "en": "Compare category and All/Favorites state separately from results."
+      },
+      "solution": {
+        "ru": "Активная категория должна иметь приоритет подсветки; без категории подсвечивается выбранный общий режим. Используйте сборку с исправлением отрисовки.",
+        "en": "Active category takes highlight priority; without a category, highlight the selected general mode. Use the corrected rendering build."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Случай из проверки команд/заметок: изменение подсветки не должно очищать библиотеку или менять сами записи.",
+        "en": "Commands/notes review case: changing highlights must not clear or alter stored entries."
+      }
+    },
+    {
+      "id": "jobs-startup-sequence",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "Вторая команда пресета не запускается после Ubuntu/SSH",
+        "en": "Second preset command does not run after Ubuntu/SSH"
+      },
+      "symptom": {
+        "ru": "Вход открыл другую оболочку, а следующая команда не попала в неё.",
+        "en": "Login opened another shell but the next command did not reach it."
+      },
+      "check": {
+        "ru": "Определите, первая команда завершает процесс или открывает интерактивную оболочку.",
+        "en": "Determine whether the first command exits or opens an interactive shell."
+      },
+      "solution": {
+        "ru": "Для смены среды используйте профиль Ubuntu/SSH и поддерживаемое ожидание оболочки. Для обычных последовательных команд подходят проверенные shell-связки; && ждёт завершения интерактивного входа, а не его готовности.",
+        "en": "Use Ubuntu/SSH profiles and supported prompt waiting for environment changes. Shell chaining suits ordinary sequential commands; && waits for interactive login to exit, not become ready."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Наблюдали Ubuntu→Codex и SSH→команда. Универсальное угадывание готовности любой программы не реализовано.",
+        "en": "Observed Ubuntu→Codex and SSH→command. No universal readiness detector for arbitrary applications exists."
+      }
+    },
+    {
+      "id": "jobs-session-vs-process",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "Сохранённая сессия не продолжает Bash с того же места",
+        "en": "Saved session does not resume the same Bash process"
+      },
+      "symptom": {
+        "ru": "После закрытия вкладки процессы/состояние оболочки не возвращаются.",
+        "en": "Closing and reopening does not restore live shell state."
+      },
+      "check": {
+        "ru": "Различите пресет запуска, историю AI-чата, историю оболочки и живой PTY.",
+        "en": "Distinguish launch preset, AI-chat history, shell history and live PTY."
+      },
+      "solution": {
+        "ru": "Пресет повторяет настройки/команды; чат продолжайте штатным ID агента. Сохранение профиля не является снимком памяти Bash и не воскрешает завершённый процесс.",
+        "en": "A preset repeats settings/commands; resume an AI chat using its native ID. Saving a profile is not a Bash-memory snapshot and cannot revive a terminated process."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "В обсуждении снимки вывода были удалены отдельно от журнала последних команд; эти данные не заменяют процесс.",
+        "en": "Output snapshots were removed separately from recent commands; neither replaces a live process."
+      }
+    },
+    {
+      "id": "jobs-codex-status-bridge",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "Codex работает, но карточка пишет «Нет подключения»",
+        "en": "Codex runs but its card says No connection"
+      },
+      "symptom": {
+        "ru": "Терминал отвечает, управление моделью/лимитами не связано с процессом.",
+        "en": "Terminal chat responds but model/usage controls are disconnected."
+      },
+      "check": {
+        "ru": "Проверьте способ запуска, версию адаптера, завершение login и наличие поддерживаемого IPC.",
+        "en": "Check launch method, adapter version, completed login and supported IPC."
+      },
+      "solution": {
+        "ru": "Запустите через поддерживаемый профиль AI Agents/Codex. Обычный CLI сам по себе не гарантирует канал карточки; существующую историю выбирайте по ID, не удаляя её.",
+        "en": "Launch through the supported AI Agents/Codex profile. A plain CLI does not guarantee the control channel; select existing history by ID without deleting it."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Пользователь воспроизводил проблему и в новом чате. Отсутствие карточки не доказывает отсутствие авторизации или файлового доступа.",
+        "en": "User reproduced this in a new chat too. A missing card does not prove missing authorization or filesystem access."
+      }
+    },
+    {
+      "id": "jobs-chat-directory",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "Чат виден в root, но не в выбранной папке проекта",
+        "en": "Chat appears under root but not the selected project"
+      },
+      "symptom": {
+        "ru": "История скрыта фильтром каталога; смена проекта путает старые пути.",
+        "en": "Directory filtering hides history; changing projects leaves old paths in context."
+      },
+      "check": {
+        "ru": "Сверьте среду, ID чата, исходную папку истории и новый рабочий каталог.",
+        "en": "Check environment, chat ID, original history directory and new working directory."
+      },
+      "solution": {
+        "ru": "Используйте «Все чаты» и подтверждение продолжения в новой папке. История остаётся прежней, файлы не перемещаются; уже работающий процесс каталог не меняет.",
+        "en": "Use All chats and confirm continuing in a new directory. History stays, files do not move, and a running process keeps its current directory."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "USAGE: история Termux/Ubuntu раздельная, новый cwd применяется при запуске; произвольный перенос контекста не обещается безопасным автоматически.",
+        "en": "USAGE: Termux/Ubuntu histories are separate; new cwd applies at launch, and arbitrary context moves are not automatically safe."
+      }
+    },
+    {
+      "id": "jobs-access-instructions",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "«Полный доступ», но помощник считает файлы недоступными",
+        "en": "Full access selected but assistant assumes files are unavailable"
+      },
+      "symptom": {
+        "ru": "Ответ об отсутствии доступа сделан без проверки путей/инструментов.",
+        "en": "Assistant claims no access without testing paths/tools."
+      },
+      "check": {
+        "ru": "Проверьте реальные права процесса и доступные монтирования read-only; отдельно прочитайте применимый AGENTS.md.",
+        "en": "Check actual process permissions and mounts read-only; read applicable AGENTS.md separately."
+      },
+      "solution": {
+        "ru": "Попросите провести фактическую проверку и исправьте инструкции проекта. AGENTS.md направляет поведение, но не выдаёт Android root, runtime-разрешения или доступ к чужим приложениям.",
+        "en": "Request an actual check and correct project instructions. AGENTS.md guides behavior but grants no Android root, runtime permissions or access to other apps."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Ошибка предположения помощника обсуждалась в чате; наличие инструкции и наличие OS-разрешения — разные вещи.",
+        "en": "Assistant-assumption error discussed in chat; instructions and OS permissions are different."
+      }
+    },
+    {
+      "id": "jobs-opencode-free-adapter",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "OpenCode: FreeTierError / HTTP 403 у старого адаптера",
+        "en": "OpenCode: FreeTierError / HTTP 403 with old adapter"
+      },
+      "symptom": {
+        "ru": "Штатный запуск и адаптер ведут себя по-разному на одной модели.",
+        "en": "Native CLI and adapter behave differently for the same model."
+      },
+      "check": {
+        "ru": "Сравните версию адаптера и происхождение native chat ID; исключите недоступность самого провайдера.",
+        "en": "Compare adapter version and native chat-ID origin; rule out provider availability."
+      },
+      "solution": {
+        "ru": "В v1.0.6 использовано штатное создание сессии сервером OpenCode вместо самодельного ID. Для старого тестового ID может потребоваться новый чат; не удаляйте рабочую историю ради обхода оплаты.",
+        "en": "v1.0.6 uses native server-created sessions instead of fabricated IDs. An old test ID may need a new chat; do not delete working history to bypass billing."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/VALIDATION-v1.0.6.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "verified-code",
+      "projectEvidence": {
+        "ru": "A/B v1.0.6: CLI и исправленный адаптер ответили, старый получил403. Доступность бесплатного сервиса в будущем этим не гарантирована.",
+        "en": "v1.0.6 A/B: native CLI and corrected adapter responded; old adapter returned403. This does not guarantee future free-service availability."
+      }
+    },
+    {
+      "id": "jobs-opencode-model-revert",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "OpenCode: модель «применена», но после сообщения старая",
+        "en": "OpenCode says model applied but reverts after sending"
+      },
+      "symptom": {
+        "ru": "Плашка меняется временно, реальный чат остаётся на прежней модели.",
+        "en": "The card changes temporarily but the actual chat retains its old model."
+      },
+      "check": {
+        "ru": "Сравните выбранную модель и фактический запущенный чат после отправки.",
+        "en": "Compare selected model and actual running chat after sending."
+      },
+      "solution": {
+        "ru": "Используйте смену модели через подтверждённое переоткрытие текущего native chat ID с нужными параметрами. Не подменяйте только надпись карточки.",
+        "en": "Use confirmed reopening of the same native chat ID with the requested parameters. Do not update only the card label."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/VALIDATION-v1.0.9.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "resolved",
+      "projectEvidence": {
+        "ru": "Пользователь подтвердил работу смены через переоткрытие в v1.0.9. Это не исправление мерцания.",
+        "en": "User confirmed model switching via reopen in v1.0.9. This does not fix flicker."
+      }
+    },
+    {
+      "id": "jobs-opencode-flicker-oc001",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "OC-001: мерцание OpenCode и возврат экрана через секунду",
+        "en": "OC-001: OpenCode flicker and screen replay after a second"
+      },
+      "symptom": {
+        "ru": "После клавиатуры/смены вкладки виден replay или прыжок; бывает и в новом чате.",
+        "en": "Keyboard/tab changes trigger replay or jumps, including in a new chat."
+      },
+      "check": {
+        "ru": "Различите native resize replay, viewport scroll, DEC2026 и отрисовку Activity; зафиксируйте размеры и время.",
+        "en": "Separate native resize replay, viewport scrolling, DEC2026 and Activity rendering; record sizes and timing."
+      },
+      "solution": {
+        "ru": "Подтверждённого универсального исправления нет. В текущем пути оставлен адаптер v1.0.9; буферы v1.0.10, отключение batching и no-resize-replay пробовались, затем эксперименты откатили. Соберите диагностику до новых точечных проб.",
+        "en": "No confirmed universal fix. Current path keeps the v1.0.9 adapter; v1.0.10 buffers, disabled batching and no-resize-replay were tried, then experiments rolled back. Capture diagnostics before further targeted trials."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/KNOWN-ISSUES.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "open",
+      "projectEvidence": {
+        "ru": "История не доказана причиной: симптом был в пустом чате и до буферов. Частичное улучшение v1.0.11 не является полным исправлением; рамка выделения и автопрокрутка требуют отдельной проверки.",
+        "en": "History is not a proven cause: symptoms occurred in empty chats and before buffers. Partial v1.0.11 improvement is not a full fix; selection frames and auto-scroll need separate checks."
+      }
+    },
+    {
+      "id": "jobs-gemini-auth-mode",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "Gemini после входа перескакивает на API key",
+        "en": "Gemini jumps to API-key login after authorization"
+      },
+      "symptom": {
+        "ru": "После кода/рестарта меняется выбранный способ авторизации.",
+        "en": "Selected auth mode changes after entering a code/restarting."
+      },
+      "check": {
+        "ru": "Сверьте профиль Google/API/auto и effective auth policy, не содержимое токенов.",
+        "en": "Compare Google/API/auto profile and effective auth policy, not token contents."
+      },
+      "solution": {
+        "ru": "Выберите явный способ входа у закрытого профиля и запустите заново. v1.0.16 фиксирует auth policy без синтетических клавиш; старые auto-профили сохраняют прежнее поведение.",
+        "en": "Choose an explicit auth mode in a closed profile and restart. v1.0.16 pins policy without synthetic keypresses; old auto profiles retain their behavior."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/VALIDATION-v1.0.16.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "verified-code",
+      "projectEvidence": {
+        "ru": "Первоначальная причина «лишнего Enter» не доказана: isolated native probe не воспроизвёл её. Фиксация политики — отдельное изменение.",
+        "en": "An extra Enter was not proven as the original cause: isolated native probing did not reproduce it. Policy pinning is a separate change."
+      }
+    },
+    {
+      "id": "jobs-gemini-policy-permissions",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "Gemini не доверяет файлу auth policy из-за прав каталога",
+        "en": "Gemini rejects auth policy because of parent-directory permissions"
+      },
+      "symptom": {
+        "ru": "Приватный файл расположен под небезопасным родительским каталогом.",
+        "en": "A private file sits under an unsafe parent directory."
+      },
+      "check": {
+        "ru": "Проверьте всю цепочку родителей policy, а не только0600 самого файла.",
+        "en": "Check the whole policy parent chain, not just the file’s0600 mode."
+      },
+      "solution": {
+        "ru": "v1.0.17 переносит policy в приватный auth-каталог с0700/0600. Исправление пути policy не восстанавливает отключённый поставщиком OAuth.",
+        "en": "v1.0.17 moves policy into a private auth directory with0700/0600. Correcting this path cannot restore provider-disabled OAuth."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/VALIDATION-v1.0.17.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "verified-code",
+      "projectEvidence": {
+        "ru": "Выявлен и проверен конкретный дефект проверки родительских прав; работающий пользовательский config не переписывался.",
+        "en": "A specific parent-permission defect was identified and checked; existing user config was not rewritten."
+      }
+    },
+    {
+      "id": "jobs-gemini-oauth-unavailable",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "Gemini: личный Google OAuth недоступен поставщиком",
+        "en": "Gemini: personal Google OAuth unavailable from provider"
+      },
+      "symptom": {
+        "ru": "Код/вход не завершаются даже при корректно зафиксированном режиме.",
+        "en": "Login/code flow fails despite correctly pinned auth mode."
+      },
+      "check": {
+        "ru": "Отличите ошибку policy от ответа сервиса о недоступности способа входа.",
+        "en": "Separate policy errors from service-side auth unavailability."
+      },
+      "solution": {
+        "ru": "Используйте только разрешённые поставщиком варианты, например собственный API key с проверкой условий/квот. Переключение Android-меню не отменяет ограничений аккаунта.",
+        "en": "Use provider-supported options, such as your own API key after checking terms/quotas. Android UI changes cannot override account restrictions."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/AI-AGENTS.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "open",
+      "projectEvidence": {
+        "ru": "В отчётах v1.0.18 личный OAuth отключён поставщиком; успешный API-ответ/квота не были полностью подтверждены. Это историческое состояние, не вечное правило сервиса.",
+        "en": "v1.0.18 reports provider-disabled personal OAuth; successful API response/quota was not fully verified. Historical state, not a permanent service rule."
+      }
+    },
+    {
+      "id": "jobs-provider-capacity",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "Selected model is at capacity / модель перегружена",
+        "en": "Selected model is at capacity"
+      },
+      "symptom": {
+        "ru": "Выбранная модель временно не принимает запрос.",
+        "en": "Selected model temporarily refuses requests."
+      },
+      "check": {
+        "ru": "Сверьте точный ответ провайдера с сетевой ошибкой и исчерпанием квоты.",
+        "en": "Distinguish provider response from network failure and exhausted quota."
+      },
+      "solution": {
+        "ru": "Повторите позже или явно выберите другую доступную модель. Смена модели требует повторной оценки изменений/тестов, но сама по себе не меняет уже собранный APK.",
+        "en": "Retry later or explicitly choose another available model. Reassess changes/tests after switching, but selecting a model does not modify an existing APK."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Сообщение обсуждалось в нашем чате; это не доказательство неисправности локального Termux или необходимости переустановки.",
+        "en": "Message discussed in our chat; it does not prove local Termux failure or a need to reinstall."
+      }
+    },
+    {
+      "id": "jobs-backup-source-unreadable",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "files",
+      "context": "all",
+      "title": {
+        "ru": "SOURCE_UNREADABLE при выборочном бэкапе",
+        "en": "SOURCE_UNREADABLE in selective backup"
+      },
+      "symptom": {
+        "ru": "Полный архив проходит, выбор компонентов обрывается на чтении.",
+        "en": "Full backup works but component selection fails while reading."
+      },
+      "check": {
+        "ru": "Найдите относительный проблемный путь и затронутую группу; проверьте .l2s и права.",
+        "en": "Identify the relative problem path and affected group; check .l2s and permissions."
+      },
+      "solution": {
+        "ru": "В v1.1.2 недоступная группа отмечается/отключается отдельно, служебное .l2s не обходится как обычная папка. Ошибка уже выбранного источника всё равно блокирует готовность копии.",
+        "en": "v1.1.2 marks/disables an unreadable group separately and avoids treating .l2s as an ordinary directory. A selected-source failure still blocks backup readiness."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/RELEASE-v1.1.2.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "verified-code",
+      "projectEvidence": {
+        "ru": "Симптом подтверждён скриншотом; исправление общего обрыва проверено на fixtures, не является обходом прав.",
+        "en": "Screenshot confirmed the symptom; fixture-tested partial-scan handling does not bypass permissions."
+      }
+    },
+    {
+      "id": "jobs-backup-size",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "files",
+      "context": "all",
+      "title": {
+        "ru": "Размер Ubuntu-бэкапа неожиданно большой",
+        "en": "Ubuntu backup estimate is unexpectedly large"
+      },
+      "symptom": {
+        "ru": "Оценка десятки гигабайт при небольшом APK.",
+        "en": "Estimate is tens of gigabytes despite a small APK."
+      },
+      "check": {
+        "ru": "Сравните APK, распакованную rootfs, проекты, SDK/Gradle/Cargo-кэши и размер сжатого архива.",
+        "en": "Compare APK, unpacked rootfs, projects, SDK/Gradle/Cargo caches and compressed archive size."
+      },
+      "solution": {
+        "ru": "Проверьте состав по компонентам и выбирайте нужное вместе с зависимостями. Распакованный объём — не обещанный размер gzip; не удаляйте проекты только из-за оценки.",
+        "en": "Inspect components and select needed data with dependencies. Unpacked size is not promised gzip size; do not delete projects based only on an estimate."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/BACKUP-RESTORE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Пользователь увидел60+ГБ proot. Это не размер установочного APK; выборочный режим добавлялся для управления составом.",
+        "en": "User saw60+GB proot. This is not the APK size; selective mode was added to control contents."
+      }
+    },
+    {
+      "id": "jobs-backup-runtime-dependencies",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "После переноса есть история AI, но агент не запускается",
+        "en": "AI history transfers but the agent does not start"
+      },
+      "symptom": {
+        "ru": "Восстановлены данные, но нет runtime/библиотек/исполняемого файла.",
+        "en": "Data restored but runtime/libraries/executable are missing."
+      },
+      "check": {
+        "ru": "Сверьте выбранные компоненты и версию/архитектуру Node, Python и CLI.",
+        "en": "Check selected components and Node/Python/CLI versions and architecture."
+      },
+      "solution": {
+        "ru": "Переносите данные вместе с требуемым runtime либо установите совместимые инструменты отдельно. Проверка архива и наличие папки агента не доказывают его запуск.",
+        "en": "Transfer data with required runtime or install compatible tools separately. Archive checks and an agent directory do not prove launchability."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/BACKUP-RESTORE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "При выборочном переносе обсуждалась чистая среда с одним Python; копирование авторизации не заменяет программу.",
+        "en": "Selective-transfer discussion included a fresh environment with only Python; copying auth does not install the application."
+      }
+    },
+    {
+      "id": "jobs-backup-dialog-cancel",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "files",
+      "context": "all",
+      "title": {
+        "ru": "Бэкап прервался от случайного тапа вне окна",
+        "en": "Backup cancelled by tapping outside its dialog"
+      },
+      "symptom": {
+        "ru": "Сканирование/копирование исчезают после внешнего нажатия.",
+        "en": "Scan/copy disappears after an outside tap."
+      },
+      "check": {
+        "ru": "Уточните версию и отличите закрытие окна от смерти app-процесса.",
+        "en": "Check version and distinguish dialog dismissal from app-process death."
+      },
+      "solution": {
+        "ru": "В обновлённом менеджере бэкапа внешний тап не закрывает его подменю. Для остановки используйте явную отмену; не считайте прерванный архив проверенным.",
+        "en": "Updated backup dialogs/subdialogs ignore outside taps. Use explicit cancellation; do not treat interrupted output as verified."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/RELEASE-v1.1.4.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Запрошено и внесено при улучшении менеджера; защита окна не предотвращает остановку Android.",
+        "en": "Requested and implemented during backup-manager improvements; dialog protection cannot prevent Android termination."
+      }
+    },
+    {
+      "id": "jobs-backup-progress",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "files",
+      "context": "all",
+      "title": {
+        "ru": "Сканирование бэкапа выглядит зависшим / неизвестно время",
+        "en": "Backup scan appears stuck / unknown completion time"
+      },
+      "symptom": {
+        "ru": "Файлов много, итоговый объём ещё неизвестен.",
+        "en": "Many files remain and total size is not yet known."
+      },
+      "check": {
+        "ru": "Проверьте меняющийся путь/этап, elapsed time и ошибки источника.",
+        "en": "Check changing path/stage, elapsed time and source errors."
+      },
+      "solution": {
+        "ru": "До известного общего объёма нужен indeterminate-индикатор. Время работы не является ETA; gzip/pigz меняют компрессию, но не устраняют ошибку чтения или нехватку места.",
+        "en": "Use an indeterminate indicator until total size is known. Elapsed time is not ETA; gzip/pigz cannot fix read errors or insufficient space."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/RELEASE-v1.1.3.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "В v1.1.3 добавлялись прогресс/выбор сжатия. pigz требует отдельной установки с согласия; реальное ускорение зависит от данных и CPU.",
+        "en": "v1.1.3 added progress/compression selection. pigz needs separately approved installation; actual gains depend on data/CPU."
+      }
+    },
+    {
+      "id": "jobs-keystore-transfer",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "Сохранённый SSH-пароль/passphrase не читается после переноса",
+        "en": "Saved SSH password/passphrase fails after migration"
+      },
+      "symptom": {
+        "ru": "Профиль и шифротекст есть, а Android Keystore ключ недоступен.",
+        "en": "Profile/ciphertext exist but the Android Keystore key is unavailable."
+      },
+      "check": {
+        "ru": "Различите обычное обновление поверх и новую установку/другое приложение.",
+        "en": "Distinguish an in-place update from a new installation/different app."
+      },
+      "solution": {
+        "ru": "Введите секрет повторно в нужном профиле. Копия JSON или HOME не переносит Android Keystore и runtime-разрешения; обычное обновление не означает их обязательной потери.",
+        "en": "Re-enter the secret in the correct profile. JSON/HOME copies cannot transfer Android Keystore or runtime permissions; in-place updates do not inherently lose them."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/SERVERS.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Ограничение подтверждено устройством механизма Keystore и описанием профилей; ключи и секреты в карточку не включаются.",
+        "en": "Keystore design and profile documentation establish the limitation; no private keys/secrets are included."
+      }
+    },
+    {
+      "id": "jobs-apk-update-identity",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "APK не устанавливается поверх / откат ниже versionCode",
+        "en": "APK cannot update in place / rollback versionCode too low"
+      },
+      "symptom": {
+        "ru": "Одинакового package name недостаточно для обновления.",
+        "en": "Matching package name alone is insufficient for updating."
+      },
+      "check": {
+        "ru": "Сравните package ID, сертификат, versionCode и ABI, а не только имя файла.",
+        "en": "Compare package ID, certificate, versionCode and ABI, not just filename."
+      },
+      "solution": {
+        "ru": "Используйте APK с тем же сертификатом и большим кодом. Для отката нужен прежний код приложения, пересобранный с повышенным versionCode; он не должен маскироваться под новую функцию.",
+        "en": "Use the same certificate and higher code. Rollback requires old source rebuilt with a higher versionCode, clearly identified as rollback."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/UPDATES.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Резервные пары создавались именно так. Нельзя предлагать удаление приложения как обязательный способ обычного обновления.",
+        "en": "Our rollback pairs use this mechanism. Uninstalling must not be presented as mandatory for ordinary updates."
+      }
+    },
+    {
+      "id": "jobs-update-partial-download",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "Загрузка обновления прервалась / SHA-256 не совпал",
+        "en": "Update download interrupted / SHA-256 mismatch"
+      },
+      "symptom": {
+        "ru": "APK скачан частично или не совпадает с release manifest.",
+        "en": "APK is partial or differs from release metadata."
+      },
+      "check": {
+        "ru": "Сверьте статус загрузки, размер, хеш, пакет и подпись до установки.",
+        "en": "Check download state, size, hash, package and signature before installation."
+      },
+      "solution": {
+        "ru": "Не устанавливайте непрошедший проверку файл. Повторите скачивание из проверенного источника; наличие автопроверки не означает автоматическую установку или докачку.",
+        "en": "Do not install a failed artifact. Download again from the verified source; automatic checking is neither automatic installation nor resumable downloading."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/UPDATES.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Наш updater отделяет скачивание, проверку и Android-подтверждение. Ошибка сети не означает потерю данных установленной версии.",
+        "en": "Our updater separates download, verification and Android confirmation. Network failure does not imply installed-data loss."
+      }
+    },
+    {
+      "id": "jobs-agent-probe",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "Agent не найден или недоступен: причины различаются",
+        "en": "Agent missing versus unavailable: different causes"
+      },
+      "symptom": {
+        "ru": "При ошибке подключения предлагается установка, хотя агент уже был.",
+        "en": "A connection error appears to require installation although the agent existed."
+      },
+      "check": {
+        "ru": "Разделите доступность порта, SSH-авторизацию, pinned host key, Python3.8+ и файл агента.",
+        "en": "Separate port reachability, SSH auth, pinned host key, Python3.8+ and agent-file presence."
+      },
+      "solution": {
+        "ru": "Используйте «Проверить состояние агента». Сбой SSH не доказывает отсутствие установки; исправляйте установленный этап, не переустанавливайте агент при каждом опросе.",
+        "en": "Use Check agent status. SSH failure does not prove missing installation; fix the failing stage instead of reinstalling on every poll."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/SERVERS.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "В серверном разделе проверка состояния отделена от установки; автоопрос не равен повторной установке.",
+        "en": "Server status checks are separate from installation; polling is not reinstallation."
+      }
+    },
+    {
+      "id": "jobs-server-media",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "Видео сервера не открывается, хотя локальная копия играет",
+        "en": "Server video fails while a local copy plays"
+      },
+      "symptom": {
+        "ru": "Плеер сообщает о недоступном/перемещённом файле или не начинает MP4.",
+        "en": "Player reports unavailable/moved file or cannot start an MP4."
+      },
+      "check": {
+        "ru": "Сверьте путь, доступность SSH-туннеля, HTTP Range и поддерживаемый Android кодек.",
+        "en": "Check path, SSH tunnel availability, HTTP Range and Android codec support."
+      },
+      "solution": {
+        "ru": "Используйте исправленный потоковый путь с поддержкой диапазонов; при неизвестном кодеке скачайте файл или используйте внешний плеер. ffprobe нужен для анализа, он не добавляет Android декодер.",
+        "en": "Use the corrected byte-range streaming path; for unsupported codecs, download or use an external player. ffprobe analyzes media but does not add Android decoders."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/SERVERS.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "verified-code",
+      "projectEvidence": {
+        "ru": "На записи экрана выявлялась проблема воспроизведения; исправление seek/Range отдельно от установки ffprobe. Loopback HTTP проходит внутри SSH-туннеля.",
+        "en": "Screen-recording playback exposed a streaming issue; seek/Range repair is separate from ffprobe installation. Loopback HTTP is carried through an SSH tunnel."
+      }
+    },
+    {
+      "id": "jobs-server-ui-refresh",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "Серверные папки/журналы мигают и страница прыгает наверх",
+        "en": "Server folders/logs flicker and page jumps to top"
+      },
+      "symptom": {
+        "ru": "Открытие папки/обновление метрик пересоздаёт видимую страницу.",
+        "en": "Opening a folder/updating metrics rebuilds the visible page."
+      },
+      "check": {
+        "ru": "Отличите обновление измерения от пересоздания всей иерархии и автофокуса ScrollView.",
+        "en": "Distinguish metric updates from full view rebuilding and ScrollView focus jumps."
+      },
+      "solution": {
+        "ru": "В исправлениях v1.1.6–1.1.9 данные обновляются на месте, одинаковый лог не переназначается, viewport сохраняется. Это отдельная проблема от OC-001.",
+        "en": "v1.1.6–1.1.9 update data in place, avoid reassigning unchanged logs and preserve viewport. This is separate from OC-001."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/RELEASE-v1.2.0.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "resolved",
+      "projectEvidence": {
+        "ru": "Пользователь подтвердил исчезновение серверного мигания, затем отдельно проверял прыжки навигации; это несколько путей одной карточки.",
+        "en": "User confirmed server flicker stopped, then separately tested navigation jumps; these are separate paths in one entry."
+      }
+    },
+    {
+      "id": "jobs-diagnostic-boundaries",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "В диагностике нет команды / заголовок показывает старую версию",
+        "en": "Diagnostics omit a command / heading shows an old version"
+      },
+      "symptom": {
+        "ru": "Действие в SSH не видно в журнале приложения, либо diagnostics v1.0.18 путает.",
+        "en": "An external SSH action is absent from app logs, or diagnostics v1.0.18 is misleading."
+      },
+      "check": {
+        "ru": "Сверьте actual APK version, уровень/паузу журнала и путь выполнения действия.",
+        "en": "Check actual APK version, log level/pause and where the action was executed."
+      },
+      "solution": {
+        "ru": "В v1.2.2 заголовок/сводка обновлены. Журнал фиксирует поддерживаемые события приложения, не весь transcript и не все действия вне него; для службы смотрите её журнал на сервере.",
+        "en": "v1.2.2 updates heading/summary. Logs capture supported app events, not a full transcript or every external action; inspect a service’s server-side logs separately."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/DIAGNOSTICS.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Перезапуск бота вне app-инструментов не обязан появляться в серверной диагностике. Она не является глобальным аудитом системы.",
+        "en": "Restarting a bot outside app tools need not appear in server diagnostics. This is not a global system audit."
+      }
+    },
+    {
+      "id": "jobs-sftp-performance",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "Отправка файлов на сервер слишком медленная",
+        "en": "Server uploads are too slow"
+      },
+      "symptom": {
+        "ru": "Последовательное ожидание каждого блока ограничивает скорость.",
+        "en": "Waiting for each block acknowledgment limits throughput."
+      },
+      "check": {
+        "ru": "Сверьте версию транспорта, latency, диск и отсутствие конкурирующего поиска/опроса.",
+        "en": "Check transport version, latency, disk and competing searches/polls."
+      },
+      "solution": {
+        "ru": "В v1.2.1 SFTP использует окно до8 блоков по одному соединению; очереди мониторинга/поиска разделены. Увеличение соединений само по себе не является исправлением.",
+        "en": "v1.2.1 uses up to8 in-flight SFTP blocks on one connection and separates monitor/search queues. More connections alone are not a fix."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/RELEASE-v1.2.1.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "resolved",
+      "projectEvidence": {
+        "ru": "Пользователь сообщил ускорение4–5раз на своём подключении. Это не универсальная гарантия и не доказательство такого же ускорения скачивания.",
+        "en": "User reported4–5× on their connection. Not a universal guarantee or proof of the same download gain."
+      }
+    },
+    {
+      "id": "jobs-editor-conflict",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "files",
+      "context": "all",
+      "title": {
+        "ru": "Редактор отказывается сохранить изменённый файл",
+        "en": "Editor refuses to save an externally modified file"
+      },
+      "symptom": {
+        "ru": "После открытия исходник изменился другой программой.",
+        "en": "Another program changed the source after it was opened."
+      },
+      "check": {
+        "ru": "Сравните исходный snapshot и текущий файл, сохраните свой текст отдельно.",
+        "en": "Compare the original snapshot with the current file; preserve your text separately."
+      },
+      "solution": {
+        "ru": "Не обходите конфликт перезаписью вслепую. Откройте актуальный файл и согласуйте правки; при ошибке наш редактор оставляет введённый текст в окне.",
+        "en": "Do not bypass conflicts with blind overwrite. Reopen the current file and reconcile changes; our editor keeps typed text in its window on failure."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/SERVERS.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Проверка внешнего изменения — защита, не дефект. При убийстве app-процесса несохранённый RAM-черновик не гарантирован.",
+        "en": "External-change detection is protection, not a defect. Unsaved RAM drafts are not guaranteed after app-process death."
+      }
+    },
+    {
+      "id": "jobs-package-active-shell",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "Установка пакета попала в Codex/работающую команду",
+        "en": "Package installation was sent to Codex/a running task"
+      },
+      "symptom": {
+        "ru": "APT-команда напечатана в интерактивном приложении вместо свободного Bash.",
+        "en": "An APT command was typed into an interactive app rather than an idle Bash."
+      },
+      "check": {
+        "ru": "Проверьте фактическую программу в выбранной вкладке и нужное окружение.",
+        "en": "Check the actual foreground program and intended environment."
+      },
+      "solution": {
+        "ru": "Выберите свободную оболочку или отдельную сессию того же окружения после предупреждения. Пакеты устанавливаются в окружение, не в отдельную вкладку; закрытие вкладки их не удаляет.",
+        "en": "Choose an idle shell or a separate session of the same environment after the warning. Packages belong to the environment, not a tab, and persist after tab closure."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Пользователь выбрал оба варианта подтверждения. Приложение не должно угадывать безопасность прерывания Codex/сборки.",
+        "en": "User requested both confirmation options. The app must not guess whether interrupting Codex/builds is safe."
+      }
+    },
+    {
+      "id": "jobs-gradle-lint-toolchain",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "build",
+      "context": "all",
+      "title": {
+        "ru": "Kotlin metadata / JNA aarch64 при локальном Lint",
+        "en": "Kotlin metadata / JNA aarch64 during local Lint"
+      },
+      "symptom": {
+        "ru": "Lint-инструмент не совместим с частью локального toolchain.",
+        "en": "Lint tooling is incompatible with part of the local toolchain."
+      },
+      "check": {
+        "ru": "Найдите итоговую упавшую задачу: compile, lint или package; не судите по одному красному сообщению.",
+        "en": "Identify the actual failing task: compile, lint or package; do not infer from one red line."
+      },
+      "solution": {
+        "ru": "Используйте согласованные версии инструментов и релевантные проверки. BUILD SUCCESSFUL не даёт права объявить полный Lint чистым, если он не выполнен. Не обновляйте общий SDK ради случайного обхода.",
+        "en": "Use compatible tooling and relevant checks. BUILD SUCCESSFUL does not prove clean full Lint if it was not run. Do not modify the shared SDK for an ad-hoc workaround."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/VALIDATION-v1.2.2.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "В наших ARM64 receipts отмечены ограничения JNA/Kotlin/custom lint; сборка APK и проверка Lint разделены.",
+        "en": "Our ARM64 receipts document JNA/Kotlin/custom-lint limits; APK building and Lint are distinct checks."
+      }
+    },
+    {
+      "id": "jobs-assistant-import-api",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "build",
+      "context": "all",
+      "title": {
+        "ru": "Сборка помощника: ambiguous ClipboardManager / getApplication",
+        "en": "Assistant build errors: ambiguous ClipboardManager / getApplication"
+      },
+      "symptom": {
+        "ru": "Java wildcard-импорты конфликтуют; Robolectric API отсутствует.",
+        "en": "Java wildcard imports conflict; a Robolectric API is unavailable."
+      },
+      "check": {
+        "ru": "Прочитайте javac-ошибку и фактическую версию зависимости до изменения production логики.",
+        "en": "Read javac output and actual dependency version before changing production logic."
+      },
+      "solution": {
+        "ru": "Для ClipboardManager используйте явный android.content импорт; для установленной версии Robolectric используйте её RuntimeEnvironment.application. Не переносите это как правило для всех будущих версий.",
+        "en": "Use an explicit android.content ClipboardManager import; use RuntimeEnvironment.application for the installed Robolectric version. This is not a rule for every future release."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "verified-code",
+      "projectEvidence": {
+        "ru": "Мои ошибки подготовки библиотеки: tests.log и tests-final.log v1.2.3 зафиксировали оба сбоя; последующие проверки прошли. Пользовательские данные не менялись.",
+        "en": "My library implementation errors: v1.2.3 tests.log/tests-final.log record both failures; subsequent checks passed. No user data changed."
+      }
+    },
+    {
+      "id": "jobs-assistant-ui-loop",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "build",
+      "context": "all",
+      "title": {
+        "ru": "UI-тест проверяет callback раньше обработки клика",
+        "en": "UI test asserts before the click callback is processed"
+      },
+      "symptom": {
+        "ru": "После performClick результат ещё не обновлён в Robolectric.",
+        "en": "After performClick, Robolectric has not delivered the result yet."
+      },
+      "check": {
+        "ru": "Различите ошибку реального обработчика и непроигранную main-looper очередь теста.",
+        "en": "Distinguish handler failure from an undrained test main-looper queue."
+      },
+      "solution": {
+        "ru": "Обработайте main looper перед проверкой ожидаемого callback и проверяйте отсутствие вызова до подтверждения. Не добавляйте sleep в production ради теста.",
+        "en": "Drain the main looper before asserting the expected callback and verify it stays absent before confirmation. Do not add production sleeps to satisfy a test."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "verified-code",
+      "projectEvidence": {
+        "ru": "При подготовке теста вставки библиотеки исправлялась именно проверка асинхронного AlertDialog callback, не логика отправки команды.",
+        "en": "Library-insertion testing corrected an asynchronous AlertDialog assertion, not command-sending logic."
+      }
+    },
+    {
+      "id": "jobs-assistant-apk-padding",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "build",
+      "context": "all",
+      "title": {
+        "ru": "APK вырос на мегабайты без изменения состава файлов",
+        "en": "APK grows by megabytes without added file content"
+      },
+      "symptom": {
+        "ru": "Инкрементальная упаковка оставила неиспользуемые участки ZIP.",
+        "en": "Incremental packaging left unused ZIP regions."
+      },
+      "check": {
+        "ru": "Сравните активные записи/сжатые размеры и общий размер, проверьте ZIP/подпись.",
+        "en": "Compare active entries/compressed sizes with total size; check ZIP/signature."
+      },
+      "solution": {
+        "ru": "Пересоберите только собственное состояние packageRelease и финальный APK. Затем заново проверьте подпись/SHA и совпадение активных файлов; не очищайте проект или пользовательские данные.",
+        "en": "Recreate only owned packageRelease state and the final APK. Recheck signature/SHA and active-entry identity; do not clear projects or user data."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "verified-code",
+      "projectEvidence": {
+        "ru": "Моя промежуточная v1.2.7:39МБ против36,5МБ,998 активных файлов совпали побайтно после перепаковки. Финальный APK проверен повторно.",
+        "en": "My intermediate v1.2.7:39MB versus36.5MB;998 active files matched after repacking. Final APK was reverified."
+      }
+    },
+    {
+      "id": "jobs-assistant-stale-stage",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "build",
+      "context": "all",
+      "title": {
+        "ru": "Удалённая функция остаётся в staging/APK",
+        "en": "Removed functionality remains in staging/APK"
+      },
+      "symptom": {
+        "ru": "Копирование поверх старой сборочной папки не удаляет старые файлы.",
+        "en": "Copying over an old build directory does not remove stale files."
+      },
+      "check": {
+        "ru": "Сравните исходное дерево, staging, assets и все DEX; одного исходного diff мало.",
+        "en": "Compare source tree, staging, assets and every DEX; source diff alone is insufficient."
+      },
+      "solution": {
+        "ru": "Для проверочного отката используйте чистую изолированную копию нужного исходного дерева и проверяйте отсутствие классов/asset. Удаляйте только подтверждённые собственные build-файлы.",
+        "en": "Build rollback from a clean isolated copy of the required source tree and verify missing classes/assets. Remove only confirmed owned build files."
+      },
+      "caution": {
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
+          "kind": "project"
+        }
+      ],
+      "reviewed": "2026-10-16",
+      "projectStatus": "guidance",
+      "projectEvidence": {
+        "ru": "Риск выявлен в prepare-java-verification.py с dirs_exist_ok. Поэтому резерв без библиотеки собирался отдельно и проверялся по DEX/asset.",
+        "en": "Risk identified in prepare-java-verification.py using dirs_exist_ok. Rollback without the library was built separately and checked across DEX/assets."
+      }
+    }
+  ]
+}

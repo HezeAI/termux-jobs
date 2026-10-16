@@ -26,10 +26,10 @@ final class ServerConnection implements AutoCloseable {
         b.environment().put("LC_ALL","C");b.redirectError(new File("/dev/null"));return b;
     }
     private SshPasswordBroker password(ProcessBuilder b)throws Exception{
-        if(!profile.auth.equals("password"))return null;
+        if(!profile.auth.equals("password")&&!(profile.auth.equals("key")&&!profile.encrypted.isEmpty()))return null;
         if(profile.encrypted.isEmpty())throw new IOException("PASSWORD_REQUIRED");
         char[] secret=SshPasswordVault.decrypt(profile.session());SshPasswordBroker broker;
-        try{broker=new SshPasswordBroker(activity,secret);}finally{Arrays.fill(secret,'\0');}
+        try{broker=new SshPasswordBroker(activity,secret,profile.auth.equals("key")?identity():null);}finally{Arrays.fill(secret,'\0');}
         try{File askpass=SessionShell.prepareAskpass(activity.getFilesDir(),profile.session(),activity.getApplicationInfo().sourceDir);
             b.environment().put("SSH_ASKPASS",askpass.getAbsolutePath());b.environment().put("SSH_ASKPASS_REQUIRE","force");b.environment().put("DISPLAY",":0");b.environment().put("TERMUX_JOBS_SSH_SOCKET",broker.address);return broker;
         }catch(Exception e){broker.close();throw e;}
@@ -37,9 +37,9 @@ final class ServerConnection implements AutoCloseable {
     List<String> ssh(){
         if(!ServerProfiles.valid(profile))throw new IllegalArgumentException("INVALID_PROFILE");
         List<String> c=new ArrayList<>(Arrays.asList(bin("ssh"),"-F","/dev/null","-T","-o","ConnectTimeout=10","-o","ServerAliveInterval=10","-o","ServerAliveCountMax=2","-o","StrictHostKeyChecking=yes","-o","UserKnownHostsFile="+knownHosts(),"-o","GlobalKnownHostsFile=/dev/null","-o","ControlMaster=no","-o","ControlPath=none","-o","ForwardAgent=no","-o","ClearAllForwardings=yes","-o","PermitLocalCommand=no"));
-        c.addAll(Arrays.asList("-o",profile.auth.equals("password")?"BatchMode=no":"BatchMode=yes"));
+        c.addAll(Arrays.asList("-o",(profile.auth.equals("password")||profile.auth.equals("key")&&!profile.encrypted.isEmpty())?"BatchMode=no":"BatchMode=yes"));
         if(profile.auth.equals("password"))c.addAll(Arrays.asList("-o","PreferredAuthentications=password","-o","PubkeyAuthentication=no","-o","KbdInteractiveAuthentication=no","-o","NumberOfPasswordPrompts=1"));
-        if(profile.auth.equals("key")){c.addAll(Arrays.asList("-o","IdentitiesOnly=yes","-i",identity()));}
+        if(profile.auth.equals("key")){c.addAll(Arrays.asList("-o","IdentitiesOnly=yes","-i",identity(),"-o","PreferredAuthentications=publickey","-o","PasswordAuthentication=no","-o","KbdInteractiveAuthentication=no","-o","NumberOfPasswordPrompts=1"));}
         c.addAll(Arrays.asList("-p",Integer.toString(profile.port),"-l",profile.user));return c;
     }
     private String identity(){return profile.identity.startsWith("~/")?TermuxConstants.TERMUX_HOME_DIR_PATH+profile.identity.substring(1):profile.identity;}
@@ -135,13 +135,16 @@ final class ServerConnection implements AutoCloseable {
     interface DownloadProgress {void received(long bytes);}
     void download(String path,File target,long max)throws Exception{download(path,target,max,bytes->{});}
     void download(String path,File target,long max,DownloadProgress progress)throws Exception{
+        try(OutputStream out=new FileOutputStream(target)){download(path,out,max,progress);}catch(Exception e){target.delete();throw e;}
+    }
+    void download(String path,OutputStream out,long max,DownloadProgress progress)throws Exception{
         if(path.indexOf('\0')>=0||path.indexOf('\n')>=0)throw new IOException("INVALID_PATH");
         List<String> args=ssh();args.addAll(Arrays.asList("--",profile.host,"exec cat -- "+SessionShell.quote(path)));
         ProcessBuilder b=builder(args);SshPasswordBroker broker=password(b);Process owned=null;ScheduledFuture<?> timer=null;
         try{owned=b.start();process=owned;Process child=owned;timer=watchdog.schedule(child::destroy,10,TimeUnit.MINUTES);if(closed)owned.destroy();long total=0;
-            try(OutputStream unused=owned.getOutputStream();InputStream in=owned.getInputStream();OutputStream out=new FileOutputStream(target)){unused.close();byte[] buf=new byte[65536];int n;while((n=in.read(buf))!=-1){if(closed)throw new IOException("CANCELLED");total+=n;if(total>max)throw new IOException("FILE_LIMIT");out.write(buf,0,n);progress.received(total);}}
+            try(OutputStream unused=owned.getOutputStream();InputStream in=owned.getInputStream()){unused.close();byte[] buf=new byte[65536];int n;while((n=in.read(buf))!=-1){if(closed)throw new IOException("CANCELLED");total+=n;if(total>max)throw new IOException("FILE_LIMIT");out.write(buf,0,n);progress.received(total);}}
             if(owned.waitFor()!=0||closed)throw new IOException("DOWNLOAD_FAILED");
-        }catch(Exception e){target.delete();throw e;}finally{if(timer!=null)timer.cancel(false);if(owned!=null)owned.destroy();process=null;if(broker!=null)broker.close();}
+        }finally{if(timer!=null)timer.cancel(false);if(owned!=null)owned.destroy();process=null;if(broker!=null)broker.close();}
     }
     ServerSftp sftp()throws Exception{
         ServerDiagnostics.Trace trace=ServerDiagnostics.begin(profile,ServerDiagnostics.Op.SFTP_CONNECT);Exception failure=null;
