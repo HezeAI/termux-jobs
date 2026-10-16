@@ -461,3 +461,19 @@ The gate does not change installer/hash/signer validation or terminal lifecycle.
 ## Диагностика v1.2.2
 
 Общий DiagnosticsPanel для сессий и серверов: сводка/события, ограниченное кольцо, пауза и экспорт. Серверные события типизированы, без команд/путей/полезной нагрузки; получение отчёта не создаёт RPC. Состояние паузы и опроса вне вкладки сохраняется отдельно в профиле. [Подробности](DIAGNOSTICS.md).
+
+## Локальная v1.3.1
+
+Выбор в chooseInputCommand вызывает openInputEntry, а не insertIntoCurrent.
+Только явная кнопка вставки использует прежний путь текущего черновика.
+Preview переиспользует previewBody; операции библиотеки защищены isWritable,
+удаление проходит через confirm. Отправка PTY/журнал команд не вызываются.
+Asset остаётся schema1, пользовательские форматы не меняются.
+
+### Star preview navigation (v1.3.2)
+
+The preview receives a callback that re-shows the existing picker and restores
+its ListView position. Tab/query state stays in that picker; no persistent data
+or PTY calls are added. Positive Back and preview cancellation share this path.
+Insert/edit/delete retain their existing separate actions. The catalog adds
+three sourced static entries; no runtime internet search or automatic fixes.

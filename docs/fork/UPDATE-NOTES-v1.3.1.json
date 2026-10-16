@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "Звёздочка в терминале: команда или заметка открывается полностью; редактирование, вставка в текущую сессию без отправки и удаление с подтверждением.",
+    "Ошибки и решения:126 карточек (+12),8 прежних дополнены после сверки форумных случаев с первоисточниками.",
+    "Справа от названия справочника добавлено «Собрано с помощью AI!»."
+  ],
+  "en": [
+    "Terminal star menu: commands and notes open in full, with edit, insert into the current session without sending, and confirmed delete.",
+    "Errors and solutions:126 entries (+12),8 existing entries extended after checking forum cases against primary sources.",
+    "Added a localized Compiled with AI! credit beside the library title."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние com.termux и сертификат, versionCode1084 выше1.3.0/1083. Форматы данных не меняются, очистка не требуется.",
+      "Нажатие карточки в звёздочке теперь открывает просмотр; для вставки нажмите отдельное действие."
+    ],
+    "en": [
+      "Same com.termux package and signing certificate, versionCode1084 above1.3.0/1083. No data format changes or reset required.",
+      "Tapping a star-menu card now opens a preview; insertion requires the separate action."
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "version": "2026.10.16-project-cases-1",
+  "version": "2026.10.16-xda-review-1",
   "entries": [
     {
       "id": "termux-shared-exec",
@@ -18,8 +18,8 @@
         "en": "Direct execution of a Bash script in shared storage fails."
       },
       "check": {
-        "ru": "Уточните путь и язык скрипта. Эта карточка не про файл в HOME.",
-        "en": "Check the path and interpreter. This entry is not for a file in HOME."
+        "ru": "Уточните путь и язык скрипта. Эта карточка не про файл в HOME.\n\nЧтение shell-скрипта интерпретатором и прямой запуск бинарника на общей памяти — разные операции. Копирование файла не добавляет поддержку Unix-прав накопителю.",
+        "en": "Check the path and interpreter. This entry is not for a file in HOME.\n\nReading a script through an interpreter and executing a binary on shared storage are different operations. Copying a file does not add Unix permission support to the storage."
       },
       "solution": {
         "ru": "Для доверенного Bash-скрипта используйте bash с путём к файлу либо скопируйте его в HOME. chmod на общей памяти не снимает noexec.",
@@ -38,6 +38,10 @@
         {
           "url": "https://www.reddit.com/r/termux/comments/klr84y/",
           "kind": "community"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=7540"
         }
       ],
       "reviewed": "2026-10-16"
@@ -58,8 +62,8 @@
         "en": "Download or ~/storage/shared is inaccessible."
       },
       "check": {
-        "ru": "Проверьте разрешение доступа к файлам в настройках Android и существование пути.\n\nВ выборе «Память устройства» проверьте Android-разрешение; из Ubuntu уточните bind-путь /sdcard, не предполагая видимость /storage напрямую.",
-        "en": "Check Android file permissions and whether the path exists.\n\nIn Device storage selection, check Android permission; inside Ubuntu verify the /sdcard bind rather than assuming /storage is visible."
+        "ru": "Проверьте разрешение доступа к файлам в настройках Android и существование пути.\n\nВ выборе «Память устройства» проверьте Android-разрешение; из Ubuntu уточните bind-путь /sdcard, не предполагая видимость /storage напрямую.\n\nОбщая память и внешняя SD-карта могут требовать разных способов доступа. Сверьте фактическое разрешение и путь; восстановление разрешения в одном сообщении форума не доказывает универсальное решение.",
+        "en": "Check Android file permissions and whether the path exists.\n\nIn Device storage selection, check Android permission; inside Ubuntu verify the /sdcard bind rather than assuming /storage is visible.\n\nShared storage and removable SD cards may need different access methods. Check actual permission and path; one reported permission reset is not a universal fix."
       },
       "solution": {
         "ru": "Запустите termux-setup-storage в Termux и подтвердите Android-разрешение. Приватные каталоги других приложений это не открывает.\n\nЛокальная v1.2.9 проверяет доступ и продолжает выбор после grant; отказ открывает пояснение/настройки. Это относится к ключам и передаче, а не только к termux-setup-storage.",
@@ -78,6 +82,10 @@
         {
           "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
           "kind": "project"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=12500"
         }
       ],
       "reviewed": "2026-10-16",
@@ -103,8 +111,8 @@
         "en": "A library or symbol cannot be found."
       },
       "check": {
-        "ru": "Запишите полное имя библиотеки, команду и недавние обновления.",
-        "en": "Record the library name, command and recent updates."
+        "ru": "Запишите полное имя библиотеки, команду и недавние обновления.\n\nУстановка пакета в Termux не делает его доступным файловому менеджеру, Magisk-shell или ADB-shell. Сначала сравните UID, PATH, загрузчик и выбранное окружение.",
+        "en": "Record the library name, command and recent updates.\n\nInstalling a Termux package does not make it available to a file manager, Magisk shell or ADB shell. Compare UID, PATH, loader and environment first."
       },
       "solution": {
         "ru": "Несогласованные версии пакетов могут требовать полного pkg upgrade после проверки репозитория. Чужие glibc-бинарники требуют другого решения.",
@@ -119,6 +127,10 @@
         {
           "url": "https://github.com/termux/termux-packages/wiki/Termux-execution-environment",
           "kind": "official"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=8940"
         }
       ],
       "reviewed": "2026-10-16"
@@ -803,8 +815,8 @@
         "en": "mount, networking or privileged operations fail even as root."
       },
       "check": {
-        "ru": "Проверьте способ запуска окружения и требуемую возможность ядра.",
-        "en": "Check the environment launch method and required kernel capability."
+        "ru": "Проверьте способ запуска окружения и требуемую возможность ядра.\n\nСсылки на запись /system, mount и управление ядром относятся к другим условиям. Имитация root в proot не предоставляет эти права Android.\n\nПоддержка OCI-образов не означает поддержку Docker daemon, KVM или изоляции ядра. Они зависят от ядра Android и реальных прав; установка пакета внутри proot не добавляет эти возможности.",
+        "en": "Check the environment launch method and required kernel capability.\n\nInstructions for writing /system, mounting filesystems and controlling the kernel require different conditions. Emulated proot root does not grant those Android privileges.\n\nOCI image support does not imply Docker daemon, KVM or kernel isolation support. These depend on the Android kernel and real permissions; installing a package inside proot does not add them."
       },
       "solution": {
         "ru": "Root внутри proot — эмуляция UID. Нужен режим программы без привилегий либо другая среда для требуемых возможностей.",
@@ -819,6 +831,10 @@
         {
           "url": "https://github.com/termux/proot-distro#limitations",
           "kind": "official"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=7540"
         }
       ],
       "reviewed": "2026-10-16"
@@ -882,8 +898,8 @@
         "en": "An online instruction does not match the installed version."
       },
       "check": {
-        "ru": "Прочитайте локальную справку и список установленных окружений.\n\nПри backup/restore сверяйте classic installed-rootfs и modern containers/rootfs, alias и поддерживаемые параметры команды.",
-        "en": "Read local help and the installed environment list.\n\nFor backup/restore, distinguish classic installed-rootfs from modern containers/rootfs, aliases and supported command options."
+        "ru": "Прочитайте локальную справку и список установленных окружений.\n\nПри backup/restore сверяйте classic installed-rootfs и modern containers/rootfs, alias и поддерживаемые параметры команды.\n\nУниверсальные команды из старой темы не гарантируют совместимости с текущим CLI. Проверяйте установленную версию, alias, layout и поддерживаемые параметры до переноса инструкции.",
+        "en": "Read local help and the installed environment list.\n\nFor backup/restore, distinguish classic installed-rootfs from modern containers/rootfs, aliases and supported command options.\n\nGeneric commands from an older thread do not guarantee current CLI compatibility. Check installed version, alias, storage layout and supported flags before adapting instructions."
       },
       "solution": {
         "ru": "Используйте синтаксис именно установленной версии. Новая документация OCI не описывает все старые версии v4.\n\nИспользуйте механизм backup/restore своей версии proot-distro; современное отдельное восстановление не переносите слепо на legacy. Наличие каталога не доказывает совместимость архива.",
@@ -902,6 +918,14 @@
         {
           "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/USAGE.md",
           "kind": "project"
+        },
+        {
+          "kind": "official",
+          "url": "https://github.com/termux/proot-distro"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=7320"
         }
       ],
       "reviewed": "2026-10-16",
@@ -2881,8 +2905,8 @@
         "en": "A process was killed with SIGKILL, including inside proot."
       },
       "check": {
-        "ru": "Проверьте журналы Android, память и совпадение со сворачиванием приложения.",
-        "en": "Check Android logs, memory pressure and whether backgrounding triggers termination."
+        "ru": "Проверьте журналы Android, память и совпадение со сворачиванием приложения.\n\nСам signal 9 не устанавливает причину: возможны ограничения фоновых процессов, чрезмерной нагрузки и нехватка памяти. Уточните Android/прошивку и доступные системные журналы перед выбором меры; универсального переключателя для всех версий нет.",
+        "en": "Check Android logs, memory pressure and whether backgrounding triggers termination.\n\nSignal 9 alone does not establish the cause: background-process limits, excessive resource usage or memory pressure may be involved. Check Android/ROM and available system logs before selecting a remedy; no universal toggle covers every version."
       },
       "solution": {
         "ru": "Для Termux на Android проверьте ограничения фоновой работы и phantom processes по инструкции авторов для вашей версии ОС.",
@@ -3062,8 +3086,8 @@
         "en": "A graphical application cannot connect to the X server."
       },
       "check": {
-        "ru": "Сверьте DISPLAY, запущенный X-сервер и доступ к его сокету из proot.",
-        "en": "Check DISPLAY, the running X server and access to its socket from proot."
+        "ru": "Сверьте DISPLAY, запущенный X-сервер и доступ к его сокету из proot.\n\nПосле восстановления соединения слишком крупный интерфейс проверяется через DPI X11 и настройки рабочего окружения. Это отдельная задача, а не повод переустанавливать rootfs.",
+        "en": "Check DISPLAY, the running X server and access to its socket from proot.\n\nOnce connected, oversized UI should be investigated through X11 DPI and desktop settings. This is separate from connectivity and does not justify reinstalling the rootfs."
       },
       "solution": {
         "ru": "Для Termux:X11 используйте общий tmp при входе в proot и тот же DISPLAY, что у сервера; проверьте синтаксис своей версии proot-distro.",
@@ -3078,6 +3102,14 @@
         {
           "url": "https://github.com/termux/termux-x11#using-with-proot-environment",
           "kind": "official"
+        },
+        {
+          "kind": "official",
+          "url": "https://github.com/termux/termux-x11#font-or-scaling-is-too-big"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=7540"
         }
       ],
       "reviewed": "2026-10-16"
@@ -3967,14 +3999,22 @@
         "en": "v1.1.2 marks/disables an unreadable group separately and avoids treating .l2s as an ordinary directory. A selected-source failure still blocks backup readiness."
       },
       "caution": {
-        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.",
-        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes."
+        "ru": "Опыт Termux Job’s; применимость зависит от версии приложения и выбранной среды. Не выполняйте сброс данных или остановку чужих процессов по этой карточке.\n\nВ стороннем скрипте проверьте ignore-failed-read: GNU tar с этим параметром может пропустить недоступные/исчезнувшие файлы без неуспешного кода завершения. Корректный gzip и список tar подтверждают целостность полученного архива, но не полноту источника.",
+        "en": "Termux Job’s experience; applicability depends on app version and selected environment. This entry does not authorize data resets or stopping unrelated processes.\n\nInspect third-party scripts for ignore-failed-read: GNU tar can skip unreadable/missing files without failing the exit status. Valid gzip and tar structure show archive integrity, not source completeness."
       },
       "command": "",
       "sources": [
         {
           "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/RELEASE-v1.1.2.md",
           "kind": "project"
+        },
+        {
+          "kind": "official",
+          "url": "https://www.gnu.org/software/tar/manual/html_node/Ignore-Failed-Read.html"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=15100"
         }
       ],
       "reviewed": "2026-10-16",
@@ -4247,8 +4287,8 @@
         "en": "Matching package name alone is insufficient for updating."
       },
       "check": {
-        "ru": "Сравните package ID, сертификат, versionCode и ABI, а не только имя файла.",
-        "en": "Compare package ID, certificate, versionCode and ABI, not just filename."
+        "ru": "Сравните package ID, сертификат, versionCode и ABI, а не только имя файла.\n\nДля дополнений Termux тоже требуется совместимый сертификат. Старый совет переподписать APK не является гарантией обновления с сохранением данных; перед сменой источника нужна проверка совместимости.",
+        "en": "Compare package ID, certificate, versionCode and ABI, not just filename.\n\nTermux add-ons also need a compatible certificate. Old advice to re-sign APKs does not guarantee a data-preserving update; verify compatibility before changing the installation source."
       },
       "solution": {
         "ru": "Используйте APK с тем же сертификатом и большим кодом. Для отката нужен прежний код приложения, пересобранный с повышенным versionCode; он не должен маскироваться под новую функцию.",
@@ -4263,6 +4303,14 @@
         {
           "url": "https://github.com/HezeAI/termux-jobs/blob/v1.2.2/docs/fork/UPDATES.md",
           "kind": "project"
+        },
+        {
+          "kind": "official",
+          "url": "https://github.com/termux/termux-boot"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=2980"
         }
       ],
       "reviewed": "2026-10-16",
@@ -4895,6 +4943,642 @@
         "ru": "Риск выявлен в prepare-java-verification.py с dirs_exist_ok. Поэтому резерв без библиотеки собирался отдельно и проверялся по DEX/asset.",
         "en": "Risk identified in prepare-java-verification.py using dirs_exist_ok. Rollback without the library was built separately and checked across DEX/assets."
       }
+    },
+    {
+      "id": "termux-boot-start",
+      "environments": [
+        "termux"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "После перезагрузки скрипт Termux:Boot не запускается",
+        "en": "Termux:Boot script does not run after reboot"
+      },
+      "symptom": {
+        "ru": "Вручную скрипт работает, после загрузки Android — нет.",
+        "en": "The script works manually but not after Android boots."
+      },
+      "check": {
+        "ru": "Отделите загрузку Android от открытия терминала. Проверьте однократный запуск Boot, папку ~/.termux/boot и сертификаты приложений.",
+        "en": "Distinguish Android boot from opening a terminal. Check the initial Boot app launch, ~/.termux/boot and matching app certificates."
+      },
+      "solution": {
+        "ru": "По официальной инструкции откройте установленное совместимое дополнение Boot хотя бы один раз и поместите проверенный скрипт в его каталог. Отдельно проверьте ограничения фоновой работы производителя.",
+        "en": "Follow the official instructions: open a compatible installed Boot add-on at least once and place the verified script in its boot directory. Separately check vendor background restrictions."
+      },
+      "caution": {
+        "ru": "Готовое дополнение с другим сертификатом может не подходить форку. Wake lock не гарантирует защиту от всех остановок Android; не удаляйте текущую среду ради проверки.",
+        "en": "An add-on with another certificate may not work with the fork. A wake lock does not prevent every Android process stop; do not delete the current environment just to test this."
+      },
+      "command": "",
+      "sources": [
+        {
+          "kind": "official",
+          "url": "https://github.com/termux/termux-boot#how-to-use"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=2980"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-services-start",
+      "environments": [
+        "termux"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "runit: служба установлена, но не запускается",
+        "en": "runit: an installed service does not start"
+      },
+      "symptom": {
+        "ru": "После установки termux-services нет ожидаемой службы или она остаётся down.",
+        "en": "After installing termux-services the service is absent or remains down."
+      },
+      "check": {
+        "ru": "Проверьте, запущен ли service-daemon, существует ли профиль и включена ли служба. Читайте $PREFIX/var/log/sv/<service>/current.",
+        "en": "Check service-daemon, the service profile and its enabled state. Inspect $PREFIX/var/log/sv/<service>/current."
+      },
+      "solution": {
+        "ru": "Документация предлагает открыть новую оболочку после установки termux-services. Для выбранной службы различайте sv-enable (включение), sv up (запуск) и файл down (отключение).",
+        "en": "The documentation calls for a new shell after installing termux-services. Distinguish sv-enable (enable), sv up (start), and a down file (disabled) for the specific service."
+      },
+      "caution": {
+        "ru": "Это управление службами Termux, а не systemd в Ubuntu/proot. Не применяйте остановку всех процессов; сначала выясните ошибку конкретной службы.",
+        "en": "This manages Termux services, not systemd in Ubuntu/proot. Do not stop every process; inspect the specific service failure first."
+      },
+      "command": "",
+      "sources": [
+        {
+          "kind": "official",
+          "url": "https://github.com/termux/termux-services"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=13280"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-incoming-ssh",
+      "environments": [
+        "termux"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "SSH к телефону: клиент работает, а вход в Termux нет",
+        "en": "SSH into the phone fails although outgoing SSH works"
+      },
+      "symptom": {
+        "ru": "С телефона удаётся войти на VPS, но другое устройство не подключается к самому Termux.",
+        "en": "The phone can connect to a VPS, but another device cannot connect to Termux itself."
+      },
+      "check": {
+        "ru": "Проверьте входящий sshd, адрес телефона, фактический порт и способ входа. Исходящий SSH-клиент не запускает сервер.",
+        "en": "Check the incoming sshd, phone address, effective port and authentication. An outgoing SSH client does not start the server."
+      },
+      "solution": {
+        "ru": "У Termux порт sshd обычно8022, но настройка могла измениться. Для пароля он задаётся через passwd; для ключа публичная часть разрешается в authorized_keys. Сверьте конфигурацию и нужного пользователя.",
+        "en": "Termux sshd normally uses port8022, but configuration may change it. Set a password with passwd for password login, or authorize the public key in authorized_keys. Verify configuration and the intended user."
+      },
+      "caution": {
+        "ru": "Это вход в Termux, не в Ubuntu и не root Android. Не открывайте доступ в интернет без необходимости и не отключайте проверку ключа сервера.",
+        "en": "This logs into Termux, not Ubuntu or Android root. Do not expose it to the internet unnecessarily or disable host-key verification."
+      },
+      "command": "",
+      "sources": [
+        {
+          "kind": "official",
+          "url": "https://github.com/termux/termux-packages/blob/master/packages/openssh/sshd_config.patch"
+        },
+        {
+          "kind": "official",
+          "url": "https://github.com/termux/termux-packages/discussions/18318"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=12180"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "ssh-reexec-legacy",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "Старый sshd: re-exec requires execution with an absolute path",
+        "en": "Older sshd: re-exec requires execution with an absolute path"
+      },
+      "symptom": {
+        "ru": "При запуске появляется указанная ошибка, а не ошибка пароля или сети.",
+        "en": "Starting the server produces this error rather than a password or network failure."
+      },
+      "check": {
+        "ru": "Проверьте версию OpenSSH и фактический путь команды. Условие ошибки есть в исходниках8.4p1; не переносите его на все современные версии.",
+        "en": "Check the OpenSSH version and actual executable path. The check exists in8.4p1 source; do not assume every modern version behaves identically."
+      },
+      "solution": {
+        "ru": "Если именно эта старая версия требует абсолютный argv[0], укажите полный путь к её sshd. В Termux он находится под PREFIX/bin, в другой системе путь нужно определить отдельно.",
+        "en": "If the affected older version requires an absolute argv[0], invoke that sshd by its full path. Termux uses PREFIX/bin; determine the correct path separately on other systems."
+      },
+      "caution": {
+        "ru": "Не подменяйте бинарник файлом с форума и не используйте /sbin/sshd наугад. Запуск службы меняет состояние системы и требует вашего решения.",
+        "en": "Do not replace the binary with a forum attachment or guess /sbin/sshd. Starting a service changes system state and requires your decision."
+      },
+      "command": "",
+      "sources": [
+        {
+          "kind": "official",
+          "url": "https://github.com/openssh/openssh-portable/blob/V_8_4_P1/sshd.c"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=6200"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "shell-source-not-found",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "launch",
+      "context": "all",
+      "title": {
+        "ru": "В скрипте source: not found, затем команда из venv не найдена",
+        "en": "Script reports source: not found, then a venv command is missing"
+      },
+      "symptom": {
+        "ru": "В интерактивном Bash команды работают, но скрипт с sh не активирует окружение.",
+        "en": "Commands work in interactive Bash, but an sh script does not activate the environment."
+      },
+      "check": {
+        "ru": "Проверьте shebang и интерпретатор, которым реально запущен файл. Относительный путь к activate зависит от рабочего каталога.",
+        "en": "Check the shebang and the interpreter actually used to launch the file. A relative activate path depends on the working directory."
+      },
+      "solution": {
+        "ru": "Для POSIX sh чтение файла выполняется встроенной точкой. Если сценарий содержит Bash-синтаксис, запускайте его Bash. Укажите верный полный путь к доверенному activate.",
+        "en": "POSIX sh reads a file with the dot builtin. If the script needs Bash syntax, run it with Bash. Use the correct absolute path to a trusted activate file."
+      },
+      "caution": {
+        "ru": "Запуск sh script игнорирует выбор Bash в shebang. Не заменяйте системный sh и не выполняйте неизвестные профили.",
+        "en": "Running sh script overrides a Bash shebang. Do not replace the system sh or source untrusted profiles."
+      },
+      "command": "",
+      "sources": [
+        {
+          "kind": "official",
+          "url": "https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_18"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=9500"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-rish-package",
+      "environments": [
+        "termux"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "rish: не выбран правильный package ID терминала",
+        "en": "rish: terminal package ID is not configured"
+      },
+      "symptom": {
+        "ru": "rish не связывается с терминалом после экспорта файлов или остаётся значение PKG.",
+        "en": "rish cannot attach after exporting files, or the PKG placeholder remains."
+      },
+      "check": {
+        "ru": "Проверьте происхождение пары rish/rish_shizuku.dex и RISH_APPLICATION_ID. Файлы другой сборки Shizuku могут не подходить.",
+        "en": "Check the origin of the rish/rish_shizuku.dex pair and RISH_APPLICATION_ID. Files from another Shizuku build may be incompatible."
+      },
+      "solution": {
+        "ru": "Официальный скрипт требует package ID терминального приложения вместо PKG, если переменная не задана. Для Termux Job’s это com.termux. В Shizuku должна быть разрешена связь приложения.",
+        "en": "The official script needs the terminal application ID instead of PKG unless the variable is already set. Termux Job’s uses com.termux. The application must be authorized in Shizuku."
+      },
+      "caution": {
+        "ru": "Не путайте package ID с доменом termux.com. Изменение строки не запускает остановленную Shizuku и не выдаёт Android root.",
+        "en": "Do not confuse the package ID with the termux.com domain. Editing this value neither starts a stopped Shizuku service nor grants Android root."
+      },
+      "command": "",
+      "sources": [
+        {
+          "kind": "official",
+          "url": "https://github.com/RikkaApps/Shizuku/blob/master/manager/src/main/assets/rish"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=965133&st=1240"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-rish-writable-dex",
+      "environments": [
+        "termux"
+      ],
+      "category": "files",
+      "context": "all",
+      "title": {
+        "ru": "Android14+: rish не может загрузить writable dex",
+        "en": "Android14+: rish cannot load writable dex"
+      },
+      "symptom": {
+        "ru": "app_process сообщает о writable dex, а убрать право записи не получается.",
+        "en": "app_process rejects writable dex and removing write permission fails."
+      },
+      "check": {
+        "ru": "Проверьте версию Android, путь dex и место запуска: Termux или proot. На общей памяти права Unix могут не применяться.",
+        "en": "Check Android version, dex location and launch context: Termux or proot. Unix permissions may not be enforceable on shared storage."
+      },
+      "solution": {
+        "ru": "Разработчик Shizuku указывает, что dex нельзя держать в /sdcard. Используйте приватный каталог терминала и штатную проверку прав из экспортированного скрипта. Сначала проверяйте запуск вне proot.",
+        "en": "The Shizuku developer states that the dex must not reside in /sdcard. Use the terminal private directory and the permission check in the exported script. Test outside proot first."
+      },
+      "caution": {
+        "ru": "Не удаляйте защитную проверку как универсальное решение. Для форков Shizuku и разных версий экспортированная пара файлов может отличаться.",
+        "en": "Do not delete the safety check as a universal fix. Shizuku forks and different versions may export different file pairs."
+      },
+      "command": "",
+      "sources": [
+        {
+          "kind": "official",
+          "url": "https://github.com/RikkaApps/Shizuku/issues/371"
+        },
+        {
+          "kind": "official",
+          "url": "https://github.com/RikkaApps/Shizuku/blob/master/manager/src/main/assets/rish"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=965133&st=1280"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-rish-environment",
+      "environments": [
+        "termux"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "После rish команды Termux стали недоступны",
+        "en": "Termux commands become unavailable after entering rish"
+      },
+      "symptom": {
+        "ru": "В rish другие PATH/LD_PRELOAD, pkg или приватные программы Termux не запускаются.",
+        "en": "rish has a different PATH/LD_PRELOAD; pkg or private Termux programs do not run."
+      },
+      "check": {
+        "ru": "Сверьте id и реальную оболочку. rish передаёт команды оболочке backend, по умолчанию /system/bin/sh, а не текущему Bash Termux.",
+        "en": "Check id and the actual shell. rish forwards commands to the backend shell, normally /system/bin/sh, rather than the current Termux Bash."
+      },
+      "solution": {
+        "ru": "Для обычных инструментов вернитесь в Termux; Android-команды выполняйте в подходящем backend. Документация объясняет RISH_PRESERVE_ENV: копирование PATH не даёт ADB-пользователю доступ к приватным файлам.",
+        "en": "Return to Termux for its normal tools; run Android commands in the appropriate backend. RISH_PRESERVE_ENV documentation explains that copying PATH does not give the ADB user access to private files."
+      },
+      "caution": {
+        "ru": "Не открывайте приватное дерево chmod777. ADB-shell, Android root и имитированный root proot имеют разные права.",
+        "en": "Do not expose the private tree with chmod777. ADB shell, Android root and emulated proot root have different permissions."
+      },
+      "command": "",
+      "sources": [
+        {
+          "kind": "official",
+          "url": "https://github.com/RikkaApps/Shizuku-API/blob/master/rish/README.md"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=965133&st=1240"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-x11-black-screen",
+      "environments": [
+        "termux"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "Termux:X11: чёрный экран с курсором",
+        "en": "Termux:X11: black screen with a cursor"
+      },
+      "symptom": {
+        "ru": "X-сервер открылся, но вместо рабочего стола виден только чёрный экран и курсор.",
+        "en": "The X server opens but only a black screen and cursor are visible."
+      },
+      "check": {
+        "ru": "Сначала проверьте запуск рабочего окружения, DISPLAY, сокет и журнал. Не путайте проблему отрисовки с отсутствующей XFCE-сессией.",
+        "en": "First check the desktop session, DISPLAY, socket and logs. Do not confuse a drawing issue with a desktop session that never started."
+      },
+      "solution": {
+        "ru": "Официальная документация предлагает legacy-drawing для некоторых устройств с этим симптомом. Применять к отдельно проверяемому запуску X11, сохраняя прежнюю команду для возврата.",
+        "en": "The official documentation suggests legacy-drawing for some affected devices. Try it on a separate verified X11 launch, keeping the previous command for reversal."
+      },
+      "caution": {
+        "ru": "Это вариант диагностики, не универсальный ремонт и не настройка терминального рендеринга Job’s. Нужны совместимые приложение X11 и пакет.",
+        "en": "This is a diagnostic option, not a universal fix or a Job’s terminal-rendering setting. A compatible X11 app and package are required."
+      },
+      "command": "",
+      "sources": [
+        {
+          "kind": "official",
+          "url": "https://github.com/termux/termux-x11#running-graphical-applications"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=7540"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-x11-swapped-colors",
+      "environments": [
+        "termux"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "Termux:X11: цвета рабочего стола перепутаны",
+        "en": "Termux:X11: desktop colors are swapped"
+      },
+      "symptom": {
+        "ru": "Окно работает, но каналы цветов отображаются неверно.",
+        "en": "The desktop works but color channels appear incorrect."
+      },
+      "check": {
+        "ru": "Проверьте, проблема во всём X11 или лишь в теме одного приложения; запишите версии графических компонентов.",
+        "en": "Check whether the issue affects all X11 output or just one application theme; record graphics component versions."
+      },
+      "solution": {
+        "ru": "Для этого симптома официальный README описывает force-bgra. Проверяйте отдельно от других изменений, с возможностью вернуться к прежней команде запуска.",
+        "en": "The official README documents force-bgra for this symptom. Test it separately from other changes and keep the original startup command."
+      },
+      "caution": {
+        "ru": "Параметр не ускоряет модель AI и не исправляет все драйверы/GPU. Не заменяйте Mesa случайным пакетом только из-за названия устройства.",
+        "en": "The option does not accelerate AI models or fix every GPU driver. Do not replace Mesa with an arbitrary package based only on a device name."
+      },
+      "command": "",
+      "sources": [
+        {
+          "kind": "official",
+          "url": "https://github.com/termux/termux-x11#running-graphical-applications"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=7540"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "archive-zip-filename-encoding",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "files",
+      "context": "all",
+      "title": {
+        "ru": "ZIP из Windows: неверная кириллица в именах файлов",
+        "en": "Windows ZIP: Cyrillic file names are decoded incorrectly"
+      },
+      "symptom": {
+        "ru": "Распаковка проходит, но имена содержат неверные символы; содержимое может быть исправно.",
+        "en": "Extraction succeeds but names contain incorrect characters; file contents may still be intact."
+      },
+      "check": {
+        "ru": "Отделите кодировку имён архива от кодировки содержимого. Проверьте версию архиватора и предварительный список файлов.",
+        "en": "Distinguish archive filename encoding from content encoding. Check the archiver version and preview the file listing."
+      },
+      "solution": {
+        "ru": "Libarchive поддерживает hdrcharset при чтении ZIP. Выбирайте исходную кодировку только при её подтверждении; сравните список до извлечения в отдельный каталог.",
+        "en": "Libarchive supports hdrcharset when reading ZIP. Select a source charset only when confirmed; compare the listing before extracting into a separate directory."
+      },
+      "caution": {
+        "ru": "Не все unzip поддерживают одинаковые флаги. CP866/CP1251 не являются универсальными значениями; перекодирование содержимого не исправляет метаданные имён.",
+        "en": "Not every unzip supports the same flags. CP866/CP1251 are not universal defaults; transcoding contents does not repair filename metadata."
+      },
+      "command": "",
+      "sources": [
+        {
+          "kind": "official",
+          "url": "https://github.com/libarchive/libarchive/blob/master/libarchive/archive_read_set_options.3"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=7540"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "samba-supervisor-mode",
+      "environments": [
+        "termux",
+        "ubuntu",
+        "debian",
+        "arch",
+        "alpine",
+        "fedora",
+        "opensuse",
+        "other"
+      ],
+      "category": "network",
+      "context": "all",
+      "title": {
+        "ru": "Samba под supervisor завершается или перезапускается",
+        "en": "Samba exits or restarts under a process supervisor"
+      },
+      "symptom": {
+        "ru": "smbd работает иначе при ручном запуске, через runit или после одного подключения.",
+        "en": "smbd behaves differently when started manually, under runit or after a single connection."
+      },
+      "check": {
+        "ru": "Сверьте конфигурацию, журнал и режим запуска. Интерактивный режим, daemon и foreground имеют разное поведение.",
+        "en": "Compare configuration, logs and startup mode. Interactive, daemon and foreground modes behave differently."
+      },
+      "solution": {
+        "ru": "Официальный smbd описывает foreground (-F) для supervisor и интерактивный режим с одним подключением. Настройте только профиль нужной службы после проверки её версии и конфигурации.",
+        "en": "Official smbd documentation describes foreground (-F) for supervisors and an interactive single-connection mode. Adjust only the intended service profile after checking its version and configuration."
+      },
+      "caution": {
+        "ru": "Не переносите форумный smbd-D в runit без проверки. Не включайте пустые пароли/гостевой доступ и не останавливайте все службы автоматически. Совместимость нестандартных SMB-портов зависит от клиента.",
+        "en": "Do not copy a forum smbd-D invocation into runit without review. Do not enable empty passwords/guest access or stop all services automatically. Nonstandard SMB port support depends on the client."
+      },
+      "command": "",
+      "sources": [
+        {
+          "kind": "official",
+          "url": "https://www.samba.org/samba/docs/current/man-html/smbd.8.html"
+        },
+        {
+          "kind": "community",
+          "url": "https://4pda.to/forum/index.php?showtopic=741456&st=13800"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-apt-nosplit",
+      "environments": [
+        "termux"
+      ],
+      "category": "packages",
+      "context": "all",
+      "title": {
+        "ru": "APT: NOSPLIT / NODATA",
+        "en": "APT: NOSPLIT / NODATA"
+      },
+      "symptom": {
+        "ru": "APT отвергает InRelease: Clearsigned file isn’t valid, NOSPLIT или NODATA.",
+        "en": "APT rejects InRelease: clearsigned file is invalid, NOSPLIT or NODATA."
+      },
+      "check": {
+        "ru": "Проверьте URL репозитория, доступность зеркала и не подменяет ли ответ страница входа Wi-Fi или прокси. Запишите Android, прошивку и архитектуру; одной строки ошибки недостаточно.",
+        "en": "Check the repository URL, mirror availability and whether a Wi-Fi login page or proxy replaces the response. Record Android, ROM and architecture; the error alone is insufficient."
+      },
+      "solution": {
+        "ru": "Повторите обновление после восстановления сети. В Termux выберите поддерживаемое зеркало через termux-change-repo, затем повторите pkg update. Если ошибка остаётся на разных зеркалах, сохраните полный вывод для разбора совместимости прошивки.",
+        "en": "Retry after restoring connectivity. In Termux select a supported mirror with termux-change-repo, then retry pkg update. If multiple mirrors fail, retain the full output for ROM compatibility investigation."
+      },
+      "caution": {
+        "ru": "Смена зеркала помогла части пользователей, но не всем случаям на кастомных прошивках. Не отключайте проверку подписей и не добавляйте trusted=yes как обход.",
+        "en": "Changing mirrors helped some reporters, not every custom-ROM case. Do not disable signature verification or add trusted=yes as a workaround."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/termux/termux-packages/issues/8138",
+          "kind": "official"
+        },
+        {
+          "url": "https://xdaforums.com/t/termux.4758702/",
+          "kind": "community"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-netlink-denied",
+      "environments": [
+        "termux"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "ip / ifconfig: доступ к netlink запрещён",
+        "en": "ip / ifconfig: netlink permission denied"
+      },
+      "symptom": {
+        "ru": "Cannot bind netlink socket: Permission denied или недоступен /proc/net/dev.",
+        "en": "Cannot bind netlink socket: Permission denied, or /proc/net/dev is inaccessible."
+      },
+      "check": {
+        "ru": "Различайте получение сведений об интерфейсах и реальную связь с нужным сервером. Проверьте Android и точную команду: просмотр интерфейсов и изменение маршрутов требуют разных прав.",
+        "en": "Distinguish interface inspection from actual connectivity to the required server. Check Android and the exact command: listing interfaces and changing routes require different permissions."
+      },
+      "solution": {
+        "ru": "Проверьте соединение с нужным адресом отдельно. Ограниченный Android может запрещать ip/ifconfig обычному приложению даже при работающей сети; переустановка net-tools сама по себе не выдаёт разрешения.",
+        "en": "Test connectivity to the required host separately. Android can restrict ip/ifconfig for an ordinary app while networking works; reinstalling net-tools does not grant permissions."
+      },
+      "caution": {
+        "ru": "Эта ошибка не доказывает отсутствие интернета. Не отключайте SELinux и не меняйте маршруты ради диагностики; proot-root не даёт root Android.",
+        "en": "This error does not prove Internet access is unavailable. Do not disable SELinux or change routes for diagnosis; proot root does not grant Android root."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://github.com/termux/termux-app/issues/2993",
+          "kind": "official"
+        },
+        {
+          "url": "https://github.com/termux/termux-packages/issues/12758",
+          "kind": "official"
+        }
+      ],
+      "reviewed": "2026-10-16"
+    },
+    {
+      "id": "termux-adb-paired-offline",
+      "environments": [
+        "termux"
+      ],
+      "category": "environment",
+      "context": "all",
+      "title": {
+        "ru": "ADB: сопряжение есть, подключения нет",
+        "en": "ADB: paired but not connected"
+      },
+      "symptom": {
+        "ru": "adb pair завершился успешно, но adb devices не показывает подключённое устройство.",
+        "en": "adb pair succeeds but adb devices does not show a connected device."
+      },
+      "check": {
+        "ru": "Сверьте Android, версию adb, Wi-Fi и текущие адреса в беспроводной отладке. Порт из окна кода сопряжения и порт подключения могут различаться; mDNS может не работать в сети.",
+        "en": "Check Android, adb version, Wi-Fi and current addresses in wireless debugging. Pairing-code and connection ports can differ; mDNS may be unavailable on the network."
+      },
+      "solution": {
+        "ru": "После сопряжения проверьте adb devices. Если автоматического соединения нет, используйте adb connect с актуальным адресом и портом подключения из основного экрана беспроводной отладки, затем проверьте список снова.",
+        "en": "After pairing, check adb devices. If automatic connection fails, use adb connect with the current connection address and port from the main wireless debugging screen, then check the device list again."
+      },
+      "caution": {
+        "ru": "Не используйте порт сопряжения по привычке и не открывайте постоянный порт 5555 как универсальное решение. Возможности Android 17 / adb 37 нельзя переносить на старые версии.",
+        "en": "Do not blindly reuse the pairing port or expose permanent port 5555 as a universal fix. Android 17 / adb 37 features do not apply to older versions."
+      },
+      "command": "",
+      "sources": [
+        {
+          "url": "https://developer.android.com/tools/adb",
+          "kind": "official"
+        },
+        {
+          "url": "https://xdaforums.com/t/adb-what-is-the-adb-syntax-to-connect-wirelessly-to-android-by-unique-serial-number-instead-of-by-wi-fi-lan-ip-address-random-port-assignment.4476319/",
+          "kind": "community"
+        }
+      ],
+      "reviewed": "2026-10-16"
     }
   ]
 }

@@ -1,0 +1,20 @@
+{
+  "ru": [
+    "Звёздочка: полный просмотр команд/заметок, редактирование, вставка, удаление и «Назад» к списку.",
+    "Ошибки и решения:129 карточек (+15 к v1.3.0), дополнения и уточнения по первоисточникам."
+  ],
+  "en": [
+    "Star menu: full command/note previews, edit, insert, delete, and Back to the list.",
+    "Errors and solutions:129 entries (+15 since v1.3.0), additions and primary-source clarifications."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние com.termux и сертификат, versionCode1085 выше1.3.1/1084. Форматы данных не меняются, очистка не требуется.",
+      "Нажатие карточки в звёздочке теперь открывает просмотр; для вставки нажмите отдельное действие."
+    ],
+    "en": [
+      "Same com.termux package and certificate; versionCode1085 above1.3.1/1084. No data format changes or reset required.",
+      "Tapping a star-menu card now opens a preview; insertion requires the separate action."
+    ]
+  }
+}

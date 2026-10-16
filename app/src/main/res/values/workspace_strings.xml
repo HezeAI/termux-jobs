@@ -581,4 +581,7 @@
     <string name="workspace_diagnostics_yes">Yes</string>
     <string name="workspace_diagnostics_no">No</string>
     <string name="workspace_cancel_startup_confirm">Cancel the following startup steps? All configured commands are listed below. The currently running command will continue.</string>
+    <string name="workspace_input_preview_hint">Tap a card to read the full text</string>
+    <string name="workspace_insert_session">Insert into session</string>
+    <string name="workspace_preview_back">Back</string>
 </resources>

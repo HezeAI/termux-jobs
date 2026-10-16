@@ -1590,6 +1590,35 @@ public final class WorkspaceController {
         if (interactiveInput) activity.getTerminalView().requestFocus();
         else terminalInput.requestFocus();
     }
+    private void openInputEntry(Object item, Runnable back) {
+        boolean isNote = item instanceof WorkspaceStore.Note;
+        WorkspaceStore.Note note = isNote ? (WorkspaceStore.Note) item : null;
+        WorkspaceStore.Command command = isNote ? null : (WorkspaceStore.Command) item;
+        String name = isNote ? note.name : command.name;
+        LinearLayout body = previewBody(isNote ? note.text : command.command, !isNote);
+        previewMetadata(body, isNote ? note.category : command.category, isNote ? note.favorite : command.favorite);
+        AlertDialog preview = WorkspaceDialogs.builder(activity).setTitle(name)
+            .setView(formScroll(body)).setPositiveButton(WorkspaceText.tr("Назад"), (dialog, which) -> back.run()).create();
+        preview.setOnCancelListener(dialog -> back.run());
+        previewAction(body, WorkspaceText.tr("Вставить в сессию"), R.drawable.workspace_commands, () -> {
+            preview.dismiss();
+            WorkspaceStore.Command value = new WorkspaceStore.Command();
+            value.command = isNote ? note.text : command.command;
+            insertIntoCurrent(value);
+        });
+        previewAction(body, WorkspaceText.tr("Редактировать"), R.drawable.workspace_edit, () -> {
+            preview.dismiss(); if (isNote) editNote(note); else editCommand(command);
+        });
+        previewAction(body, WorkspaceText.tr("Удалить"), R.drawable.workspace_delete, () -> {
+            if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
+            preview.dismiss();
+            confirm((isNote ? WorkspaceText.tr("Удалить заметку «") : WorkspaceText.tr("Удалить команду «")) + name + "»?", () -> {
+                if (isNote) store.notes.remove(note); else store.commands.remove(command);
+                store.save(); renderContent();
+            });
+        });
+        preview.show();
+    }
     private void chooseInputCommand() {
         hideDialogKeyboard();
         List<WorkspaceStore.Command> commands = new ArrayList<>(store.commands);
@@ -1625,7 +1654,7 @@ public final class WorkspaceController {
         commandTab.setPadding(dp(6), dp(8), dp(6), dp(8));
         LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams(0, -2, 1.5f); tabParams.setMarginEnd(dp(8));
         tabs.addView(commandTab, tabParams); tabs.addView(notesTab, new LinearLayout.LayoutParams(0, -2, 1)); heading.addView(tabs);
-        TextView hint = text(WorkspaceText.tr("Нажми на команду, чтобы вставить"), 12, MUTED); hint.setPadding(0, dp(8), 0, dp(12)); heading.addView(hint);
+        TextView hint = text(WorkspaceText.tr("Нажми на карточку, чтобы прочитать полностью"), 12, MUTED); hint.setPadding(0, dp(8), 0, dp(12)); heading.addView(hint);
         EditText search = field(WorkspaceText.tr("Найти команду"), "", false); search.setContentDescription(WorkspaceText.tr("Поиск в меню звёздочки"));
         search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH | android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI);
         search.setMinHeight(dp(48)); heading.addView(search, new LinearLayout.LayoutParams(-1, -2));
@@ -1633,11 +1662,15 @@ public final class WorkspaceController {
         empty.setPadding(0, dp(12), 0, 0); empty.setVisibility(commands.isEmpty() ? View.VISIBLE : View.GONE); heading.addView(empty);
         AlertDialog.Builder builder = WorkspaceDialogs.builder(activity).setCustomTitle(heading)
             .setAdapter(adapter, (dialog, index) -> {
-                Object item = visible.get(index);
-                if (item instanceof WorkspaceStore.Note) {
-                    WorkspaceStore.Command value = new WorkspaceStore.Command(); value.command = ((WorkspaceStore.Note) item).text;
-                    insertIntoCurrent(value);
-                } else insertIntoCurrent((WorkspaceStore.Command) item);
+                hideDialogKeyboard();
+                AlertDialog list = (AlertDialog) dialog;
+                int position = list.getListView().getFirstVisiblePosition();
+                View first = list.getListView().getChildAt(0);
+                int top = first == null ? 0 : first.getTop();
+                openInputEntry(visible.get(index), () -> {
+                    list.show();
+                    list.getListView().setSelectionFromTop(position, top);
+                });
             })
             .setNegativeButton(WorkspaceText.tr("Закрыть"), null);
         String input = terminalInput.getText().toString();
@@ -1654,7 +1687,7 @@ public final class WorkspaceController {
             boolean libraryEmpty = noteTab[0] ? notes.isEmpty() : commands.isEmpty();
             empty.setText(libraryEmpty ? (noteTab[0] ? WorkspaceText.tr("Сохраните заметку в библиотеке.") : WorkspaceText.tr("Сохраните команду в библиотеке или нажмите «Сохранить ввод».")) : WorkspaceText.tr("Ничего не найдено"));
             empty.setVisibility(visible.isEmpty() ? View.VISIBLE : View.GONE); adapter.notifyDataSetChanged();
-            hint.setText(noteTab[0] ? WorkspaceText.tr("Нажми на заметку, чтобы вставить") : WorkspaceText.tr("Нажми на команду, чтобы вставить"));
+            hint.setText(WorkspaceText.tr("Нажми на карточку, чтобы прочитать полностью"));
             search.setHint(noteTab[0] ? WorkspaceText.tr("Найти заметку") : WorkspaceText.tr("Найти команду"));
             for (TextView tab : new TextView[]{commandTab, notesTab}) {
                 boolean selected = (tab == notesTab) == noteTab[0]; tab.setSelected(selected);

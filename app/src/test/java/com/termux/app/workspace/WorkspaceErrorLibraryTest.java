@@ -25,8 +25,16 @@ public class WorkspaceErrorLibraryTest {
     private View text(View view,String text){if(view instanceof TextView&&text.equals(((TextView)view).getText().toString()))return view;if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++){View found=text(((ViewGroup)view).getChildAt(i),text);if(found!=null)return found;}return null;}
     private EditText search(View view){if(view instanceof EditText)return(EditText)view;if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++){EditText e=search(((ViewGroup)view).getChildAt(i));if(e!=null)return e;}return null;}
     @Test public void catalogContainsBilingualSourcedEntriesForEveryEnvironment()throws Exception{
-        WorkspaceErrorLibrary lib=load();assertEquals(114,lib.entries.size());Set<String> ids=new HashSet<>();for(WorkspaceErrorLibrary.Entry e:lib.entries){assertTrue(ids.add(e.id));assertFalse(e.text("solution",true).isEmpty());assertFalse(e.text("solution",false).isEmpty());assertTrue(e.data.getJSONArray("sources").length()>0);assertFalse(e.command.contains("sudo "));assertFalse(e.command.contains("rm "));}
+        WorkspaceErrorLibrary lib=load();assertEquals(129,lib.entries.size());Set<String> ids=new HashSet<>();for(WorkspaceErrorLibrary.Entry e:lib.entries){assertTrue(ids.add(e.id));assertFalse(e.text("solution",true).isEmpty());assertFalse(e.text("solution",false).isEmpty());assertTrue(e.data.getJSONArray("sources").length()>0);assertFalse(e.command.contains("sudo "));assertFalse(e.command.contains("rm "));}
         for(String env:WorkspaceErrorLibrary.ENV)assertFalse(env,lib.search("",env,"all","all").isEmpty());
+    }
+    @Test public void xdaCandidatesAreSearchableAndNeverAutoRun()throws Exception{
+        WorkspaceErrorLibrary lib=load();
+        for(String key:new String[]{"NOSPLIT","netlink","adb pair"}) {
+            java.util.List<WorkspaceErrorLibrary.Entry> found=lib.search(key,"termux","all","all");
+            assertFalse(key,found.isEmpty());
+            for(WorkspaceErrorLibrary.Entry e:found) if(e.id.equals("termux-apt-nosplit")||e.id.equals("termux-netlink-denied")||e.id.equals("termux-adb-paired-offline"))assertEquals("",e.command);
+        }
     }
     @Test public void searchUsesBothLanguagesAllTokensAndCombinedFilters()throws Exception{
         WorkspaceErrorLibrary lib=load();assertFalse(lib.search("JAVA_HOME","ubuntu","build","all").isEmpty());assertFalse(lib.search("общей памяти","termux","files","all").isEmpty());assertTrue(lib.search("JAVA_HOME","ubuntu","git","all").isEmpty());assertTrue(lib.search("no-such-error-12345","all","all","all").isEmpty());
@@ -44,7 +52,7 @@ public class WorkspaceErrorLibraryTest {
         assertFalse(lib.search("SSH_AUTH_SOCK","debian","all","ssh").isEmpty());
         assertTrue(lib.search("SSH_AUTH_SOCK","debian","all","proot").isEmpty());
         int community=0;for(WorkspaceErrorLibrary.Entry entry:lib.entries){boolean official=false,discussion=false;JSONArray sources=entry.data.getJSONArray("sources");for(int i=0;i<sources.length();i++){String kind=sources.getJSONObject(i).getString("kind");official|="official".equals(kind)||"project".equals(kind);discussion|="community".equals(kind);}assertTrue(entry.id,official);if(discussion)community++;}
-        assertEquals(8,community);
+        assertEquals(29,community);
     }
     @Test public void projectCasesAreDistinctFromOfficialAdviceAndUnresolvedIssueStaysOpen()throws Exception{
         WorkspaceErrorLibrary lib=load();int count=0;for(WorkspaceErrorLibrary.Entry e:lib.entries)if(e.data.has("projectStatus")){count++;assertFalse(e.text("projectEvidence",true).isEmpty());assertFalse(e.text("projectEvidence",false).isEmpty());}
@@ -54,6 +62,20 @@ public class WorkspaceErrorLibraryTest {
     @Test public void projectSourceWithoutEvidenceOrValidStatusFailsClosed()throws Exception{
         JSONObject card=new JSONObject(load().entries.stream().filter(e->e.id.startsWith("jobs-")).findFirst().get().data.toString());card.remove("projectEvidence");JSONObject root=new JSONObject().put("schema",1).put("version","test").put("entries",new JSONArray().put(card));try{parse(root);fail();}catch(JSONException expected){}
         card.put("projectEvidence",new JSONObject().put("ru","test").put("en","test")).put("projectStatus","certain");try{parse(root);fail();}catch(JSONException expected){}
+    }
+    @Test public void reviewedForumCasesHavePrimarySourcesAndDoNotDuplicateExtendedCards()throws Exception{
+        WorkspaceErrorLibrary lib=load();
+        for(String id:new String[]{"termux-boot-start","termux-services-start","termux-incoming-ssh","ssh-reexec-legacy","shell-source-not-found","termux-rish-package","termux-rish-writable-dex","termux-rish-environment","termux-x11-black-screen","termux-x11-swapped-colors","archive-zip-filename-encoding","samba-supervisor-mode"}){
+            WorkspaceErrorLibrary.Entry e=lib.entries.stream().filter(x->x.id.equals(id)).findFirst().get();assertEquals("",e.command);boolean primary=false;for(int i=0;i<e.data.getJSONArray("sources").length();i++)primary|=e.data.getJSONArray("sources").getJSONObject(i).getString("kind").equals("official");assertTrue(id,primary);
+        }
+        assertFalse(lib.search("writable dex","termux","files","all").isEmpty());
+        assertFalse(lib.search("hdrcharset","ubuntu","files","all").isEmpty());
+        WorkspaceErrorLibrary.Entry backup=lib.entries.stream().filter(x->x.id.equals("jobs-backup-source-unreadable")).findFirst().get();assertTrue(backup.text("caution",false).contains("ignore-failed-read"));assertEquals(1,lib.entries.stream().filter(x->x.id.equals("jobs-backup-source-unreadable")).count());
+    }
+    @Test public void libraryTitleHasLocalizedAiCreditOnItsRight(){
+        for(boolean ru:new boolean[]{true,false}){
+            TermuxActivity a=activity(ru);WorkspaceErrorLibraryUi.show(a,c->fail());AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();View root=dialog.getWindow().getDecorView();TextView title=(TextView)text(root,ru?"Ошибки и решения":"Errors and solutions"),credit=(TextView)text(root,ru?"Собрано с помощью AI!":"Compiled with AI!");assertNotNull(title);assertNotNull(credit);assertSame(title.getParent(),credit.getParent());ViewGroup row=(ViewGroup)title.getParent();assertTrue(row.indexOfChild(title)<row.indexOfChild(credit));assertTrue(((LinearLayout.LayoutParams)title.getLayoutParams()).weight>0);assertTrue(credit.getMaxWidth()>0);dialog.dismiss();
+        }
     }
     @Test public void sourcesRejectCommandSchemesCredentialsAndMalformedUrls(){assertFalse(WorkspaceErrorLibrary.safeUrl("javascript:alert(1)"));assertFalse(WorkspaceErrorLibrary.safeUrl("file:///root/secret"));assertFalse(WorkspaceErrorLibrary.safeUrl("https://user:pass@example.com/path"));assertTrue(WorkspaceErrorLibrary.safeUrl("https://github.com/termux/proot-distro#limitations"));}
     private WorkspaceErrorLibrary parse(JSONObject root)throws Exception{return WorkspaceErrorLibrary.parse(new ByteArrayInputStream(root.toString().getBytes(StandardCharsets.UTF_8)));}

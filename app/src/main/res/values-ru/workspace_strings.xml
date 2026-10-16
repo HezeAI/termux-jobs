@@ -581,4 +581,7 @@
     <string name="workspace_diagnostics_yes">Да</string>
     <string name="workspace_diagnostics_no">Нет</string>
     <string name="workspace_cancel_startup_confirm">Отменить следующие шаги запуска? Ниже все настроенные команды. Уже выполняемая команда продолжит работу.</string>
+    <string name="workspace_input_preview_hint">Нажми на карточку, чтобы прочитать полностью</string>
+    <string name="workspace_insert_session">Вставить в сессию</string>
+    <string name="workspace_preview_back">Назад</string>
 </resources>

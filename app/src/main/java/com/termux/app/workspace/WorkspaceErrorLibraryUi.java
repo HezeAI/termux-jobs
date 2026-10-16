@@ -48,7 +48,10 @@ final class WorkspaceErrorLibraryUi {
         count=text("",12);add(body,count);ScrollView scroll=new ScrollView(activity);results=column();scroll.addView(results);body.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         add(body,text(t("База ","Library ")+library.version+t(" · обновляется с приложением. Команды не выполняются автоматически."," · updated with the app. Commands never run automatically."),11));
         FrameLayout frame=new FrameLayout(activity);frame.addView(body,new FrameLayout.LayoutParams(-1,(int)(activity.getResources().getDisplayMetrics().heightPixels*.7)));
-        dialog=WorkspaceDialogs.builder(activity).setTitle(label(activity)).setView(frame).setNegativeButton(t("Закрыть","Close"),null).create();
+        LinearLayout titleRow=new LinearLayout(activity);titleRow.setGravity(Gravity.CENTER_VERTICAL);titleRow.setPadding(dp(10),dp(8),dp(10),0);
+        TextView title=text(label(activity),18);title.setTypeface(null,Typeface.BOLD);titleRow.addView(title,new LinearLayout.LayoutParams(0,-2,1));
+        TextView credit=text(t("Собрано с помощью AI!","Compiled with AI!"),11);credit.setTextColor(WorkspaceDialogs.MUTED);credit.setMaxWidth(dp(135));credit.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);titleRow.addView(credit,new LinearLayout.LayoutParams(-2,-2));
+        dialog=WorkspaceDialogs.builder(activity).setCustomTitle(titleRow).setView(frame).setNegativeButton(t("Закрыть","Close"),null).create();
         search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int before,int c){update();}public void afterTextChanged(Editable e){}});
         dialog.setOnShowListener(v->{if(dialog.getWindow()!=null){dialog.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE|WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);}body.requestFocus();});
         update();dialog.show();

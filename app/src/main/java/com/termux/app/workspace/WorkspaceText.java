@@ -14,6 +14,7 @@ final class WorkspaceText {
     private static final Map<String,Integer> IDS;
     static {
         Map<String,Integer> ids = new HashMap<>();
+        ids.put("Назад", R.string.workspace_preview_back);
         ids.put("printf '%s\\n' 'Ожидание оболочки Ubuntu…'\n", R.string.workspace_text_000);
         ids.put("Команда ", R.string.workspace_text_001);
         ids.put(" завершилась с ошибкой; запуск остановлен.", R.string.workspace_text_002);
@@ -595,6 +596,8 @@ final class WorkspaceText {
         ids.put("Да", R.string.workspace_diagnostics_yes);
         ids.put("Нет", R.string.workspace_diagnostics_no);
         ids.put("Отменить следующие шаги запуска? Ниже все настроенные команды. Уже выполняемая команда продолжит работу.", R.string.workspace_cancel_startup_confirm);
+        ids.put("Нажми на карточку, чтобы прочитать полностью", R.string.workspace_input_preview_hint);
+        ids.put("Вставить в сессию", R.string.workspace_insert_session);
         IDS = Collections.unmodifiableMap(ids);
     }
     /** App helper errors may have been cached in another UI language. */
