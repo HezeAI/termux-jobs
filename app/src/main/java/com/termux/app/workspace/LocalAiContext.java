@@ -48,7 +48,7 @@ final class LocalAiContext {
         }
         // Large tool output becomes a clearly marked excerpt; do not cut the user's task.
         while(counter.count(work,system)>budget){
-            int largest=-1,length=256;for(int i=0;i<work.length();i++){JSONObject m=work.getJSONObject(i);if(tool(m)&&m.optString("text").length()>length){largest=i;length=m.getString("text").length();}}
+            int largest=-1,length=256;for(int i=0;i<work.length();i++){JSONObject m=work.getJSONObject(i);if(tool(m)&&!m.optBoolean("protectedVideoAnalysis")&&m.optString("text").length()>length){largest=i;length=m.getString("text").length();}}
             if(largest<0){notice.state("failed");throw new IllegalStateException("CONTEXT_TOO_SMALL: current request and instructions exceed this runtime context. Shorten the current request; saved history is kept.");}
             JSONObject m=work.getJSONObject(largest);String text=m.getString("text");int keep=Math.max(64,(text.length()-100)/2);
             m.put("text",text.substring(0,keep)+"\n[Context excerpt: middle omitted. Full tool result remains in saved history.]\n"+text.substring(text.length()-Math.min(64,text.length())));

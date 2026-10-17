@@ -1,3 +1,7 @@
+## Latest private delivery: v1.5.7-test (1144)
+
+Delivered /sdcard/Download/Termux-Jobs-v1.5.7-test-arm64.apk. See RELEASE-v1.5.7-test.md and VALIDATION-v1.5.7-test.md. view_video uses no-tool/no-history sub-analysis, joint then per-frame fallback, restores schemas/scope and returns text observations to normal chat. Only compatible vision LiteRT currently; llama remains text-only. Full615 app tests, final111 targeted, real-SDK13 interface tests passed. Hardware video and normal follow-up/cancel tests need developer verification. No publication. Next versionCode >=1145.
+
 ## Latest private delivery: v1.5.6-test (1143)
 
 Delivered /sdcard/Download/Termux-Jobs-v1.5.6-test-arm64.apk. See RELEASE-v1.5.6-test.md and VALIDATION-v1.5.6-test.md. Current-turn progress survives context compaction and native LiteRT prompt replacement. Exact repeated mutation cycles trigger a reminder and then stop if proposed unchanged again. Expandable persistent step card for both local engines. Structural context comparison avoids false shortening notices. 609 app tests and12 real-SDK interface tests passed; hardware/model outcome requires developer check. Not published. Next versionCode >=1144.

@@ -10,5 +10,5 @@ final class LocalAiListContext {
    out.put("columns",new JSONArray().put("path").put("type").put("sizeBytes").put("modifiedMillis").put("match")).put("rows",rows).put("notice","Metadata only for checked locations; null means unknown. Use read for file contents. No new rights granted; unselected candidates are not approved.");return "exit=0\n"+out;
   }catch(JSONException e){return result;}
  }
- static String preview(JSONObject request,String result){String compact=compact(request,result);if(!compact.equals(result))return compact;return result.length()>8000?result.substring(0,8000)+"\n[Context preview truncated; full result is saved in chat history]":result;}
+ static String preview(JSONObject request,String result){if(request.optString("tool").equals("view_video"))result=LocalAiVideo.preview(result);String compact=compact(request,result);if(!compact.equals(result))return compact;return result.length()>8000?result.substring(0,8000)+"\n[Context preview truncated; full result is saved in chat history]":result;}
 }

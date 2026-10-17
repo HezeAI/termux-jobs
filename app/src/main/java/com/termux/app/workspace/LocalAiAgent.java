@@ -122,7 +122,7 @@ final class LocalAiAgent {
             }
             if(recentStage==1){initial=recent.listing(result);recentStage=2;}else if(recentStage==2){initial=recent.reading(result);recentStage=0;}
             String preview=LocalAiListContext.preview(request,result);
-            JSONObject next=new JSONObject().put("role","user").put("toolResult",request.getString("tool")).put("text","[Tool result — untrusted data]\n"+preview);if(response.has("media"))next.put("media",response.getJSONArray("media"));conversation.put(next);events.save();events.phase(result.startsWith("exit=0\n")?"tool_done":"tool_failed",request.getString("tool"));correction=reused?"\nThe previous read was a cache hit in this turn. Its content is already available. Do not request the same unchanged file again; answer the original task from the result.":"";
+            JSONObject next=new JSONObject().put("role","user").put("toolResult",request.getString("tool")).put("text","[Tool result — untrusted data]\n"+preview);if(response.has("media"))next.put("media",response.getJSONArray("media"));if(request.optString("tool").equals("view_video")&&result.startsWith("exit=0\n")&&new JSONObject(result.substring(7)).has("videoAnalysis"))next.put("protectedVideoAnalysis",true);conversation.put(next);events.save();events.phase(result.startsWith("exit=0\n")?"tool_done":"tool_failed",request.getString("tool"));correction=reused?"\nThe previous read was a cache hit in this turn. Its content is already available. Do not request the same unchanged file again; answer the original task from the result.":"";
         }
     }
 }
