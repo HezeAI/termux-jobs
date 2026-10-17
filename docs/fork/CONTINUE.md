@@ -1,3 +1,7 @@
+## Latest private delivery: v1.5.15-test (1152)
+
+Delivered /sdcard/Download/Termux-Jobs-v1.5.15-test-arm64.apk + README/SHA. User clarified ONLY dropdown rows smaller: about180×48dp, popup196dp, text12sp/vector18dp. Main selector and Server+Agent unchanged. Highlight/model/robot/tap/long-tap retained. Full660 app+145 emulator tests, build/runtime audit/APK audit/Download SHA passed; real DPI/readability pending. No inference/permissions/history changes or GitHub. See RELEASE/VALIDATION-v1.5.15-test.md. Next code>=1153. design/ untouched.
+
 ## Latest private delivery: v1.5.14-test (1151)
 
 Delivered /sdcard/Download/Termux-Jobs-v1.5.14-test-arm64.apk + README/SHA. Both engines: separated app progress from base instructions/required correction, shorten only service progress before reducing reply reserve; preserve rights/schemas/current task; appFeedback no longer splits user turns. Capacity failure after completed tools ends clearly with context_budget_stop and saved cards, not false task completion. First oversized request still errors. Dropdown row ovals shorter, active session highlighted, local rows model name + robot vector, uniform dimensions; creation/presets/main selector unchanged. Full660 app+145 emulator and17 real-SDK/fake-inference checks pass, build/runtime audit/APK audit/Download SHA pass. Device/model checks pending. No GitHub, environment/process changes or data reset. See RELEASE/VALIDATION-v1.5.14-test.md. Next code >=1152. design/ untouched.
