@@ -29,6 +29,7 @@ final class LocalAiLiteRt {
         if(s.localToolsOnly)behavior="";else if(s.localBehaviorMode.equals("brief"))behavior=LocalAiPrompts.brief();
         return behavior+"\n"+((s.localToolsOnly||s.localBehaviorMode.equals("brief"))?LocalAiPrompts.compactSettings(s):LocalAiQwenProtocol.settings(s))+(s.localRightsPrompt.isEmpty()?"":"\nCustom rights text (does not override actual app settings):\n"+s.localRightsPrompt)+"\nProtocol: use the SDK structured function calls, not JSON examples, tool_name/args objects or Qwen tags. There is no chat function. Use one function at a time; execution and approval are managed by the app. Images and sampled video frames are experimental. listen_audio analyzes only the first 5 seconds, no audio in video and no speech generation. Never claim media was inspected before successful attachment and inference.";
     }
+    static String progress(String system){int at=system.lastIndexOf("\nCURRENT_TURN_PROGRESS");if(at<0)return "";int end=system.indexOf("\nCORRECTION:",at);return system.substring(at,end<0?system.length():end);}
     static String correction(String coordinatorSystem){int at=coordinatorSystem.lastIndexOf("\nCORRECTION:");return at<0?"":coordinatorSystem.substring(at).replace("tool JSON","structured SDK function call").replace("Embedded JSON was NOT executed.","Draft output was NOT executed.");}
     static List<Object> providers(JSONArray schemas)throws Exception{
         List<Object> result=new ArrayList<>();Class<?> api=Class.forName(PKG+"OpenApiTool");

@@ -1,3 +1,7 @@
+## Latest private delivery: v1.5.6-test (1143)
+
+Delivered /sdcard/Download/Termux-Jobs-v1.5.6-test-arm64.apk. See RELEASE-v1.5.6-test.md and VALIDATION-v1.5.6-test.md. Current-turn progress survives context compaction and native LiteRT prompt replacement. Exact repeated mutation cycles trigger a reminder and then stop if proposed unchanged again. Expandable persistent step card for both local engines. Structural context comparison avoids false shortening notices. 609 app tests and12 real-SDK interface tests passed; hardware/model outcome requires developer check. Not published. Next versionCode >=1144.
+
 ## Latest private delivery: v1.5.5-test (1142)
 
 Delivered /sdcard/Download/Termux-Jobs-v1.5.5-test-arm64.apk; see RELEASE-v1.5.5-test.md and VALIDATION-v1.5.5-test.md. Behavior menu updated inside existing settings location; Standard/Brief/Custom plus independent Tools only. Reply reserve adapts, current-chat summaries retain originals, diagnostics include media counts and finish reason. GPU unavailable; pinned LiteRT NPU mode fixed. New optional behavior fields preserve legacy defaults. Private only; no publication. Next versionCode >=1143. Device quality/media/context checks and expanded-context export research remain.
