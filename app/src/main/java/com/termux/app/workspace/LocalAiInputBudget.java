@@ -6,8 +6,8 @@ final class LocalAiInputBudget {
   try{return measure(messages,system,count,exact);}catch(java.util.concurrent.CancellationException e){throw e;}catch(Exception e){return new JSONObject().put("kind","input_breakdown").put("unavailable",true);}
  }
  static JSONObject measure(JSONArray messages,String system,LocalAiContext.Counter count,boolean exact)throws Exception{
-  int total=count.count(messages,system),last=-1;for(int i=messages.length()-1;i>=0;i--){JSONObject m=messages.getJSONObject(i);if(m.optString("role").equals("user")&&!m.has("toolResult")){last=i;break;}}
-  int[] groups=new int[messages.length()];for(int i=0;i<groups.length;i++){JSONObject m=messages.getJSONObject(i);groups[i]=m.has("toolResult")||m.has("toolRequest")?1:i==last?2:0;}
+  int total=count.count(messages,system),last=-1;for(int i=messages.length()-1;i>=0;i--){JSONObject m=messages.getJSONObject(i);if(LocalAiContext.userTask(m)){last=i;break;}}
+  int[] groups=new int[messages.length()];for(int i=0;i<groups.length;i++){JSONObject m=messages.getJSONObject(i);groups[i]=m.has("toolResult")||m.has("toolRequest")||m.optBoolean("appFeedback")?1:i==last?2:0;}
   int[] parts=new int[3];for(int g=0;g<3;g++){JSONArray rest=new JSONArray();boolean found=false;for(int i=0;i<groups.length;i++)if(groups[i]!=g)rest.put(messages.getJSONObject(i));else found=true;parts[g]=found?total-count.count(rest,system):0;}
   int instructions=total-count.count(messages,"");int residual=total-instructions-parts[0]-parts[1]-parts[2];
   return new JSONObject().put("kind","input_breakdown").put("exact",exact).put("total",total).put("system",instructions).put("history",parts[0]).put("tools",parts[1]).put("current",parts[2]).put("format",residual).put("messages",messages.length());

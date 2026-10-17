@@ -26,7 +26,7 @@ final class LocalAiRemote implements AutoCloseable {
             if(type.equals("performance")){LocalAiEngine.Output o=output;if(o!=null)o.performance(value);return;}
             if(type.equals("stage")){LocalAiEngine.Output o=output;if(o!=null)o.stage(value);return;}
             if(type.equals("metrics")){try{JSONObject v=new JSONObject(value);LocalAiEngine.Output o=output;if(o!=null)o.metrics(v.getInt("input"),v.getInt("output"));}catch(Exception ignored){}return;}
-            if(type.equals("context")){contextCompacted=true;contextState=value;LocalAiEngine.Output o=output;if(o!=null)o.context(value);return;}
+            if(type.equals("context")){if(!value.equals("service_reduced")){contextCompacted=true;contextState=value;}LocalAiEngine.Output o=output;if(o!=null)o.context(value);return;}
             if(type.equals("text")){LocalAiEngine.Output o=output;if(o!=null)o.text(value);return;}
             if(type.equals("error"))failure=value;else result=value;if(type.equals("done"))finishReason=m.getData().getString("finish","unknown");
             CountDownLatch latch=pending;if(latch!=null)latch.countDown();
@@ -50,12 +50,13 @@ final class LocalAiRemote implements AutoCloseable {
     void load(Context c,JSONObject model,java.io.File file,String acceleration,int threads,int contextSize) throws Exception {Bundle b=new Bundle();b.putString("model",model.getString("id"));b.putString("backend",acceleration);b.putString("cpu",cpuMode);LocalAiEngine.validateCompute(compute);b.putString("compute",compute);LocalAiQwenProtocol.validate(protocol);b.putString("protocol",protocol);LocalAiProcess.validate(location);b.putString("location",location);b.putInt("context",contextSize);LocalAiCpu.validate(threads);b.putInt("threads",threads);backend=call(LocalAiService.LOAD,b);}
     boolean probeThinking,probeGreedy;
     void generate(JSONArray history,int tokens,LocalAiEngine.Output listener) throws Exception {generate(history,tokens,"You are a helpful assistant. No tools are available.",listener);}
-    void generate(JSONArray history,int tokens,String system,LocalAiEngine.Output listener) throws Exception {
+    void generate(JSONArray history,int tokens,String system,LocalAiEngine.Output listener) throws Exception {generate(history,tokens,system,"","",listener);}
+    void generate(JSONArray history,int tokens,String system,String progress,String correction,LocalAiEngine.Output listener) throws Exception {
         contextCompacted=false;contextState="";
         history=LocalAiContext.fit(history,system,400000,0,(items,instructions)->{int n=instructions.length()*3;for(int i=0;i<items.length();i++)n+=items.getJSONObject(i).toString().length()*3;return n;},state->{contextCompacted=true;contextState=state;listener.context(state);});
         JSONArray bounded=new JSONArray();int start=0,chars=0;
         int imageBudget=3;for(int i=history.length()-1;i>=start;i--){JSONObject source=history.getJSONObject(i),copy=new JSONObject(source.toString());JSONArray media=copy.optJSONArray("media");if(media!=null){JSONArray keep=new JSONArray();for(int n=0;n<media.length()&&imageBudget>0;n++,imageBudget--)keep.put(media.getJSONObject(n));if(keep.length()==0){copy.remove("media");copy.put("text",copy.getString("text")+"\n[Older media omitted; only the latest three images/frames are attached.]");}else copy.put("media",keep);}bounded.put(copy);}JSONArray ordered=new JSONArray();for(int i=bounded.length()-1;i>=0;i--)ordered.put(bounded.getJSONObject(i));bounded=ordered;
-        finishReason="unknown";output=listener;Bundle b=new Bundle();b.putString("nativeSchemas",nativeSchemas);b.putBoolean("probeThinking",probeThinking);b.putBoolean("probeGreedy",probeGreedy);b.putString("history",bounded.toString());b.putString("system",system);b.putString("scope",cacheScope);b.putInt("tokens",tokens);String answer=call(LocalAiService.GENERATE,b);listener.text(answer);
+        finishReason="unknown";output=listener;Bundle b=new Bundle();b.putString("nativeSchemas",nativeSchemas);b.putBoolean("probeThinking",probeThinking);b.putBoolean("probeGreedy",probeGreedy);b.putString("history",bounded.toString());b.putString("system",system);b.putString("turnProgress",progress);b.putString("turnCorrection",correction);b.putString("scope",cacheScope);b.putInt("tokens",tokens);String answer=call(LocalAiService.GENERATE,b);listener.text(answer);
     }
     void prepareBenchmark(){benchmarkCancelled=false;benchmarkToken=UUID.randomUUID().toString();}
     void benchmark(int mode,LocalAiEngine.Output listener)throws Exception{if(benchmarkCancelled)throw new CancellationException();Bundle b=new Bundle();b.putInt("mode",mode);b.putString("benchmark",benchmarkToken);output=listener;call(LocalAiService.BENCHMARK,b);}

@@ -387,32 +387,37 @@ public final class WorkspaceController {
 
         LinearLayout.LayoutParams toolsParams=new LinearLayout.LayoutParams(dp(106),-2);toolsParams.setMarginStart(dp(6));tabs.addView(serverTools,toolsParams);
     }
+    private TextView sessionStackItem(String label,boolean active,int icon,Runnable click){
+        TextView item=new TextView(activity);item.setText(label);item.setTextSize(14);item.setTextColor(active?Color.BLACK:TEXT);item.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);item.setPadding(dp(12),dp(8),dp(12),dp(8));item.setMinHeight(dp(68));item.setMaxLines(2);item.setEllipsize(TextUtils.TruncateAt.END);item.setSelected(active);
+        item.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),shape(active?ACCENT:PANEL,active?ACCENT:BORDER,18),null));
+        android.graphics.drawable.Drawable image=activity.getDrawable(icon).mutate();image.setTint(active?Color.BLACK:TEXT);image.setBounds(0,0,dp(22),dp(22));item.setCompoundDrawables(image,null,null,null);item.setCompoundDrawablePadding(dp(8));item.setOnClickListener(v->click.run());
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(68));lp.setMarginEnd(dp(24));lp.bottomMargin=dp(6);item.setLayoutParams(lp);return item;
+    }
     private android.widget.PopupWindow showSessionStack(View anchor) {
         LinearLayout body=column();body.setPadding(dp(8),dp(8),dp(8),dp(8));body.setBackground(shape(PANEL,BORDER,14));
         TextView heading=text(WorkspaceText.tr("Открытые сессии"),14,TEXT);heading.setPadding(dp(6),dp(4),dp(6),dp(10));
         ScrollView scroll=new ScrollView(activity);LinearLayout list=column();scroll.addView(list);
         android.widget.PopupWindow popup=new android.widget.PopupWindow(body,Math.min(dp(340),activity.getResources().getDisplayMetrics().widthPixels-dp(24)),-2,true);
         popup.setBackgroundDrawable(shape(PANEL,BORDER,14));popup.setOutsideTouchable(true);popup.setElevation(dp(8));
-        TextView create=button(WorkspaceText.tr("Создать новую сессию"),true,()->{popup.dismiss();editSession(null);});
-        create.setContentDescription(WorkspaceText.tr("Создать новую сессию"));
-        android.graphics.drawable.Drawable plus=activity.getDrawable(R.drawable.workspace_plus).mutate();plus.setTint(Color.BLACK);plus.setBounds(0,0,dp(22),dp(22));
-        create.setCompoundDrawables(plus,null,null,null);create.setCompoundDrawablePadding(dp(8));create.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams createParams=new LinearLayout.LayoutParams(-1,-2);createParams.bottomMargin=dp(8);list.addView(create,createParams);
+        TextView create=sessionStackItem(WorkspaceText.tr("Создать новую сессию"),false,R.drawable.workspace_plus,()->{popup.dismiss();editSession(null);});
+        create.setContentDescription(WorkspaceText.tr("Создать новую сессию"));create.setTag("session-stack-create");list.addView(create);
         list.addView(heading);
         for(TermuxSession ts:live()) {
             TerminalSession terminal=ts.getTerminalSession();WorkspaceStore.Session profile=store.findByHandle(terminal.mHandle);
             String title=terminal.mSessionName==null?"Bash":terminal.mSessionName;
             String info=profile==null?"":ProjectFiles.environmentLabel(profile)+" · "+compact(profile.directory);
-            TextView item=button(title+(activity.getCurrentSession()==terminal?"  ✓":"")+"\n"+info,false,()->{popup.dismiss();selectedLocal=null;activity.getTermuxTerminalSessionClient().setCurrentSession(terminal);show(Screen.TERMINAL,false);});
-            item.setTextSize(14);item.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);item.setMaxLines(3);item.setContentDescription(WorkspaceText.tr("Сессия ")+title);
-            item.setOnLongClickListener(v->{popup.dismiss();if(profile!=null)sessionMenu(profile,true);return true;});LinearLayout.LayoutParams rowParams=new LinearLayout.LayoutParams(-1,-2);rowParams.bottomMargin=dp(6);list.addView(item,rowParams);
+            boolean active=selectedLocal==null&&activity.getCurrentSession()==terminal;
+            TextView item=sessionStackItem(title+(active?"  ✓":"")+"\n"+info,active,R.drawable.workspace_terminal,()->{popup.dismiss();selectedLocal=null;activity.getTermuxTerminalSessionClient().setCurrentSession(terminal);show(Screen.TERMINAL,false);});
+            item.setTag("session-stack-"+terminal.mHandle);item.setContentDescription(WorkspaceText.tr("Сессия ")+title+" · "+info);
+            item.setOnLongClickListener(v->{popup.dismiss();if(profile!=null)sessionMenu(profile,true);return true;});list.addView(item);
         }
+        int localCount=0;
         for(WorkspaceStore.Session p:store.sessions)if(p.localAi&&localAi.active(p.id)){
-            TextView item=button(p.name+(selectedLocal==p?" ✓":"")+"\n"+localAi.tr("Локальный ИИ","Local AI"),false,()->{popup.dismiss();launch(p);});
-            item.setOnLongClickListener(v->{popup.dismiss();sessionMenu(p,true);return true;});list.addView(item);
+            localCount++;TextView item=sessionStackItem(p.name+(selectedLocal==p?" ✓":"")+"\n"+localAi.sessionModelName(p),selectedLocal==p,R.drawable.workspace_local_robot,()->{popup.dismiss();launch(p);});
+            item.setTag("session-stack-local-"+p.id);item.setContentDescription(p.name+" · "+localAi.sessionModelName(p));item.setOnLongClickListener(v->{popup.dismiss();sessionMenu(p,true);return true;});list.addView(item);
         }
-        if(live().isEmpty())list.addView(text(WorkspaceText.tr("Нет открытых сессий. Создайте новую сессию."),13,MUTED));
-        body.addView(scroll,new LinearLayout.LayoutParams(-1,Math.min(dp(360),Math.max(dp(140),dp(86)+live().size()*dp(76)))));
+        if(live().isEmpty()&&localCount==0)list.addView(text(WorkspaceText.tr("Нет открытых сессий. Создайте новую сессию."),13,MUTED));
+        body.addView(scroll,new LinearLayout.LayoutParams(-1,Math.min(dp(360),Math.max(dp(140),dp(86)+(live().size()+localCount)*dp(76)))));
         body.addView(text(WorkspaceText.tr("Долгий тап — действия сессии"),12,MUTED));
         View cancel=tabs.findViewWithTag("cancel-startup");if(cancel!=null){cancel.setVisibility(View.INVISIBLE);popup.setOnDismissListener(()->cancel.setVisibility(View.VISIBLE));}
         popup.showAsDropDown(anchor,0,dp(4));return popup;

@@ -12,6 +12,7 @@ final class LocalAiContext {
         return text.substring(0,128)+"\n[Earlier tool result excerpt; use history for full original; read for current contents. "+(path.isEmpty()?"":"Source: "+path)+"]\n"+text.substring(text.length()-48);
     }
     static boolean tool(JSONObject m){return m.has("toolResult");}
+    static boolean userTask(JSONObject m){return m.optString("role").equals("user")&&!tool(m)&&!m.optBoolean("appFeedback");}
     static int estimate(JSONArray messages,String system){
         double tokens=weight(system)+32;
         for(int i=0;i<messages.length();i++){JSONObject m=messages.optJSONObject(i);tokens+=weight(m.optString("text"))+20;JSONArray media=m.optJSONArray("media");if(media!=null)tokens+=media.length()*384;}
@@ -30,7 +31,7 @@ final class LocalAiContext {
         if(counter.count(work,system)<=budget)return work;
         notice.state("begin");changed=true;
         for(int i=0;i<work.length();i++){JSONObject m=work.getJSONObject(i);if(m.optString("role").equals("assistant")){String answer=LocalAiText.split(m.optString("text")).answer;if(!answer.equals(m.optString("text")))m.put("text",answer.isEmpty()?"[Earlier reasoning omitted]":answer);}}
-        java.util.List<Integer> turns=new java.util.ArrayList<>();for(int i=0;i<work.length();i++)if(work.getJSONObject(i).optString("role").equals("user")&&!tool(work.getJSONObject(i)))turns.add(i);
+        java.util.List<Integer> turns=new java.util.ArrayList<>();for(int i=0;i<work.length();i++)if(userTask(work.getJSONObject(i)))turns.add(i);
         // Binary search keeps as many recent complete turns as fit, without quadratic tokenization.
         if(counter.count(work,system)>budget&&turns.size()>1){int low=0,high=turns.size()-1;while(low<high){int mid=(low+high)/2;if(counter.count(suffix(work,turns.get(mid)),system)<=budget)high=mid;else low=mid+1;}work=suffix(work,turns.get(low));}
         if(turns.size()==1&&turns.get(0)>0)work=suffix(work,turns.get(0));

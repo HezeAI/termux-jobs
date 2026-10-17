@@ -20,6 +20,7 @@ final class LocalAiEngine implements AutoCloseable {
     private volatile LocalAiProcess external;String location="android",protocol="json",compute="cpu";
     private long llama;private boolean fastCpu;String cpuMode="auto";
     private final AtomicBoolean cancel=new AtomicBoolean();
+    String turnProgress="",turnCorrection="";
     String cacheScope="";String backend="",finishReason="unknown";
     String system="You are a helpful assistant. Reply in the user\'s language. Be concise.";
     static String soc(){return Build.VERSION.SDK_INT>=31?Build.SOC_MODEL.toUpperCase(Locale.ROOT):"";}
@@ -92,23 +93,24 @@ final class LocalAiEngine implements AutoCloseable {
         for(int i=0;i<messages.length();i++){JSONArray media=messages.getJSONObject(i).optJSONArray("media");if(media!=null)for(int j=0;j<media.length();j++)if(media.getJSONObject(j).optString("kind").equals("audio"))sound=true;else images=true;}
         if(images||sound){output.stage("media_preparation");if(isLlama())throw new IllegalStateException("UNSUPPORTED_VISION: llama.cpp projector/audio support is not bundled");ensureMedia(images,sound);}
         boolean nativeTools=!isLlama()&&protocol.equals(LocalAiLiteRt.NATIVE)&&LocalAiLiteRt.supported(loadedModel);
-        String budgetSystem=system+(nativeTools?"\n"+nativeSchemas.toString():"");
+        String schemaBudget=nativeTools?"\n"+nativeSchemas.toString():"";
         int capacity=loadedContext>0?loadedContext:4096;if(isLlama())capacity=Math.max(512,Math.min(8192,capacity));
         int[] inputTokens={-1};LocalAiContext.Counter counter=isLlama()?(items,instructions)->{inputTokens[0]=countPrompt(items,instructions);return inputTokens[0];}:LocalAiContext::estimate;
         int originalImages=LocalAiReplyBudget.media(messages,"image"),originalAudio=LocalAiReplyBudget.media(messages,"audio"),requested=maxTokens;
-        LocalAiReplyBudget.Prepared prepared=LocalAiReplyBudget.prepare(messages,budgetSystem,capacity,Math.min(maxTokens,2048),counter,output::context);messages=prepared.messages;maxTokens=prepared.answer;
+        LocalAiServiceContext.Prepared runtime=LocalAiServiceContext.prepare(messages,system,turnProgress,turnCorrection,schemaBudget,capacity,Math.min(maxTokens,2048),counter,output::context);String runtimeSystem=runtime.system,budgetSystem=runtimeSystem+schemaBudget;LocalAiReplyBudget.Prepared prepared=runtime.reply;messages=prepared.messages;maxTokens=prepared.answer;
+        if(runtime.reduced)output.performance(new JSONObject().put("kind","service_context").put("reduced",true).put("beforeChars",turnProgress.length()).put("afterChars",runtimeSystem.length()-system.length()-turnCorrection.length()).toString());
         output.performance(new JSONObject().put("kind","reply_budget").put("capacity",capacity).put("requested",requested).put("effective",maxTokens).put("input",prepared.input).put("exact",isLlama()).put("imagesPrepared",originalImages).put("imagesAttached",LocalAiReplyBudget.media(messages,"image")).put("audioPrepared",originalAudio).put("audioAttached",LocalAiReplyBudget.media(messages,"audio")).toString());
         LocalAiContext.Counter budgetCounter=isLlama()?this::countPrompt:LocalAiContext::estimate;
         output.performance(LocalAiInputBudget.safeMeasure(messages,budgetSystem,budgetCounter,isLlama()).toString());
         JSONArray rendered=renderMessages(messages);
-        if(external!=null){if(cancel.get())throw new CancellationException();output.stage("prefill");JSONObject reply=external.request(LocalAiProcess.prompt(rendered,system).put("op","generate").put("scope",cacheScope).put("maxTokens",maxTokens),output).getJSONObject("value");finishReason=reply.getString("finish");output.metrics(reply.getInt("input"),reply.getInt("generated"));output.performance(new JSONObject().put("kind","finish_reason").put("value",finishReason).toString());output.stage("postprocessing");return;}
+        if(external!=null){if(cancel.get())throw new CancellationException();output.stage("prefill");JSONObject reply=external.request(LocalAiProcess.prompt(rendered,runtimeSystem).put("op","generate").put("scope",cacheScope).put("maxTokens",maxTokens),output).getJSONObject("value");finishReason=reply.getString("finish");output.metrics(reply.getInt("input"),reply.getInt("generated"));output.performance(new JSONObject().put("kind","finish_reason").put("value",finishReason).toString());output.stage("postprocessing");return;}
         if(llama!=0){
             String[] roles=roles(rendered),texts=texts(rendered);
-            output.stage("prefill");int outcome=fastCpu?FastCpu.nativeGenerate(llama,roles,texts,maxTokens,output,cancel,system,cacheScope):nativeGenerate(llama,roles,texts,maxTokens,output,cancel,system,cacheScope);finishReason=(outcome&1)==1?"token_limit":"eos";output.metrics(inputTokens[0],outcome>>>1);output.performance(new JSONObject().put("kind","finish_reason").put("value",finishReason).toString());output.stage("postprocessing");return;
+            output.stage("prefill");int outcome=fastCpu?FastCpu.nativeGenerate(llama,roles,texts,maxTokens,output,cancel,runtimeSystem,cacheScope):nativeGenerate(llama,roles,texts,maxTokens,output,cancel,runtimeSystem,cacheScope);finishReason=(outcome&1)==1?"token_limit":"eos";output.metrics(inputTokens[0],outcome>>>1);output.performance(new JSONObject().put("kind","finish_reason").put("value",finishReason).toString());output.stage("postprocessing");return;
         }
         if(cancel.get())throw new CancellationException();if(engine==null)throw new IllegalStateException("Model is stopped");
         Object companion=Class.forName(PKG+"Contents").getField("Companion").get(null);
-        Object system=companion.getClass().getMethod("of",String.class).invoke(companion,this.system);
+        Object system=companion.getClass().getMethod("of",String.class).invoke(companion,runtimeSystem);
         Object msgCompanion=Class.forName(PKG+"Message").getField("Companion").get(null);List<Object> history=new ArrayList<>();
         List<Object> runtimeMessages=new ArrayList<>();
         for(int i=0;i<messages.length();i++){

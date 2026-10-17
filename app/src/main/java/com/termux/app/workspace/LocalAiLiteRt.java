@@ -53,7 +53,8 @@ final class LocalAiLiteRt {
     }
     static String completion(boolean nativeTools,String call,String text){return !call.isEmpty()?"native_tool":nativeTools&&leakedCall(text)?"unparsed_native_tool":"sdk_done";}
     static String progress(String system){int at=system.lastIndexOf("\nCURRENT_TURN_PROGRESS");if(at<0)return "";int end=system.indexOf("\nCORRECTION:",at);return system.substring(at,end<0?system.length():end);}
-    static String correction(String coordinatorSystem){int at=coordinatorSystem.lastIndexOf("\nCORRECTION:");return at<0?"":coordinatorSystem.substring(at).replace("tool JSON","structured SDK function call").replace("Embedded JSON was NOT executed.","Draft output was NOT executed.");}
+    static String correction(String coordinatorSystem){int at=coordinatorSystem.lastIndexOf("\nCORRECTION:");return at<0?"":translateCorrection(coordinatorSystem.substring(at));}
+    static String translateCorrection(String correction){return correction.replace("tool JSON","structured SDK function call").replace("Embedded JSON was NOT executed.","Draft output was NOT executed.");}
     static List<Object> providers(JSONArray schemas)throws Exception{
         List<Object> result=new ArrayList<>();Class<?> api=Class.forName(PKG+"OpenApiTool");
         for(int i=0;i<schemas.length();i++){
