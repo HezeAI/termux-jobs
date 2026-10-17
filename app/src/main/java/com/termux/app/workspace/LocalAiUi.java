@@ -410,7 +410,7 @@ final class LocalAiUi {
                 ToolCard activeCard;
                 public void tool(JSONObject request,String state,String result){tool(request,state,result,false);}
                 public void tool(JSONObject request,String state,String result,boolean cached){ui(()->{if(state.equals("running")||state.equals("rejected")||request.optString("tool").equals("validation")||activeCard==null){activeCard=new ToolCard(request,state,result,cached);messages.addView(activeCard);}else activeCard.update(state,result,cached);});}
-                public void phase(String phase,String detail){if(phase.equals("finished")&&detail.equals("context_budget_stop"))try{timing.performance(new JSONObject().put("kind","finish_reason").put("value",detail).toString());}catch(Exception ignored){}if(phase.equals("running"))setPhase("running:"+detail);else if(phase.matches("preparation|generating|file_choice|approval|tool_validation|loop_warning"))setPhase(phase);}
+                public void phase(String phase,String detail){if(phase.equals("finished")&&detail.matches("context_budget_stop|unverified_completion"))try{timing.performance(new JSONObject().put("kind","finish_reason").put("value",detail).toString());}catch(Exception ignored){}if(phase.equals("running"))setPhase("running:"+detail);else if(phase.matches("preparation|generating|file_choice|approval|tool_validation|loop_warning|completion_check"))setPhase(phase);}
 
             },output);}finally{LocalAiTools active=tools;tools=null;if(active!=null){active.close();active.cleanupMedia();}}
         }

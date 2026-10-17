@@ -1,6 +1,6 @@
 package com.termux.app.workspace;
 import org.json.*;
-/** One owned SDK conversation. Exact semantic append only; runtime feedback is fully budgeted. */
+/** One owned SDK conversation. Exact canonical append only; actual fitted SDK history and feedback are fully budgeted. */
 final class LocalAiSdkCache {
  String key="";JSONArray expected=new JSONArray(),runtime=new JSONArray();volatile boolean invalidated;
  void clear(){key="";expected=new JSONArray();runtime=new JSONArray();invalidated=false;}

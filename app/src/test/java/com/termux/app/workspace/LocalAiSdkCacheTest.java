@@ -29,4 +29,9 @@ public class LocalAiSdkCacheTest {
   LocalAiServiceContext.Prepared p=LocalAiServiceContext.prepareSdk(h,"RIGHTS",progress,"","SCHEMA",1000,256,counter,notices::add);
   assertEquals(5,p.reply.messages.length());assertEquals(0,p.progressChars);assertTrue(p.reduced);assertEquals(original,h.toString());assertTrue(LocalAiSdkCache.same(h,p.reply.messages));assertFalse(notices.contains("begin"));assertEquals(256,p.reply.answer);
  }
+
+ @Test public void fittedRuntimeCanContinueOnlyWhenFullCanonicalHistoryAppendsExactly()throws Exception{
+  JSONArray canonical=new JSONArray().put(user("OLD_TASK")).put(new JSONObject().put("role","assistant").put("text","old answer")).put(user("CURRENT_TASK"));JSONArray actual=new JSONArray().put(user("CURRENT_TASK"));String before=canonical.toString();LocalAiSdkCache c=new LocalAiSdkCache();c.keep("key",canonical,actual,"answer","sdk_done");
+  JSONArray next=new JSONArray(canonical.toString()).put(new JSONObject().put("role","assistant").put("text","answer")).put(user("NEXT"));assertTrue(c.appendable(next,"key"));JSONArray runtime=c.expand(next);assertEquals(3,runtime.length());assertEquals("CURRENT_TASK",runtime.getJSONObject(0).getString("text"));assertTrue(c.runtimePrefix(runtime));assertEquals(before,canonical.toString());next.getJSONObject(0).put("text","EDITED_OLD_TASK");assertEquals("history_changed",c.miss(next,"key"));assertFalse(c.appendable(next,"other-rights"));
+ }
 }
