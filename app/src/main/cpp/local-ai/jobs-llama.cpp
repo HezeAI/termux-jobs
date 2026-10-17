@@ -40,26 +40,26 @@ extern "C" JNIEXPORT jlong JNICALL JOBS_JNI(nativeLoad)(JNIEnv *e,jclass,jstring
     auto ctx=llama_init_from_model(model,cp);if(!ctx){llama_model_free(model);fail(e,"Cannot allocate model context");return 0;}
     return (jlong)new JobsModel{model,ctx};
 }
-static std::vector<llama_token> prompt_tokens(JNIEnv *e,JobsModel *h,jobjectArray roles,jobjectArray texts,jstring system){
+static std::vector<llama_token> prompt_tokens(JNIEnv *e,JobsModel *h,jobjectArray roles,jobjectArray texts,jstring system,int feedback=-1,size_t* checkpoint=nullptr){
         int n=e->GetArrayLength(roles);std::vector<std::string> rs,ts;
         rs.emplace_back("system");ts.emplace_back(utf8(e,system));
         for(int i=0;i<n;i++){auto r=(jstring)e->GetObjectArrayElement(roles,i);auto t=(jstring)e->GetObjectArrayElement(texts,i);rs.push_back(utf8(e,r));ts.push_back(utf8(e,t));e->DeleteLocalRef(r);e->DeleteLocalRef(t);}
-        return jobs_prompt_tokens(h->model,rs,ts);
+        auto tokens=jobs_prompt_tokens(h->model,rs,ts);if(checkpoint)*checkpoint=jobs_feedback_checkpoint(h->model,rs,ts,feedback<0||feedback>=n?-1:feedback+1,tokens);return tokens;
 }
 extern "C" JNIEXPORT jint JNICALL JOBS_JNI(nativePromptTokens)(JNIEnv *e,jclass,jlong ptr,jobjectArray roles,jobjectArray texts,jstring system){
     try{auto h=(JobsModel*)ptr;if(!h)throw std::runtime_error("Model is stopped");return prompt_tokens(e,h,roles,texts,system).size();}catch(const std::exception &err){if(!e->ExceptionCheck())fail(e,err.what());return 0;}
 }
-extern "C" JNIEXPORT jint JNICALL JOBS_JNI(nativeGenerate)(JNIEnv *e,jclass,jlong ptr,jobjectArray roles,jobjectArray texts,jint max,jobject output,jobject cancel,jstring system,jstring scope){
+extern "C" JNIEXPORT jint JNICALL JOBS_JNI(nativeGenerate)(JNIEnv *e,jclass,jlong ptr,jobjectArray roles,jobjectArray texts,jint max,jobject output,jobject cancel,jstring system,jstring scope,jint feedback){
     auto native_start=std::chrono::steady_clock::now();auto h=(JobsModel*)ptr;if(!h)return 0;llama_sampler *sampler=nullptr;int finish=0,generated=0;
     try{
-        auto tokens=prompt_tokens(e,h,roles,texts,system);int count=tokens.size();auto vocab=llama_model_get_vocab(h->model);
+        size_t feedback_at=0;auto tokens=prompt_tokens(e,h,roles,texts,system,feedback,&feedback_at);int count=tokens.size();auto vocab=llama_model_get_vocab(h->model);
         if(tokens.empty())throw std::runtime_error("Empty prompt");
         int limit=std::clamp((int)max,1,2048);if(count+limit+1>(int)llama_n_ctx(h->ctx))throw std::runtime_error("CONTEXT_TOO_SMALL: current input exceeds the runtime context after budgeting; saved history is kept.");
         using clock=std::chrono::steady_clock;auto millis=[](clock::time_point t){return std::chrono::duration_cast<std::chrono::milliseconds>(clock::now()-t).count();};
         auto cache_start=clock::now();size_t reused=h->cache.begin(h->ctx,tokens,utf8(e,scope),utf8(e,system));long long cache_ms=millis(cache_start);
         // A system-only probe with two different user bodies gives a stable, token-exact boundary.
         auto a=jobs_prompt_tokens(h->model,{"system","user"},{utf8(e,system),"A-cache-boundary"});auto b=jobs_prompt_tokens(h->model,{"system","user"},{utf8(e,system),"B-cache-boundary"});
-        size_t base_at=std::min({jobs_prefix_cache::common(a,b),jobs_prefix_cache::common(a,tokens),tokens.size()-1});size_t tail_at=std::max(base_at,tokens.size()>64?tokens.size()-64:size_t(0));
+        size_t base_at=std::min({jobs_prefix_cache::common(a,b),jobs_prefix_cache::common(a,tokens),tokens.size()-1});size_t tail_at=feedback_at>base_at?feedback_at:std::max(base_at,tokens.size()>64?tokens.size()-64:size_t(0));
 
         jclass cancelClass=e->GetObjectClass(cancel);jmethodID get=e->GetMethodID(cancelClass,"get","()Z");e->DeleteLocalRef(cancelClass);
         jclass outClass=e->GetObjectClass(output);jmethodID emit=e->GetMethodID(outClass,"text","(Ljava/lang/String;)V");jmethodID progress=e->GetMethodID(outClass,"performance","(Ljava/lang/String;)V");jmethodID stage=e->GetMethodID(outClass,"stage","(Ljava/lang/String;)V");e->DeleteLocalRef(outClass);

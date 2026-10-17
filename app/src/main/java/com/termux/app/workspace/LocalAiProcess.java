@@ -30,5 +30,6 @@ final class LocalAiProcess implements AutoCloseable {
  }
  void cancel(){int id=active;if(id!=0)try{send(new JSONObject().put("op","cancel").put("id",id));}catch(Exception ignored){}}
  public void close(){if(closed)return;try{send(new JSONObject().put("op","quit"));}catch(Exception ignored){}closed=true;try{writer.close();}catch(Exception ignored){}try{if(!process.waitFor(15,TimeUnit.SECONDS)){process.destroy();if(!process.waitFor(2,TimeUnit.SECONDS))process.destroyForcibly();}}catch(InterruptedException e){process.destroy();Thread.currentThread().interrupt();}try{process.getInputStream().close();}catch(Exception ignored){}reader.interrupt();}
- static JSONObject prompt(JSONArray messages,String system)throws Exception{JSONArray roles=new JSONArray(),texts=new JSONArray();for(int i=0;i<messages.length();i++){roles.put(messages.getJSONObject(i).getString("role"));texts.put(messages.getJSONObject(i).getString("text"));}return new JSONObject().put("roles",roles).put("texts",texts).put("system",system);}
+ static JSONObject prompt(JSONArray messages,String system)throws Exception{JSONArray roles=new JSONArray(),texts=new JSONArray();for(int i=0;i<messages.length();i++){roles.put(messages.getJSONObject(i).getString("role"));texts.put(messages.getJSONObject(i).getString("text"));}return new JSONObject().put("roles",roles).put("texts",texts).put("system",system).put("feedbackStart",feedbackStart(messages));}
+ static int feedbackStart(JSONArray messages){int n=messages.length()-1;return n>=0&&messages.optJSONObject(n).optBoolean("cacheTransient")?n:-1;}
 }

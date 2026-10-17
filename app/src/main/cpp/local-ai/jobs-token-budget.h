@@ -1,6 +1,7 @@
 #pragma once
 #include "llama.h"
 #include "jobs-chat-policy.h"
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <stdexcept>
@@ -14,4 +15,10 @@ inline std::vector<llama_token> jobs_prompt_tokens(llama_model *model,const std:
         auto vocab=llama_model_get_vocab(model);int count=-llama_tokenize(vocab,rendered.data(),rendered.size(),nullptr,0,true,true);if(count<=0)throw std::runtime_error("Cannot size prompt tokens");std::vector<llama_token> tokens(count);
         count=llama_tokenize(vocab,rendered.data(),rendered.size(),tokens.data(),tokens.size(),true,true);if(count<=0)throw std::runtime_error("Cannot tokenize prompt");
         return tokens;
+}
+
+// Conservative token-exact checkpoint before a final app-owned feedback message.
+inline size_t jobs_feedback_checkpoint(llama_model* model,const std::vector<std::string>& roles,const std::vector<std::string>& texts,int index,const std::vector<llama_token>& full){
+ if(index<1||index!=(int)roles.size()-1||roles.size()!=texts.size()||roles[index]!="user"||full.empty())return 0;
+ auto alternate=roles;alternate[index]="assistant";auto other=jobs_prompt_tokens(model,alternate,texts);size_t n=0;while(n<full.size()&&n<other.size()&&full[n]==other[n])++n;return std::min(n,full.size()-1);
 }

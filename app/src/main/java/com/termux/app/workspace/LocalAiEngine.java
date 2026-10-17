@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 final class LocalAiEngine implements AutoCloseable {
     interface Output {void text(String text);default void context(String state){}default void stage(String stage){}default void metrics(int input,int output){}default void performance(String json){}}
     private static final String PKG="com.google.ai.edge.litertlm.";
-    private Object engine,conversation;
+    private Object engine;private volatile Object conversation;private Object retainedConversation;private int retainedMaxTokens;private final LocalAiSdkCache sdkCache=new LocalAiSdkCache();
     private Context runtimeContext;private JSONObject loadedModel;private File loadedFile;private String loadedRequested;private int loadedThreads,loadedContext;private boolean vision,audio;
     JSONArray nativeSchemas=new JSONArray();
     boolean probeThinking,probeGreedy; // Diagnostic-only; normal generations retain the existing settings.
@@ -60,6 +60,7 @@ final class LocalAiEngine implements AutoCloseable {
                 Class<?> configType=Class.forName(PKG+"EngineConfig");
                 File cache=new File(c.getCacheDir(),"local-ai/"+LocalAiFiles.safeId(model.getString("id"))+"/"+target);cache.mkdirs();
                 Object config=configType.getConstructor(String.class,Class.forName(PKG+"Backend"),Class.forName(PKG+"Backend"),Class.forName(PKG+"Backend"),Integer.class,Integer.class,String.class).newInstance(file.getAbsolutePath(),device,images?Class.forName(PKG+"Backend$GPU").getConstructor().newInstance():null,sound?Class.forName(PKG+"Backend$CPU").getConstructor(Integer.class,Integer.class).newInstance(threads,null):null,context,images?3:null,cache.getAbsolutePath());
+                try{Class<?> flags=Class.forName(PKG+"ExperimentalFlags");flags.getMethod("setEnableBenchmark",boolean.class).invoke(flags.getField("INSTANCE").get(null),true);}catch(ReflectiveOperationException ignored){}
                 candidate=Class.forName(PKG+"Engine").getConstructor(configType).newInstance(config);
                 invoke(candidate,"initialize");engine=candidate;backend=target.toUpperCase(Locale.ROOT);vision=images;audio=sound;return;
             }catch(Throwable t){failure=t;if(candidate!=null)try{invoke(candidate,"close");}catch(Exception ignored){}if(cancel.get())throw new CancellationException();}
@@ -69,7 +70,7 @@ final class LocalAiEngine implements AutoCloseable {
     private void ensureMedia(boolean images,boolean sound)throws Exception{
         if((!images||vision)&&(!sound||audio))return;
         if(images&&!LocalAiMedia.supported(loadedModel)||sound&&!LocalAiMedia.audioSupported(loadedModel))throw new IllegalStateException("UNSUPPORTED_MEDIA: selected model has no verified media input");
-        if(cancel.get())throw new CancellationException();Object old=engine;engine=null;if(old!=null)invoke(old,"close");
+        if(cancel.get())throw new CancellationException();dropSdk();Object old=engine;engine=null;if(old!=null)invoke(old,"close");
         boolean wantImages=images||vision,wantSound=sound||audio;
         try{initialize(runtimeContext,loadedModel,loadedFile,loadedRequested,loadedThreads,loadedContext,wantImages,wantSound);}catch(Exception error){if(cancel.get())throw new CancellationException();initialize(runtimeContext,loadedModel,loadedFile,loadedRequested,loadedThreads,loadedContext,false,false);throw new IllegalStateException("MEDIA_UNAVAILABLE: media backend failed; text engine restored. "+message(error),error);}
     }
@@ -79,6 +80,7 @@ final class LocalAiEngine implements AutoCloseable {
     static boolean contextOverflow(String error){String text=error.toLowerCase(Locale.ROOT);return !text.contains("context_too_small")&&(text.contains("context")&&text.matches("(?s).*(exceed|too long|overflow|capacity|token limit).*" )||text.contains("input")&&text.contains("too long"));}
     void generate(JSONArray messages,int maxTokens,Output output)throws Exception{
         try{generateOnce(messages,maxTokens,output);}catch(Exception error){
+            if(!isLlama())dropSdk();
             if(isLlama()||cancel.get()||!contextOverflow(message(error)))throw error;
             // LiteRT does not expose its tokenizer here. One bounded retry with more headroom.
             output.context("begin");int estimate=LocalAiContext.estimate(messages,system);int tighter=Math.min((loadedContext>0?loadedContext:4096)*3/4,Math.max(1,estimate*2/3)+Math.min(maxTokens,2048)+64);
@@ -97,16 +99,24 @@ final class LocalAiEngine implements AutoCloseable {
         int capacity=loadedContext>0?loadedContext:4096;if(isLlama())capacity=Math.max(512,Math.min(8192,capacity));
         int[] inputTokens={-1};LocalAiContext.Counter counter=isLlama()?(items,instructions)->{inputTokens[0]=countPrompt(items,instructions);return inputTokens[0];}:LocalAiContext::estimate;
         int originalImages=LocalAiReplyBudget.media(messages,"image"),originalAudio=LocalAiReplyBudget.media(messages,"audio"),requested=maxTokens;
-        LocalAiServiceContext.Prepared runtime=LocalAiServiceContext.prepare(messages,system,turnProgress,turnCorrection,schemaBudget,capacity,Math.min(maxTokens,2048),counter,output::context,isLlama());String runtimeSystem=runtime.system,budgetSystem=runtimeSystem+schemaBudget;LocalAiReplyBudget.Prepared prepared=runtime.reply;messages=prepared.messages;maxTokens=prepared.answer;
+        JSONArray canonicalInput=LocalAiSdkCache.source(messages);messages=canonicalInput;String sdkKey=!isLlama()&&!cacheScope.isEmpty()&&!images&&!sound?new JSONArray().put(cacheScope).put(system).put(nativeSchemas).put(protocol).put(maxTokens).put(probeThinking).put(probeGreedy).toString():"";
+        boolean sdkMode=!isLlama()&&!sdkKey.isEmpty(),reuseSdk=sdkMode&&retainedConversation!=null&&sdkCache.appendable(canonicalInput,sdkKey);
+        if(!isLlama()&&!reuseSdk)dropSdk();if(reuseSdk)messages=sdkCache.expand(canonicalInput);
+        LocalAiServiceContext.Prepared runtime;List<String> runtimeNotices=new ArrayList<>();LocalAiContext.Notice budgetNotice=runtimeNotices::add;
+        try{runtime=sdkMode?LocalAiServiceContext.prepareSdk(messages,system,turnProgress,turnCorrection,schemaBudget,capacity,Math.min(maxTokens,2048),counter,budgetNotice):LocalAiServiceContext.prepare(messages,system,turnProgress,turnCorrection,schemaBudget,capacity,Math.min(maxTokens,2048),counter,budgetNotice,isLlama());}
+        catch(Exception error){if(!reuseSdk||!LocalAiServiceContext.tooSmall(error)){if(!isLlama())dropSdk();throw error;}dropSdk();reuseSdk=false;runtimeNotices.clear();runtime=LocalAiServiceContext.prepareSdk(canonicalInput,system,turnProgress,turnCorrection,schemaBudget,capacity,Math.min(maxTokens,2048),counter,budgetNotice);}
+        if(reuseSdk&&(!sdkCache.runtimePrefix(runtime.reply.messages)||runtime.reply.answer!=retainedMaxTokens)){dropSdk();reuseSdk=false;runtimeNotices.clear();runtime=LocalAiServiceContext.prepareSdk(canonicalInput,system,turnProgress,turnCorrection,schemaBudget,capacity,Math.min(maxTokens,2048),counter,budgetNotice);}
+        for(String notice:runtimeNotices)output.context(notice);String runtimeSystem=runtime.system,budgetSystem=runtimeSystem+schemaBudget;LocalAiReplyBudget.Prepared prepared=runtime.reply;messages=prepared.messages;maxTokens=prepared.answer;
         if(runtime.reduced)output.performance(new JSONObject().put("kind","service_context").put("reduced",true).put("beforeChars",turnProgress.length()).put("afterChars",runtime.progressChars).toString());
         output.performance(new JSONObject().put("kind","reply_budget").put("capacity",capacity).put("requested",requested).put("effective",maxTokens).put("input",prepared.input).put("exact",isLlama()).put("imagesPrepared",originalImages).put("imagesAttached",LocalAiReplyBudget.media(messages,"image")).put("audioPrepared",originalAudio).put("audioAttached",LocalAiReplyBudget.media(messages,"audio")).toString());
         LocalAiContext.Counter budgetCounter=isLlama()?this::countPrompt:LocalAiContext::estimate;
         output.performance(LocalAiInputBudget.safeMeasure(messages,budgetSystem,budgetCounter,isLlama()).toString());
         JSONArray rendered=renderMessages(messages);
+        if(isLlama())output.performance(new JSONObject().put("kind","cpu_runtime").put("batch",compute.equals("gpu")?1024:256).put("ubatch",compute.equals("gpu")?512:128).put("threads",compute.equals("gpu")?6:loadedThreads).toString());
         if(external!=null){if(cancel.get())throw new CancellationException();output.stage("prefill");JSONObject reply=external.request(LocalAiProcess.prompt(rendered,runtimeSystem).put("op","generate").put("scope",cacheScope).put("maxTokens",maxTokens),output).getJSONObject("value");finishReason=reply.getString("finish");output.metrics(reply.getInt("input"),reply.getInt("generated"));output.performance(new JSONObject().put("kind","finish_reason").put("value",finishReason).toString());output.stage("postprocessing");return;}
         if(llama!=0){
             String[] roles=roles(rendered),texts=texts(rendered);
-            output.stage("prefill");int outcome=fastCpu?FastCpu.nativeGenerate(llama,roles,texts,maxTokens,output,cancel,runtimeSystem,cacheScope):nativeGenerate(llama,roles,texts,maxTokens,output,cancel,runtimeSystem,cacheScope);finishReason=(outcome&1)==1?"token_limit":"eos";output.metrics(inputTokens[0],outcome>>>1);output.performance(new JSONObject().put("kind","finish_reason").put("value",finishReason).toString());output.stage("postprocessing");return;
+            output.stage("prefill");int outcome=fastCpu?FastCpu.nativeGenerate(llama,roles,texts,maxTokens,output,cancel,runtimeSystem,cacheScope,LocalAiProcess.feedbackStart(rendered)):nativeGenerate(llama,roles,texts,maxTokens,output,cancel,runtimeSystem,cacheScope,LocalAiProcess.feedbackStart(rendered));finishReason=(outcome&1)==1?"token_limit":"eos";output.metrics(inputTokens[0],outcome>>>1);output.performance(new JSONObject().put("kind","finish_reason").put("value",finishReason).toString());output.stage("postprocessing");return;
         }
         if(cancel.get())throw new CancellationException();if(engine==null)throw new IllegalStateException("Model is stopped");
         Object companion=Class.forName(PKG+"Contents").getField("Companion").get(null);
@@ -128,7 +138,8 @@ final class LocalAiEngine implements AutoCloseable {
         Object thinking=Class.forName(PKG+"ThinkingConfig").getConstructor(boolean.class,int.class).newInstance(probeThinking,probeThinking?128:0);
         Object cfg=configType.getConstructor(Class.forName(PKG+"Contents"),List.class,List.class,Class.forName(PKG+"SamplerConfig"),boolean.class,List.class,java.util.Map.class,Class.forName(PKG+"LoraConfig"),boolean.class,Integer.class,Class.forName(PKG+"ThinkingConfig"),boolean.class)
             .newInstance(system,history,nativeTools?LocalAiLiteRt.providers(nativeSchemas):Collections.emptyList(),sampler,false,probeThinking?null:Collections.emptyList(),Collections.emptyMap(),null,true,Math.min(maxTokens,2048),thinking,false);
-        output.stage("prefill");conversation=engine.getClass().getMethod("createConversation",configType).invoke(engine,cfg);
+        output.stage("prefill");conversation=reuseSdk?retainedConversation:engine.getClass().getMethod("createConversation",configType).invoke(engine,cfg);
+        final boolean reusedConversation=reuseSdk;boolean keepConversation=false;
         CountDownLatch done=new CountDownLatch(1);Throwable[] error={null};StringBuilder response=new StringBuilder();String[] nativeCall={""};
         Class<?> callback=Class.forName(PKG+"MessageCallback");
         Object listener=Proxy.newProxyInstance(callback.getClassLoader(),new Class<?>[]{callback},(proxy,method,args)->{
@@ -144,16 +155,24 @@ final class LocalAiEngine implements AutoCloseable {
         try{
             conversation.getClass().getMethod("sendMessageAsync",Class.forName(PKG+"Message"),callback).invoke(conversation,lastMessage,listener);
             if(!done.await(15,TimeUnit.MINUTES)){cancel();done.await();throw new TimeoutException("Local response timed out");}
-            finishReason=LocalAiLiteRt.completion(nativeTools,nativeCall[0],response.toString());if(cancel.get())throw new CancellationException();if(error[0]!=null)throw new Exception(message(error[0]),error[0]);if(!nativeCall[0].isEmpty())output.text(nativeCall[0]);output.metrics(-1,-1);output.performance(new JSONObject().put("kind","finish_reason").put("value",finishReason).toString());output.stage("postprocessing");
-        }finally{Object conv=conversation;conversation=null;if(conv!=null)invoke(conv,"close");}
+            finishReason=LocalAiLiteRt.completion(nativeTools,nativeCall[0],response.toString());if(cancel.get())throw new CancellationException();if(error[0]!=null)throw new Exception(message(error[0]),error[0]);if(!nativeCall[0].isEmpty())output.text(nativeCall[0]);sdkMetrics(conversation,output,reusedConversation);output.performance(new JSONObject().put("kind","finish_reason").put("value",finishReason).toString());output.stage("postprocessing");
+            keepConversation=sdkMode&&!cancel.get()&&!sdkCache.invalidated&&finishReason.matches("sdk_done|native_tool")&&(nativeCall[0].isEmpty()||response.length()==0)&&LocalAiSdkCache.same(canonicalInput,messages);
+            if(keepConversation){sdkCache.keep(sdkKey,canonicalInput,messages,nativeCall[0].isEmpty()?response.toString():nativeCall[0],finishReason);keepConversation=!sdkCache.key.isEmpty();}
+        }finally{Object conv=conversation;conversation=null;if(keepConversation){retainedConversation=conv;retainedMaxTokens=maxTokens;}else{if(retainedConversation==conv)retainedConversation=null;sdkCache.clear();if(conv!=null)invoke(conv,"close");}}
+    }
+    private void dropSdk(){Object old=retainedConversation;retainedConversation=null;sdkCache.clear();if(old!=null)try{invoke(old,"close");}catch(Exception ignored){}}
+    private void sdkMetrics(Object conv,Output output,boolean reused)throws Exception{
+        JSONObject event=new JSONObject().put("kind","litert_runtime").put("reused",reused).put("available",false);int in=-1,out=-1;
+        try{Object info=invoke(conv,"getBenchmarkInfo");in=((Number)invoke(info,"getLastPrefillTokenCount")).intValue();out=((Number)invoke(info,"getLastDecodeTokenCount")).intValue();double pp=((Number)invoke(info,"getLastPrefillTokensPerSecond")).doubleValue(),tg=((Number)invoke(info,"getLastDecodeTokensPerSecond")).doubleValue();if(in>=0&&out>=0&&Double.isFinite(pp)&&Double.isFinite(tg)&&pp>=0&&tg>=0)event.put("available",true).put("prefillTokens",in).put("decodeTokens",out).put("prefillRate",pp).put("decodeRate",tg);else{in=out=-1;}}catch(Exception ignored){}
+        try{int n=((Number)invoke(conv,"getTokenCount")).intValue();if(n>=0)event.put("kvTokens",n);}catch(Exception ignored){}output.metrics(in,out);output.performance(event.toString());
     }
     private boolean isLlama(){return llama!=0||external!=null;}
     JSONArray renderMessages(JSONArray items)throws Exception{return protocol.equals("qwen-native")?LocalAiQwenProtocol.render(items):items;}
     private int countPrompt(JSONArray items,String instructions)throws Exception{items=renderMessages(items);if(cancel.get())throw new CancellationException();return external!=null?external.request(LocalAiProcess.prompt(items,instructions).put("op","count"),null).getInt("value"):fastCpu?FastCpu.nativePromptTokens(llama,roles(items),texts(items),instructions):nativePromptTokens(llama,roles(items),texts(items),instructions);}
     void resetBenchmarkCancel(){cancel.set(false);}
     void benchmark(int mode,Output output)throws Exception{if(compute.equals("gpu"))throw new IllegalStateException("CPU benchmark unavailable in GPU mode; select CPU");if(!isLlama())throw new IllegalStateException("Benchmark requires a loaded llama.cpp model");if(mode<0||mode>2)throw new IllegalArgumentException("Invalid benchmark mode");if(cancel.get())throw new CancellationException();try{if(external!=null){external.request(new JSONObject().put("op","benchmark").put("mode",mode),output);}else if(fastCpu)FastCpu.nativeBenchmark(llama,mode,loadedThreads,output,cancel);else nativeBenchmark(llama,mode,loadedThreads,output,cancel);}finally{cancel.set(false);}}
-    void cancel(){cancel.set(true);LocalAiProcess process=external;if(process!=null)process.cancel();Object conv=conversation;if(conv!=null)try{invoke(conv,"cancelProcess");}catch(Exception ignored){}}
-    public void close(){cancel();LocalAiProcess process=external;external=null;if(process!=null)process.close();if(llama!=0){if(fastCpu)FastCpu.nativeFree(llama);else nativeFree(llama);llama=0;}fastCpu=false;if(engine!=null){try{invoke(engine,"close");}catch(Exception ignored){}engine=null;}vision=false;audio=false;backend="";}
+    void cancel(){cancel.set(true);sdkCache.invalidated=true;LocalAiProcess process=external;if(process!=null)process.cancel();Object conv=conversation;if(conv!=null)try{invoke(conv,"cancelProcess");}catch(Exception ignored){}}
+    public void close(){cancel();dropSdk();LocalAiProcess process=external;external=null;if(process!=null)process.close();if(llama!=0){if(fastCpu)FastCpu.nativeFree(llama);else nativeFree(llama);llama=0;}fastCpu=false;if(engine!=null){try{invoke(engine,"close");}catch(Exception ignored){}engine=null;}vision=false;audio=false;backend="";}
     static Object invoke(Object target,String name) throws Exception{return target.getClass().getMethod(name).invoke(target);}
     static String message(Throwable t){if(t==null)return "Unknown error";while(t instanceof InvocationTargetException&&t.getCause()!=null)t=t.getCause();String s=t.getMessage();return t.getClass().getSimpleName()+(s==null?"":": "+s.substring(0,Math.min(s.length(),500)));}
     static String[] roles(JSONArray messages)throws JSONException{String[] out=new String[messages.length()];for(int i=0;i<out.length;i++)out[i]=messages.getJSONObject(i).getString("role");return out;}
@@ -165,13 +184,13 @@ final class LocalAiEngine implements AutoCloseable {
     private static final class FastCpu {
     private static native int nativePromptTokens(long ptr,String[] roles,String[] texts,String system);
     private static native long nativeLoad(String path,int threads,int context);
-    private static native int nativeGenerate(long handle,String[] roles,String[] texts,int maxTokens,Output output,AtomicBoolean cancel,String system,String scope);
+    private static native int nativeGenerate(long handle,String[] roles,String[] texts,int maxTokens,Output output,AtomicBoolean cancel,String system,String scope,int feedbackStart);
     private static native void nativeBenchmark(long handle,int mode,int threads,Output output,AtomicBoolean cancel);
     private static native void nativeFree(long handle);
     }
     private static native int nativePromptTokens(long ptr,String[] roles,String[] texts,String system);
     private static native long nativeLoad(String path,int threads,int context);
-    private static native int nativeGenerate(long handle,String[] roles,String[] texts,int maxTokens,Output output,AtomicBoolean cancel,String system,String scope);
+    private static native int nativeGenerate(long handle,String[] roles,String[] texts,int maxTokens,Output output,AtomicBoolean cancel,String system,String scope,int feedbackStart);
     private static native void nativeBenchmark(long handle,int mode,int threads,Output output,AtomicBoolean cancel);
     private static native void nativeFree(long handle);
 }
