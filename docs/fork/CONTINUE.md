@@ -1,3 +1,9 @@
+## Latest private delivery: v1.5.8-test (1145)
+
+Delivered /sdcard/Download/Termux-Jobs-v1.5.8-test-arm64.apk. See RELEASE-v1.5.8-test.md and VALIDATION-v1.5.8-test.md. Bounded untrusted task/target evidence added only after dropping previous turns and only if space remains; optional null history fields omitted; one expandable context notice per user turn. Both local engines, no semantic history search or external-agent changes. Final71 targeted tests pass; broad-run results/corrections documented. ZIP/identity/signature/limited-secret scan and Download SHA verified. No publication. Next versionCode >=1146.
+
+Developer verification of1.5.7: diagnostics4159294689667868535 shows joint video analysis3prepared/3attached/0omitted, followed by final normal chat; developer supplied successful ordinary file read in the same chat. Visual accuracy and cancellation are not established by that sequence.
+
 ## Latest private delivery: v1.5.7-test (1144)
 
 Delivered /sdcard/Download/Termux-Jobs-v1.5.7-test-arm64.apk. See RELEASE-v1.5.7-test.md and VALIDATION-v1.5.7-test.md. view_video uses no-tool/no-history sub-analysis, joint then per-frame fallback, restores schemas/scope and returns text observations to normal chat. Only compatible vision LiteRT currently; llama remains text-only. Full615 app tests, final111 targeted, real-SDK13 interface tests passed. Hardware video and normal follow-up/cancel tests need developer verification. No publication. Next versionCode >=1145.

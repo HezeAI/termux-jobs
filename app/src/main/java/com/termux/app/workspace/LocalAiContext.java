@@ -53,6 +53,16 @@ final class LocalAiContext {
             JSONObject m=work.getJSONObject(largest);String text=m.getString("text");int keep=Math.max(64,(text.length()-100)/2);
             m.put("text",text.substring(0,keep)+"\n[Context excerpt: middle omitted. Full tool result remains in saved history.]\n"+text.substring(text.length()-Math.min(64,text.length())));
         }
+        // Only supplement when previous turns really were dropped. Do not displace
+        // a complete recent exchange merely to make room for its own excerpt.
+        if(LocalAiSummary.lastUser(work)==0&&work.length()<original.length()){
+            String anchor=LocalAiSummary.taskAnchor(original);
+            if(!anchor.isEmpty()){
+                JSONArray candidate=new JSONArray(work.toString());
+                candidate.getJSONObject(0).put("text",anchor+candidate.getJSONObject(0).optString("text"));
+                if(counter.count(candidate,system)<=budget)work=candidate;
+            }
+        }
         if(changed)notice.state("done");return work;
     }
 }
