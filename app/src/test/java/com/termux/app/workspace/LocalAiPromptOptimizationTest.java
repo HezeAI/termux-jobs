@@ -29,4 +29,12 @@ public class LocalAiPromptOptimizationTest {
    JSONObject command=new JSONObject().put("tool","command").put("command","true");if(!mode.equals("write")||scope)try{LocalAiTools.authorize(p,command);fail();}catch(SecurityException expected){}else LocalAiTools.authorize(p,command);
   }
  }
+ @Test public void toolDescriptionsReachBothNativeSchemaSetsIncludingToolsOnly()throws Exception{
+  WorkspaceStore.Session p=new WorkspaceStore.Session();p.localAccess="write";p.localCheckPaths=false;p.localConfirmActions=true;p.localToolsOnly=true;
+  java.util.Set<String> names=new java.util.HashSet<>();for(JSONArray schemas:new JSONArray[]{LocalAiQwenProtocol.tools(p),LocalAiLiteRt.schemas(p)})for(int i=0;i<schemas.length();i++){
+   JSONObject f=schemas.getJSONObject(i).getJSONObject("function");String name=f.getString("name");names.add(name);assertEquals(LocalAiLiteRt.description(name),f.getString("description"));assertTrue(f.getString("description").length()<260);
+   if(name.equals("command"))assertTrue(f.getString("description").contains("NOT for writing/saving an installation guide; use write"));
+   if(name.equals("write")){assertTrue(f.getString("description").contains("NOT install Python"));assertTrue(f.getJSONObject("parameters").getJSONObject("properties").getJSONObject("text").getString("description").contains("SAVE"));}
+  }assertEquals(13,names.size());assertEquals("",LocalAiPrompts.behavior(RuntimeEnvironment.application,p));
+ }
 }

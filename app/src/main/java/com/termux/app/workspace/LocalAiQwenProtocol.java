@@ -28,6 +28,8 @@ final class LocalAiQwenProtocol {
             if(name.matches("screenshots|history"))properties.put("query",field("string")).put("limit",field("integer").put("minimum",1).put("maximum",name.equals("history")?10:200));
             if(name.equals("screenshots"))properties.put("path",field("string"));
             if(name.equals("history"))properties.put("start",field("integer").put("minimum",0));
+            if(name.equals("write"))properties.getJSONObject("text").put("description","Complete UTF-8 document contents to SAVE; not commands to execute.");
+            if(name.equals("command"))properties.getJSONObject("command").put("description","Bash script to EXECUTE. To save instructions/documentation instead, use write.");
             String description=LocalAiLiteRt.description(name);
             out.put(new JSONObject().put("type","function").put("function",new JSONObject().put("name",name).put("description",description).put("parameters",new JSONObject().put("type","object").put("properties",properties).put("required",required).put("additionalProperties",false))));
         }return out;

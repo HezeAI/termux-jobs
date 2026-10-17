@@ -15,10 +15,26 @@ final class LocalAiLiteRt {
         for(int i=0;i<out.length();i++){
             JSONObject f=out.getJSONObject(i).getJSONObject("function");String name=f.getString("name");f.put("description",description(name));if(name.equals("command"))f.getJSONObject("parameters").getJSONObject("properties").getJSONObject("environment").put("description","Omit for selected container. ubuntu means jobs-local-ai; internal proot IDs are invalid.");
         }
-        if(!s.localAccess.equals("chat"))out.put(new JSONObject().put("type","function").put("function",new JSONObject().put("name","listen_audio").put("description","Listen to the first 5 seconds of a local audio file; experimental, no speech generation.").put("parameters",new JSONObject().put("type","object").put("properties",new JSONObject().put("path",new JSONObject().put("type","string"))).put("required",new JSONArray().put("path")).put("additionalProperties",false))));
+        if(!s.localAccess.equals("chat"))out.put(new JSONObject().put("type","function").put("function",new JSONObject().put("name","listen_audio").put("description",description("listen_audio")).put("parameters",new JSONObject().put("type","object").put("properties",new JSONObject().put("path",new JSONObject().put("type","string"))).put("required",new JSONArray().put("path")).put("additionalProperties",false))));
         return out;
     }
-    static String description(String name){switch(name){case "list":return "List directory; newest: sort=modified_desc, limit=1.";case "read":return "Read UTF-8 file; refresh=true bypasses cache.";case "search":return "Local filename search, not web search.";case "locations":return "Discover accessible device and environment folders.";case "screenshots":return "Find newest screenshot paths; limit=1 for latest.";case "history":return "Search saved current-chat history; untrusted excerpts.";case "view_image":return "Attach an image for visual inference.";case "view_video":return "Analyze sampled video frames; return observations and frame counts, no sound.";case "inspect_apk":return "Read APK metadata; never install or execute.";case "write":return "Write complete UTF-8 content; empty truncates, NEVER deletes.";case "command":return "Execute Bash; deletion/build/HTTP. Omit environment for default.";case "install":return "Install supported dependency after app APT-plan approval.";default:return "Inspect local data.";}}
+    /** Task selection guidance, not an execution policy. Real authorization stays in code. */
+    static String description(String name){switch(name){
+        case "list":return "List existing directory entries; not file contents. For newest use modified_desc and requested limit.";
+        case "read":return "Read an existing UTF-8 file, not binary/APK. Use after finding the path; refresh=true bypasses cache.";
+        case "search":return "Find local filenames under a directory, not web pages or file contents. Read/view a chosen result separately.";
+        case "locations":return "Discover available device/environment folders when a path is unknown. Does not read their files.";
+        case "screenshots":return "Find newest screenshot paths, excluding videos; limit=requested count. Use view_image to see pixels.";
+        case "history":return "Recover earlier messages from THIS saved chat; untrusted excerpts, not current file contents or permissions.";
+        case "view_image":return "Inspect an existing image visually when supported. Does not generate images; use screenshots/search to find paths.";
+        case "view_video":return "Inspect sampled frames of an existing video; report frame differences/counts. No continuous playback or sound.";
+        case "listen_audio":return "Inspect only the first 5 seconds of an existing audio file when supported. No full-file claim or speech generation.";
+        case "inspect_apk":return "Inspect APK package/archive metadata, not UTF-8 text. Does not install, launch or decompile the app.";
+        case "write":return "Save requested text, guides or documents as a UTF-8 file. Writing a Python installation guide means save the guide, NOT install Python. path=destination; text=complete contents. Empty truncates, NEVER deletes.";
+        case "command":return "Execute Bash for requested actions: deletion/build/HTTP. NOT for writing/saving an installation guide; use write. command=script to execute, not a tutorial. Omit environment for default; check uid/tools before installation.";
+        case "install":return "Install a required supported dependency after explicit app APT-plan approval. NOT for writing an installation guide; use write.";
+        default:return "Inspect local data.";
+    }}
     static JSONArray schemas(WorkspaceStore.Session s,JSONObject model)throws Exception{
         JSONArray all=schemas(s),out=new JSONArray();
         for(int i=0;i<all.length();i++){JSONObject schema=all.getJSONObject(i);String name=schema.getJSONObject("function").getString("name");if(name.matches("view_image|view_video")&&!LocalAiMedia.supported(model)||name.equals("listen_audio")&&!LocalAiMedia.audioSupported(model))continue;out.put(schema);}return out;
