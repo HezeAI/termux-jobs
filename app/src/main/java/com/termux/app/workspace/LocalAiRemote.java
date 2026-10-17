@@ -18,6 +18,7 @@ final class LocalAiRemote implements AutoCloseable {
     private volatile int request;
     private boolean bound,detached;
     volatile String benchmarkToken="";volatile boolean benchmarkCancelled;volatile String cacheScope="";String cpuMode="auto",location="android",protocol="json",compute="cpu";
+    String nativeSchemas="[]";
     volatile boolean contextCompacted;volatile String contextState="";
     volatile String backend="",finishReason="unknown";
     private final Messenger callback=new Messenger(new Handler(Looper.getMainLooper()){
@@ -53,7 +54,7 @@ final class LocalAiRemote implements AutoCloseable {
         history=LocalAiContext.fit(history,system,400000,0,(items,instructions)->{int n=instructions.length()*3;for(int i=0;i<items.length();i++)n+=items.getJSONObject(i).toString().length()*3;return n;},state->{contextCompacted=true;contextState=state;listener.context(state);});
         JSONArray bounded=new JSONArray();int start=0,chars=0;
         int imageBudget=3;for(int i=history.length()-1;i>=start;i--){JSONObject source=history.getJSONObject(i),copy=new JSONObject(source.toString());JSONArray media=copy.optJSONArray("media");if(media!=null){JSONArray keep=new JSONArray();for(int n=0;n<media.length()&&imageBudget>0;n++,imageBudget--)keep.put(media.getJSONObject(n));if(keep.length()==0){copy.remove("media");copy.put("text",copy.getString("text")+"\n[Older media omitted; only the latest three images/frames are attached.]");}else copy.put("media",keep);}bounded.put(copy);}JSONArray ordered=new JSONArray();for(int i=bounded.length()-1;i>=0;i--)ordered.put(bounded.getJSONObject(i));bounded=ordered;
-        finishReason="unknown";output=listener;Bundle b=new Bundle();b.putString("history",bounded.toString());b.putString("system",system);b.putString("scope",cacheScope);b.putInt("tokens",tokens);String answer=call(LocalAiService.GENERATE,b);listener.text(answer);
+        finishReason="unknown";output=listener;Bundle b=new Bundle();b.putString("nativeSchemas",nativeSchemas);b.putString("history",bounded.toString());b.putString("system",system);b.putString("scope",cacheScope);b.putInt("tokens",tokens);String answer=call(LocalAiService.GENERATE,b);listener.text(answer);
     }
     void prepareBenchmark(){benchmarkCancelled=false;benchmarkToken=UUID.randomUUID().toString();}
     void benchmark(int mode,LocalAiEngine.Output listener)throws Exception{if(benchmarkCancelled)throw new CancellationException();Bundle b=new Bundle();b.putInt("mode",mode);b.putString("benchmark",benchmarkToken);output=listener;call(LocalAiService.BENCHMARK,b);}

@@ -22,7 +22,7 @@ final class LocalAiPrompts {
     static boolean stale(WorkspaceStore.Session s){return !s.localRightsPrompt.isEmpty()&&!scope(s).equals(s.localRightsScope);}
     static String behavior(Context c,WorkspaceStore.Session s)throws Exception{String text=s.localBehavior.isEmpty()?LocalAiInstructions.load(c):s.localBehavior;if(s.localBehavior.isEmpty()&&LocalAiQwenProtocol.enabled(s))text=text.replace("emit exactly one complete tool JSON with no surrounding prose", "emit exactly one complete native tool_call/function block with no surrounding prose");return text;}
     static String permissions(WorkspaceStore.Session s)throws Exception{
-        String actual=LocalAiQwenProtocol.enabled(s)?LocalAiQwenProtocol.instructions(s):LocalAiTools.instructions(s);
+        String actual=s.localProtocol.equals(LocalAiLiteRt.NATIVE)?LocalAiQwenProtocol.settings(s)+" Use native structured SDK functions; ordinary replies are text, not tool JSON.":LocalAiQwenProtocol.enabled(s)?LocalAiQwenProtocol.instructions(s):LocalAiTools.instructions(s);
         if(s.localRightsPrompt.isEmpty())return actual;
         if(stale(s))throw new IllegalStateException("CUSTOM_RIGHTS_PROMPT_STALE: review or regenerate your custom rights prompt");
         return "AUTHORITATIVE APP SETTINGS: mode="+s.localAccess+", projectOnly="+s.localCheckPaths+", confirmActions="+s.localConfirmActions+", toolEnvironment="+s.localEnvironment+", termuxCommands="+s.localTermuxCommands+", project="+s.localProject+". Custom instructions never override these settings or application checks.\nUSER CUSTOM RIGHTS PROMPT:\n"+s.localRightsPrompt+(LocalAiQwenProtocol.enabled(s)?"\n"+actual:"");
