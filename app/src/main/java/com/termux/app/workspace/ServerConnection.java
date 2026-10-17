@@ -146,11 +146,13 @@ final class ServerConnection implements AutoCloseable {
             if(owned.waitFor()!=0||closed)throw new IOException("DOWNLOAD_FAILED");
         }finally{if(timer!=null)timer.cancel(false);if(owned!=null)owned.destroy();process=null;if(broker!=null)broker.close();}
     }
-    ServerSftp sftp()throws Exception{
+    ServerSftp sftp()throws Exception{return sftp(30);}
+    ServerSftp sftp(long timeoutMinutes)throws Exception{
+        if(timeoutMinutes<1||timeoutMinutes>360)throw new IOException("INVALID_TIMEOUT");
         ServerDiagnostics.Trace trace=ServerDiagnostics.begin(profile,ServerDiagnostics.Op.SFTP_CONNECT);Exception failure=null;
         try{
         if(!trusted())throw new IOException("TRUST_REQUIRED");List<String> args=ssh();args.addAll(Arrays.asList("-s","--",profile.host,"sftp"));ProcessBuilder b=builder(args);SshPasswordBroker broker=password(b);Process child=null;
-        try{child=b.start();process=child;final Process owned=child;ScheduledFuture<?> timer=watchdog.schedule(owned::destroy,30,TimeUnit.MINUTES);return new ServerSftp(owned.getInputStream(),owned.getOutputStream(),()->{timer.cancel(false);owned.destroy();if(broker!=null)broker.close();});}
+        try{child=b.start();process=child;final Process owned=child;ScheduledFuture<?> timer=watchdog.schedule(owned::destroy,timeoutMinutes,TimeUnit.MINUTES);return new ServerSftp(owned.getInputStream(),owned.getOutputStream(),()->{timer.cancel(false);owned.destroy();if(broker!=null)broker.close();});}
         catch(Exception e){if(child!=null)child.destroy();if(broker!=null)broker.close();throw e;}
         }catch(Exception e){failure=e;throw e;}finally{trace.finish(trace.elapsed(),0,-1,closed?new CancellationException():failure);}
     }

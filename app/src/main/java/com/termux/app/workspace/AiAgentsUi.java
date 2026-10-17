@@ -104,6 +104,7 @@ public final class AiAgentsUi {
                 }).show();
         })));
 
+        body.addView(text(a,WorkspaceLanguage.code(a).equals("ru")?(s.aiProjectOnly?"Профиль: ограничение внешних путей OpenCode (не изоляция); shell и внешние инструменты запрещены. Настройки применяются при запуске.":"Профиль: внешние каталоги регулируются штатными правами. Настройки применяются при запуске."):(s.aiProjectOnly?"Profile: OpenCode external-path policy (not isolation); shell and external tools denied. Settings apply on launch.":"Profile: native permissions govern external directories. Settings apply on launch.")));
         body.addView(text(a,modeDescription(s.aiMode)));body.addView(text(a,accessLabel(s.aiAccess)));body.addView(text(a,accessDescription(s.aiAccess)));
         body.addView(text(a,WorkspaceText.tr("Разрешения и авторизация отображаются в терминале OpenCode. Лимиты аккаунта здесь не вычисляются.")));
         WorkspaceDialogs.builder(a).setTitle("OpenCode").setView(body).setPositiveButton(WorkspaceText.tr("Закрыть"),null).show();

@@ -1,0 +1,13 @@
+# v1.5.1-test — private local AI / Qualcomm NPU testing
+
+Same server selection/download/move, history and external-agent permission changes as public v1.5.0. Local AI remains enabled; code1138 is higher than public1137 and previoustest1136, with the existing package/certificate and data retained.
+
+Includes LiteRT Qualcomm dispatch2.3.0 and QAIRT2.50 Android libraries plus Hexagonv79 skeleton for the pinned Gemma4E2BSM8750 model. Only SM8750 and exact known model hash are accepted. Auto chooses NPU for this compiled model rather than GPU/CPU fallback. Known imported model hash is recognized and labeled NPU; arbitrary filenames are not compatibility proof. Android inference process sets its own DSP search path; tools remain in their selected environment, with no modification of the working Ubuntu. No CPU runner or external-agent binary was rebuilt/changed.
+
+Model stays on the server: `/root/models/gemma4-e2b-sm8750/gemma-4-E2B-it_qualcomm_sm8750.litertlm`,3,016,294,400bytes,SHA41dd675fbe735b6029012b5576a5716bac614fd8156de0128db4c9dff3cebd4e. Download through Server+Agent to a chosen local folder, then Import model in Local AI and select it. Importing copies/registers the model; the server copy alone is not used for inference.
+
+The SDK libraries were obtained through the official Qualcomm Community download and checked against the transfer manifest. Google dispatch AAR is pinned in scripts/local-ai-tools.json; QAIRT binaries/SDK are not committed or included in the public APK. Private APK includes the QAIRT license notice. Qualcomm terms are separate from the fork's GPL license; standalone SDK binaries are not published as release assets.
+
+Standalone QNN HTP/System/Stub dlopen passed. Standalone dispatch dlopen encountered system-linker-namespace dependencies; this is a different namespace from an installed Android app and neither proves installed-app success nor failure. No real NPU model initialization/generation or app namespace/FastRPC access was verified. Device/vendor restrictions, runtime/model compatibility, context capacity and memory may cause explicit startup errors. Test with a new short chat first, export session diagnostics if startup fails. Existing CPU/llama path remains unchanged. This build does not fix the separately planned command-output overflow handling; that remains future work.
+
+Full/privateJava724 tests and public153 targeted tests passed; final package/signature/CRC/DEX/runtime/limited-secrets gates passed. See VALIDATION-v1.5.0.md for shared transfer validation and remaining device checks. This APK is for local testing, not the GitHub asset.

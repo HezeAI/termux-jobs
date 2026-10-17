@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "Разделены разрешённые действия, область проекта и подтверждения. Только чат / Чтение / Полный доступ.",
+    "Проверка путей включена: только файлы проекта; shell-команды запрещены даже в полном доступе.",
+    "При отключении проверки путей — явное предупреждение о доступе за пределы проекта. Подтверждения Да/Нет независимы."
+  ],
+  "en": [
+    "Action permissions, project scope and confirmation are separate: Chat only / Read / Full access.",
+    "Path checks ON: project file tools only; shell commands are blocked even in Full access.",
+    "Turning off Path checks requires an explicit warning about access outside the project. Yes/No approval remains independent."
+  ],
+  "compatibility": {
+    "ru": [
+      "Сброс данных не нужен, сохранённые настройки остаются. Изменение поведения: при включённой проверке путей shell-команды теперь блокируются. Для них нужно отключить проверку, подтвердив предупреждение; режим должен быть Полный доступ.",
+      "Test code1109; baseline rollback1.3.4 code1110. После отката нужен code1111+. Откат не открывает локальные чаты и может потерять новые поля пресетов при сохранении."
+    ],
+    "en": [
+      "No data reset, saved choices retained. Behavior change: shell commands are now blocked with Path checks ON. Commands require disabling that check, accepting the warning, and Full access mode.",
+      "Test code1109; baseline recovery1.3.4 code1110. Updates after recovery need code1111+. Recovery cannot open local chats and may discard new preset fields on save."
+    ]
+  }
+}

@@ -2,6 +2,7 @@
 # Source this from a build script. Keep build tools and all caches in the fork.
 set -euo pipefail
 FORK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export TERMUX_FORK_SOURCE_ROOT="$FORK_ROOT"
 export GRADLE_USER_HOME="$FORK_ROOT/.tools/gradle-home"
 export ANDROID_HOME="${FORK_ANDROID_HOME:-$FORK_ROOT/.tools/sdk}"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"

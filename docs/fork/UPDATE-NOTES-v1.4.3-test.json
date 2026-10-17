@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "Локальный ИИ: общий цикл выполнения заданий для llama.cpp, LiteRT-LM и своих моделей; один повтор при ответе-предложении или одних рассуждениях.",
+    "Исправлен шаблон Qwen для режима без рассуждений. Рассуждения открываются отдельным окном с прокруткой.",
+    "Опция Подтверждать действия: настоящие карточки Да/Нет для записи и команд. По умолчанию полный доступ остаётся автоматическим."
+  ],
+  "en": [
+    "Local AI: shared action coordination for llama.cpp, LiteRT-LM and custom models, with one recovery attempt for offers or thinking-only replies.",
+    "Fixed Qwen non-thinking prompt formatting. Reasoning opens in a separate scrollable dialog.",
+    "Optional Confirm actions provides real Yes/No cards for writes and commands. Full access remains automatic by default."
+  ],
+  "compatibility": {
+    "ru": [
+      "Сброс данных не нужен. Новая опция подтверждений выключена по умолчанию; проверка путей независима. Команды полного доступа не являются песочницей проекта.",
+      "Test code1107; baseline rollback1.3.4 code1108. После отката нужен code1109+. Откат не открывает локальные чаты и может потерять новые поля пресетов при сохранении библиотеки."
+    ],
+    "en": [
+      "No data reset required. Confirm actions defaults off; Path checks is independent. Full-access commands are not project-sandboxed.",
+      "Test code1107; baseline recovery1.3.4 code1108. Updates after recovery need code1109+. Recovery cannot open local chats and may discard new preset fields when saving the library."
+    ]
+  }
+}

@@ -44,6 +44,8 @@ public final class WorkspaceStore {
         public String sshAuth = "auto", sshIdentity = "", sshEncryptedPassword = "";
         public String codexEnvironment = "ubuntu", codexAccess = "full", codexChat = "new", codexThread = "", codexThreadName = "", codexSocketId = UUID.randomUUID().toString();
         public String codexSourceDirectory = "";
+        public Boolean codexConfirmActions; // null preserves legacy approval mapping
+        public boolean aiProjectOnly;
         public String aiAgent = "", aiConnection = "00000000-0000-4000-8000-000000000002", aiModel = "", aiVariant = "", aiMode = "build", aiAccess = "ask", aiChat = "new", aiThread = "ses" + UUID.randomUUID().toString().replace("-", "");
         /** Explicit user bookmark; current runtime thread is otherwise temporary. */
         public String aiSavedThread = "";
@@ -52,6 +54,14 @@ public final class WorkspaceStore {
         public String claudeModel="", claudeMode="manual", claudeChat="new", claudeThread=UUID.randomUUID().toString(), claudeSocketId=UUID.randomUUID().toString();
         public boolean geminiAgent;
         public boolean extendedDebug;
+        public boolean localAi;
+        public boolean localCheckPaths=true, localConfirmActions=false, localTermuxCommands=false, keepHistory=false;
+        public String localProtocol="json", localCompute="cpu";
+        public String localBehavior="", localBehaviorName="", localRightsPrompt="", localRightsScope="";
+        public String localAccess="chat", localProject="", localEnvironment="termux";
+        public int localThreads=0;
+        public int localContext=4096,localMaxTokens=768;
+        public String localModel="qwen35-4b", localBackend="auto", localCpu="auto", localLocation="android", localChat="";
         public String geminiAuth="google", geminiModel="", geminiMode="default", geminiChat="new", geminiThread=UUID.randomUUID().toString(), geminiSocketId=UUID.randomUUID().toString();
         public long updated;
         public boolean saved;
@@ -62,9 +72,11 @@ public final class WorkspaceStore {
         }
         public Session copy() {
             Session s = new Session();s.restoreReview=restoreReview;
+            s.localCompute=localCompute;s.localProtocol=localProtocol;s.keepHistory=keepHistory;s.localTermuxCommands=localTermuxCommands;s.localBehavior=localBehavior;s.localBehaviorName=localBehaviorName;s.localRightsPrompt=localRightsPrompt;s.localRightsScope=localRightsScope;s.localConfirmActions=localConfirmActions;s.localCheckPaths=localCheckPaths;s.localAccess=localAccess;s.localProject=localProject;s.localEnvironment=localEnvironment;
+            s.localLocation=localLocation;s.localThreads=localThreads;s.localCpu=localCpu;s.localContext=localContext;s.localMaxTokens=localMaxTokens;s.localAi=localAi;s.localModel=localModel;s.localBackend=localBackend;
             s.extendedDebug=extendedDebug; s.name = name + WorkspaceText.tr(" — копия"); s.directory = directory; s.startup = startup; s.startup2 = startup2; s.startup3 = startup3; s.environment = environment;
             s.sshHost = sshHost; s.sshUser = sshUser; s.sshPort = sshPort; s.sshKeepOpen = sshKeepOpen; s.sshAuth = sshAuth; s.sshIdentity = sshIdentity; // Password is bound to the original profile ID.
-            s.codexEnvironment = codexEnvironment; s.codexAccess = codexAccess; s.codexChat = codexChat; s.codexThread = codexThread; s.codexThreadName = codexThreadName; s.codexSourceDirectory=codexSourceDirectory;
+            s.codexConfirmActions=codexConfirmActions; s.aiProjectOnly=aiProjectOnly; s.codexEnvironment = codexEnvironment; s.codexAccess = codexAccess; s.codexChat = codexChat; s.codexThread = codexThread; s.codexThreadName = codexThreadName; s.codexSourceDirectory=codexSourceDirectory;
             s.aiAgent=aiAgent; s.aiConnection=aiConnection; s.aiModel=aiModel; s.aiVariant=aiVariant; s.aiMode=aiMode; s.aiAccess=aiAccess;
             s.claudeAgent=claudeAgent; s.claudeModel=claudeModel; s.claudeMode=claudeMode;
             s.geminiAgent=geminiAgent; s.geminiAuth=geminiAuth; s.geminiModel=geminiModel; s.geminiMode=geminiMode;
@@ -144,9 +156,11 @@ public final class WorkspaceStore {
             .put("command", c.command).put("category", c.category).put("directory", c.directory).put("favorite", c.favorite));
         for (Session s : sessions) ss.put(new JSONObject().put("id", s.id).put("name", s.name)
             .put("directory", s.directory).put("startup", s.startup).put("startup2", s.startup2).put("startup3", s.startup3).put("sshAuth", s.sshAuth).put("sshIdentity", s.sshIdentity).put("sshEncryptedPassword", s.sshEncryptedPassword).put("sshHost", s.sshHost).put("sshUser", s.sshUser).put("sshPort", s.sshPort).put("sshKeepOpen", s.sshKeepOpen).put("environment", s.environment).put("handle", s.handle)
+            .put("codexConfirmActions",s.codexConfirmActions==null?JSONObject.NULL:s.codexConfirmActions).put("aiProjectOnly",s.aiProjectOnly)
             .put("codexEnvironment", s.codexEnvironment).put("codexAccess", s.codexAccess).put("codexChat", s.codexChat).put("codexThread", s.codexThread).put("codexThreadName", s.codexThreadName).put("codexSocketId", s.codexSocketId).put("codexSourceDirectory",s.codexSourceDirectory)
             .put("aiAgent",s.aiAgent).put("aiConnection",s.aiConnection).put("aiModel",s.aiModel).put("aiVariant",s.aiVariant).put("aiMode",s.aiMode).put("aiAccess",s.aiAccess).put("aiChat",s.aiChat).put("aiThread",s.aiThread).put("aiSavedThread",s.aiSavedThread)
             .put("claudeAgent",s.claudeAgent).put("claudeModel",s.claudeModel).put("claudeMode",s.claudeMode).put("claudeChat",s.claudeChat).put("claudeThread",s.claudeThread).put("claudeSocketId",s.claudeSocketId)
+            .put("localCompute",s.localCompute).put("localProtocol",s.localProtocol).put("keepHistory",s.keepHistory).put("localTermuxCommands",s.localTermuxCommands).put("localBehavior",s.localBehavior).put("localBehaviorName",s.localBehaviorName).put("localRightsPrompt",s.localRightsPrompt).put("localRightsScope",s.localRightsScope).put("localLocation",s.localLocation).put("localThreads",s.localThreads).put("localCpu",s.localCpu).put("localContext",s.localContext).put("localMaxTokens",s.localMaxTokens).put("localConfirmActions",s.localConfirmActions).put("localCheckPaths",s.localCheckPaths).put("localAccess",s.localAccess).put("localProject",s.localProject).put("localEnvironment",s.localEnvironment).put("localAi",s.localAi).put("localModel",s.localModel).put("localBackend",s.localBackend).put("localChat",s.localChat)
             .put("geminiAuth",s.geminiAuth).put("geminiAgent",s.geminiAgent).put("geminiModel",s.geminiModel).put("geminiMode",s.geminiMode).put("geminiChat",s.geminiChat).put("geminiThread",s.geminiThread).put("geminiSocketId",s.geminiSocketId)
             .put("restoreReview",s.restoreReview).put("extendedDebug",s.extendedDebug).put("updated", s.updated).put("saved", s.saved));
         JSONArray ns = new JSONArray();
@@ -184,6 +198,9 @@ public final class WorkspaceStore {
             s.sshPort = o.optInt("sshPort", 22); s.sshKeepOpen = o.optBoolean("sshKeepOpen", true);
             if (s.environment.equals("ssh") && (version < 6 || !SshSessionShell.validHost(s.sshHost)
                 || !SshSessionShell.validUser(s.sshUser) || !SshSessionShell.validPort(s.sshPort))) throw new JSONException("Invalid SSH settings");
+            if(o.has("codexConfirmActions")&&!o.isNull("codexConfirmActions")&&!(o.get("codexConfirmActions") instanceof Boolean))throw new JSONException("Invalid Codex approval policy");
+            if(o.has("aiProjectOnly")&&!(o.get("aiProjectOnly") instanceof Boolean))throw new JSONException("Invalid agent project scope");
+            s.codexConfirmActions=o.has("codexConfirmActions")&&!o.isNull("codexConfirmActions")?o.getBoolean("codexConfirmActions"):null; s.aiProjectOnly=o.optBoolean("aiProjectOnly",false);
             s.codexEnvironment = o.optString("codexEnvironment", "ubuntu"); s.codexAccess = o.optString("codexAccess", "full");
             s.codexChat = o.optString("codexChat", "new"); s.codexThread = o.optString("codexThread", ""); s.codexThreadName = o.optString("codexThreadName", ""); s.codexSocketId = validId(o.optString("codexSocketId", s.codexSocketId));
             if (s.environment.equals("codex") && (version < 8 || !(s.codexEnvironment.equals("ubuntu") || s.codexEnvironment.equals("termux"))
@@ -191,6 +208,19 @@ public final class WorkspaceStore {
                 || !(s.codexChat.equals("new") || s.codexChat.equals("last") || s.codexChat.equals("choose") || (s.codexChat.equals("id") && CodexSessionShell.validThread(s.codexThread))))) throw new JSONException("Invalid Codex profile");
             s.codexSourceDirectory=o.optString("codexSourceDirectory","");
             if(!s.codexSourceDirectory.isEmpty()&&(!s.codexSourceDirectory.startsWith("/")||CodexProjects.directory(s.codexEnvironment,s.codexSourceDirectory).isEmpty()))throw new JSONException("Invalid confirmed chat directory");
+            for(String key:new String[]{"keepHistory","localTermuxCommands"})if(o.has(key)&&!(o.get(key) instanceof Boolean))throw new JSONException("Invalid local boolean");
+            for(String key:new String[]{"localBehavior","localBehaviorName","localRightsPrompt","localRightsScope"})if(o.has(key)&&(!(o.get(key) instanceof String)||o.getString(key).length()>16384))throw new JSONException("Invalid local instructions");
+            if(o.has("localCompute")&&!(o.get("localCompute") instanceof String))throw new JSONException("Invalid compute mode");s.localCompute=o.optString("localCompute","cpu");try{LocalAiEngine.validateCompute(s.localCompute);}catch(IllegalArgumentException bad){throw new JSONException(bad.getMessage());}
+            if(o.has("localProtocol")&&!(o.get("localProtocol") instanceof String))throw new JSONException("Invalid model communication format");s.localProtocol=o.optString("localProtocol","json");try{LocalAiQwenProtocol.validate(s.localProtocol);}catch(IllegalArgumentException bad){throw new JSONException(bad.getMessage());}
+            s.keepHistory=o.optBoolean("keepHistory",false);s.localTermuxCommands=o.optBoolean("localTermuxCommands",false);s.localBehavior=o.optString("localBehavior","");s.localBehaviorName=o.optString("localBehaviorName","");s.localRightsPrompt=o.optString("localRightsPrompt","");s.localRightsScope=o.optString("localRightsScope","");
+            s.localConfirmActions=o.optBoolean("localConfirmActions",false);s.localCheckPaths=o.optBoolean("localCheckPaths",true);s.localAccess=o.optString("localAccess","chat");s.localProject=o.optString("localProject","");s.localEnvironment=o.optString("localEnvironment","termux");
+            if(!s.localAccess.matches("chat|read|write")||!s.localEnvironment.matches("termux|ubuntu|proot:[A-Za-z0-9][A-Za-z0-9_.-]{0,63}"))throw new JSONException("Invalid local permissions");
+            if(o.has("localLocation")&&!(o.get("localLocation") instanceof String))throw new JSONException("Invalid engine location");s.localLocation=o.optString("localLocation","android");try{LocalAiProcess.validate(s.localLocation);}catch(IllegalArgumentException e){throw new JSONException(e.getMessage());}
+            if(o.has("localThreads")&&!(o.get("localThreads") instanceof Integer))throw new JSONException("Invalid CPU thread count");s.localThreads=o.optInt("localThreads",0);try{LocalAiCpu.validate(s.localThreads);}catch(IllegalArgumentException e){throw new JSONException(e.getMessage());}
+            if(o.has("localCpu")&&!(o.get("localCpu") instanceof String))throw new JSONException("Invalid CPU engine mode");s.localCpu=o.optString("localCpu","auto");try{LocalAiEngine.validateCpuMode(s.localCpu);}catch(IllegalArgumentException e){throw new JSONException(e.getMessage());}
+            if(o.has("localContext")&&!(o.get("localContext") instanceof Integer)||o.has("localMaxTokens")&&!(o.get("localMaxTokens") instanceof Integer))throw new JSONException("Invalid local limits");s.localContext=o.optInt("localContext",4096);s.localMaxTokens=o.optInt("localMaxTokens",768);try{LocalAiLimits.validate(s.localContext,s.localMaxTokens);}catch(IllegalArgumentException e){throw new JSONException(e.getMessage());}
+            s.localAi=o.optBoolean("localAi",false);s.localModel=o.optString("localModel","qwen35-4b");s.localBackend=o.optString("localBackend","auto");s.localChat=o.optString("localChat","");
+            if(s.localAi && (!s.environment.equals("termux") || !s.localModel.matches("[A-Za-z0-9_-]{1,90}") || !s.localBackend.matches("auto|cpu|gpu|npu") || !s.localChat.matches("[A-Za-z0-9_-]{0,90}")))throw new JSONException("Invalid local AI profile");
             s.aiAgent=o.optString("aiAgent",""); s.aiConnection=validId(o.optString("aiConnection",s.aiConnection)); s.aiModel=o.optString("aiModel",""); s.aiVariant=o.optString("aiVariant",""); s.aiMode=o.optString("aiMode","build"); s.aiAccess=o.optString("aiAccess","ask"); s.aiChat=o.optString("aiChat","new"); s.aiThread=o.optString("aiThread",s.aiThread);
             s.aiSavedThread=o.optString("aiSavedThread","");
             if(!s.aiSavedThread.isEmpty()&&!AiAgents.validThread(s.aiSavedThread))throw new JSONException("Invalid saved AI thread");

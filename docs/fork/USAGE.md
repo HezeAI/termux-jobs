@@ -553,3 +553,43 @@ gzip3 выбран по умолчанию. Для отсутствующего 
 «Назад» в просмотре команды или заметки возвращает к списку с прежним поиском
 и выбранной вкладкой. Системный Back также возвращает к списку. Для выхода из
 самого списка остаётся «Закрыть». Просмотр не отправляет команду в терминал.
+
+### Локальная v1.3.4
+
+Поиск по-прежнему работает при вводе каждой буквы и учитывает текущие фильтры обеих библиотек. Новых настроек нет.
+
+Local AI preview: see [model downloads, imports, history and current limitations](LOCAL-AI.md).
+
+### Local AI v1.4.1-test
+
+Compact header controls, offline Markdown and collapsed reasoning; per-session
+project tools and independent path-check toggle. Full access is automatic and
+shell commands are not project-sandboxed. See [current scope](LOCAL-AI.md).
+
+### Local AI v1.4.3-test
+
+All local backends share action coordination, optional non-replaying Yes/No
+approvals and a separate reasoning dialog. Full access stays automatic by default;
+path checks remain independent. See [scope and limitations](LOCAL-AI.md).
+
+### Local AI v1.4.4-test
+
+Action mode, scope and confirmation are independent. Path checks ON restricts
+file tools to the project and rejects all arbitrary command requests before
+approval/execution. OFF needs a warning acceptance; external file access remains
+subject to mode/Android permissions. No new isolation. See LOCAL-AI.md.
+
+
+## Experimental Qwen protocol (v1.4.29-test)
+
+Local AI → Settings → Engine settings → Model communication format: Current JSON (default) or Native Qwen format (testing). Only catalog Qwen3.5 2B / llama.cpp is verified for the new adapter. It preserves existing permissions and reloads the same chat. For comparison create a new chat; tool schemas take context space. This is a text/function-call adapter, not a general Jinja evaluator or a model modification. See [release notes](RELEASE-v1.4.29-test.md) for limits.
+
+
+## v1.4.30-test operating mode
+
+Engine settings → Operating mode → CPU / GPU (OpenCL, testing). CPU is default; its ARM/compatible settings and threads reappear unchanged after returning from GPU. Initially only catalog Qwen3.5 2B on Snapdragon8EliteSM8750 is supported. GPU inference runs in an Android child process; Ubuntu tool environment remains selected independently. Select CPU if GPU initialization fails. Compare actual request diagnostics; CPU prefill benchmark is unavailable while GPU selected. Error cards now contain original calls and precise schema feedback. Empty write truncates, never deletes. See [release notes](RELEASE-v1.4.30-test.md).
+
+
+## v1.5.0 server selection and histories
+
+Long-press a server file/folder to select; the lower-right ↓ panel offers Download, Move, Select all, Clear. Download opens the local destination picker (including access request for device storage). Files preserve names/hierarchy in a new download-UUID folder, max10GiB/file. Quick Download remains. Move prepares a same-server selection: navigate to destination, use Move here, confirm. No overwriting or cross-filesystem copy/delete fallback. Completed transfers/moves survive partial batch failure; stop affects only the transfer connection. No persistent retry queue after app exit. Unsaved-session closing has Keep history and Close / Add preset and close. CLI-native chat history is independent; supported Codex chat viewing/deletion is in General settings → Chat histories. Local models are disabled in the public build while testing continues; existing experimental data remains.

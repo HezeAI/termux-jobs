@@ -34,7 +34,7 @@ public final class AiAgents {
     }
     static String command(File files,WorkspaceStore.Session s) {
         if(!s.aiAgent.equals("opencode")||!s.environment.equals("ubuntu")||!validThread(s.aiThread)||!validModel(s.aiModel))throw new IllegalArgumentException("Invalid AI profile");
-        return "( set -e; export JOBS_AI_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")+"; source "+SessionShell.quote(GUEST+"/bootstrap-v1.sh")+"; exec node "+SessionShell.quote(GUEST+"/bridge-v1.js")+" run "+SessionShell.quote(GUEST+"/connections/"+s.aiConnection)+" "+SessionShell.quote(GUEST+"/"+socket(files,s).getName())+" "+SessionShell.quote(s.aiThread)+" "+SessionShell.quote(s.aiModel)+" "+SessionShell.quote(s.aiMode)+" "+SessionShell.quote(s.aiChat)+" "+SessionShell.quote(s.aiVariant)+" "+SessionShell.quote(s.aiAccess)+" )";
+        return "( set -e; export JOBS_AI_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")+"; source "+SessionShell.quote(GUEST+"/bootstrap-v1.sh")+"; exec node "+SessionShell.quote(GUEST+"/bridge-v1.js")+" run "+SessionShell.quote(GUEST+"/connections/"+s.aiConnection)+" "+SessionShell.quote(GUEST+"/"+socket(files,s).getName())+" "+SessionShell.quote(s.aiThread)+" "+SessionShell.quote(s.aiModel)+" "+SessionShell.quote(s.aiMode)+" "+SessionShell.quote(s.aiChat)+" "+SessionShell.quote(s.aiVariant)+" "+SessionShell.quote(s.aiAccess)+" "+SessionShell.quote(s.aiProjectOnly?"project":"unrestricted")+" )";
     }
     static JSONObject call(Context c,String connection,WorkspaceStore.Session live,JSONObject request) throws Exception {
         java.util.UUID.fromString(connection);prepare(c);

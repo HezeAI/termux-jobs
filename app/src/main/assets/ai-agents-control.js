@@ -104,15 +104,22 @@ function readJSON(stream) {return new Promise((resolve,reject) => {
   let data='',size=0;stream.on('data',b=>{size+=b.length;if(size>65536){reject(new Error('Oversized request'));stream.destroy();}else data+=b;});
   stream.on('end',()=>{try{resolve(JSON.parse(data));}catch(_){reject(new Error('Invalid JSON'));}});stream.on('error',reject);
 });}
-function accessRules(access) {
+function accessRules(access,scope='unrestricted') {
+  if(!['full','ask','read'].includes(access)||!['unrestricted','project'].includes(scope))throw new Error('Invalid permission scope');
+  if(scope==='project')return [
+    {action:'*',resource:'*',effect:'deny'},
+    ...['read','glob','grep','question'].map(action=>({action,resource:'*',effect:'allow'})),
+    ...(access==='read'?[]:[{action:'edit',resource:'*',effect:access==='ask'?'ask':'allow'}]),
+    {action:'external_directory',resource:'*',effect:'deny'}
+  ];
   if(access==='full')return [{action:'*',resource:'*',effect:'allow'}];
   if(access==='ask')return [{action:'*',resource:'*',effect:'ask'}];
   if(access==='read')return [{action:'*',resource:'*',effect:'deny'},...['read','glob','grep','question','external_directory'].map(action=>({action,resource:'*',effect:'allow'}))];
   throw new Error('Invalid access mode');
 }
-async function run(root,sock,id,model,mode,resume,variant,access='ask') {
+async function run(root,sock,id,model,mode,resume,variant,access='ask',scope='unrestricted') {
   if (!/^ses[A-Za-z0-9_-]{1,124}$/.test(id) || !['build','plan'].includes(mode)) throw new Error('Invalid session');
-  const permissions=accessRules(access);
+  const permissions=accessRules(access,scope);
   const runtime=await start(root);
   const alias=id;id=resolvedID(root,id);
   let found;

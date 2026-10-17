@@ -1,0 +1,31 @@
+package com.termux.app.workspace;
+
+import android.app.Activity;
+import android.content.Context;
+import android.graphics.*;
+import android.media.MediaMetadataRetriever;
+import android.os.Build;
+import org.json.*;
+import java.io.*;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+/** Temporary image/frame preparation. No cloud, audio decoding or arbitrary path access. */
+final class LocalAiMedia {
+    static boolean supported(JSONObject model){return model!=null&&model.optString("engine").equals("litert")&&model.optBoolean("vision",false)&&!model.optString("backend").equals("npu");}
+    static File root(Context c)throws IOException{File dir=new File(c.getCacheDir(),"local-ai/media");if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create media cache");return dir.getCanonicalFile();}
+    static File checkedImage(Context c,String path)throws IOException{File f=new File(path),canonical=f.getCanonicalFile();if(!root(c).equals(canonical.getParentFile())||!f.getName().matches("frame-[a-f0-9-]+\\.jpg")||!canonical.isFile())throw new IOException("Invalid or expired prepared image");return canonical;}
+    static long[] frameTimes(long durationMs){if(durationMs<=0)return new long[]{0};return new long[]{0,durationMs/2,Math.max(0,durationMs-1)};}
+    static File save(Context c,Bitmap source,AtomicBoolean cancel)throws Exception{LocalAiFiles.check(cancel);if(source==null)throw new IOException("UNSUPPORTED_MEDIA: Android could not decode an image/frame");Bitmap scaled=source;try{int longest=Math.max(source.getWidth(),source.getHeight());if(longest>1024)scaled=Bitmap.createScaledBitmap(source,Math.max(1,source.getWidth()*1024/longest),Math.max(1,source.getHeight()*1024/longest),true);File out=File.createTempFile("frame-",".jpg",root(c));try(OutputStream stream=new FileOutputStream(out)){if(!scaled.compress(Bitmap.CompressFormat.JPEG,92,stream))throw new IOException("Cannot encode prepared image");}catch(Exception e){out.delete();throw e;}try{LocalAiFiles.check(cancel);}catch(Exception e){out.delete();throw e;}return out;}finally{if(scaled!=source)scaled.recycle();source.recycle();}}
+    static Bitmap decode(File file)throws IOException{BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;BitmapFactory.decodeFile(file.getPath(),bounds);if(bounds.outWidth<=0||bounds.outHeight<=0)throw new IOException("UNSUPPORTED_IMAGE: not an Android-decodable image");BitmapFactory.Options opts=new BitmapFactory.Options();while(Math.max(bounds.outWidth/Math.max(1,opts.inSampleSize),bounds.outHeight/Math.max(1,opts.inSampleSize))>2048)opts.inSampleSize=opts.inSampleSize==0?2:opts.inSampleSize*2;return BitmapFactory.decodeFile(file.getPath(),opts);}
+    static String inspect(Activity a,WorkspaceStore.Session profile,JSONObject request,AtomicBoolean cancel,LocalAiTools tools)throws Exception{
+        LocalAiTools.authorize(profile,request);JSONObject model=request.optString("tool").equals("inspect_apk")?null:new LocalAiFiles(a).find(profile.localModel);if(model!=null&&!supported(model))return "exit=4\nUNSUPPORTED_VISION: this model/runtime has no image input. Files can be found/listed, but do not claim to have viewed them. Gemma 4 E2B/E4B LiteRT has experimental image/frame support; current llama.cpp Qwen requires a separate multimodal projector not bundled here.";
+        File original=File.createTempFile("source-",request.optString("tool").equals("inspect_apk")?".apk":".bin",root(a));List<File> prepared=new ArrayList<>();boolean retained=false;
+        try{tools.copyMedia(a,profile,request,cancel,original);LocalAiFiles.check(cancel);if(request.optString("tool").equals("inspect_apk"))return LocalAiApk.inspect(a,original,request.getString("path"),cancel);JSONArray images=new JSONArray();JSONObject result=new JSONObject().put("source",request.getString("path")).put("audioAnalyzed",false).put("mode",request.getString("tool"));
+            if(request.getString("tool").equals("view_image")){File f=save(a,decode(original),cancel);prepared.add(f);images.put(new JSONObject().put("path",f.getPath()));}
+            else{MediaMetadataRetriever retriever=new MediaMetadataRetriever();try{retriever.setDataSource(original.getPath());long duration=Long.parseLong(Objects.toString(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION),"0"));if(Build.VERSION.SDK_INT<27){long width=Long.parseLong(Objects.toString(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH),"0")),height=Long.parseLong(Objects.toString(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT),"0"));if(width*height>16000000)throw new IOException("UNSUPPORTED_MEDIA: video frame is too large for this Android decoder path");}result.put("durationMillis",duration).put("width",retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)).put("height",retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)).put("notice","Sampled frames only, not continuous video or audio analysis");for(long time:frameTimes(duration)){LocalAiFiles.check(cancel);Bitmap frame=Build.VERSION.SDK_INT>=27?retriever.getScaledFrameAtTime(time*1000,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,1024,1024):retriever.getFrameAtTime(time*1000,MediaMetadataRetriever.OPTION_CLOSEST_SYNC);File f=save(a,frame,cancel);prepared.add(f);images.put(new JSONObject().put("path",f.getPath()).put("requestedTimeMillis",time));}}finally{retriever.release();}}
+            result.put("images",images);for(File f:prepared)tools.retainMedia(f);retained=true;return "exit=0\n"+result.toString();
+        }finally{original.delete();if(!retained)for(File f:prepared)f.delete();}
+    }
+    static JSONArray attachments(String result)throws JSONException{if(!result.startsWith("exit=0\n"))return new JSONArray();return new JSONObject(result.substring(7)).getJSONArray("images");}
+}

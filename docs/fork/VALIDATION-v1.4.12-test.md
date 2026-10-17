@@ -1,0 +1,13 @@
+# Validation: v1.4.12-test / code1118
+
+584 automated Java tests passed, zero failures/errors/skips (tests-delivery.log). Twelve added tests cover approximate Cyrillic/Latin names and suffix/case matching, explicit alternate-name schema, exact candidate validation, approximate-single/multiple choice policy, selected-only next model context, cancel without continuation/actions, exclusion of UI events from model context, one-shot UI choice, cancelled waiting/history state, friendly vs technical details, read-only restoration without a misleading command card, and preventing another model from displacing a busy local turn. The first friendly-details test needed main-looper processing for its dialog button; final passing results supersede intermediate logs.
+
+Final ARM64 build passed, runtime gate 15872 defined classes / 30 explicitly reviewed unresolved types. Existing Kotlin metadata/Lint limitations remain; no claim of clean Lint. ZIP CRC, package com.termux, version 1.4.12-test/1118, min SDK26, ARM64 ABI, v2 certificate continuity, SHA-256, final production source-stage match, and limited private-file/key/token-pattern scan passed. Native libraries, server agent and external Codex/OpenCode/Claude/Gemini controller assets byte-identical to v1.4.11-test. Limited scan is not exhaustive proof of absence of secrets.
+
+Review/logic: query variants are filename hints, never shell interpolation or path rewriting. Approximate matches may be false positives and require explicit choice. A selected path must exactly match a native returned file candidate; future read/write/command tools retain normal scope/permission/approval checks. Cancel/Stop ends waiting; restored chooser events never resume actions. Human selection blocks only the local-turn worker while waiting, not ordinary terminals; loading another local model is refused while any local turn is busy. Picker windows are dismissed on UI close. No package installation, runtime reconfiguration or global CLI edits in development verification.
+
+Pending device checks: real model decisions, queries beyond tested examples, Android shared-storage mounts, file chooser gestures/scroll/keyboard, Stop and restoration across actual app lifecycle. Spelling/transliteration matching is not universal translation or semantic retrieval. Searches cover requested accessible folders, not the entire device by guarantee. Selecting an image adds no vision capability to text-only models.
+
+Evidence: .verification/local-ai-v1.4.12/{tests-delivery.log,build-delivery.log,artifact.json,signature.txt,badging.txt}. Earlier logs intermediate.
+
+SHA-256: 752bbcd954a60a983c1ba947a8a94743497a3f8de268f4723e37768f32c3e949

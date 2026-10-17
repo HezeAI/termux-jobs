@@ -1,5 +1,10 @@
 # Termux Job’s
 
+## v1.5.0
+
+Public code1137; private test code1138. com.termux, same signing identity, Android8+/ARM64, library v8 with optional fields. Local models disabled in public builds while testing continues. History controls, agent permissions and server multi-selection/download/move are available. No automatic reset or environment replacement. [Release](docs/fork/RELEASE-v1.5.0.md).
+
+
 ## v1.3.3 — Обязательное обновление
 
 Исправлена ошибка зависимостей Guava, вызывавшая вылеты при очистке файлов и

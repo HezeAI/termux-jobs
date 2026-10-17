@@ -1,0 +1,20 @@
+{
+  "ru": [
+    "Локальные чаты и пресеты: Qwen3.5 и Gemma 4, импорт своих моделей, история и SHA-256 загрузок.",
+    "llama.cpp: CPU; LiteRT-LM: GPU/CPU, требуется проверка устройства. NPU runtime и MTP не включены."
+  ],
+  "en": [
+    "Local chat/presets: Qwen3.5 and Gemma 4, custom imports, history and SHA-256 downloads.",
+    "llama.cpp CPU; LiteRT-LM GPU/CPU requires device checks. NPU runtime and MTP are not included."
+  ],
+  "compatibility": {
+    "ru": [
+      "Сброс старых данных не нужен. Удаление приложения удаляет локальные модели и чаты. Откат v1.3.4/code1102 не понимает локальные пресеты и может потерять их новые параметры при сохранении.",
+      "Android 8.0+, прежние пакет и сертификат. Test code1101; rollback code1102. Следующая сборка для обновления поверх отката — code1103+."
+    ],
+    "en": [
+      "No existing-data reset required. Uninstall removes local models/chats. Recovery v1.3.4/code1102 does not understand local presets and may discard their new parameters on save.",
+      "Android 8.0+, unchanged package and certificate. Test code1101; rollback code1102. A later update over recovery needs code1103+."
+    ]
+  }
+}

@@ -82,7 +82,7 @@ class Connection {
     const result=new Promise((resolve,reject)=> {const timer=setTimeout(()=>{this.pending.delete(id);reject(new Error('Codex request timeout'));},25000);this.pending.set(id,{resolve,reject,timer,method});});
     this.send({id,method,params});return result;
   }
-  async initialize() {await this.ready;await this.call('initialize',{clientInfo:{name:'termux_jobs_control',version:'0.2.19'},capabilities:{experimentalApi:true}});this.send({method:'initialized'});}
+  async initialize() {await this.ready;await this.call('initialize',{clientInfo:{name:'termux_jobs_control',version:'0.2.20'},capabilities:{experimentalApi:true}});this.send({method:'initialized'});}
 }
 function writeStatus(path, value) {
   const temporary = path+'.state.json.tmp-'+process.pid;
@@ -143,7 +143,7 @@ async function statusWorker(path, preferred) {
   } finally {connection.onFailure=null;connection.close();}
 }
 async function main() {
-  const [mode,path,access,chat,requested,cwd,confirmedCwd]=process.argv.slice(2);
+  const [mode,path,access,chat,requested,cwd,confirmedCwd,requestedApproval]=process.argv.slice(2);
   if(!path || !['proxy','resume','status'].includes(mode))throw new Error('Invalid control arguments');
   if(mode==='status') {await statusWorker(path,access || '');return;}
   const connection=new Connection(path);
@@ -161,7 +161,8 @@ async function main() {
     if(chat==='last') {const result=await connection.call('thread/list',{limit:1,sortKey:'updated_at',archived:false,cwd,sourceKinds:['cli','vscode','appServer']});id=result.data?.[0]?.id;}
     if(!id || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(id))throw new Error('No saved chat in this directory. Select a chat ID.');
     if(!['full','project','read'].includes(access))throw new Error('Invalid access mode');
-    const approvalPolicy=access==='full'?'never':'on-request';
+    const approvalPolicy=requestedApproval ?? (access==='full'?'never':'on-request');
+    if(!['never','on-request'].includes(approvalPolicy))throw new Error('Invalid approval policy');
     const sandbox=access==='full'?'danger-full-access':access==='read'?'read-only':'workspace-write';
     const metadata=await connection.call('thread/read',{threadId:id,includeTurns:false});
     const normalize=p=>require('path').posix.normalize(String(p || '')).replace(/\/$/,'') || '/';

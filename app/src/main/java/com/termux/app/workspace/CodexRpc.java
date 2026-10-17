@@ -63,6 +63,7 @@ final class CodexRpc implements AutoCloseable {
     private final java.util.concurrent.ScheduledExecutorService timeout = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
     private static final int MAX = 2 * 1024 * 1024;
     static CodexRpc live(Context context, WorkspaceStore.Session profile) throws Exception {
+        CodexSessionShell.prepareBridge(context); // New immutable helper, without touching the active server.
         return process(context, CodexSessionShell.proxyCommand(context.getFilesDir(), profile));
     }
     static CodexRpc history(Context context, WorkspaceStore.Session profile) throws Exception {

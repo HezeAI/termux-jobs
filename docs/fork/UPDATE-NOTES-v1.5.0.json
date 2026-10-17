@@ -1,0 +1,30 @@
+{
+  "ru": [
+    "Закрытие несохранённых сессий: галочка сохранения истории, закрыть или добавить пресет и закрыть.",
+    "Истории чатов в общих настройках: просмотр и подтверждённое удаление поддерживаемых чатов Codex.",
+    "Более понятные права AI Agents, подтверждения и ограничения путей там, где агент их поддерживает.",
+    "Сервер: выделение файлов и папок, скачивание с вложенностью до 10 ГиБ на файл и выбор папки назначения.",
+    "Две панели ↑ / ↓: загрузка на сервер и скачивание/перемещение. «Переместить сюда» без перезаписи; прогресс и отмена скачивания.",
+    "Локальные модели временно недоступны — идёт тестирование. Сохранённые данные локального ИИ остаются."
+  ],
+  "en": [
+    "Unsaved-session closing: keep-history checkbox, Close or Add preset and close.",
+    "Global chat histories: preview and confirmed deletion of supported Codex conversations.",
+    "Clearer native AI-agent permissions, confirmations and path restrictions where supported.",
+    "Server multi-selection and recursive downloads up to 10 GiB/file, with destination picker.",
+    "Two ↑ / ↓ panels: upload and download/move. Nonoverwriting Move here; download progress and cancellation.",
+    "Local models are temporarily disabled while testing continues. Existing local AI data is retained."
+  ],
+  "compatibility": {
+    "ru": [
+      "Очистка данных не требуется; библиотека v8 и существующие окружения сохраняются. Android8+/ARM64, прежние пакет и подпись, code1137.",
+      "История не восстанавливает остановленные процессы; собственные чаты CLI не удаляются галочкой при закрытии. API историй зависит от версии Codex.",
+      "Личные тестовые сборки с кодом1138 и выше не понижаются этим обновлением. Локальные модели и их пресеты в публичной сборке не запускаются. Завершите важные задачи перед установкой."
+    ],
+    "en": [
+      "No data reset required; library v8 and existing environments retained. Android8+/ARM64, same package/signature, code1137.",
+      "History does not restore stopped processes; the closing checkbox does not delete CLI-native chats. History API support depends on Codex version.",
+      "Private test builds with code1138 or higher are not downgraded. Local models/presets cannot start in this public build. Finish important tasks before updating."
+    ]
+  }
+}

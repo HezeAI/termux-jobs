@@ -486,3 +486,50 @@ checks debug/release runtime jars; the APK gate inspects DEX definitions and
 inventories unresolved types against compileSDK. Explicit optional-type review
 notes are not proof of method/API/device compatibility. Data schemas and the
 upstream FileUtils implementation are unchanged.
+
+### Локальная v1.3.4
+
+Closed package/file browsers notify their owners once and clear loaded catalogs. Owners close a snapshot of browser registrations. Library search updates existing result containers; diagnostics and Codex polling are unchanged.
+
+Local AI preview uses `LocalAiUi` + atomic `LocalAiFiles` storage and a non-exported
+`LocalAiService` in `:local_ai`, accessed via bounded Messenger IPC. Native handles
+are owned/closed by one service worker; cancellation is signalled without touching
+PTYs or external agents. This is process separation, not a separate UID sandbox.
+
+### Local AI v1.4.1-test
+
+Compact header controls, offline Markdown and collapsed reasoning; per-session
+project tools and independent path-check toggle. Full access is automatic and
+shell commands are not project-sandboxed. See [current scope](LOCAL-AI.md).
+
+### Local AI v1.4.3-test
+
+All local backends share action coordination, optional non-replaying Yes/No
+approvals and a separate reasoning dialog. Full access stays automatic by default;
+path checks remain independent. See [scope and limitations](LOCAL-AI.md).
+
+### Local AI v1.4.4-test
+
+Action mode, scope and confirmation are independent. Path checks ON restricts
+file tools to the project and rejects all arbitrary command requests before
+approval/execution. OFF needs a warning acceptance; external file access remains
+subject to mode/Android permissions. No new isolation. See LOCAL-AI.md.
+
+
+## Optional Qwen3.5 protocol adapter (v1.4.29-test)
+
+Session.localProtocol defaults to json and crosses LOAD IPC into LocalAiEngine. Only catalog qwen35-2b/llama supports qwen-native. LocalAiQwenProtocol generates permission-specific schemas; LocalAiPrompts appends authoritative current settings after user instructions. Engine.renderMessages is used by both exact prompt counting and generation after context fitting. Recorded toolRequest history becomes native assistant blocks; recorded toolResult becomes grouped user tool_response blocks. Historical assistant examples are not inferred as actions.
+
+The strict native parser translates one standalone block into the existing JSONObject tool request, preserving actual authorization, confirmation, environment dispatch and execution. Application-originated initial tools keep their internal JSON path. No dynamic Jinja interpreter or native library/model changes are introduced. Model adherence and hardware behavior require device checks.
+
+
+## v1.4.30-test compute mode and validation evidence
+
+Optional Session.localCompute defaults cpu and crosses Selection/WorkspaceStore/LOAD IPC. CPU native libraries/runners are retained unchanged. GPU guards catalog Qwen3.5 2B, SM8750 and ARM feature support, then starts separate Bionic OpenCL runner through the owned-process wrapper. It uses Android model paths and1024/512 batches; tool environment remains independent. Saved CPU location/variant/threads are not rewritten. GPU uses6 CPU assistance threads, not user-configurable GPU threads. CPU benchmark is rejected in GPU mode. NPU remains separate.
+
+LocalAiToolErrors records original invalid text and exact parser reason, selects the schema for the detected available tool without executing it, and removes redundant original text from model feedback. Cards format cause/original/expected schema as readable text. Empty-write results explicitly state no deletion. Authorization still gates all requests.
+
+
+## v1.5.0 SFTP batches and distribution gate
+
+ServerDownloadPlan inventories bounded trees read-only via LSTAT/REALPATH/READDIR; links/special files skipped. ServerSftp implements bounded eight-request 32KiB downloads with response IDs, ordered writes and before/after metadata checks; short/invalid replies fail closed. WorkspaceServerDownloads serializes one owned batch, snapshots download profile, uses a six-hour download transport bound (existing SFTP upload default unchanged), exclusive local UUID destination and per-file temporary publish. Move uses v3 nonoverwriting RENAME with target/self/source checks, no cross-device copy fallback or automatic partial rollback. ServerDiagnostics adds FILE_MOVE; no command/path payload enters diagnostics. BuildConfig.LOCAL_AI_ENABLED is false for TERMUX_PUBLIC_RELEASE=1, guarded in new session/preset selection, existing launch/edit/menu and inference service. Private build retains local AI and adds optional Qualcomm runtime; public APK excludes QAIRT/dispatch runtime, and no user data migration/reset is performed.

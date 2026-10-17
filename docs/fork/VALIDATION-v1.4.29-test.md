@@ -1,0 +1,11 @@
+# v1.4.29-test validation
+
+Automated Java tests: 698 passed, zero failures/errors/skips, including 12 added protocol/UI/agent tests. Coverage includes typed native round-trips, literal thinking tags in written content, malformed/multiple/prose/unknown requests, permission-specific schemas, rejected approvals, read-mode command denial, bounded validation retries, history conversion/grouping without source mutation, JSON default, persistence/copy and UI selection. Existing JSON/other-session suites passed. Fixtures do not establish real-model adherence or Android keyboard/gesture behavior.
+
+Release ARM64 assembly passed. Packaged DEX runtime gate: 15987 definitions, 30 unresolved explicitly reviewed types. Existing Kotlin dependency metadata warnings remain in the successful build log; compiler/dependency versions were not changed in this task. ZIP CRC, duplicate/path checks, package/version/ABI, v2 certificate and SHA-256 checked. Every native library/runner and external CLI control asset matches v1.4.28 byte-for-byte. Source-to-build-stage main code/resources/assets/native source matches. Limited archive filename/secret-marker scan passed, not a universal secret detector.
+
+Package com.termux, code1135, name1.4.29-test, ARM64, minSDK26/target28. Certificate dd37d983cd2496ebe49c7e88ddbc0088f311d38b8a8503e4392c81b48a11a644. APK bytes 59197452. SHA-256 92e30c560b60a867c1e8b6e9cd2a6a2283a3f6b4ff195f9db904915774725ee4. Evidence: .verification/local-ai-v1.4.29/.
+
+Review/logical inspection: opt-in mode passed through profile/IPC/engine; common count/generate renderer; strict parser returns to existing authorize/approval/runner path; lifecycle/stop ownership unchanged. Protocol change reloads same chat; custom rights scope requires review. No automatic model/environment migration or reset. Older readers may drop new optional field. No GitHub publication in this delivery.
+
+Required device check: new Qwen3.5 2B chat, native format vs JSON with the same CPU/threads/location/rights/context. Verify requested test-file creation/read/deletion and absence, one denied approval and read-mode denial. Check ordinary chats/terminal/keyboard switching. Model-native adherence, latency and real template handling remain experimental; this is a verified text/tool subset adapter, not full Jinja evaluation.

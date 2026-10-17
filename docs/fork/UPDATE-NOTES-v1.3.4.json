@@ -1,0 +1,20 @@
+{
+  "ru": [
+    "Поиск команд и заметок обновляет только результаты, сохраняя панели и фильтры.",
+    "Закрытые окна пакетов и файлов освобождаются из реестров, загруженные списки очищаются."
+  ],
+  "en": [
+    "Command and note search updates results while preserving panels and filters.",
+    "Closed package and file browsers release owner registrations and loaded lists."
+  ],
+  "compatibility": {
+    "ru": [
+      "Android8.0+, прежние com.termux и сертификат, code1087 выше1.3.3/1086. Форматы данных не меняются, очистка не требуется.",
+      "Поведение поиска после каждой буквы сохранено; диагностика и запуск сессий не менялись."
+    ],
+    "en": [
+      "Android8.0+, same com.termux package and certificate, code1087 above1.3.3/1086. No data format changes or reset required.",
+      "Search still responds to each character; diagnostics and session launching are unchanged."
+    ]
+  }
+}

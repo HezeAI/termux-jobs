@@ -483,3 +483,23 @@ API key остаётся отдельным путём; успешный отв�
 являются историческими, не текущим обещанием доступности.
 Antigravity1.3.4 исследован изолированно: version/help прошли с Go options,
 сервер стартовал, PTY интерфейс не появился; пока не интегрирован (ANTIGRAVITY-PROBE.md).
+
+## Permission controls in v1.4.10-test
+
+Profile editing separates Codex read/write capabilities, project write scope and native on-request/never approvals. `codexAccess` remains full/project/read for compatibility. Optional `codexConfirmActions` is null for legacy profiles (uses their original mapping) and explicitly stored after settings Save. It is sent both to the server/client for new chats and to the resume preflight; the server must confirm it. New bridge-v0.2.20 is installed atomically without replacing bridge-v0.2.19 used by an active process.
+
+Optional `aiProjectOnly` defaults false. When enabled for OpenCode, launch applies a deny-first session policy, allowlisting read/glob/grep/question and permitted edits; external_directory and shell/execute/skills/subagents/MCP/unknown tools are denied. The checkbox explicitly means native external-path policy, not strict folder confinement: pinned OpenCode 2.0.28 path resolution is lexical, may encompass the project worktree, and does not guarantee protection against symlink escapes. This must not be advertised as filesystem isolation.
+
+Claude/Gemini retain their native modes. Project-folder enforcement in this integration is marked unavailable. No substitute advisory prompt is presented as enforcement. Settings affect next launch/manual restart; saving does not reconfigure active agents. A normal terminal or SSH session is not sandboxed by its working directory.
+
+Older builds ignore these optional fields and can relax newly selected scope/approval settings on a subsequent launch after downgrade. Review policies before rollback. Existing histories and credentials are unchanged by this migration. See RELEASE-v1.4.10-test.md and its validation report.
+
+
+## Experimental Qwen protocol (v1.4.29-test)
+
+Local AI → Settings → Engine settings → Model communication format: Current JSON (default) or Native Qwen format (testing). Only catalog Qwen3.5 2B / llama.cpp is verified for the new adapter. It preserves existing permissions and reloads the same chat. For comparison create a new chat; tool schemas take context space. This is a text/function-call adapter, not a general Jinja evaluator or a model modification. See [release notes](RELEASE-v1.4.29-test.md) for limits.
+
+
+## v1.4.30-test operating mode
+
+Engine settings → Operating mode → CPU / GPU (OpenCL, testing). CPU is default; its ARM/compatible settings and threads reappear unchanged after returning from GPU. Initially only catalog Qwen3.5 2B on Snapdragon8EliteSM8750 is supported. GPU inference runs in an Android child process; Ubuntu tool environment remains selected independently. Select CPU if GPU initialization fails. Compare actual request diagnostics; CPU prefill benchmark is unavailable while GPU selected. Error cards now contain original calls and precise schema feedback. Empty write truncates, never deletes. See [release notes](RELEASE-v1.4.30-test.md).

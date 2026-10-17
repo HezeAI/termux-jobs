@@ -17,6 +17,7 @@ final class ServerSftp implements AutoCloseable {
     static final class Info {
         final boolean exists;final long size;final int permissions,mtime;
         Info(boolean e,long s,int p,int m){exists=e;size=s;permissions=p;mtime=m;}
+        boolean directory(){return (permissions&0170000)==0040000;}
         boolean regular(){return (permissions&0170000)==0100000;}
         boolean same(Info other){return exists==other.exists&&(!exists||size==other.size&&permissions==other.permissions&&mtime==other.mtime);}
     }
@@ -63,7 +64,36 @@ final class ServerSftp implements AutoCloseable {
     String canonical(String directory)throws IOException{DataInputStream r=request(16,b->string(b,directory));if(r.readUnsignedByte()!=104||r.readInt()!=1)throw new IOException("SFTP_DIRECTORY");String path=string(r);if(!path.startsWith("/")||path.indexOf('\0')>=0)throw new IOException("SFTP_DIRECTORY");return path;}
     Info stat(String path)throws IOException{
         DataInputStream r=request(7,b->string(b,path));int type=r.readUnsignedByte();if(type==101){if(r.readInt()==2)return new Info(false,0,0,0);throw new IOException("SFTP_STAT");}if(type!=105)throw new IOException("SFTP_STAT");
-        int flags=r.readInt();long size=(flags&1)!=0?r.readLong():0;if((flags&2)!=0){r.readInt();r.readInt();}int mode=(flags&4)!=0?r.readInt():0;int modified=0;if((flags&8)!=0){r.readInt();modified=r.readInt();}return new Info(true,size,mode,modified);
+        return attributes(r);
+    }
+    private static Info attributes(DataInputStream r)throws IOException{
+        int flags=r.readInt();if((flags&~15)!=0)throw new IOException("SFTP_ATTRIBUTES");long size=(flags&1)!=0?r.readLong():0;if(size<0)throw new IOException("SFTP_SIZE");if((flags&2)!=0){r.readInt();r.readInt();}int mode=(flags&4)!=0?r.readInt():0;int modified=0;if((flags&8)!=0){r.readInt();modified=r.readInt();}return new Info(true,size,mode,modified);
+    }
+    static final long MAX_DOWNLOAD_BYTES=10L*1024*1024*1024;
+    static final class Entry {final String name;final Info info;Entry(String n,Info i){name=n;info=i;}}
+    List<Entry> list(String path)throws IOException{
+        DataInputStream opened=request(11,b->string(b,path));if(opened.readUnsignedByte()!=102)throw new IOException("SFTP_DIRECTORY");byte[] handle=blob(opened);List<Entry> entries=new ArrayList<>();
+        try{while(true){DataInputStream r=request(12,b->blob(b,handle));int type=r.readUnsignedByte();if(type==101){if(r.readInt()==1)break;throw new IOException("SFTP_READDIR");}if(type!=104)throw new IOException("SFTP_READDIR");int count=r.readInt();if(count<0||count>20000||entries.size()+count>20002)throw new IOException("DIRECTORY_LIMIT");for(int i=0;i<count;i++){String name=string(r);string(r);Info info=attributes(r);if(name.equals(".")||name.equals(".."))continue;if(!validName(name))throw new IOException("UNSAFE_NAME");entries.add(new Entry(name,info));}}return entries;}
+        finally{if(!closed)try{ok(request(4,b->blob(b,handle)));}catch(IOException error){close();}}
+    }
+    void download(String path,OutputStream target,Info expected,Progress progress)throws Exception{
+        if(!expected.regular()||expected.size>MAX_DOWNLOAD_BYTES)throw new IOException("FILE_LIMIT_OR_TYPE");if(!expected.same(stat(path)))throw new IOException("REMOTE_CHANGED");
+        DataInputStream r=request(3,b->{string(b,path);b.writeInt(1);b.writeInt(0);});if(r.readUnsignedByte()!=102)throw new IOException("SFTP_OPEN");byte[] handle=blob(r);boolean success=false;
+        try{long received=0,next=0;Map<Integer,Long> pending=new HashMap<>();TreeMap<Long,byte[]> ready=new TreeMap<>();
+            while(received<expected.size){
+                while(next<expected.size&&pending.size()+ready.size()<WRITE_WINDOW){final long offset=next;final int length=(int)Math.min(32768,expected.size-next);int id=send(5,b->{blob(b,handle);b.writeLong(offset);b.writeInt(length);});pending.put(id,offset);next+=length;}
+                DataInputStream data=response();int type=data.readUnsignedByte(),id=data.readInt();Long offset=pending.remove(id);if(type!=103||offset==null)throw new IOException("SFTP_READ");byte[] chunk=blob(data);int wanted=(int)Math.min(32768,expected.size-offset);if(chunk.length!=wanted)throw new IOException("SFTP_SHORT_READ");ready.put(offset,chunk);
+                while(ready.containsKey(received)){byte[] current=ready.remove(received);target.write(current);received+=current.length;progress.sent(received);}
+            }success=true;}
+
+        catch(Exception error){close();throw error;}
+        finally{if(!closed)ok(request(4,b->blob(b,handle)));}
+        if(success&&!expected.same(stat(path)))throw new IOException("REMOTE_CHANGED");
+    }
+
+    void move(String source,String directory,Info expected)throws Exception{
+        String name=new java.io.File(source).getName();if(!source.startsWith("/")||!validName(name)||!directory.startsWith("/"))throw new IOException("INVALID_PATH");String target=directory+(directory.equals("/")?"":"/")+name;
+        if(!expected.regular()&&!expected.directory())throw new IOException("UNSUPPORTED_TYPE");if(target.equals(source)||directory.equals(source)||directory.startsWith(source+"/"))throw new IOException("MOVE_INTO_SELF");if(!expected.same(stat(source)))throw new IOException("REMOTE_CHANGED");if(stat(target).exists)throw new IOException("DESTINATION_EXISTS");ok(request(18,b->{string(b,source);string(b,target);}));
     }
     boolean canReplace(){return posixRename;}
     void upload(InputStream source,String directory,String name,Info expected,Progress progress)throws Exception{

@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "Локальный ИИ: компактная кнопка Запустить/Остановить, Markdown, свёрнутые рассуждения и выбор чата в меню сессии.",
+    "Три режима доступа и файловые инструменты. Полный доступ запускает запись и команды автоматически. Проверка путей — отдельная галочка.",
+    "Импорт моделей через файловый менеджер приложения с запросом доступа к общей памяти, прогрессом, скоростью и оставшимся временем."
+  ],
+  "en": [
+    "Local AI: compact Start/Stop, Markdown, collapsed reasoning and chat selection in the session menu.",
+    "Three access modes and file tools. Full access runs writes and commands automatically. Path confinement is a separate checkbox.",
+    "Model import through the app file manager with storage access checks, progress, speed and estimated remaining time."
+  ],
+  "compatibility": {
+    "ru": [
+      "Сброс данных не требуется. Режим по умолчанию — Только чат, проверка путей включена. В полном доступе команды не являются песочницей проекта даже с галочкой.",
+      "Test code1103; rollback v1.3.4/code1104. После отката следующая сборка должна иметь code1105+. Старый UI не открывает локальные чаты и может потерять новые параметры пресетов при сохранении."
+    ],
+    "en": [
+      "No data reset required. Default: Chat only, path checks enabled. Full-access commands are not project-sandboxed even with path checks on.",
+      "Test code1103; rollback v1.3.4/code1104. A later build after recovery needs code1105+. Old UI cannot open local chats and may discard new preset parameters on save."
+    ]
+  }
+}

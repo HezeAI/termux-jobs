@@ -31,7 +31,7 @@ public class ClaudeCodeUiTest {
             AlertDialog editor=ShadowAlertDialog.getLatestAlertDialog();View chat=find(editor.getWindow().getDecorView(),WorkspaceText.tr("Чат: ")+WorkspaceText.tr("Новый чат"));assertNotNull(chat);chat.performClick();shadowOf(Looper.getMainLooper()).idle();
             AlertDialog picker=ShadowAlertDialog.getLatestAlertDialog();assertEquals(3,picker.getListView().getCount());assertEquals(WorkspaceText.tr("Выбрать чат"),picker.getListView().getItemAtPosition(1));
             picker.getListView().performItemClick(null,1,1);shadowOf(Looper.getMainLooper()).idle();assertNotNull(find(editor.getWindow().getDecorView(),WorkspaceText.tr("Чат: ")+WorkspaceText.tr("Выбрать чат")));
-            View mode=find(editor.getWindow().getDecorView(),WorkspaceText.tr("Доступ: ")+WorkspaceText.tr("Подтверждать действия"));assertNotNull(mode);mode.performClick();shadowOf(Looper.getMainLooper()).idle();
+            View mode=find(editor.getWindow().getDecorView(),(WorkspaceLanguage.code(a).equals("ru")?"Права: ":"Permissions: ")+WorkspaceText.tr("Подтверждать действия"));assertNotNull(mode);mode.performClick();shadowOf(Looper.getMainLooper()).idle();
             picker=ShadowAlertDialog.getLatestAlertDialog();picker.getListView().performItemClick(null,2,2);shadowOf(Looper.getMainLooper()).idle();
             editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertTrue(s.claudeAgent);assertEquals("choose",s.claudeChat);assertEquals("plan",s.claudeMode);assertEquals("ubuntu",s.environment);assertEquals("",s.aiAgent);
         } finally {c.close();}

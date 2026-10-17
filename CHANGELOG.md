@@ -1,4 +1,220 @@
+# v1.5.0 — sessions, histories and server file operations
+
+- Unsaved-session closing: keep-history checkbox, Close / Add preset and close; native CLI chat storage remains independent.
+- Global supported Codex chat history browser, preview and explicit confirmed deletion through the native API; no silent archival fallback.
+- Clearer native AI-agent rights, confirmation and path-scope controls where supported; existing profiles preserved.
+- Server multi-selection via long press; two equally sized vector panels ↑ / ↓; Select all / Clear.
+- Pipelined bounded-window SFTP downloads, files and recursive folders, destination picker for Termux/proot/device storage, quick Download retained; 10 GiB/file.
+- Exclusive destination batch folder preserves names and hierarchy, avoids overwrites. Progress, speed, remaining estimate and cancellation; completed files kept after interruption.
+- Same-server nonoverwriting moves via Move / Move here; collision and recursive-self checks; cross-filesystem moves can fail safely without fallback copying.
+- Public Local models entry disabled during testing, including existing-preset startup; experimental data retained. Private testing continues separately.
+- Existing package/signing/data schema v8; stable code1137, private test1138; no reset. In-app updater metadata included.
+
+# v1.4.30-test
+
+- Operating mode CPU/GPU in Engine settings; GPU hides CPU mode/thread settings and preserves their saved values.
+- Separate opt-in OpenCL runner, initially catalog Qwen3.5 2B / SM8750; explicit failure and manual CPU recovery, independent Ubuntu tools.
+- Tool validation: original call, named duplicate/invalid argument, selected-tool schema, readable RU/EN details.
+- Empty write explicitly does not delete; permission-aware deletion/verification and quoted HTTP command guidance.
+
+# v1.4.29-test
+
+- Optional native Qwen function schemas/call/result adapter for catalog Qwen3.5 2B, with strict parsing and the existing authorization/confirmation pipeline.
+- Engine settings protocol selector; persisted per session/preset, JSON default, same-chat reload.
+- Identical adapted messages for exact token count and generation across inference locations; native libraries and model weights unchanged.
+
+# v1.4.28-test
+
+- Local-AI Environment: dedicated Ubuntu for new sessions; optional explicit Termux command routing, three independent inference locations; new llama defaults Ubuntu, LiteRT Android only. Legacy environments unchanged until confirmed.
+- Behavior instructions below Permissions: bundled/custom UTF-8 TXT/MD import from device storage, private copied text, view, help/template and reset.
+- Rights prompt: generated from current settings or explicitly acknowledged custom edit; red risk warning, unchanged code authorization, stale settings detection, auto reset.
+- Standard guide explains real command execution, permission-aware dependency installation/HTTP requests, exact deletion targets and multi-step completion. A bounded continuation handles a promised next step after a successful action.
+- Unsaved session closing: Keep history checkbox, Close or Add preset and close. Local deletion waits for owned writer/model shutdown; external CLI histories are not deleted by closing.
+- Chat histories in global settings: local/Codex catalogs, search/filter/view, exact confirmed deletion, active-chat checks and independent preset bindings. Native Codex thread/delete required; no archive/filesystem fallback.
+
+# v1.4.27-test
+
+- Local llama/LiteRT chats automatically receive a short APK-bundled operating guide, before authoritative current settings.
+- Guidance covers chat/read/full-access modes, actual tool execution, dependency checks, filtered listings and deletion target verification.
+- No authorization, native engine, history schema or external CLI-agent changes.
+
+# v1.4.21-test — isolated synthetic prefill diagnostics
+
+## v1.4.26-test
+
+Local AI Environment settings separate tools from engine location: Embedded Android, native Termux, or the same dedicated Local-AI Ubuntu. Experimental CPU runners share model files/history and keep existing permissions. Includes compact file-list context and clearer tool-call draft status.
+
+## v1.4.25-test
+
+All local models: compact file-list metadata for inference, full raw results retained; instructions recommend filters and requested count for newest-file tasks. Larger requested lists remain available.
+
+## v1.4.24-test
+
+Local AI: shorter system/tool instructions and smaller old-result excerpts for lower input cost; full saved history retained. Saved preset menu order and model-picker palette aligned with other settings.
+
+## v1.4.23-test
+
+Local AI diagnostics now reports input token composition per inference pass, using the model tokenizer for llama totals and labelled estimates for components. Session/preset button shortened to Engine settings.
+
+## v1.4.22-test
+
+Local AI: Engine settings now groups processor mode and CPU thread selection. Auto preserves the previous four-thread cap; manual options are 2/4/6/8 where supported. Existing chats and presets are retained.
+
+- Input-length, thread-count and batch-size tests in local diagnostics, using temporary native contexts and the selected CPU variant.
+- Exact per-trial/per-batch decode wall time, process CPU time, throughput, progress, stop and separate persisted/exportable report.
+- Benchmark-only cancellation gate handles early/active/late stop without contaminating chat cancellation; regular settings/cache/history remain intact.
+- Same package/certificate, code1127, no reset. Actual Qwen length/thread results require running the test in-app.
+
+# v1.4.20-test — tool validation recovery and repeated-read guard
+
+- Return schema errors to the local model for up to two corrections, without executing invalid calls or bypassing rights/approval.
+- Distinguish category filter from extension; preserve non-executable prose handling and cancellation.
+- Execution-metadata Cached labels, persisted in history, and bounded repeated cached reads with honest incomplete-task notice.
+- Rename Automatic to ARM acceleration (when supported); native backends unchanged. Same identity/code1126, no reset.
+
+# v1.4.19-test — guarded ARM CPU engine variants
+
+- Session/preset Engine selector: Automatic or Compatible CPU for llama.cpp; actual backend/threads in diagnostics.
+- Separate guarded dotprod/FP16/i8mm compute library, hidden internal symbols and distinct JNI namespace; generic baseline retained.
+- Mode persistence/private IPC validation and safe idle reload with same chat; no rights/history or LiteRT behavior change.
+- Same package/certificate, code1125; additional library increases APK size. Qwen speed requires device comparison.
+
+# v1.4.18-test — latest-file routing and previous-result excerpts
+
+- Recognize short folderless latest-file requests and ask for a folder without model inference.
+- Latest screenshot phone aliases; text-only discovery returns real paths and honest vision limits, preserving capable-model flow.
+- Runtime-only excerpts of older large tool results with source/recall hints and chat notice; full archive and current task/results preserved.
+- Same native libraries/settings/permissions, no reset; code1124.
+
+# v1.4.17-test — diagnostics for every local model call
+
+- Keep per-call input/cache/timing/output metadata instead of only the final call.
+- Completed, active and interrupted records; bounded archive, journal-pause handling, bilingual reports and honest unknown LiteRT counters.
+- No inference or native-library changes, no reset; code1123, same package/signature.
+
+# v1.4.16-test — llama input timing and prefix reuse
+
+- Live native processed/total/cached token counters; separate setup, prefill, cache and first-step timings in existing local-session diagnostics.
+- RAM-only prefix reuse scoped to owner/model/chat/exact instructions; bounded stored snapshots for unsupported partial rollback and full-evaluation fallback.
+- No data reset; code1122, same package/certificate. Qwen3.5 device speed remains to be checked.
+
+# v1.4.15-test — local budgets and timing diagnostics
+
+- Saved per-session/preset context and reply limits; real IPC/native/SDK wiring, safe idle reload for context changes.
+- Phase placeholders and live metadata-only local diagnostics for llama.cpp and LiteRT, with export and last-report persistence.
+- Fast RU/EN find-latest-text-and-read without model inference. Defaults4096/768 retained, code1121, same signing identity, no reset.
+
+# v1.4.14-test — local context, recall and direct text
+
+- Runtime-budget context reduction with a chat notice and unchanged full saved transcript; exact GGUF counting, estimated LiteRT budgeting and one overflow retry.
+- Current-chat history search tool; no other chats opened and no permission changes.
+- Reuse identical successful reads within a turn, explicit refresh support and invalidation after writes/commands/installations.
+- Immediate literal display for supported short latest-text read requests, without model inference.
+- Same package/certificate, code1120; no reset. Device validation pending.
+
+# v1.4.13-test — latest files in the requested folder
+
+- Shared local-model discovery for short RU/EN latest-file requests with known folder aliases and exact extension filtering before date sorting.
+- Read/open text requests continue with the exact discovered file; find-only and binary requests do not automatically read or execute.
+- Checked directory visible in listing details; existing rights/scope and named-file selection preserved. Same package/signature, code1119, no reset.
+
+# v1.4.12-test — local file search and selection
+
+- Case/suffix tolerant file-name search with approximate Russian/Latin spelling and explicit alternate names from the model. This is not universal translation or semantic search.
+- Multiple matching files, and even one approximate match, pause the local-agent turn for an explicit card-based selection. Cancelling stops continuation; selection grants no execution/install/write permissions.
+- Selection opens a scrollable list with names, full paths, sizes and dates. Saved chooser events restore read-only and never silently resume a previous operation.
+- Friendly file-search/screenshot result details; raw JSON behind Technical data.
+- Shared by all local engines and imported models. Native/external agent controllers unchanged. Same package/signature, code1118; no reset required.
+
+# v1.4.11-test — screenshot phrases and tool request cards
+
+- Recognizes polite/greeting screenshot requests such as “привет посмотри ласт скрин”; questions, negations and explicit filenames/paths keep their own handling.
+- Local-model tool JSON is presented as an unconfirmed request card with raw details on tap. User messages remain literal. Completed/failed execution still requires a real tool result.
+- A mixed prose+JSON reply can receive one formatting correction for an action request; embedded JSON itself is never executed. Existing authorization and approval checks remain in force.
+- Shared by catalog/imported local models; no added vision capability or changes to external agent permissions. Same package/signature, code 1117; no history reset.
+
+# v1.4.10-test — agent permission controls
+
+- Codex native action mode, project write scope and approval policy shown separately; existing profiles preserve their original policies.
+- OpenCode adds opt-in external-path tool policy (not symlink-safe filesystem isolation): denies external directories, shell, execution, plugins, delegation and unknown tools while preserving selected file permissions.
+- Claude/Gemini retain native modes; unsupported project enforcement is explicitly disabled, rather than advertised as a sandbox.
+- Changes apply on the next launch, not to running sessions. No history reset or authentication changes. Optional v8 fields retain backward readability, but older builds ignore new approval/scope settings: review before any downgrade.
+- Same signing identity and package; code 1116.
+
+# v1.4.9-test — portable local-AI file discovery
+
+- Local-AI settings selectors now use the ordinary session panel colors, text and ripple feedback.
+- Shared screenshot finder for all local model engines: mixed image extensions, modification-time sorting, Android storage aliases, known screenshot directories and duplicate suppression.
+- Short explicit last-screenshot requests start discovery before model generation; exact filenames and questions are left to the model with clear instructions.
+- Reports checked folders and distinguishes absent folders, access denial and project restrictions. No permission bypass or fallback into another environment.
+- Expanded known folder hints for downloads, pictures, documents, media and selected environment homes. External CLI agents retain their own tools.
+- Same package/signing identity, code 1115; no data reset or schema change.
+
+# v1.4.8-test — dedicated local-AI Ubuntu
+
+Explicit Main Termux / Ubuntu for local AI selection; readiness check and confirmed first-time setup with progress; fresh persistent container with Python3/Git; no fallback to the working Ubuntu; legacy local profiles require environment reselection. Expanded confirmed package catalogue. No data reset or GitHub publication.
+
+# v1.4.7-test — local file tools and media
+
+Real metadata/newest-file search, environment-folder discovery, explicit file errors, APK metadata, experimental Gemma LiteRT images/video frames, and user-confirmed missing-tool installation with APT plan in chat. Local permission labels clarified. No reset/publication.
+
+# v1.4.6-test — local session fixes
+
+Session/preset rename; focus-neutral streaming; local project file browser; current permissions on the next turn without model restart. No reset or publication.
+
+# v1.4.5-test — local chat presentation
+
+Independent activity dots, expandable tool cards with actual execution state, and a left accent on user messages. Permissions unchanged; no data reset. Private test build.
+
+## v1.4.4-test — local testing, not published
+
+- Separate action permissions (Chat only / Read / Full access), project scope and Yes/No confirmation.
+- Path checks ON blocks arbitrary shell commands before approval/execution, even in Full access; file tools stay project-scoped.
+- Path checks OFF permits external app-accessible paths; only Full access allows writes/commands. Disabling requires an explicit warning confirmation.
+- Existing profiles/choices retained; no data reset. Test code1109; refreshed baseline rollback1110. No separate isolation.
+
+## v1.4.3-test — local testing, not published
+
+- All local backends share an action-first turn coordinator with one recovery attempt for reasoning-only or non-executing offers. Explicit user paths are preserved by instructions, not silently rewritten.
+- Qwen-compatible ChatML templates now use their official non-thinking generation suffix; native EOS/token-limit finish reason is reported.
+- Optional per-session Confirm actions: Yes/No cards for full-access writes/commands; automatic execution remains the default. Path checks are independent.
+- Reasoning opens in an independent scrollable dialog from a pill; raw history is retained. Tool results are labelled separately.
+- Test code1107; recovery code1108. No data reset or GitHub publication.
+
+## v1.4.2-test — local testing, not published
+
+- Recognize structured tool JSON in json/tool/unlabelled fences; reject trailing prose, multiple objects and invalid fields.
+- Move local New chat / Choose chat above Settings in the long-press menu; remove duplicates from the session selector. Model/access stay in Settings.
+- Black local chat, inline You:/AI: labels and compact reasoning toggle; no colored cards.
+- Package/signing retained, no data reset. Test code1105; refreshed recovery code1106.
+
+## v1.4.1-test — local testing, not published
+
+- Compact Local AI Start/Stop header and new/choose-chat selector actions.
+- Offline Markdown/code copying and collapsed, preserved reasoning.
+- Chat/read/full-access modes, project picker and independently switchable path checks.
+- Full access runs tools automatically; commands are not a project sandbox.
+- Test code1103; refreshed pre-feature rollback code1104. No data reset.
+
+## v1.4.0-test — local preview, not published
+
+- Local AI sessions/presets with a separate inference process, local chat history
+  and input drafts; no project tools or command execution.
+- Five models/six catalogue variants, pinned downloads with SHA-256, resumable
+  partial downloads and custom model imports.
+- llama.cpp CPU and LiteRT-LM GPU/CPU integration. NPU runtime is not included;
+  NPU is explicitly blocked. MTP is not enabled. Device validation pending.
+- Recovery APK: pre-feature v1.3.4 with manifest code1102; test code1101.
+- Includes the earlier unreleased v1.3.4 search/browser-lifecycle improvements.
+
 # Изменения Termux Job’s
+
+## v1.3.4 — локальная проверка
+
+- Поиск команд/заметок сохраняет панели и фильтры, обновляя результаты.
+- Закрытые браузеры пакетов/файлов удаляются из реестров; списки освобождаются.
+- Диагностика и фоновые опросы без изменений; данные без миграций.
+
 
 ## v1.3.3 — Обязательное обновление
 

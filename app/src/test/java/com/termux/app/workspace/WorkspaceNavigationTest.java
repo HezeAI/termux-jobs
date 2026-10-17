@@ -26,6 +26,22 @@ import static org.robolectric.Shadows.shadowOf;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 28, application = Application.class)
 public class WorkspaceNavigationTest {
+    @Test public void searchUpdatesBothListsWithoutReplacingPanelsFiltersOrInput()throws Exception{
+        TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.setContentView(R.layout.activity_termux);Field tv=TermuxActivity.class.getDeclaredField("mTerminalView");tv.setAccessible(true);tv.set(a,a.findViewById(R.id.terminal_view));WorkspaceController c=new WorkspaceController(a);
+        try{
+            Field f=WorkspaceController.class.getDeclaredField("store");f.setAccessible(true);WorkspaceStore store=(WorkspaceStore)f.get(c);store.commands.clear();store.notes.clear();
+            for(String name:new String[]{"Alpha","Beta"}){WorkspaceStore.Command cmd=new WorkspaceStore.Command();cmd.name=name+" command";cmd.command="echo "+name;cmd.favorite=name.equals("Alpha");store.commands.add(cmd);WorkspaceStore.Note note=new WorkspaceStore.Note();note.name=name+" note";note.text="text "+name;store.notes.add(note);}
+            findDescription(a.findViewById(R.id.workspace_navigation),"Команды/Заметки").performClick();
+            ViewGroup content=a.findViewById(R.id.workspace_content);View viewport=content.getChildAt(0),commands=findDescription(content,"Список сохранённых команд"),notes=findDescription(content,"Список сохранённых заметок"),filters=findDescription(content,"Фильтры команд");
+            EditText search=(EditText)findDescription(a.findViewById(R.id.workspace_header),"Поиск команд и заметок");search.requestFocus();
+            for(String query:new String[]{"A","Al","Alpha","no match",""}){
+                search.setText(query);assertSame(viewport,content.getChildAt(0));assertSame(commands,findDescription(content,"Список сохранённых команд"));assertSame(notes,findDescription(content,"Список сохранённых заметок"));assertSame(filters,findDescription(content,"Фильтры команд"));assertTrue(search.hasFocus());assertEquals(query,search.getText().toString());
+                boolean alpha=query.isEmpty()||"Alpha".toLowerCase().contains(query.toLowerCase()),beta=query.isEmpty()||"Beta".toLowerCase().contains(query.toLowerCase());assertEquals(alpha,findText(content,"Alpha command")!=null);assertEquals(alpha,findText(content,"Alpha note")!=null);assertEquals(beta,findText(content,"Beta command")!=null);assertEquals(beta,findText(content,"Beta note")!=null);
+            }
+            findText(filters,"Избранное").performClick();View favoriteFilters=findDescription(content,"Фильтры команд");assertTrue(findText(favoriteFilters,"Избранное").isSelected());search.setText("Beta");assertNull(findText(content,"Beta command"));assertNotNull(findText(content,"Beta note"));assertSame(favoriteFilters,findDescription(content,"Фильтры команд"));assertTrue(findText(favoriteFilters,"Избранное").isSelected());
+            assertNull(a.getCurrentSession());
+        }finally{c.close();}
+    }
     @Test public void categorySuggestionsAllowExistingAndNewValuesInBothEditors() throws Exception {
         TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();activity.setTheme(R.style.Theme_Termux_Black);activity.setContentView(R.layout.activity_termux);
         Field tv=TermuxActivity.class.getDeclaredField("mTerminalView");tv.setAccessible(true);tv.set(activity,activity.findViewById(R.id.terminal_view));WorkspaceController controller=new WorkspaceController(activity);Field sf=WorkspaceController.class.getDeclaredField("store");sf.setAccessible(true);WorkspaceStore store=(WorkspaceStore)sf.get(controller);store.commands.clear();store.notes.clear();
@@ -769,12 +785,15 @@ public class WorkspaceNavigationTest {
         java.lang.reflect.Method edit = WorkspaceController.class.getDeclaredMethod("editSession", WorkspaceStore.Session.class, boolean.class); edit.setAccessible(true); edit.invoke(controller, null, false);
         AlertDialog form = ShadowAlertDialog.getLatestAlertDialog(); View decor = form.getWindow().getDecorView();
         findDescription(decor, "Среда запуска").performClick(); AlertDialog environments = ShadowAlertDialog.getLatestAlertDialog();
-        assertEquals(4,environments.getListView().getCount()); assertEquals("Termux",environments.getListView().getItemAtPosition(0)); assertEquals("Ubuntu",environments.getListView().getItemAtPosition(1)); assertEquals("AI Agents", environments.getListView().getAdapter().getItem(3)); environments.getListView().performItemClick(null,3,3);
+        assertEquals(5,environments.getListView().getCount()); assertEquals("Termux",environments.getListView().getItemAtPosition(0)); assertEquals("Ubuntu",environments.getListView().getItemAtPosition(1)); assertEquals("AI Agents", environments.getListView().getAdapter().getItem(3)); environments.getListView().performItemClick(null,3,3);
         assertNotNull(findText(decor,"Среда Codex: Ubuntu"));
         assertEquals(View.GONE, findDescription(decor,"Добавить команду запуска").getVisibility());
         findDescription(decor,"Доступ Codex").performClick(); AlertDialog access = ShadowAlertDialog.getLatestAlertDialog();
-        assertEquals(3,access.getListView().getAdapter().getCount()); access.getListView().performItemClick(null,2,2);
-        assertNotNull(findText(decor,"Доступ: Только чтение · с подтверждениями"));
+        assertEquals(2,access.getListView().getAdapter().getCount()); access.getListView().performItemClick(null,0,0);
+        shadowOf(Looper.getMainLooper()).idle();
+        assertEquals(WorkspaceLanguage.code(activity).equals("ru")?"Права: Чтение · read-only":"Permissions: Read · read-only", ((TextView)findDescription(decor,"Доступ Codex")).getText().toString());
+        assertNotNull(findDescription(decor,"Codex project write scope"));
+        assertNotNull(findDescription(decor,"Codex action confirmations"));
         findDescription(decor,"Чат Codex").performClick(); AlertDialog chat=ShadowAlertDialog.getLatestAlertDialog();assertEquals(3,chat.getListView().getAdapter().getCount());chat.getListView().performItemClick(null,0,0);
         assertNotNull(findDescription(decor,"Выбрать рабочий каталог"));
         shadowOf(Looper.getMainLooper()).idle();

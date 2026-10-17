@@ -14,6 +14,8 @@ final class WorkspacePackages implements AutoCloseable {
     interface Launch {void run(WorkspaceStore.Session profile,boolean selectedSession);}
     private final TermuxActivity activity;private final ProjectFiles files;private final Launch launch;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
+    private Runnable onClosed;
+    void setOnClosed(Runnable callback){onClosed=callback;}
     private AlertDialog dialog;private LinearLayout rows,tabs;private TextView status;private EditText search;
     private List<PackageCatalog.Entry> entries=Collections.emptyList();private int tab,limit=100,generation;private volatile boolean closed;private boolean busy;
     WorkspacePackages(TermuxActivity activity,WorkspaceStore.Session profile,Launch launch){this.activity=activity;this.files=new ProjectFiles(activity,profile);this.launch=launch;}
@@ -85,5 +87,5 @@ final class WorkspacePackages implements AutoCloseable {
             .setPositiveButton(WorkspaceText.tr("Продолжить"),(d,w)->{if(closed)return;boolean current=choices.getCheckedRadioButtonId()==selected.getId();WorkspaceStore.Session operation=PackageCatalog.operationProfile(files.profile,command);close();launch.run(operation,current);})
             .setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
     }
-    public void close(){if(closed)return;closed=true;++generation;if(dialog!=null&&dialog.isShowing())dialog.dismiss();files.close();worker.shutdownNow();}
+    public void close(){if(closed)return;closed=true;++generation;if(dialog!=null&&dialog.isShowing())dialog.dismiss();try{files.close();}finally{worker.shutdownNow();entries=Collections.emptyList();Runnable callback=onClosed;onClosed=null;if(callback!=null)callback.run();}}
 }

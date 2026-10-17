@@ -194,3 +194,35 @@ the app. Both Russian and English are localized. Existing gear badge remains.
 Кнопка «Назад» / Back возвращает существующий список, сохраняя вкладку,
 поисковый запрос и позицию. Системная отмена ведёт туда же. Кнопка закрытия
 самого списка остаётся прежней. Изменение не касается других просмотров.
+
+### Локальная v1.3.4
+
+Поиск команд/заметок сохраняет объекты панелей и фильтров; обновляются только карточки, без задержки ввода.
+
+Local AI adds an optional native chat panel inside the terminal workspace, reusing
+the session selector and multiline input. It keeps a stable message container and
+throttles streaming updates; only the selected local model is loaded.
+
+### Local AI v1.4.1-test
+
+Compact header controls, offline Markdown and collapsed reasoning; per-session
+project tools and independent path-check toggle. Full access is automatic and
+shell commands are not project-sandboxed. See [current scope](LOCAL-AI.md).
+
+### Local AI v1.4.3-test
+
+All local backends share action coordination, optional non-replaying Yes/No
+approvals and a separate reasoning dialog. Full access stays automatic by default;
+path checks remain independent. See [scope and limitations](LOCAL-AI.md).
+
+### Local AI v1.4.4-test
+
+Action mode, scope and confirmation are independent. Path checks ON restricts
+file tools to the project and rejects all arbitrary command requests before
+approval/execution. OFF needs a warning acceptance; external file access remains
+subject to mode/Android permissions. No new isolation. See LOCAL-AI.md.
+
+
+## v1.5.0 selection interaction
+
+Server rows enter checkbox selection on long press. Two equally sized centered vector panels replace the single upload button: left ↑ uploads, right ↓ opens Download / Move. A gap separates their touch areas; the parent-directory vector now points left without changing its action. Its menu offers Download / Move / Select all / Clear; pending same-profile move uses a folder-arrow vector and Move here / Cancel move, preserved across directory navigation. Directory navigation clears ordinary selection. Public session/preset environment chooser retains a disabled Local AI row with reduced opacity; existing local-preset launch is denied with an explanatory dialog, not deletion.
