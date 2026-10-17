@@ -7,15 +7,35 @@ import java.security.MessageDigest;
 final class LocalAiTurnProgress {
     private final ArrayDeque<Step> steps=new ArrayDeque<>();private int completed;
     private String warned="";final int requestedRepeats;
+    private String lastWrite="",writeTarget="",writeText="",warnedWrite="";private int identicalWrites;
+    private final LinkedHashMap<String,Integer> stalledLookups=new LinkedHashMap<>();
+    private void resetWrite(){lastWrite="";writeTarget="";writeText="";warnedWrite="";identicalWrites=0;stalledLookups.clear();}
+
     private static final class Step {String call,result,label,tool,target,status;boolean mutation;Step(String c,String r,String l,boolean m){call=c;result=r;label=l;mutation=m;}}
     LocalAiTurnProgress(JSONArray history)throws Exception{String task="";for(int i=history.length()-1;i>=0;i--){JSONObject m=history.getJSONObject(i);if(m.optString("role").equals("user")&&!m.has("toolResult")){task=m.optString("text");break;}}requestedRepeats=repetitions(task);}
     static int repetitions(String text){text=text.toLowerCase(Locale.ROOT);java.util.regex.Matcher m=java.util.regex.Pattern.compile("(?u)\\b([0-9]{1,3}|два|три|четыре|пять|шесть|семь|восемь|девять|десять|two|three|four|five|six|seven|eight|nine|ten)\\s*(?:раз(?:а|ов)?|times)\\b").matcher(text);if(!m.find())return 0;String value=m.group(1);try{return Math.min(100,Integer.parseInt(value));}catch(NumberFormatException ignored){}String[] ru={"два","три","четыре","пять","шесть","семь","восемь","девять","десять"},en={"two","three","four","five","six","seven","eight","nine","ten"};for(int i=0;i<ru.length;i++)if(value.equals(ru[i])||value.equals(en[i]))return i+2;return 0;}
     static String fingerprint(String text)throws Exception{byte[] digest=MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));StringBuilder out=new StringBuilder();for(byte b:digest)out.append(String.format(Locale.ROOT,"%02x",b&255));return out.toString();}
     static String call(JSONObject request)throws Exception{List<String> keys=new ArrayList<>();Iterator<String> it=request.keys();while(it.hasNext())keys.add(it.next());Collections.sort(keys);StringBuilder canonical=new StringBuilder();for(String k:keys)canonical.append(k).append('=').append(new JSONArray().put(request.get(k)).toString()).append('\n');return fingerprint(canonical.toString());}
-    void record(JSONObject request,String output)throws Exception{String name=request.optString("tool"),target=request.optString("path",request.optString("command"));if(target.length()>160)target=target.substring(0,160)+" [excerpt]";String status=output.startsWith("exit=0\n")?"ok":"failed";Step step=new Step(call(request),fingerprint(output),name+" "+target+" => "+status,name.matches("write|command|install"));step.tool=name;step.target=target;step.status=status;steps.add(step);completed++;if(steps.size()>64)steps.removeFirst();}
+    void record(JSONObject request,String output)throws Exception{record(request,output,false);}
+    void record(JSONObject request,String output,boolean cached)throws Exception{
+        String tool=request.optString("tool");boolean success=output.startsWith("exit=0\n");
+        if(tool.equals("write")){
+            if(success){String signature=call(request);if(!signature.equals(lastWrite)){resetWrite();lastWrite=signature;writeTarget=request.optString("path");writeText=request.optString("text");}identicalWrites++;}
+            else resetWrite();
+        }else if(tool.matches("command|install"))resetWrite(); // Either can change file state, even on failure.
+        else if(tool.equals("read")&&!cached&&success&&request.optString("path").equals(writeTarget)&&!output.substring(7).equals(writeText))resetWrite();
+        if(!warnedWrite.isEmpty()&&tool.matches("locations|list|search")){String key=call(request);stalledLookups.put(key,stalledLookups.getOrDefault(key,0)+1);if(stalledLookups.size()>64)stalledLookups.remove(stalledLookups.keySet().iterator().next());}
+        recordStep(request,output);
+    }
+    private void recordStep(JSONObject request,String output)throws Exception{String name=request.optString("tool"),target=request.optString("path",request.optString("command"));if(target.length()>160)target=target.substring(0,160)+" [excerpt]";String status=output.startsWith("exit=0\n")?"ok":"failed";Step step=new Step(call(request),fingerprint(output),name+" "+target+" => "+status,name.matches("write|command|install"));step.tool=name;step.target=target;step.status=status;steps.add(step);completed++;if(steps.size()>64)steps.removeFirst();}
     /** 0 proceed; 1 remind without execution; 2 same cycle proposed again after reminder. */
     int check(JSONObject request)throws Exception{
         List<Step> all=new ArrayList<>(steps);int repeats=Math.max(2,requestedRepeats);String next=call(request);
+        if(request.optString("tool").equals("write")&&next.equals(lastWrite)&&identicalWrites>=repeats){if(warnedWrite.equals(next))return 2;warnedWrite=next;stalledLookups.clear();return 1;}
+        // After a blocked duplicate write, changing directory timestamps are not new work.
+        // Allow fresh paths and actual reads; stop repeated rediscovery of the same folders.
+        if(!warnedWrite.isEmpty()&&request.optString("tool").matches("locations|list|search")&&stalledLookups.getOrDefault(next,0)>=repeats)return 2;
+
         for(int period=2;period<=8;period++){
             int size=period*repeats;if(all.size()<size)continue;int start=all.size()-size;boolean same=true,mutating=false;
             for(int i=0;i<size;i++){Step a=all.get(start+i),b=all.get(start+i%period);if(!a.call.equals(b.call)||!a.result.equals(b.result)){same=false;break;}mutating|=a.mutation;}
