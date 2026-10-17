@@ -1,3 +1,7 @@
+## Latest private delivery: v1.5.9-test (1146)
+
+Delivered /sdcard/Download/Termux-Jobs-v1.5.9-test-arm64.apk. See RELEASE-v1.5.9-test.md and VALIDATION-v1.5.9-test.md. Shorter default/brief prompts and shared native descriptions/settings; all24 schema configurations retain structure/constraints. Built-in behavior distinguishes saving an instruction from installing it and follows user language. User custom files and Tools only semantics retained. Tool/progress/context cards are rounded left-aligned pills with expandable details. Final99 relevant cases +13 SDK interface cases pass; broad-run evidence/correction documented. Estimated Standard LiteRT2533->2223, Qwen3383->2542; Brief LiteRT savings only20 estimated tokens. No real model speed/obedience claim. Private only, no publication. Next versionCode>=1147.
+
 ## Latest private delivery: v1.5.8-test (1145)
 
 Delivered /sdcard/Download/Termux-Jobs-v1.5.8-test-arm64.apk. See RELEASE-v1.5.8-test.md and VALIDATION-v1.5.8-test.md. Bounded untrusted task/target evidence added only after dropping previous turns and only if space remains; optional null history fields omitted; one expandable context notice per user turn. Both local engines, no semantic history search or external-agent changes. Final71 targeted tests pass; broad-run results/corrections documented. ZIP/identity/signature/limited-secret scan and Download SHA verified. No publication. Next versionCode >=1146.

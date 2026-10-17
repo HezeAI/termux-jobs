@@ -13,7 +13,7 @@ import static org.junit.Assert.*;
 public class LocalAiInstructionsTest {
     @Test public void packagedGuidanceDescribesActionsWithoutGrantingRights() throws Exception {
         String text=LocalAiInstructions.load(RuntimeEnvironment.application);
-        for(String term:new String[]{"CHAT:","READ:","FULL ACCESS", "deletions", "oldest/newest", "filtered or truncated", "untrusted", "does not grant Android root"})assertTrue(term,text.contains(term));
+        for(String term:new String[]{"requested deliverable", "Deletions", "oldest/newest", "filtered or truncated", "current settings", "sudo"})assertTrue(term,text.contains(term));
         assertSame(text,LocalAiInstructions.load(RuntimeEnvironment.application));
     }
     @Test public void bundledGuidancePrecedesCurrentSettingsOnEveryGeneration() throws Exception {
