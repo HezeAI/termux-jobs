@@ -40,5 +40,6 @@ final class WorkspaceServerSchedules implements AutoCloseable {
     }).setPositiveButton(t("Закрыть","Close"),null).create());}
     private void send(String action,JSONObject entry,Consumer<JSONObject> done){try{request(op(action).put("id",entry.getString("id")),done);}catch(JSONException e){throw new IllegalStateException(e);}}
     private void confirm(String action,JSONObject entry){show(WorkspaceDialogs.builder(activity).setTitle(t("Подтвердить действие","Confirm action")).setMessage(entry.optString("title")+"\n"+action+"\n\n"+t("Меняется только это расписание приложения. Отключение не прерывает уже выполняющуюся команду; удаление выполняющегося расписания заблокировано. При ошибке изменения расписание может остаться выключенным — проверьте список.","Only this app-owned schedule changes. Disabling does not stop a running command; deleting a running schedule is blocked. A failed change may leave it disabled: check the list.")).setPositiveButton(t("Да","Yes"),(d,w)->send(action,entry,r->list())).setNegativeButton(t("Нет","No"),null).create());}
+    String serverProfileId(){return connection.profile.id;}
     @Override public void close(){closed=true;for(AlertDialog d:new ArrayList<>(dialogs))d.dismiss();}
 }

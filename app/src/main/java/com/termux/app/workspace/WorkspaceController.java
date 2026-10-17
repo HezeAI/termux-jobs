@@ -1077,7 +1077,7 @@ public final class WorkspaceController {
             updateEnvironment.run();
         }).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
         environment.setOnClickListener(v -> WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Среда запуска"))
-            .setSingleChoiceItems(new android.widget.ArrayAdapter<String>(activity,android.R.layout.simple_list_item_single_choice,environmentNames){@Override public boolean isEnabled(int position){return position!=4||com.termux.BuildConfig.LOCAL_AI_ENABLED;}@Override public boolean areAllItemsEnabled(){return com.termux.BuildConfig.LOCAL_AI_ENABLED;}@Override public View getView(int position,View recycled,android.view.ViewGroup parent){View row=super.getView(position,recycled,parent);row.setEnabled(isEnabled(position));row.setAlpha(isEnabled(position)?1f:.4f);return row;}}, java.util.Arrays.asList(environments).indexOf(chosenEnvironment[0]), (d, which) -> {
+            .setSingleChoiceItems(WorkspaceDialogs.choiceAdapter(activity,environmentNames,java.util.Arrays.asList(environments).indexOf(chosenEnvironment[0]),position->position!=4||com.termux.BuildConfig.LOCAL_AI_ENABLED), java.util.Arrays.asList(environments).indexOf(chosenEnvironment[0]), (d, which) -> {
                 if(which==4&&!com.termux.BuildConfig.LOCAL_AI_ENABLED)return;
                 chosenEnvironment[0] = environments[which];
                 if ((which == 1 || (which == 3 && (!chosenAgent[0].equals("codex") || codexEnvironment[0].equals("ubuntu")))) && directory.getText().toString().equals(TermuxConstants.TERMUX_HOME_DIR_PATH)) directory.setText("/root");

@@ -13,15 +13,20 @@ import java.util.concurrent.*;
 
 /** All commands run through independent OpenSSH processes, pinned host keys, bounded I/O. */
 final class ServerConnection implements AutoCloseable {
+    private static final Set<ServerConnection> LIVE=ConcurrentHashMap.newKeySet();
+    private static final Map<Activity,Set<String>> DISCONNECTED=new WeakHashMap<>();
+    static synchronized boolean disconnected(Activity activity,String id){Set<String> ids=DISCONNECTED.get(activity);return ids!=null&&ids.contains(id);}
+    static synchronized void allow(Activity activity,String id){Set<String> ids=DISCONNECTED.get(activity);if(ids!=null)ids.remove(id);}
+    static void disconnectAll(Activity activity,String id){synchronized(ServerConnection.class){DISCONNECTED.computeIfAbsent(activity,a->new HashSet<>()).add(id);}for(ServerConnection c:LIVE)if(c.activity==activity&&c.profile.id.equals(id))c.close();}
     private final Activity activity;final ServerProfiles.Profile profile;
     private volatile Process process,tunnel;private volatile boolean closed;
     private final ScheduledExecutorService watchdog=Executors.newSingleThreadScheduledExecutor();
-    ServerConnection(Activity a,ServerProfiles.Profile p){activity=a;profile=p;ServerDiagnostics.configure(p);}
+    ServerConnection(Activity a,ServerProfiles.Profile p){activity=a;profile=p;ServerDiagnostics.configure(p);synchronized(ServerConnection.class){LIVE.add(this);if(disconnected(a,p.id))close();}}
     File knownHosts(){return new File(activity.getFilesDir(),"server-host-"+profile.id);}
     boolean trusted(){return knownHosts().isFile();}
     private String bin(String name){return TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/"+name;}
     private ProcessBuilder builder(List<String> command)throws Exception{
-        if(closed)throw new IOException("CLOSED");ProcessBuilder b=new ProcessBuilder(command);b.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));b.environment().clear();
+        if(closed||disconnected(activity,profile.id))throw new IOException("CLOSED");ProcessBuilder b=new ProcessBuilder(command);b.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));b.environment().clear();
         for(String item:TermuxShellUtils.buildEnvironment(activity,false,TermuxConstants.TERMUX_HOME_DIR_PATH)){int i=item.indexOf('=');if(i>0)b.environment().put(item.substring(0,i),item.substring(i+1));}
         b.environment().put("LC_ALL","C");b.redirectError(new File("/dev/null"));return b;
     }
@@ -152,9 +157,9 @@ final class ServerConnection implements AutoCloseable {
         ServerDiagnostics.Trace trace=ServerDiagnostics.begin(profile,ServerDiagnostics.Op.SFTP_CONNECT);Exception failure=null;
         try{
         if(!trusted())throw new IOException("TRUST_REQUIRED");List<String> args=ssh();args.addAll(Arrays.asList("-s","--",profile.host,"sftp"));ProcessBuilder b=builder(args);SshPasswordBroker broker=password(b);Process child=null;
-        try{child=b.start();process=child;final Process owned=child;ScheduledFuture<?> timer=watchdog.schedule(owned::destroy,timeoutMinutes,TimeUnit.MINUTES);return new ServerSftp(owned.getInputStream(),owned.getOutputStream(),()->{timer.cancel(false);owned.destroy();if(broker!=null)broker.close();});}
+        try{child=b.start();process=child;if(closed){child.destroy();throw new IOException("CLOSED");}final Process owned=child;ScheduledFuture<?> timer=watchdog.schedule(owned::destroy,timeoutMinutes,TimeUnit.MINUTES);return new ServerSftp(owned.getInputStream(),owned.getOutputStream(),()->{timer.cancel(false);owned.destroy();if(broker!=null)broker.close();});}
         catch(Exception e){if(child!=null)child.destroy();if(broker!=null)broker.close();throw e;}
         }catch(Exception e){failure=e;throw e;}finally{trace.finish(trace.elapsed(),0,-1,closed?new CancellationException():failure);}
     }
-    public void close(){closed=true;Process owned=process;if(owned!=null)owned.destroy();stopTunnel();watchdog.shutdownNow();}
+    public void close(){closed=true;LIVE.remove(this);Process owned=process;if(owned!=null)owned.destroy();stopTunnel();watchdog.shutdownNow();}
 }

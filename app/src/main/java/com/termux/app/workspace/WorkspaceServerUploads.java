@@ -24,6 +24,7 @@ final class WorkspaceServerUploads implements AutoCloseable {
     private String t(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
     private void show(AlertDialog d){dialogs.add(d);d.setCanceledOnTouchOutside(false);d.setOnDismissListener(x->dialogs.remove(d));d.show();}
     private void error(String message){if(!closed)show(WorkspaceDialogs.builder(activity).setTitle(t("Отправка файлов","Upload files")).setMessage(message).setPositiveButton("OK",null).create());}
+    void disconnect(String id){if(profile!=null&&profile.id.equals(id)){picker.cancelSelection();cancel();for(AlertDialog d:new ArrayList<>(dialogs))if(d!=progress)d.dismiss();}}
     boolean active(){return running;}
     void pick(ServerProfiles.Profile p,String path){
         if(closed||active())return;if(path==null||!path.startsWith("/")){error(t("Сначала откройте каталог сервера.","Open a server directory first."));return;}
@@ -52,7 +53,7 @@ final class WorkspaceServerUploads implements AutoCloseable {
         }
     }catch(Exception e){failed=!cancelled;}finally{
         ServerSftp channel=sftp;if(channel!=null)leftover=channel.pendingTemp();if(channel!=null)channel.close();ServerConnection c=connection;if(c!=null)c.close();sftp=null;connection=null;
-        if(leftover!=null){try(ServerConnection cleanup=new ServerConnection(activity,profile);ServerSftp clean=cleanup.sftp()){clean.removeTemporary(leftover);}catch(Exception e){cleanupFailed=true;}}
+        if(leftover!=null&&ServerConnection.disconnected(activity,profile.id)){cleanupFailed=true;}else if(leftover!=null){try(ServerConnection cleanup=new ServerConnection(activity,profile);ServerSftp clean=cleanup.sftp()){clean.removeTemporary(leftover);}catch(Exception e){cleanupFailed=true;}}
         final boolean failure=failed,dirty=cleanupFailed;final String remaining=leftover;main.post(()->{running=false;if(progress!=null)progress.dismiss();progress=null;if(closed)return;String summary=t("Отправлено: ","Uploaded: ")+uploaded+t(" · Пропущено: "," · Skipped: ")+skipped;if(cancelled)summary+="\n"+t("Передача остановлена. Если остановка совпала с публикацией, проверьте итоговый каталог.","Transfer stopped. If stopped during publication, check the destination directory.");if(failure)summary+="\n"+t("Передача не завершена. Проверьте сеть, права, свободное место и поддержку SFTP. При потере связи в момент публикации файл уже мог быть отправлен — проверьте каталог.","Transfer incomplete. Check network, permissions, free space and SFTP support. If connectivity was lost during publication, the file may already have been uploaded: check the directory.");if(dirty)summary+="\n"+t("Не удалось удалить временный файл: ","Could not remove temporary file: ")+remaining;error(summary);completed.run();});
     }}
     private boolean skipCurrent;

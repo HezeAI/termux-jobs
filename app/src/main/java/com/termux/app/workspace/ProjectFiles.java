@@ -116,7 +116,7 @@ final class ProjectFiles implements AutoCloseable {
     private void run(String script,OutputStream out,long max) throws Exception {run(script,out,max,null);}
     private synchronized void run(String script,OutputStream out,long max,byte[] input) throws Exception {
         if(profile.environment.equals(LocalAiEnvironment.INTERNAL))LocalAiEnvironment.require(activity,LocalAiEnvironment.UBUNTU);
-        if(closed)throw new IOException(WorkspaceText.tr("Окно закрыто"));
+        if(closed||serverKnownHosts!=null&&ServerConnection.disconnected(activity,profile.id))throw new IOException(WorkspaceText.tr("Окно закрыто"));
         String invocation=command(profile,script);
         if(serverKnownHosts!=null&&environment(profile).equals("ssh"))invocation=invocation.replaceFirst("ssh -T",java.util.regex.Matcher.quoteReplacement("ssh -T -o "+SessionShell.quote("UserKnownHostsFile="+serverKnownHosts.getAbsolutePath())+" -o GlobalKnownHostsFile=/dev/null"));
         ProcessBuilder builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c","exec "+invocation);
@@ -132,7 +132,7 @@ final class ProjectFiles implements AutoCloseable {
                 File askpass=SessionShell.prepareAskpass(activity.getFilesDir(),profile,activity.getApplicationInfo().sourceDir);
                 builder.environment().put("SSH_ASKPASS",askpass.getAbsolutePath());builder.environment().put("SSH_ASKPASS_REQUIRE","force");builder.environment().put("DISPLAY",":0");builder.environment().put("TERMUX_JOBS_SSH_SOCKET",broker.address);builder.environment().put("LC_ALL","C");
             }
-            builder.redirectError(new File("/dev/null"));Process owned=builder.start();process=owned;
+            builder.redirectError(new File("/dev/null"));Process owned=builder.start();process=owned;if(closed||serverKnownHosts!=null&&ServerConnection.disconnected(activity,profile.id)){owned.destroy();throw new IOException("CANCELLED");}
             timer.schedule(owned::destroy,90,TimeUnit.SECONDS);
             try(OutputStream stdin=owned.getOutputStream()){if(input!=null)stdin.write(input);}
             try(InputStream in=owned.getInputStream()) {byte[] buffer=new byte[32768];int n;long total=0;while((n=in.read(buffer))!=-1){if(closed||Thread.currentThread().isInterrupted())throw new IOException(WorkspaceText.tr("Операция отменена"));total+=n;if(total>max)throw new IOException(WorkspaceText.tr("Файл или список слишком большой"));out.write(buffer,0,n);}}

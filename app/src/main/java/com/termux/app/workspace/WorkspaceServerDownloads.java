@@ -17,22 +17,24 @@ final class WorkspaceServerDownloads implements AutoCloseable {
     private volatile ServerConnection connection;private volatile ServerSftp channel;
     private volatile boolean cancelled,closed;private volatile LocalDownloadFile destination;
     private final WorkspaceLocalFilePicker picker;
+    private String ownerProfile="";private int choiceEpoch;
     private boolean running;private AlertDialog progress,result;private long started,lastUpdate;
     WorkspaceServerDownloads(TermuxActivity a){activity=a;picker=new WorkspaceLocalFilePicker(a);}
     private String t(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
     void start(ServerProfiles.Profile profile,JSONObject entry){choose(profile,Collections.singletonList(entry),false);}
     void quick(ServerProfiles.Profile profile,JSONObject entry){choose(profile,Collections.singletonList(entry),true);}
     void selected(ServerProfiles.Profile profile,List<JSONObject> entries){choose(profile,entries,false);}
-    private void choose(ServerProfiles.Profile profile,List<JSONObject> entries,boolean quick){
+    void disconnect(String id){if(ownerProfile.equals(id)){choiceEpoch++;picker.cancelSelection();if(result!=null)result.dismiss();cancel();}}
+    private void choose(ServerProfiles.Profile profile,List<JSONObject> entries,boolean quick){ownerProfile=profile.id;final int epoch=++choiceEpoch;
         if(closed||running||entries.isEmpty())return;
         ServerProfiles.Profile snapshot=new ServerProfiles.Profile();snapshot.id=profile.id;snapshot.name=profile.name;snapshot.host=profile.host;snapshot.port=profile.port;snapshot.user=profile.user;snapshot.auth=profile.auth;snapshot.identity=profile.identity;snapshot.encrypted=profile.encrypted;snapshot.diagnosticsPaused=profile.diagnosticsPaused;
         List<String> paths=new ArrayList<>();for(JSONObject e:entries){if(!e.optBoolean("directory")&&e.optLong("size",0)>ServerSftp.MAX_DOWNLOAD_BYTES){result=WorkspaceDialogs.builder(activity).setMessage(t("Лимит скачивания — 10 ГБ на файл.","Download limit: 10 GB per file.")).setPositiveButton("OK",null).show();return;}paths.add(e.optString("path"));}
         String root="download-"+UUID.randomUUID();
-        if(quick)activity.requestWorkspaceStorageAccess(()->{if(closed)return;WorkspaceStore.Session local=new WorkspaceStore.Session();local.environment="termux";local.name=t("Память устройства","Device storage");confirm(snapshot,paths,local,"/sdcard/Download",root);});
+        if(quick)activity.requestWorkspaceStorageAccess(()->{if(closed||epoch!=choiceEpoch)return;if(closed)return;WorkspaceStore.Session local=new WorkspaceStore.Session();local.environment="termux";local.name=t("Память устройства","Device storage");confirm(snapshot,paths,local,"/sdcard/Download",root);});
         else picker.chooseDirectory(t("Куда скачать?","Choose download destination"),(location,path)->confirm(snapshot,paths,location,path,root));
     }
     private void confirm(ServerProfiles.Profile profile,List<String> paths,WorkspaceStore.Session location,String folder,String root){
-        if(closed)return;
+        if(closed||ServerConnection.disconnected(activity,profile.id))return;
         result=WorkspaceDialogs.builder(activity).setTitle(t("Скачать выбранное?","Download selection?"))
             .setMessage(location.name+"\n"+folder+"/"+root+"\n\n"+t("Выбрано: ","Selected: ")+paths.size()+t("\nВ отдельную папку, с исходными именами и вложенностью. Существующие файлы не заменяются. Ссылки и специальные файлы пропускаются. До 10 ГБ на файл, 20 000 записей и 256 ГБ суммарно; соединение до 6 часов. Не закрывайте приложение.","\nInto a separate folder with original names and hierarchy. Existing files are not replaced. Links and special files are skipped. Up to 10 GB per file, 20,000 entries and 256 GB total; connection up to 6 hours. Keep the app open."))
             .setPositiveButton(t("Скачать","Download"),(d,w)->transfer(profile,paths,location,folder,root)).setNegativeButton(t("Отмена","Cancel"),null).show();
@@ -70,7 +72,7 @@ final class WorkspaceServerDownloads implements AutoCloseable {
         result=WorkspaceDialogs.builder(activity).setTitle(t("Переместить сюда?","Move here?"))
             .setMessage(t("Выбрано: ","Selected: ")+entries.size()+"\n"+folder+t("\nТолько внутри этого сервера, без перезаписи. Между дисками операция может быть недоступна. При ошибке уже перемещённые объекты остаются в папке назначения.","\nWithin this server only, without overwriting. Moving between filesystems may be unavailable. If interrupted, already moved entries remain at the destination."))
             .setNegativeButton(t("Отмена","Cancel"),null).setPositiveButton(t("Переместить","Move"),(dialog,which)->{
-                running=true;cancelled=false;TextView state=new TextView(activity);state.setText(t("Перемещение…","Moving…"));state.setPadding(24,24,24,24);
+                ownerProfile=profile.id;running=true;cancelled=false;TextView state=new TextView(activity);state.setText(t("Перемещение…","Moving…"));state.setPadding(24,24,24,24);
                 progress=WorkspaceDialogs.builder(activity).setTitle(t("Перемещение","Move")).setView(state).setNegativeButton(t("Остановить","Stop"),(d,w)->cancel()).create();progress.setCancelable(false);progress.setCanceledOnTouchOutside(false);progress.show();
                 worker.execute(()->{int moved=0;Exception failure=null;ServerDiagnostics.Trace trace=ServerDiagnostics.begin(profile,ServerDiagnostics.Op.FILE_MOVE);
                     try{check();ServerConnection owned=new ServerConnection(activity,profile);connection=owned;check();try(ServerSftp sftp=owned.sftp()){channel=sftp;String target=sftp.canonical(folder);for(JSONObject entry:entries){check();String path=entry.getString("path");ServerSftp.Info info=sftp.stat(path);sftp.move(path,target,info);moved++;}}}catch(Exception e){failure=e;}finally{channel=null;ServerConnection owned=connection;connection=null;if(owned!=null)owned.close();trace.finish(trace.elapsed(),0,0,failure);}

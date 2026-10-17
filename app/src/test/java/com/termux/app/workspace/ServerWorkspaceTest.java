@@ -218,7 +218,7 @@ public class ServerWorkspaceTest {
     }
 
     @Test public void staleMonitorReplyCannotOverwriteManualStateOrDifferentProfile()throws Exception{
-        WorkspaceServers s=serverScreen(new LinearLayout(activity()));try{ServerProfiles.Profile p=(ServerProfiles.Profile)get(s,"selected");Map<String,org.json.JSONObject> snapshots=(Map<String,org.json.JSONObject>)get(s,"snapshots");org.json.JSONObject original=snapshots.get(p.id),updated=snapshot(99);int generation=(int)get(s,"generation");set(s,"manualEpoch",4);s.applyMonitor(p,generation,3,updated,null);assertSame(original,snapshots.get(p.id));s.applyMonitor(p,generation-1,4,updated,null);assertSame(original,snapshots.get(p.id));s.applyMonitor(profile(),generation,4,updated,null);assertSame(original,snapshots.get(p.id));s.applyMonitor(p,generation,4,updated,null);assertSame(updated,snapshots.get(p.id));}finally{s.close();}
+        WorkspaceServers s=serverScreen(new LinearLayout(activity()));try{ServerProfiles.Profile p=(ServerProfiles.Profile)get(s,"selected");Map<String,org.json.JSONObject> snapshots=(Map<String,org.json.JSONObject>)get(s,"snapshots");org.json.JSONObject original=snapshots.get(p.id),updated=snapshot(99);int generation=(int)get(s,"generation");s.store.profiles.add(p);((Set<String>)get(s,"connected")).add(p.id);set(s,"manualEpoch",4);s.applyMonitor(p,generation,3,updated,null);assertSame(original,snapshots.get(p.id));s.applyMonitor(p,generation-1,4,updated,null);assertSame(original,snapshots.get(p.id));s.applyMonitor(profile(),generation,4,updated,null);assertSame(original,snapshots.get(p.id));s.applyMonitor(p,generation,4,updated,null);assertSame(updated,snapshots.get(p.id));}finally{s.close();}
     }
 
     @Test public void diagnosticHeaderButtonIsWideAndBeforeInfoWithoutRemoteWork()throws Exception{LinearLayout root=new LinearLayout(activity());WorkspaceServers server=serverScreen(root);try{View diagnostics=description(root,"Диагностика сервера"),info=description(root,"Об агенте сервера");assertNotNull(diagnostics);assertSame(info.getParent(),diagnostics.getParent());ViewGroup row=(ViewGroup)info.getParent();assertTrue(row.indexOfChild(diagnostics)<row.indexOfChild(info));assertEquals(WorkspaceDialogs.dp(root.getContext(),106),diagnostics.getLayoutParams().width);diagnostics.performClick();assertTrue(((Map<?,?>)get(server,"connections")).isEmpty());}finally{server.close();}}
@@ -227,17 +227,30 @@ public class ServerWorkspaceTest {
     @SuppressWarnings("unchecked") @Test public void pollingPreferenceAndListRepliesAreIndependentOfAgentState()throws Exception{
         TermuxActivity a=activity();WorkspaceServers server=new WorkspaceServers(a,(n,c)->fail());try{
             ServerProfiles.Profile p=profile();server.store.profiles.add(p);assertFalse(p.backgroundPolling);
-            ((Set<String>)get(server,"connected")).add(p.id);assertFalse(server.pollingEnabled(p));
+            ((Set<String>)get(server,"connected")).add(p.id);assertTrue(server.pollingEnabled(p));
             p.backgroundPolling=true;assertTrue(server.pollingEnabled(p));assertEquals(30000,server.pollingInterval(p));
             server.store.save();assertTrue(new ServerProfiles(a).profiles.get(0).backgroundPolling);
             set(server,"selected",p);set(server,"visible",true);assertEquals(10000,server.pollingInterval(p));
-            p.backgroundPolling=false;assertTrue(server.pollingEnabled(p));set(server,"visible",false);assertFalse(server.pollingEnabled(p));
+            p.backgroundPolling=false;assertTrue(server.pollingEnabled(p));set(server,"visible",false);assertTrue(server.pollingEnabled(p));
             p.backgroundPolling=true;set(server,"selected",null);org.json.JSONObject result=snapshot(42);
             server.applyMonitor(p,(int)get(server,"generation"),(int)get(server,"manualEpoch"),result,null);
             assertSame(result,((Map<String,org.json.JSONObject>)get(server,"snapshots")).get(p.id));
             ((Set<String>)get(server,"connected")).remove(p.id);server.applyMonitor(p,(int)get(server,"generation"),(int)get(server,"manualEpoch"),snapshot(43),null);
             assertSame(result,((Map<String,org.json.JSONObject>)get(server,"snapshots")).get(p.id));assertFalse(server.pollingEnabled(p));
         }finally{server.close();}
+    }
+
+    @SuppressWarnings("unchecked") @Test public void disconnectClosesOnlyOwnedProfileTransportsAndRejectsLatePoll()throws Exception{
+        TermuxActivity a=activity();WorkspaceLanguage.select(a,"ru");WorkspaceServers server=new WorkspaceServers(a,(n,c)->fail());ServerProfiles.Profile p=profile(),other=profile();server.store.profiles.add(p);server.store.profiles.add(other);
+        ServerConnection mine=new ServerConnection(a,p),parallel=new ServerConnection(a,p),different=new ServerConnection(a,other),differentActivity=new ServerConnection(activity(),p);FakeProcess own=new FakeProcess(),sftp=new FakeProcess(),safe=new FakeProcess(),safeActivity=new FakeProcess(),unmanaged=new FakeProcess();
+        try{
+            set(mine,"process",own);set(parallel,"process",sftp);set(different,"process",safe);set(differentActivity,"process",safeActivity);((Map<String,ServerConnection>)get(server,"connections")).put(p.id,mine);((Set<String>)get(server,"connected")).add(p.id);((Set<String>)get(server,"connected")).add(other.id);set(server,"selected",p);set(server,"visible",true);
+            LinearLayout root=new LinearLayout(a);server.attach(root);assertEquals("Отключиться",((android.widget.TextView)root.findViewWithTag("server-connect-"+p.id)).getText().toString());int generation=(int)get(server,"generation"),epoch=(int)get(server,"manualEpoch");root.findViewWithTag("server-connect-"+p.id).performClick();assertEquals("Подключиться",((android.widget.TextView)root.findViewWithTag("server-connect-"+p.id)).getText().toString());
+            assertFalse(own.running);assertFalse(sftp.running);assertTrue(safe.running);assertTrue(safeActivity.running);assertTrue(unmanaged.running);assertFalse(server.pollingEnabled(p));assertTrue(server.pollingEnabled(other));assertTrue(ServerConnection.disconnected(a,p.id));assertEquals("Отключён",server.pollingLabel(p));
+            server.applyMonitor(p,generation,epoch,snapshot(42),null);assertFalse(((Map<String,org.json.JSONObject>)get(server,"snapshots")).containsKey(p.id));assertFalse(((Set<String>)get(server,"connected")).contains(p.id));
+            ServerConnection blocked=new ServerConnection(a,p);try{assertTrue((boolean)get(blocked,"closed"));}finally{blocked.close();}
+            ServerConnection.allow(a,p.id);ServerConnection fresh=new ServerConnection(a,p);try{assertFalse((boolean)get(fresh,"closed"));assertTrue((boolean)get(mine,"closed"));}finally{fresh.close();}
+        }finally{mine.close();parallel.close();different.close();differentActivity.close();server.close();}
     }
 
 }

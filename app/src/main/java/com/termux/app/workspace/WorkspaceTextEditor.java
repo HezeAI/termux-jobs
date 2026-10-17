@@ -40,5 +40,6 @@ final class WorkspaceTextEditor {
         if(text.equals(original.text)){close();return;}saving=true;input.setEnabled(false);dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(false);status.setText(WorkspaceText.tr("Сохранение…"));
         worker.execute(()->{String error=null;try{files.editSave(original,text);}catch(Exception e){error=e.getMessage();}String result=error;activity.runOnUiThread(()->{if(closed)return;saving=false;if(result!=null){input.setEnabled(true);dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(true);status.setText(result);return;}close();saved.run();activity.showToast(WorkspaceText.tr("Файл сохранён"),false);});});
     }
+    String serverProfileId(){return files.profile.id;}
     void close(){if(closed)return;closed=true;if(dialog!=null&&dialog.isShowing())dialog.dismiss();dismissed.run();}
 }

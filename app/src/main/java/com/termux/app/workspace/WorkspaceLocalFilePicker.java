@@ -20,21 +20,22 @@ final class WorkspaceLocalFilePicker implements AutoCloseable {
         for(String alias:aliases)result.add(new Location(alias.equals("ubuntu")?"Ubuntu":alias,"proot:"+alias,"/",false));
         result.add(new Location(storageLabel,"termux","/sdcard",true));return result;
     }
-    private final TermuxActivity activity;private final List<WorkspaceFileBrowser> browsers=new ArrayList<>();private AlertDialog chooser;private boolean closed;
+    private final TermuxActivity activity;private final List<WorkspaceFileBrowser> browsers=new ArrayList<>();private AlertDialog chooser;private boolean closed;private int selectionEpoch;
     WorkspaceLocalFilePicker(TermuxActivity a){activity=a;}
     private String t(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
     void choose(String title,WorkspaceFileBrowser.FileChoice choice){choose(title,choice,null,null);}
     void chooseDirectory(String title,java.util.function.BiConsumer<WorkspaceStore.Session,String> choice){choose(title,null,null,choice);}
     void chooseMultiple(String title,java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> choice){choose(title,null,choice,null);}
     private void choose(String title,WorkspaceFileBrowser.FileChoice choice,java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> multiple,java.util.function.BiConsumer<WorkspaceStore.Session,String> directory){
-        if(closed)return;
+        if(closed)return;final int epoch=++selectionEpoch;
         List<Location> locations=locations(new File(TermuxConstants.TERMUX_HOME_DIR_PATH),new File(TermuxConstants.TERMUX_PREFIX_DIR_PATH,"var/lib/proot-distro"),t("Память устройства","Device storage"));
         String[] names=new String[locations.size()];for(int i=0;i<names.length;i++)names[i]=locations.get(i).name;
         chooser=WorkspaceDialogs.builder(activity).setTitle(title).setItems(names,(d,which)->{
-            Location location=locations.get(which);Runnable open=()->{if(closed)return;WorkspaceStore.Session profile=new WorkspaceStore.Session();profile.name=location.name;profile.environment=location.environment;
-                WorkspaceFileBrowser browser=new WorkspaceFileBrowser(activity,profile,location.path,directory==null?null:path->directory.accept(profile,path));if(multiple!=null)browser.setFileChoices(multiple);else browser.setFileChoice(choice);browsers.add(browser);browser.show();};
+            Location location=locations.get(which);Runnable open=()->{if(closed||epoch!=selectionEpoch)return;WorkspaceStore.Session profile=new WorkspaceStore.Session();profile.name=location.name;profile.environment=location.environment;
+                WorkspaceFileBrowser browser=new WorkspaceFileBrowser(activity,profile,location.path,directory==null?null:path->{if(!closed&&epoch==selectionEpoch)directory.accept(profile,path);});if(multiple!=null)browser.setFileChoices((source,entries)->{if(!closed&&epoch==selectionEpoch)multiple.accept(source,entries);});else if(choice!=null)browser.setFileChoice((source,entry)->{if(!closed&&epoch==selectionEpoch)choice.selected(source,entry);});browsers.add(browser);browser.show();};
             if(location.shared)activity.requestWorkspaceStorageAccess(open);else open.run();
         }).setNegativeButton(t("Отмена","Cancel"),null).create();chooser.show();
     }
-    @Override public void close(){closed=true;if(chooser!=null)chooser.dismiss();for(WorkspaceFileBrowser browser:browsers)browser.close();}
+    void cancelSelection(){selectionEpoch++;if(chooser!=null)chooser.dismiss();for(WorkspaceFileBrowser browser:new ArrayList<>(browsers))browser.close();browsers.clear();}
+    @Override public void close(){closed=true;cancelSelection();}
 }

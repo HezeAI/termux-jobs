@@ -36,9 +36,13 @@ final class WorkspaceDialogs {
             return super.setSingleChoiceItems(new Rows(getContext(), items, selected), selected, listener);
         }
     }
+    static android.widget.ListAdapter choiceAdapter(Context c,CharSequence[] items,int selected,java.util.function.IntPredicate enabled){return new Rows(c,items,selected,enabled);}
     private static final class Rows extends ArrayAdapter<CharSequence> {
-        private final int selected;
-        Rows(Context c, CharSequence[] items, int selected) { super(c, 0, items); this.selected = selected; }
+        private final int selected;private final java.util.function.IntPredicate enabled;
+        Rows(Context c,CharSequence[] items,int selected){this(c,items,selected,position->true);}
+        Rows(Context c,CharSequence[] items,int selected,java.util.function.IntPredicate enabled){super(c,0,items);this.selected=selected;this.enabled=enabled;}
+        @Override public boolean isEnabled(int position){return enabled.test(position);}
+        @Override public boolean areAllItemsEnabled(){for(int i=0;i<getCount();i++)if(!isEnabled(i))return false;return true;}
         @Override public View getView(int position, View recycled, ViewGroup parent) {
             Context c = getContext(); FrameLayout outer = new FrameLayout(c);
             outer.setPadding(dp(c, 16), dp(c, 4), dp(c, 16), dp(c, 4));
@@ -47,7 +51,7 @@ final class WorkspaceDialogs {
                 : label.equals(WorkspaceText.tr("Редактировать")) ? R.drawable.workspace_edit
                 : label.contains(WorkspaceText.tr("избранное")) || label.contains(WorkspaceText.tr("избранного")) ? R.drawable.workspace_star : 0);
             row.setBackground(background(c, position == selected)); row.setDuplicateParentStateEnabled(true);
-            outer.addView(row, new FrameLayout.LayoutParams(-1, -2)); return outer;
+            outer.addView(row, new FrameLayout.LayoutParams(-1, -2));outer.setEnabled(isEnabled(position));outer.setAlpha(isEnabled(position)?1f:.4f);return outer;
         }
     }
     static TextView action(Context c, String label, int icon) {

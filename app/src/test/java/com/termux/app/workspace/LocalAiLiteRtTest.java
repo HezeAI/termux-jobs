@@ -49,4 +49,10 @@ public class LocalAiLiteRtTest {
         JSONObject text=new JSONObject().put("engine","litert");assertTrue(LocalAiLiteRt.supported(text));JSONArray schemas=LocalAiLiteRt.schemas(profile("read"),text);for(int i=0;i<schemas.length();i++)assertFalse(schemas.getJSONObject(i).getJSONObject("function").getString("name").matches("view_image|view_video|listen_audio"));
     }
 
+    @Test public void nativeInvalidArgumentsReturnToCoordinatorForRepairWithoutExecution()throws Exception{
+        WorkspaceStore.Session p=profile("read");p.localProtocol=LocalAiLiteRt.NATIVE;int[] pass={0},calls={0};
+        LocalAiAgent.run(p,new JSONArray().put(new JSONObject().put("role","user").put("text","покажи файлы")),new java.util.concurrent.atomic.AtomicBoolean(),(h,system,out)->{if(pass[0]++==0){Map<String,Object> args=new HashMap<>();args.put("path","/sdcard");args.put("limit",0);return new LocalAiAgent.Generation(LocalAiLiteRt.rawRequest("list",args).toString(),"native_tool");}assertTrue(h.toString().contains("TOOL_VALIDATION_ERROR"));assertTrue(h.toString().contains("native SDK"));return new LocalAiAgent.Generation("Нет выполненных действий","eos");},r->{calls[0]++;return "exit=0";},r->false,new LocalAiSearchTest.Events(),t->{});
+        assertEquals(2,pass[0]);assertEquals(0,calls[0]);assertTrue(LocalAiLiteRt.correction("system\nCORRECTION: emit tool JSON").contains("structured SDK function call"));assertEquals("",LocalAiLiteRt.correction("system"));
+    }
+
 }

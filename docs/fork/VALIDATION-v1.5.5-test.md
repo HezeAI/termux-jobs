@@ -1,0 +1,11 @@
+# v1.5.5-test validation
+
+Private APK: 104876276 bytes, com.termux, version1.5.5-test, code1142, minSDK26, arm64-v8a. SHA-256 df4a64272415cbfa01414836211f10d767aaa25a105d8157a547b55bf2d63e5a. Certificate dd37d983cd2496ebe49c7e88ddbc0088f311d38b8a8503e4392c81b48a11a644, v2 verified. ZIP CRC, duplicates/path traversal, DEX build flags/runtime definitions, bounded secret-marker/filename scan passed. Existing native libraries, QNN payload and external CLI/server-agent assets unchanged. Final Download copy independently hashed.
+
+Full application suite:598 tests passed; terminal-emulator suite145 passed/cached, terminal-view/termux-shared have no unit tests. Final targeted suite111 passed after final source changes, including reserve adaptation/no current-task truncation, summary archive preservation, behavior flag persistence/UI disable-restore, disabled GPU selection/CPU restoration, permission enforcement, and protection against false write-success claims. Real SDK0.17.0 interface probe:11 passed using actual configuration/messages/providers and fake inference engine on Java21. Source diff check passed. Initial test run had old assertions for the formerly selectable GPU/hidden LiteRT mode and the old estimate label; updated to new intended behavior and verified.
+
+Review: local inference/service cancellation unchanged; no running sessions or external environments changed. Tool schemas and behavior are not authorization. Summary generation has no tool providers/actions, retains originals and treats its output as untrusted historical data. Reserve fallback does not edit saved history/current request. New persistence fields are optional and existing library fields are retained.
+
+Device checks pending: actual Gemma/Qwen answers for Standard/Brief/Tools only, summary correctness across a long chat, UI and keyboard, adapted reserve notice, video retained-frame counts/timestamps, audio recognition and cancellation. LiteRT finish reason lacks reliable token-limit detail. Preview token counts remain estimates. No claim of quality equivalence between instruction modes or exhaustive media validation.
+
+Evidence: .verification/local-ai-v155/{tests-final.log,full-suite-summary.json,tests-targeted.log,targeted-summary.json,build.log,sdk-tests.log,context-budget.txt,1.5.5-test/artifact.json}. No publication performed.
