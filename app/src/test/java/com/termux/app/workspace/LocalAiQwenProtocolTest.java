@@ -68,4 +68,13 @@ public class LocalAiQwenProtocolTest {
         LocalAiAgentTest.Fixture f=new LocalAiAgentTest.Fixture();f.p.localProtocol="qwen-native";String bad=LocalAiQwenProtocol.call(list()).replace("\n10\n","\nwrong\n");
         f.answers.add(bad);f.answers.add(bad);f.answers.add(bad);assertTrue(f.run().contains("two retries"));assertEquals(3,f.systems.size());assertTrue(f.calls.isEmpty());
     }
+
+    @Test public void templateCompatibleLeadingExplanationStillUsesTypedValidationAndApproval()throws Exception{
+        String prefix="Продолжаем выполнение задачи. Сначала прочитаем содержимое файла `local-ai-ubuntu-check.txt`.\n\n";JSONObject call=new JSONObject().put("tool","read").put("path","/sdcard/Download/test.txt").put("refresh",true);
+        assertEquals("read",LocalAiQwenProtocol.request(prefix+LocalAiQwenProtocol.call(call)).getString("tool"));
+        for(String p:new String[]{"Example of a call. ","Например, пример вызова. ","```xml\n","<quote>","Here is how:\n"})rejected(p+LocalAiQwenProtocol.call(call));
+        rejected(prefix+LocalAiQwenProtocol.call(call)+" done");rejected(prefix+LocalAiQwenProtocol.call(call)+LocalAiQwenProtocol.call(call));rejected(prefix+LocalAiQwenProtocol.call(call).replace("\ntrue\n","\nwrong\n"));
+        LocalAiAgentTest.Fixture f=new LocalAiAgentTest.Fixture();f.p.localProtocol="qwen-native";f.p.localConfirmActions=true;f.allow=false;f.answers.add(prefix+LocalAiQwenProtocol.call(new JSONObject().put("tool","command").put("command","pwd")));assertTrue(f.run().contains("rejected"));assertTrue(f.calls.isEmpty());assertEquals(1,f.approvals);
+        LocalAiAgentTest.Fixture denied=new LocalAiAgentTest.Fixture();denied.p.localProtocol="qwen-native";denied.p.localAccess="read";denied.answers.add(prefix+LocalAiQwenProtocol.call(new JSONObject().put("tool","command").put("command","pwd")));try{denied.run();fail();}catch(SecurityException expected){}assertTrue(denied.calls.isEmpty());
+    }
 }

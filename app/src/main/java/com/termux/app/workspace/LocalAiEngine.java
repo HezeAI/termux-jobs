@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 final class LocalAiEngine implements AutoCloseable {
     interface Output {void text(String text);default void context(String state){}default void stage(String stage){}default void metrics(int input,int output){}default void performance(String json){}}
     private static final String PKG="com.google.ai.edge.litertlm.";
-    private Object engine;private volatile Object conversation;private Object retainedConversation;private int retainedMaxTokens;private final LocalAiSdkCache sdkCache=new LocalAiSdkCache();
+    private Object engine;private volatile Object conversation;private Object retainedConversation;private int retainedMaxTokens;private String sdkPrevious="no_conversation";private final LocalAiSdkCache sdkCache=new LocalAiSdkCache();
     private Context runtimeContext;private JSONObject loadedModel;private File loadedFile;private String loadedRequested;private int loadedThreads,loadedContext;private boolean vision,audio;
     JSONArray nativeSchemas=new JSONArray();
     boolean probeThinking,probeGreedy; // Diagnostic-only; normal generations retain the existing settings.
@@ -100,12 +100,13 @@ final class LocalAiEngine implements AutoCloseable {
         int[] inputTokens={-1};LocalAiContext.Counter counter=isLlama()?(items,instructions)->{inputTokens[0]=countPrompt(items,instructions);return inputTokens[0];}:LocalAiContext::estimate;
         int originalImages=LocalAiReplyBudget.media(messages,"image"),originalAudio=LocalAiReplyBudget.media(messages,"audio"),requested=maxTokens;
         JSONArray canonicalInput=LocalAiSdkCache.source(messages);messages=canonicalInput;String sdkKey=!isLlama()&&!cacheScope.isEmpty()&&!images&&!sound?new JSONArray().put(cacheScope).put(system).put(nativeSchemas).put(protocol).put(maxTokens).put(probeThinking).put(probeGreedy).toString():"";
-        boolean sdkMode=!isLlama()&&!sdkKey.isEmpty(),reuseSdk=sdkMode&&retainedConversation!=null&&sdkCache.appendable(canonicalInput,sdkKey);
+        String sdkReason=images||sound?"media":sdkKey.isEmpty()?"scope_unavailable":retainedConversation==null?sdkPrevious:sdkCache.miss(canonicalInput,sdkKey);
+        boolean sdkMode=!isLlama()&&!sdkKey.isEmpty(),reuseSdk=sdkMode&&retainedConversation!=null&&sdkReason.equals("reused");
         if(!isLlama()&&!reuseSdk)dropSdk();if(reuseSdk)messages=sdkCache.expand(canonicalInput);
         LocalAiServiceContext.Prepared runtime;List<String> runtimeNotices=new ArrayList<>();LocalAiContext.Notice budgetNotice=runtimeNotices::add;
         try{runtime=sdkMode?LocalAiServiceContext.prepareSdk(messages,system,turnProgress,turnCorrection,schemaBudget,capacity,Math.min(maxTokens,2048),counter,budgetNotice):LocalAiServiceContext.prepare(messages,system,turnProgress,turnCorrection,schemaBudget,capacity,Math.min(maxTokens,2048),counter,budgetNotice,isLlama());}
-        catch(Exception error){if(!reuseSdk||!LocalAiServiceContext.tooSmall(error)){if(!isLlama())dropSdk();throw error;}dropSdk();reuseSdk=false;runtimeNotices.clear();runtime=LocalAiServiceContext.prepareSdk(canonicalInput,system,turnProgress,turnCorrection,schemaBudget,capacity,Math.min(maxTokens,2048),counter,budgetNotice);}
-        if(reuseSdk&&(!sdkCache.runtimePrefix(runtime.reply.messages)||runtime.reply.answer!=retainedMaxTokens)){dropSdk();reuseSdk=false;runtimeNotices.clear();runtime=LocalAiServiceContext.prepareSdk(canonicalInput,system,turnProgress,turnCorrection,schemaBudget,capacity,Math.min(maxTokens,2048),counter,budgetNotice);}
+        catch(Exception error){if(!reuseSdk||!LocalAiServiceContext.tooSmall(error)){if(!isLlama())dropSdk();throw error;}dropSdk();reuseSdk=false;sdkReason="runtime_context_too_large";runtimeNotices.clear();runtime=LocalAiServiceContext.prepareSdk(canonicalInput,system,turnProgress,turnCorrection,schemaBudget,capacity,Math.min(maxTokens,2048),counter,budgetNotice);}
+        if(reuseSdk&&(!sdkCache.runtimePrefix(runtime.reply.messages)||runtime.reply.answer!=retainedMaxTokens)){sdkReason=runtime.reply.answer!=retainedMaxTokens?"effective_reply_changed":"runtime_history_changed";dropSdk();reuseSdk=false;runtimeNotices.clear();runtime=LocalAiServiceContext.prepareSdk(canonicalInput,system,turnProgress,turnCorrection,schemaBudget,capacity,Math.min(maxTokens,2048),counter,budgetNotice);}
         for(String notice:runtimeNotices)output.context(notice);String runtimeSystem=runtime.system,budgetSystem=runtimeSystem+schemaBudget;LocalAiReplyBudget.Prepared prepared=runtime.reply;messages=prepared.messages;maxTokens=prepared.answer;
         if(runtime.reduced)output.performance(new JSONObject().put("kind","service_context").put("reduced",true).put("beforeChars",turnProgress.length()).put("afterChars",runtime.progressChars).toString());
         output.performance(new JSONObject().put("kind","reply_budget").put("capacity",capacity).put("requested",requested).put("effective",maxTokens).put("input",prepared.input).put("exact",isLlama()).put("imagesPrepared",originalImages).put("imagesAttached",LocalAiReplyBudget.media(messages,"image")).put("audioPrepared",originalAudio).put("audioAttached",LocalAiReplyBudget.media(messages,"audio")).toString());
@@ -139,7 +140,7 @@ final class LocalAiEngine implements AutoCloseable {
         Object cfg=configType.getConstructor(Class.forName(PKG+"Contents"),List.class,List.class,Class.forName(PKG+"SamplerConfig"),boolean.class,List.class,java.util.Map.class,Class.forName(PKG+"LoraConfig"),boolean.class,Integer.class,Class.forName(PKG+"ThinkingConfig"),boolean.class)
             .newInstance(system,history,nativeTools?LocalAiLiteRt.providers(nativeSchemas):Collections.emptyList(),sampler,false,probeThinking?null:Collections.emptyList(),Collections.emptyMap(),null,true,Math.min(maxTokens,2048),thinking,false);
         output.stage("prefill");conversation=reuseSdk?retainedConversation:engine.getClass().getMethod("createConversation",configType).invoke(engine,cfg);
-        final boolean reusedConversation=reuseSdk;boolean keepConversation=false;
+        final boolean reusedConversation=reuseSdk;final String reuseReason=sdkReason;boolean keepConversation=false;String retentionReason="inference_failed";
         CountDownLatch done=new CountDownLatch(1);Throwable[] error={null};StringBuilder response=new StringBuilder();String[] nativeCall={""};
         Class<?> callback=Class.forName(PKG+"MessageCallback");
         Object listener=Proxy.newProxyInstance(callback.getClassLoader(),new Class<?>[]{callback},(proxy,method,args)->{
@@ -155,14 +156,16 @@ final class LocalAiEngine implements AutoCloseable {
         try{
             conversation.getClass().getMethod("sendMessageAsync",Class.forName(PKG+"Message"),callback).invoke(conversation,lastMessage,listener);
             if(!done.await(15,TimeUnit.MINUTES)){cancel();done.await();throw new TimeoutException("Local response timed out");}
-            finishReason=LocalAiLiteRt.completion(nativeTools,nativeCall[0],response.toString());if(cancel.get())throw new CancellationException();if(error[0]!=null)throw new Exception(message(error[0]),error[0]);if(!nativeCall[0].isEmpty())output.text(nativeCall[0]);sdkMetrics(conversation,output,reusedConversation);output.performance(new JSONObject().put("kind","finish_reason").put("value",finishReason).toString());output.stage("postprocessing");
+            finishReason=LocalAiLiteRt.completion(nativeTools,nativeCall[0],response.toString());if(cancel.get())throw new CancellationException();if(error[0]!=null)throw new Exception(message(error[0]),error[0]);if(!nativeCall[0].isEmpty())output.text(nativeCall[0]);output.performance(new JSONObject().put("kind","finish_reason").put("value",finishReason).toString());
             keepConversation=sdkMode&&!cancel.get()&&!sdkCache.invalidated&&finishReason.matches("sdk_done|native_tool")&&(nativeCall[0].isEmpty()||response.length()==0)&&LocalAiSdkCache.same(canonicalInput,messages);
+            retentionReason=keepConversation?"retained":!sdkMode?"scope_unavailable":cancel.get()||sdkCache.invalidated?"cancelled":!finishReason.matches("sdk_done|native_tool")?"unsupported_finish":!nativeCall[0].isEmpty()&&response.length()!=0?"mixed_tool_response":"history_compacted";
+            sdkMetrics(conversation,output,reusedConversation,reuseReason,retentionReason);output.stage("postprocessing");
             if(keepConversation){sdkCache.keep(sdkKey,canonicalInput,messages,nativeCall[0].isEmpty()?response.toString():nativeCall[0],finishReason);keepConversation=!sdkCache.key.isEmpty();}
-        }finally{Object conv=conversation;conversation=null;if(keepConversation){retainedConversation=conv;retainedMaxTokens=maxTokens;}else{if(retainedConversation==conv)retainedConversation=null;sdkCache.clear();if(conv!=null)invoke(conv,"close");}}
+        }finally{sdkPrevious=cancel.get()||sdkCache.invalidated?"cancelled":retentionReason;Object conv=conversation;conversation=null;if(keepConversation){retainedConversation=conv;retainedMaxTokens=maxTokens;}else{if(retainedConversation==conv)retainedConversation=null;sdkCache.clear();if(conv!=null)invoke(conv,"close");}}
     }
-    private void dropSdk(){Object old=retainedConversation;retainedConversation=null;sdkCache.clear();if(old!=null)try{invoke(old,"close");}catch(Exception ignored){}}
-    private void sdkMetrics(Object conv,Output output,boolean reused)throws Exception{
-        JSONObject event=new JSONObject().put("kind","litert_runtime").put("reused",reused).put("available",false);int in=-1,out=-1;
+    private void dropSdk(){sdkPrevious="no_conversation";Object old=retainedConversation;retainedConversation=null;sdkCache.clear();if(old!=null)try{invoke(old,"close");}catch(Exception ignored){}}
+    private void sdkMetrics(Object conv,Output output,boolean reused,String reason,String retention)throws Exception{
+        JSONObject event=new JSONObject().put("kind","litert_runtime").put("reused",reused).put("reuseReason",reason).put("retentionReason",retention).put("available",false);int in=-1,out=-1;
         try{Object info=invoke(conv,"getBenchmarkInfo");in=((Number)invoke(info,"getLastPrefillTokenCount")).intValue();out=((Number)invoke(info,"getLastDecodeTokenCount")).intValue();double pp=((Number)invoke(info,"getLastPrefillTokensPerSecond")).doubleValue(),tg=((Number)invoke(info,"getLastDecodeTokensPerSecond")).doubleValue();if(in>=0&&out>=0&&Double.isFinite(pp)&&Double.isFinite(tg)&&pp>=0&&tg>=0)event.put("available",true).put("prefillTokens",in).put("decodeTokens",out).put("prefillRate",pp).put("decodeRate",tg);else{in=out=-1;}}catch(Exception ignored){}
         try{int n=((Number)invoke(conv,"getTokenCount")).intValue();if(n>=0)event.put("kvTokens",n);}catch(Exception ignored){}output.metrics(in,out);output.performance(event.toString());
     }

@@ -36,8 +36,8 @@ final class LocalAiQwenProtocol {
     }
     static String instructions(WorkspaceStore.Session s)throws Exception{
         JSONArray tools=tools(s);StringBuilder out=new StringBuilder();
-        if(tools.length()>0){out.append("# Tools\n<tools>");for(int i=0;i<tools.length();i++)out.append('\n').append(tools.getJSONObject(i));out.append("\n</tools>\n\nFunction call format (one call, no prose):\n\n<tool_call>\n<function=example_function_name>\n<parameter=example_parameter_1>\nvalue_1\n</parameter>\n</function>\n</tool_call>\n\n");}
-        return out.append((s.localToolsOnly||s.localBehaviorMode.equals("brief"))?LocalAiPrompts.compactSettings(s):settings(s)).append("\nProtocol: Qwen native tools; overrides old JSON examples. Emit one complete tool_call/function block, no prose outside it, no JSON call envelope. Boolean=true/false; integers decimal; variants=JSON array. Normal answers are text, never tool-call examples. Continue after tool_response; never claim unexecuted success.\n").toString();
+        if(tools.length()>0){out.append("# Tools\n<tools>");for(int i=0;i<tools.length();i++)out.append('\n').append(tools.getJSONObject(i));out.append("\n</tools>\n\nFunction call format (one call; optional brief explanation before it):\n\n<tool_call>\n<function=example_function_name>\n<parameter=example_parameter_1>\nvalue_1\n</parameter>\n</function>\n</tool_call>\n\n");}
+        return out.append((s.localToolsOnly||s.localBehaviorMode.equals("brief"))?LocalAiPrompts.compactSettings(s):settings(s)).append("\nProtocol: Qwen native tools; overrides old JSON examples. Emit one complete tool_call/function block; optional brief explanation before it, never after it; no JSON call envelope. Boolean=true/false; integers decimal; variants=JSON array. Normal answers are text, never tool-call examples. Continue after tool_response; never claim unexecuted success. Prefer starting directly with <tool_call>; keep lengthy explanations for the final answer after results.\n").toString();
     }
     static String call(JSONObject request)throws Exception{
         validated(request);StringBuilder out=new StringBuilder("<tool_call>\n<function=").append(request.getString("tool")).append(">\n");
@@ -46,7 +46,14 @@ final class LocalAiQwenProtocol {
     static JSONObject request(String raw)throws Exception{try{return parse(raw);}catch(JSONException e){throw new IllegalArgumentException("Invalid native parameter encoding",e);}}
     private static JSONObject parse(String raw)throws Exception{
         String answer=raw.trim();if(answer.startsWith("<think>")){int end=answer.indexOf("</think>");if(end<0)return null;answer=answer.substring(end+8).trim();}if(!answer.contains("<tool_call>"))return null;
-        if(answer.length()>131072||!answer.startsWith("<tool_call>")||!answer.endsWith("</tool_call>"))throw new IllegalArgumentException("Native call must be one complete block without prose or code fences; expected <tool_call> ... </tool_call>");
+        // The installed Qwen template explicitly permits natural-language reasoning BEFORE a call.
+        // Accept only a short plain prefix and a single terminal block; never unwrap examples/fences.
+        int start=answer.indexOf("<tool_call>");String prefix=answer.substring(0,start).trim();
+        if(!prefix.isEmpty()){
+            if(prefix.length()>4096||(prefix.contains("```")||prefix.contains("~~~"))||prefix.contains("<")||prefix.contains(">")||prefix.endsWith(":")||prefix.matches("(?isu).*\\b(example|examples|пример|примеры|образец)\\b.*"))throw new IllegalArgumentException("Quoted/example native calls are not executable");
+            answer=answer.substring(start);
+        }
+        if(raw.length()>131072||!answer.startsWith("<tool_call>")||!answer.endsWith("</tool_call>"))throw new IllegalArgumentException("Native call must be one complete block without prose or code fences; expected <tool_call> ... </tool_call>");
         Cursor c=new Cursor(answer);c.expect("<tool_call>");c.space();c.expect("<function=");String name=c.until(">");if(!name.matches("[a-z_]{1,32}"))throw new IllegalArgumentException("Invalid function name");JSONObject out=new JSONObject().put("tool",name);c.space();Set<String> seen=new HashSet<>();
         while(c.starts("<parameter=")){
             c.expect("<parameter=");String key=c.until(">");if(!key.matches("[a-zA-Z_]{1,32}")||key.equals("tool"))throw new IllegalArgumentException("Invalid parameter name: "+key+" in function "+name);if(!seen.add(key))throw new IllegalArgumentException("Duplicate parameter: "+key+" in function "+name);String value=c.until("</parameter>");if(value.startsWith("\r\n"))value=value.substring(2);else if(value.startsWith("\n"))value=value.substring(1);if(value.endsWith("\r\n"))value=value.substring(0,value.length()-2);else if(value.endsWith("\n"))value=value.substring(0,value.length()-1);

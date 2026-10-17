@@ -24,6 +24,10 @@ final class LocalAiServiceContext {
  private static Prepared prepareMode(JSONArray messages,String base,String progress,String correction,String schemas,int capacity,int requested,LocalAiContext.Counter counter,LocalAiContext.Notice notice,int mode)throws Exception{
   boolean stableSystem=mode!=0;
   java.util.LinkedHashSet<String> variants=new java.util.LinkedHashSet<>();variants.add(progress);if(!progress.isEmpty()){String shorter=compact(progress);if(shorter.length()<progress.length())variants.add(shorter);variants.add("");int full=stableSystem?counter.count(attach(messages,progress,correction,mode),base+schemas):counter.count(messages,base+progress+correction+schemas);if(full>capacity-requested-64)variants.remove(progress);}IllegalStateException failure=null;
+  // For owned SDK conversations, shorten optional app progress before discarding
+  // any canonical messages. Required correction, tool results and rights stay intact.
+  if(mode==2)for(String note:variants){JSONArray actual=attach(messages,note,correction,mode);int input=counter.count(actual,base+schemas);if(input<=capacity-requested-64){boolean reduced=!note.equals(progress);if(reduced)notice.state("service_reduced");return new Prepared(base,new LocalAiReplyBudget.Prepared(actual,requested,input),reduced,note.length());}}
+
   // Fit every progress variant at the user's reserve before reducing the reply budget.
   for(int pass=0;pass<2;pass++)for(String note:variants){String system=stableSystem?base:base+note+correction,budgetSystem=system+schemas;
    // Keep mandatory correction outside the fitter's removable history, but count its actual rendered role/template.
