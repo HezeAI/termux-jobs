@@ -21,7 +21,7 @@ final class LocalAiAgent {
         }return out;
     }
 
-    static boolean actionRequested(JSONArray history){for(int i=history.length()-1;i>=0;i--){JSONObject m=history.optJSONObject(i);if(m==null||!m.optString("role").equals("user")||m.has("toolResult"))continue;String text=m.optString("text").toLowerCase(Locale.ROOT);if(text.matches("\\s*(а теперь|теперь|повтори|again|now)[?! .]*"))continue;return text.matches("(?s).*(посмотр[иь]|покажи|прочита[йть]|найди|откро[йть]|созда[йть]|запусти|выполни|удали|запиши|измени|сохрани|собери|скачай|установи|проверь|просмотри|переименуй|скопируй|перемести|\\b(list|read|find|search|open|inspect|show|create|write|run|execute|delete|build|install|check)\\b).*" );}return false;}
+    static boolean actionRequested(JSONArray history){for(int i=history.length()-1;i>=0;i--){JSONObject m=history.optJSONObject(i);if(m==null||!m.optString("role").equals("user")||m.has("toolResult"))continue;String text=m.optString("text").toLowerCase(Locale.ROOT);if(text.matches("\\s*(а теперь|теперь|повтори|again|now)[?! .]*"))continue;return text.matches("(?s).*(напиши|положи|посмотр[иь]|покажи|прочита[йть]|найди|откро[йть]|созда[йть]|запусти|выполни|удали|запиши|измени|сохрани|собери|скачай|установи|проверь|просмотри|переименуй|скопируй|перемести|\\b(list|read|find|search|open|inspect|show|create|write|save|copy|move|edit|run|execute|delete|build|install|check)\\b).*" );}return false;}
     /** Only unambiguous short screenshot requests; questions and explicit paths stay with the model. */
     static JSONObject screenshotRequest(JSONArray history)throws JSONException{
         for(int i=history.length()-1;i>=0;i--){JSONObject m=history.optJSONObject(i);if(m==null||!m.optString("role").equals("user")||m.has("toolResult"))continue;
@@ -42,6 +42,11 @@ final class LocalAiAgent {
             int count=1;java.util.regex.Matcher number=java.util.regex.Pattern.compile("[0-9]+").matcher(text);if(number.find())count=Integer.parseInt(number.group());else if(text.matches(".*\\b(два|две|two)\\b.*"))count=2;else if(text.matches(".*\\b(три|three)\\b.*"))count=3;
             return new JSONObject().put("tool","screenshots").put("limit",Math.max(1,Math.min(200,count)));
         }return null;
+    }
+    static boolean exampleRequested(JSONArray history){
+        for(int i=history.length()-1;i>=0;i--){JSONObject m=history.optJSONObject(i);if(m==null||!m.optString("role").equals("user")||m.has("toolResult"))continue;
+            return m.optString("text").toLowerCase(Locale.ROOT).matches("(?s).*\\b(пример|примеры|образец|образцы|example|examples|sample|samples)\\b.*");
+        }return false;
     }
     static boolean mixedRequestNeedsRepair(JSONArray history,String raw){
         if(LocalAiToolText.preview(LocalAiText.split(raw).answer).request==null)return false;
@@ -64,13 +69,15 @@ final class LocalAiAgent {
         int validationRetries=0;String correction="";JSONObject initial=p.localAccess.equals("chat")?null:screenshotRequest(history);if(recent!=null)initial=new JSONObject().put("tool","locations");
         while(true){
             LocalAiFiles.check(cancel);events.phase(initial!=null?"preparation":"generating","");Generation g;if(initial!=null){g=new Generation(initial.toString(),"tool");initial=null;}else g=model.generate(conversation,base+progress.note()+correction,output);LocalAiFiles.check(cancel);JSONObject request;
-            try{request=LocalAiQwenProtocol.enabled(p)&&!g.finish.equals("tool")?LocalAiQwenProtocol.request(g.text):LocalAiTools.request(g.text);}catch(IllegalArgumentException bad){
+            boolean leakedNative=p.localProtocol.equals(LocalAiLiteRt.NATIVE)&&!g.finish.equals("native_tool")&&!g.finish.equals("tool")&&LocalAiLiteRt.leakedCall(g.text);
+            if(leakedNative&&(p.localAccess.equals("chat")||!requested||exampleRequested(history))){String stopped=events.tr("Модель вернула нераспознанный нативный вызов вместо ответа. Действие не выполнено.","The model returned an unparsed native call instead of an answer. No action was executed.");events.phase("finished","unparsed_native_tool");output.text(stopped);return stopped;}
+            try{if(leakedNative)throw new IllegalArgumentException("UNPARSED_GEMMA_TOOL_CALL: SDK did not return a structured call. No action executed; cause may be incomplete or invalid output, not proven token exhaustion.");request=LocalAiQwenProtocol.enabled(p)&&!g.finish.equals("tool")?LocalAiQwenProtocol.request(g.text):LocalAiTools.request(g.text);if(p.localProtocol.equals(LocalAiLiteRt.NATIVE)&&request!=null&&!g.finish.equals("native_tool")&&!g.finish.equals("tool"))throw new IllegalArgumentException("UNSTRUCTURED_NATIVE_CALL: tool JSON was returned as text, not as an SDK structured call. No action executed.");}catch(IllegalArgumentException bad){
                 if(g.finish.equals("tool"))throw bad;
                 if(p.localAccess.equals("chat"))throw new SecurityException("Tools are disabled");
                 String feedback=LocalAiToolErrors.feedback(p,g.text,bad);JSONObject invalid=new JSONObject().put("role","assistant").put("text",g.text).put("repair",true).put("toolRequest",new JSONObject().put("tool","validation")).put("toolState","failed").put("toolOutput",feedback);history.put(invalid);
                 history.put(new JSONObject().put("role","user").put("toolResult","validation").put("repair",true).put("text",feedback));events.save();events.tool(new JSONObject().put("tool","validation"),"failed",feedback);
                 if(validationRetries>=2){String stopped=events.tr("Не удалось исправить параметры инструмента после двух попыток. Некорректный вызов не выполнен; подробности в карточке ошибки.","Tool arguments could not be corrected after two retries. The invalid call was not executed; see its error card.");events.phase("finished","invalid_tool_arguments");output.text(stopped);return stopped;}
-                validationRetries++;conversation.put(new JSONObject().put("role","assistant").put("text",g.text));conversation.put(new JSONObject().put("role","user").put("toolResult","validation").put("text","[Application tool validation feedback; no action executed]\n"+LocalAiToolErrors.forModel(feedback)));events.phase("tool_validation",String.valueOf(validationRetries));output.text("");continue;
+                validationRetries++;if(p.localProtocol.equals(LocalAiLiteRt.NATIVE)){conversation.put(new JSONObject().put("role","user").put("text","[Application tool validation feedback; no action executed]\n"+LocalAiToolErrors.forModel(feedback)));}else{conversation.put(new JSONObject().put("role","assistant").put("text",g.text));conversation.put(new JSONObject().put("role","user").put("toolResult","validation").put("text","[Application tool validation feedback; no action executed]\n"+LocalAiToolErrors.forModel(feedback)));}events.phase("tool_validation",String.valueOf(validationRetries));output.text("");continue;
             }
             if(request==null){
                 if(!recalled&&!p.localAccess.equals("chat")&&archive.length()>0&&LocalAiMemory.needsRecall(g.text)){

@@ -9,6 +9,7 @@ final class LocalAiToolText {
         Preview(String text,JSONObject request,boolean pending){this.text=text;this.request=request;this.pending=pending;}
     }
     static Preview preview(String answer){
+        if(LocalAiLiteRt.leakedCall(answer))return new Preview("",null,true);
         if(answer.trim().startsWith("<tool_call>")){try{JSONObject r=LocalAiQwenProtocol.request(answer);if(r!=null)return new Preview("",r,false);}catch(Exception ignored){}if(!answer.trim().endsWith("</tool_call>"))return new Preview("",null,true);}
 
         try{JSONObject direct=LocalAiTools.request(answer);if(direct!=null)return new Preview("",direct,false);}catch(Exception ignored){}

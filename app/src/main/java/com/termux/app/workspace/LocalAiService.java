@@ -33,6 +33,7 @@ public final class LocalAiService extends Service {
                         JSONArray history=new JSONArray(data.getString("history","[]"));long[] last={0};String[] result={""};
                         String scope=data.getString("scope","");if(!scope.isEmpty())LocalAiFiles.safeId(scope);engine.cacheScope=scope.isEmpty()?"":client+":"+scope;
                         engine.nativeSchemas=new JSONArray(data.getString("nativeSchemas","[]"));
+                        engine.probeThinking=data.getBoolean("probeThinking",false);engine.probeGreedy=data.getBoolean("probeGreedy",false);
                         engine.system=data.getString("system","You are a helpful assistant. No tools are available.");
                         int tokens=data.getInt("tokens",768);LocalAiLimits.validate(4096,tokens);engine.generate(history,tokens,new LocalAiEngine.Output(){public void text(String text){result[0]=text;long now=android.os.SystemClock.uptimeMillis();if(now-last[0]>=65){last[0]=now;send(reply,id,"text",text);}}public void context(String state){send(reply,id,"context",state);}public void performance(String json){send(reply,id,"performance",json);}public void stage(String stage){send(reply,id,"stage",stage);}public void metrics(int input,int output){send(reply,id,"metrics","{\"input\":"+input+",\"output\":"+output+"}");}});
                         send(reply,id,"performance",new JSONObject().put("kind","finish_reason").put("value",engine.finishReason).toString());send(reply,id,"done",result[0],engine.finishReason);

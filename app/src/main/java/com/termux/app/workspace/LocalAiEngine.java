@@ -16,6 +16,7 @@ final class LocalAiEngine implements AutoCloseable {
     private Object engine,conversation;
     private Context runtimeContext;private JSONObject loadedModel;private File loadedFile;private String loadedRequested;private int loadedThreads,loadedContext;private boolean vision,audio;
     JSONArray nativeSchemas=new JSONArray();
+    boolean probeThinking,probeGreedy; // Diagnostic-only; normal generations retain the existing settings.
     private volatile LocalAiProcess external;String location="android",protocol="json",compute="cpu";
     private long llama;private boolean fastCpu;String cpuMode="auto";
     private final AtomicBoolean cancel=new AtomicBoolean();
@@ -121,10 +122,10 @@ final class LocalAiEngine implements AutoCloseable {
         if(runtimeMessages.isEmpty())throw new IllegalArgumentException("Empty conversation");
         Object lastMessage=runtimeMessages.remove(runtimeMessages.size()-1);history.addAll(runtimeMessages);
         Class<?> configType=Class.forName(PKG+"ConversationConfig");
-        Object sampler=Class.forName(PKG+"SamplerConfig").getConstructor(int.class,double.class,double.class,int.class).newInstance(40,.9,.65,0);
-        Object thinking=Class.forName(PKG+"ThinkingConfig").getConstructor(boolean.class,int.class).newInstance(false,0);
+        Object sampler=Class.forName(PKG+"SamplerConfig").getConstructor(int.class,double.class,double.class,int.class).newInstance(probeGreedy?1:40,probeGreedy?1.0:.9,probeGreedy?0.0:.65,0);
+        Object thinking=Class.forName(PKG+"ThinkingConfig").getConstructor(boolean.class,int.class).newInstance(probeThinking,probeThinking?128:0);
         Object cfg=configType.getConstructor(Class.forName(PKG+"Contents"),List.class,List.class,Class.forName(PKG+"SamplerConfig"),boolean.class,List.class,java.util.Map.class,Class.forName(PKG+"LoraConfig"),boolean.class,Integer.class,Class.forName(PKG+"ThinkingConfig"),boolean.class)
-            .newInstance(system,history,nativeTools?LocalAiLiteRt.providers(nativeSchemas):Collections.emptyList(),sampler,false,Collections.emptyList(),Collections.emptyMap(),null,true,Math.min(maxTokens,2048),thinking,false);
+            .newInstance(system,history,nativeTools?LocalAiLiteRt.providers(nativeSchemas):Collections.emptyList(),sampler,false,probeThinking?null:Collections.emptyList(),Collections.emptyMap(),null,true,Math.min(maxTokens,2048),thinking,false);
         output.stage("prefill");conversation=engine.getClass().getMethod("createConversation",configType).invoke(engine,cfg);
         CountDownLatch done=new CountDownLatch(1);Throwable[] error={null};StringBuilder response=new StringBuilder();String[] nativeCall={""};
         Class<?> callback=Class.forName(PKG+"MessageCallback");
@@ -141,7 +142,7 @@ final class LocalAiEngine implements AutoCloseable {
         try{
             conversation.getClass().getMethod("sendMessageAsync",Class.forName(PKG+"Message"),callback).invoke(conversation,lastMessage,listener);
             if(!done.await(15,TimeUnit.MINUTES)){cancel();done.await();throw new TimeoutException("Local response timed out");}
-            finishReason=nativeCall[0].isEmpty()?"sdk_done":"native_tool";if(cancel.get())throw new CancellationException();if(error[0]!=null)throw new Exception(message(error[0]),error[0]);if(!nativeCall[0].isEmpty())output.text(nativeCall[0]);output.metrics(-1,-1);output.performance(new JSONObject().put("kind","finish_reason").put("value",finishReason).toString());output.stage("postprocessing");
+            finishReason=LocalAiLiteRt.completion(nativeTools,nativeCall[0],response.toString());if(cancel.get())throw new CancellationException();if(error[0]!=null)throw new Exception(message(error[0]),error[0]);if(!nativeCall[0].isEmpty())output.text(nativeCall[0]);output.metrics(-1,-1);output.performance(new JSONObject().put("kind","finish_reason").put("value",finishReason).toString());output.stage("postprocessing");
         }finally{Object conv=conversation;conversation=null;if(conv!=null)invoke(conv,"close");}
     }
     private boolean isLlama(){return llama!=0||external!=null;}

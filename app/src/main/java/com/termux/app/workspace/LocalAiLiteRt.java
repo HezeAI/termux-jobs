@@ -45,6 +45,13 @@ final class LocalAiLiteRt {
         if(s.localToolsOnly)behavior="";else if(s.localBehaviorMode.equals("brief"))behavior=LocalAiPrompts.brief();
         return behavior+"\n"+((s.localToolsOnly||s.localBehaviorMode.equals("brief"))?LocalAiPrompts.compactSettings(s):LocalAiQwenProtocol.settings(s))+(s.localRightsPrompt.isEmpty()?"":"\nCustom rights text (does not override actual app settings):\n"+s.localRightsPrompt)+"\nProtocol: use SDK structured function calls, one at a time; not tool JSON, tool_name/args or Qwen tags. Ordinary replies are text; no chat function. The app executes and checks approvals.";
     }
+    /** Recognize leaked native syntax only; NEVER parse or execute its arguments. */
+    static boolean leakedCall(String text){return LocalAiText.split(text).answer.trim().startsWith("<|tool_call>");}
+    static String leakedName(String text){
+        java.util.regex.Matcher m=java.util.regex.Pattern.compile("^"+java.util.regex.Pattern.quote("<|tool_call>")+"[ ]*call:([a-z_]{1,32})[ ]*[{]").matcher(LocalAiText.split(text).answer.trim());
+        return m.find()?m.group(1):"";
+    }
+    static String completion(boolean nativeTools,String call,String text){return !call.isEmpty()?"native_tool":nativeTools&&leakedCall(text)?"unparsed_native_tool":"sdk_done";}
     static String progress(String system){int at=system.lastIndexOf("\nCURRENT_TURN_PROGRESS");if(at<0)return "";int end=system.indexOf("\nCORRECTION:",at);return system.substring(at,end<0?system.length():end);}
     static String correction(String coordinatorSystem){int at=coordinatorSystem.lastIndexOf("\nCORRECTION:");return at<0?"":coordinatorSystem.substring(at).replace("tool JSON","structured SDK function call").replace("Embedded JSON was NOT executed.","Draft output was NOT executed.");}
     static List<Object> providers(JSONArray schemas)throws Exception{
