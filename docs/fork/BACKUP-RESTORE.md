@@ -1,3 +1,22 @@
+# v1.5.3: inventory and compression
+
+Full and Custom backup use title-right Refresh with an inline spinner and one
+current-file/bytes status line. Refresh always rescans; repeated entry may reuse
+bounded process-memory estimates. Creation still reads sources freshly and
+validates the archive. Closing cancels only this inventory worker. Components
+and destination survive refresh, while creation consent must be given again.
+
+Compression method: gzip1 worker / pigz2 / pigz4; level below:1/3/9.
+Missing pigz offers explicit installation approval. All produce .tar.gz.
+Legacy proot-distro full Ubuntu keeps native compression with a warning.
+A missing selected full environment stops creation rather than being omitted.
+Previous backup formats remain supported. Cache is neither a filesystem snapshot
+nor a substitute for source/SQLite/symlink/space/integrity checks.
+
+## General backup and restore documentation
+
+---
+
 # Резервное копирование и импорт — бета (v1.1.2 на проверке)
 
 **Шестерёнка справа сверху → Резервное копирование · бета** на любой вкладке.

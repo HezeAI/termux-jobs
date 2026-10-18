@@ -79,10 +79,14 @@ versionCode, release tag, результат проверки/ошибку ус�
 профиль JSON/Keystore. TCP-проверка не доказывает авторизацию, наличие agent.py
 не доказывает работоспособность агента. См. docs/fork/SERVERS.md.
 
-## Public/private build configuration (v1.5.0)
+## Current stable build configuration (v1.5.3)
 
-Published stable APKs use `TERMUX_PUBLIC_RELEASE=1 TERMUX_APP_VERSION_NAME=1.5.0` with `scripts/build-local-arm64.sh`. This compiles local models disabled (including old preset startup) and omits QAIRT/Qualcomm dispatch. Version code1137; the separate private test is1138. The source default is the private development configuration, not the public release flavor. Do not omit the explicit public flag when reproducing the release.
-
-For tests use the isolated environment from scripts/build-env.sh, the existing ARM64 AAPT2 override, and scripts/verify-java.sh. Public-gate tests must also run with TERMUX_PUBLIC_RELEASE=1. Dependencies/tools stay in ignored .tools/.verification; prepare-local-ai-tools.py verifies pinned inputs. Native source/SDK setup remains described in FORK.md and LOCAL-AI.md. Private QAIRT SDK files and credentials must not be committed or uploaded as standalone assets.
+Local AI and its runtimes/dependencies were removed, not just gated. No
+TERMUX_PUBLIC_RELEASE flag or local-model preparation is required. Use the
+isolated environment, SDK copy and ARM64 overrides from FORK.md and build scripts.
+Stable versionName1.5.3/code1165; same release certificate is required for updates.
+Historical protocols, source links and SDK/LoRA experiments are documented in
+[LOCAL-AI-RESEARCH.md](docs/fork/LOCAL-AI-RESEARCH.md). Do not reintroduce model
+weights, vendor SDK binaries, private prompts/chats or credentials in a PR.
 
 For transfer issues provide app version, Download/Upload/Move, file sizes/count, destination environment, completion/cancel/error state, free space and a sanitized diagnostics report. A failed batch can contain completed files; never retry destructive operations blindly.

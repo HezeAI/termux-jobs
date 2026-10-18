@@ -1,4 +1,32 @@
-## Private v1.5.27-test: inline inventory and memory cache
+# Current architecture: v1.5.3
+
+Local-AI engines/services/JNI/vendor payloads and UI were removed. RetiredModelData
+cleans fixed app-private files/local-ai and cache/local-ai without following links,
+plus local diagnostics preferences. Old local profiles are skipped. HOME/PREFIX,
+external agent auth/history, other libraries and proot distributions are not deleted.
+Historical source links and implementation boundaries: [research](LOCAL-AI-RESEARCH.md).
+
+Server deletion uses a separate Python helper over existing pinned SSH with
+batch preflight and descriptor-relative no-follow traversal; not a remote-agent
+upgrade. Progress UI retains owned upload/download jobs and restores the same
+window; no foreground-service or process-death resume guarantee is introduced.
+Terminal activity and server border use independent views with bounded frame
+callbacks. Existing terminal/emulator and external-agent assets are retained.
+
+BackupInventoryCache stores bounded process-memory metadata estimates, never
+Activity/process objects or file content. Manual Refresh bypasses it; archive
+creation always performs fresh preflight/reads/validation. Refresh controls have
+owned callbacks/cancellation; a destroyed dialog cannot reopen from late results.
+Compression engine, worker count and level are validated independently.
+
+## Historical implementation notes
+
+The detailed intermediate-version notes below preserve development evidence;
+references to removed local-AI functionality are historical.
+
+---
+
+## Historical private v1.5.27-test: inline inventory and memory cache
 
 BackupInventoryCache stores bounded full/custom JSON estimates and custom folder
 lists by app-files/PREFIX key, never an Activity/worker/file contents. Reads do not
@@ -19,7 +47,7 @@ level and strictly validated threads (gzip1, pigz2/4); older requests default to
 prior behavior. No dependency added. Metadata records threads; old readers ignore
 this optional field. Native legacy proot compression remains explicitly separate.
 
-## Private v1.5.26-test: bounded inventory aggregates
+## Historical private v1.5.26-test: bounded inventory aggregates
 
 Full inventory uses iterative scandir and one no-follow entry.stat; regular file
 sizes only, symlink targets excluded as before. Selective inventory reuses walker
@@ -40,7 +68,7 @@ Scroll has its own default TerminalViewClient callback, distinct from navigation
 it shares preserve-active/ignore-idle redraw filtering with keyboard resizing.
 No change to actual scroll, PTY, input, permissions or network poll frequency.
 
-## Private v1.5.25-test: separate terminal resize signal
+## Historical private v1.5.25-test: separate terminal resize signal
 
 TerminalViewClient.onTerminalSizeChanged is distinct from viewport navigation.
 Actual updateSize uses it; attach/doScroll still use onTerminalViewportChanged.
@@ -50,7 +78,7 @@ only for that handle. Resize never refreshes the real output timestamp and does
 not keep an otherwise finished session busy. All callbacks are paint-only signals;
 PTY dimensions, input, cancellation, lifecycle and scroll behavior are unchanged.
 
-## Private v1.5.24-test: viewport activity filtering
+## Historical private v1.5.24-test: viewport activity filtering
 
 TerminalViewClient.onTerminalViewportChanged is a default no-op notification,
 implemented by the app to clear output-only activity and ignore redraw for1600ms.
@@ -63,7 +91,7 @@ other-session title Toast restored. Historical1523 implementation follows.
 
 # Архитектура v1.2.1
 
-## Private v1.5.23-test: isolated presentation updates
+## Historical private v1.5.23-test: isolated presentation updates
 
 ServerTransferPresentation owns only main-thread window visibility/state, never
 transport cancellation. Background hides the existing dialog; foreground restores
@@ -86,7 +114,7 @@ and stop after2.4s. Events/animation do not relayout the terminal or rebuild hea
 No title/event content is added to diagnostics or persistent history.
 
 
-## Private v1.5.23-test: confirmed server deletion
+## Historical private v1.5.23-test: confirmed server deletion
 
 WorkspaceServers shares the existing per-profile/per-directory selection with
 trash/download/move. A separate boolean preserves an empty delete-selection mode;
@@ -103,7 +131,7 @@ or rollback. Shared pinned SSH transport/timeout/disconnect still apply. A lost
 reply cannot establish deletion outcome; UI requests a listing refresh.
 
 
-## Private v1.5.22-test: retired local-model implementation
+## Historical private v1.5.22-test: retired local-model implementation
 
 LocalAi classes, separate service/process, inference native libraries/AARs,
 model catalog/instructions and all local session UI hooks are removed.

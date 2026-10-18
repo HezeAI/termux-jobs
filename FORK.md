@@ -1,6 +1,44 @@
+# Termux Job’s — сборка v1.5.3
+
+Пакет com.termux, versionName1.5.3, versionCode1165, Android8+/ARM64.
+Прежний сертификат выпуска, библиотекаschema8. Локальные ИИ удалены;
+специальный TERMUX_PUBLIC_RELEASE больше не нужен и ничего не включает.
+[Совместимость](docs/fork/RELEASE-v1.5.3.md),
+[проверки](docs/fork/VALIDATION-v1.5.3.md),
+[исследование удалённой функции](docs/fork/LOCAL-AI-RESEARCH.md).
+
+Нужны существующие JDK11, Gradle7.2, SDK и ARM64 AAPT2/clang/ld.lld/NDK sysroot
+для локального ARM64-хоста. scripts/build-env.sh задаёт локальные кеши и SDK
+в .tools; не указывайте общий изменяемый SDK. Дополнительные компоненты держите
+внутри проекта. На стандартном хосте применяются обычные Android build tools.
+
+```sh
+FORK_AAPT2=/path/to/arm64/aapt2 bash scripts/verify-java.sh
+python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+FORK_AAPT2=/path/to/arm64/aapt2 \
+FORK_NATIVE_SYSROOT=/path/to/ndk/sysroot \
+TERMUX_APP_VERSION_NAME=1.5.3 bash scripts/build-local-arm64.sh
+```
+
+Результат build/apk/Termux-Jobs-v1.5.3-arm64.apk. Скрипт использует
+изолированный staging, проверенный bootstrap и финальный runtime-аудит.
+Нужны локальные инструменты, описанные в scripts/build-env.sh/build-local-arm64.sh;
+готовая установленная Termux/Ubuntu не заменяется. Для идентичной подписи
+требуется прежний секретный ключ выпуска; независимая сборка с новым ключом
+не обновит официальный APK форка. Ключ, кеши, SDK и APK не коммитятся.
+Порядок публикации: docs/fork/RELEASING.md.
+
+## Историческая справка
+
+Текст ниже сохранён для истории. Номера версий, прежние публичные flags,
+планы и промежуточные элементы UI не описывают v1.5.3. В частности, верхние
+кружочки отменены, локальные ИИ удалены. Актуальны сведения выше и release notes.
+
+---
+
 # Termux Job’s
 
-## Private v1.5.23-test — server transfers and session activity
+## Historical private v1.5.23-test — server transfers and session activity
 
 В этой приватной сборке также добавлены:
 

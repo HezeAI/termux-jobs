@@ -1,3 +1,24 @@
+# Release work: v1.5.3
+
+User authorized GitHub publication as stable1.5.3, code1165 (> private1164).
+Changes since public1.5.0: complete local-AI removal/data compatibility warning,
+research preservation, server trash/background transfers/progress, session activity,
+backup scans/cache/inline Refresh and separated compression method/level.
+LOCAL-AI-RESEARCH.md covers both adapters, Native, tool/rights/environment wrapper,
+context/cache, SDK experiment and cancelled LoRA with historical source links.
+
+Release preparation/verification is in progress; see VALIDATION-v1.5.3.md for final
+evidence. Do not install APK or change working sessions/environments/server.
+No trained LoRA or model weights to publish. design/ is pre-existing untracked work.
+Stable requires APK/SHA256SUMS/update.json and download-back verification.
+
+## Historical continuation notes
+
+All earlier “Current private work” sections below describe their stated versions,
+not the current release authorization or current local-AI feature set.
+
+---
+
 # Current private work: v1.5.27-test
 
 Backup refresh moved into custom title at right in both modes. Header spinner

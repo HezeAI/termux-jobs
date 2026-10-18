@@ -1,3 +1,22 @@
+# v1.5.3: selection, deletion and transfers
+
+Trash after Home enters selection; empty second tap cancels. With selected files
+or folders it opens a scrollable Yes/No confirmation for permanent recursive removal.
+Long-press uses the same selection as download/move. Symlink targets are not
+followed; preflight/race checks reject changed items. A failed deletion may be
+partial and is never retried automatically. Existing SSH pinning is retained.
+
+Both upload and download support Background within the running application.
+Active progress rows above Open restore the original cancel/progress window;
+progress bars and Server + Agent border update independently. Switching app tabs
+is supported; Android process/Activity destruction and disconnect can stop jobs.
+There is no persisted resume or automatic destructive retry. Media HTTP security
+boundaries and installed server agent are unchanged by this release.
+
+## Earlier feature documentation
+
+---
+
 # Сервер + Agent — v1.2.0
 
 ## v1.2.1 — ускорение отправки и очередей сервера

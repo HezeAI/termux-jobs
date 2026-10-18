@@ -1,0 +1,32 @@
+{
+  "ru": [
+    "Сервер: корзина и удаление выбранных файлов/папок с подтверждением.",
+    "Передачи на сервер и с сервера можно убрать в фон приложения; прогресс — в карточке.",
+    "Тонкая линия активности сессии; робот у AI Agents; независимое обновление индикаторов.",
+    "Бэкапы: меньше повторных обходов, быстрый повторный вход и Обновить в шапке.",
+    "Способ gzip/pigz2/pigz4 отдельно от уровня сжатия; архивы остаются .tar.gz.",
+    "Исследование локальных ИИ опубликовано: адаптеры, Native, обвязка, SDK и LoRA."
+  ],
+  "en": [
+    "Server trash: select files/folders and confirm permanent deletion.",
+    "Uploads/downloads can continue while switching in-app tabs; progress appears in server cards.",
+    "Thin session activity line, AI Agent robot icons and independently updated indicators.",
+    "Backup inventory avoids repeated work; cached re-entry and inline Refresh.",
+    "Separate gzip/pigz2/pigz4 method and compression level; .tar.gz remains compatible.",
+    "Local-AI research preserved: adapters, Native protocols, tool wrapper, SDK and LoRA work."
+  ],
+  "compatibility": {
+    "ru": [
+      "ВАЖНО: локальные ИИ удалены. Первый запуск удаляет их приватные модели, чаты, инструкции/настройки и диагностику; старые локальные сессии/пресеты не загружаются. Сохраните нужное заранее.",
+      "Оригиналы моделей вне приватных каталогов и proot-дистрибутивы автоматически не удаляются.",
+      "Другие среды, внешние AI Agents/авторизация/история, команды, заметки, серверы и бэкапы сохраняются. Общий сброс не нужен.",
+      "com.termux, прежний сертификат, schema8, Android8+/ARM64. Code1165 выше публичной1.5.0 и приватной1.5.27-test."
+    ],
+    "en": [
+      "IMPORTANT: local AI removed. First launch deletes its app-private models, chats, prompts/settings and diagnostics; old local-AI sessions/presets are skipped. Export required data first.",
+      "External model originals and proot distributions are not automatically deleted.",
+      "Other environments, external AI agents/auth/history, commands, notes, servers and backups remain. No general reset.",
+      "Same com.termux/certificate, schema8, Android8+/ARM64. Code1165 exceeds public1.5.0 and private1.5.27-test."
+    ]
+  }
+}

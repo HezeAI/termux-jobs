@@ -1,3 +1,26 @@
+# v1.5.3 — changes since public v1.5.0
+
+- Remove local-AI code/runtimes/dependencies; migrate away old local profiles and
+  delete only app-private local models/chats/prompts/settings/diagnostics on launch.
+  Export needed local data first. External agents, environments and other libraries remain.
+- Preserve adapters, Native protocols, tool/permission wrapper, context/cache,
+  performance/SDK experiments and unfinished LoRA work in LOCAL-AI-RESEARCH.md.
+- Add server trash selection and confirmed recursive deletion without following links.
+- Add in-app background upload/download, restorable progress windows, card progress
+  bars and an animated Server + Agent border. No process-death transfer persistence.
+- Add thin session activity line and AI Agent robot icons. Preserve activity across
+  keyboard resize/scroll; filter idle redraw and bound frame callbacks to visible views.
+- Optimize backup inventories and bounded memory reuse; add title-right Refresh,
+  inline scan spinner/status and owned cancellation in full/custom modes.
+- Separate gzip1/pigz2/pigz4 from level1/3/9, retain archive format and fresh validation;
+  fail rather than omit a missing selected full Ubuntu.
+- Same com.termux/certificate/schema8; Android8+/ARM64; code1165 above private1164.
+  No general reset. See RELEASE-v1.5.3.md for complete compatibility information.
+
+# Historical intermediate development notes
+
+---
+
 ## Private v1.5.27-test
 
 - Backup Refresh at title-right in both modes; inline spinner and one status line.
