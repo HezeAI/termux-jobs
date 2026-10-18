@@ -1,4 +1,4 @@
-# Release work: v1.5.3
+# Latest public release: v1.5.3
 
 User authorized GitHub publication as stable1.5.3, code1165 (> private1164).
 Changes since public1.5.0: complete local-AI removal/data compatibility warning,
@@ -7,10 +7,16 @@ backup scans/cache/inline Refresh and separated compression method/level.
 LOCAL-AI-RESEARCH.md covers both adapters, Native, tool/rights/environment wrapper,
 context/cache, SDK experiment and cancelled LoRA with historical source links.
 
-Release preparation/verification is in progress; see VALIDATION-v1.5.3.md for final
-evidence. Do not install APK or change working sessions/environments/server.
+Published stable/latest: https://github.com/HezeAI/termux-jobs/releases/tag/v1.5.3
+Tag v1.5.3 ->8ada09c5, immutable. APK/SHA256SUMS/update.json/research MD downloaded
+back byte-identical; APK signature and updater code1165 verified. Release body
+and four public tag-document links verified. See VALIDATION-v1.5.3.md.
+Do not install APK or change working sessions/environments/server.
 No trained LoRA or model weights to publish. design/ is pre-existing untracked work.
-Stable requires APK/SHA256SUMS/update.json and download-back verification.
+All four assets and the research copy are also available in Download.
+Final artifact SHA256:6e5e0b0297dcc1a51e2ebfaa50f721e79ec075cb292c3b0376b1bb93745cad98.
+Device-specific checks remain as listed in validation. Developer reports on
+intermediate APKs do not establish every final scenario.
 
 ## Historical continuation notes
 
