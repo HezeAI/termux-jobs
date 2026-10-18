@@ -17,7 +17,7 @@ final class LocalAiRemote implements AutoCloseable {
     private volatile LocalAiEngine.Output output;
     private volatile int request;
     private boolean bound,detached;
-    volatile String benchmarkToken="";volatile boolean benchmarkCancelled;volatile String cacheScope="";String cpuMode="auto",location="android",protocol="json",compute="cpu";
+    volatile String benchmarkToken="";volatile boolean benchmarkCancelled;volatile String cacheScope="";String lora="",cpuMode="auto",location="android",protocol="json",compute="cpu";
     String nativeSchemas="[]";
     volatile boolean contextCompacted;volatile String contextState="";
     volatile String backend="",finishReason="unknown";
@@ -47,7 +47,7 @@ final class LocalAiRemote implements AutoCloseable {
         try{service.send(m);if(!latch.await(20,TimeUnit.MINUTES)){if(operation==LocalAiService.BENCHMARK)cancelBenchmark();else cancel();throw new TimeoutException("Local inference timed out");}if(!failure.isEmpty())throw new IllegalStateException(failure);return result;}
         finally{pending=null;output=null;}
     }
-    void load(Context c,JSONObject model,java.io.File file,String acceleration,int threads,int contextSize) throws Exception {Bundle b=new Bundle();b.putString("model",model.getString("id"));b.putString("backend",acceleration);b.putString("cpu",cpuMode);LocalAiEngine.validateCompute(compute);b.putString("compute",compute);LocalAiQwenProtocol.validate(protocol);b.putString("protocol",protocol);LocalAiProcess.validate(location);b.putString("location",location);b.putInt("context",contextSize);LocalAiCpu.validate(threads);b.putInt("threads",threads);backend=call(LocalAiService.LOAD,b);}
+    void load(Context c,JSONObject model,java.io.File file,String acceleration,int threads,int contextSize) throws Exception {Bundle b=new Bundle();b.putString("model",model.getString("id"));b.putString("backend",acceleration);b.putString("cpu",cpuMode);LocalAiLora.id(lora);b.putString("lora",lora);LocalAiEngine.validateCompute(compute);b.putString("compute",compute);LocalAiQwenProtocol.validate(protocol);b.putString("protocol",protocol);LocalAiProcess.validate(location);b.putString("location",location);b.putInt("context",contextSize);LocalAiCpu.validate(threads);b.putInt("threads",threads);backend=call(LocalAiService.LOAD,b);}
     boolean probeThinking,probeGreedy;
     void generate(JSONArray history,int tokens,LocalAiEngine.Output listener) throws Exception {generate(history,tokens,"You are a helpful assistant. No tools are available.",listener);}
     void generate(JSONArray history,int tokens,String system,LocalAiEngine.Output listener) throws Exception {generate(history,tokens,system,"","",listener);}

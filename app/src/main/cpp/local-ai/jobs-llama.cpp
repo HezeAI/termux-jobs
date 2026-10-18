@@ -22,7 +22,7 @@ extern "C" JNIEXPORT jboolean JNICALL Java_com_termux_app_workspace_LocalAiEngin
 #include <mutex>
 #include <stdexcept>
 
-struct JobsModel { llama_model * model; llama_context * ctx; jobs_prefix_cache cache; };
+struct JobsModel { llama_model * model; llama_context * ctx; jobs_prefix_cache cache; llama_adapter_lora * adapter=nullptr; };
 static void fail(JNIEnv *e,const char *message){e->ThrowNew(e->FindClass("java/lang/IllegalStateException"),message);}
 static std::string utf8(JNIEnv *e,jstring s){
     jclass cls=e->FindClass("java/lang/String");jmethodID get=e->GetMethodID(cls,"getBytes","(Ljava/lang/String;)[B");jstring charset=e->NewStringUTF("UTF-8");
@@ -39,6 +39,9 @@ extern "C" JNIEXPORT jlong JNICALL JOBS_JNI(nativeLoad)(JNIEnv *e,jclass,jstring
     llama_context_params cp=llama_context_default_params();cp.n_ctx=std::clamp((int)context,512,8192);cp.n_batch=256;cp.n_ubatch=128;cp.n_threads=std::clamp((int)threads,1,8);cp.n_threads_batch=cp.n_threads;
     auto ctx=llama_init_from_model(model,cp);if(!ctx){llama_model_free(model);fail(e,"Cannot allocate model context");return 0;}
     return (jlong)new JobsModel{model,ctx};
+}
+extern "C" JNIEXPORT void JNICALL JOBS_JNI(nativeAdapter)(JNIEnv *e,jclass,jlong ptr,jstring path){
+ auto h=(JobsModel*)ptr;try{if(!h||h->adapter)throw std::runtime_error("Invalid adapter state");auto adapter=llama_adapter_lora_init(h->model,utf8(e,path).c_str());if(!adapter)throw std::runtime_error("LoRA load/base compatibility failed");float scale=1.0f;if(llama_set_adapters_lora(h->ctx,&adapter,1,&scale)){llama_adapter_lora_free(adapter);throw std::runtime_error("LoRA activation failed");}h->adapter=adapter;h->cache.invalidate(h->ctx);}catch(const std::exception&err){if(!e->ExceptionCheck())fail(e,err.what());}
 }
 static std::vector<llama_token> prompt_tokens(JNIEnv *e,JobsModel *h,jobjectArray roles,jobjectArray texts,jstring system,int feedback=-1,size_t* checkpoint=nullptr){
         int n=e->GetArrayLength(roles);std::vector<std::string> rs,ts;
@@ -90,4 +93,4 @@ extern "C" JNIEXPORT void JNICALL JOBS_JNI(nativeBenchmark)(JNIEnv*e,jclass,jlon
  jobs_benchmark(h->model,llama_n_ctx(h->ctx),mode,threads,[&](){return e->CallBooleanMethod(cancel,get)||e->ExceptionCheck();},[&](const std::string&s){jstring value=string(e,s);e->CallVoidMethod(output,emit,value);e->DeleteLocalRef(value);if(e->ExceptionCheck())throw std::runtime_error("Benchmark callback failed");});
  }catch(const std::exception&err){if(!e->ExceptionCheck())fail(e,err.what());}
 }
-extern "C" JNIEXPORT void JNICALL JOBS_JNI(nativeFree)(JNIEnv*,jclass,jlong ptr){auto h=(JobsModel*)ptr;if(h){llama_free(h->ctx);llama_model_free(h->model);delete h;}}
+extern "C" JNIEXPORT void JNICALL JOBS_JNI(nativeFree)(JNIEnv*,jclass,jlong ptr){auto h=(JobsModel*)ptr;if(h){llama_free(h->ctx);if(h->adapter)llama_adapter_lora_free(h->adapter);llama_model_free(h->model);delete h;}}

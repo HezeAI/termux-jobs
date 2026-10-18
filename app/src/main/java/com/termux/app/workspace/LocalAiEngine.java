@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 final class LocalAiEngine implements AutoCloseable {
     interface Output {void text(String text);default void context(String state){}default void stage(String stage){}default void metrics(int input,int output){}default void performance(String json){}}
     private static final String PKG="com.google.ai.edge.litertlm.";
+    File loraFile;
     private Object engine;private volatile Object conversation;private Object retainedConversation;private int retainedMaxTokens;private String sdkPrevious="no_conversation";private final LocalAiSdkCache sdkCache=new LocalAiSdkCache();
     private Context runtimeContext;private JSONObject loadedModel;private File loadedFile;private String loadedRequested;private int loadedThreads,loadedContext;private boolean vision,audio;
     JSONArray nativeSchemas=new JSONArray();
@@ -38,7 +39,7 @@ final class LocalAiEngine implements AutoCloseable {
         cancel.set(false);runtimeContext=c.getApplicationContext();loadedModel=model;loadedFile=file;loadedRequested=requested;loadedThreads=threads;loadedContext=context;initialize(c,model,file,requested,threads,context,false,false);
     }
     private void initialize(Context c,JSONObject model,File file,String requested,int threads,int context,boolean images,boolean sound)throws Exception{
-        validateBackend(model,requested,c);validateCompute(compute);if(compute.equals("gpu")&&!gpuModel(model))throw new IllegalArgumentException("OpenCL testing supports catalog Qwen3.5 2B only");LocalAiQwenProtocol.validate(protocol);if(protocol.equals(LocalAiLiteRt.NATIVE)&&!LocalAiLiteRt.supported(model))throw new IllegalArgumentException("Native LiteRT format requires a LiteRT model");if(protocol.equals("qwen-native")&&!LocalAiQwenProtocol.supported(model.getString("id"),model.getString("engine")))throw new IllegalArgumentException("Native Qwen format currently supports catalog Qwen3.5 2B llama only");LocalAiProcess.validate(location);if(!model.getString("engine").equals("llama")&&!location.equals("android"))throw new IllegalArgumentException("External locations support llama.cpp only");vision=false;audio=false;
+        validateBackend(model,requested,c);validateCompute(compute);if(loraFile!=null&&(!model.optString("engine").equals("llama")||!compute.equals("cpu")))throw new IllegalArgumentException("LoRA currently requires llama.cpp CPU");if(compute.equals("gpu")&&!gpuModel(model))throw new IllegalArgumentException("OpenCL testing supports catalog Qwen3.5 2B only");LocalAiQwenProtocol.validate(protocol);if(protocol.equals(LocalAiLiteRt.NATIVE)&&!LocalAiLiteRt.supported(model))throw new IllegalArgumentException("Native LiteRT format requires a LiteRT model");if(protocol.equals("qwen-native")&&!LocalAiQwenProtocol.supported(model.getString("id"),model.getString("engine")))throw new IllegalArgumentException("Native Qwen format currently supports catalog Qwen3.5 2B llama only");LocalAiProcess.validate(location);if(!model.getString("engine").equals("llama")&&!location.equals("android"))throw new IllegalArgumentException("External locations support llama.cpp only");vision=false;audio=false;
         if(model.getString("engine").equals("llama")){
             System.loadLibrary("jobs_llama");
             if(compute.equals("gpu")){
@@ -47,8 +48,8 @@ final class LocalAiEngine implements AutoCloseable {
             }
             validateCpuMode(cpuMode);fastCpu=false;String variant="compatible";
             if(cpuMode.equals("auto")&&nativeFastCpuSupported())try{System.loadLibrary("jobs_llama_fast");fastCpu=true;variant="dotprod+fp16+i8mm";}catch(UnsatisfiedLinkError error){variant="compatible (optimized library unavailable)";}
-            if(!location.equals("android")){external=new LocalAiProcess(c,location,fastCpu,file);if(cancel.get()){external.close();external=null;throw new CancellationException();}external.load(file,location,threads,context);backend="CPU / "+variant+" / threads="+threads+" / location="+location;return;}
-            llama=fastCpu?FastCpu.nativeLoad(file.getAbsolutePath(),threads,context):nativeLoad(file.getAbsolutePath(),threads,context);if(llama==0)throw new IllegalStateException("Cannot load GGUF architecture or model");backend="CPU / "+variant+" / threads="+Math.max(1,Math.min(8,threads));return;
+            if(!location.equals("android")){external=new LocalAiProcess(c,location,fastCpu,file);if(cancel.get()){external.close();external=null;throw new CancellationException();}external.load(file,location,threads,context);if(loraFile!=null)external.adapter(loraFile,location);backend="CPU / "+variant+" / threads="+threads+" / location="+location+(loraFile==null?"":" / LoRA=on");return;}
+            llama=fastCpu?FastCpu.nativeLoad(file.getAbsolutePath(),threads,context):nativeLoad(file.getAbsolutePath(),threads,context);if(llama==0)throw new IllegalStateException("Cannot load GGUF architecture or model");if(loraFile!=null)try{if(fastCpu)FastCpu.nativeAdapter(llama,loraFile.getPath());else nativeAdapter(llama,loraFile.getPath());}catch(Exception error){if(fastCpu)FastCpu.nativeFree(llama);else nativeFree(llama);llama=0;throw error;}backend="CPU / "+variant+" / threads="+Math.max(1,Math.min(8,threads))+(loraFile==null?"":" / LoRA=on");return;
         }
         List<String> attempts=LocalAiNpu.model(model)?Collections.singletonList("npu"):requested.equals("auto")?Arrays.asList("gpu","cpu"):Collections.singletonList(requested);
         if(LocalAiNpu.model(model))LocalAiNpu.prepare(c);
@@ -187,12 +188,14 @@ final class LocalAiEngine implements AutoCloseable {
     private static final class FastCpu {
     private static native int nativePromptTokens(long ptr,String[] roles,String[] texts,String system);
     private static native long nativeLoad(String path,int threads,int context);
+    private static native void nativeAdapter(long model,String path);
     private static native int nativeGenerate(long handle,String[] roles,String[] texts,int maxTokens,Output output,AtomicBoolean cancel,String system,String scope,int feedbackStart);
     private static native void nativeBenchmark(long handle,int mode,int threads,Output output,AtomicBoolean cancel);
     private static native void nativeFree(long handle);
     }
     private static native int nativePromptTokens(long ptr,String[] roles,String[] texts,String system);
     private static native long nativeLoad(String path,int threads,int context);
+    private static native void nativeAdapter(long model,String path);
     private static native int nativeGenerate(long handle,String[] roles,String[] texts,int maxTokens,Output output,AtomicBoolean cancel,String system,String scope,int feedbackStart);
     private static native void nativeBenchmark(long handle,int mode,int threads,Output output,AtomicBoolean cancel);
     private static native void nativeFree(long handle);

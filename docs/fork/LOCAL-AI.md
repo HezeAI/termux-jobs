@@ -2,6 +2,9 @@
 
 Public v1.5.0 disables local-model creation/startup while testing continues; existing experimental data remains. The implementation below describes private test builds. Private v1.5.1-test includes Qualcomm runtime for the pinned Gemma4E2BSM8750 model; installed-app NPU initialization/inference still requires device verification. See [test notes](RELEASE-v1.5.1-test.md).
 
+
+Private v1.5.20-test adds a CPU llama.cpp LoRA import/loader pilot, not trained assistant weights. LiteRT LoRA stays disabled. See [support and training requirements](LOCAL-AI-LORA.md) and [test release](RELEASE-v1.5.20-test.md).
+
 # Local AI — v1.4.4-test
 
 Experimental native chat, separate from Codex/OpenCode/Claude/Gemini and from PTYs.

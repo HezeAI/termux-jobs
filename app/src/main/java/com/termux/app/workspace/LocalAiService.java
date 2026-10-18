@@ -24,6 +24,7 @@ public final class LocalAiService extends Service {
                     if(!com.termux.BuildConfig.LOCAL_AI_ENABLED)throw new IllegalStateException("Local models are unavailable in this public build");
                     if(what==LOAD){
                         engine.close();owner=client;String cpu=data.getString("cpu","auto");LocalAiEngine.validateCpuMode(cpu);engine.cpuMode=cpu;engine.compute=data.getString("compute","cpu");LocalAiEngine.validateCompute(engine.compute);engine.protocol=data.getString("protocol","json");LocalAiQwenProtocol.validate(engine.protocol);engine.location=data.getString("location","android");LocalAiProcess.validate(engine.location);LocalAiFiles files=new LocalAiFiles(LocalAiService.this);JSONObject model=files.find(data.getString("model",""));
+                        String lora=data.getString("lora","");LocalAiLora.id(lora);engine.loraFile=lora.isEmpty()?null:LocalAiLora.checked(files,lora,model);
                         int context=data.getInt("context",4096);LocalAiLimits.engine(model.getString("engine"),context,768);engine.load(LocalAiService.this,model,files.modelFile(model),data.getString("backend","auto"),LocalAiCpu.resolve(data.getInt("threads",0),Runtime.getRuntime().availableProcessors()),context);
                         send(reply,id,"loaded",engine.backend);
                     }else if(what==BENCHMARK){
