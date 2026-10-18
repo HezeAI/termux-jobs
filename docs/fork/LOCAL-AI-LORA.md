@@ -1,3 +1,5 @@
+> Historical proposal/test notes, superseded by [v1.5.21-test](RELEASE-v1.5.21-test.md). LoRA was cancelled. Referenced training scripts belong to archived commit9ffa1501 and are not present in the current app source.
+
 # Private LoRA pilot — v1.5.20-test
 
 Status: import/loading support, NOT a trained assistant adapter. No trained Qwen or Gemma adapter is bundled. Public local AI remains disabled; this private build is not a GitHub release.

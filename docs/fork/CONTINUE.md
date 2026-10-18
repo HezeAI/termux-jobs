@@ -1,5 +1,10 @@
 ## Latest private delivery: v1.5.19-test (1156)
 
+## Current private rollback — v1.5.21-test
+
+Developer cancelled the LoRA route. Production app/native sources restored exactly to6a9ab547 (v1.5.19-test), code1158/name1.5.21-test to update over1157. LoRA loader/training draft commits7c6d6182/9ffa1501 preserved in Git history, not current feature. Owned checkpoint downloader stopped; no LoRA training steps or trained adapter. Isolated preparation/partial downloads retained in ignored .tools/lora-training and .verification/lora-training; do not assume they are installed app models. No GitHub authorization in this task. design/ untouched. See RELEASE/VALIDATION-v1.5.21-test.md for final results. Main next direction is intentionally undecided by the developer.
+
+
 Delivered APK/README/SHA in Download. LiteRT retains full canonical expected append vs fitted actual SDK history; exact historical edits/rights/key/runtime-prefix/reply cap/media/error/cancel checks retained. SDK25 fake-inference tests cover compacted reuse, changed dropped history and reporting-failure cleanup. Both local engines: explicit requested file-operation claim check using current-turn successful tool kinds, one correction then unconfirmed output; no constant prompt/inference overhead. No universal target/content/order/intent verifier; arbitrary successful commands opaque. Invalid claims repair-marked, excluded from future context/UI; permissions/approval/cancel/loops unchanged. Fixed noun vs past-verb/punctuation false positives; no replay of old successes. Full684app+145emulator, final88focused and25SDK checks pass; final build/runtime/APK/signature/native equality/limitedsecretscan/DownloadSHA pass. APK smaller due ZIP gap padding, not removed native payload. No persistence resets, model/native/environment/process/GitHub changes. Repeat Qwen task and two Gemma requests. LoRA/index work not started. See RELEASE/VALIDATION-v1.5.19-test.md. Next code>=1157. design/ untouched.
 
 ## Latest private delivery: v1.5.18-test (1155)

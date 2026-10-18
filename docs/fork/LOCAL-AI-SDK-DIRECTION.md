@@ -1,3 +1,5 @@
+> Historical proposal/test notes, superseded by [v1.5.21-test](RELEASE-v1.5.21-test.md). LoRA was cancelled. Referenced training scripts belong to archived commit9ffa1501 and are not present in the current app source.
+
 # Local AI SDK direction (proposal, not an implemented new SDK)
 
 Current layers already form a useful boundary: LocalAiUi owns selection/chat; LocalAiRemote talks to the owned LocalAiService; LocalAiEngine chooses llama JNI/external runner or Android LiteRT; the tool broker enforces actual rights and runs commands separately. Reuse this boundary rather than rewriting working engines.

@@ -46,8 +46,8 @@ android {
         ndk { abiFilters "arm64-v8a" }
         minSdkVersion project.properties.minSdkVersion.toInteger()
         targetSdkVersion project.properties.targetSdkVersion.toInteger()
-        versionCode (System.getenv("TERMUX_PUBLIC_RELEASE") == "1" ? 1137 : 1157)
-        versionName "1.5.20-test"
+        versionCode (System.getenv("TERMUX_PUBLIC_RELEASE") == "1" ? 1137 : 1158)
+        versionName "1.5.21-test"
 
         if (appVersionName) versionName = appVersionName
         validateVersionName(versionName)

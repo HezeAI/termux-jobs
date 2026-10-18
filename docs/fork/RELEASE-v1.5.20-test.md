@@ -1,3 +1,5 @@
+> Historical private test. LoRA pilot cancelled by the developer; superseded by [v1.5.21-test](RELEASE-v1.5.21-test.md), which restores v1.5.19 behavior. No trained adapter was produced.
+
 # v1.5.20-test — private LoRA loader pilot
 
 Private com.termux ARM64 build, code1157 (previous1156), Android8+/minSDK26. Not published. Existing models/chats/presets retained, no reset; optional adapter field defaults Off. Previous package/signing identity must match the final verified artifact.

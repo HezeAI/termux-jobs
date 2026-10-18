@@ -1,3 +1,5 @@
+> Historical private test. LoRA pilot cancelled by the developer; superseded by [v1.5.21-test](RELEASE-v1.5.21-test.md), which restores v1.5.19 behavior. No trained adapter was produced.
+
 # v1.5.20-test validation
 
 Private build; no GitHub publication. Scope: managed optional llama.cpp LoRA import/selection/attachment, removal of the duplicated main CPU/GPU hint, shared native tool descriptions and workflow regression tests. No actual LoRA training or new model weights. No changes to running environments, shared SDK, Bridge or user sessions.
