@@ -6,7 +6,7 @@ final class SessionOutputActivity {
     private final java.util.LinkedHashMap<String,Long> resizeIgnore=new java.util.LinkedHashMap<>();
     private final java.util.LinkedHashMap<String,Long> output=new java.util.LinkedHashMap<>();
     void viewport(long now){ignoreUntil=now+1600;output.clear();resizeIgnore.clear();}
-    // A keyboard resize must not erase ongoing work or extend its lifetime.
+    // A keyboard resize or scroll must not erase ongoing work or extend its lifetime.
     void resize(String handle,long now){
         if(active(handle,now))return;
         output.remove(handle);resizeIgnore.put(handle,now+1600);

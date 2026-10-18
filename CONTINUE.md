@@ -1,3 +1,18 @@
+# Current private work: v1.5.26-test
+
+Backup inventory optimizations: DirEntry no-follow metadata reused; selective
+walker optionally yields its lstat; category prefix classifier compiled once per
+traversal; bounded per-dialog directory/file-category aggregates allow custom
+folder regrouping without tree walks. No cache service/disk persistence/timer.
+Cache never enters create request or supplies archive data/validation. Manual
+Refresh sizes drops it. Cache has expiry/root+rule guards/size and row limits;
+oversized/expired/changed snapshots fall back to fresh per-scope walks.
+Scroll now uses same preserve-active/ignore-idle semantics as keyboard resize;
+session/tab navigation retains existing behavior. Same signing/package/schema,
+code1163; private APK Download, no GitHub/install authorized. See validation.
+
+---
+
 # Current private work: v1.5.25-test
 
 Keyboard show/hide temporarily reset active shimmer because all viewport changes

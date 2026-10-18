@@ -308,14 +308,28 @@ def environments(prefix):
 
 
 def tree_bytes(path, excluded=()):
+    # Reuse DirEntry metadata; never descend into queued symbolic-link directories.
     total = 0
-    for root, dirs, files in os.walk(path, followlinks=False):
-        dirs[:] = [d for d in dirs if not Path(root, d).is_symlink() and not any(Path(root, d) == p for p in excluded)]
-        for f in files:
-            p = Path(root, f)
-            if not p.is_symlink() and p.is_file():
-                total += p.stat().st_size
-                progress('ESTIMATE',total,current=str(p))
+    pending = [Path(path)]
+    excluded = {str(p) for p in excluded}
+    while pending:
+        folder = pending.pop()
+        try:
+            if folder.is_symlink(): continue
+            entries = os.scandir(folder)
+        except OSError:
+            continue
+        with entries as children:
+            for entry in children:
+                try:
+                    metadata = entry.stat(follow_symlinks=False)
+                    if stat.S_ISDIR(metadata.st_mode):
+                        if entry.path not in excluded: pending.append(Path(entry.path))
+                    elif stat.S_ISREG(metadata.st_mode):
+                        total += metadata.st_size
+                        progress('ESTIMATE', total, current=entry.path)
+                except FileNotFoundError:
+                    continue  # Files can disappear during a live size estimate.
     return total
 
 
@@ -527,7 +541,7 @@ def selection_issue(issues, root, path, error):
         issues.append(dict(path='.',errno=0))
 
 
-def selection_backing(root, path):
+def selection_backing(root, path, known_link=False):
     """Recognise proot's internal link2symlink files without following ordinary links.
 
     Only marker-named backing files in the rootfs .l2s store or alongside the
@@ -536,7 +550,7 @@ def selection_backing(root, path):
     No chmod or proot process is used. This is a portable regular-file copy,
     rather than an absolute link back into the source environment's container.
     """
-    if not path.is_symlink(): return None
+    if not known_link and not path.is_symlink(): return None
     target=os.readlink(path)
     if not Path(target).name.startswith(('.proot.l2s.','.l2s.')): return None
     try:
@@ -570,11 +584,11 @@ def selection_open(root, relative):
     finally:os.close(fd)
 
 
-def selection_size(root,path):
-    metadata=path.lstat()
+def selection_size(root,path,metadata=None):
+    if metadata is None: metadata=path.lstat()
     if stat.S_ISREG(metadata.st_mode):return metadata.st_size,True
     if stat.S_ISLNK(metadata.st_mode):
-        backing=selection_backing(root,path)
+        backing=selection_backing(root,path,known_link=True)
         if backing is not None:
             fd,metadata=selection_open(root,backing)
             os.close(fd)
@@ -582,10 +596,12 @@ def selection_size(root,path):
     return 0,False
 
 
-def selection_walk(scope, specs=None, chosen=None, issues=None):
+def selection_walk(scope, specs=None, chosen=None, issues=None, include_metadata=False):
     root = Path(scope['root'])
     starts = [root/'home', root/'usr'] if scope['type']=='termux' else [root]
     excluded = {'.l2s','proc','sys','dev','run','tmp','mnt','media','sdcard','storage'} if scope['type']=='ubuntu' else {'usr/var/lib/proot-distro','usr/tmp','home/storage'}
+    classifier = SelectionClassifier(specs) if specs is not None else None
+    chosen_paths = [p for spec in (specs or []) if chosen is not None and spec['id'] in chosen for p in spec['paths']]
     def failed(error): selection_issue(issues,root,error.filename or root,error)
     for start in starts:
         if not start.is_dir() or start.is_symlink(): continue
@@ -596,7 +612,7 @@ def selection_walk(scope, specs=None, chosen=None, issues=None):
             dirs[:] = [d for d in dirs if (Path(folder,d).relative_to(root).as_posix() not in excluded and d not in skip)]
             if chosen is not None:
                 def wanted(relative):
-                    return selection_group(relative,specs) in chosen or any(p.startswith(relative+'/') for s in specs if s['id'] in chosen for p in s['paths'])
+                    return classifier.group(relative) in chosen or any(p.startswith(relative+'/') for p in chosen_paths)
                 dirs[:] = [d for d in dirs if wanted(Path(folder,d).relative_to(root).as_posix())]
             for name in dirs+files:
                 path = Path(folder,name)
@@ -604,17 +620,36 @@ def selection_walk(scope, specs=None, chosen=None, issues=None):
                 if relative in excluded or '/.codex/' in '/'+relative and (name.endswith(('.sqlite-wal','.sqlite-shm')) or name=='.sqlite-maintenance.lock'):
                     continue
                 if scope['type']=='ubuntu' and name.startswith(('.proot.l2s.','.l2s.')):continue
-                try:mode = path.lstat().st_mode
+                try:metadata = path.lstat();mode = metadata.st_mode
                 except OSError as error:
                     selection_issue(issues,root,path,error);continue
                 if stat.S_ISREG(mode) or stat.S_ISDIR(mode) or stat.S_ISLNK(mode):
-                    yield path, relative
+                    yield (path, relative, metadata) if include_metadata else (path, relative)
+
+
+class SelectionClassifier:
+    """Compile prefix ownership once, then look up only path ancestors."""
+    def __init__(self, specs):
+        self.owners = {}
+        for i, spec in enumerate(specs):
+            for path in spec['paths']:
+                rank = (len(path), int(spec['id'].startswith('folder:')), -i, spec['id'])
+                previous = self.owners.get(path)
+                if previous is None or rank > previous: self.owners[path] = rank
+
+    def match(self, relative):
+        path = relative
+        while True:
+            rank = self.owners.get(path)
+            if rank is not None: return rank[3], path
+            if not path: return 'system', ''
+            path = path.rpartition('/')[0]
+
+    def group(self, relative): return self.match(relative)[0]
 
 
 def selection_group(relative, specs):
-    matches = [(len(p), int(s['id'].startswith('folder:')), -i, s['id']) for i,s in enumerate(specs) for p in s['paths']
-               if not p or relative==p or relative.startswith(p+'/')]
-    return max(matches)[3] if matches else 'system'
+    return SelectionClassifier(specs).group(relative)
 
 
 def selection_runtime(root):
@@ -624,31 +659,82 @@ def selection_runtime(root):
         git=('usr/bin/git','usr/local/bin/git'),ssh=('usr/bin/ssh','usr/local/bin/ssh')).items()}
 
 
+# Estimates only: bounded directory aggregates, never reused for archive reads.
+INVENTORY_CACHE_ROWS = 12000
+INVENTORY_CACHE_SECONDS = 600
+INVENTORY_CACHE_BYTES = 2 * 1024 * 1024
+
+
+def inventory_cached(scope, specs, candidate, now, budget):
+    if not isinstance(candidate, dict): return None
+    cache = candidate.get('scan')
+    try:
+        root = Path(scope['root']).stat()
+        if (not isinstance(cache, dict) or cache.get('root') != [root.st_dev, root.st_ino]
+                or cache.get('specs') != [[s['id'], s['paths']] for s in specs]
+                or not 0 <= now-cache['time'] < INVENTORY_CACHE_SECONDS): return None
+        rows = cache['rows']
+        if not isinstance(rows, list) or len(rows) > budget[0]: return None
+        for row in rows:
+            if (not isinstance(row, list) or len(row) != 3 or not isinstance(row[0], str)
+                    or len(row[0]) > 16384 or not all(type(n) is int and 0 <= n < 2**63 for n in row[1:])): return None
+        cost = sum(len(json.dumps(row[0], ensure_ascii=True))+128 for row in rows)
+        if cost > budget[1]: return None
+        issues = candidate.get('issues', [])
+        if not isinstance(issues, list) or len(issues) > 101: return None
+        if any(not isinstance(i, dict) or not isinstance(i.get('path'), str) for i in issues): return None
+        budget[0] -= len(rows);budget[1] -= cost
+        return cache, issues
+    except (KeyError, TypeError, ValueError, OSError): return None
+
+
 def selection_inventory(request):
-    result=[]
+    result=[];now=time.monotonic();budget=[INVENTORY_CACHE_ROWS,INVENTORY_CACHE_BYTES];reused=False
+    old=request.get('inventoryCache',{})
+    old_scopes=old.get('scopes',[]) if isinstance(old,dict) else []
+    old_scopes={s.get('id'):s for s in old_scopes if isinstance(s,dict)} if isinstance(old_scopes,list) else {}
     for scope in selection_scopes(request):
-        custom = request.get('folders',{}).get(scope['id'],[])
+        custom=request.get('folders',{}).get(scope['id'],[])
         if not isinstance(custom,list) or len(custom)>30: raise BackupError('INVALID_SELECTION')
-        specs=selection_layout(scope, custom)
-        counts={s['id']:dict(bytes=0, files=0,unreadable=0) for s in specs}
-        issues=[]
-        for path,relative in selection_walk(scope,issues=issues):
-            c=counts[selection_group(relative,specs)]
-            try:
-                size,is_file=selection_size(Path(scope['root']),path)
-                c['bytes']+=size;c['files']+=int(is_file)
-            except (OSError,BackupError) as error:selection_issue(issues,Path(scope['root']),path,error)
-            progress('ESTIMATE',sum(v['bytes'] for v in counts.values()),current=relative)
-        root=Path(scope['root'])
+        specs=selection_layout(scope,custom)
+        base_specs=[s for s in specs if not s['id'].startswith('folder:')]
+        classifier=SelectionClassifier(specs);base_classifier=SelectionClassifier(base_specs)
+        counts={s['id']:dict(bytes=0,files=0,unreadable=0) for s in specs}
+        cached=inventory_cached(scope,base_specs,old_scopes.get(scope['id']),now,budget)
+        scan=None;root=Path(scope['root']);total=0
+        if cached is not None:
+            scan,issues=cached;reused=True
+            for relative,size,files in scan['rows']:
+                c=counts[classifier.group(relative)];c['bytes']+=size;c['files']+=files
+        else:
+            issues=[];aggregates={};cacheable=True
+            for path,relative,metadata in selection_walk(scope,issues=issues,include_metadata=True):
+                try:
+                    size,is_file=selection_size(root,path,metadata)
+                    c=counts[classifier.group(relative)];c['bytes']+=size;c['files']+=int(is_file);total+=size
+                    if is_file and cacheable:
+                        key=(relative.rpartition('/')[0],base_classifier.match(relative)[1])
+                        if key not in aggregates:
+                            cost=len(json.dumps(relative,ensure_ascii=True))+128
+                            if budget[0]<=0 or budget[1]<cost: aggregates.clear();cacheable=False
+                            else: budget[0]-=1;budget[1]-=cost;aggregates[key]=[relative,0,0]
+                        if cacheable:
+                            aggregates[key][1]+=size;aggregates[key][2]+=1
+                except (OSError,BackupError) as error: selection_issue(issues,root,path,error)
+                progress('ESTIMATE',total,current=relative)
+            if cacheable:
+                identity=root.stat()
+                scan=dict(root=[identity.st_dev,identity.st_ino],specs=[[s['id'],s['paths']] for s in base_specs],time=time.monotonic(),rows=list(aggregates.values()))
         for issue in issues:
+            group=classifier.group(issue['path'])
             for spec in specs:
-                if issue['path']=='.' or selection_group(issue['path'],specs)==spec['id'] or any(p.startswith(issue['path']+'/') for p in spec['paths']):
-                    counts[spec['id']]['unreadable']+=1
-        scope['issues']=issues
-        scope['items']=[dict(s,**counts[s['id']]) for s in specs]
+                if issue['path']=='.' or group==spec['id'] or any(p.startswith(issue['path']+'/') for p in spec['paths']): counts[spec['id']]['unreadable']+=1
+        scope['issues']=issues;scope['items']=[dict(s,**counts[s['id']]) for s in specs]
         scope['runtime']=selection_runtime(root)
+        if scan is not None: scope['scan']=scan
         result.append(scope)
-    return dict(scopes=result,libraryBytes=tree_bytes(Path(request['files'])/'workspace-sessions') if request.get('files') else 0)
+    # This small history tree is always fresh, independently of environment estimates.
+    return dict(scopes=result,reusedEstimate=reused,libraryBytes=tree_bytes(Path(request['files'])/'workspace-sessions') if request.get('files') else 0)
 
 
 def selected_plan(request):
@@ -677,6 +763,7 @@ def create_selected_tar(file, scope, specs, chosen, work, total=0, compression=N
     root=Path(scope['root'])
     wrapper='ubuntu/rootfs' if scope['type']=='ubuntu' and 'system' in chosen else 'payload'
     entries=0
+    classifier=SelectionClassifier(specs)
     contains_codex=False
     with compressed_output(file,compression) as output, tarfile.open(fileobj=output,mode='w|',dereference=False) as tar:
         track_archive(tar,total)
@@ -685,7 +772,7 @@ def create_selected_tar(file, scope, specs, chosen, work, total=0, compression=N
             for name in ('proc','sys','dev','run','tmp','mnt','media','root','home'):
                 directory=tarfile.TarInfo(wrapper+'/'+name);directory.type=tarfile.DIRTYPE;directory.mode=0o1777 if name=='tmp' else 0o700 if name=='root' else 0o755;tar.addfile(directory)
         for path, relative in selection_walk(scope,specs,chosen):
-            if selection_group(relative,specs) not in chosen: continue
+            if classifier.group(relative) not in chosen: continue
             contains_codex = contains_codex or relative.startswith(scope['home']+'/.codex/')
             arcname=wrapper+'/'+relative
             metadata=path.lstat()
@@ -760,7 +847,8 @@ def create(request):
     estimate += sum(info['ubuntuBytes'][e['name']] for e in selected_envs)
     plan_sizes=[]
     for scope,specs,chosen in plans:
-        value=sum(selection_size(Path(scope['root']),p)[0] for p,r in selection_walk(scope,specs,chosen) if selection_group(r,specs) in chosen)
+        classifier=SelectionClassifier(specs)
+        value=sum(selection_size(Path(scope['root']),p,m)[0] for p,r,m in selection_walk(scope,specs,chosen,include_metadata=True) if classifier.group(r) in chosen)
         plan_sizes.append(value);estimate+=value
     if shutil.disk_usage(parent).free < estimate + 64 * 1024 ** 2:
         raise BackupError('INSUFFICIENT_SPACE')

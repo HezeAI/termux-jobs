@@ -179,6 +179,8 @@ public class TermuxTerminalViewClient extends TermuxTerminalViewClientBase {
 
 
 
+    @Override public void onTerminalScrolled() { mActivity.workspaceTerminalScrolled(); }
+
     @Override public void onTerminalSizeChanged() { mActivity.workspaceTerminalSizeChanged(); }
 
     @Override public void onTerminalViewportChanged() { mActivity.workspaceTerminalViewportChanged(); }

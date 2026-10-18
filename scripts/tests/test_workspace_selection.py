@@ -167,4 +167,79 @@ class SelectionTests(unittest.TestCase):
         with tarfile.open(r['components'][0]['file']) as t:
             self.assertNotIn('ubuntu/rootfs/proc/runtime/file',t.getnames());self.assertTrue(t.getmember('ubuntu/rootfs/root/external').issym())
 
+    def counts(self,report):
+        return {s['id']:{i['id']:(i['bytes'],i['files'],i['unreadable']) for i in s['items']} for s in report['scopes']}
+    def test_cached_folder_reclassification_matches_fresh_without_tree_walk(self):
+        snapshot=b.selection_inventory(self.req)
+        folders={'ubuntu:ubuntu':['root/projects/demo','root/projects/demo/build','root/.codex']}
+        with patch.object(b,'selection_walk',side_effect=AssertionError('unexpected tree walk')):
+            reused=b.selection_inventory(dict(self.req,folders=folders,inventoryCache=snapshot))
+        fresh=b.selection_inventory(dict(self.req,folders=folders))
+        self.assertTrue(reused['reusedEstimate']);self.assertEqual(self.counts(reused),self.counts(fresh))
+    def test_cache_expires_and_changed_root_or_rules_force_rescan(self):
+        import copy
+        original=b.selection_inventory(self.req)
+        for reason in ('expired','future','root','rules','malformed'):
+            snapshot=copy.deepcopy(original)
+            for scope in snapshot['scopes']:
+                cache=scope['scan']
+                if reason=='expired':cache['time']-=b.INVENTORY_CACHE_SECONDS+1
+                elif reason=='future':cache['time']+=999999
+                elif reason=='root':cache['root']=[-1,-1]
+                elif reason=='rules':cache['specs']=[]
+                else:cache['rows']=[['bad',-1,1]]
+            walk=b.selection_walk
+            with patch.object(b,'selection_walk',wraps=walk) as observed:
+                report=b.selection_inventory(dict(self.req,inventoryCache=snapshot))
+                self.assertFalse(report['reusedEstimate']);self.assertGreater(observed.call_count,0)
+    def test_cache_limit_falls_back_and_fresh_counts_are_preserved(self):
+        normal=b.selection_inventory(self.req)
+        with patch.object(b,'INVENTORY_CACHE_ROWS',0):
+            limited=b.selection_inventory(self.req)
+        self.assertEqual(self.counts(normal),self.counts(limited))
+        self.assertTrue(all('scan' not in scope for scope in limited['scopes']))
+        with patch.object(b,'INVENTORY_CACHE_BYTES',0):
+            limited=b.selection_inventory(self.req)
+        self.assertEqual(self.counts(normal),self.counts(limited))
+        self.assertTrue(all('scan' not in scope for scope in limited['scopes']))
+    def test_cached_sizes_never_supply_actual_archive_data(self):
+        snapshot=b.selection_inventory(self.req)
+        target=self.put('root/projects/demo/main.py',b'NEW LONGER CONTENT AFTER INVENTORY')
+        req=dict(self.req,destination=str(self.out),components=[],environments=[],inventoryCache=snapshot,
+                 selections=[dict(scope='ubuntu:ubuntu',items=['project:root/projects'],folders=[])])
+        result=b.create(req);report=b.inspect(dict(self.req,path=str(Path(result['path'])/'manifest.json')))
+        with tarfile.open(report['components'][0]['file']) as archive:
+            self.assertEqual(archive.extractfile('payload/root/projects/demo/main.py').read(),target.read_bytes())
+    def test_inventory_reuses_walker_metadata(self):
+        size=b.selection_size;seen=[]
+        def checked(root,path,metadata=None):
+            self.assertIsNotNone(metadata);seen.append(path);return size(root,path,metadata)
+        with patch.object(b,'selection_size',side_effect=checked):b.selection_inventory(self.req)
+        self.assertTrue(seen)
+    def test_compiled_classifier_preserves_longest_prefix_and_custom_ties(self):
+        specs=[{'id':'first','paths':['root/a','root/config']},
+               {'id':'second','paths':['root/a','root/a/deep']},
+               {'id':'folder:root/a','paths':['root/a']},
+               {'id':'other','paths':['root']},{'id':'system','paths':['']}]
+        classifier=b.SelectionClassifier(specs)
+        for relative in ['root/a','root/a/file','root/a/deep/file','root/abc','usr/bin/x','root/config']:
+            matches=[(len(p),int(spec['id'].startswith('folder:')),-i,spec['id']) for i,spec in enumerate(specs) for p in spec['paths'] if not p or relative==p or relative.startswith(p+'/')]
+            self.assertEqual(classifier.group(relative),max(matches)[3])
+    def test_full_size_uses_one_metadata_read_and_ignores_link_targets(self):
+        root=self.base/'scan';root.mkdir();(root/'file').write_bytes(b'123');(root/'nested').mkdir();(root/'nested/a').write_bytes(b'45')
+        (root/'outside').symlink_to(self.guest,target_is_directory=True)
+        (root/'excluded').mkdir();(root/'excluded/x').write_bytes(b'NEVER')
+        original=b.os.scandir;reads={}
+        class Entry:
+            def __init__(self,entry):self.entry=entry;self.path=entry.path
+            def stat(self,follow_symlinks=False):
+                reads[self.path]=reads.get(self.path,0)+1
+                return self.entry.stat(follow_symlinks=follow_symlinks)
+        from contextlib import contextmanager
+        @contextmanager
+        def scan(path):
+            with original(path) as entries:yield (Entry(entry) for entry in entries)
+        with patch.object(b.os,'scandir',scan):self.assertEqual(b.tree_bytes(root,[root/'excluded']),5)
+        self.assertTrue(reads);self.assertTrue(all(n==1 for n in reads.values()))
+
 if __name__=='__main__':unittest.main()

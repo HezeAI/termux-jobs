@@ -1,3 +1,11 @@
+## Private v1.5.26-test
+
+- Faster full/custom backup inventory: reuse metadata and compile category rules.
+- Reuse bounded per-dialog estimates when adding folders; manual fresh refresh.
+- Fresh reads/space estimate, SQLite handling and archive validation retained.
+- Scrolling preserves ongoing activity-line output, filtering idle redraw.
+- No data reset or backup-format change.
+
 ## Private v1.5.25-test
 
 - Preserve ongoing output activity when keyboard visibility changes terminal size.

@@ -97,7 +97,9 @@ final class WorkspaceBackupUi {
         if(id.startsWith("folder:"))return t("Папка · ","Folder · ")+id.substring(7);
         switch(id){case "codex":return t("Codex · программа, авторизация, настройки и история","Codex · CLI, authorization, settings and history");case "agents":return t("Другие AI-агенты · найденные файлы и настройки","Other AI agents · detected files and settings");case "ssh":return t("SSH и Git · ключи и настройки","SSH and Git · keys and settings");case "shell":return t("Оболочка и пользовательские скрипты","Shell and user scripts");case "builds":return t("Инструменты, кеши и результаты сборок","Tools, caches and build outputs");case "other":return t("Остальные пользовательские файлы","Other user files");case "system":return t("Система и установленные зависимости","System and installed dependencies");default:return id;}
     }
-    private void selectiveInventory(JSONObject folders,Map<String,Set<String>> retained){try{run(request("selection-inventory").put("folders",folders),r->selectiveForm(r,folders,retained));}catch(Exception e){message(errorText("INVENTORY_FAILED"));}}
+    private void selectiveInventory(JSONObject folders,Map<String,Set<String>> retained){selectiveInventory(folders,retained,null);}
+    private void selectiveInventory(JSONObject folders,Map<String,Set<String>> retained,JSONObject cached){try{JSONObject req=request("selection-inventory").put("folders",folders);if(cached!=null&&cached.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length<4*1024*1024)req.put("inventoryCache",cached);run(req,r->selectiveForm(r,folders,retained));}catch(Exception e){message(errorText("INVENTORY_FAILED"));}}
+
     private void selectiveForm(JSONObject inventory,JSONObject folders,Map<String,Set<String>> retained){try{
         LinearLayout form=column();info(form,t("Выбранные данные. Полная копия остаётся отдельным режимом. Размеры до сжатия; каждая найденная папка учитывается один раз. Внешние цели ссылок не копируются. Архив содержит секреты.","Selected data. Full backup remains a separate mode. Sizes are before compression; detected folders are counted once. External symlink targets are not copied. Archives contain secrets."));
         CheckBox library=check(form,t("Библиотека, настройки и история терминала","Library, settings and terminal history")+" · "+size(inventory.optLong("libraryBytes")),store.isWritable());library.setEnabled(store.isWritable());
@@ -123,9 +125,10 @@ final class WorkspaceBackupUi {
                 if(!chosen.getPath().startsWith(user)){message(t("Выберите подпапку пользовательского HOME этого окружения.","Choose a subdirectory of this environment's user HOME."));return;}
                 String relative=chosen.getPath().substring(base.length());JSONArray added=folders.optJSONArray(sid);if(added==null){added=new JSONArray();folders.put(sid,added);}boolean exists=false;for(int k=0;k<added.length();k++)if(relative.equals(added.optString(k)))exists=true;if(!exists)added.put(relative);
                 Map<String,Set<String>> keep=selectedItems(checks);keep.computeIfAbsent(sid,key->new HashSet<>()).add("folder:"+relative);
-                holder[0].dismiss();selectiveInventory(folders,keep);
+                holder[0].dismiss();selectiveInventory(folders,keep,inventory);
             }catch(Exception e){message(errorText("INVALID_SELECTION_PATH"));}}));
         }
+        action(form,t("Обновить размеры","Refresh sizes"),()->{Map<String,Set<String>> keep=selectedItems(checks);holder[0].dismiss();selectiveInventory(folders,keep);});
         compressionControl(form);
         info(form,t("Папка создания резервной копии","Backup destination folder"));
         EditText destination=field(form,Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath(),t("Путь к папке","Folder path"));action(form,t("Выбрать каталог","Choose directory"),()->browse(new File(destination.getText().toString()),true,destination::setText));

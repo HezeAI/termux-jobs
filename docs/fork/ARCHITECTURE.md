@@ -1,3 +1,24 @@
+## Private v1.5.26-test: bounded inventory aggregates
+
+Full inventory uses iterative scandir and one no-follow entry.stat; regular file
+sizes only, symlink targets excluded as before. Selective inventory reuses walker
+metadata in selection_size. The compiled prefix owner table preserves longest
+path/custom-folder tie/earliest-rule precedence and is built once per traversal.
+
+Per-dialog JSON inventory may carry bounded directory aggregates keyed by parent
+and baseline winning prefix. Only regular/backing-file counts are aggregated;
+custom directory ownership can be recomputed from representative paths, preserving
+more-specific built-in groups. Error paths remain separately classified. The
+snapshot holds metadata only, uses root dev/inode and baseline rules checks,
+expiry and global serialized-payload/row budgets, and is not a process-wide/background cache.
+UI only passes it on add-folder reclassification; Refresh sizes requests a fresh
+scan. It is never included in the fresh create request. Actual creation recomputes
+plans/sizes and reopens files with existing checks; integrity checks are unchanged.
+
+Scroll has its own default TerminalViewClient callback, distinct from navigation;
+it shares preserve-active/ignore-idle redraw filtering with keyboard resizing.
+No change to actual scroll, PTY, input, permissions or network poll frequency.
+
 ## Private v1.5.25-test: separate terminal resize signal
 
 TerminalViewClient.onTerminalSizeChanged is distinct from viewport navigation.

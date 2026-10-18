@@ -71,7 +71,7 @@ public final class WorkspaceController {
     private boolean activityStopped;
     private void updateTransferBorder(){if(transferBorder!=null)transferBorder.active(!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible()&&servers.transfersActive());}
     private final SessionOutputActivity outputSignal=new SessionOutputActivity();
-    public void onTerminalSizeChanged(){TerminalSession session=activity.getCurrentSession();if(session!=null)outputSignal.resize(session.mHandle,android.os.SystemClock.uptimeMillis());updateActivityLine();}
+    public void onTerminalRedrawInteraction(){TerminalSession session=activity.getCurrentSession();if(session!=null)outputSignal.resize(session.mHandle,android.os.SystemClock.uptimeMillis());updateActivityLine();}
     public void onTerminalViewportChanged(){outputSignal.viewport(android.os.SystemClock.uptimeMillis());updateActivityLine();}
     private boolean activityProbePending,foregroundCommand;private String activityProbeHandle="";
     private final Runnable activityPoll=new Runnable(){public void run(){

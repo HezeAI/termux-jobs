@@ -27,6 +27,9 @@ public interface TerminalViewClient {
     /** Actual size change, e.g. IME hide/show; distinct from navigation. */
     default void onTerminalSizeChanged() {}
 
+    /** Scroll gesture/scroll wheel: preserve existing work, ignore idle redraw. */
+    default void onTerminalScrolled() {}
+
 
 
     /**

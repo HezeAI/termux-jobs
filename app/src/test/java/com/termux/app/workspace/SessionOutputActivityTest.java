@@ -23,7 +23,7 @@ public class SessionOutputActivityTest {
         assertFalse(s.active("idle",201));assertTrue(s.active("other",201));
         assertFalse(s.active("idle",1701));s.output("idle",1702);assertTrue(s.active("idle",1703));
     }
-    @Test public void scrollStillClearsWorkEvenAfterKeyboardResize(){
+    @Test public void sessionNavigationStillClearsWorkEvenAfterKeyboardResize(){
         SessionOutputActivity s=new SessionOutputActivity();s.output("a",100);s.resize("a",200);
         s.viewport(300);s.output("a",400);assertFalse(s.active("a",401));assertFalse(s.active("a",1901));
     }

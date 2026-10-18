@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "Ускорено сканирование полного/выборочного бэкапа: повторное чтение метаданных сокращено, категории ищутся быстрее.",
+    "Добавление папки использует временную сводку; «Обновить размеры» запускает свежий обход. Создание и проверка архива читают файлы заново.",
+    "Прокрутка сохраняет уже активную линию над терминалом; перерисовка при простое отфильтрована."
+  ],
+  "en": [
+    "Faster full/custom backup scanning: reuse metadata and compile category-prefix lookups.",
+    "Folder additions reuse bounded temporary estimates; Refresh sizes starts a fresh scan. Archive creation and verification use fresh reads.",
+    "Scrolling preserves ongoing terminal activity while idle redraw remains filtered."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние пакет, подпись, schema8 и форматы бэкапа. Сброс с1.5.25 не нужен.",
+      "При обновлении с версии до1.5.22 удаляются приватные данные уже удалённых локальных ИИ."
+    ],
+    "en": [
+      "Same package, signing, schema8 and backup formats. No reset from1.5.25.",
+      "Updating from before1.5.22 removes app-private data of retired local AI."
+    ]
+  }
+}
