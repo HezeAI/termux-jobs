@@ -121,7 +121,9 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
     public void onTitleChanged(TerminalSession updatedSession) {
         if (!mActivity.isVisible()) return;
 
-        if(updatedSession!=mActivity.getCurrentSession())mActivity.workspaceSessionTitle(updatedSession);
+        if (updatedSession != mActivity.getCurrentSession()) {
+            mActivity.showToast(toToastTitle(updatedSession), true);
+        }
 
         mActivity.termuxSessionTitleNotifyUpdated();
     }

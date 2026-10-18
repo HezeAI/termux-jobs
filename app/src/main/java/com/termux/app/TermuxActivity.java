@@ -820,7 +820,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         if(mWorkspaceStorageAccess!=null&&mWorkspaceStorageAccess.activityResult(requestCode))return;
     }
 
-    public void workspaceSessionTitle(TerminalSession session){if(mWorkspace!=null)mWorkspace.onSessionTitle(session);}
+    public void workspaceTerminalViewportChanged(){if(mWorkspace!=null)mWorkspace.onTerminalViewportChanged();}
 
     public void workspaceSessionOutput(TerminalSession session){if(mWorkspace!=null)mWorkspace.onSessionOutput(session);}
 

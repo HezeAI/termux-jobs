@@ -23,9 +23,9 @@ public class SessionActivityUiTest {
         assertFalse(SessionActivitySignal.command("bash\n"));assertFalse(SessionActivitySignal.command("ssh"));assertFalse(SessionActivitySignal.command("node"));assertFalse(SessionActivitySignal.busy(-1));assertTrue(SessionActivitySignal.command("sleep\n"));assertTrue(SessionActivitySignal.command("clang"));
     }
     @Test public void lineNeverChangesLayoutHeightWhenWorkChanges(){
-        android.content.Context c=RuntimeEnvironment.application;WorkspaceActivityLine line=new WorkspaceActivityLine(c,null);line.setLayoutParams(new android.widget.FrameLayout.LayoutParams(300,3));
-        line.working(true);assertTrue(line.working());assertEquals(View.VISIBLE,line.getVisibility());assertEquals(3,line.getLayoutParams().height);
-        line.working(false);assertFalse(line.working());assertEquals(View.INVISIBLE,line.getVisibility());assertEquals(3,line.getLayoutParams().height);
+        android.content.Context c=RuntimeEnvironment.application;WorkspaceActivityLine line=new WorkspaceActivityLine(c,null);line.setLayoutParams(new android.widget.FrameLayout.LayoutParams(300,1));
+        line.working(true);assertTrue(line.working());assertEquals(View.VISIBLE,line.getVisibility());assertEquals(1,line.getLayoutParams().height);
+        line.working(false);assertFalse(line.working());assertEquals(View.INVISIBLE,line.getVisibility());assertEquals(1,line.getLayoutParams().height);
     }
     @Test public void hidingAndRestoringTransferPreservesTheWindowAndProgress(){
         Activity a=Robolectric.buildActivity(Activity.class).setup().get();AlertDialog dialog=new AlertDialog.Builder(a).setMessage("progress").setNegativeButton("Cancel",null).create();dialog.show();
@@ -34,8 +34,7 @@ public class SessionActivityUiTest {
     @Test public void backgroundCompletionStopsOnlyPresentation(){
         Activity a=Robolectric.buildActivity(Activity.class).setup().get();AlertDialog d=new AlertDialog.Builder(a).create();d.show();ServerTransferPresentation s=new ServerTransferPresentation();s.begin("one",d,"working");s.background();assertTrue(s.finish());assertFalse(s.active());s.foreground();assertFalse(s.active());d.dismiss();
     }
-    @Test public void paintingBackgroundEventsAndTransferBorderKeepsGeometry(){
-        android.content.Context c=RuntimeEnvironment.application;WorkspaceBackgroundActivity view=new WorkspaceBackgroundActivity(c);view.setLayoutParams(new android.widget.FrameLayout.LayoutParams(300,26));view.layout(0,0,300,26);view.state(true,true);view.event("[2] project · status");view.draw(new Canvas());assertEquals(26,view.getLayoutParams().height);view.state(false,false);assertEquals(View.INVISIBLE,view.getVisibility());
+    @Test public void paintingTransferBorderKeepsGeometry(){
         WorkspaceTransferBorder border=new WorkspaceTransferBorder(1);border.setBounds(0,0,106,48);border.active(true);border.draw(new Canvas());assertTrue(border.active());border.active(false);assertFalse(border.active());assertEquals(106,border.getBounds().width());
     }
 }

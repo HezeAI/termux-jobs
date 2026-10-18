@@ -74,7 +74,7 @@
         <com.termux.app.workspace.WorkspaceActivityLine
             android:id="@+id/workspace_session_activity"
             android:layout_width="match_parent"
-            android:layout_height="3dp"
+            android:layout_height="1dp"
             android:layout_below="@id/workspace_terminal_tools"
             android:visibility="invisible" />
 

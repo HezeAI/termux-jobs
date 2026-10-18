@@ -179,6 +179,8 @@ public class TermuxTerminalViewClient extends TermuxTerminalViewClientBase {
 
 
 
+    @Override public void onTerminalViewportChanged() { mActivity.workspaceTerminalViewportChanged(); }
+
     @Override
     public void onSingleTapUp(MotionEvent e) {
         TerminalEmulator term = mActivity.getCurrentSession().getEmulator();

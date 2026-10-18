@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "Полоса активности терминала уменьшена до1dp; фильтр кратких перерисовок после прокрутки, смены вкладок и размера.",
+    "Верхние кружочки удалены, прежние уведомления о заголовках восстановлены.",
+    "В карточках активных скачивания и отправки добавлена полоса прогресса."
+  ],
+  "en": [
+    "Terminal activity line reduced to1dp; filter brief redraw output after scrolling, tab changes and resizing.",
+    "Header dots removed; original other-session title notifications restored.",
+    "Active upload and download profile cards now include progress bars."
+  ],
+  "compatibility": {
+    "ru": [
+      "Пакет, подпись и schema8 сохранены. При обновлении с1.5.23 сброс данных не нужен.",
+      "При переходе с версии до1.5.22 удаляются приватные модели, истории и настройки уже удалённых локальных ИИ."
+    ],
+    "en": [
+      "Same package, certificate and schema8. No reset when updating from1.5.23.",
+      "Updating from before1.5.22 removes app-private models, histories and settings of retired local AI."
+    ]
+  }
+}

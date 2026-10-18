@@ -51,21 +51,29 @@ final class WorkspaceServers implements AutoCloseable {
     private final List<AlertDialog> ownedDialogs=new ArrayList<>();
     private final Map<String,Long> lastPoll=new HashMap<>();
     private final Map<String,TextView> pollLabels=new HashMap<>(),listMetrics=new HashMap<>();
-    private final Map<String,TextView> transferRows=new HashMap<>();
+    private final Map<String,LinearLayout> transferRows=new HashMap<>();
     private Runnable transferListener=()->{};
     void transferListener(Runnable listener){transferListener=listener==null?()->{}:listener;}
     boolean transfersActive(){return downloads.presentation.active()||uploads.presentation.active();}
     private void transferChanged(){
         if(closed)return;
-        for(Map.Entry<String,TextView> entry:transferRows.entrySet()){
-            boolean upload=entry.getKey().startsWith("up:");String id=entry.getKey().substring(3);ServerTransferPresentation state=upload?uploads.presentation:downloads.presentation;TextView row=entry.getValue();boolean active=state.belongs(id);
+        for(Map.Entry<String,LinearLayout> entry:transferRows.entrySet()){
+            boolean upload=entry.getKey().startsWith("up:");String id=entry.getKey().substring(3);ServerTransferPresentation state=upload?uploads.presentation:downloads.presentation;LinearLayout row=entry.getValue();TextView label=(TextView)row.getChildAt(0);android.widget.ProgressBar bar=(android.widget.ProgressBar)row.getChildAt(1);boolean active=state.belongs(id);
             int visibility=active?View.VISIBLE:View.GONE;if(row.getVisibility()!=visibility)row.setVisibility(visibility);
-            if(active){String value=(upload?t("Загрузка на сервер","Uploading to server"):t("Скачивание с сервера","Downloading from server"))+"\n"+state.text();if(!value.contentEquals(row.getText()))row.setText(value);}
+            if(active){String value=(upload?t("Загрузка на сервер","Uploading to server"):t("Скачивание с сервера","Downloading from server"))+"\n"+state.text();if(!value.contentEquals(label.getText()))label.setText(value);bar.setIndeterminate(state.indeterminate());if(!state.indeterminate())bar.setProgress(state.progress());}
         }
         transferListener.run();
     }
     private void transferRows(LinearLayout parent,ServerProfiles.Profile profile){
-        for(boolean upload:new boolean[]{true,false}){ServerTransferPresentation state=upload?uploads.presentation:downloads.presentation;TextView row=button("",()->state.foreground());row.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);row.setMaxLines(3);row.setEllipsize(android.text.TextUtils.TruncateAt.END);row.setTextSize(12);row.setContentDescription(upload?t("Прогресс загрузки на сервер","Upload progress"):t("Прогресс скачивания с сервера","Download progress"));row.setTag((upload?"up:":"dn:")+profile.id);parent.addView(row,new LinearLayout.LayoutParams(-1,dp(84)));transferRows.put((upload?"up:":"dn:")+profile.id,row);row.setVisibility(View.GONE);}
+        for(boolean upload:new boolean[]{true,false}){
+            ServerTransferPresentation state=upload?uploads.presentation:downloads.presentation;
+            LinearLayout row=column();TextView label=button("",()->{});row.setBackground(label.getBackground());label.setBackground(null);label.setClickable(false);label.setFocusable(false);label.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);label.setMaxLines(3);label.setEllipsize(android.text.TextUtils.TruncateAt.END);label.setTextSize(12);
+            row.addView(label,new LinearLayout.LayoutParams(-1,0,1));
+            android.widget.ProgressBar bar=new android.widget.ProgressBar(activity,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(1000);bar.setProgressTintList(android.content.res.ColorStateList.valueOf(WorkspaceDialogs.ACCENT));bar.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(WorkspaceDialogs.ACCENT));
+            LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(-1,dp(4));bp.setMargins(dp(12),0,dp(12),dp(10));row.addView(bar,bp);
+            row.setOnClickListener(v->state.foreground());row.setContentDescription(upload?t("Прогресс загрузки на сервер","Upload progress"):t("Прогресс скачивания с сервера","Download progress"));row.setTag((upload?"up:":"dn:")+profile.id);
+            parent.addView(row,new LinearLayout.LayoutParams(-1,dp(96)));transferRows.put((upload?"up:":"dn:")+profile.id,row);row.setVisibility(View.GONE);
+        }
         transferChanged();
     }
 

@@ -83,7 +83,7 @@ final class WorkspaceServerDownloads implements AutoCloseable {
             }).show();
     }
     private void check(){if(cancelled||closed)throw new CancellationException();}
-    private void update(TextView status,ProgressBar bar,String text,long bytes,long total){long now=SystemClock.uptimeMillis();if(now-lastUpdate<150&&bytes!=total)return;lastUpdate=now;main.post(()->{if(closed||cancelled)return;status.setText(text);presentation.update(text);bar.setIndeterminate(total<0);if(total>=0)bar.setProgress(total==0?1000:(int)Math.min(1000,bytes*1000.0/total));});}
+    private void update(TextView status,ProgressBar bar,String text,long bytes,long total){long now=SystemClock.uptimeMillis();if(now-lastUpdate<150&&bytes!=total)return;lastUpdate=now;main.post(()->{if(closed||cancelled)return;status.setText(text);presentation.update(text,bytes,total);bar.setIndeterminate(total<0);if(total>=0)bar.setProgress(total==0?1000:(int)Math.min(1000,bytes*1000.0/total));});}
     private void cancel(){cancelled=true;LocalDownloadFile local=destination;if(local!=null)local.cancel();ServerConnection owned=connection;if(owned!=null)owned.close();}
     @Override public void close(){if(closed)return;closed=true;presentation.finish();picker.close();cancel();if(progress!=null)progress.dismiss();if(result!=null)result.dismiss();worker.shutdown();main.removeCallbacksAndMessages(null);}
 }

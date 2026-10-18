@@ -1,3 +1,10 @@
+## Private v1.5.24-test
+
+- Filter activity-line flashes caused by scrolling, tab/session return and resize;
+  reduce thickness to1dp and keep genuine available busy-state signals.
+- Remove header dots; restore original other-session title Toasts.
+- Preserve background transfers, trash and AI Agent robot icons. No data reset.
+
 # v1.5.23-test — server files, background transfers and activity
 
 - Upload/download progress can be hidden with Background and restored from active-only profile rows above Open; simultaneous directions have separate rows. Paint-only clockwise border on Server + Agent while either transfer runs. Transport/cancel semantics retained; no Android foreground service or process-death recovery.

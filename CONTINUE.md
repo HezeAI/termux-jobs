@@ -1,3 +1,15 @@
+# Current private work: v1.5.24-test
+
+Correction requested after device testing: reduce activity-line thickness from3dp to1dp,
+exclude scroll/viewport-resize/tab-return redraw from output-based activity.
+TerminalView default notification is observational only; same input/PTY behavior.
+A 1600ms grace resets old output, ignores redraw during grace, and never replays
+ignored output after grace. Native Codex busy/local foreground task remain valid.
+Remove header dots and restore original other-session title Toast behavior.
+Same package/certificate, code1161, no reset/GitHub/install. See validation1524.
+
+---
+
 # Current private work: v1.5.23-test, server trash
 
 В этой приватной сборке также добавлены:
@@ -421,3 +433,6 @@ LocalAiLiteRt reflection bridge checked against actual0.17.0classes. SDK structu
 Pinned Gemma view_image/video now experimental viaGPU vision with NPU text; listen_audio viaCPU audio, Android MediaExtractor/MediaCodec first5seconds -> bounded mono16k WAV in owned cache, no cloud/speechgeneration/video sound. Separate declaredcapability checks; unverifiedNPU/import models not silently given media. Lazy backend init and text restoration on media init failure; source file authorization unchanged, checked owned media paths, cancellation/decode60sdeadline/sourcecopybounds/cleanup. Media success flag marksattachment not completedmodelanalysis.
 Full Java suite passed after initial changes; final relevant menu tests passed;83 final storage/UI/permissions/Qwen tests passed.10 separate realSDK adapter tests on existing Java21 passed (fake inference, realclasses; not hardwareproof). Actual AARclassfile65 cannot be instrumented by oldJava11Robolectric; probe stays ignored verification, not app. Final isolatedbuild+ZIP/runtime/signature/privategate/QNN/nativepayload/limitedsecretchecks passed. Evidence .verification/litert-native-v153/. Device NPU native conversation/image/audio/video still unverified; request newchat greeting/question,readfile, screenshot,audio then diagnostics. README delivered. Installed apps/user processes/Ubuntu/sharedSDK unchanged.
 Deferred UI environment tiles and server connect/disconnect plan remain pending. Current user requested no rollback; do not create another backup/rollback APK unnecessarily.
+
+Карточки активной передачи сервера теперь включают полосу прогресса обеих направлений.
+При неизвестном размере используется indeterminate; обновляются только собственные View.

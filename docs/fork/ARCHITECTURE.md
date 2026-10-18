@@ -1,3 +1,14 @@
+## Private v1.5.24-test: viewport activity filtering
+
+TerminalViewClient.onTerminalViewportChanged is a default no-op notification,
+implemented by the app to clear output-only activity and ignore redraw for1600ms.
+It runs before doScroll (including fling/mouse), session attach and actual resize;
+workspace screen transitions also clear it. It never consumes input, changes
+scroll position, sends PTY data or schedules a later synthetic output event.
+Known Codex active state/local foreground-task signals remain separate.
+The header activity component and its title callback are removed; original
+other-session title Toast restored. Historical1523 implementation follows.
+
 # Архитектура v1.2.1
 
 ## Private v1.5.23-test: isolated presentation updates

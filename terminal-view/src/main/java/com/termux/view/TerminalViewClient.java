@@ -21,6 +21,9 @@ public interface TerminalViewClient {
      */
     float onScale(float scale);
 
+    /** Viewport navigation/resize, not terminal work. Does not consume input. */
+    default void onTerminalViewportChanged() {}
+
 
 
     /**
