@@ -1,3 +1,13 @@
+## Private v1.5.25-test: separate terminal resize signal
+
+TerminalViewClient.onTerminalSizeChanged is distinct from viewport navigation.
+Actual updateSize uses it; attach/doScroll still use onTerminalViewportChanged.
+The app preserves already-active output on resize and accepts further output
+immediately. For idle handles it clears stale output and suppresses redraw1600ms
+only for that handle. Resize never refreshes the real output timestamp and does
+not keep an otherwise finished session busy. All callbacks are paint-only signals;
+PTY dimensions, input, cancellation, lifecycle and scroll behavior are unchanged.
+
 ## Private v1.5.24-test: viewport activity filtering
 
 TerminalViewClient.onTerminalViewportChanged is a default no-op notification,
@@ -598,3 +608,9 @@ LocalAiToolErrors records original invalid text and exact parser reason, selects
 ## v1.5.0 SFTP batches and distribution gate
 
 ServerDownloadPlan inventories bounded trees read-only via LSTAT/REALPATH/READDIR; links/special files skipped. ServerSftp implements bounded eight-request 32KiB downloads with response IDs, ordered writes and before/after metadata checks; short/invalid replies fail closed. WorkspaceServerDownloads serializes one owned batch, snapshots download profile, uses a six-hour download transport bound (existing SFTP upload default unchanged), exclusive local UUID destination and per-file temporary publish. Move uses v3 nonoverwriting RENAME with target/self/source checks, no cross-device copy fallback or automatic partial rollback. ServerDiagnostics adds FILE_MOVE; no command/path payload enters diagnostics. BuildConfig.LOCAL_AI_ENABLED is false for TERMUX_PUBLIC_RELEASE=1, guarded in new session/preset selection, existing launch/edit/menu and inference service. Private build retains local AI and adds optional Qualcomm runtime; public APK excludes QAIRT/dispatch runtime, and no user data migration/reset is performed.
+
+Линия над терминалом и бегущая рамка передачи сервера обновляются примерно60 раз/с. Частота данных сервера не менялась.
+
+У каждого индикатора не более одного ожидающего кадра. Скрытие/отключение
+отменяет кадр; рамка сервера останавливается вне терминала и при сворачивании.
+Это не останавливает передачу файлов и не меняет частоту сетевых запросов.

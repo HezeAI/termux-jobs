@@ -1,0 +1,24 @@
+{
+  "ru": [
+    "Исправлена пауза индикатора активности при открытии и закрытии клавиатуры во время ответа.",
+    "Фильтр перерисовки при простое и прокрутке сохранён. Линия1dp и серверные полосы прогресса остаются.",
+    "Линия над чатом и бегущая рамка передачи сервера настроены примерно на60 кадров/с; частота обновления данных сервера не меняется.",
+    "Устранены повторные запросы кадров индикаторов; скрытая рамка передачи приостанавливается без остановки передачи."
+  ],
+  "en": [
+    "Keep ongoing session activity visible when the keyboard opens or closes during output.",
+    "Idle resize/scroll redraw filtering retained. Keep the1dp line and server transfer progress bars.",
+    "Set both the terminal activity line and server transfer border to approximately60fps; server data polling is unchanged.",
+    "Avoid duplicate pending animation frames; suspend a hidden transfer border without stopping the file transfer."
+  ],
+  "compatibility": {
+    "ru": [
+      "Пакет/подпись/schema8 сохранены; сброс с1.5.24 не нужен.",
+      "При переходе с версии до1.5.22 удаляются приватные данные уже удалённых локальных ИИ."
+    ],
+    "en": [
+      "Same package/signature/schema8; no reset from1.5.24.",
+      "Updating from before1.5.22 removes app-private data of retired local AI."
+    ]
+  }
+}

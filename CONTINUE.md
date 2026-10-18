@@ -1,3 +1,14 @@
+# Current private work: v1.5.25-test
+
+Keyboard show/hide temporarily reset active shimmer because all viewport changes
+cleared output and ignored it1600ms. New separate size callback preserves already
+active output; idle resize uses per-handle redraw suppression and never affects
+other sessions. Real output extends activity, resize itself does not. Scroll and
+session/tab navigation retain1524 behavior. Same package/cert/schema, code1162.
+Private Download delivery only; no install or GitHub publication authorized.
+
+---
+
 # Current private work: v1.5.24-test
 
 Correction requested after device testing: reduce activity-line thickness from3dp to1dp,
@@ -436,3 +447,9 @@ Deferred UI environment tiles and server connect/disconnect plan remain pending.
 
 Карточки активной передачи сервера теперь включают полосу прогресса обеих направлений.
 При неизвестном размере используется indeterminate; обновляются только собственные View.
+
+Линия над терминалом и бегущая рамка передачи сервера обновляются примерно60 раз/с. Частота данных сервера не менялась.
+
+У каждого индикатора не более одного ожидающего кадра. Скрытие/отключение
+отменяет кадр; рамка сервера останавливается вне терминала и при сворачивании.
+Это не останавливает передачу файлов и не меняет частоту сетевых запросов.

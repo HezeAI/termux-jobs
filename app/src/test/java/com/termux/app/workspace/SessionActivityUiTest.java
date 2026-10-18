@@ -37,4 +37,22 @@ public class SessionActivityUiTest {
     @Test public void paintingTransferBorderKeepsGeometry(){
         WorkspaceTransferBorder border=new WorkspaceTransferBorder(1);border.setBounds(0,0,106,48);border.active(true);border.draw(new Canvas());assertTrue(border.active());border.active(false);assertFalse(border.active());assertEquals(106,border.getBounds().width());
     }
+    @Test public void repeatedBorderDrawingCannotAccumulateFrameCallbacks()throws Exception{
+        WorkspaceTransferBorder border=new WorkspaceTransferBorder(1);
+        final int[] schedules={0},cancels={0};final Runnable[] pending={null};
+        border.setCallback(new android.graphics.drawable.Drawable.Callback(){
+            public void invalidateDrawable(android.graphics.drawable.Drawable d){}
+            public void scheduleDrawable(android.graphics.drawable.Drawable d,Runnable r,long when){schedules[0]++;pending[0]=r;}
+            public void unscheduleDrawable(android.graphics.drawable.Drawable d,Runnable r){cancels[0]++;pending[0]=null;}
+        });
+        border.setBounds(0,0,106,48);
+        // Robolectric's legacy PathMeasure returns zero; isolate frame scheduling from graphics.
+        java.lang.reflect.Field measure=WorkspaceTransferBorder.class.getDeclaredField("measure");measure.setAccessible(true);
+        measure.set(border,new android.graphics.PathMeasure(){@Override public float getLength(){return 200;}});
+        border.active(true);
+        for(int i=0;i<20;i++)border.draw(new Canvas());assertEquals(1,schedules[0]);
+        pending[0].run();border.draw(new Canvas());assertEquals(2,schedules[0]);
+        border.active(false);assertTrue(cancels[0]>0);assertNull(pending[0]);
+        border.draw(new Canvas());assertEquals(2,schedules[0]);
+    }
 }

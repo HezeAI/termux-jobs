@@ -24,6 +24,9 @@ public interface TerminalViewClient {
     /** Viewport navigation/resize, not terminal work. Does not consume input. */
     default void onTerminalViewportChanged() {}
 
+    /** Actual size change, e.g. IME hide/show; distinct from navigation. */
+    default void onTerminalSizeChanged() {}
+
 
 
     /**

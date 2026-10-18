@@ -68,11 +68,14 @@ public final class WorkspaceController {
     private final ExecutorService codexReader = Executors.newSingleThreadExecutor();
     private WorkspaceActivityLine activityLine;
     private WorkspaceTransferBorder transferBorder;
+    private boolean activityStopped;
+    private void updateTransferBorder(){if(transferBorder!=null)transferBorder.active(!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible()&&servers.transfersActive());}
     private final SessionOutputActivity outputSignal=new SessionOutputActivity();
+    public void onTerminalSizeChanged(){TerminalSession session=activity.getCurrentSession();if(session!=null)outputSignal.resize(session.mHandle,android.os.SystemClock.uptimeMillis());updateActivityLine();}
     public void onTerminalViewportChanged(){outputSignal.viewport(android.os.SystemClock.uptimeMillis());updateActivityLine();}
     private boolean activityProbePending,foregroundCommand;private String activityProbeHandle="";
     private final Runnable activityPoll=new Runnable(){public void run(){
-        if(closed)return;updateActivityLine();
+        if(closed||activityStopped)return;updateActivityLine();
         TerminalSession session=activity.getCurrentSession();WorkspaceStore.Session profile=session==null?null:store.findByHandle(session.mHandle);
         boolean shell=profile==null||(!profile.environment.equals("ssh")&&!profile.environment.equals("codex")&&!profile.claudeAgent&&!profile.geminiAgent&&profile.aiAgent.isEmpty());
         if(screen==Screen.TERMINAL&&activity.isVisible()&&session!=null&&session.isRunning()&&shell&&!activityProbePending){
@@ -86,7 +89,7 @@ public final class WorkspaceController {
     }
     private void updateActivityLine(){
         if(activityLine==null)return;TerminalSession session=activity.getCurrentSession();boolean active=false;
-        if(screen==Screen.TERMINAL&&activity.isVisible()&&session!=null&&session.isRunning()){
+        if(!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible()&&session!=null&&session.isRunning()){
             active=outputSignal.active(session.mHandle,android.os.SystemClock.uptimeMillis());
             WorkspaceStore.Session profile=store.findByHandle(session.mHandle);
             boolean shell=profile==null||(!profile.environment.equals("ssh")&&!profile.environment.equals("codex")&&!profile.claudeAgent&&!profile.geminiAgent&&profile.aiAgent.isEmpty());
@@ -133,7 +136,7 @@ public final class WorkspaceController {
         interactiveInput = activity.getSharedPreferences("workspace-input", Context.MODE_PRIVATE)
             .getBoolean("interactive-input", false);
         activity.getTerminalView().setSoftKeyboardInputEnabled(interactiveInput);
-        servers.transferListener(()->{if(!closed&&transferBorder!=null)transferBorder.active(servers.transfersActive());});
+        servers.transferListener(this::updateTransferBorder);
         header = activity.findViewById(R.id.workspace_header);
         navigation = activity.findViewById(R.id.workspace_navigation);
         tabs = activity.findViewById(R.id.workspace_tabs);
@@ -177,8 +180,8 @@ public final class WorkspaceController {
         });
         codexHandler.postDelayed(codexPoll, 1000);
     }
-    public void onStop(){codexHandler.removeCallbacks(activityPoll);if(activityLine!=null)activityLine.working(false);WorkspaceUpdates.background(activity);servers.pause();}
-    public void onResume(){codexHandler.removeCallbacks(activityPoll);codexHandler.post(activityPoll);servers.resume();WorkspaceUpdates.automatic(activity,()->{if(!closed)renderHeader();});}
+    public void onStop(){activityStopped=true;if(transferBorder!=null)transferBorder.active(false);codexHandler.removeCallbacks(activityPoll);if(activityLine!=null)activityLine.working(false);WorkspaceUpdates.background(activity);servers.pause();}
+    public void onResume(){activityStopped=false;updateTransferBorder();codexHandler.removeCallbacks(activityPoll);codexHandler.post(activityPoll);servers.resume();WorkspaceUpdates.automatic(activity,()->{if(!closed)renderHeader();});}
     public void refreshLanguage() {
         terminalInput.setHint(WorkspaceText.tr("Введите команду…"));
         inputRow.getChildAt(0).setContentDescription(WorkspaceText.tr("Вставить сохранённую команду"));
@@ -414,7 +417,7 @@ public final class WorkspaceController {
         statusRow.setVisibility(screen==Screen.TERMINAL?View.VISIBLE:View.GONE);
         View oldServer=statusRow.findViewWithTag("server-entry");if(oldServer!=null)statusRow.removeView(oldServer);
         TextView server=button(serverLabel,false,()->show(Screen.SERVERS,true));server.setTextSize(12);server.setPadding(dp(4),0,dp(4),0);server.setContentDescription(serverLabel);server.setTag("server-entry");
-        if(transferBorder!=null)transferBorder.active(false);transferBorder=new WorkspaceTransferBorder(activity.getResources().getDisplayMetrics().density);server.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{server.getBackground(),transferBorder}));transferBorder.active(servers.transfersActive());
+        if(transferBorder!=null)transferBorder.active(false);transferBorder=new WorkspaceTransferBorder(activity.getResources().getDisplayMetrics().density);server.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{server.getBackground(),transferBorder}));updateTransferBorder();
         FrameLayout.LayoutParams serverParams=new FrameLayout.LayoutParams(dp(106),dp(48),Gravity.END|Gravity.CENTER_VERTICAL);statusRow.addView(server,serverParams);
 
         LinearLayout.LayoutParams toolsParams=new LinearLayout.LayoutParams(dp(106),-2);toolsParams.setMarginStart(dp(6));tabs.addView(serverTools,toolsParams);

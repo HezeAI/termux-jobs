@@ -1,3 +1,10 @@
+## Private v1.5.25-test
+
+- Preserve ongoing output activity when keyboard visibility changes terminal size.
+- Keep idle resize/scroll redraw filtering; resizing cannot prolong activity.
+- Set terminal-line and server-border animation intervals to16ms (approximately60fps). Server polling unchanged.
+- No data migration/reset; all1524 server and UI functions retained.
+
 ## Private v1.5.24-test
 
 - Filter activity-line flashes caused by scrolling, tab/session return and resize;
