@@ -1,3 +1,24 @@
+## Private v1.5.27-test: inline inventory and memory cache
+
+BackupInventoryCache stores bounded full/custom JSON estimates and custom folder
+lists by app-files/PREFIX key, never an Activity/worker/file contents. Reads do not
+extend age; reclassification preserves the original age; fresh scans renew it.
+Restore/import clears estimates. No scheduled job/timer or persistent cache DB.
+Existing Python aggregate-cache validation and fresh create/read checks remain.
+A missing requested full environment now fails before output directory creation.
+
+WorkspaceBackupScanHeader is a custom title: title-left, Refresh/spinner-right,
+one bounded status line underneath. WorkspaceBackupUi uses owned Engine callbacks
+inline, disables the form/create while scanning, preserves disabled component
+states, and cancels only that scan on dismissal. Closed headers ignore callbacks.
+After success only the backup dialog is rebuilt with selections/destination;
+consent is deliberately not inherited. No terminal/header/server page rerenders.
+
+Compression method and level are independent controls. Requests carry engine,
+level and strictly validated threads (gzip1, pigz2/4); older requests default to
+prior behavior. No dependency added. Metadata records threads; old readers ignore
+this optional field. Native legacy proot compression remains explicitly separate.
+
 ## Private v1.5.26-test: bounded inventory aggregates
 
 Full inventory uses iterative scandir and one no-follow entry.stat; regular file

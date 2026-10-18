@@ -38,6 +38,23 @@ class CompressionTests(unittest.TestCase):
   self.fake_pigz(True)
   with self.assertRaises((b.BackupError,BrokenPipeError)):
    with b.compressed_output(self.root/'bad.gz',self.options('pigz')) as f:f.write(b'test')
+ def test_explicit_two_and_four_threads_are_passed_and_roundtrip(self):
+  self.fake_pigz();real=b.subprocess.Popen;calls=[]
+  def start(args,**kw):calls.append(args);return real(args,**kw)
+  for threads in (2,4):
+   options=b.compression_options(dict(prefix=str(self.prefix),compressionEngine='pigz',compressionThreads=threads))
+   path=self.root/('threads'+str(threads)+'.gz')
+   with patch.object(b.subprocess,'Popen',side_effect=start):
+    with b.compressed_output(path,options) as stream:stream.write(b'fixture roundtrip')
+   self.assertEqual(calls[-1][2:4],['-p',str(threads)])
+   self.assertEqual(gzip.decompress(path.read_bytes()),b'fixture roundtrip')
+ def test_invalid_thread_modes_fail_before_creating_output(self):
+  self.fake_pigz()
+  for engine,threads in [('gzip',2),('pigz',1),('pigz',3),('pigz',8),('pigz',True),('pigz','4')]:
+   with self.assertRaisesRegex(b.BackupError,'INVALID_COMPRESSION'):
+    b.compression_options(dict(prefix=str(self.prefix),compressionEngine=engine,compressionThreads=threads))
+  self.assertEqual(self.options()['threads'],1)
+  self.assertEqual(self.options('pigz')['threads'],4)
  def test_pigz_failure_cleanup_only_its_child(self):
   self.executable('pigz','import time\ntime.sleep(30)\n');children=[];real=b.subprocess.Popen
   def start(*a,**kw):p=real(*a,**kw);children.append(p);return p

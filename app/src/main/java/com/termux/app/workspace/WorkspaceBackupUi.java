@@ -13,7 +13,7 @@ import java.util.function.Consumer;
 
 /** Deliberate backup/restore flows. No operation runs merely from opening settings. */
 final class WorkspaceBackupUi {
-    private int compressionLevel=3;private String compressionEngine="gzip";private boolean installingPigz;
+    private int compressionLevel=3,compressionThreads=1;private String compressionEngine="gzip";private boolean installingPigz;
     private final TermuxActivity activity;private final WorkspaceStore store;private final Runnable changed;private final Consumer<String> packageInstall;
     private WorkspaceBackupUi(TermuxActivity a,WorkspaceStore s,Runnable r,Consumer<String> install){activity=a;store=s;changed=r;packageInstall=install;}
     static String text(Activity a,String ru,String en){return WorkspaceLanguage.code(a).equals("ru")?ru:en;}
@@ -29,26 +29,30 @@ final class WorkspaceBackupUi {
     private EditText field(LinearLayout form,String value,String hint){EditText e=new EditText(activity);e.setSingleLine();e.setText(value);e.setHint(hint);e.setTextColor(WorkspaceDialogs.TEXT);e.setSelectAllOnFocus(true);form.addView(e);return e;}
     private void action(LinearLayout form,String title,Runnable click){TextView b=WorkspaceDialogs.action(activity,title,0);b.setOnClickListener(v->click.run());LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=WorkspaceDialogs.dp(activity,8);form.addView(b,p);}
     private ScrollView scroll(LinearLayout form){ScrollView s=new ScrollView(activity);s.setFillViewport(false);s.addView(form);return s;}
-    private String compressionName(){return compressionEngine+" · "+(compressionLevel==1?t("Быстрое","Fast"):compressionLevel==9?t("Компактное","Compact"):t("Сбалансированное","Balanced"));}
-    private JSONObject compressedRequest(JSONObject request)throws JSONException{return request.put("compressionLevel",compressionLevel).put("compressionEngine",compressionEngine);}
+    private String compressionName(){return compressionEngine+" · "+compressionThreads+t(compressionThreads==1?" поток":" потока",compressionThreads==1?" thread":" threads");}
+    private String levelName(){return compressionLevel==1?t("Быстрое","Fast"):compressionLevel==9?t("Максимальное","Maximum"):t("Сбалансированное","Balanced");}
+    private JSONObject compressedRequest(JSONObject request)throws JSONException{return request.put("compressionLevel",compressionLevel).put("compressionEngine",compressionEngine).put("compressionThreads",compressionThreads);}
     private boolean pigzAvailable(){return new File(WorkspaceBackupEngine.prefix(),"bin/pigz").canExecute();}
     private void compressionControl(LinearLayout form){
-        info(form,t("Сжатие · формат .tar.gz","Compression · .tar.gz format"));
+        info(form,t("Способ сжатия · .tar.gz","Compression method · .tar.gz"));
         TextView control=WorkspaceDialogs.action(activity,compressionName(),0);form.addView(control);
-        control.setOnClickListener(v->backupBuilder(activity).setTitle(t("Способ сжатия","Compression method")).setItems(new String[]{t("gzip — обычное сжатие, меньше нагрузка","gzip — standard compression, lower load"),t("pigz — до 4 потоков, быстрее сжатие, выше нагрузка и нагрев","pigz — up to 4 threads, faster compression, more load and heat"),t("Уровень сжатия","Compression level")},(d,w)->{
-            if(w==0){compressionEngine="gzip";control.setText(compressionName());}
-            else if(w==1){if(pigzAvailable()){compressionEngine="pigz";control.setText(compressionName());}else offerPigz(control);}
-            else backupBuilder(activity).setTitle(t("Уровень сжатия","Compression level")).setItems(new String[]{t("Быстрое · уровень 1, архив больше","Fast · level 1, larger archive"),t("Сбалансированное · уровень 3","Balanced · level 3"),t("Компактное · уровень 9, медленнее","Compact · level 9, slower")},(x,n)->{compressionLevel=new int[]{1,3,9}[n];control.setText(compressionName());}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
+        control.setOnClickListener(v->backupBuilder(activity).setTitle(t("Способ сжатия","Compression method")).setItems(new String[]{t("gzip — 1 поток","gzip — 1 thread"),t("pigz — 2 потока","pigz — 2 threads"),t("pigz — 4 потока","pigz — 4 threads")},(d,w)->{
+            if(w==0){compressionEngine="gzip";compressionThreads=1;control.setText(compressionName());}
+            else if(pigzAvailable()){compressionEngine="pigz";compressionThreads=w==1?2:4;control.setText(compressionName());}
+            else offerPigz(control,w==1?2:4);
         }).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
-        info(form,t("Оба способа создают совместимый .tar.gz. Уровень 3 выбран по умолчанию. Ускорение зависит от накопителя и состава файлов. Полная Ubuntu на старом proot-distro использует штатное сжатие независимо от выбора.","Both methods create compatible .tar.gz archives. Level 3 is the default. Speed depends on storage and file mix. Full Ubuntu backups on legacy proot-distro use native compression regardless of this selection."));
+        info(form,t("Уровень сжатия","Compression level"));
+        TextView level=WorkspaceDialogs.action(activity,levelName(),0);form.addView(level);
+        level.setOnClickListener(v->backupBuilder(activity).setTitle(t("Уровень сжатия","Compression level")).setItems(new String[]{t("Быстрое · уровень 1, архив больше","Fast · level 1, larger archive"),t("Сбалансированное · уровень 3","Balanced · level 3"),t("Максимальное · уровень 9, медленнее","Maximum · level 9, slower")},(d,w)->{compressionLevel=new int[]{1,3,9}[w];level.setText(levelName());}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
+        info(form,t("Все варианты создают совместимый .tar.gz. Уровень 3 выбран по умолчанию. Ускорение зависит от накопителя и состава файлов. Полная Ubuntu на старом proot-distro использует штатное сжатие независимо от выбора.","All options create compatible .tar.gz archives. Level 3 is the default. Speed depends on storage and file mix. Full Ubuntu backups on legacy proot-distro use native compression regardless of this selection."));
     }
-    private void offerPigz(TextView control){
+    private void offerPigz(TextView control,int threads){
         if(installingPigz)return;
         backupBuilder(activity).setTitle(t("Установить pigz?","Install pigz?")).setMessage(t("Пакет pigz отсутствует. Установить его в общую среду Termux в фоне? Нужен интернет; APT может добавить зависимости. После успешной установки будет выбран pigz. Сжатие gzip доступно без установки.","pigz is missing. Install it into the shared Termux environment in the background? Internet is required; APT may add dependencies. Successful installation selects pigz. gzip works without installation.")).setPositiveButton(t("Установить","Install"),(d,w)->{
             WorkspaceBackupEngine engine=new WorkspaceBackupEngine();installingPigz=true;control.setEnabled(false);control.setText(t("Установка pigz…","Installing pigz…"));
             boolean started=engine.start(activity,request("install-pigz"),new WorkspaceBackupEngine.Callback(){
                 public void progress(JSONObject event){}
-                public void done(JSONObject result){installingPigz=false;control.setEnabled(true);if(pigzAvailable()){compressionEngine="pigz";control.setText(compressionName());}else{control.setText(compressionName());message(errorText("PIGZ_INSTALL_FAILED"));}}
+                public void done(JSONObject result){installingPigz=false;control.setEnabled(true);if(pigzAvailable()){compressionEngine="pigz";compressionThreads=threads;control.setText(compressionName());}else{control.setText(compressionName());message(errorText("PIGZ_INSTALL_FAILED"));}}
                 public void error(String code){installingPigz=false;control.setEnabled(true);control.setText(compressionName());message(errorText(code));}
             });
             if(!started){installingPigz=false;control.setEnabled(true);control.setText(compressionName());message(t("Другая операция ещё выполняется. Дождитесь её завершения и повторите установку.","Another operation is running. Wait for it to finish and retry installation."));}
@@ -61,7 +65,7 @@ final class WorkspaceBackupUi {
         dialog.setOnCancelListener(d->engine.cancel());dialog.setOnDismissListener(d->progress.close());
         boolean started=engine.start(activity,request,new WorkspaceBackupEngine.Callback(){
             public void progress(JSONObject event){if(dialog.isShowing())progress.update(stageName(event.optString("stage")),event);}
-            public void done(JSONObject result){progress.close();dialog.dismiss();try{success.accept(result);}catch(Exception e){message(t("Операция не применена полностью. Проверьте результат и сохранённые исходные данные.","Operation was not fully applied. Inspect the result; original files were retained."));}}
+            public void done(JSONObject result){progress.close();dialog.dismiss();try{if("restore".equals(request.optString("operation")))BackupInventoryCache.SHARED.clear();success.accept(result);}catch(Exception e){message(t("Операция не применена полностью. Проверьте результат и сохранённые исходные данные.","Operation was not fully applied. Inspect the result; original files were retained."));}}
             public void error(String code){progress.close();dialog.dismiss();message(errorText(code));}
         });if(started){dialog.show();progress.start();}else{progress.close();message(t("Другая операция резервного копирования ещё выполняется.","Another backup operation is still running."));}
     }
@@ -69,27 +73,55 @@ final class WorkspaceBackupUi {
     private String stageName(String stage){switch(stage){case "INSTALL_PIGZ":return t("Установка pigz","Installing pigz");case "DATABASE":return t("Копирование базы данных","Backing up database");case "CHECKSUM":return t("Проверка SHA-256","Checking SHA-256");case "SCAN":return t("Проверка структуры архива","Checking archive structure");case "VERIFY_COMPRESSION":return t("Проверка целостности сжатия","Verifying compressed stream");case "ARCHIVE":return t("Создание архива","Creating archive");case "PROOT_DISTRO":return t("Работа proot-distro","Running proot-distro");case "RESTORE_FILES":return t("Извлечение в новую папку","Extracting to a new folder");case "PREPARE_UBUNTU":return t("Подготовка отдельной Ubuntu","Preparing separate Ubuntu");default:return t("Подготовка и оценка размера","Preparing and estimating size");}}
     private String errorText(String code){switch(code){case "PIGZ_INSTALL_FAILED":return t("Не удалось установить pigz. Проверьте интернет, репозитории и завершение других операций APT. gzip остаётся доступен. При необходимости выполните вручную: pkg install pigz.","Could not install pigz. Check internet, repositories and other APT operations. gzip remains available. If needed, run manually: pkg install pigz.");case "PIGZ_REQUIRED":return t("pigz больше недоступен. Выберите gzip или установите pigz заново.","pigz is no longer available. Select gzip or install pigz again.");case "SOURCE_UNREADABLE":case "SOURCE_CHANGED_RETRY":return t("Выбранные исходные файлы недоступны или изменились во время копирования. Копия не завершена; текущие окружения не заменялись. Повторите проверку состава после завершения задач, меняющих файлы.","Selected source files cannot be read or changed while copying. Backup is incomplete; existing environments were not replaced. Recheck the selection after file-writing jobs finish.");case "PROOT_LINK_UNSAFE":return t("Служебная ссылка proot повреждена или ведёт за пределы разрешённого хранилища. Копирование остановлено без изменения источника.","A proot internal link is broken or escapes the permitted backing store. Copying stopped without changing the source.");case "PYTHON_REQUIRED":return t("Нужен Python в Termux. Установите вручную: pkg install python. Данные не изменены.","Python is required in Termux. Install manually: pkg install python. Your data was not changed.");case "INSUFFICIENT_SPACE":return t("Недостаточно свободного места. Для восстановления нужен запас на проверенную копию и извлечение.","Not enough free space. Restore needs room for a verified copy and extraction.");case "CANCELLED":return t("Операция отменена. Незавершённая копия помечена INCOMPLETE, если каталог уже был создан. Не используйте её как готовый бэкап.","Cancelled. A created partial backup/restore folder is marked INCOMPLETE. Do not treat it as complete.");case "ARCH_OR_PROOT_UNCONFIRMED":return t("Архитектура не подтверждена/несовместима или нужен современный proot-distro. Восстановление Ubuntu заблокировано.","Architecture is unconfirmed/incompatible or modern proot-distro is required. Ubuntu restore blocked.");case "UNRECOGNIZED_ARCHIVE":return t("Формат архива не распознан. Поддерживаются manifest.json нашего бэкапа, workspace-v1.json и распознаваемые TAR-архивы HOME/PREFIX/proot-distro.","Archive format not recognized. Supported: our manifest.json, workspace-v1.json and recognized HOME/PREFIX/proot-distro TAR layouts.");case "UNSAFE_ARCHIVE_PATH":case "WRITE_THROUGH_SYMLINK":case "UNSAFE_LINK":case "DUPLICATE_ARCHIVE_PATH":return t("Архив содержит опасные или конфликтующие пути/ссылки. Восстановление заблокировано.","Archive contains unsafe or conflicting paths/links. Restore blocked.");case "CHECKSUM_MISMATCH":case "BACKUP_CHANGED_RECHECK":return t("Контрольная сумма не совпадает или бэкап изменился. Выберите и проверьте его заново.","Checksum mismatch or backup changed. Select and verify it again.");default:return t("Операция остановлена. Текущие окружения не заменялись. Возможна нехватка прав, повреждённый/неподдерживаемый архив или ошибка инструмента. Код: ","Operation stopped. Existing environments were not replaced. Check permissions, archive format/integrity and required tools. Code: ")+code;}}
     private JSONObject request(String operation){try{return WorkspaceBackupEngine.base(activity,operation);}catch(Exception e){throw new IllegalStateException(e);}}
-    private void inventory(){backupBuilder(activity).setTitle(t("Режим резервного копирования","Backup mode")).setItems(new String[]{t("Полная копия окружения","Full environment backup"),t("По выбору","Custom selection")},(d,w)->{if(w==0)run(request("inventory"),this::createForm);else selectiveInventory(new JSONObject(),new LinkedHashMap<>());}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();}
+    private String inventoryKey(boolean selective){return (selective?"selection:":"full:")+activity.getFilesDir().getAbsolutePath()+":"+WorkspaceBackupEngine.prefix();}
+    private void inventory(){backupBuilder(activity).setTitle(t("Режим резервного копирования","Backup mode")).setItems(new String[]{t("Полная копия окружения","Full environment backup"),t("По выбору","Custom selection")},(d,w)->{
+        BackupInventoryCache.Entry entry=BackupInventoryCache.SHARED.get(inventoryKey(w==1));
+        if(w==0)createForm(entry==null?null:entry.inventory);
+        else try{selectiveForm(entry==null?null:entry.inventory,entry==null?new JSONObject():new JSONObject(entry.folders.toString()),new LinkedHashMap<>(),new JSONObject(),entry==null,null);}catch(Exception e){message(errorText("INVENTORY_FAILED"));}
+    }).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();}
+    private void inlineInventory(AlertDialog dialog,WorkspaceBackupScanHeader header,LinearLayout form,JSONObject req,Consumer<JSONObject> success){
+        if(header.running||header.closed||installingPigz)return;
+        WorkspaceBackupEngine engine=new WorkspaceBackupEngine();Map<View,Boolean> enabled=new IdentityHashMap<>();rememberEnabled(form,enabled);for(View v:enabled.keySet())v.setEnabled(false);
+        Button positive=dialog.getButton(-1);boolean wasEnabled=positive!=null&&positive.isEnabled();if(positive!=null)positive.setEnabled(false);
+        header.start(engine,t("Сканирование…","Scanning…"));
+        Runnable restore=()->{if(!header.ready)return;for(Map.Entry<View,Boolean> e:enabled.entrySet())e.getKey().setEnabled(e.getValue());if(positive!=null)positive.setEnabled(wasEnabled);};
+        boolean started=engine.start(activity,req,new WorkspaceBackupEngine.Callback(){
+            public void progress(JSONObject event){if(!header.closed&&dialog.isShowing())header.progress(stageName(event.optString("stage")),event);}
+            public void done(JSONObject result){if(header.closed||!dialog.isShowing())return;header.ready=true;header.finish(null);restore.run();try{success.accept(result);}catch(Exception e){header.finish(errorText("INVENTORY_FAILED"));}}
+            public void error(String code){if(header.closed||!dialog.isShowing())return;header.finish(errorText(code));restore.run();}
+        });
+        if(!started){header.finish(t("Другая операция резервного копирования ещё выполняется.","Another backup operation is still running."));restore.run();}
+    }
+    private void rememberEnabled(View view,Map<View,Boolean> enabled){enabled.put(view,view.isEnabled());if(view instanceof android.view.ViewGroup){android.view.ViewGroup group=(android.view.ViewGroup)view;for(int i=0;i<group.getChildCount();i++)rememberEnabled(group.getChildAt(i),enabled);}}
     static void bindConsent(AlertDialog dialog,CheckBox agreement){
         Button create=dialog.getButton(AlertDialog.BUTTON_POSITIVE);
         create.setEnabled(agreement.isChecked());create.setAlpha(agreement.isChecked()?1f:0.4f);
         agreement.setOnCheckedChangeListener((button,checked)->{create.setEnabled(checked);create.setAlpha(checked?1f:0.4f);});
     }
-    private void createForm(JSONObject inventory){try{
+    private void createForm(JSONObject inventory){createForm(inventory,new JSONObject());}
+    private void createForm(JSONObject supplied,JSONObject state){try{
+        boolean initial=supplied==null;
+        JSONObject inventory=initial?new JSONObject().put("environments",new JSONArray()).put("ubuntuBytes",new JSONObject()):supplied;
+        WorkspaceBackupScanHeader scan=new WorkspaceBackupScanHeader(activity,t("Создать резервную копию","Create backup"));scan.ready=!initial;
         LinearLayout form=column();info(form,t("Архивы могут содержать SSH-ключи, токены и авторизацию. Завершите изменяющие файлы задачи перед копированием. Процессы не останавливаются автоматически; копия работающих баз не гарантированно согласована.","Archives may contain SSH keys, tokens and authorization. Finish file-writing tasks first. Processes are not stopped automatically; live database copies may be inconsistent."));
-        CheckBox library=check(form,t("Команды, заметки, пресеты, настройки и файлы истории сессий","Commands, notes, presets, settings and shell history files"),true);
+        CheckBox library=check(form,t("Команды, заметки, пресеты, настройки и файлы истории сессий","Commands, notes, presets, settings and shell history files"),state.optBoolean("library",true));
         if(!store.isWritable()){library.setChecked(false);library.setEnabled(false);info(form,t("Библиотека недоступна для чтения/записи. Её исходный файл нужно сохранить отдельно.","Library is unavailable. Preserve its original file separately."));}
-        CheckBox home=check(form,"Termux HOME · "+size(inventory.optLong("homeBytes")),false),prefix=check(form,"Termux PREFIX · "+size(inventory.optLong("prefixBytes")),false);
+        CheckBox home=check(form,"Termux HOME · "+size(inventory.optLong("homeBytes")),state.optBoolean("home")),prefix=check(form,"Termux PREFIX · "+size(inventory.optLong("prefixBytes")),state.optBoolean("prefix"));
         info(form,t("PREFIX сохраняется без rootfs/cache proot-distro и временных файлов. Ubuntu выбирается отдельно. Внешние файлы по символьным ссылкам и общая память Android не копируются.","PREFIX excludes proot-distro storage/cache and temporary files. Select Ubuntu separately. External symlink targets and Android shared storage are not copied."));
-        JSONArray environments=inventory.getJSONArray("environments");List<CheckBox> envChecks=new ArrayList<>();for(int i=0;i<environments.length();i++){String name=environments.getJSONObject(i).getString("name");envChecks.add(check(form,"Ubuntu / proot · "+name+" · "+size(inventory.getJSONObject("ubuntuBytes").optLong(name)),false));}
+        JSONArray environments=inventory.getJSONArray("environments");List<CheckBox> envChecks=new ArrayList<>();for(int i=0;i<environments.length();i++){String name=environments.getJSONObject(i).getString("name");envChecks.add(check(form,"Ubuntu / proot · "+name+" · "+size(inventory.getJSONObject("ubuntuBytes").optLong(name)),state.optJSONObject("envs")!=null&&state.optJSONObject("envs").optBoolean(name)));}
         compressionControl(form);
         info(form,t("Папка создания резервной копии","Backup destination folder"));
-        EditText destination=field(form,Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath(),t("Путь к папке","Folder path"));action(form,t("Выбрать каталог","Choose directory"),()->browse(new File(destination.getText().toString()),true,p->destination.setText(p)));
+        EditText destination=field(form,state.optString("destination",Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath()),t("Путь к папке","Folder path"));action(form,t("Выбрать каталог","Choose directory"),()->browse(new File(destination.getText().toString()),true,p->destination.setText(p)));
         CheckBox confirmed=check(form,t("Я завершил важные задачи и понимаю, что архив содержит секреты","I finished important jobs and understand the archive contains secrets"),false);
-        AlertDialog dialog=backupBuilder(activity).setTitle(t("Создать резервную копию","Create backup")).setView(scroll(form)).setPositiveButton(t("Создать","Create"),null).setNegativeButton(WorkspaceText.tr("Отмена"),null).create();dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{try{
+        AlertDialog dialog=backupBuilder(activity).setCustomTitle(scan.view).setView(scroll(form)).setPositiveButton(t("Создать","Create"),null).setNegativeButton(WorkspaceText.tr("Отмена"),null).create();dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{try{
             if(installingPigz){message(t("Дождитесь окончания установки pigz.","Wait for pigz installation to finish."));return;}if(!confirmed.isChecked()){confirmed.setError(t("Нужно подтверждение","Confirmation required"));return;}JSONArray selected=new JSONArray(),envs=new JSONArray();if(library.isChecked())selected.put("library");if(home.isChecked())selected.put("home");if(prefix.isChecked())selected.put("prefix");for(int i=0;i<envChecks.size();i++)if(envChecks.get(i).isChecked())envs.put(environments.getJSONObject(i).getString("name"));if(selected.length()+envs.length()==0)return;
             JSONObject req=compressedRequest(request("create")).put("destination",destination.getText().toString().trim()).put("components",selected).put("environments",envs).put("workspace",store.encode()).put("settings",WorkspaceBackupImport.settings(activity));dialog.dismiss();run(req,this::backupCreated);
-        }catch(Exception e){message(t("Не удалось подготовить бэкап.","Could not prepare backup."));}}));dialog.show();bindConsent(dialog,confirmed);
+        }catch(Exception e){message(t("Не удалось подготовить бэкап.","Could not prepare backup."));}}));dialog.setOnDismissListener(d->scan.close());dialog.show();bindConsent(dialog,confirmed);
+        Runnable refresh=()->{try{
+            JSONObject draft=new JSONObject().put("library",library.isChecked()).put("home",home.isChecked()).put("prefix",prefix.isChecked()).put("destination",destination.getText().toString());JSONObject names=new JSONObject();for(int i=0;i<envChecks.size();i++)names.put(environments.getJSONObject(i).getString("name"),envChecks.get(i).isChecked());draft.put("envs",names);
+            inlineInventory(dialog,scan,form,request("inventory"),result->{BackupInventoryCache.SHARED.put(inventoryKey(false),result,new JSONObject());dialog.dismiss();createForm(result,draft);});
+        }catch(Exception e){scan.finish(errorText("INVENTORY_FAILED"));}};
+        scan.refresh.setOnClickListener(v->refresh.run());if(initial)refresh.run();
     }catch(Exception e){message(errorText("INVENTORY_FAILED"));}}
     private String scopeName(String id){return id.equals("termux")?"Termux":id.startsWith("ubuntu:")?"Ubuntu · "+id.substring(7):id;}
     private String itemName(String id){
@@ -97,12 +129,14 @@ final class WorkspaceBackupUi {
         if(id.startsWith("folder:"))return t("Папка · ","Folder · ")+id.substring(7);
         switch(id){case "codex":return t("Codex · программа, авторизация, настройки и история","Codex · CLI, authorization, settings and history");case "agents":return t("Другие AI-агенты · найденные файлы и настройки","Other AI agents · detected files and settings");case "ssh":return t("SSH и Git · ключи и настройки","SSH and Git · keys and settings");case "shell":return t("Оболочка и пользовательские скрипты","Shell and user scripts");case "builds":return t("Инструменты, кеши и результаты сборок","Tools, caches and build outputs");case "other":return t("Остальные пользовательские файлы","Other user files");case "system":return t("Система и установленные зависимости","System and installed dependencies");default:return id;}
     }
-    private void selectiveInventory(JSONObject folders,Map<String,Set<String>> retained){selectiveInventory(folders,retained,null);}
-    private void selectiveInventory(JSONObject folders,Map<String,Set<String>> retained,JSONObject cached){try{JSONObject req=request("selection-inventory").put("folders",folders);if(cached!=null&&cached.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length<4*1024*1024)req.put("inventoryCache",cached);run(req,r->selectiveForm(r,folders,retained));}catch(Exception e){message(errorText("INVENTORY_FAILED"));}}
-
-    private void selectiveForm(JSONObject inventory,JSONObject folders,Map<String,Set<String>> retained){try{
+    private void selectiveInventory(JSONObject folders,Map<String,Set<String>> retained,JSONObject cached,JSONObject state){selectiveForm(cached,folders,retained,state,true,cached);}
+    private void selectiveForm(JSONObject supplied,JSONObject folders,Map<String,Set<String>> retained,JSONObject state,boolean scanOnOpen,JSONObject cached){try{
+        boolean initial=supplied==null;
+        JSONObject inventory=initial?new JSONObject().put("scopes",new JSONArray()):supplied;
+        WorkspaceBackupScanHeader scan=new WorkspaceBackupScanHeader(activity,t("По выбору (тестирование)","Custom selection (testing)"));scan.ready=!initial;
+        final EditText[] destinationField={null};
         LinearLayout form=column();info(form,t("Выбранные данные. Полная копия остаётся отдельным режимом. Размеры до сжатия; каждая найденная папка учитывается один раз. Внешние цели ссылок не копируются. Архив содержит секреты.","Selected data. Full backup remains a separate mode. Sizes are before compression; detected folders are counted once. External symlink targets are not copied. Archives contain secrets."));
-        CheckBox library=check(form,t("Библиотека, настройки и история терминала","Library, settings and terminal history")+" · "+size(inventory.optLong("libraryBytes")),store.isWritable());library.setEnabled(store.isWritable());
+        CheckBox library=check(form,t("Библиотека, настройки и история терминала","Library, settings and terminal history")+" · "+size(inventory.optLong("libraryBytes")),store.isWritable()&&state.optBoolean("library",true));library.setEnabled(store.isWritable());
         JSONArray scopes=inventory.getJSONArray("scopes");Map<String,Map<String,CheckBox>> checks=new LinkedHashMap<>();
         final AlertDialog[] holder={null};
         for(int i=0;i<scopes.length();i++){
@@ -125,23 +159,33 @@ final class WorkspaceBackupUi {
                 if(!chosen.getPath().startsWith(user)){message(t("Выберите подпапку пользовательского HOME этого окружения.","Choose a subdirectory of this environment's user HOME."));return;}
                 String relative=chosen.getPath().substring(base.length());JSONArray added=folders.optJSONArray(sid);if(added==null){added=new JSONArray();folders.put(sid,added);}boolean exists=false;for(int k=0;k<added.length();k++)if(relative.equals(added.optString(k)))exists=true;if(!exists)added.put(relative);
                 Map<String,Set<String>> keep=selectedItems(checks);keep.computeIfAbsent(sid,key->new HashSet<>()).add("folder:"+relative);
-                holder[0].dismiss();selectiveInventory(folders,keep,inventory);
+                JSONObject draft=new JSONObject().put("library",library.isChecked()).put("destination",destinationField[0].getText().toString());holder[0].dismiss();selectiveInventory(folders,keep,inventory,draft);
             }catch(Exception e){message(errorText("INVALID_SELECTION_PATH"));}}));
         }
-        action(form,t("Обновить размеры","Refresh sizes"),()->{Map<String,Set<String>> keep=selectedItems(checks);holder[0].dismiss();selectiveInventory(folders,keep);});
         compressionControl(form);
         info(form,t("Папка создания резервной копии","Backup destination folder"));
-        EditText destination=field(form,Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath(),t("Путь к папке","Folder path"));action(form,t("Выбрать каталог","Choose directory"),()->browse(new File(destination.getText().toString()),true,destination::setText));
+        EditText destination=field(form,state.optString("destination",Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath()),t("Путь к папке","Folder path"));action(form,t("Выбрать каталог","Choose directory"),()->browse(new File(destination.getText().toString()),true,destination::setText));
+        destinationField[0]=destination;
         info(form,t("История чатов не заменяет файлы проектов. Работающие процессы и Android Keystore не переносятся. Для других AI-агентов точный состав и зависимости требуют отдельной проверки.","Chat history does not include project files. Live processes and Android Keystore cannot be transferred. Other AI agents need individual file/dependency review."));
-        AlertDialog dialog=backupBuilder(activity).setTitle(t("По выбору (тестирование)","Custom selection (testing)")).setView(scroll(form)).setPositiveButton(t("Проверить состав","Check selection"),null).setNegativeButton(WorkspaceText.tr("Отмена"),null).create();holder[0]=dialog;
+        AlertDialog dialog=backupBuilder(activity).setCustomTitle(scan.view).setView(scroll(form)).setPositiveButton(t("Проверить состав","Check selection"),null).setNegativeButton(WorkspaceText.tr("Отмена"),null).create();holder[0]=dialog;
         dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{try{
             if(installingPigz){message(t("Дождитесь окончания установки pigz.","Wait for pigz installation to finish."));return;}JSONArray selections=new JSONArray();long total=library.isChecked()?inventory.optLong("libraryBytes"):0;
             for(int i=0;i<scopes.length();i++){JSONObject scope=scopes.getJSONObject(i);String sid=scope.getString("id");JSONArray ids=new JSONArray();Map<String,CheckBox> rows=checks.get(sid);JSONArray items=scope.getJSONArray("items");for(int j=0;j<items.length();j++){JSONObject item=items.getJSONObject(j);CheckBox b=rows.get(item.getString("id"));if(b!=null&&b.isChecked()){ids.put(item.getString("id"));total+=item.optLong("bytes");}}if(ids.length()>0)selections.put(new JSONObject().put("scope",sid).put("items",ids).put("folders",folders.optJSONArray(sid)==null?new JSONArray():folders.getJSONArray(sid)).put("runtime",scope.optJSONObject("runtime")));}
             if(selections.length()==0&&!library.isChecked())return;
             JSONObject req=compressedRequest(request("create")).put("destination",destination.getText().toString().trim()).put("components",library.isChecked()?new JSONArray().put("library"):new JSONArray()).put("environments",new JSONArray()).put("selections",selections).put("workspace",store.encode()).put("settings",WorkspaceBackupImport.settings(activity));
             selectionConfirmation(req,scopes,checks,dialog,total);
-        }catch(Exception e){message(errorText("INVALID_SELECTION"));}}));dialog.show();
+        }catch(Exception e){message(errorText("INVALID_SELECTION"));}}));dialog.setOnDismissListener(d->scan.close());dialog.show();
+        Runnable refresh=()->{try{
+            Map<String,Set<String>> keep=scanOnOpen?retained:selectedItems(checks);JSONObject draft=new JSONObject().put("library",library.isChecked()).put("destination",destination.getText().toString());JSONObject req=request("selection-inventory").put("folders",folders);
+            if(scanOnOpen&&cached!=null&&cached.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length<4*1024*1024)req.put("inventoryCache",cached);
+            inlineInventory(dialog,scan,form,req,result->{BackupInventoryCache.SHARED.put(inventoryKey(true),result,folders);dialog.dismiss();selectiveForm(result,folders,keep,draft,false,null);});
+        }catch(Exception e){scan.finish(errorText("INVENTORY_FAILED"));}};
+        scan.refresh.setOnClickListener(v->{selectiveRefresh(dialog,scan,form,folders,checks,library,destination);});if(scanOnOpen||initial)refresh.run();
     }catch(Exception e){message(errorText("INVENTORY_FAILED"));}}
+    private void selectiveRefresh(AlertDialog dialog,WorkspaceBackupScanHeader scan,LinearLayout form,JSONObject folders,Map<String,Map<String,CheckBox>> checks,CheckBox library,EditText destination){try{
+        Map<String,Set<String>> keep=selectedItems(checks);JSONObject draft=new JSONObject().put("library",library.isChecked()).put("destination",destination.getText().toString());
+        inlineInventory(dialog,scan,form,request("selection-inventory").put("folders",folders),result->{BackupInventoryCache.SHARED.put(inventoryKey(true),result,folders);dialog.dismiss();selectiveForm(result,folders,keep,draft,false,null);});
+    }catch(Exception e){scan.finish(errorText("INVENTORY_FAILED"));}}
     private Map<String,Set<String>> selectedItems(Map<String,Map<String,CheckBox>> checks){Map<String,Set<String>> result=new LinkedHashMap<>();for(Map.Entry<String,Map<String,CheckBox>> scope:checks.entrySet()){Set<String> ids=new HashSet<>();for(Map.Entry<String,CheckBox> row:scope.getValue().entrySet())if(row.getValue().isChecked())ids.add(row.getKey());result.put(scope.getKey(),ids);}return result;}
     private void selectionConfirmation(JSONObject req,JSONArray scopes,Map<String,Map<String,CheckBox>> checks,AlertDialog parent,long total)throws JSONException{
         LinearLayout form=column();info(form,t("Выбрано до сжатия: ","Selected before compression: ")+size(total));JSONArray plans=req.getJSONArray("selections");final AlertDialog[] reviewHolder={null};
@@ -226,7 +270,7 @@ final class WorkspaceBackupUi {
     private void applyImport(JSONObject report,JSONObject restored,WorkspaceBackupImport.Choice choice){
         AlertDialog wait=backupBuilder(activity).setTitle(label(activity)).setMessage(t("Проверка и импорт библиотеки…","Validating and importing library…")).create();wait.setCancelable(false);wait.show();
         new Thread(()->{try{WorkspaceBackupImport.Prepared prepared=WorkspaceBackupImport.prepare(activity,report,restored,choice);activity.runOnUiThread(()->{try{
-            if(activity.isDestroyed())return;WorkspaceBackupImport.apply(activity,store,prepared,choice);if(choice.settings){WorkspaceBackupImport.settings(activity,report.optJSONObject("settings"));WorkspaceLanguage.apply(activity);}changed.run();
+            if(activity.isDestroyed())return;WorkspaceBackupImport.apply(activity,store,prepared,choice);if(choice.settings){WorkspaceBackupImport.settings(activity,report.optJSONObject("settings"));WorkspaceLanguage.apply(activity);}BackupInventoryCache.SHARED.clear();changed.run();
             new Thread(()->{try{store.awaitWrites();String saved=new String(readFile(new File(activity.getFilesDir(),"workspace-v1.json")),java.nio.charset.StandardCharsets.UTF_8);if(!WorkspaceBackupImport.persisted(new JSONObject(saved),prepared))throw new java.io.IOException();activity.runOnUiThread(()->{wait.dismiss();message(t("Выбранные компоненты восстановлены. Ничего из архива не запускалось. Проверьте пути, настройки и авторизацию. Для части настроек нужно заново открыть приложение.\n","Selected components restored. No archive content was executed. Review paths, settings and authorization. Some settings require reopening the app.\n")+restored.optString("path",t("Импортирована библиотека","Library imported"))+"\n"+t("Отдельные Ubuntu добавлены как пресеты запуска. Исходные библиотеки перед импортом сохранены в приватном каталоге приложения.","Separate Ubuntu environments were added as launch presets. Original libraries were saved in the app's private directory before import."));});}catch(Exception e){activity.runOnUiThread(()->{wait.dismiss();message(errorText("LIBRARY_WRITE_FAILED"));});}},"jobs-backup-save").start();
         }catch(Exception e){wait.dismiss();message(errorText("IMPORT_FAILED"));}});}catch(Exception e){activity.runOnUiThread(()->{wait.dismiss();message(t("Файлы могли быть извлечены, но импорт библиотеки не завершён. Проверьте каталог результата.","Files may have been staged, but library import did not complete. Inspect the result directory."));});}},"jobs-backup-import").start();
     }

@@ -1,3 +1,12 @@
+## Private v1.5.27-test
+
+- Backup Refresh at title-right in both modes; inline spinner and one status line.
+- Reuse bounded process-memory estimates on repeated entry; fresh manual refresh.
+- Close cancels only the owned scan; retain components/destination across refresh.
+- Split gzip1/pigz2/pigz4 method from compression level1/3/9; validate thread count.
+- Fail if a selected full environment disappeared instead of silently omitting it.
+- Same package, certificate, library schema and backup format; no reset.
+
 ## Private v1.5.26-test
 
 - Faster full/custom backup inventory: reuse metadata and compile category rules.

@@ -1,3 +1,21 @@
+# Current private work: v1.5.27-test
+
+Backup refresh moved into custom title at right in both modes. Header spinner
+replaces Refresh during scans, one inline filename/byte status line; no modal scan
+progress. Only explicit mode selection/Refresh/add-folder launches scan. Close
+cancels its owned worker, ignores late callbacks. Initial placeholder blocks create
+until inventory ready. Refresh preserves components/destination; consent is renewed.
+Process-memory estimate cache has no Activity/worker/timer/disk persistence,
+bounded payload and expiry; gets do not renew expiry, regrouping doesn't either.
+Restore/import invalidates it. Fresh source checks still govern archive creation.
+Compression method gzip1/pigz2/pigz4 separate from level1/3/9; explicit install
+prompt retained. Python validates worker count and records it in metadata.
+Missing requested full Ubuntu now fails SOURCE_CHANGED_RETRY before output creation.
+Same package/signature/schema, code1164. Private Download delivery only. No GitHub
+publication or install authorized. See release/validation1527.
+
+---
+
 # Current private work: v1.5.26-test
 
 Backup inventory optimizations: DirEntry no-follow metadata reused; selective

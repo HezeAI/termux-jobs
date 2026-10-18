@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "«Обновить» справа в заголовке обоих режимов бэкапа: кружок во время сканирования и одна строка прогресса под шапкой.",
+    "Быстрый повторный вход с оценкой из памяти; ручное обновление выполняет свежий обход. Закрытие окна отменяет сканирование.",
+    "Отдельный выбор gzip1 / pigz2 / pigz4 потока и уровня сжатия. Компоненты и папка назначения сохраняются при обновлении размеров."
+  ],
+  "en": [
+    "Refresh at title-right in both backup modes: inline spinner and one scan-status line beneath the header.",
+    "Reuse a valid in-memory estimate on repeated entry; Refresh scans anew. Closing the window cancels its scan.",
+    "Choose gzip1 / pigz2 / pigz4 threads separately from compression level. Keep components and destination when refreshing sizes."
+  ],
+  "compatibility": {
+    "ru": [
+      "Пакет/подпись/schema8 и форматы бэкапа прежние. Сброс с1.5.26 не требуется.",
+      "При обновлении с версии до1.5.22 удаляются приватные данные уже удалённых локальных ИИ."
+    ],
+    "en": [
+      "Same package/signature/schema8 and backup formats. No reset from1.5.26.",
+      "Updating from before1.5.22 removes app-private data of retired local AI."
+    ]
+  }
+}

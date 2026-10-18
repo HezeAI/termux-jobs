@@ -380,9 +380,12 @@ def compression_options(request):
     engine=request.get('compressionEngine','gzip')
     if type(level) is not int or level not in (1,3,9) or engine not in ('gzip','pigz'):
         raise BackupError('INVALID_COMPRESSION')
+    threads=request.get('compressionThreads',4 if engine=='pigz' else 1)
+    if type(threads) is not int or threads not in ((2,4) if engine=='pigz' else (1,)):
+        raise BackupError('INVALID_COMPRESSION')
     if engine=='pigz' and not pigz_available(request['prefix']):
         raise BackupError('PIGZ_REQUIRED')
-    return dict(level=level,engine=engine,prefix=request['prefix'])
+    return dict(level=level,engine=engine,threads=threads,prefix=request['prefix'])
 
 
 def compression_status(request):
@@ -424,7 +427,7 @@ def compressed_output(path, options=None):
         # Bound parallelism to four workers; avoid using every core while terminals are active.
         with open(path,'xb') as output:
             p=subprocess.Popen([str(Path(options['prefix'])/'bin/pigz'),'-'+str(options['level']),
-                                '-p',str(min(4,os.cpu_count() or 1)),'-c'],stdin=subprocess.PIPE,
+                                '-p',str(options.get('threads',4)),'-c'],stdin=subprocess.PIPE,
                                stdout=output,stderr=subprocess.DEVNULL)
             try:
                 yield p.stdin
@@ -843,6 +846,8 @@ def create(request):
     info = environment_info(request) if needs_full else dict(arch=current_arch(),environments=[],homeBytes=0,prefixBytes=0,ubuntuBytes={})
     library_bytes = tree_bytes(Path(request['files'])/'workspace-sessions') if 'library' in wanted else 0
     estimate = library_bytes + (info['homeBytes'] if 'home' in wanted else 0) + (info['prefixBytes'] if 'prefix' in wanted else 0)
+    if any(name not in {e['name'] for e in info['environments']} for name in request.get('environments', [])):
+        raise BackupError('SOURCE_CHANGED_RETRY')
     selected_envs = [e for e in info['environments'] if e['name'] in request.get('environments', [])]
     estimate += sum(info['ubuntuBytes'][e['name']] for e in selected_envs)
     plan_sizes=[]
@@ -857,7 +862,7 @@ def create(request):
     protected_write(out / 'INCOMPLETE', b'Not verified. Do not use as a complete backup.\n')
     meta = dict(format='termux-jobs-backup', version=2 if plans else 1, created=time.time(), live=True,
                 consistency='Best effort live copy; user must finish writers before backup. No process memory.',
-                compression=dict(engine=compression['engine'],level=compression['level']),
+                compression=dict(engine=compression['engine'],level=compression['level'],threads=compression['threads']),
                 source=dict(arch=info['arch'], packageId=request.get('packageId'), prefix=str(prefix), home=str(home), appVersion=request.get('appVersion')), components=[])
     def add(name, kind):
         file = out / name

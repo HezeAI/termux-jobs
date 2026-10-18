@@ -210,6 +210,12 @@ class SelectionTests(unittest.TestCase):
         result=b.create(req);report=b.inspect(dict(self.req,path=str(Path(result['path'])/'manifest.json')))
         with tarfile.open(report['components'][0]['file']) as archive:
             self.assertEqual(archive.extractfile('payload/root/projects/demo/main.py').read(),target.read_bytes())
+    def test_removed_environment_after_inventory_is_not_silently_omitted(self):
+        b.environment_info(self.req)
+        self.guest.parent.rename(self.base/'moved-environment')
+        req=dict(self.req,destination=str(self.out),components=[],environments=['ubuntu'])
+        with self.assertRaisesRegex(b.BackupError,'SOURCE_CHANGED_RETRY'):b.create(req)
+        self.assertEqual(list(self.out.iterdir()),[])
     def test_inventory_reuses_walker_metadata(self):
         size=b.selection_size;seen=[]
         def checked(root,path,metadata=None):
