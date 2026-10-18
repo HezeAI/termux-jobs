@@ -111,6 +111,7 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
     @Override
     public void onTextChanged(TerminalSession changedSession) {
         com.termux.app.workspace.WorkspaceDiagnostics.onOutput(changedSession);
+        mActivity.workspaceSessionOutput(changedSession);
         if (!mActivity.isVisible()) return;
 
         if (mActivity.getCurrentSession() == changedSession) mActivity.getTerminalView().onScreenUpdated();
@@ -120,12 +121,7 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
     public void onTitleChanged(TerminalSession updatedSession) {
         if (!mActivity.isVisible()) return;
 
-        if (updatedSession != mActivity.getCurrentSession()) {
-            // Only show toast for other sessions than the current one, since the user
-            // probably consciously caused the title change to change in the current session
-            // and don't want an annoying toast for that.
-            mActivity.showToast(toToastTitle(updatedSession), true);
-        }
+        if(updatedSession!=mActivity.getCurrentSession())mActivity.workspaceSessionTitle(updatedSession);
 
         mActivity.termuxSessionTitleNotifyUpdated();
     }

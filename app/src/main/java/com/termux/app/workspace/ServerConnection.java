@@ -76,7 +76,9 @@ final class ServerConnection implements AutoCloseable {
             if(!trusted())throw new IOException("TRUST_REQUIRED");List<String> args=ssh();args.add("--");args.add(profile.host);args.add(command);
             networkStart=System.nanoTime();byte[] data=execute(args,input,limit,40);network=(System.nanoTime()-networkStart)/1000000;networkStart=0;size=data.length;parseStart=System.nanoTime();
             JSONObject result;try{result=new JSONObject(new String(data,StandardCharsets.UTF_8));}catch(JSONException e){throw new IOException("PYTHON_OR_AGENT_UNAVAILABLE");}
-            if(result.has("ok")&&!result.optBoolean("ok"))throw new IOException(result.optString("error","AGENT_ERROR"));return result;
+            if(result.has("ok")&&!result.optBoolean("ok"))throw new IOException(result.optString("error","AGENT_ERROR"));
+            if(op==ServerDiagnostics.Op.FILE_DELETE&&result.optJSONObject("result")!=null){String code=result.getJSONObject("result").optString("error");if(!code.isEmpty())failure=new IOException(code);}
+            return result;
         }catch(Exception e){failure=e;throw e;}finally{if(networkStart!=0)network=(System.nanoTime()-networkStart)/1000000;if(parseStart!=0)parse=(System.nanoTime()-parseStart)/1000000;trace.finish(network,parse,size,closed?new CancellationException():failure);}
     }
     JSONObject diagnose()throws Exception{
@@ -97,6 +99,12 @@ final class ServerConnection implements AutoCloseable {
         String code;try(InputStream in=activity.getAssets().open("workspace-server-schedules.py")){ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);code=out.toString("UTF-8");}
         JSONObject reply=remote(ServerDiagnostics.Op.SCHEDULE,"python3 -I -c "+SessionShell.quote(code),request.toString().getBytes(StandardCharsets.UTF_8),2*1024*1024);
         if(!reply.optBoolean("ok"))throw new IOException(reply.optString("error","SCHEDULE_ERROR"));return reply.getJSONObject("result");
+    }
+    JSONObject deleteFiles(String directory,JSONArray entries)throws Exception{
+        String code;try(InputStream in=activity.getAssets().open("workspace-server-delete.py")){ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);code=out.toString("UTF-8");}
+        JSONObject request=new JSONObject().put("directory",directory).put("entries",entries);
+        JSONObject reply=remote(ServerDiagnostics.Op.FILE_DELETE,"python3 -I -c "+SessionShell.quote(code),request.toString().getBytes(StandardCharsets.UTF_8),131072);
+        return reply.getJSONObject("result");
     }
     JSONObject search(String path,String query)throws Exception{
         String code;try(InputStream in=activity.getAssets().open("workspace-server-search.py")){ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int n;while((n=in.read(buffer))!=-1)out.write(buffer,0,n);code=out.toString("UTF-8");}

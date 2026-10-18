@@ -1,0 +1,20 @@
+package com.termux.app.workspace;
+
+import android.app.AlertDialog;
+
+/** Main-thread presentation only. Hiding the window never owns/cancels the transport. */
+final class ServerTransferPresentation {
+    private String owner="",text="";
+    private AlertDialog window;
+    private boolean active,background;
+    private Runnable changed=()->{};
+    void listener(Runnable listener){changed=listener==null?()->{}:listener;}
+    boolean active(){return active;}
+    boolean belongs(String id){return active&&owner.equals(id);}
+    String text(){return text;}
+    void begin(String id,AlertDialog dialog,String initial){owner=id;window=dialog;text=initial;active=true;background=false;changed.run();}
+    void update(String value){text=value;if(active)changed.run();}
+    void background(){if(!active||window==null)return;background=true;window.hide();changed.run();}
+    void foreground(){if(!active||window==null)return;background=false;window.show();changed.run();}
+    boolean finish(){boolean hidden=background;active=false;background=false;window=null;changed.run();return hidden;}
+}

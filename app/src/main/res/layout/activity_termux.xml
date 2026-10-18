@@ -71,10 +71,17 @@
                 android:visibility="gone" />
         </FrameLayout>
 
+        <com.termux.app.workspace.WorkspaceActivityLine
+            android:id="@+id/workspace_session_activity"
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:layout_below="@id/workspace_terminal_tools"
+            android:visibility="invisible" />
+
         <androidx.drawerlayout.widget.DrawerLayout
             android:id="@+id/drawer_layout"
             android:layout_width="match_parent"
-            android:layout_below="@id/workspace_terminal_tools"
+            android:layout_below="@id/workspace_session_activity"
             android:layout_above="@+id/terminal_toolbar_view_pager"
             android:layout_height="match_parent">
 

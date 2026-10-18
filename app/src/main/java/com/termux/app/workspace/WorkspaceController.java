@@ -66,6 +66,57 @@ public final class WorkspaceController {
     private final ExecutorService reader = Executors.newSingleThreadExecutor();
     private final android.os.Handler codexHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final ExecutorService codexReader = Executors.newSingleThreadExecutor();
+    private WorkspaceActivityLine activityLine;
+    private WorkspaceBackgroundActivity backgroundActivity;
+    private final java.util.Map<String,String> backgroundTitles=new java.util.LinkedHashMap<>();
+    private long lastBackgroundEvent;
+    public void onSessionTitle(TerminalSession session){
+        if(closed||session==null||session==activity.getCurrentSession())return;
+        String value=session.getTitle();if(value==null)value="";String old=backgroundTitles.put(session.mHandle,value);while(backgroundTitles.size()>64)backgroundTitles.remove(backgroundTitles.keySet().iterator().next());
+        updateBackgroundActivity();long now=android.os.SystemClock.uptimeMillis();
+        if(backgroundActivity!=null&&!value.equals(old)&&!value.trim().isEmpty()&&(lastBackgroundEvent==0||now-lastBackgroundEvent>=6000)){lastBackgroundEvent=now;backgroundActivity.event(value.substring(0,Math.min(220,value.length())));}
+    }
+    private void updateBackgroundActivity(){
+        if(backgroundActivity==null)return;TerminalSession current=activity.getCurrentSession();boolean available=false,active=false;long now=android.os.SystemClock.uptimeMillis();
+        for(TermuxSession item:live()){TerminalSession session=item.getTerminalSession();if(session==current||!session.isRunning())continue;available=true;active|=now-outputActivity.getOrDefault(session.mHandle,-10000L)<1600;}
+        backgroundActivity.state(available,active);
+    }
+    private void showBackgroundSessions(){
+        final AlertDialog[] popup={null};LinearLayout body=column();TerminalSession current=activity.getCurrentSession();int index=0,count=0;
+        for(TermuxSession item:live()){index++;TerminalSession session=item.getTerminalSession();if(session==current)continue;count++;String title=session.mSessionName==null?"Bash":session.mSessionName,value=session.getTitle();String status=android.os.SystemClock.uptimeMillis()-outputActivity.getOrDefault(session.mHandle,-10000L)<1600?tr("Есть активность","Output active"):session.isRunning()?tr("Открыта","Open"):tr("Завершена","Finished");TextView row=button("["+index+"] "+title+" · "+status+(value==null||value.trim().isEmpty()?"":"\n"+value),false,()->{});row.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);row.setMaxLines(3);row.setEllipsize(TextUtils.TruncateAt.END);body.addView(row,new LinearLayout.LayoutParams(-1,-2));row.setOnClickListener(v->{if(popup[0]!=null)popup[0].dismiss();activity.getTermuxTerminalSessionClient().setCurrentSession(session);show(Screen.TERMINAL,false);});}
+        if(count==0)body.addView(text(tr("Других сессий нет","No other sessions"),13,MUTED));
+        AlertDialog dialog=WorkspaceDialogs.builder(activity).setTitle(tr("Другие сессии","Other sessions")).setView(formScroll(body)).setNegativeButton(tr("Назад","Back"),null).create();
+        popup[0]=dialog;dialog.show();
+    }
+
+    private WorkspaceTransferBorder transferBorder;
+    private final java.util.LinkedHashMap<String,Long> outputActivity=new java.util.LinkedHashMap<>();
+    private boolean activityProbePending,foregroundCommand;private String activityProbeHandle="";
+    private final Runnable activityPoll=new Runnable(){public void run(){
+        if(closed)return;updateActivityLine();updateBackgroundActivity();
+        TerminalSession session=activity.getCurrentSession();WorkspaceStore.Session profile=session==null?null:store.findByHandle(session.mHandle);
+        boolean shell=profile==null||(!profile.environment.equals("ssh")&&!profile.environment.equals("codex")&&!profile.claudeAgent&&!profile.geminiAgent&&profile.aiAgent.isEmpty());
+        if(screen==Screen.TERMINAL&&activity.isVisible()&&session!=null&&session.isRunning()&&shell&&!activityProbePending){
+            activityProbePending=true;final String handle=session.mHandle;final int pid=session.getPid();
+            reader.execute(()->{boolean busy=SessionActivitySignal.busy(pid);activity.runOnUiThread(()->{activityProbePending=false;if(closed)return;TerminalSession current=activity.getCurrentSession();if(current==session&&current.getPid()==pid){activityProbeHandle=handle;foregroundCommand=busy;updateActivityLine();}});});
+        }
+        codexHandler.postDelayed(this,700);
+    }};
+    public void onSessionOutput(TerminalSession session){
+        if(closed||session==null)return;outputActivity.put(session.mHandle,android.os.SystemClock.uptimeMillis());while(outputActivity.size()>64)outputActivity.remove(outputActivity.keySet().iterator().next());updateActivityLine();updateBackgroundActivity();
+    }
+    private void updateActivityLine(){
+        if(activityLine==null)return;TerminalSession session=activity.getCurrentSession();boolean active=false;
+        if(screen==Screen.TERMINAL&&activity.isVisible()&&session!=null&&session.isRunning()){
+            active=android.os.SystemClock.uptimeMillis()-outputActivity.getOrDefault(session.mHandle,-10000L)<1600;
+            WorkspaceStore.Session profile=store.findByHandle(session.mHandle);
+            boolean shell=profile==null||(!profile.environment.equals("ssh")&&!profile.environment.equals("codex")&&!profile.claudeAgent&&!profile.geminiAgent&&profile.aiAgent.isEmpty());
+            if(shell&&activityProbeHandle.equals(session.mHandle))active|=foregroundCommand;
+            CodexStatus status=profile==null?null:codexStatuses.get(profile.id);
+            if(status!=null&&status.error.isEmpty()&&System.currentTimeMillis()-status.updated<2500&&status.state.equals("active"))active=true;
+        }
+        activityLine.working(active);
+    }
     private boolean codexLoading;
     private int codexApplyGeneration;
     private final java.util.Map<String,String[]> codexConfirmedChoices=new java.util.HashMap<>();
@@ -103,10 +154,12 @@ public final class WorkspaceController {
         interactiveInput = activity.getSharedPreferences("workspace-input", Context.MODE_PRIVATE)
             .getBoolean("interactive-input", false);
         activity.getTerminalView().setSoftKeyboardInputEnabled(interactiveInput);
+        servers.transferListener(()->{if(!closed&&transferBorder!=null)transferBorder.active(servers.transfersActive());});
         header = activity.findViewById(R.id.workspace_header);
         navigation = activity.findViewById(R.id.workspace_navigation);
         tabs = activity.findViewById(R.id.workspace_tabs);
         codexStatus = activity.findViewById(R.id.workspace_codex_status);
+        activityLine=activity.findViewById(R.id.workspace_session_activity);
         content = activity.findViewById(R.id.workspace_content);
         inputRow = activity.findViewById(R.id.workspace_input);
         inputRow.setPadding(dp(12), dp(6), dp(12), dp(6));
@@ -145,8 +198,8 @@ public final class WorkspaceController {
         });
         codexHandler.postDelayed(codexPoll, 1000);
     }
-    public void onStop(){WorkspaceUpdates.background(activity);servers.pause();}
-    public void onResume(){servers.resume();WorkspaceUpdates.automatic(activity,()->{if(!closed)renderHeader();});}
+    public void onStop(){codexHandler.removeCallbacks(activityPoll);if(activityLine!=null)activityLine.working(false);WorkspaceUpdates.background(activity);servers.pause();}
+    public void onResume(){codexHandler.removeCallbacks(activityPoll);codexHandler.post(activityPoll);servers.resume();WorkspaceUpdates.automatic(activity,()->{if(!closed)renderHeader();});}
     public void refreshLanguage() {
         terminalInput.setHint(WorkspaceText.tr("Введите команду…"));
         inputRow.getChildAt(0).setContentDescription(WorkspaceText.tr("Вставить сохранённую команду"));
@@ -261,6 +314,7 @@ public final class WorkspaceController {
         if(settings instanceof WorkspaceIconButton)((WorkspaceIconButton)settings).setBadge(WorkspaceUpdates.available(activity));
         top.addView(settings,new LinearLayout.LayoutParams(dp(48),dp(48)));
         header.addView(top, new LinearLayout.LayoutParams(-1, dp(48)));
+        if(backgroundActivity==null)backgroundActivity=new WorkspaceBackgroundActivity(activity);backgroundActivity.setContentDescription(tr("Активность других сессий","Other session activity"));backgroundActivity.setOnClickListener(v->showBackgroundSessions());header.addView(backgroundActivity,new LinearLayout.LayoutParams(-1,dp(26)));updateBackgroundActivity();
         LinearLayout.LayoutParams navigationParams = new LinearLayout.LayoutParams(-1, -2);
         navigationParams.topMargin = dp(4);
         header.addView(navigation, navigationParams);
@@ -355,7 +409,7 @@ public final class WorkspaceController {
         if(terminalInput.hasFocus())((InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE)).restartInput(terminalInput);
     }
     private void renderTabs() {
-        syncTerminalInput(); renderCodexStatus(); tabs.removeAllViews();
+        syncTerminalInput(); updateActivityLine(); updateBackgroundActivity(); renderCodexStatus(); tabs.removeAllViews();
         tabs.setPadding(dp(10),dp(4),dp(10),dp(8));tabs.setGravity(Gravity.TOP);
         TerminalSession current=activity.getCurrentSession();
         String name=current==null?WorkspaceText.tr("Сессии"):current.mSessionName==null?"Bash":current.mSessionName;
@@ -381,10 +435,12 @@ public final class WorkspaceController {
         statusRow.setVisibility(screen==Screen.TERMINAL?View.VISIBLE:View.GONE);
         View oldServer=statusRow.findViewWithTag("server-entry");if(oldServer!=null)statusRow.removeView(oldServer);
         TextView server=button(serverLabel,false,()->show(Screen.SERVERS,true));server.setTextSize(12);server.setPadding(dp(4),0,dp(4),0);server.setContentDescription(serverLabel);server.setTag("server-entry");
+        if(transferBorder!=null)transferBorder.active(false);transferBorder=new WorkspaceTransferBorder(activity.getResources().getDisplayMetrics().density);server.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{server.getBackground(),transferBorder}));transferBorder.active(servers.transfersActive());
         FrameLayout.LayoutParams serverParams=new FrameLayout.LayoutParams(dp(106),dp(48),Gravity.END|Gravity.CENTER_VERTICAL);statusRow.addView(server,serverParams);
 
         LinearLayout.LayoutParams toolsParams=new LinearLayout.LayoutParams(dp(106),-2);toolsParams.setMarginStart(dp(6));tabs.addView(serverTools,toolsParams);
     }
+    static int sessionIcon(WorkspaceStore.Session p){return p!=null&&(p.environment.equals("codex")||p.claudeAgent||p.geminiAgent||!p.aiAgent.isEmpty())?R.drawable.workspace_ai_agent:R.drawable.workspace_terminal;}
     private TextView sessionStackItem(String label,boolean active,int icon,Runnable click){
         TextView item=new TextView(activity);item.setText(label);item.setTextSize(14);item.setTextColor(active?Color.BLACK:TEXT);item.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);item.setPadding(dp(13),dp(8),dp(13),dp(8));item.setMinHeight(dp(48));item.setMaxLines(3);item.setEllipsize(TextUtils.TruncateAt.END);item.setSelected(active);
         item.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),shape(active?ACCENT:PANEL,active?ACCENT:BORDER,12),null));
@@ -405,7 +461,7 @@ public final class WorkspaceController {
             String title=terminal.mSessionName==null?"Bash":terminal.mSessionName;
             String info=profile==null?"":ProjectFiles.environmentLabel(profile)+" · "+compact(profile.directory);
             boolean active=activity.getCurrentSession()==terminal;
-            TextView item=sessionStackItem(title+(active?"  ✓":"")+"\n"+info,active,R.drawable.workspace_terminal,()->{popup.dismiss();activity.getTermuxTerminalSessionClient().setCurrentSession(terminal);show(Screen.TERMINAL,false);});
+            TextView item=sessionStackItem(title+(active?"  ✓":"")+"\n"+info,active,sessionIcon(profile),()->{popup.dismiss();activity.getTermuxTerminalSessionClient().setCurrentSession(terminal);show(Screen.TERMINAL,false);});
             item.setTag("session-stack-"+terminal.mHandle);item.setContentDescription(WorkspaceText.tr("Сессия ")+title+" · "+info);
             item.setOnLongClickListener(v->{popup.dismiss();if(profile!=null)sessionMenu(profile,true);return true;});list.addView(item);
         }
@@ -2031,7 +2087,7 @@ public final class WorkspaceController {
         show(Screen.HOME, true); return true;
     }
     public void close() {
-        servers.close();
+        if(transferBorder!=null)transferBorder.active(false);servers.close();if(activityLine!=null)activityLine.working(false);outputActivity.clear();
         terminalDrafts.clear();
         for(WorkspacePackages browser:new ArrayList<>(packageBrowsers))browser.close();packageBrowsers.clear();
         for(WorkspaceFileBrowser browser:new ArrayList<>(fileBrowsers))browser.close();fileBrowsers.clear();

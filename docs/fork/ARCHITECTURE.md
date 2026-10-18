@@ -1,5 +1,45 @@
 # Архитектура v1.2.1
 
+## Private v1.5.23-test: isolated presentation updates
+
+ServerTransferPresentation owns only main-thread window visibility/state, never
+transport cancellation. Background hides the existing dialog; foreground restores
+it. Worker/connection/stream ownership remains with existing upload/download
+controllers. Throttled progress callbacks update only mapped fixed-height card
+rows and one drawable flag; no WorkspaceController/Servers page render call.
+Rows are GONE without an active matching transfer and appear above Open and in
+the selected-server page. WorkspaceTransferBorder draws a CW PathMeasure segment
+on the existing tile background. Android services/manifest permissions unchanged.
+
+WorkspaceActivityLine reserves3dp across idle/active states and only invalidates
+itself. Per-handle timestamps are bounded64; optional proc foreground-group reads
+run off UI on the existing reader with one pending probe, visible activity only.
+No process enumeration or new model RPC. SessionActivitySignal is best-effort:
+remote SSH busy state and unknown interactive/AI states are not inferred from a
+long-lived process alone. Existing native Codex active state is used only while
+fresh. Background activity uses current in-memory terminal titles/output and a
+reused26dp canvas slot; crossfade events are throttled6s, duplicates suppressed,
+and stop after2.4s. Events/animation do not relayout the terminal or rebuild header.
+No title/event content is added to diagnostics or persistent history.
+
+
+## Private v1.5.23-test: confirmed server deletion
+
+WorkspaceServers shares the existing per-profile/per-directory selection with
+trash/download/move. A separate boolean preserves an empty delete-selection mode;
+context changes clear it. Confirmation snapshots entries, checks the server and
+current directory before dispatch, and submits one foreground SSH operation.
+workspace-server-delete.py is passed as a fixed quoted Python program, with all
+paths in JSON stdin. No agent update, shell-interpolated filename or system service.
+The helper scans the complete batch before mutation, opens every ancestor with
+O_DIRECTORY|O_NOFOLLOW and uses fd-relative lstat/unlink/rmdir. It refuses mount
+crossings, changed object identities and special files, and caps depth/count/time.
+It closes owned directory descriptors in finally blocks. Completed roots and
+removed-node count plus an allowlisted error report partial completion; no retry
+or rollback. Shared pinned SSH transport/timeout/disconnect still apply. A lost
+reply cannot establish deletion outcome; UI requests a listing refresh.
+
+
 ## Private v1.5.22-test: retired local-model implementation
 
 LocalAi classes, separate service/process, inference native libraries/AARs,

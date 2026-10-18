@@ -11,6 +11,7 @@ import java.util.concurrent.*;
 
 /** One queued batch and an independent owned SFTP connection. Monitoring and terminals are untouched. */
 final class WorkspaceServerDownloads implements AutoCloseable {
+    final ServerTransferPresentation presentation=new ServerTransferPresentation();
     private final TermuxActivity activity;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private final Handler main=new Handler(Looper.getMainLooper());
@@ -25,8 +26,9 @@ final class WorkspaceServerDownloads implements AutoCloseable {
     void quick(ServerProfiles.Profile profile,JSONObject entry){choose(profile,Collections.singletonList(entry),true);}
     void selected(ServerProfiles.Profile profile,List<JSONObject> entries){choose(profile,entries,false);}
     void disconnect(String id){if(ownerProfile.equals(id)){choiceEpoch++;picker.cancelSelection();if(result!=null)result.dismiss();cancel();}}
-    private void choose(ServerProfiles.Profile profile,List<JSONObject> entries,boolean quick){ownerProfile=profile.id;final int epoch=++choiceEpoch;
-        if(closed||running||entries.isEmpty())return;
+    private void choose(ServerProfiles.Profile profile,List<JSONObject> entries,boolean quick){
+        if(closed||entries.isEmpty())return;if(running){presentation.foreground();return;}
+        ownerProfile=profile.id;final int epoch=++choiceEpoch;
         ServerProfiles.Profile snapshot=new ServerProfiles.Profile();snapshot.id=profile.id;snapshot.name=profile.name;snapshot.host=profile.host;snapshot.port=profile.port;snapshot.user=profile.user;snapshot.auth=profile.auth;snapshot.identity=profile.identity;snapshot.encrypted=profile.encrypted;snapshot.diagnosticsPaused=profile.diagnosticsPaused;
         List<String> paths=new ArrayList<>();for(JSONObject e:entries){if(!e.optBoolean("directory")&&e.optLong("size",0)>ServerSftp.MAX_DOWNLOAD_BYTES){result=WorkspaceDialogs.builder(activity).setMessage(t("Лимит скачивания — 10 ГБ на файл.","Download limit: 10 GB per file.")).setPositiveButton("OK",null).show();return;}paths.add(e.optString("path"));}
         String root="download-"+UUID.randomUUID();
@@ -44,7 +46,7 @@ final class WorkspaceServerDownloads implements AutoCloseable {
         LinearLayout body=new LinearLayout(activity);body.setOrientation(1);int pad=WorkspaceDialogs.dp(activity,16);body.setPadding(pad,pad,pad,pad);
         TextView status=new TextView(activity);status.setTextColor(WorkspaceDialogs.TEXT);status.setText(t("Проверка выбранных файлов…","Checking selected files…"));body.addView(status);
         ProgressBar bar=new ProgressBar(activity,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(1000);bar.setIndeterminate(true);body.addView(bar);
-        progress=WorkspaceDialogs.builder(activity).setTitle(t("Скачивание","Download")).setView(body).setNegativeButton(t("Остановить","Stop"),null).create();progress.setCancelable(false);progress.setCanceledOnTouchOutside(false);progress.show();progress.getButton(-2).setOnClickListener(v->{status.setText(t("Остановка…","Stopping…"));progress.getButton(-2).setEnabled(false);cancel();});
+        progress=WorkspaceDialogs.builder(activity).setTitle(t("Скачивание","Download")).setView(body).setNeutralButton(t("В фон","Background"),null).setNegativeButton(t("Остановить","Stop"),null).create();progress.setCancelable(false);progress.setCanceledOnTouchOutside(false);progress.show();presentation.begin(profile.id,progress,t("Проверка выбранных файлов…","Checking selected files…"));progress.getButton(-3).setOnClickListener(v->presentation.background());progress.getButton(-2).setOnClickListener(v->{status.setText(t("Остановка…","Stopping…"));progress.getButton(-2).setEnabled(false);cancel();});
         worker.execute(()->{
             String base=folder+(folder.equals("/")?"":"/")+root;long[] received={0};int completed=0,skipped=0;boolean success=false;Exception failure=null;
             ServerDiagnostics.Trace trace=ServerDiagnostics.begin(profile,ServerDiagnostics.Op.DOWNLOAD);
@@ -63,8 +65,8 @@ final class WorkspaceServerDownloads implements AutoCloseable {
             }catch(Exception error){failure=cancelled?new CancellationException():error;}
             finally{trace.finish(trace.elapsed(),0,received[0],failure);ServerSftp sftp=channel;channel=null;if(sftp!=null)sftp.close();ServerConnection owned=connection;connection=null;if(owned!=null)owned.close();}
             final boolean done=success;final int count=completed,omitted=skipped;final String error=failure==null?"":failure.getMessage();
-            main.post(()->{running=false;if(progress!=null)progress.dismiss();progress=null;if(closed)return;String message=(done?t("Скачано и завершено.","Download complete."):cancelled?t("Передача остановлена. Завершённые файлы сохранены.","Transfer stopped. Completed files were kept."):t("Передача не завершена. Завершённые файлы сохранены. Проверьте сеть, права и свободное место.","Download incomplete. Completed files were kept. Check network, permissions and free space."))+"\n"+base+"\n"+t("Готово файлов: ","Completed files: ")+count+"\n"+t("Пропущено ссылок / специальных файлов: ","Skipped links / special files: ")+omitted;
-                if(!done&&error!=null)message+="\n"+error.substring(0,Math.min(180,error.length()));result=WorkspaceDialogs.builder(activity).setTitle(t("Скачивание","Download")).setMessage(message).setPositiveButton("OK",null).create();result.setCanceledOnTouchOutside(false);result.show();});
+            main.post(()->{running=false;boolean hidden=presentation.finish();if(progress!=null)progress.dismiss();progress=null;if(closed)return;String message=(done?t("Скачано и завершено.","Download complete."):cancelled?t("Передача остановлена. Завершённые файлы сохранены.","Transfer stopped. Completed files were kept."):t("Передача не завершена. Завершённые файлы сохранены. Проверьте сеть, права и свободное место.","Download incomplete. Completed files were kept. Check network, permissions and free space."))+"\n"+base+"\n"+t("Готово файлов: ","Completed files: ")+count+"\n"+t("Пропущено ссылок / специальных файлов: ","Skipped links / special files: ")+omitted;
+                if(!done&&error!=null)message+="\n"+error.substring(0,Math.min(180,error.length()));result=WorkspaceDialogs.builder(activity).setTitle(t("Скачивание","Download")).setMessage(message).setPositiveButton("OK",null).create();result.setCanceledOnTouchOutside(false);if(hidden&&done)activity.showToast(t("Скачивание завершено","Download complete"),false);else result.show();});
         });
     }
     void move(ServerProfiles.Profile profile,List<JSONObject> entries,String folder,Runnable finished){
@@ -81,7 +83,7 @@ final class WorkspaceServerDownloads implements AutoCloseable {
             }).show();
     }
     private void check(){if(cancelled||closed)throw new CancellationException();}
-    private void update(TextView status,ProgressBar bar,String text,long bytes,long total){long now=SystemClock.uptimeMillis();if(now-lastUpdate<150&&bytes!=total)return;lastUpdate=now;main.post(()->{if(closed||cancelled)return;status.setText(text);bar.setIndeterminate(total<0);if(total>=0)bar.setProgress(total==0?1000:(int)Math.min(1000,bytes*1000.0/total));});}
+    private void update(TextView status,ProgressBar bar,String text,long bytes,long total){long now=SystemClock.uptimeMillis();if(now-lastUpdate<150&&bytes!=total)return;lastUpdate=now;main.post(()->{if(closed||cancelled)return;status.setText(text);presentation.update(text);bar.setIndeterminate(total<0);if(total>=0)bar.setProgress(total==0?1000:(int)Math.min(1000,bytes*1000.0/total));});}
     private void cancel(){cancelled=true;LocalDownloadFile local=destination;if(local!=null)local.cancel();ServerConnection owned=connection;if(owned!=null)owned.close();}
-    @Override public void close(){if(closed)return;closed=true;picker.close();cancel();if(progress!=null)progress.dismiss();if(result!=null)result.dismiss();worker.shutdown();main.removeCallbacksAndMessages(null);}
+    @Override public void close(){if(closed)return;closed=true;presentation.finish();picker.close();cancel();if(progress!=null)progress.dismiss();if(result!=null)result.dismiss();worker.shutdown();main.removeCallbacksAndMessages(null);}
 }

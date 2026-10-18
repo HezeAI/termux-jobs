@@ -1,3 +1,22 @@
+# Current private work: v1.5.23-test, server trash
+
+В этой приватной сборке также добавлены:
+
+- «В фон» для скачивания и отправки: сохраняется та же передача и окно,
+  строки прогресса появляются в карточке сервера только при активных операциях.
+  Нажатие возвращает прогресс/отмену; рамка «Сервер + агент» анимируется по часовой.
+- Тонкая линия активности во всех терминальных сессиях, с постоянной высотой
+  области и без пересоздания терминала при анимации.
+- Вместо Toast при изменении заголовка другой сессии — кружочки над вкладками,
+  краткий плавный текст события и окно других сессий по нажатию.
+- В списке открытых AI Agents — векторный робот; у обычных сессий остаётся терминал.
+
+See USAGE/ARCHITECTURE for telemetry and process-lifetime limitations.
+
+User requested vector trash after server Home, shared long-press selection, empty-mode toggle/cancel and Yes/No deletion confirmation; selected trash and download/move cards highlighted. Built privately as code1160, same package/signing. No GitHub publication or APK installation authorized. Existing server agent not modified; helper sent over pinned SSH/Python. Real-server deletion is NOT performed during development, only isolated .verification fixtures. See RELEASE/VALIDATION-v1.5.23-test.md.
+
+---
+
 # Current private work: v1.5.22-test, remove local models
 
 User authorized removal of all on-device AI plus its dedicated jobs-local-ai Ubuntu, preserving all unrelated current features. No GitHub publication or APK installation authorized. Version code1159, package/signature unchanged. Old local profiles skipped; first-launch fixed app-private local-ai directories/cache/preferences removed without following symlinks. See RELEASE/VALIDATION-v1.5.22-test.md for final artifact evidence.

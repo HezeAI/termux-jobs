@@ -41,6 +41,9 @@ export TERMUX_APK_VERSION_TAG="v${TERMUX_APP_VERSION_NAME}-arm64"
 export TERMUX_SPLIT_APKS_FOR_RELEASE_BUILDS=0
 FORK_GRADLE="$FORK_ROOT/.tools/gradle-7.2/bin/gradle"
 if [[ ! -x "$FORK_GRADLE" ]]; then FORK_GRADLE="$PWD/gradlew"; fi
+# Recreate the APK container, retaining compile caches but dropping vacant ZIP blocks.
+rm -f "$FORK_STAGE/app/build/outputs/apk/release/termux-app_${TERMUX_APK_VERSION_TAG}_universal.apk"
+rm -rf "$FORK_STAGE/app/build/intermediates/incremental/packageRelease"
 "$FORK_GRADLE" --no-daemon \
     -Pandroid.aapt2FromMavenOverride="${FORK_AAPT2:-$ANDROID_HOME/build-tools/30.0.3/aapt2}" \
     -x :app:downloadBootstraps :app:assembleRelease

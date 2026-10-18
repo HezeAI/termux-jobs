@@ -1,3 +1,14 @@
+# v1.5.23-test — server files, background transfers and activity
+
+- Upload/download progress can be hidden with Background and restored from active-only profile rows above Open; simultaneous directions have separate rows. Paint-only clockwise border on Server + Agent while either transfer runs. Transport/cancel semantics retained; no Android foreground service or process-death recovery.
+- Paint-only current-session activity line, per-handle PTY output signals and best-effort plain-shell foreground-job probe; no additional AI RPCs. Other-session title Toast replaced by a centered dots/event crossfade and a switchable session popup. Fixed geometry, no terminal/header rebuild on animation/progress.
+- Vector robot in opened-session list for declared Codex/Claude/Gemini/OpenCode profiles; normal terminal icons retained.
+- Vector trash after Home: toggle selection mode, cancel on a second tap with no selection, otherwise confirm permanent deletion with Yes/No and a scrollable list.
+- Reuses long-press multi-selection; both trash and download/move cards highlight while selected. Directory/profile change resets selection mode.
+- SSH/Python helper deletes files/folders and unlinks symlinks without following targets. FD-based ancestor traversal, full preflight, changed-object/mount checks, 500 selected roots/20,000 nodes/depth64/25-second limits. No agent update or automatic retry.
+- Partial/interrupted deletion is reported; reload before retry. Typed FILE_DELETE diagnostics record operation errors without paths or payloads.
+- Same package/signing/schema, code1160; no local AI restored; private delivery, no GitHub publication.
+
 # v1.5.22-test — remove on-device AI
 
 - Remove the complete local-model feature: Java UI/service/tools, native llama runners, LiteRT-LM/QAIRT runtimes, model catalog, import/download/settings and local histories.

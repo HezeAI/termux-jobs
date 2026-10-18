@@ -1,8 +1,32 @@
 # Termux Job’s
 
-## Private v1.5.22-test — local AI removed
+## Private v1.5.23-test — server transfers and session activity
 
-This source checkout builds **v1.5.22-test / code1159**, not a new public release.
+В этой приватной сборке также добавлены:
+
+- «В фон» для скачивания и отправки: сохраняется та же передача и окно,
+  строки прогресса появляются в карточке сервера только при активных операциях.
+  Нажатие возвращает прогресс/отмену; рамка «Сервер + агент» анимируется по часовой.
+- Тонкая линия активности во всех терминальных сессиях, с постоянной высотой
+  области и без пересоздания терминала при анимации.
+- Вместо Toast при изменении заголовка другой сессии — кружочки над вкладками,
+  краткий плавный текст события и окно других сессий по нажатию.
+- В списке открытых AI Agents — векторный робот; у обычных сессий остаётся терминал.
+
+A vector trash button follows Home in server Files. Tap it to select files/folders;
+tap again with no selection to cancel that mode. With selected entries it opens a
+scrollable permanent-deletion confirmation with Yes/No. Long-press selection is
+shared with download/move; both action cards highlight while entries are selected.
+Deletion uses existing pinned SSH/Python, without changing the installed agent.
+Folders include their contents; links are unlinked without following targets.
+Interrupted deletion may be partial and is never retried automatically.
+Same package/signature, code1160; private APK delivery only, no GitHub publication.
+[Changes](docs/fork/RELEASE-v1.5.23-test.md) · [Checks](docs/fork/VALIDATION-v1.5.23-test.md).
+
+
+## Historical private v1.5.22-test — local AI removed
+
+The preceding private update was **v1.5.22-test / code1159**, not a public release.
 On-device AI (llama.cpp, LiteRT-LM, NPU runtime, local chats and presets) is removed.
 The first launch removes only app-private `files/local-ai`, `cache/local-ai` and
 local diagnostics preferences. This intentionally deletes downloaded local models,

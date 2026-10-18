@@ -51,6 +51,24 @@ final class WorkspaceServers implements AutoCloseable {
     private final List<AlertDialog> ownedDialogs=new ArrayList<>();
     private final Map<String,Long> lastPoll=new HashMap<>();
     private final Map<String,TextView> pollLabels=new HashMap<>(),listMetrics=new HashMap<>();
+    private final Map<String,TextView> transferRows=new HashMap<>();
+    private Runnable transferListener=()->{};
+    void transferListener(Runnable listener){transferListener=listener==null?()->{}:listener;}
+    boolean transfersActive(){return downloads.presentation.active()||uploads.presentation.active();}
+    private void transferChanged(){
+        if(closed)return;
+        for(Map.Entry<String,TextView> entry:transferRows.entrySet()){
+            boolean upload=entry.getKey().startsWith("up:");String id=entry.getKey().substring(3);ServerTransferPresentation state=upload?uploads.presentation:downloads.presentation;TextView row=entry.getValue();boolean active=state.belongs(id);
+            int visibility=active?View.VISIBLE:View.GONE;if(row.getVisibility()!=visibility)row.setVisibility(visibility);
+            if(active){String value=(upload?t("Загрузка на сервер","Uploading to server"):t("Скачивание с сервера","Downloading from server"))+"\n"+state.text();if(!value.contentEquals(row.getText()))row.setText(value);}
+        }
+        transferListener.run();
+    }
+    private void transferRows(LinearLayout parent,ServerProfiles.Profile profile){
+        for(boolean upload:new boolean[]{true,false}){ServerTransferPresentation state=upload?uploads.presentation:downloads.presentation;TextView row=button("",()->state.foreground());row.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);row.setMaxLines(3);row.setEllipsize(android.text.TextUtils.TruncateAt.END);row.setTextSize(12);row.setContentDescription(upload?t("Прогресс загрузки на сервер","Upload progress"):t("Прогресс скачивания с сервера","Download progress"));row.setTag((upload?"up:":"dn:")+profile.id);parent.addView(row,new LinearLayout.LayoutParams(-1,dp(84)));transferRows.put((upload?"up:":"dn:")+profile.id,row);row.setVisibility(View.GONE);}
+        transferChanged();
+    }
+
     boolean pollingEnabled(ServerProfiles.Profile p){return connected.contains(p.id)&&!ServerConnection.disconnected(activity,p.id);}
     long pollingInterval(ServerProfiles.Profile p){return selected==p&&visible?10000:30000;}
     private final Runnable poll=new Runnable(){public void run(){if(closed||!foreground)return;
@@ -66,10 +84,10 @@ final class WorkspaceServers implements AutoCloseable {
         for(WorkspaceTextEditor editor:new ArrayList<>(editors))if(editor.serverProfileId().equals(p.id))editor.close();
         for(ProjectFiles files:new ArrayList<>(textFiles))if(files.profile.id.equals(p.id)){files.close();textFiles.remove(files);}
         if(scheduleUi!=null&&scheduleUi.serverProfileId().equals(p.id)){scheduleUi.close();scheduleUi=null;}
-        if(playerProfile.equals(p.id))closePlayer();streamNames.remove(p.id);if(selected==p){listing=null;downloadSelection.clear();if(moveProfile.equals(p.id)){moveSelection.clear();moveProfile="";}}render();
+        if(playerProfile.equals(p.id))closePlayer();streamNames.remove(p.id);if(selected==p){listing=null;downloadSelection.clear();deleteSelectionMode=false;if(moveProfile.equals(p.id)){moveSelection.clear();moveProfile="";}}render();
     }
     private void updatePollLabel(ServerProfiles.Profile p,TextView label){boolean active=pollingEnabled(p);label.setText("●  "+pollingLabel(p));android.text.SpannableString value=new android.text.SpannableString(label.getText());value.setSpan(new android.text.style.ForegroundColorSpan(active?0xffe7bc55:WorkspaceDialogs.DANGER),0,1,0);value.setSpan(new android.text.style.RelativeSizeSpan(.65f),0,1,0);label.setText(value);}
-    WorkspaceServers(TermuxActivity a,Terminal t){activity=a;terminal=t;store=new ServerProfiles(a);downloads=new WorkspaceServerDownloads(a);uploads=new WorkspaceServerUploads(a,()->{if(!closed&&visible&&selected!=null&&!ServerConnection.disconnected(activity,selected.id)&&tab.equals("files"))loadFiles();});}
+    WorkspaceServers(TermuxActivity a,Terminal t){activity=a;terminal=t;store=new ServerProfiles(a);downloads=new WorkspaceServerDownloads(a);uploads=new WorkspaceServerUploads(a,()->{if(!closed&&visible&&selected!=null&&!ServerConnection.disconnected(activity,selected.id)&&tab.equals("files"))loadFiles();});downloads.presentation.listener(this::transferChanged);uploads.presentation.listener(this::transferChanged);}
     private String t(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
     private int dp(int n){return WorkspaceDialogs.dp(activity,n);}
     private LinearLayout column(){LinearLayout v=new LinearLayout(activity);v.setOrientation(1);return v;}
@@ -106,7 +124,7 @@ final class WorkspaceServers implements AutoCloseable {
             });
         });
     }
-    /** Explicit read-only file actions update their own region/dialog, never the page. */
+    /** Explicit file actions update their own region/dialog, never the page. */
     private void runInline(Work work,Done done,java.util.function.Consumer<String> failure){runInline(work,done,failure,()->{});}
     private void runInline(Work work,Done done,java.util.function.Consumer<String> failure,Runnable discarded){
         if(closed||busy)return;manualEpoch++;busy=true;final int g=generation;
@@ -147,7 +165,7 @@ final class WorkspaceServers implements AutoCloseable {
         "Installed with consent under ~/.local/share/termux-jobs-server; requires Linux, Bash and Python 3.8+. Manages tasks and serves files. It has the SSH user's permissions; root means full access. Use a separate account to restrict access.\n\nNo automatic server-boot startup. Connecting restarts the agent. Tasks survive phone disconnection, not server reboot; commands must stay in the foreground. Logs capped at 2 MB/task, latest 40 records. Commands/output may contain secrets.\n\nPhone background monitoring pauses. Video uses a temporary SSH tunnel up to 30 minutes; the built-in player is released in the background. Agent removal is a separate action after checking tasks, without deleting projects. Existing SSH session creation is retained."));}
     void rerender(){render();}
     private void render(){
-        if(root==null||closed||!visible)return;int y=scroll==null?0:scroll.getScrollY();sampleText=null;monitorStatus=null;metricCards=null;taskRows=null;streamPanel=null;fileRows=null;filePathLabel=null;fileStatus=null;serviceText=null;sectionBody=null;projectBanner=null;sectionButtons.clear();pollLabels.clear();listMetrics.clear();root.removeAllViews();scroll=new ServerScrollView(activity);scroll.setFillViewport(true);LinearLayout body=column();body.setPadding(0,dp(12),0,dp(16));scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,-1));
+        if(root==null||closed||!visible)return;int y=scroll==null?0:scroll.getScrollY();sampleText=null;monitorStatus=null;metricCards=null;taskRows=null;streamPanel=null;fileRows=null;filePathLabel=null;fileStatus=null;serviceText=null;sectionBody=null;projectBanner=null;sectionButtons.clear();pollLabels.clear();listMetrics.clear();transferRows.clear();root.removeAllViews();scroll=new ServerScrollView(activity);scroll.setFillViewport(true);LinearLayout body=column();body.setPadding(0,dp(12),0,dp(16));scroll.addView(body);root.addView(scroll,new LinearLayout.LayoutParams(-1,-1));
         if(!store.writable)add(body,text(t("Профили повреждены или имеют неподдерживаемый формат; запись отключена, исходный файл сохранён.","Profiles are damaged or unsupported; writes disabled, original file preserved."),14,WorkspaceDialogs.DANGER));
         LinearLayout heading=row();TextView h=text(selected==null?t("Серверы","Servers"):selected.name,19,WorkspaceDialogs.TEXT);h.setTypeface(null,Typeface.BOLD);heading.addView(h,new LinearLayout.LayoutParams(0,-2,1));h.setMaxLines(2);h.setEllipsize(android.text.TextUtils.TruncateAt.END);if(selected!=null){TextView diagnostics=button(t("Диагностика","Diagnostics"),this::serverDiagnostics);diagnostics.setTextSize(12);diagnostics.setPadding(dp(4),0,dp(4),0);diagnostics.setContentDescription(t("Диагностика сервера","Server diagnostics"));LinearLayout.LayoutParams diagnosticsParams=new LinearLayout.LayoutParams(dp(106),dp(48));diagnosticsParams.setMarginEnd(dp(8));heading.addView(diagnostics,diagnosticsParams);}heading.addView(iconButton(t("Об агенте сервера","About server agent"),R.drawable.workspace_server_info,this::info));if(selected!=null){LinearLayout.LayoutParams menuParams=new LinearLayout.LayoutParams(dp(48),dp(48));menuParams.setMarginStart(dp(8));heading.addView(iconButton(t("Настройки сервера","Server settings"),R.drawable.workspace_more,this::menu),menuParams);}add(body,heading);
         if(busy)add(body,text(t("Подключение / выполнение…","Connecting / working…"),13,WorkspaceDialogs.ACCENT));
@@ -158,12 +176,12 @@ final class WorkspaceServers implements AutoCloseable {
     private void renderList(LinearLayout body){
         if(store.profiles.isEmpty())add(body,text(t("Добавьте свой сервер. Подключения независимы от обычных SSH-сессий.","Add your server. These connections are independent of existing SSH sessions."),14,WorkspaceDialogs.MUTED));
         if(!store.profiles.isEmpty())add(body,text(t("Автообновление данных от сервера: после подключения каждые 10 с внутри сервера и 30 с в остальных разделах приложения. В фоне приложения приостановлено. «Отключиться» закрывает соединения панели и передачи; сервер, агент, удалённые задачи и отдельные SSH-сессии продолжают работать.","Auto-update data from server: every 10 s inside the server view and 30 s elsewhere after connecting. Paused while the app is in the background. Disconnect closes workspace connections and transfers; the server, agent, remote tasks and independent SSH sessions keep running."),12,WorkspaceDialogs.MUTED));
-        for(ServerProfiles.Profile p:store.profiles){LinearLayout c=card(body);title(c,p.name);LinearLayout address=row();address.addView(text(p.user+"@"+p.host+":"+p.port,13,WorkspaceDialogs.MUTED),new LinearLayout.LayoutParams(0,-2,1));TextView toggle=connectionButton(p);LinearLayout.LayoutParams toggleParams=new LinearLayout.LayoutParams(-2,dp(48));toggleParams.setMarginStart(dp(8));address.addView(toggle,toggleParams);add(c,address);TextView status=text("",12,WorkspaceDialogs.MUTED);pollLabels.put(p.id,status);updatePollLabel(p,status);add(c,status);JSONObject snapshot=snapshots.get(p.id);if(snapshot!=null&&snapshot.has("metrics")){TextView metrics=text(metricSummary(snapshot.optJSONObject("metrics")),13,WorkspaceDialogs.ACCENT);listMetrics.put(p.id,metrics);add(c,metrics);}add(c,button(t("Открыть","Open"),()->{if(busy)return;selected=p;directory="~";tab="overview";listing=null;generation++;render();if(p.automatic&&!ServerConnection.disconnected(activity,p.id)&&!pollingEnabled(p))connect();}));c.setOnLongClickListener(v->{if(busy)return true;selected=p;generation++;render();menu();return true;});}
+        for(ServerProfiles.Profile p:store.profiles){LinearLayout c=card(body);title(c,p.name);LinearLayout address=row();address.addView(text(p.user+"@"+p.host+":"+p.port,13,WorkspaceDialogs.MUTED),new LinearLayout.LayoutParams(0,-2,1));TextView toggle=connectionButton(p);LinearLayout.LayoutParams toggleParams=new LinearLayout.LayoutParams(-2,dp(48));toggleParams.setMarginStart(dp(8));address.addView(toggle,toggleParams);add(c,address);TextView status=text("",12,WorkspaceDialogs.MUTED);pollLabels.put(p.id,status);updatePollLabel(p,status);add(c,status);JSONObject snapshot=snapshots.get(p.id);if(snapshot!=null&&snapshot.has("metrics")){TextView metrics=text(metricSummary(snapshot.optJSONObject("metrics")),13,WorkspaceDialogs.ACCENT);listMetrics.put(p.id,metrics);add(c,metrics);}transferRows(c,p);add(c,button(t("Открыть","Open"),()->{if(busy)return;selected=p;directory="~";tab="overview";listing=null;generation++;render();if(p.automatic&&!ServerConnection.disconnected(activity,p.id)&&!pollingEnabled(p))connect();}));c.setOnLongClickListener(v->{if(busy)return true;selected=p;generation++;render();menu();return true;});}
         TextView add=button(t("Добавить сервер","Add server"),()->edit(null));add.setEnabled(store.writable&&!busy);add(body,add);
         add(body,text(t("Профиль хранится на телефоне: это адрес сервера, порт, пользователь и способ входа. Агент, задачи, файлы и программы находятся на сервере и остаются там после удаления профиля из приложения. Профили серверов пока не входят в экспорт библиотеки.","A profile is stored on this phone: the server address, port, user and authentication method. The agent, tasks, files and programs live on the server and remain there when you delete the app profile. Server profiles are not yet included in library exports."),12,WorkspaceDialogs.MUTED));
     }
     private void renderServer(LinearLayout body){
-        final ServerProfiles.Profile p=selected;add(body,text(p.user+"@"+p.host+":"+p.port,13,WorkspaceDialogs.MUTED));
+        final ServerProfiles.Profile p=selected;add(body,text(p.user+"@"+p.host+":"+p.port,13,WorkspaceDialogs.MUTED));transferRows(body,p);
         TextView all=button(t("Все серверы","All servers"),()->{if(!busy)back();});setLeadingIcon(all,R.drawable.workspace_server_back);add(body,all);
         LinearLayout actions=row();actions.addView(connectionButton(p),new LinearLayout.LayoutParams(0,-2,1));TextView terminalButton=iconButton(t("Терминал","Terminal"),R.drawable.workspace_terminal,this::openTerminal);LinearLayout.LayoutParams terminalParams=new LinearLayout.LayoutParams(dp(48),dp(48));terminalParams.setMarginStart(dp(8));actions.addView(terminalButton,terminalParams);add(body,actions);
         if(ServerConnection.disconnected(activity,p.id)){add(body,text(t("Отключено. Подключитесь для работы с панелью и автообновления данных от сервера. Удалённые задачи и отдельные SSH-сессии продолжают работать.","Disconnected. Connect to use the workspace and auto-update data from server. Remote tasks and independent SSH sessions keep running."),13,WorkspaceDialogs.MUTED));return;}
@@ -375,10 +393,38 @@ final class WorkspaceServers implements AutoCloseable {
         runInline(()->c.rpc(new JSONObject().put("op","list").put("path",target)),r->{listing=r;directory=r.getString("path");updateFileViews();},code->{if(listing!=null&&listing.has("path"))directory=listing.optString("path");if(filePathLabel!=null)filePathLabel.setText(directory);if(fileStatus!=null){fileStatus.setText(explain(code));fileStatus.setContentDescription(explain(code));fileStatus.setTextColor(WorkspaceDialogs.DANGER);}});
     }
     private final LinkedHashMap<String,JSONObject> downloadSelection=new LinkedHashMap<>();
-    private TextView downloadSelectedButton;
+    private TextView downloadSelectedButton,deleteSelectedButton;
+    private boolean deleteSelectionMode;
     private final List<JSONObject> moveSelection=new ArrayList<>();private String moveProfile="";
     private String selectionProfile="",selectionDirectory="";
-    private void updateDownloadSelection(){if(downloadSelectedButton==null)return;boolean pending=selected!=null&&moveProfile.equals(selected.id)&&!moveSelection.isEmpty();downloadSelectedButton.setVisibility(View.VISIBLE);downloadSelectedButton.setBackground(WorkspaceDialogs.background(activity,pending||!downloadSelection.isEmpty()));downloadSelectedButton.setContentDescription(pending?t("Переместить сюда: ","Move here: ")+moveSelection.size():(downloadSelection.isEmpty()?t("Скачать с сервера / переместить","Download from server / move"):t("Действия с выбранным: ","Selection actions: ")+downloadSelection.size()));if(downloadSelectedButton instanceof WorkspaceIconButton)((WorkspaceIconButton)downloadSelectedButton).setIcon(activity.getDrawable(pending?R.drawable.workspace_move_here:R.drawable.workspace_diag_download).mutate(),dp(22));}
+    private void updateDownloadSelection(){updateDeleteSelection();if(downloadSelectedButton==null)return;boolean pending=selected!=null&&moveProfile.equals(selected.id)&&!moveSelection.isEmpty();downloadSelectedButton.setVisibility(View.VISIBLE);downloadSelectedButton.setSelected(pending||!downloadSelection.isEmpty());downloadSelectedButton.setBackground(WorkspaceDialogs.background(activity,pending||!downloadSelection.isEmpty()));downloadSelectedButton.setContentDescription(pending?t("Переместить сюда: ","Move here: ")+moveSelection.size():(downloadSelection.isEmpty()?t("Скачать с сервера / переместить","Download from server / move"):t("Действия с выбранным: ","Selection actions: ")+downloadSelection.size()));if(downloadSelectedButton instanceof WorkspaceIconButton)((WorkspaceIconButton)downloadSelectedButton).setIcon(activity.getDrawable(pending?R.drawable.workspace_move_here:R.drawable.workspace_diag_download).mutate(),dp(22));}
+    private void updateDeleteSelection(){
+        if(deleteSelectedButton==null)return;
+        boolean active=deleteSelectionMode||!downloadSelection.isEmpty();deleteSelectedButton.setSelected(active);deleteSelectedButton.setBackground(WorkspaceDialogs.background(activity,active));
+        String label=downloadSelection.isEmpty()?(deleteSelectionMode?t("Отменить выбор для удаления","Cancel delete selection"):t("Выбрать для удаления","Select for deletion")):t("Удалить выбранное: ","Delete selected: ")+downloadSelection.size();
+        deleteSelectedButton.setContentDescription(label);deleteSelectedButton.setTooltipText(label);
+    }
+    private void deleteSelectionAction(){
+        if(closed||busy||selected==null||listing==null)return;
+        if(downloadSelection.isEmpty()){deleteSelectionMode=!deleteSelectionMode;updateFileViews();return;}
+        final ServerProfiles.Profile profile=selected;final String folder=listing.optString("path");final JSONArray entries=new JSONArray();StringBuilder names=new StringBuilder();
+        for(JSONObject item:downloadSelection.values())try{JSONObject copy=new JSONObject(item.toString());entries.put(copy);names.append(copy.optString("path")).append(copy.optBoolean("directory")?"/":"").append("\n");}catch(JSONException invalid){return;}
+        ScrollView viewport=new ScrollView(activity);TextView body=text(profile.name+"\n\n"+names+t("\nУдаление с сервера безвозвратное. Папки удаляются со всем содержимым. Цели символических ссылок не удаляются. При обрыве уже удалённые объекты не восстанавливаются.","\nDeletion from the server is permanent. Folders include all contents. Symbolic-link targets are not deleted. Interrupted deletion does not restore already removed entries."),14,WorkspaceDialogs.TEXT);body.setTextIsSelectable(true);body.setPadding(dp(16),dp(8),dp(16),dp(8));viewport.addView(body);
+        AlertDialog confirm=WorkspaceDialogs.builder(activity).setTitle(t("Удалить выбранное с сервера?","Delete selection from server?"))
+            .setView(viewport).setNegativeButton(t("Нет","No"),null).setPositiveButton(t("Да","Yes"),(d,w)->{
+                if(closed||busy||selected!=profile||listing==null||!folder.equals(listing.optString("path"))||ServerConnection.disconnected(activity,profile.id))return;
+                if(fileStatus!=null)fileStatus.setText(t("Удаление…","Deleting…"));
+                ServerConnection c=connection(profile);
+                runInline(()->c.deleteFiles(folder,entries),result->{
+                    downloadSelection.clear();deleteSelectionMode=false;
+                    if(moveProfile.equals(profile.id)){moveSelection.clear();moveProfile="";}
+                    updateDownloadSelection();loadFiles();
+                    String code=result.optString("error");String summary=t("Удалено выбранных объектов: ","Deleted selected entries: ")+result.getJSONArray("deleted").length()+" / "+entries.length();
+                    if(!code.isEmpty())summary+="\n"+t("Удаление не завершено: ","Deletion incomplete: ")+code+t("\nЧасть содержимого могла быть удалена. Обновите список перед повтором.","\nSome contents may already be deleted. Refresh before retrying.");
+                    message(t("Удаление с сервера","Server deletion"),summary);
+                },code->{downloadSelection.clear();deleteSelectionMode=false;updateDownloadSelection();loadFiles();message(t("Удаление не подтверждено","Deletion not confirmed"),t("Проверьте список: часть объектов могла быть удалена. Автоматический повтор не выполняется.","Check the listing: some entries may have been deleted. No automatic retry.")+"\n"+code);});
+            }).create();show(confirm);
+    }
     private void selectedFileActions(){
         if(selected==null||busy)return;
         boolean pending=moveProfile.equals(selected.id)&&!moveSelection.isEmpty();
@@ -400,6 +446,7 @@ final class WorkspaceServers implements AutoCloseable {
     private void files(LinearLayout body){filePathLabel=text(directory,13,WorkspaceDialogs.MUTED);add(body,filePathLabel);LinearLayout controls=row();
         control(controls,iconButton(t("На уровень выше","Parent directory"),R.drawable.workspace_server_back,()->{if(busy)return;directory=listing==null?"~":listing.optString("parent","~");loadFiles();}));
         control(controls,iconButton(t("Домашний каталог сервера","Server home directory"),R.drawable.workspace_home,()->{if(busy)return;directory="~";loadFiles();}));
+        deleteSelectedButton=iconButton(t("Выбрать для удаления","Select for deletion"),R.drawable.workspace_delete,this::deleteSelectionAction);deleteSelectedButton.setTag("server-delete-selection");control(controls,deleteSelectedButton);
         control(controls,iconButton(t("Путь…","Path…"),R.drawable.workspace_folder,this::pathDialog));
         control(controls,iconButton(t("Обновить","Refresh"),R.drawable.workspace_server_refresh,this::loadFiles));
         favoriteButton=iconButton(t("Избранные папки и файлы","Favorite folders and files"),R.drawable.workspace_star,this::favoriteFolders);control(controls,favoriteButton);
@@ -417,18 +464,18 @@ final class WorkspaceServers implements AutoCloseable {
     }
     private void replaceFileRows(){
         if(sectionBody!=null)sectionBody.setMinimumHeight(0);
-        String owner=selected==null?"":selected.id,currentDirectory=listing.optString("path",directory);if(!selectionProfile.equals(owner)||!selectionDirectory.equals(currentDirectory)){downloadSelection.clear();selectionProfile=owner;selectionDirectory=currentDirectory;}updateDownloadSelection();
+        String owner=selected==null?"":selected.id,currentDirectory=listing.optString("path",directory);if(!selectionProfile.equals(owner)||!selectionDirectory.equals(currentDirectory)){downloadSelection.clear();deleteSelectionMode=false;selectionProfile=owner;selectionDirectory=currentDirectory;}updateDownloadSelection();
         if(filePathLabel!=null)filePathLabel.setText(listing.optString("path",directory));if(favoriteButton!=null){boolean starred=selected!=null&&selected.favorites.contains(listing.optString("path"));favoriteButton.setSelected(starred);favoriteButton.setBackground(WorkspaceDialogs.background(activity,starred));}fileRows.removeAllViews();JSONArray entries=listing.optJSONArray("entries");if(entries==null)return;
         for(int i=0;i<entries.length();i++){JSONObject entry=entries.optJSONObject(i);if(entry!=null)add(fileRows,fileRow(entry));}
         if(fileStatus!=null){fileStatus.setText(t("Записей: ","Entries: ")+entries.length());fileStatus.setTextColor(WorkspaceDialogs.MUTED);fileStatus.setContentDescription(fileStatus.getText());}
     }
     private View fileRow(JSONObject entry){
         LinearLayout item=row();boolean checked=downloadSelection.containsKey(entry.optString("path"));item.setBackground(WorkspaceDialogs.background(activity,checked));item.setPadding(dp(14),dp(10),dp(14),dp(10));item.setMinimumHeight(dp(48));
-        if(!downloadSelection.isEmpty()){CheckBox check=new CheckBox(activity);check.setChecked(checked);check.setContentDescription(t("Выбрать ","Select ")+entry.optString("name"));check.setOnClickListener(v->{if(!busy)toggleDownloadSelection(entry);});item.addView(check,new LinearLayout.LayoutParams(dp(44),dp(44)));}
+        if(deleteSelectionMode||!downloadSelection.isEmpty()){CheckBox check=new CheckBox(activity);check.setChecked(checked);check.setContentDescription(t("Выбрать ","Select ")+entry.optString("name"));check.setOnClickListener(v->{if(!busy)toggleDownloadSelection(entry);});item.addView(check,new LinearLayout.LayoutParams(dp(44),dp(44)));}
         boolean folder=entry.optBoolean("directory");android.widget.ImageView icon=new android.widget.ImageView(activity);icon.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);icon.setImageResource(folder?R.drawable.workspace_folder:R.drawable.workspace_server_file);icon.setColorFilter(WorkspaceDialogs.ACCENT);LinearLayout.LayoutParams iconParams=new LinearLayout.LayoutParams(dp(22),dp(22));iconParams.setMarginEnd(dp(12));item.addView(icon,iconParams);
         TextView name=text(entry.optString("name"),14,WorkspaceDialogs.TEXT);name.setMaxLines(2);name.setEllipsize(android.text.TextUtils.TruncateAt.END);item.addView(name,new LinearLayout.LayoutParams(0,-2,1));
         if(folder){android.widget.ImageView next=new android.widget.ImageView(activity);next.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);next.setImageResource(R.drawable.workspace_next);next.setColorFilter(WorkspaceDialogs.MUTED);item.addView(next,new LinearLayout.LayoutParams(dp(18),dp(18)));}else{TextView bytes=text(ServerFileInfo.size(entry.optLong("size"),WorkspaceLanguage.code(activity).equals("ru")),11,WorkspaceDialogs.MUTED);bytes.setPadding(dp(8),0,0,0);item.addView(bytes);}
-        item.setContentDescription(entry.optString("name")+(folder?t(" · Папка"," · Folder"):""));item.setOnLongClickListener(v->{if(!busy)toggleDownloadSelection(entry);return true;});item.setOnClickListener(v->{if(busy)return;if(!downloadSelection.isEmpty()){toggleDownloadSelection(entry);return;}if(folder){directory=entry.optString("path");loadFiles();}else fileMenu(entry);});return item;
+        item.setContentDescription(entry.optString("name")+(folder?t(" · Папка"," · Folder"):""));item.setOnLongClickListener(v->{if(!busy)toggleDownloadSelection(entry);return true;});item.setOnClickListener(v->{if(busy)return;if(deleteSelectionMode||!downloadSelection.isEmpty()){toggleDownloadSelection(entry);return;}if(folder){directory=entry.optString("path");loadFiles();}else fileMenu(entry);});return item;
     }
     private void favoriteFolders(){
         if(selected==null||busy)return;final ServerProfiles.Profile p=selected;String current=listing==null?null:listing.optString("path");

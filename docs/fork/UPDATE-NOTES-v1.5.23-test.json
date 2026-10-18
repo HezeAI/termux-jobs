@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "Корзина после домика в файлах сервера: выбор файлов/папок, удаление с подтверждением Да/Нет, общая подсветка с кнопкой скачивания/перемещения.",
+    "Фоновые скачивание и отправка между вкладками: прогресс в карточке сервера, возврат к окну и анимированная рамка.",
+    "Линия активности сессии, кружочки/события вместо Toast других сессий, робот у AI Agents."
+  ],
+  "en": [
+    "Trash after Home in server files: select files/folders, confirm permanent deletion with Yes/No, shared selection highlights with download/move.",
+    "Background upload/download while using other tabs: active profile progress rows, restored progress window and animated tile border.",
+    "Session activity line, other-session dots/events instead of title Toasts, robot icons for AI Agents."
+  ],
+  "compatibility": {
+    "ru": [
+      "Пакет/подпись и schema8 сохранены; сброс данных не требуется. Агент обновлять не нужно. Удаление безвозвратно и при обрыве может быть частичным.",
+      "При переходе с версии до1.5.22 удалятся приватные модели, чаты и настройки локальных ИИ. Другие данные не сбрасываются."
+    ],
+    "en": [
+      "Same package/signature and schema8; no reset or installed-agent update. Permanent deletion may be partial if interrupted.",
+      "Updating from before1.5.22 deletes retired app-private local models, chats and settings. Other app data is not reset."
+    ]
+  }
+}
