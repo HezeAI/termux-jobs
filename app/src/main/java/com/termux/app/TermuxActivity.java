@@ -817,7 +817,6 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data) {
         super.onActivityResult(requestCode,resultCode,data);
-        if(mWorkspace!=null&&mWorkspace.localAiActivityResult(requestCode,resultCode,data))return;
         if(mWorkspaceStorageAccess!=null&&mWorkspaceStorageAccess.activityResult(requestCode))return;
     }
 

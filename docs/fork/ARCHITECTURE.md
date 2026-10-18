@@ -1,5 +1,19 @@
 # Архитектура v1.2.1
 
+## Private v1.5.22-test: retired local-model implementation
+
+LocalAi classes, separate service/process, inference native libraries/AARs,
+model catalog/instructions and all local session UI hooks are removed.
+WorkspaceStore schema8 skips legacy localAi=true objects and ignores removed
+local-only optional properties on other profiles. Shared keepHistory and CLI
+permission fields are retained. WorkspaceChatHistories now catalogs Codex only.
+RetiredModelData is a narrowly scoped asynchronous removal migration for the
+fixed local-ai child of Context files/cache, with NOFOLLOW directory traversal;
+it never resolves stored profile paths or deletes HOME/PREFIX/proot roots.
+The isolated build stages recreate disposable src trees so removed native
+payloads/assets cannot survive incrementally into the new APK.
+
+
 ## Дополнения v1.3.0
 
 WorkspaceErrorLibrary валидирует встроенный schema1 JSON по запросу:114 записей,

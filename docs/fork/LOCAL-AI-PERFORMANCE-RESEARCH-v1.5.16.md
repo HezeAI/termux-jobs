@@ -1,3 +1,5 @@
+> Historical experimental feature: removed from the current v1.5.22-test source/APK. This document is retained as research evidence, not current functionality. See [removal notes](RELEASE-v1.5.22-test.md).
+
 # Local engine performance investigation after v1.5.16-test
 
 Research snapshot: 2026-10-18. Original engine/app sources, installed environments, model files and running sessions were not modified. No APK or GitHub release for this investigation. Reproduction artifacts are under `.verification/engine-research-v1516/`.

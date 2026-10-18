@@ -1,3 +1,11 @@
+# v1.5.22-test — remove on-device AI
+
+- Remove the complete local-model feature: Java UI/service/tools, native llama runners, LiteRT-LM/QAIRT runtimes, model catalog, import/download/settings and local histories.
+- Migration skips retired local-AI profiles instead of launching them as shells. Schema8 and unrelated data/settings remain; first launch deletes only the retired app-private model/history/cache directories and diagnostics preferences, without following symbolic links.
+- Keep shared history closing controls, Codex history manager, external CLI agents and their permissions, server connection/file-transfer UI, packages, editor, backup and update features.
+- Dedicated jobs-local-ai Ubuntu removed on the developer's device by explicit request; working ubuntu preserved. No generic environment auto-removal in the APK.
+- Same com.termux/signing identity; code1159 >1158. Private local delivery, no GitHub publication. APK/package audit and device limitations in VALIDATION-v1.5.22-test.md.
+
 # v1.5.0 — sessions, histories and server file operations
 
 - Unsaved-session closing: keep-history checkbox, Close / Add preset and close; native CLI chat storage remains independent.

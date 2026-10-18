@@ -1,3 +1,11 @@
+# Current private work: v1.5.22-test, remove local models
+
+User authorized removal of all on-device AI plus its dedicated jobs-local-ai Ubuntu, preserving all unrelated current features. No GitHub publication or APK installation authorized. Version code1159, package/signature unchanged. Old local profiles skipped; first-launch fixed app-private local-ai directories/cache/preferences removed without following symlinks. See RELEASE/VALIDATION-v1.5.22-test.md for final artifact evidence.
+
+jobs-local-ai was verified inactive, canonical, marked as dedicated, and removed; allocated304125KiB. Working ubuntu root identity retained. No Bridge/normal session/shared SDK/server changes. App-private models/chats are not visible from this proot: cleanup is on first new-APK launch, not claimed already done. Old research/report documents below are historical.
+
+---
+
 # v1.5.0 public / v1.5.1-test handoff (2026-10-17)
 
 Public release preparation: v1.5.0 code1137, local models disabled while testing, existing local data retained. Private v1.5.1-test code1138 enables all local models and experimental Qualcomm SM8750 NPU runtime. Same com.termux/signing; next compatible update code must exceed1138. Publication/delivery status is recorded below after final verification; do not infer completion from this preparation note.

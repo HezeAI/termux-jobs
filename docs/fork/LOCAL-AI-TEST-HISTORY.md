@@ -1,3 +1,5 @@
+> Historical experimental feature: removed from the current v1.5.22-test source/APK. This document is retained as research evidence, not current functionality. See [removal notes](RELEASE-v1.5.22-test.md).
+
 # Historical private local-AI previews
 
 These development notes are not the public feature list. Public v1.5.0 keeps local models disabled while testing continues. See LOCAL-AI.md for experimental implementation details.

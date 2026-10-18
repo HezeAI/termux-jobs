@@ -785,7 +785,7 @@ public class WorkspaceNavigationTest {
         java.lang.reflect.Method edit = WorkspaceController.class.getDeclaredMethod("editSession", WorkspaceStore.Session.class, boolean.class); edit.setAccessible(true); edit.invoke(controller, null, false);
         AlertDialog form = ShadowAlertDialog.getLatestAlertDialog(); View decor = form.getWindow().getDecorView();
         findDescription(decor, "Среда запуска").performClick(); AlertDialog environments = ShadowAlertDialog.getLatestAlertDialog();
-        assertEquals(5,environments.getListView().getCount()); assertEquals("Termux",environments.getListView().getItemAtPosition(0)); assertEquals("Ubuntu",environments.getListView().getItemAtPosition(1)); assertEquals("AI Agents", environments.getListView().getAdapter().getItem(3)); environments.getListView().performItemClick(null,3,3);
+        assertEquals(4,environments.getListView().getCount()); assertEquals("Termux",environments.getListView().getItemAtPosition(0)); assertEquals("Ubuntu",environments.getListView().getItemAtPosition(1)); assertEquals("AI Agents", environments.getListView().getAdapter().getItem(3)); environments.getListView().performItemClick(null,3,3);
         assertNotNull(findText(decor,"Среда Codex: Ubuntu"));
         assertEquals(View.GONE, findDescription(decor,"Добавить команду запуска").getVisibility());
         findDescription(decor,"Доступ Codex").performClick(); AlertDialog access = ShadowAlertDialog.getLatestAlertDialog();
@@ -879,15 +879,29 @@ public class WorkspaceNavigationTest {
         else if (root instanceof ViewGroup) for (int i = 0; i < ((ViewGroup) root).getChildCount(); i++) collectEditors(((ViewGroup) root).getChildAt(i), fields);
     }
 
-    @Test public void openSessionRowsRestoreOriginalSizingAndOnlyCurrentSelectionIsHighlighted()throws Exception{
-        TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();activity.setTheme(R.style.Theme_Termux_Black);activity.setContentView(R.layout.activity_termux);Field view=TermuxActivity.class.getDeclaredField("mTerminalView");view.setAccessible(true);view.set(activity,activity.findViewById(R.id.terminal_view));WorkspaceController c=new WorkspaceController(activity);
-        try{com.termux.terminal.TerminalSession terminal=new com.termux.terminal.TerminalSession("unused","unused",new String[0],new String[0],2000,null);terminal.mSessionName="Background Bash";
-            java.lang.reflect.Constructor<TermuxSession> ctor=TermuxSession.class.getDeclaredConstructor(com.termux.terminal.TerminalSession.class,com.termux.shared.models.ExecutionCommand.class,TermuxSession.TermuxSessionClient.class,boolean.class);ctor.setAccessible(true);com.termux.app.TermuxService service=new com.termux.app.TermuxService();service.getTermuxSessions().add(ctor.newInstance(terminal,new com.termux.shared.models.ExecutionCommand(),null,false));Field sf=TermuxActivity.class.getDeclaredField("mTermuxService");sf.setAccessible(true);sf.set(activity,service);activity.getTerminalView().mTermSession=terminal;
-            Field f=WorkspaceController.class.getDeclaredField("store");f.setAccessible(true);WorkspaceStore store=(WorkspaceStore)f.get(c);store.sessions.clear();WorkspaceStore.Session term=new WorkspaceStore.Session();term.handle=terminal.mHandle;term.directory="/project";store.sessions.add(term);WorkspaceStore.Session local=new WorkspaceStore.Session();local.localAi=true;local.environment="termux";local.localModel="qwen35-2b";local.name="Local project";store.sessions.add(local);
-            f=WorkspaceController.class.getDeclaredField("localAi");f.setAccessible(true);LocalAiUi ui=(LocalAiUi)f.get(c);ui.panel(local,()->{});Field selected=WorkspaceController.class.getDeclaredField("selectedLocal");selected.setAccessible(true);selected.set(c,local);java.lang.reflect.Method stack=WorkspaceController.class.getDeclaredMethod("showSessionStack",View.class);stack.setAccessible(true);View anchor=activity.findViewById(R.id.workspace_tabs);
-            android.widget.PopupWindow popup=(android.widget.PopupWindow)stack.invoke(c,anchor);View root=popup.getContentView();TextView create=root.findViewWithTag("session-stack-create"),localRow=root.findViewWithTag("session-stack-local-"+local.id),terminalRow=root.findViewWithTag("session-stack-"+terminal.mHandle);
-            assertFalse(create.isSelected());assertTrue(localRow.isSelected());assertFalse(terminalRow.isSelected());assertTrue(localRow.getText().toString().contains(ui.sessionModelName(local)));assertFalse(localRow.getText().toString().contains("Локальный ИИ"));assertNotNull(localRow.getCompoundDrawables()[0]);assertEquals(terminalRow.getLayoutParams().height,localRow.getLayoutParams().height);assertEquals(create.getLayoutParams().height,localRow.getLayoutParams().height);assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,localRow.getLayoutParams().height);assertEquals(Math.min(Math.round(340*activity.getResources().getDisplayMetrics().density),activity.getResources().getDisplayMetrics().widthPixels-Math.round(24*activity.getResources().getDisplayMetrics().density)),popup.getWidth());assertEquals(14f,localRow.getTextSize()/activity.getResources().getDisplayMetrics().scaledDensity,.01f);popup.dismiss();
-            selected.set(c,null);popup=(android.widget.PopupWindow)stack.invoke(c,anchor);root=popup.getContentView();assertTrue(root.findViewWithTag("session-stack-"+terminal.mHandle).isSelected());assertFalse(root.findViewWithTag("session-stack-local-"+local.id).isSelected());popup.dismiss();
-        }finally{c.close();}
+
+    @Test public void openSessionRowsKeepSizingAndHighlightOnlyTheSelectedTerminal()throws Exception{
+        TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();activity.setTheme(R.style.Theme_Termux_Black);activity.setContentView(R.layout.activity_termux);
+        Field view=TermuxActivity.class.getDeclaredField("mTerminalView");view.setAccessible(true);view.set(activity,activity.findViewById(R.id.terminal_view));WorkspaceController c=new WorkspaceController(activity);
+        try {
+            com.termux.terminal.TerminalSession first=new com.termux.terminal.TerminalSession("unused","unused",new String[0],new String[0],2000,null);
+            com.termux.terminal.TerminalSession second=new com.termux.terminal.TerminalSession("unused","unused",new String[0],new String[0],2001,null);
+            first.mSessionName="First Bash";second.mSessionName="Second Bash";
+            java.lang.reflect.Constructor<TermuxSession> ctor=TermuxSession.class.getDeclaredConstructor(com.termux.terminal.TerminalSession.class,com.termux.shared.models.ExecutionCommand.class,TermuxSession.TermuxSessionClient.class,boolean.class);ctor.setAccessible(true);
+            com.termux.app.TermuxService service=new com.termux.app.TermuxService();
+            service.getTermuxSessions().add(ctor.newInstance(first,new com.termux.shared.models.ExecutionCommand(),null,false));service.getTermuxSessions().add(ctor.newInstance(second,new com.termux.shared.models.ExecutionCommand(),null,false));
+            Field sf=TermuxActivity.class.getDeclaredField("mTermuxService");sf.setAccessible(true);sf.set(activity,service);
+            java.lang.reflect.Method stack=WorkspaceController.class.getDeclaredMethod("showSessionStack",View.class);stack.setAccessible(true);View anchor=activity.findViewById(R.id.workspace_tabs);
+            for(com.termux.terminal.TerminalSession selected:new com.termux.terminal.TerminalSession[]{first,second}) {
+                activity.getTerminalView().mTermSession=selected;
+                android.widget.PopupWindow popup=(android.widget.PopupWindow)stack.invoke(c,anchor);View root=popup.getContentView();TextView create=root.findViewWithTag("session-stack-create");
+                assertFalse(create.isSelected());
+                for(com.termux.terminal.TerminalSession terminal:new com.termux.terminal.TerminalSession[]{first,second}) {
+                    TextView row=root.findViewWithTag("session-stack-"+terminal.mHandle);assertNotNull(row);assertEquals(terminal==selected,row.isSelected());assertNotNull(row.getCompoundDrawables()[0]);
+                    assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,row.getLayoutParams().height);assertEquals(create.getLayoutParams().height,row.getLayoutParams().height);assertEquals(14f,row.getTextSize()/activity.getResources().getDisplayMetrics().scaledDensity,.01f);
+                }
+                assertEquals(Math.min(Math.round(340*activity.getResources().getDisplayMetrics().density),activity.getResources().getDisplayMetrics().widthPixels-Math.round(24*activity.getResources().getDisplayMetrics().density)),popup.getWidth());popup.dismiss();
+            }
+        } finally { c.close(); }
     }
 }

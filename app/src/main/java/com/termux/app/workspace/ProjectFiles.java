@@ -21,7 +21,7 @@ final class ProjectFiles implements AutoCloseable {
         this.profile.name=profile.name;this.profile.handle=profile.handle;this.profile.codexSocketId=profile.codexSocketId;
         this.profile.sshEncryptedPassword=profile.sshEncryptedPassword;}
     void setPassword(char[] value) {if(password!=null)Arrays.fill(password,'\0');password=value.clone();}
-    static String environment(WorkspaceStore.Session s) {return s.environment.equals(LocalAiEnvironment.INTERNAL)?LocalAiEnvironment.UBUNTU:s.environment.equals("codex")?s.codexEnvironment:s.environment.equals("legacy")?"termux":s.environment;}
+    static String environment(WorkspaceStore.Session s) {return s.environment.equals("codex")?s.codexEnvironment:s.environment.equals("legacy")?"termux":s.environment;}
     static String environmentLabel(WorkspaceStore.Session s) {String e=environment(s);return e.startsWith("proot:")?s.name:e.equals("ubuntu")?"Ubuntu":e.equals("ssh")?"SSH · "+s.sshHost:"Termux";}
     static String target(String path) {
         if(path==null || path.indexOf('\0')>=0 || path.contains("\n") || path.contains("\r"))throw new IllegalArgumentException(WorkspaceText.tr("Некорректный путь"));
@@ -99,7 +99,6 @@ final class ProjectFiles implements AutoCloseable {
     private byte[] bytes(String script,int max) throws Exception {ByteArrayOutputStream out=new ByteArrayOutputStream();run(script,out,max);return out.toByteArray();}
     static String command(WorkspaceStore.Session s,String script) {
         String e=environment(s);String bash="bash --noprofile --norc -c "+SessionShell.quote(script);
-        if(s.environment.equals(LocalAiEnvironment.INTERNAL))return LocalAiEnvironment.command(script);
         if(e.startsWith("proot:")){String alias=e.substring(6);if(!WorkspaceLocalFilePicker.validAlias(alias))throw new IllegalArgumentException("INVALID_ENVIRONMENT");return "proot-distro login "+SessionShell.quote(alias)+" -- /bin/sh -c "+SessionShell.quote(script);}
         if(e.equals("ubuntu"))return "proot-distro login ubuntu -- /bin/"+bash;
         if(!e.equals("ssh"))return bash;
@@ -115,7 +114,6 @@ final class ProjectFiles implements AutoCloseable {
     }
     private void run(String script,OutputStream out,long max) throws Exception {run(script,out,max,null);}
     private synchronized void run(String script,OutputStream out,long max,byte[] input) throws Exception {
-        if(profile.environment.equals(LocalAiEnvironment.INTERNAL))LocalAiEnvironment.require(activity,LocalAiEnvironment.UBUNTU);
         if(closed||serverKnownHosts!=null&&ServerConnection.disconnected(activity,profile.id))throw new IOException(WorkspaceText.tr("Окно закрыто"));
         String invocation=command(profile,script);
         if(serverKnownHosts!=null&&environment(profile).equals("ssh"))invocation=invocation.replaceFirst("ssh -T",java.util.regex.Matcher.quoteReplacement("ssh -T -o "+SessionShell.quote("UserKnownHostsFile="+serverKnownHosts.getAbsolutePath())+" -o GlobalKnownHostsFile=/dev/null"));
@@ -142,7 +140,7 @@ final class ProjectFiles implements AutoCloseable {
     void localOperation(String script)throws Exception{if(environment(profile).equals("ssh"))throw new IOException("LOCAL_DESTINATION_REQUIRED");bytes(script,1024);}
     InputStream openUpload(Entry entry)throws Exception {return openLocalRead(entry,ServerSftp.MAX_BYTES);}
     InputStream openLocalRead(Entry entry,long maxBytes)throws Exception {
-        String env=environment(profile);if(profile.environment.equals(LocalAiEnvironment.INTERNAL))LocalAiEnvironment.require(activity,env);if(env.equals("ssh"))throw new IOException("LOCAL_SOURCE_REQUIRED");
+        String env=environment(profile);if(env.equals("ssh"))throw new IOException("LOCAL_SOURCE_REQUIRED");
         if(entry.directory||entry.size<0||entry.size>maxBytes)throw new IOException("FILE_LIMIT");
         ProcessBuilder builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c","exec "+command(profile,"test -f "+target(entry.path)+" && exec cat -- "+target(entry.path)));
         builder.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));builder.environment().clear();

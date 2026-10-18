@@ -49,7 +49,6 @@
         android:theme="@style/Theme.Termux">
         <uses-native-library android:name="libOpenCL.so" android:required="false" />
 
-        <service android:name=".app.workspace.LocalAiService" android:exported="false" android:process=":local_ai" />
         <uses-native-library android:name="libvndksupport.so" android:required="false" />
         <activity
             android:name=".app.TermuxActivity"

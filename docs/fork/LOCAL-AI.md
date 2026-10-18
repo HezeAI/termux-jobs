@@ -1,3 +1,5 @@
+> Historical experimental feature: removed from the current v1.5.22-test source/APK. This document is retained as research evidence, not current functionality. See [removal notes](RELEASE-v1.5.22-test.md).
+
 # Public availability and private testing
 
 Public v1.5.0 disables local-model creation/startup while testing continues; existing experimental data remains. The implementation below describes private test builds. Private v1.5.1-test includes Qualcomm runtime for the pinned Gemma4E2BSM8750 model; installed-app NPU initialization/inference still requires device verification. See [test notes](RELEASE-v1.5.1-test.md).

@@ -1,3 +1,5 @@
+> Historical experimental feature: removed from the current v1.5.22-test source/APK. This document is retained as research evidence, not current functionality. See [removal notes](RELEASE-v1.5.22-test.md).
+
 > Historical proposal/test notes, superseded by [v1.5.21-test](RELEASE-v1.5.21-test.md). LoRA was cancelled. Referenced training scripts belong to archived commit9ffa1501 and are not present in the current app source.
 
 # Private LoRA pilot — v1.5.20-test

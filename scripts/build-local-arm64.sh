@@ -34,32 +34,6 @@ link_native libtermux.so "$FORK_NATIVE/termux.o"
 link_native libtermux-bootstrap.so "$FORK_NATIVE/bootstrap.o" "$FORK_NATIVE/bootstrap-zip.o"
 cp "$FORK_NATIVE/libtermux.so" "$FORK_STAGE/terminal-emulator/src/main/jniLibs/arm64-v8a/"
 cp "$FORK_NATIVE/libtermux-bootstrap.so" "$FORK_STAGE/app/src/main/jniLibs/arm64-v8a/"
-if [[ ! -f "$FORK_ROOT/.tools/local-ai/native-build/libjobs_llama.so" ]]; then
-    echo "Build the isolated local AI native library first: scripts/build-local-ai-native.sh" >&2; exit 1
-fi
-cp "$FORK_ROOT/.tools/local-ai/native-build/libjobs_llama.so" "$FORK_STAGE/app/src/main/jniLibs/arm64-v8a/"
-${FORK_NATIVE_STRIP:-llvm-strip} --strip-unneeded "$FORK_STAGE/app/src/main/jniLibs/arm64-v8a/libjobs_llama.so"
-cp "$FORK_ROOT/.tools/local-ai/native-build/libjobs_llama_fast.so" "$FORK_STAGE/app/src/main/jniLibs/arm64-v8a/"
-${FORK_NATIVE_STRIP:-llvm-strip} --strip-unneeded "$FORK_STAGE/app/src/main/jniLibs/arm64-v8a/libjobs_llama_fast.so"
-for FORK_RUNNER in libjobs_runner_opencl.so libjobs_runner_termux.so libjobs_runner_termux_fast.so libjobs_runner_ubuntu.so libjobs_runner_ubuntu_fast.so; do
- test -f "$FORK_ROOT/.tools/local-ai/native-build/$FORK_RUNNER"
- cp "$FORK_ROOT/.tools/local-ai/native-build/$FORK_RUNNER" "$FORK_STAGE/app/src/main/jniLibs/arm64-v8a/"
- ${FORK_NATIVE_STRIP:-llvm-strip} --strip-unneeded "$FORK_STAGE/app/src/main/jniLibs/arm64-v8a/$FORK_RUNNER"
-done
-# Only the private test flavor includes QAIRT binaries; public local AI is disabled.
-if [[ "${TERMUX_PUBLIC_RELEASE:-0}" != "1" ]]; then
- for FORK_QNN in libQnnHtp.so libQnnSystem.so libQnnHtpPrepare.so libQnnHtpV79Stub.so libQnnHtpV79Skel.so; do
-  cp "$FORK_ROOT/.tools/local-ai/qairt-sm8750/$FORK_QNN" "$FORK_STAGE/app/src/main/jniLibs/arm64-v8a/"
- done
-else
- rm -f "$FORK_STAGE/app/src/main/jniLibs/arm64-v8a/"libQnn*.so
-fi
-if [[ "${TERMUX_PUBLIC_RELEASE:-0}" != "1" ]]; then
- mkdir -p "$FORK_STAGE/app/src/main/assets/licenses"
- cp "$FORK_ROOT/.tools/local-ai/qairt-sm8750/LICENSE.pdf" "$FORK_STAGE/app/src/main/assets/licenses/QAIRT-2.50-LICENSE.pdf"
-else
- rm -f "$FORK_STAGE/app/src/main/assets/licenses/QAIRT-2.50-LICENSE.pdf"
-fi
 cd "$FORK_STAGE"
 export TERMUX_SPLIT_APKS_FOR_DEBUG_BUILDS=0
 export TERMUX_APP_VERSION_NAME="${TERMUX_APP_VERSION_NAME:-1.5.1-test}"

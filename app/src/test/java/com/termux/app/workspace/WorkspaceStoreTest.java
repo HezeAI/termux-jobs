@@ -24,6 +24,24 @@ public class WorkspaceStoreTest {
         new File(context.getFilesDir(), "workspace-v1.json").delete();
         new File(context.getFilesDir(), "workspace-v1.json.bak").delete();
     }
+    @Test public void retiredLocalProfilesAreSkippedWithoutResettingOtherData() throws Exception {
+        WorkspaceStore store = new WorkspaceStore(context, errors::add);
+        WorkspaceStore.Command command = new WorkspaceStore.Command(); command.name="Keep command";command.command="pwd";store.commands.add(command);
+        WorkspaceStore.Note note = new WorkspaceStore.Note();note.text="Keep note";store.notes.add(note);
+        WorkspaceStore.Session shell = new WorkspaceStore.Session();shell.environment="ubuntu";shell.keepHistory=true;shell.saved=true;shell.startup="pwd";
+        WorkspaceStore.Session codex = new WorkspaceStore.Session();codex.environment="codex";codex.codexChat="id";codex.codexThread="01900000-0000-7000-8000-000000000001";codex.codexConfirmActions=false;codex.codexAccess="read";
+        WorkspaceStore.Session ssh = new WorkspaceStore.Session();ssh.environment="ssh";ssh.sshHost="example.invalid";ssh.sshEncryptedPassword="ciphertext";
+        store.sessions.add(shell);store.sessions.add(codex);store.sessions.add(ssh);store.recordCommand("keep recent");store.awaitWrites();
+        org.json.JSONObject data=store.encode();org.json.JSONArray profiles=data.getJSONArray("sessions");
+        profiles.put(new org.json.JSONObject().put("localAi",true).put("environment","termux").put("localChat","retired").put("localModel","old"));
+        // Obsolete local-only settings on ordinary sessions no longer invalidate the library.
+        profiles.getJSONObject(0).put("localContext","obsolete").put("localBehavior",false);
+        store.decode(data.toString());
+        assertEquals(3,store.sessions.size());assertEquals(shell.id,store.sessions.get(0).id);assertTrue(store.sessions.get(0).keepHistory);assertTrue(store.sessions.get(0).copy().keepHistory);
+        assertEquals(codex.codexThread,store.sessions.get(1).codexThread);assertEquals(Boolean.FALSE,store.sessions.get(1).codexConfirmActions);assertEquals("read",store.sessions.get(1).codexAccess);
+        assertEquals("ciphertext",store.sessions.get(2).sshEncryptedPassword);assertEquals("pwd",store.commands.get(0).command);assertEquals("Keep note",store.notes.get(0).text);assertEquals("keep recent",store.recentCommands.get(0).command);
+        org.json.JSONObject encoded=store.encode();assertEquals(8,encoded.getInt("version"));assertEquals(3,encoded.getJSONArray("sessions").length());assertFalse(encoded.toString().contains("localAi"));assertFalse(encoded.toString().contains("localChat"));store.close();
+    }
     @Test public void passwordProfilesPersistOnlyCiphertextAndMigrateSshVersionSix() throws Exception {
         WorkspaceStore store = new WorkspaceStore(context, errors::add); WorkspaceStore.Session s = new WorkspaceStore.Session();
         s.environment = "ssh"; s.sshHost = "example.invalid"; s.sshAuth = "password"; s.sshEncryptedPassword = "1:iv:ciphertext";

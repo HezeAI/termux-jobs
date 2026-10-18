@@ -1,5 +1,24 @@
 # Termux Job’s
 
+## Private v1.5.22-test — local AI removed
+
+This source checkout builds **v1.5.22-test / code1159**, not a new public release.
+On-device AI (llama.cpp, LiteRT-LM, NPU runtime, local chats and presets) is removed.
+The first launch removes only app-private `files/local-ai`, `cache/local-ai` and
+local diagnostics preferences. This intentionally deletes downloaded local models,
+local chat history and their settings; export anything needed before updating.
+Old local-AI profiles are skipped without resetting the rest of the library.
+Codex/Gemini/Claude/OpenCode, regular environments, servers, files, commands,
+notes, backups and the shared history controls remain. No GitHub publication.
+See [changes](docs/fork/RELEASE-v1.5.22-test.md) and
+[checks](docs/fork/VALIDATION-v1.5.22-test.md).
+
+**RU:** локальные ИИ полностью убраны. При первом запуске удаляются их модели,
+локальные чаты и приватные настройки. Прочие данные приложения не сбрасываются.
+Рабочая Ubuntu сохраняется. Отдельная `jobs-local-ai` удалена на устройстве
+разработчика по его запросу; APK не удаляет произвольные proot-окружения.
+
+
 ## v1.5.0
 
 Public code1137; private test code1138. com.termux, same signing identity, Android8+/ARM64, library v8 with optional fields. Local models disabled in public builds while testing continues. History controls, agent permissions and server multi-selection/download/move are available. No automatic reset or environment replacement. [Release](docs/fork/RELEASE-v1.5.0.md).

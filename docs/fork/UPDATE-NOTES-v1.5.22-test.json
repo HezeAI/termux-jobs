@@ -1,0 +1,8 @@
+{
+  "ru": ["Полностью удалены локальные ИИ, их движки и библиотеки. Остальные текущие функции сохранены."],
+  "en": ["On-device AI and inference runtimes removed. Other current features retained."],
+  "compatibility": {
+    "ru": ["Первый запуск удалит модели, чаты и настройки локальных ИИ из приватных каталогов. Экспортируйте нужное до обновления. Старые локальные профили исчезнут. Остальные данные не сбрасываются; package/сертификат сохранены."],
+    "en": ["First launch deletes retired app-private local models, chats and settings; export anything needed before updating. Old local profiles disappear. Other app data is not reset; package/signing identity retained."]
+  }
+}

@@ -1,1 +1,0 @@
-{ global: Java_com_termux_app_workspace_LocalAiEngine_*; local: *; };
