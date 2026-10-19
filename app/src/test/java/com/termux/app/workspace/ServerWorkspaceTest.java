@@ -41,7 +41,7 @@ public class ServerWorkspaceTest {
     @Test public void passwordCiphertextIsBoundToServerIdentity(){ServerProfiles.Profile p=profile();p.encrypted="encrypted";assertEquals(p.id,p.session().id);assertEquals(p.host,p.session().sshHost);assertEquals(p.user,p.session().sshUser);assertEquals("encrypted",p.session().sshEncryptedPassword);}
     @Test public void existingSshSessionOptionRemainsAvailable()throws Exception{
         WorkspaceStore.Session s=new WorkspaceStore.Session();s.environment="ssh";s.sshHost="example.invalid";s.sshUser="tester";assertTrue(SshSessionShell.command(s).startsWith("ssh -t"));
-        String controller=new String(java.nio.file.Files.readAllBytes(new File("src/main/java/com/termux/app/workspace/WorkspaceController.java").toPath()),"UTF-8");assertTrue(controller.contains("\"termux\", \"ubuntu\", \"ssh\", \"codex\""));
+        String controller=new String(java.nio.file.Files.readAllBytes(new File("src/main/java/com/termux/app/workspace/WorkspaceController.java").toPath()),"UTF-8");assertTrue(controller.contains("\"local\", \"ssh\", \"codex\""));
     }
     private boolean contains(View v,String value){if(v instanceof TextView&&((TextView)v).getText().toString().contains(value))return true;if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++)if(contains(((ViewGroup)v).getChildAt(i),value))return true;return false;}
     @Test public void serverScreenOpensWithoutSshOrAutomaticInstallation(){TermuxActivity a=activity();WorkspaceServers s=new WorkspaceServers(a,(name,command)->fail("Should not launch terminals"));LinearLayout root=new LinearLayout(a);s.attach(root);assertTrue(contains(root,"Добавить сервер")||contains(root,"Add server"));assertEquals(0,s.store.profiles.size());s.close();}

@@ -763,3 +763,10 @@ Engine settings → Operating mode → CPU / GPU (OpenCL, testing). CPU is defau
 ## v1.5.0 server selection and histories
 
 Long-press a server file/folder to select; the lower-right ↓ panel offers Download, Move, Select all, Clear. Download opens the local destination picker (including access request for device storage). Files preserve names/hierarchy in a new download-UUID folder, max10GiB/file. Quick Download remains. Move prepares a same-server selection: navigate to destination, use Move here, confirm. No overwriting or cross-filesystem copy/delete fallback. Completed transfers/moves survive partial batch failure; stop affects only the transfer connection. No persistent retry queue after app exit. Unsaved-session closing has Keep history and Close / Add preset and close. CLI-native chat history is independent; supported Codex chat viewing/deletion is in General settings → Chat histories. Local models are disabled in the public build while testing continues; existing experimental data remains.
+
+## Проверочная сборка после v1.6.5
+
+[Окружения Termux](ENVIRONMENTS.md): вложенный выбор Linux, команда входа,
+подтверждённая установка, проверка наличия оболочки и особенности отката.
+У AI Agents в долгом тапе по сессии на вкладке терминала — «Установка пакетов»;
+терминальное окно по-прежнему открывается роботом над чатом.

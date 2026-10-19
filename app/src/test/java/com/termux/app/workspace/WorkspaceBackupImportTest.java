@@ -40,6 +40,16 @@ public class WorkspaceBackupImportTest {
         WorkspaceBackupImport.Choice c=new WorkspaceBackupImport.Choice();assertEquals(0,WorkspaceBackupImport.prepare(activity,r,new JSONObject(),c).commands.size());c.candidates.add(0);assertEquals("ls -lah",WorkspaceBackupImport.prepare(activity,r,new JSONObject(),c).commands.get(0).command);c.candidates.add(1);try{WorkspaceBackupImport.prepare(activity,r,new JSONObject(),c);fail();}catch(IllegalArgumentException expected){}
     }
     @Test public void restoredUbuntuGetsAnExplicitSeparateLaunchPreset()throws Exception{
-        JSONObject restored=new JSONObject().put("environments",new JSONArray().put("jobs-abcdef123456"));WorkspaceBackupImport.Prepared p=WorkspaceBackupImport.prepare(activity,report(),restored,new WorkspaceBackupImport.Choice());assertEquals(1,p.presets.size());assertEquals("termux",p.presets.get(0).environment);assertEquals("proot-distro login --isolated 'jobs-abcdef123456'",p.presets.get(0).startup);assertFalse(p.presets.get(0).restoreReview);
+        JSONObject restored=new JSONObject().put("environments",new JSONArray().put("jobs-abcdef123456"));WorkspaceBackupImport.Prepared p=WorkspaceBackupImport.prepare(activity,report(),restored,new WorkspaceBackupImport.Choice());assertEquals(1,p.presets.size());assertEquals("termux",p.presets.get(0).environment);assertEquals("jobs-abcdef123456",p.presets.get(0).prootAlias);assertTrue(p.presets.get(0).prootIsolated);assertEquals("",p.presets.get(0).startup);assertTrue(p.presets.get(0).restoreReview);
+    }
+
+    @Test public void restoredPresetsRebindOnlyTheSelectedSourceInstance()throws Exception{
+        WorkspaceStore.Session alpine=new WorkspaceStore.Session();alpine.environment="termux";alpine.prootAlias="alpine";alpine.saved=true;alpine.startup="pwd";store.sessions.add(alpine);
+        WorkspaceStore.Session other=new WorkspaceStore.Session();other.environment="termux";other.prootAlias="debian";other.saved=true;store.sessions.add(other);
+        WorkspaceStore.Session agent=new WorkspaceStore.Session();agent.environment="codex";agent.saved=true;store.sessions.add(agent);
+        WorkspaceBackupImport.Choice choice=new WorkspaceBackupImport.Choice();choice.presets=true;JSONObject restored=new JSONObject().put("environmentBindings",new JSONObject().put("alpine","jobs-abcdef123456").put("ubuntu","jobs-111111111111"));
+        WorkspaceBackupImport.Prepared data=WorkspaceBackupImport.prepare(activity,report(),restored,choice);
+        assertEquals("jobs-abcdef123456",data.presets.get(0).prootAlias);assertEquals("pwd",data.presets.get(0).startup);assertTrue(data.presets.get(0).restoreReview);
+        assertEquals("debian",data.presets.get(1).prootAlias);assertEquals("codex",data.presets.get(2).environment);assertEquals("",data.presets.get(2).prootAlias);
     }
 }

@@ -36,10 +36,13 @@ public class ManualOpenCodeChatTest {
         try {
             WorkspaceStore.Session s=new WorkspaceStore.Session();s.environment="ubuntu";store(c).sessions.add(s);
             Method menu=WorkspaceController.class.getDeclaredMethod("sessionMenu",WorkspaceStore.Session.class,boolean.class);menu.setAccessible(true);
-            for(String agent:new String[]{"opencode","","claude","gemini"}) {
-                s.aiAgent=agent.equals("opencode")?agent:"";s.claudeAgent=agent.equals("claude");s.geminiAgent=agent.equals("gemini");menu.invoke(c,s,true);
+            for(String agent:new String[]{"opencode","codex","claude","gemini"}) {
+                s.environment=agent.equals("codex")?"codex":"ubuntu";s.aiAgent=agent.equals("opencode")?agent:"";s.claudeAgent=agent.equals("claude");s.geminiAgent=agent.equals("gemini");menu.invoke(c,s,true);
                 AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();
                 for(int i=0;i<dialog.getListView().getCount();i++)assertNotEquals(WorkspaceText.tr("Сохранить чат сессии"),dialog.getListView().getItemAtPosition(i));
+                boolean packages=false;
+                for(int i=0;i<dialog.getListView().getCount();i++){String label=dialog.getListView().getItemAtPosition(i).toString();packages|=label.equals("Установка пакетов")||label.equals("Install packages");assertFalse(label.startsWith("Терминал ")||label.startsWith("Terminal "));}
+                assertTrue(packages);
                 dialog.dismiss();
             }
         } finally {c.close();}

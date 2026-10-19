@@ -12,6 +12,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -37,6 +38,8 @@ public final class WorkspaceStore {
         public String id = UUID.randomUUID().toString();
         public String name = "Bash", directory = "", startup = "", handle = "";
         public String startup2 = "", startup3 = "", environment = "legacy";
+        public String prootAlias="";
+        public boolean prootIsolated;
         public String sshHost = "", sshUser = "root";
         public int sshPort = 22;
         public boolean restoreReview;
@@ -69,7 +72,7 @@ public final class WorkspaceStore {
         }
         public Session copy() {
             Session s = new Session();s.restoreReview=restoreReview;s.keepHistory=keepHistory;
-            s.extendedDebug=extendedDebug; s.name = name + WorkspaceText.tr(" — копия"); s.directory = directory; s.startup = startup; s.startup2 = startup2; s.startup3 = startup3; s.environment = environment;
+            s.extendedDebug=extendedDebug; s.name = name + WorkspaceText.tr(" — копия"); s.directory = directory; s.startup = startup; s.startup2 = startup2; s.startup3 = startup3; s.environment = environment;s.prootAlias=prootAlias;s.prootIsolated=prootIsolated;
             s.sshHost = sshHost; s.sshUser = sshUser; s.sshPort = sshPort; s.sshKeepOpen = sshKeepOpen; s.sshAuth = sshAuth; s.sshIdentity = sshIdentity; // Password is bound to the original profile ID.
             s.codexConfirmActions=codexConfirmActions; s.aiProjectOnly=aiProjectOnly; s.codexEnvironment = codexEnvironment; s.codexAccess = codexAccess; s.codexChat = codexChat; s.codexThread = codexThread; s.codexThreadName = codexThreadName; s.codexSourceDirectory=codexSourceDirectory;
             s.aiAgent=aiAgent; s.aiConnection=aiConnection; s.aiModel=aiModel; s.aiVariant=aiVariant; s.aiMode=aiMode; s.aiAccess=aiAccess;
@@ -154,7 +157,7 @@ public final class WorkspaceStore {
         for (Command c : commands) cs.put(new JSONObject().put("id", c.id).put("name", c.name)
             .put("command", c.command).put("category", c.category).put("directory", c.directory).put("favorite", c.favorite));
         for (Session s : sessions) ss.put(new JSONObject().put("id", s.id).put("name", s.name)
-            .put("directory", s.directory).put("startup", s.startup).put("startup2", s.startup2).put("startup3", s.startup3).put("sshAuth", s.sshAuth).put("sshIdentity", s.sshIdentity).put("sshEncryptedPassword", s.sshEncryptedPassword).put("sshHost", s.sshHost).put("sshUser", s.sshUser).put("sshPort", s.sshPort).put("sshKeepOpen", s.sshKeepOpen).put("environment", s.environment).put("handle", s.handle)
+            .put("directory", s.directory).put("prootAlias",s.prootAlias).put("prootIsolated",s.prootIsolated).put("prootStartup",s.prootAlias.isEmpty()?JSONObject.NULL:new JSONArray(Arrays.asList(s.startup,s.startup2,s.startup3))).put("startup", s.prootAlias.isEmpty()?s.startup:WorkspaceEnvironments.OLD_READER_GUARD).put("startup2", s.prootAlias.isEmpty()?s.startup2:"").put("startup3", s.prootAlias.isEmpty()?s.startup3:"").put("sshAuth", s.sshAuth).put("sshIdentity", s.sshIdentity).put("sshEncryptedPassword", s.sshEncryptedPassword).put("sshHost", s.sshHost).put("sshUser", s.sshUser).put("sshPort", s.sshPort).put("sshKeepOpen", s.sshKeepOpen).put("environment", s.environment).put("handle", s.handle)
             .put("codexConfirmActions",s.codexConfirmActions==null?JSONObject.NULL:s.codexConfirmActions).put("aiProjectOnly",s.aiProjectOnly)
             .put("codexEnvironment", s.codexEnvironment).put("codexAccess", s.codexAccess).put("codexChat", s.codexChat).put("codexThread", s.codexThread).put("codexThreadName", s.codexThreadName).put("codexSocketId", s.codexSocketId).put("codexSourceDirectory",s.codexSourceDirectory)
             .put("aiAgent",s.aiAgent).put("aiConnection",s.aiConnection).put("aiModel",s.aiModel).put("aiVariant",s.aiVariant).put("aiMode",s.aiMode).put("aiAccess",s.aiAccess).put("aiChat",s.aiChat).put("aiThread",s.aiThread).put("aiSavedThread",s.aiSavedThread)
@@ -192,6 +195,18 @@ public final class WorkspaceStore {
             s.id = validId(o.getString("id")); s.name = o.getString("name"); s.directory = o.optString("directory");
             s.startup = o.optString("startup"); s.startup2 = o.optString("startup2"); s.startup3 = o.optString("startup3"); s.environment = o.optString("environment", "legacy");
             if (!s.environment.equals("legacy") && !s.environment.equals("termux") && !s.environment.equals("ubuntu") && !s.environment.equals("ssh") && !s.environment.equals("codex")) throw new JSONException("Unknown environment"); s.handle = o.optString("handle");
+            if(o.has("prootAlias")&&!(o.get("prootAlias") instanceof String))throw new JSONException("Invalid environment alias");
+            s.prootAlias=o.optString("prootAlias","");
+            if(o.has("prootIsolated")&&!(o.get("prootIsolated") instanceof Boolean))throw new JSONException("Invalid environment isolation");
+            s.prootIsolated=o.optBoolean("prootIsolated");
+            if(s.prootIsolated&&s.prootAlias.isEmpty())throw new JSONException("Missing isolated environment alias");
+            if(!s.prootAlias.isEmpty()){
+                if(!s.environment.equals("termux")||!WorkspaceLocalFilePicker.validAlias(s.prootAlias)||o.optBoolean("geminiAgent")||o.optBoolean("claudeAgent")||!o.optString("aiAgent").isEmpty())throw new JSONException("Invalid environment binding");
+                JSONArray commands=o.optJSONArray("prootStartup");if(commands==null||commands.length()!=3)throw new JSONException("Invalid environment startup");
+                for(int k=0;k<3;k++)if(!(commands.get(k) instanceof String))throw new JSONException("Invalid environment command");
+                s.startup=commands.getString(0);s.startup2=commands.getString(1);s.startup3=commands.getString(2);
+            }
+
             s.sshHost = o.optString("sshHost", ""); s.sshUser = o.optString("sshUser", "root");
             s.sshAuth = o.optString("sshAuth", "auto"); s.sshIdentity = o.optString("sshIdentity", "");
             s.sshEncryptedPassword = o.optString("sshEncryptedPassword", "");

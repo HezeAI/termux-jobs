@@ -1,3 +1,22 @@
+# Unreleased — 1.6.8-test (private verification)
+
+- Add the Termux environments launch family, concrete proot instance selection,
+  explicit entry command, confirmed missing-distribution setup and readiness check.
+- Bind session files and restored ordinary presets to the selected/new instance;
+  preserve existing shared Ubuntu and agent startup paths. No migration to ubuntu-ai.
+- Replace terminal shortcuts in AI-session long-press menus with Install packages,
+  including Codex; retain the robot terminal button above chats.
+- Fix entry into the installed Void OCI: root's passwd names missing /bin/bash,
+  although /bin/sh exists. Use native OCI run with explicit sh only for this
+  missing-Bash configuration and an empty Entrypoint. Files and displayed entry
+  commands share this decision. Existing Ubuntu/AI paths remain unchanged.
+- Enable modern Void Linux installation from its official multi-architecture OCI;
+  enable Arch Linux ARM from a pinned Termux rootfs, with HTTPS/SHA-256 validation,
+  cleanup and explicit ARM variant consent. Existing distro and legacy paths retained.
+- Test code1204 updates code1203; library format unchanged. Earlier code1203
+  superseded an accidentally installed previous1.6.6 rollback/code1202. Older readers preserve the
+  library but lose new proot preset fields on resave; see ENVIRONMENTS.md before rollback.
+
 # v1.6.5 fix — changes since public v1.6.0
 
 - Fix Codex large-history startup disconnect with one-turn pages and a bounded

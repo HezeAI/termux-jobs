@@ -118,5 +118,28 @@ class BackupTests(unittest.TestCase):
         p=self.tar([('home/file',b'foo')]);with_limit=patch.object(b,'MAX_FILES',0)
         with with_limit:self.assertRaises(b.BackupError,b.scan_tar,p)
 
+    def test_environment_metadata_preserves_concrete_alias_and_rejects_invalid_values(self):
+        p=self.tar([('debian/rootfs/usr/bin/env',elf()),('debian/rootfs/etc/os-release',b'ID=debian')])
+        manifest=self.root/'manifest.json'
+        value=dict(format='termux-jobs-backup',version=1,components=[dict(file=p.name,kind='ubuntu',sha256=b.digest(p),bytes=p.stat().st_size,environmentAlias='debian')])
+        manifest.write_text(json.dumps(value))
+        report=self.inspect(manifest)
+        self.assertEqual('debian',report['components'][0]['environmentAlias'])
+        for invalid in ('../ubuntu','-bad',False,'a;b'):
+            value['components'][0]['environmentAlias']=invalid
+            manifest.write_text(json.dumps(value))
+            self.assertRaises(b.BackupError,self.inspect,manifest)
+
+    def test_restore_records_source_alias_without_replacing_it(self):
+        p=self.tar([('debian/rootfs/usr/bin/env',elf()),('debian/rootfs/etc/os-release',b'ID=debian')])
+        manifest=self.root/'manifest.json'
+        manifest.write_text(json.dumps(dict(format='termux-jobs-backup',version=1,components=[dict(file=p.name,kind='ubuntu',sha256=b.digest(p),bytes=p.stat().st_size,environmentAlias='debian')])))
+        with patch.object(b,'proot_modern',return_value=True),patch.object(b,'restore_ubuntu',return_value='jobs-abcdef123456') as create:
+            report=self.inspect(manifest)
+            result=b.restore(dict(self.req,path=str(manifest),fingerprints=report['fingerprints'],selected=[0],destination=str(self.home),work=str(self.work)))
+        self.assertEqual({'debian':'jobs-abcdef123456'},result['environmentBindings'])
+        self.assertEqual(['jobs-abcdef123456'],result['environments'])
+        self.assertEqual('debian',create.call_args.args[1]['environmentAlias'])
+
 
 if __name__=='__main__':unittest.main()

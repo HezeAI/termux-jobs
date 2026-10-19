@@ -724,3 +724,16 @@ ServerDownloadPlan inventories bounded trees read-only via LSTAT/REALPATH/READDI
 У каждого индикатора не более одного ожидающего кадра. Скрытие/отключение
 отменяет кадр; рамка сервера останавливается вне терминала и при сворачивании.
 Это не останавливает передачу файлов и не меняет частоту сетевых запросов.
+
+## Concrete local environments (unreleased 1.6.6-test)
+
+Ordinary proot sessions retain storage environment `termux` for old-reader
+compatibility, with optional `prootAlias` and `prootIsolated`. Execution and file
+operations resolve the concrete alias; do not infer the system from its display
+name or route these sessions into the host working directory. Original Ubuntu
+and AI launch routes stay unchanged. `prootStartup` preserves the real commands,
+while legacy startup fields contain a fail-closed unsupported-version guard.
+An older app can read the library, but its resave drops new preset metadata.
+Restore metadata maps source aliases to fresh jobs-* instances for ordinary
+presets only; restored sessions retain --isolated and mandatory settings review.
+See [environments](ENVIRONMENTS.md) for setup and rollback constraints.

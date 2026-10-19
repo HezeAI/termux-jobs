@@ -105,6 +105,7 @@ public final class WorkspaceController {
     private ClaudeLiveUi claudeLiveUi;
     private AgentReceiptsUi agentReceiptsUi;
     private AgentChatUi agentChatUi;
+    private EnvironmentSetup environmentSetup;
     private final GeminiInputDispatch geminiInputDispatch=new GeminiInputDispatch();
     private boolean codexLoading;
     private int codexApplyGeneration;
@@ -133,6 +134,7 @@ public final class WorkspaceController {
     private final java.util.Map<String, char[]> pendingSshPasswords = new java.util.HashMap<>();
     public WorkspaceController(TermuxActivity activity) {
         this.activity = activity;
+        environmentSetup=new EnvironmentSetup(activity);
         prepareKeyboardWindow();
         store = new WorkspaceStore(activity, message -> activity.showToast(message, true));
         claudeLiveUi=new ClaudeLiveUi(activity,()->{TerminalSession t=activity.getCurrentSession();WorkspaceStore.Session p=t==null?null:store.findByHandle(t.mHandle);return t!=null&&t.isRunning()&&p!=null&&p.claudeAgent?p:null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible(),(p,run,model,mode)->{if(store.sessions.contains(p)&&run.equals(p.claudeSocketId)){p.claudeModel=model;p.claudeMode=mode;store.save();}});
@@ -917,16 +919,20 @@ public final class WorkspaceController {
         WorkspaceStore.Session draft = existing == null ? new WorkspaceStore.Session() : existing;
         if(existing!=null&&draft.environment.equals("codex")&&draft.codexEnvironment.equals("termux"))
             activity.showToast(tr("Старый профиль Codex сохраняет Termux, авторизацию и историю. Для Ubuntu создайте новую сессию.","This legacy Codex profile keeps Termux, authentication and history. Create a new session for Ubuntu."),true);
-        LinearLayout form = column(); if(draft.restoreReview)form.addView(text(WorkspaceLanguage.code(activity).equals("ru")?"Импортированный пресет: проверьте среду, команды и пути. Отдельная восстановленная Ubuntu доступна своим пресетом запуска. Сохраните настройки перед запуском.":"Imported preset: review environment, commands and paths. A separate restored Ubuntu has its own launch preset. Save settings before launching.",14,MUTED)); EditText name = labeled(form, WorkspaceText.tr("Название сессии"), existing == null ? "" : draft.name, false);
+        LinearLayout form = column(); if(draft.restoreReview)form.addView(text(WorkspaceLanguage.code(activity).equals("ru")?"Импортированный пресет: проверьте среду, команды и пути. Отдельное восстановленное окружение доступно своим пресетом запуска. Сохраните настройки перед запуском.":"Imported preset: review environment, commands and paths. A separate restored environment has its own launch preset. Save settings before launching.",14,MUTED)); EditText name = labeled(form, WorkspaceText.tr("Название сессии"), existing == null ? "" : draft.name, false);
         EditText directory = labeled(form, WorkspaceText.tr("Рабочий каталог"), existing == null ? TermuxConstants.TERMUX_HOME_DIR_PATH : draft.directory, false);
-        String[] chosenEnvironment = {existing == null ? "termux" : (draft.aiAgent.equals("opencode") || draft.claudeAgent || draft.geminiAgent) ? "codex" : draft.environment.equals("legacy")?"termux":draft.environment};
+        String[] chosenEnvironment = {existing == null ? "termux" : (draft.aiAgent.equals("opencode") || draft.claudeAgent || draft.geminiAgent) ? "codex" : draft.environment.equals("legacy")?"termux":!draft.prootAlias.isEmpty()?"proot:"+draft.prootAlias:draft.environment};
         String[] chosenAgent={draft.geminiAgent?"gemini":draft.claudeAgent?"claude":draft.aiAgent.equals("opencode")?"opencode":"codex"};
         TextView chooseDirectory=button("▱",false,()->{});
         chooseDirectory.setContentDescription(WorkspaceText.tr("Выбрать рабочий каталог"));
         form.removeView(directory);LinearLayout directoryRow=row();directoryRow.addView(directory,new LinearLayout.LayoutParams(0,-2,1));directoryRow.addView(chooseDirectory,new LinearLayout.LayoutParams(dp(48),dp(48)));form.addView(directoryRow);
 
-        String[] environments = {"termux", "ubuntu", "ssh", "codex"};
-        String[] environmentNames = {"Termux", "Ubuntu", WorkspaceText.tr("SSH · сервер"), "AI Agents"};
+        boolean[] editorOpen={true};
+        String[] environments = {"local", "ssh", "codex"};
+        String[] environmentNames = {tr("Окружения Termux","Termux environments"), WorkspaceText.tr("SSH · сервер"), "AI Agents"};
+        LinearLayout localFields=column();
+        TextView localEnvironment=button("",false,()->{});localEnvironment.setContentDescription(tr("Окружение","Environment"));localFields.addView(localEnvironment);
+        TextView environmentLogin=text("",13,MUTED);environmentLogin.setContentDescription("Environment login command");environmentLogin.setTextIsSelectable(true);localFields.addView(environmentLogin);
         TextView environment = button("", false, () -> {});
         environment.setContentDescription(WorkspaceText.tr("Среда запуска"));
         TextView environmentCheck=button(tr("Проверка среды запуска","Launch environment check"),false,()->{});environmentCheck.setTag("agent-environment-check");
@@ -1104,7 +1110,7 @@ public final class WorkspaceController {
                 }
             }).setNegativeButton(WorkspaceText.tr("Отмена"), null).show());
         chooseDirectory.setOnClickListener(v->{
-            WorkspaceStore.Session location=new WorkspaceStore.Session();location.id=draft.id;location.environment=chosenEnvironment[0].equals("codex")&&!chosenAgent[0].equals("codex")?"ubuntu":chosenEnvironment[0];location.codexEnvironment=codexEnvironment[0];
+            WorkspaceStore.Session location=new WorkspaceStore.Session();location.id=draft.id;location.environment=chosenEnvironment[0].equals("codex")&&!chosenAgent[0].equals("codex")?"ubuntu":chosenEnvironment[0];location.codexEnvironment=codexEnvironment[0];location.prootIsolated=draft.prootIsolated&&chosenEnvironment[0].equals("proot:"+draft.prootAlias);
             location.sshHost=sshHost.getText().toString().trim();location.sshUser=sshUser.getText().toString().trim();location.sshAuth=chosenAuth[0];location.sshIdentity=identity.getText().toString().trim();location.sshEncryptedPassword=draft.sshEncryptedPassword;
             try{location.sshPort=Integer.parseInt(sshPort.getText().toString());}catch(NumberFormatException e){sshPort.setError(WorkspaceText.tr("Порт от 1 до 65535"));return;}
             showFileBrowser(location,directory.getText().toString().trim(),path->{directory.setText(path);if(name.getText().toString().trim().isEmpty())name.setText(new File(path).getName());});
@@ -1118,7 +1124,15 @@ public final class WorkspaceController {
         });
         codexFields.addView(text(WorkspaceText.tr("Авторизация и история берутся из выбранной среды. Если вход не выполнен, Codex предложит авторизоваться. Для карточки управления нужна версия Codex с app-server и --remote. Полный доступ действует в пределах доступных среде файлов. На Android ограничения sandbox зависят от поддержки Codex; при ошибке запуск остановится, права не повышаются автоматически."), 12, MUTED));
         Runnable updateEnvironment = () -> {
-            resetEnvironmentCheck[0].run();environmentCheck.setVisibility(chosenEnvironment[0].equals("codex")?View.VISIBLE:View.GONE);
+            resetEnvironmentCheck[0].run();environmentCheck.setVisibility(View.VISIBLE);
+            localFields.setVisibility(!chosenEnvironment[0].equals("ssh")&&!chosenEnvironment[0].equals("codex")?View.VISIBLE:View.GONE);
+            if(chosenEnvironment[0].equals("ssh"))environmentCheck.setVisibility(View.GONE);
+            localEnvironment.setText(tr("Окружение: ","Environment: ")+(chosenEnvironment[0].startsWith("proot:")?WorkspaceEnvironments.label(chosenEnvironment[0].substring(6)):chosenEnvironment[0].equals("ubuntu")?"Ubuntu":"Termux"));
+            String loginAlias=chosenEnvironment[0].startsWith("proot:")?chosenEnvironment[0].substring(6):chosenEnvironment[0].equals("ubuntu")?"ubuntu":"";
+            environmentLogin.setText(loginAlias.isEmpty()?tr("Вход: локальная оболочка Termux.","Entry: local Termux shell."):
+                tr("Вход из Termux: ","Enter from Termux: ")+WorkspaceEnvironments.entryCommand(loginAlias,draft.prootIsolated&&loginAlias.equals(draft.prootAlias))+"\n"+
+                (loginAlias.equals("ubuntu")?tr("Сейчас это общая Ubuntu: её также используют AI Agents.","This is currently the shared Ubuntu, also used by AI Agents."):
+                tr("Команда открывает именно этот экземпляр. Обычная команда входа в Ubuntu откроет другое окружение.","This command opens this exact instance. The ordinary Ubuntu login command opens a different environment.")));
             sshFields.setVisibility(chosenEnvironment[0].equals("ssh") ? View.VISIBLE : View.GONE);
             agentFields.setVisibility(chosenEnvironment[0].equals("codex") ? View.VISIBLE : View.GONE);
             codexFields.setVisibility(chosenEnvironment[0].equals("codex") && chosenAgent[0].equals("codex") ? View.VISIBLE : View.GONE);
@@ -1126,26 +1140,31 @@ public final class WorkspaceController {
             geminiFields.setVisibility(chosenAgent[0].equals("gemini")?View.VISIBLE:View.GONE);
             claudeFields.setVisibility(chosenAgent[0].equals("claude")?View.VISIBLE:View.GONE);
             agentButton.setText(WorkspaceText.tr("Агент: ")+(chosenAgent[0].equals("gemini")?"Gemini CLI":chosenAgent[0].equals("claude")?"Claude Code":chosenAgent[0].equals("codex")?"Codex":"OpenCode"));
-            int index = java.util.Arrays.asList(environments).indexOf(chosenEnvironment[0]);
+            int index = java.util.Arrays.asList(environments).indexOf(chosenEnvironment[0].equals("ssh")||chosenEnvironment[0].equals("codex")?chosenEnvironment[0]:"local");
             environment.setText(WorkspaceText.tr("Среда запуска: ") + environmentNames[Math.max(0, index)]);
         };
         java.util.function.Supplier<WorkspaceStore.Session> checkProfile=()->{WorkspaceStore.Session p=draft.copy();p.environment=chosenEnvironment[0].equals("codex")?(chosenAgent[0].equals("codex")?"codex":"ubuntu"):chosenEnvironment[0];p.codexEnvironment=codexEnvironment[0];p.geminiAgent=chosenAgent[0].equals("gemini")&&chosenEnvironment[0].equals("codex");p.claudeAgent=chosenAgent[0].equals("claude")&&chosenEnvironment[0].equals("codex");p.aiAgent=chosenAgent[0].equals("opencode")&&chosenEnvironment[0].equals("codex")?"opencode":"";p.geminiAuth=geminiAuth[0];p.geminiCloudProject=geminiCloudProject.getText().toString().trim();p.geminiCloudLocation=geminiCloudLocation.getText().toString().trim();return p;};
-        environmentCheck.setOnClickListener(v->{WorkspaceStore.Session p=checkProfile.get();String captured=AgentPreparation.key(p);AgentPreparation.check(activity,p,plan->{if(!captured.equals(AgentPreparation.key(checkProfile.get()))||environmentCheck.getWindowToken()==null)return;environmentCheck.setCompoundDrawablesRelativeWithIntrinsicBounds(0,0,plan.ready()?com.termux.R.drawable.workspace_environment_ready:0,0);environmentCheck.setCompoundDrawablePadding(dp(10));WorkspaceDialogs.builder(activity).setTitle(tr("Проверка среды запуска","Launch environment check")).setMessage(AgentPreparation.summary(activity,plan)).setPositiveButton(tr("Назад","Back"),null).show();});});
+        environmentCheck.setOnClickListener(v->{if(!chosenEnvironment[0].equals("codex")){String captured=chosenEnvironment[0];environmentSetup.check(captured,result->{if(!editorOpen[0]||closed||!captured.equals(chosenEnvironment[0]))return;environmentCheck.setCompoundDrawablesRelativeWithIntrinsicBounds(0,0,result.ready()?com.termux.R.drawable.workspace_environment_ready:0,0);environmentCheck.setCompoundDrawablePadding(dp(10));});return;}WorkspaceStore.Session p=checkProfile.get();String captured=AgentPreparation.key(p);AgentPreparation.check(activity,p,plan->{if(!captured.equals(AgentPreparation.key(checkProfile.get()))||environmentCheck.getWindowToken()==null)return;environmentCheck.setCompoundDrawablesRelativeWithIntrinsicBounds(0,0,plan.ready()?com.termux.R.drawable.workspace_environment_ready:0,0);environmentCheck.setCompoundDrawablePadding(dp(10));WorkspaceDialogs.builder(activity).setTitle(tr("Проверка среды запуска","Launch environment check")).setMessage(AgentPreparation.summary(activity,plan)).setPositiveButton(tr("Назад","Back"),null).show();});});
         TextWatcher cloudChanged=new TextWatcher(){public void beforeTextChanged(CharSequence t,int start,int count,int after){}public void onTextChanged(CharSequence t,int start,int before,int count){resetEnvironmentCheck[0].run();}public void afterTextChanged(Editable t){}};geminiCloudProject.addTextChangedListener(cloudChanged);geminiCloudLocation.addTextChangedListener(cloudChanged);
-        updateEnvironment.run(); form.addView(environment);form.addView(environmentCheck); form.addView(sshFields); form.addView(agentFields); form.addView(codexFields);
+        updateEnvironment.run(); form.addView(environment);form.addView(localFields);form.addView(environmentCheck); form.addView(sshFields); form.addView(agentFields); form.addView(codexFields);
         agentButton.setOnClickListener(v->WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Выбрать агента")).setItems(new String[]{"Codex","OpenCode","Claude Code","Gemini CLI"},(d,w)->{
             chosenAgent[0]=new String[]{"codex","opencode","claude","gemini"}[w];
             if(w>=0){if(java.util.Arrays.asList("","Codex","OpenCode","Claude Code","Gemini CLI").contains(name.getText().toString().trim()))name.setText(w==0?"Codex":w==1?"OpenCode":w==2?"Claude Code":"Gemini CLI");if(!(w==0&&existing!=null&&existing.environment.equals("codex")&&existing.codexEnvironment.equals("termux")))codexEnvironment[0]="ubuntu";if(codexEnvironment[0].equals("ubuntu")&&directory.getText().toString().equals(TermuxConstants.TERMUX_HOME_DIR_PATH))directory.setText("/root");}
             updateEnvironment.run();
         }).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
+        localEnvironment.setOnClickListener(v->environmentSetup.choose(choice->{
+            if(!editorOpen[0]||closed)return;
+            String old=chosenEnvironment[0];chosenEnvironment[0]=choice.environment;
+            if(!old.equals(choice.environment))directory.setText(choice.home);
+            updateEnvironment.run();
+        }));
         environment.setOnClickListener(v -> WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Среда запуска"))
-            .setSingleChoiceItems(WorkspaceDialogs.choiceAdapter(activity,environmentNames,java.util.Arrays.asList(environments).indexOf(chosenEnvironment[0]),position->true), java.util.Arrays.asList(environments).indexOf(chosenEnvironment[0]), (d, which) -> {
-                chosenEnvironment[0] = environments[which];
-                if ((which == 1 || (which == 3 && (!chosenAgent[0].equals("codex") || codexEnvironment[0].equals("ubuntu")))) && directory.getText().toString().equals(TermuxConstants.TERMUX_HOME_DIR_PATH)) directory.setText("/root");
-                else if (which == 2 && (directory.getText().toString().equals(TermuxConstants.TERMUX_HOME_DIR_PATH) || directory.getText().toString().equals("/root"))) directory.setText("~");
-                else if ((which == 0 || (which == 3 && chosenAgent[0].equals("codex") && codexEnvironment[0].equals("termux"))) && directory.getText().toString().equals("/root")) directory.setText(TermuxConstants.TERMUX_HOME_DIR_PATH);
-                if (which == 3 && name.getText().toString().trim().isEmpty()) name.setText("Codex");
-                updateEnvironment.run(); d.dismiss();
+            .setItems(environmentNames,(d,which)->{
+                String before=chosenEnvironment[0];
+                if(which==0){if(before.equals("codex")||before.equals("ssh")){chosenEnvironment[0]="termux";directory.setText(TermuxConstants.TERMUX_HOME_DIR_PATH);}}
+                else if(which==1){chosenEnvironment[0]="ssh";if(directory.getText().toString().equals(TermuxConstants.TERMUX_HOME_DIR_PATH)||directory.getText().toString().equals("/root"))directory.setText("~");}
+                else {chosenEnvironment[0]="codex";if(directory.getText().toString().equals(TermuxConstants.TERMUX_HOME_DIR_PATH))directory.setText("/root");if(name.getText().toString().trim().isEmpty())name.setText("Codex");}
+                updateEnvironment.run();
             }).setNegativeButton(WorkspaceText.tr("Отмена"), null).show());
         LinearLayout commandFields = column(); form.addView(commandFields);
         List<EditText> startupFields = new ArrayList<>();
@@ -1169,7 +1188,7 @@ public final class WorkspaceController {
             public void beforeTextChanged(CharSequence x, int a, int b, int c) {} public void onTextChanged(CharSequence x, int a, int b, int c) { toggleCommands.run(); }
             public void afterTextChanged(Editable x) {}
         });
-        TextView hint = text(WorkspaceText.tr("Termux / Ubuntu: команды запускаются после готовности Bash в выбранной среде. Вход в Ubuntu выполняется автоматически — команду proot-distro login вводить не нужно. До трёх шагов, при ошибке остановка. После запуска Codex следующие шаги ждут его выхода. SSH: каталог и все команды выполняются на сервере с Bash. Пароль и подтверждение ключа — в терминале; следующая команда ждёт завершения предыдущей."), 12, MUTED);
+        TextView hint = text(tr("Окружения Termux: вход выполняется автоматически в выбранный экземпляр. Команда ручного входа показана выше; добавлять её в команды запуска не нужно. До трёх шагов, при ошибке остановка. Для Ubuntu используется Bash, для остальных систем — Bash или sh. SSH: каталог и команды выполняются на сервере с Bash; пароль и подтверждение ключа — в терминале.","Termux environments: automatically enter the selected instance. The manual entry command is shown above; do not add it to startup commands. Up to three steps, stopping after a failure. Ubuntu uses Bash; other systems use Bash or sh. SSH: directories and commands run on the server with Bash; password and host-key confirmation are handled in the terminal."), 12, MUTED);
         hint.setPadding(0, dp(16), 0, 0); form.addView(hint);
         CheckBox extendedDebug=new CheckBox(activity);extendedDebug.setText(WorkspaceText.tr("Расширенный дебаг-журнал"));extendedDebug.setTextColor(TEXT);extendedDebug.setChecked(draft.extendedDebug);form.addView(extendedDebug);
         form.addView(text(WorkspaceText.tr("Базовый журнал ведётся автоматически. Расширенный: события и коды ошибок, для Gemini также штатный debug с запуска. Без записи ввода и диалога. Изменение действует при следующем запуске."),12,MUTED));
@@ -1180,6 +1199,8 @@ public final class WorkspaceController {
             if (name.getText().toString().trim().isEmpty()) { name.setError(WorkspaceText.tr("Укажите название")); return; }
 
             if (!validDirectoryInput(directory)) return;
+            String nextAlias=chosenEnvironment[0].startsWith("proot:")?chosenEnvironment[0].substring(6):"";
+            if(existing!=null&&(!existing.prootAlias.isEmpty()||!nextAlias.isEmpty())&&liveFor(existing)!=null&&liveFor(existing).isRunning()&&(!existing.prootAlias.equals(nextAlias)||!existing.environment.equals(nextAlias.isEmpty()?chosenEnvironment[0]:"termux"))){activity.showToast(tr("Сначала закройте сессию, чтобы сменить окружение.","Close the session before changing its environment."),true);return;}
             boolean selectedGemini=chosenEnvironment[0].equals("codex")&&chosenAgent[0].equals("gemini");
             if(selectedGemini&&geminiAuth[0].equals("vertex")){
                 if(!GeminiCli.validCloudProject(geminiCloudProject.getText().toString().trim())){geminiCloudProject.setError(tr("Укажите ID облачного проекта, например my-project-123, а не путь к папке","Enter a cloud project ID, for example my-project-123, not a folder path"));return;}
@@ -1248,7 +1269,9 @@ public final class WorkspaceController {
             if(!draft.aiConnection.equals(aiConnection[0]) || aiChat[0].equals("new") || !draft.aiSavedThread.equals(aiThread[0]))draft.aiSavedThread="";
             draft.aiConnection=aiConnection[0];draft.aiModel=aiModel[0];draft.aiVariant=aiVariant[0];draft.aiMode=aiMode[0];draft.aiAccess=aiAccess[0];draft.aiChat=aiChat[0];draft.aiThread=aiThread[0];
             draft.codexConfirmActions=codexConfirm.isChecked();draft.aiProjectOnly=aiProjectScope.isChecked();draft.codexEnvironment = codexEnvironment[0]; draft.codexAccess = codexAccess[0]; draft.codexChat = codexChat[0]; draft.codexThread = codexThread[0]; draft.codexThreadName = codexThreadName[0];draft.codexSourceDirectory=codexSourceDirectory[0];
-            draft.environment = (draft.aiAgent.equals("opencode")||draft.claudeAgent||draft.geminiAgent)?"ubuntu":chosenEnvironment[0]; draft.name = name.getText().toString().trim(); draft.directory = directory.getText().toString().trim(); draft.startup = startupFields.get(0).getText().toString();
+            draft.prootIsolated=draft.prootIsolated&&draft.prootAlias.equals(nextAlias);
+            draft.prootAlias=chosenEnvironment[0].startsWith("proot:")?chosenEnvironment[0].substring(6):"";
+            draft.environment = (draft.aiAgent.equals("opencode")||draft.claudeAgent||draft.geminiAgent)?"ubuntu":chosenEnvironment[0].startsWith("proot:")?"termux":chosenEnvironment[0]; draft.name = name.getText().toString().trim(); draft.directory = directory.getText().toString().trim(); draft.startup = startupFields.get(0).getText().toString();
             draft.startup2 = startupFields.size() > 1 ? startupFields.get(1).getText().toString() : "";
             draft.startup3 = startupFields.size() > 2 ? startupFields.get(2).getText().toString() : ""; if(draft.aiAgent.equals("opencode")||draft.claudeAgent||draft.geminiAgent){draft.startup="";draft.startup2="";draft.startup3="";}
             draft.updated = System.currentTimeMillis();
@@ -1259,7 +1282,7 @@ public final class WorkspaceController {
             if (existing == null && launchAfterSave) launch(draft);
             else if (live != null) activity.showToast(tr("Имя обновлено. Каталог, команды и права применятся при следующем запуске; текущая сессия не изменена.","Name updated. Directory, commands and permissions apply on next launch; the current session is unchanged."), true);
         }));
-        dialog.setOnDismissListener(d -> password.setText("")); dialog.show();
+        dialog.setOnDismissListener(d -> {editorOpen[0]=false;password.setText("");}); dialog.show();
     }
     private interface ChatChoice {void chosen(String id,String name,String sourceDirectory);}
     private void chooseCodexChat(String environment,String directory,ChatChoice choice) {
@@ -1596,10 +1619,10 @@ public final class WorkspaceController {
         if (terminalTab) Collections.addAll(actions, WorkspaceText.tr("Перезапустить"), WorkspaceText.tr("Настройки"), WorkspaceText.tr("Закрыть сессию"));
         else Collections.addAll(actions, WorkspaceText.tr("Закрыть сессию"), WorkspaceText.tr("Настройки"), WorkspaceText.tr("Удалить сессию"));
         if(terminalTab)actions.add(WorkspaceText.tr("Диагностика сессии"));
-        if(terminalTab&&(s.aiAgent.equals("opencode")||s.geminiAgent||s.claudeAgent))actions.add(tr("Терминал ","Terminal ")+(s.claudeAgent?"Claude":s.geminiAgent?"Gemini":"OpenCode"));
+        if(terminalTab&&(s.environment.equals("codex")||s.aiAgent.equals("opencode")||s.geminiAgent||s.claudeAgent))actions.add(tr("Установка пакетов","Install packages"));
         WorkspaceDialogs.builder(activity).setTitle(s.name).setItems(actions.toArray(new String[0]), (d, which) -> {
             String action = actions.get(which);
-            if(action.equals(tr("Терминал ","Terminal ")+(s.claudeAgent?"Claude":s.geminiAgent?"Gemini":"OpenCode"))){agentChatUi.terminal();return;}
+            if(action.equals(tr("Установка пакетов","Install packages"))){showPackages(s);return;}
             if(action.equals(WorkspaceText.tr("Диагностика сессии"))){showDiagnostics(s);return;}
             if (action.equals(WorkspaceText.tr("Добавить в пресеты запуска"))) {
                 if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
@@ -2025,7 +2048,7 @@ public final class WorkspaceController {
         if(WorkspaceStore.isBase(profile))baseStartedAt=System.currentTimeMillis();
         boolean replacing = replaced != null && !replaced.isRunning() && service.getIndexOfSession(replaced) >= 0;
         if (service.getTermuxSessionsSize() >= 8 && !replacing) { activity.showToast(WorkspaceText.tr("Максимум 8 терминалов. Закройте завершённую сессию."), true); return null; }
-        String directory = (profile.environment.equals("ubuntu") || profile.environment.equals("ssh") || (profile.environment.equals("codex") && profile.codexEnvironment.equals("ubuntu"))) ? TermuxConstants.TERMUX_HOME_DIR_PATH : resolve(profile.directory);
+        String directory = (!WorkspaceEnvironments.alias(profile).isEmpty() || profile.environment.equals("ssh") || (profile.environment.equals("codex") && profile.codexEnvironment.equals("ubuntu"))) ? TermuxConstants.TERMUX_HOME_DIR_PATH : resolve(profile.directory);
         if (!new File(directory).isDirectory() || !new File(directory).canExecute()) {
             activity.showToast(WorkspaceText.tr("Каталог недоступен: ") + directory, true); return null;
         }
@@ -2144,6 +2167,6 @@ public final class WorkspaceController {
         for(WorkspacePackages browser:new ArrayList<>(packageBrowsers))browser.close();packageBrowsers.clear();
         for(WorkspaceFileBrowser browser:new ArrayList<>(fileBrowsers))browser.close();fileBrowsers.clear();
         for (char[] secret : pendingSshPasswords.values()) java.util.Arrays.fill(secret, '\0'); pendingSshPasswords.clear();
-        closed = true; codexApplyGeneration++; if(codexApplyDialog!=null)codexApplyDialog.dismiss(); codexHandler.removeCallbacksAndMessages(null); codexReader.shutdown(); reader.shutdown(); store.close();
+        environmentSetup.close();closed = true; codexApplyGeneration++; if(codexApplyDialog!=null)codexApplyDialog.dismiss(); codexHandler.removeCallbacksAndMessages(null); codexReader.shutdown(); reader.shutdown(); store.close();
     }
 }

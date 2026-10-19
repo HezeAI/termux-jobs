@@ -21,8 +21,8 @@ final class ProjectFiles implements AutoCloseable {
         this.profile.name=profile.name;this.profile.handle=profile.handle;this.profile.codexSocketId=profile.codexSocketId;
         this.profile.sshEncryptedPassword=profile.sshEncryptedPassword;}
     void setPassword(char[] value) {if(password!=null)Arrays.fill(password,'\0');password=value.clone();}
-    static String environment(WorkspaceStore.Session s) {return s.environment.equals("codex")?s.codexEnvironment:s.environment.equals("legacy")?"termux":s.environment;}
-    static String environmentLabel(WorkspaceStore.Session s) {String e=environment(s);return e.startsWith("proot:")?s.name:e.equals("ubuntu")?"Ubuntu":e.equals("ssh")?"SSH · "+s.sshHost:"Termux";}
+    static String environment(WorkspaceStore.Session s) {return !s.prootAlias.isEmpty()?"proot:"+s.prootAlias:s.environment.equals("codex")?s.codexEnvironment:s.environment.equals("legacy")?"termux":s.environment;}
+    static String environmentLabel(WorkspaceStore.Session s) {String e=environment(s);return e.startsWith("proot:")?WorkspaceEnvironments.label(e.substring(6)):e.equals("ubuntu")?"Ubuntu":e.equals("ssh")?"SSH · "+s.sshHost:"Termux";}
     static String target(String path) {
         if(path==null || path.indexOf('\0')>=0 || path.contains("\n") || path.contains("\r"))throw new IllegalArgumentException(WorkspaceText.tr("Некорректный путь"));
         if(path.isEmpty() || path.equals("~"))return "\"$HOME\"";
@@ -111,7 +111,7 @@ final class ProjectFiles implements AutoCloseable {
     private byte[] bytes(String script,int max) throws Exception {ByteArrayOutputStream out=new ByteArrayOutputStream();run(script,out,max);return out.toByteArray();}
     static String command(WorkspaceStore.Session s,String script) {
         String e=environment(s);String bash="bash --noprofile --norc -c "+SessionShell.quote(script);
-        if(e.startsWith("proot:")){String alias=e.substring(6);if(!WorkspaceLocalFilePicker.validAlias(alias))throw new IllegalArgumentException("INVALID_ENVIRONMENT");return "proot-distro login "+SessionShell.quote(alias)+" -- /bin/sh -c "+SessionShell.quote(script);}
+        if(e.startsWith("proot:")){String alias=e.substring(6);if(!WorkspaceLocalFilePicker.validAlias(alias))throw new IllegalArgumentException("INVALID_ENVIRONMENT");return "proot-distro "+WorkspaceEnvironments.verb(alias)+" "+(s.prootIsolated?"--isolated ":"")+SessionShell.quote(alias)+" -- /bin/sh -c "+SessionShell.quote(script);}
         if(e.equals("ubuntu"))return "proot-distro login ubuntu -- /bin/"+bash;
         if(!e.equals("ssh"))return bash;
         if(!SshSessionShell.validHost(s.sshHost)||!SshSessionShell.validUser(s.sshUser)||!SshSessionShell.validPort(s.sshPort))throw new IllegalArgumentException(WorkspaceText.tr("Укажите корректные параметры SSH"));

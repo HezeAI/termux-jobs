@@ -298,9 +298,9 @@ public class WorkspaceNavigationTest {
         findDescription(sessionEditor.getWindow().getDecorView(), "Среда запуска").performClick();
         shadowOf(Looper.getMainLooper()).idle();
         AlertDialog environmentChooser = ShadowAlertDialog.getLatestAlertDialog();
-        environmentChooser.getListView().performItemClick(null, 1, 1);
+        environmentChooser.getListView().performItemClick(null, 0, 0);
         shadowOf(Looper.getMainLooper()).idle();
-        assertEquals("/root", fields.get(1).getText().toString());
+        assertEquals(com.termux.shared.termux.TermuxConstants.TERMUX_HOME_DIR_PATH, fields.get(1).getText().toString());
         fields.get(0).setText("Codex / Ubuntu"); fields.get(2).setText("codex resume");
         findDescription(sessionEditor.getWindow().getDecorView(), "Добавить команду запуска").performClick();
         findDescription(sessionEditor.getWindow().getDecorView(), "Добавить команду запуска").performClick();
@@ -311,7 +311,7 @@ public class WorkspaceNavigationTest {
         shadowOf(Looper.getMainLooper()).idle(); store.awaitWrites();
         assertEquals(1, store.sessions.size()); assertTrue(store.sessions.get(0).saved); assertNull(activity.getCurrentSession());
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Codex / Ubuntu"));
-        assertEquals("ubuntu", store.sessions.get(0).environment);
+        assertEquals("termux", store.sessions.get(0).environment);
         assertEquals(3, store.sessions.get(0).startupCommands().size());
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "codex resume → echo second → echo third"));
         for (int i = 0; i < 20; i++) {
@@ -577,7 +577,7 @@ public class WorkspaceNavigationTest {
         edit.setAccessible(true); edit.invoke(controller, null, false); shadowOf(Looper.getMainLooper()).idle();
         AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
         findDescription(dialog.getWindow().getDecorView(), "Среда запуска").performClick(); shadowOf(Looper.getMainLooper()).idle();
-        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 2, 2); shadowOf(Looper.getMainLooper()).idle();
+        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 1, 1); shadowOf(Looper.getMainLooper()).idle();
         findDescription(dialog.getWindow().getDecorView(), "Авторизация SSH").performClick(); shadowOf(Looper.getMainLooper()).idle();
         ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 2, 2); shadowOf(Looper.getMainLooper()).idle();
         List<EditText> fields = new ArrayList<>(); collectEditors(dialog.getWindow().getDecorView(), fields);
@@ -604,7 +604,7 @@ public class WorkspaceNavigationTest {
         AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog(); List<EditText> fields = new ArrayList<>();
         collectEditors(dialog.getWindow().getDecorView(), fields); assertEquals(3, fields.size());
         findDescription(dialog.getWindow().getDecorView(), "Среда запуска").performClick(); shadowOf(Looper.getMainLooper()).idle();
-        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 2, 2);
+        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 1, 1);
         shadowOf(Looper.getMainLooper()).idle(); fields.clear(); collectEditors(dialog.getWindow().getDecorView(), fields);
         assertEquals(6, fields.size()); assertEquals("~", fields.get(1).getText().toString());
         fields.get(0).setText("Server"); fields.get(2).setText("example.invalid"); fields.get(3).setText("deploy");
@@ -785,7 +785,7 @@ public class WorkspaceNavigationTest {
         java.lang.reflect.Method edit = WorkspaceController.class.getDeclaredMethod("editSession", WorkspaceStore.Session.class, boolean.class); edit.setAccessible(true); edit.invoke(controller, null, false);
         AlertDialog form = ShadowAlertDialog.getLatestAlertDialog(); View decor = form.getWindow().getDecorView();
         findDescription(decor, "Среда запуска").performClick(); AlertDialog environments = ShadowAlertDialog.getLatestAlertDialog();
-        assertEquals(4,environments.getListView().getCount()); assertEquals("Termux",environments.getListView().getItemAtPosition(0)); assertEquals("Ubuntu",environments.getListView().getItemAtPosition(1)); assertEquals("AI Agents", environments.getListView().getAdapter().getItem(3)); environments.getListView().performItemClick(null,3,3);
+        assertEquals(3,environments.getListView().getCount()); assertEquals(WorkspaceLanguage.code(activity).equals("ru")?"Окружения Termux":"Termux environments",environments.getListView().getItemAtPosition(0)); assertEquals("AI Agents", environments.getListView().getAdapter().getItem(2)); environments.getListView().performItemClick(null,2,2);
         assertNull(findText(decor,"Среда Codex: Ubuntu")); assertNull(findDescription(decor,"Среда Codex"));
         assertEquals(View.GONE, findDescription(decor,"Добавить команду запуска").getVisibility());
         findDescription(decor,"Доступ Codex").performClick(); AlertDialog access = ShadowAlertDialog.getLatestAlertDialog();
@@ -808,7 +808,7 @@ public class WorkspaceNavigationTest {
         TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();activity.setTheme(R.style.Theme_Termux_Black);activity.setContentView(R.layout.activity_termux);
         Field f=TermuxActivity.class.getDeclaredField("mTerminalView");f.setAccessible(true);f.set(activity,activity.findViewById(R.id.terminal_view));WorkspaceController controller=new WorkspaceController(activity);
         java.lang.reflect.Method edit=WorkspaceController.class.getDeclaredMethod("editSession",WorkspaceStore.Session.class,boolean.class);edit.setAccessible(true);edit.invoke(controller,null,false);
-        AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();View decor=form.getWindow().getDecorView();findDescription(decor,"Среда запуска").performClick();ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null,3,3);
+        AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();View decor=form.getWindow().getDecorView();findDescription(decor,"Среда запуска").performClick();ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null,2,2);
         findText(decor,"Агент: Codex").performClick();ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null,1,1);
         shadowOf(Looper.getMainLooper()).idle();assertNotNull(findText(decor,"Агент: OpenCode"));assertNotNull(findText(decor,"Подключение: Основное подключение"));assertEquals(View.GONE,findDescription(decor,"Добавить команду запуска").getVisibility());
         form.getButton(-1).performClick();shadowOf(Looper.getMainLooper()).idle();Field sf=WorkspaceController.class.getDeclaredField("store");sf.setAccessible(true);WorkspaceStore store=(WorkspaceStore)sf.get(controller);assertEquals(1,store.sessions.size());WorkspaceStore.Session profile=store.sessions.get(0);

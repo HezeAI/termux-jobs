@@ -897,11 +897,13 @@ def create(request):
         actual=backup_ubuntu(prefix,env['name'],file,compression)
         add(file.name, 'ubuntu')
         meta['components'][-1]['compressionEngine']=actual
+        meta['components'][-1]['environmentAlias']=env['name']
     for index,(scope,specs,chosen) in enumerate(plans):
         file=out/('selected-'+str(index)+'.tar.gz')
         details=create_selected_tar(file,scope,specs,chosen,request['work'],total=plan_sizes[index],compression=compression)
         add(file.name,'ubuntu' if scope['type']=='ubuntu' and 'system' in chosen else 'data')
         meta['components'][-1]['selection']=details
+        if scope['type']=='ubuntu': meta['components'][-1]['environmentAlias']=scope['id'].split(':',1)[1]
     # The helper is a known app asset; never copy a script from an imported archive for execution.
     shutil.copyfile(__file__, out / 'backup-tool.py')
     protected_write(out / 'restore.sh', b'''#!/data/data/com.termux/files/usr/bin/bash
@@ -941,6 +943,7 @@ def inspect(request):
     source = {}
     inputs = []
     selections = {}
+    aliases = {}
     settings = None
     workspace = None
     if path.name.endswith('.json'):
@@ -969,6 +972,10 @@ def inspect(request):
                     expected='ubuntu' if details['environment']=='ubuntu' and details['system'] else 'data'
                     if c['kind']!=expected: raise BackupError('INVALID_SELECTION_ARCHIVE')
                     selections[str(f)]=details
+                if 'environmentAlias' in c:
+                    alias=c['environmentAlias']
+                    if not isinstance(alias,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,63}',alias): raise BackupError('INVALID_ENVIRONMENT_ALIAS')
+                    aliases[str(f)]=alias
                 inputs.append((f, c['kind']))
         else:
             workspace = libraries(value)
@@ -1001,6 +1008,7 @@ def inspect(request):
             # PREFIX is always staged; never applied to the running runtime.
             c.update(file=str(f), unpacked=scan['unpacked'], status='portable' if c['kind'] in ('home', 'library', 'app-data','data') else 'review')
             if c['kind'] == 'ubuntu':
+                if str(f) in aliases: c['environmentAlias']=aliases[str(f)]
                 c['status'] = 'compatible' if c['arch'] == current_arch() and proot_modern(Path(request['prefix'])) else 'blocked'
                 c['reason'] = '' if c['status'] == 'compatible' else 'ARCH_OR_PROOT_UNCONFIRMED'
             if c['kind'] == 'prefix':
@@ -1187,12 +1195,17 @@ def restore(request):
                 raise BackupError('BACKUP_CHANGED_RECHECK')
             copies[source] = target
     environments_created = []
+    environment_bindings = {}
     paths = {}
     for i, c in zip(choices, selected):
         path = copies[c['file']]
         if c['kind'] == 'ubuntu':
             alias = restore_ubuntu(path, c, prefix, work)
             environments_created.append(alias)
+            source_alias=c.get('environmentAlias')
+            if source_alias:
+                if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,63}',source_alias): raise BackupError('INVALID_ENVIRONMENT_ALIAS')
+                environment_bindings[source_alias]=alias if source_alias not in environment_bindings else None
             paths[str(i)] = 'proot-distro login --isolated ' + alias
         elif c['kind'] == 'packages':
             target = destination / ('packages-' + str(i) + '.txt')
@@ -1205,8 +1218,8 @@ def restore(request):
     if any('selection' in c or c['kind']=='data' for c in selected):
         protected_write(destination/'README-SELECTED.txt', b'Selected data is STAGED only. Existing files were NOT replaced.\nFor Ubuntu data, paths in payload are relative to the guest root (/); for Termux, relative to files/ (home/ and usr/).\nPrepare a compatible environment and runtime first. Review paths, scripts and authorization before manually copying files.\nDo not replace an active .codex directory. Stop the TARGET assistant first, retaining the original data.\nChat history does not include project files unless selected. Processes and Android Keystore cannot be restored.\n')
     (destination / 'INCOMPLETE').unlink()
-    protected_write(destination / 'RESTORE-RESULT.json', json.dumps(dict(paths=paths, environments=environments_created)).encode())
-    return dict(path=str(destination), paths=paths, environments=environments_created)
+    protected_write(destination / 'RESTORE-RESULT.json', json.dumps(dict(paths=paths, environments=environments_created, environmentBindings=environment_bindings)).encode())
+    return dict(path=str(destination), paths=paths, environments=environments_created, environmentBindings=environment_bindings)
 
 
 def valid_package(name, version):

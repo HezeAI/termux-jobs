@@ -15,6 +15,7 @@ public final class SessionShell {
         return prepare(files, session, null, null);
     }
     public static File prepare(File files, WorkspaceStore.Session session, String askpass, String socket) throws IOException {
+        if(!session.prootAlias.isEmpty()&&(!session.environment.equals("termux")||session.geminiAgent||session.claudeAgent||!session.aiAgent.isEmpty()||!WorkspaceLocalFilePicker.validAlias(session.prootAlias)))throw new IOException("Invalid environment binding");
         File dir = directory(files, session.id);
         if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("Cannot create session directory");
         File history = new File(dir, "history");
@@ -24,7 +25,8 @@ public final class SessionShell {
         if (cancel.exists() && !cancel.delete()) throw new IOException("Cannot reset startup cancellation");
         String script;
         java.util.List<String> startup = session.startupCommands();
-        boolean guest = session.environment.equals("ubuntu") || (session.environment.equals("codex") && session.codexEnvironment.equals("ubuntu"));
+        boolean otherGuest=!WorkspaceEnvironments.alias(session).isEmpty()&&!session.environment.equals("ubuntu");
+        boolean guest = otherGuest || session.environment.equals("ubuntu") || (session.environment.equals("codex") && session.codexEnvironment.equals("ubuntu"));
         if (session.geminiAgent) startup = java.util.Collections.singletonList(GeminiCli.command(files, session));
         if (session.claudeAgent) startup = java.util.Collections.singletonList(ClaudeCode.command(files, session));
         if (session.aiAgent.equals("opencode")) startup = java.util.Collections.singletonList(AiAgents.command(files, session));
@@ -32,20 +34,24 @@ public final class SessionShell {
         if (AgentPreparation.supports(session)&&!startup.isEmpty())startup=java.util.Collections.singletonList(AgentPreparation.wrap(session,startup.get(0)));
         if (guest) {
             String mount = "/tmp/termux-fork-session-" + session.id;
+            String alias=otherGuest?WorkspaceEnvironments.alias(session):"ubuntu";
+            if(!WorkspaceLocalFilePicker.validAlias(alias))throw new IOException("Invalid environment alias");
             File guestRc = new File(dir, "ubuntu-bashrc");
             write(guestRc, buildReadyRc("$HOME", mount + "/history", mount + "/cancel-startup", startup, true).getBytes(StandardCharsets.UTF_8));
+            if(otherGuest)write(new File(dir,"proot-shrc"),portableRc(mount+"/history",mount+"/cancel-startup",startup).getBytes(StandardCharsets.UTF_8));
             String cwd = session.directory.isEmpty() || session.directory.equals("~") ? "/root" : session.directory;
             if (cwd.startsWith("~/")) cwd = "/root/" + cwd.substring(2);
             script = buildRc(TermuxConstants.TERMUX_HOME_DIR_PATH, history.getAbsolutePath(), "")
                 + AgentPreparation.host(files,session)
-                + WorkspaceText.tr("printf '%s\\n' 'Ожидание оболочки Ubuntu…'\n")
-                + "proot-distro login --bind " + quote(dir.getAbsolutePath() + ":" + mount)
+                + (otherGuest?"printf '%s\\n' "+quote(WorkspaceText.tr("Ожидание оболочки ")+WorkspaceEnvironments.label(alias)+"…")+"\n":WorkspaceText.tr("printf '%s\\n' 'Ожидание оболочки Ubuntu…'\n"))
+                + "proot-distro "+(otherGuest?WorkspaceEnvironments.verb(alias):"login")+" "+(session.prootIsolated?"--isolated ":"")+"--bind " + quote(dir.getAbsolutePath() + ":" + mount)
                 + (AgentPreparation.supports(session)?" --bind "+quote(AgentPreparation.directory(files).getAbsolutePath()+":"+AgentPreparation.GUEST):"")
                 + (session.geminiAgent ? " --bind " + quote(GeminiCli.directory(files).getAbsolutePath() + ":" + GeminiCli.GUEST) : "")
                 + (session.claudeAgent ? " --bind " + quote(ClaudeCode.directory(files).getAbsolutePath() + ":" + ClaudeCode.GUEST) : "")
                 + (session.aiAgent.equals("opencode") ? " --bind " + quote(AiAgents.directory(files).getAbsolutePath() + ":/tmp/termux-jobs-ai") : "")
                 + (session.environment.equals("codex") ? " --bind " + quote(CodexSessionShell.socketDirectory(files).getAbsolutePath() + ":/tmp/termux-jobs-codex") : "")
-                + " --work-dir " + quote(cwd) + " ubuntu -- /bin/bash --rcfile " + quote(mount + "/ubuntu-bashrc") + " -i\n";
+                + " --work-dir " + quote(cwd) + " " + (otherGuest?quote(alias):"ubuntu") + " -- "
+                + (otherGuest?"/bin/sh -c "+quote("if command -v bash >/dev/null 2>&1; then exec bash --rcfile "+quote(mount+"/ubuntu-bashrc")+" -i; else SHELL=/bin/sh; export SHELL; ENV="+quote(mount+"/proot-shrc")+"; export ENV; exec /bin/sh -i; fi")+"\n":"/bin/bash --rcfile " + quote(mount + "/ubuntu-bashrc") + " -i\n");
         } else if (session.environment.equals("ssh")) {
             script = buildReadyRc(TermuxConstants.TERMUX_HOME_DIR_PATH, history.getAbsolutePath(), cancel.getAbsolutePath(),
                 java.util.Collections.singletonList((session.sshAuth.equals("password") && askpass != null && socket != null
@@ -109,6 +115,13 @@ public final class SessionShell {
         }
         script.append("return 0\n}\nPROMPT_COMMAND+=('_termux_workspace_ready')\n");
         return script.toString();
+    }
+    static String portableRc(String history,String cancel,java.util.List<String> commands){
+        StringBuilder rc=new StringBuilder("HISTFILE="+quote(history)+"\nHISTSIZE=2000\nexport HISTFILE HISTSIZE\n");
+        if(commands.isEmpty())return rc.toString();
+        rc.append("_jobs_environment_startup() {\n[ \"${_jobs_environment_started:-0}\" = 1 ] && return 0\n_jobs_environment_started=1\n");
+        for(String command:commands)rc.append("[ ! -f ").append(quote(cancel)).append(" ] || return 0\neval ").append(quote(command)).append("\n_jobs_status=$?\n[ \"$_jobs_status\" -eq 0 ] || { printf '%s\\n' 'Startup stopped after a failed command.' >&2; return 0; }\n");
+        return rc.append("}\n_jobs_environment_startup\n").toString();
     }
     static boolean hasCancellableStartup(WorkspaceStore.Session s){return s!=null&&(s.environment.equals("termux")||s.environment.equals("ubuntu"))&&!s.geminiAgent&&!s.claudeAgent&&s.aiAgent.isEmpty()&&!s.startupCommands().isEmpty();}
     public static void cancel(File files, String id) throws IOException {
