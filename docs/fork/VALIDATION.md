@@ -6,6 +6,8 @@ Node/native-CLI fixtures. Release-сборка и runtime/ZIP/package/version/AB
 подпись/SHA-256 проверены. Все assets/native libraries совпадают с проверенной
 разработчиком v1.5.33. Чистый полный Lint не заявляется; реальные Cloud-сценарии
 Claude/Vertex и полный набор Android UI/обновления не объявляются проверенными.
+Stable/latest v1.6.0 и четыре скачанных assets проверены: metadata/hash/size/code
+совпадают, публичные ссылки доступны.
 [Совместимость](RELEASE-v1.6.0.md) · [исследование удалённых local AI](LOCAL-AI-RESEARCH.md).
 
 Ниже исторические отчёты; они не являются проверками текущего выпуска.

@@ -1,6 +1,6 @@
 # Latest stable release: v1.6.0
 
-## Stable v1.6.0/code1192 — release prepared
+## Stable v1.6.0/code1192 — published and verified
 
 User explicitly authorized publication of current agreed work; anonymous feedback
 relay/API/Issues service was discussed then deferred. No feedback component is
@@ -29,6 +29,15 @@ next launch, active Android processes not guaranteed through install and retaine
 local-AI removal behavior for upgrades from before1.5.3. Older private version
 names were reused; old/public and later report text preserved separately.
 See RELEASE-v1.6.0.md, VALIDATION-v1.6.0.md, .verification/release-v1.6.0/.
+
+Published https://github.com/HezeAI/termux-jobs/releases/tag/v1.6.0 as stable/latest,
+source commit3e1632b621bba1e7b450913ebe888147194bb97d (annotated tag unchanged).
+Four release assets downloaded and byte-compared: APK/SHA256SUMS/update.json/notes.
+Unauthenticated releases/latest reports1.6.0, update.json/checksums and public docs
+fetch successfully. Updater schema1/code1192/hash/size/compatibility match the APK.
+Release body matches reviewed notes. Same APK/checksum copied to Download.
+No anonymous-feedback service, no user app installation or server process changes.
+Keep the existing untracked design/ image; it was not part of the release.
 
 ## Private v1.5.33-test/code1191 — agent terminal controls delivered
 

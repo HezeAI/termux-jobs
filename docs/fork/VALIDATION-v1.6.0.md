@@ -1,6 +1,6 @@
 # Проверки v1.6.0
 
-Stable-кандидат: com.termux, version1.6.0/code1192, Android8+/ARM64.
+Stable-релиз: com.termux, version1.6.0/code1192, Android8+/ARM64.
 Разработчик — HezeAI; Codex помогает с проверками. Это отчёт о конкретном APK,
 а не подтверждение каждого сценария на всех устройствах.
 
@@ -75,3 +75,15 @@ compatibility сверяются перед публикацией и после
 
 Доказательства локальной проверки: .verification/release-v1.6.0/.
 Проверка опубликованных файлов фиксируется после загрузки отдельно.
+
+## Публикация проверена
+
+Релиз v1.6.0 опубликован как stable/latest; исходники тега —
+3e1632b621bba1e7b450913ebe888147194bb97d. Четыре release assets (APK, SHA256SUMS,
+update.json, release notes) скачаны обратно и побайтно совпали. Без GitHub-входа
+доступны releases/latest, metadata/checksums и ссылки документации тега; latest
+возвращает1.6.0, draft=false/prerelease=false. APK hash/size/code и localized
+compatibility соответствуют update.json schema1. Release body совпадает с
+подготовленным описанием. Копия APK/контрольной суммы в Download проверена.
+Это проверка публикации и metadata, не новый тест Android-установки. Тег/APK
+не менялись после публикации; эта запись добавлена в основной ветке документации.
