@@ -1,3 +1,17 @@
+# Релиз v1.7.0 / code1215
+
+Авторизована публикация stable v1.7.0 с окружениями, пакетами и бэкапами.
+Итоговые проверки — VALIDATION-v1.7.0.md. 668 JVM/146 Python проходят,
+APK проверен; меню удаления новых восстановленных копий требует устройства.
+Исходная Ubuntu/AI Agents общая, не мигрировать. Неподтверждённые jobs-копии
+не удалять из приложения по одному имени. Архивы при удалении копии сохранять.
+Статус публикации будет уточнён после проверки GitHub assets.
+
+Ниже история разработки; старые «не публиковать»/ожидания проверок относятся
+к соответствующим промежуточным версиям и не отменяют текущую авторизацию.
+
+---
+
 # Текущая проверочная сборка: 1.6.8-test/code1204
 
 Исправлен Void OCI missing /bin/bash: ограниченный переход на native run с явным
@@ -116,3 +130,135 @@ Delivered /sdcard/Download/Termux-Jobs-v1.5.4-test-arm64.apk. See RELEASE-v1.5.4
 
 ## Latest local delivery: v1.4.21-test (1127)
 APK delivered to /sdcard/Download/Termux-Jobs-v1.4.21-test-arm64.apk. Manual llama prefill benchmark: lengths512/1024/2048/4096, threads2/4/6/8, batches256/128 vs512/256, forward/reverse; separate temporary contexts and cancellation gate. Normal chat remains4threads. 651 Java tests and tiny-GGUF native benchmark/cancellation/context-preservation checks passed. Final artifact audit: .verification/local-ai-v1.4.21/artifact.json. Real Qwen/device measurements pending; not published. Next build code >=1128.
+
+
+## Частная 1.6.9-test / code1205
+Подключены пакеты шести менеджеров к конкретному proot alias; 29 тестов и сборка
+прошли. См. VALIDATION-v1.6.9-test.md. Пользователю передаётся один UPDATE APK.
+Далее проверить каталоги/пакетные действия на устройстве, затем бэкапы; особенно
+Void после restore без OCI manifest (ещё не исправлен). На GitHub не публиковать
+без нового разрешения. Старые rollback1200/1202 ниже текущего versionCode.
+
+
+## Исправление Alpine — 1.6.10-test/code1206
+На скриншотах18:33 APT обнаружен через Termux PATH fallback; реальный Alpine
+содержит sbin/apk и не содержит usr/bin/apt-get, usr/bin/dpkg-query. Гостевые
+пакетные операции теперь используют Linux PATH в subshell; общий PATH сессий и
+агенты не менялись. Повторить пакетные тесты Alpine после обновления APK.
+Debian update/install/tree --version подтверждены разработчиком на1.6.9.
+
+
+## Alpine catalogue — 1.6.11-test/code1207
+Developer confirmed apk update and native manager in1.6.10. Offline --available
+filter returned empty while plain offline apk list returned repository rows.
+Remove that filter for available tab only; refresh/install still require device
+verification. No GitHub publication. Next test: Alpine list, install tree, version.
+
+
+## Fedora DNF5 — 1.6.12-test/code1208
+Alpine tree2.3.2 installed/runs, developer confirmed. Fedora makecache succeeds;
+repoquery output has literal backslash-t, causing parser rejection. Queryformat
+now passes actual TAB for all DNF tabs. No parser relaxation or manager changes.
+Next device check: Fedora reread, install tree, tree --version. Remaining managers
+and backups still pending; no GitHub authorization.
+
+
+## Void versions — 1.6.13-test/code1209
+Fedora/openSUSE tree2.2.1 installed/runs, developer confirmed. XBPS remote index
+contains14204 packages incl13 letter-leading versions rejected by old parser.
+New XBPS-only regex requires _revision and accepts letters; entire index checked
+read-only in memory. Next device test: Void reread/install/tree --version, then
+Arch. Backups and openSUSE initial query/refresh busy remain separate checks.
+
+
+## Все шесть пакетных менеджеров — проверка разработчиком завершена для install
+Void tree2.2.1 installed/runs (19:29). Arch full upgrade completed, service hooks
+skipped in nonbooted proot; tree2.1.0 installed/runs (19:38). Together with Debian,
+Alpine, Fedora, openSUSE, basic catalogue/refresh/install/run paths checked by
+developer. Removal and backup/restore not yet verified. Next: backup stage, notably
+Void restore without OCI manifest; do not claim all restores supported or publish.
+
+
+## Backups — 1.6.14-test/code1210
+restore_ubuntu now adds only generated minimal manifest to freshly renamed
+rootfs; foreign OCI metadata discarded, rootfs/passwd preserved. Native AST
+command_run accepted generated config with explicit sh (mocks, no process).
+28 Python backup tests passed including fresh alias/content preservation and
+malicious manifest symlink / rootfs write-through rejection. Environment chooser
+now separate right Install / disabled gray Installed badges; row selection kept.
+Actual backup/restore not run. Next developer check: backup Debian only, inspect,
+restore separate jobs alias, tree/files, original still intact; then Void. Do not
+publish. Package comparison remains Termux APT only. Stable rollback assets have
+lower version codes; don't offer old ones as overlay rollback.
+
+
+## Restore failure/PAX — 1.6.15-test/code1211
+Developer created Debian-only backup /sdcard/Download/Termux-Jobs-20261019-195137-d09fc64b.
+Real SHA/size and helper inspect compatible. Restore failed: first115-char APT
+path carries pax_headers.path=debian/rootfs/... overriding rewritten jobs name.
+Proved via one-member in-memory repack. New code clears pax_headers/sparse and
+materializes file data normally. Native invocation still untouched; full real
+repack in repository with intercepted native run is verification, not live restore.
+Installed partial jobs-6a650d598a1d exists without manifest; don't delete or start
+it, installed environment modifications not authorized. Source Debian unchanged.
+Next user test: SAME manifest, Linux only, fresh restore. No GitHub publication.
+
+
+## Device restore confirmations after1.6.15
+Debian restored jobs-5b9572bd2e44: developer terminal Debian13/trixie13.7,
+tree2.2.1, jobs-env-test.txt, file manager confirmed. Void restored
+jobs-2fadee2c8257 (source void via RESTORE-RESULT), developer confirms startup,
+commands/test file/file manager after requested checks. Do not claim all other
+restore modes verified. Remaining: original environments recheck, other four
+full restores if needed, selective-data flows, process-close/reopen. No release
+authorization. Partial jobs-6a650d598a1d remains; don't modify installed state.
+
+
+## Alpine backup arch — 1.6.16-test/code1212
+Developer confirms both restored presets and original Debian/Void restart.
+Alpine backup /sdcard/Download/Termux-Jobs-20261019-201520-e38b386d is blocked
+because only regular ELF is bin/busybox (machine183); sh/env are symlinks to it.
+Add busybox to bounded ELF scan + primary paths. Real helper inspect now marks
+alpine/aarch64 compatible. New tests enforce wrong/unknown arch still blocked.
+No actual Alpine restore done by assistant. User should re-open same manifest
+in updated app, select Linux only and restore, then verify preset/tree/files.
+
+
+## Alpine restored — developer confirmation
+After1.6.16 developer confirms full Alpine restore, os-release/tree/files check,
+file manager, close/reopen. Debian/Void/Alpine cycles confirmed. Next full restore:
+Fedora, then openSUSE and Arch. No GitHub authorization; don't delete installed
+partial jobs-6a650d598a1d or alter user environments.
+
+
+## Arch archive — 1.6.17-test/code1213
+Developer confirmed Fedora full restore works like previous. Arch creation
+failed unsafe path in native TAR. Existing incomplete folder in Download:
+Termux-Jobs-20261019-202550-abf32c48, ubuntu-archlinux.tar.gz374164991 bytes,
+no manifest. Three ordinary systemd filenames contain literal backslash-xHH;
+old clean rejected all backslashes. Allow only literal hex sequences without
+decoding; arbitrary backslash/traversal still blocked. Full scan now37022 entries,
+aarch64. Recreate Arch backup after updating to confirm complete creation, then
+restore/test. openSUSE restore not confirmed yet. Do not clear installed partial
+jobs-6a650d598a1d or any existing incomplete archives without authorization.
+
+
+## Restored Arch .l2s — 1.6.18-test/code1214
+Developer confirms Arch restore/file/commands/restart. Warning .l2s seen in
+jobs-72e1416e65be. Read-only actual root0555 and absent .l2s; original Arch0555
+has it. Native login makedirs_at catches OSError and safely unsets PROOT_L2S_DIR,
+falling back to adjacent intermediates. Likely app-UID write restriction; exact
+errno not captured, assistant/root fixture can mkdir despite0555. New repack
+adds absent .l2s0700 before native restore applies root modes; rejects file/link,
+keeps existing directory unduplicated. No live filesystem edits. Need user repeat
+restore same Arch backup to new copy, confirm no warning. openSUSE restore still
+not explicitly confirmed. Do not publish or delete any copies without authorization.
+
+
+## All six full environment restore cycles confirmed by developer
+After1.6.18 developer confirmed Arch restored launch WITHOUT .l2s warning.
+Then confirmed openSUSE full cycle. Debian/Alpine/Fedora/openSUSE/Void/Arch Linux
+ARM now have developer-reported backup, separate restore, tool/test-file/file
+manager and reopen verification. Do not infer exhaustive selective/foreign/cross-
+device/live-database coverage. No GitHub publication authorized. Latest delivered
+APK1.6.18-test/code1214; metadata audit in .verification/backups-environments-v1.6.18.

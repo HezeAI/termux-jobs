@@ -1592,13 +1592,13 @@ public final class WorkspaceController {
     }
     private void showPackages(WorkspaceStore.Session profile) {
         String environment=ProjectFiles.environment(profile);
-        if(!environment.equals("termux")&&!environment.equals("ubuntu")){activity.showToast(WorkspaceText.tr("Пакеты пока доступны только для Termux и Ubuntu."),true);return;}
+        if(!environment.equals("termux")&&!environment.equals("ubuntu")&&!environment.startsWith("proot:")){activity.showToast(WorkspaceText.tr("Пакеты пока доступны только для Termux и Ubuntu."),true);return;}
         String heldHandle=profile.handle;
         WorkspacePackages browser=new WorkspacePackages(activity,profile,(operation,selectedSession)->{
             if(closed)return;
             if(!selectedSession){launchNew(operation,true);return;}
             TerminalSession target=liveFor(profile);
-            if(target==null||!target.isRunning()||!PackageCatalog.matchesTarget(profile,heldHandle,target.mHandle,operation.environment)){
+            if(target==null||!target.isRunning()||!PackageCatalog.matchesTarget(profile,heldHandle,target.mHandle,ProjectFiles.environment(operation))){
                 activity.showToast(WorkspaceText.tr("Выбранная сессия закрыта или изменилась. Откройте меню пакетов заново либо выберите новую сессию."),true);return;
             }
             activity.getTermuxTerminalSessionClient().setCurrentSession(target);show(Screen.TERMINAL,true);

@@ -1,6 +1,6 @@
 {
   "name": "Ошибка Termux Job’s",
-  "description": "Проблема бэкапов (тестирование), обновления, UI, AI Agents, SSH или пресетов",
+  "description": "Проблема бэкапов, обновления, UI, AI Agents, SSH или пресетов",
   "title": "[Bug]: ",
   "body": [
     {

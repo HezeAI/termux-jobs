@@ -84,12 +84,16 @@ final class ProjectFiles implements AutoCloseable {
         try{run(TextFileEdits.saveScript(original),output,1024,payload);}catch(Exception error){throw new IOException(WorkspaceText.tr("Не удалось сохранить файл. Проверьте права и доступность окружения; введённый текст сохранён в окне."));}
         if(!output.toString("UTF-8").equals("SAVED"))throw new IOException(WorkspaceText.tr("Файл изменился после открытия. Сохранение отменено: закройте редактор и откройте файл заново. Ваш текст остался в окне."));
     }
+    private String packageScript(String script){return environment(profile).startsWith("proot:")?EnvironmentPackages.nativeCommand(script):script;}
+    EnvironmentPackages.Kind packageBackend()throws Exception{return EnvironmentPackages.kind(bytes(packageScript(EnvironmentPackages.probe()),128));}
+    byte[] packageQuery(EnvironmentPackages.Kind kind,int tab)throws Exception{return bytes(packageScript(EnvironmentPackages.query(kind,tab)),PackageCatalog.MAX_BYTES);}
+    byte[] packageDescription(EnvironmentPackages.Kind kind,PackageCatalog.Entry entry,boolean installed)throws Exception{return bytes(packageScript(EnvironmentPackages.description(kind,entry,installed)),256*1024);}
     byte[] packageDescription(PackageCatalog.Entry entry,boolean installed) throws Exception {
         try{return bytes(PackageCatalog.descriptionQuery(entry,installed),256*1024);}
         catch(Exception error){if(closed)throw error;throw new IOException(WorkspaceText.tr("Описание недоступно. Обновите каталог или проверьте выбранное окружение."));}
     }
     byte[] packageVersions(String name) throws Exception {
-        try {return bytes(PackageCatalog.versionsQuery(name),1024*1024);}
+        try {return bytes(environment(profile).startsWith("proot:")?EnvironmentPackages.nativeCommand("exec bash --noprofile --norc -c "+SessionShell.quote(PackageCatalog.versionsQuery(name))):PackageCatalog.versionsQuery(name),1024*1024);}
         catch(Exception error){if(closed)throw error;throw new IOException(WorkspaceText.tr("Не удалось прочитать доступные версии пакета. Проверьте APT и выбранное окружение."));}
     }
     byte[] packageQuery(int tab) throws Exception {

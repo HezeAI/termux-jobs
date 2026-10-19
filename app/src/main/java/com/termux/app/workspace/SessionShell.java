@@ -37,8 +37,8 @@ public final class SessionShell {
             String alias=otherGuest?WorkspaceEnvironments.alias(session):"ubuntu";
             if(!WorkspaceLocalFilePicker.validAlias(alias))throw new IOException("Invalid environment alias");
             File guestRc = new File(dir, "ubuntu-bashrc");
-            write(guestRc, buildReadyRc("$HOME", mount + "/history", mount + "/cancel-startup", startup, true).getBytes(StandardCharsets.UTF_8));
-            if(otherGuest)write(new File(dir,"proot-shrc"),portableRc(mount+"/history",mount+"/cancel-startup",startup).getBytes(StandardCharsets.UTF_8));
+            write(guestRc, ((otherGuest?"export TERMUX_JOBS_ENVIRONMENT_ALIAS="+quote(alias)+"\n":"")+buildReadyRc("$HOME", mount + "/history", mount + "/cancel-startup", startup, true)).getBytes(StandardCharsets.UTF_8));
+            if(otherGuest)write(new File(dir,"proot-shrc"),("export TERMUX_JOBS_ENVIRONMENT_ALIAS="+quote(alias)+"\n"+portableRc(mount+"/history",mount+"/cancel-startup",startup)).getBytes(StandardCharsets.UTF_8));
             String cwd = session.directory.isEmpty() || session.directory.equals("~") ? "/root" : session.directory;
             if (cwd.startsWith("~/")) cwd = "/root/" + cwd.substring(2);
             script = buildRc(TermuxConstants.TERMUX_HOME_DIR_PATH, history.getAbsolutePath(), "")

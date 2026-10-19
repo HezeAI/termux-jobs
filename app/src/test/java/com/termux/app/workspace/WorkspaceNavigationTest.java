@@ -76,7 +76,7 @@ public class WorkspaceNavigationTest {
         Field tv=TermuxActivity.class.getDeclaredField("mTerminalView");tv.setAccessible(true);tv.set(a,a.findViewById(R.id.terminal_view));WorkspaceLanguage.select(a,"ru");WorkspaceController c=new WorkspaceController(a);
         try{for(String label:new String[]{"Главная","Команды/Заметки","Терминал"}){
             findDescription(a.findViewById(R.id.workspace_navigation),label).performClick();View header=a.findViewById(R.id.workspace_header);assertNull(findDescription(header,"Язык / Language"));
-            findDescription(header,"Настройки приложения").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog menu=ShadowAlertDialog.getLatestAlertDialog();View dialog=menu.getWindow().getDecorView();assertNotNull(findText(dialog,"Язык / Language"));assertNotNull(findText(dialog,"Проверить обновления"));assertNotNull(findText(dialog,"Резервное копирование (тестирование)"));assertNotNull(findDescription(dialog,"Автопроверка при открытии приложения"));assertNull(findText(dialog,"Автопроверка обновлений · 10 ч"));menu.dismiss();
+            findDescription(header,"Настройки приложения").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog menu=ShadowAlertDialog.getLatestAlertDialog();View dialog=menu.getWindow().getDecorView();assertNotNull(findText(dialog,"Язык / Language"));assertNotNull(findText(dialog,"Проверить обновления"));assertNotNull(findText(dialog,"Резервное копирование"));assertNotNull(findDescription(dialog,"Автопроверка при открытии приложения"));assertNull(findText(dialog,"Автопроверка обновлений · 10 ч"));menu.dismiss();
         }}finally{c.close();}
     }
 

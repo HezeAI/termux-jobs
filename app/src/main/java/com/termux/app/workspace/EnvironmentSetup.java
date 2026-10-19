@@ -4,6 +4,8 @@ import android.app.AlertDialog;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.Gravity;
 import android.widget.*;
 import com.termux.app.TermuxActivity;
 import com.termux.shared.termux.TermuxConstants;
@@ -31,9 +33,23 @@ final class EnvironmentSetup implements AutoCloseable {
     EnvironmentSetup(TermuxActivity a,java.util.function.Supplier<List<WorkspaceEnvironments.Choice>> choices){activity=a;inventory=choices;}
     private String t(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
     void choose(Consumer<WorkspaceEnvironments.Choice> selected){
-        List<WorkspaceEnvironments.Choice> choices=inventory.get();String[] titles=new String[choices.size()];
-        for(int i=0;i<titles.length;i++){WorkspaceEnvironments.Choice c=choices.get(i);titles[i]=c.label+" · "+(c.installed?t("Установлено","Installed"):t("Установить","Install"));}
-        WorkspaceDialogs.builder(activity).setTitle(t("Окружение","Environment")).setItems(titles,(dialog,index)->{
+        List<WorkspaceEnvironments.Choice> choices=inventory.get();
+        ArrayAdapter<WorkspaceEnvironments.Choice> rows=new ArrayAdapter<WorkspaceEnvironments.Choice>(activity,0,choices){
+            @Override public View getView(int position,View recycled,ViewGroup parent){
+                WorkspaceEnvironments.Choice choice=getItem(position);
+                int gap=WorkspaceDialogs.dp(activity,8);
+                FrameLayout outer=new FrameLayout(activity);outer.setPadding(gap*2,gap/2,gap*2,gap/2);
+                LinearLayout row=new LinearLayout(activity);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(gap*2,gap,gap,gap);row.setBackground(WorkspaceDialogs.background(activity,false));
+                TextView label=new TextView(activity);label.setText(choice.label);label.setTextSize(15);label.setTextColor(WorkspaceDialogs.TEXT);label.setMaxLines(2);
+                row.addView(label,new LinearLayout.LayoutParams(0,-2,1));
+                TextView badge=WorkspaceDialogs.action(activity,choice.installed?t("Установлено","Installed"):t("Установить","Install"),0);
+                badge.setTextSize(12);badge.setGravity(Gravity.CENTER);badge.setMinHeight(WorkspaceDialogs.dp(activity,44));badge.setPadding(gap,gap,gap,gap);
+                badge.setTextColor(choice.installed?WorkspaceDialogs.MUTED:WorkspaceDialogs.ACCENT);badge.setEnabled(!choice.installed);badge.setAlpha(choice.installed?.6f:1f);
+                LinearLayout.LayoutParams badgeParams=new LinearLayout.LayoutParams(-2,-2);badgeParams.leftMargin=gap;row.addView(badge,badgeParams);
+                outer.addView(row,new FrameLayout.LayoutParams(-1,-2));return outer;
+            }
+        };
+        WorkspaceDialogs.builder(activity).setTitle(t("Окружение","Environment")).setAdapter(rows,(dialog,index)->{
             WorkspaceEnvironments.Choice choice=choices.get(index);
             if(choice.installed){selected.accept(choice);return;}
             WorkspaceDialogs.builder(activity).setTitle(t("Установить ","Install ")+choice.label+"?")

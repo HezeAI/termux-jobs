@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Termux Job's backup (testing). JSON protocol; never executes archive content."""
+"""Termux Job's backup. JSON protocol; never executes archive content."""
 import argparse
 import bz2
 import copy
@@ -100,7 +100,9 @@ def digest(path):
 
 
 def clean(name):
-    if '\x00' in name or '\\' in name or name.startswith('/') or len(name) > 4096:
+    # systemd stores literal \\xHH in unit names. Accept that spelling, never decode it.
+    other_backslashes = re.sub(r'\\x[0-9A-Fa-f]{2}', '', name)
+    if '\x00' in name or '\\' in other_backslashes or name.startswith('/') or len(name) > 4096:
         raise BackupError('UNSAFE_ARCHIVE_PATH')
     while name.startswith('./'):
         name = name[2:]
@@ -207,7 +209,7 @@ def scan_tar(path):
                             label, command = tokens[1].split('=', 1)
                             if re.fullmatch(r'[A-Za-z0-9_.-]{1,80}', label) and command and len(candidates) < 500:
                                 candidates.append(dict(kind='alias', name=label, command=command, source=name))
-                elif base in ('bash', 'env', 'python3', 'sh', 'ls') or name.endswith('.sh'):
+                elif base in ('bash', 'env', 'python3', 'sh', 'ls', 'busybox') or name.endswith('.sh'):
                     f = tar.extractfile(m)
                     head = f.read(min(m.size, 128)) if f else b''
                     arch = arch_of(head)
@@ -272,7 +274,7 @@ def scan_tar(path):
         selected = [n for n in all_names if not root or n == root or n.startswith(root + '/')]
         architecture = sorted({a for n, a in elf.items() if n in selected})
         # Only binaries in bin directories establish the rootfs architecture.
-        primary = sorted({a for n, a in elf.items() if n in selected and any(n == (root + '/' if root else '') + q for q in ('bin/bash', 'bin/sh', 'usr/bin/bash', 'usr/bin/env', 'usr/bin/sh'))})
+        primary = sorted({a for n, a in elf.items() if n in selected and any(n == (root + '/' if root else '') + q for q in ('bin/bash', 'bin/sh', 'usr/bin/bash', 'usr/bin/env', 'usr/bin/sh', 'bin/busybox', 'usr/bin/busybox'))})
         arch = primary[0] if len(primary) == 1 else architecture[0] if len(architecture) == 1 else ''
         found.append(dict(kind=kind, root=root, alias=alias, format=fmt, arch=arch, files=len(selected)))
     termux_packages={}
@@ -912,7 +914,7 @@ cd -- "$(dirname -- "$0")"
 command -v python3 >/dev/null || { echo 'Install Python first: pkg install python'; exit 1; }
 exec python3 -I -S ./backup-tool.py --wizard ./manifest.json
 ''')
-    protected_write(out / 'README-RESTORE.txt', b'''Termux Job's backup (testing). Contains private credentials; keep offline and protected.
+    protected_write(out / 'README-RESTORE.txt', b'''Termux Job's backup. Contains private credentials; keep offline and protected.
 Install a trusted Termux (same architecture), run termux-setup-storage, then pkg install python proot-distro.
 Open Backup and restore in Termux Job's, select manifest.json, inspect compatibility and choose components.
 In ordinary Termux run: bash /sdcard/Download/<backup>/restore.sh
@@ -1124,7 +1126,7 @@ def extract_new(path, root, destination):
     return written
 
 
-def restore_ubuntu(path, component, prefix, work):
+def restore_ubuntu(path, component, prefix, work, receipt=None):
     if component['status'] != 'compatible':
         raise BackupError('ARCH_OR_PROOT_UNCONFIRMED')
     alias = 'jobs-' + uuid.uuid4().hex[:12]
@@ -1134,13 +1136,26 @@ def restore_ubuntu(path, component, prefix, work):
         raise BackupError('TARGET_EXISTS')
     rewritten = work / (alias + '.tar')
     root = component['root']
+    runtime_directory_present = False
     with archive(path) as src, tarfile.open(rewritten, 'w') as dst:
         for m in src:
             name = clean(m.name)
             if root and not (name == root or name.startswith(root + '/')):
                 continue
             rel = name[len(root):].lstrip('/') if root else name
+            if rel == '.l2s':
+                # Never accept a foreign runtime symlink/file at proot's write target.
+                if not m.isdir():
+                    raise BackupError('UNSAFE_LINK')
+                runtime_directory_present = True
             item = copy.copy(m)
+            # PAX path/linkpath override TarInfo names during writing. Drop foreign
+            # extended headers and let tarfile regenerate them from rebased fields.
+            # extractfile supplies logical bytes, so sparse inputs become regular files.
+            item.pax_headers = {}
+            item.sparse = None
+            if item.isfile():
+                item.type = tarfile.REGTYPE
             item.name = alias + '/rootfs' + ('/' + rel if rel else '')
             if item.islnk():
                 link = clean(item.linkname)
@@ -1152,7 +1167,25 @@ def restore_ubuntu(path, component, prefix, work):
                 continue
             dst.addfile(item, src.extractfile(m) if item.isfile() else None)
             progress('PREPARE_UBUNTU',current=name)
+        if not runtime_directory_present:
+            # Native backup omits this transient store. Create it before native restore
+            # reapplies restrictive rootfs modes (Arch rootfs may be 0555).
+            runtime = tarfile.TarInfo(alias + '/rootfs/.l2s')
+            runtime.type = tarfile.DIRTYPE
+            runtime.mode = 0o700
+            dst.addfile(runtime)
+        # Fresh runtime metadata, never the archive's Entrypoint/Env/image origin.
+        # Native run needs a manifest to bypass an unavailable passwd shell (Void).
+        manifest = dict(image_config=dict(config=dict(Entrypoint=None, Cmd=['/bin/sh'],
+                        WorkingDir='/', Env=['PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'])))
+        payload = json.dumps(manifest, separators=(',', ':')).encode('utf-8')
+        member = tarfile.TarInfo(alias + '/manifest.json')
+        member.mode = 0o600
+        member.size = len(payload)
+        dst.addfile(member, io.BytesIO(payload))
     scan_tar(rewritten)
+    if receipt is not None:
+        write_restore_receipt(receipt, alias, dict(alias=alias, source=component.get('environmentAlias', component.get('alias', '')), deleted=False))
     run_tool([str(prefix / 'bin/proot-distro'), 'restore', str(rewritten)])
     rewritten.unlink()
     return alias
@@ -1200,13 +1233,13 @@ def restore(request):
     for i, c in zip(choices, selected):
         path = copies[c['file']]
         if c['kind'] == 'ubuntu':
-            alias = restore_ubuntu(path, c, prefix, work)
+            alias = restore_ubuntu(path, c, prefix, work, request if Path(request.get('files', '')).is_dir() and request.get('files') else None)
             environments_created.append(alias)
             source_alias=c.get('environmentAlias')
             if source_alias:
                 if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,63}',source_alias): raise BackupError('INVALID_ENVIRONMENT_ALIAS')
                 environment_bindings[source_alias]=alias if source_alias not in environment_bindings else None
-            paths[str(i)] = 'proot-distro login --isolated ' + alias
+            paths[str(i)] = 'proot-distro run --isolated --work-dir / ' + shlex.quote(alias) + ' -- /bin/sh -i'
         elif c['kind'] == 'packages':
             target = destination / ('packages-' + str(i) + '.txt')
             shutil.copyfile(path, target)
@@ -1221,6 +1254,119 @@ def restore(request):
     protected_write(destination / 'RESTORE-RESULT.json', json.dumps(dict(paths=paths, environments=environments_created, environmentBindings=environment_bindings)).encode())
     return dict(path=str(destination), paths=paths, environments=environments_created, environmentBindings=environment_bindings)
 
+
+
+RESTORED_ALIAS = re.compile(r'jobs-[a-f0-9]{12}')
+
+
+def restore_receipt_fd(request):
+    return directory_fd(Path(request['files']), ['workspace-restored-environments'])
+
+
+def write_restore_receipt(request, alias, value):
+    if not RESTORED_ALIAS.fullmatch(alias): raise BackupError('INVALID_ENVIRONMENT_ALIAS')
+    fd = restore_receipt_fd(request)
+    temp = uuid.uuid4().hex + '.tmp'
+    try:
+        out = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=fd)
+        with os.fdopen(out, 'wb') as stream:
+            stream.write(json.dumps(value).encode()); stream.flush(); os.fsync(stream.fileno())
+        os.replace(temp, alias + '.json', src_dir_fd=fd, dst_dir_fd=fd)
+    finally:
+        try: os.unlink(temp, dir_fd=fd)
+        except FileNotFoundError: pass
+        os.close(fd)
+
+
+def restored_sources(request):
+    sources, deleted = {}, set()
+    home = Path(request['home'])
+    # Legacy successful imports have receipts in their HOME result folders.
+    for folder in home.iterdir():
+        if folder.is_symlink() or not folder.is_dir() or not re.fullmatch(r'restored-[0-9]{8}-[0-9]{6}-[a-f0-9]{8}', folder.name): continue
+        try: value = read_json(folder / 'RESTORE-RESULT.json')
+        except (OSError, ValueError, BackupError): continue
+        if not isinstance(value, dict): continue
+        envs, bindings = value.get('environments'), value.get('environmentBindings', {})
+        if not isinstance(envs, list) or not isinstance(bindings, dict): continue
+        for alias in envs:
+            if isinstance(alias, str) and RESTORED_ALIAS.fullmatch(alias):
+                sources[alias] = next((k for k,v in bindings.items() if v == alias and isinstance(k,str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,63}',k)), '')
+    fd = restore_receipt_fd(request)
+    try:
+        for name in os.listdir(fd):
+            if not re.fullmatch(r'jobs-[a-f0-9]{12}\.json', name): continue
+            try:
+                f = os.open(name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=fd)
+                with os.fdopen(f, 'rb') as stream:
+                    if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode): continue
+                    raw = stream.read(4097)
+                if len(raw) > 4096: continue
+                record = json.loads(raw)
+                alias = name[:-5]
+                if record.get('alias') != alias: continue
+                if record.get('deleted') is True: deleted.add(alias)
+                else:
+                    source=record.get('source','')
+                    sources[alias]=source if isinstance(source,str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,63}',source) else ''
+            except (OSError, ValueError, AttributeError): continue
+    finally: os.close(fd)
+    return {k:v for k,v in sources.items() if k not in deleted}
+
+
+def restored_target(prefix, alias):
+    if not isinstance(alias, str) or not RESTORED_ALIAS.fullmatch(alias): raise BackupError('RESTORED_NOT_CONFIRMED')
+    base=Path(prefix).resolve(strict=True)/'var/lib/proot-distro/containers'
+    if base.resolve() != base.absolute(): raise BackupError('UNSAFE_LINK')
+    target=base/alias
+    st=target.lstat()
+    if not stat.S_ISDIR(st.st_mode): raise BackupError('UNSAFE_LINK')
+    return target, str(st.st_dev)+':'+str(st.st_ino)
+
+
+def restored_inventory(request):
+    confirmed=restored_sources(request);base=Path(request['prefix'])/'var/lib/proot-distro/containers';rows=[]
+    if base.is_dir():
+        for item in sorted(base.iterdir()):
+            if not RESTORED_ALIAS.fullmatch(item.name): continue
+            try: target, identity=restored_target(request['prefix'],item.name)
+            except (OSError,BackupError): continue
+            trusted=item.name in confirmed
+            rows.append(dict(alias=item.name,source=confirmed.get(item.name,''),identity=identity,
+                             confirmed=trusted,incomplete=not (target/'manifest.json').is_file(),
+                             bytes=tree_bytes(target) if trusted else 0))
+    return dict(environments=rows)
+
+
+def locked_remove_available(prefix):
+    # Fail closed on older managers without shared session/exclusive removal locks.
+    prefix=Path(prefix).resolve(strict=True)
+    if not proot_modern(prefix): return False
+    for module in (prefix/'lib').glob('python*/site-packages/proot_distro'):
+        try:
+            if module.resolve() != module.absolute(): continue
+            paths=[module/'commands/remove.py',module/'commands/login/__init__.py',module/'locking.py']
+            if any(not p.is_file() or p.is_symlink() or p.stat().st_size>256*1024 for p in paths): continue
+            remove,login,locking=[p.read_text() for p in paths]
+            if 'ContainerLock(container_name, exclusive=True, command="remove")' in remove and 'exclusive=False, command="login", inheritable=True' in login and 'LOCK_NB' in locking: return True
+        except (OSError,ValueError): continue
+    return False
+
+
+def remove_restored(request):
+    alias=request.get('alias')
+    if not isinstance(alias,str) or not RESTORED_ALIAS.fullmatch(alias): raise BackupError('RESTORED_NOT_CONFIRMED')
+    if alias not in restored_sources(request): raise BackupError('RESTORED_NOT_CONFIRMED')
+    prefix=Path(request['prefix']);target,identity=restored_target(prefix,alias)
+    if identity != request.get('identity'): raise BackupError('RESTORED_CHANGED_RECHECK')
+    if not locked_remove_available(prefix): raise BackupError('RESTORED_LOCKS_REQUIRED')
+    # The native exclusive nonblocking lock refuses active sessions, including CLI sessions.
+    # No force/kill flags, filesystem fallback or arbitrary command from the receipt.
+    try: run_tool([str(prefix/'bin/proot-distro'),'remove',alias])
+    except BackupError: raise BackupError('RESTORED_REMOVE_FAILED')
+    if target.exists() or target.is_symlink(): raise BackupError('RESTORED_REMOVE_FAILED')
+    write_restore_receipt(request,alias,dict(alias=alias,deleted=True))
+    return dict(removed=alias)
 
 def valid_package(name, version):
     return bool(re.fullmatch(r'[a-z0-9][a-z0-9+.-]*(?::[a-z0-9-]+)?', name) and re.fullmatch(r'[A-Za-z0-9.+:~_-]{1,160}', version))
@@ -1299,7 +1445,7 @@ def main():
         return
     request = read_json(args.request)
     operation = request['operation']
-    value = {'compression-status': compression_status, 'install-pigz': install_pigz, 'inventory': environment_info, 'selection-inventory': selection_inventory, 'create': create, 'inspect': inspect, 'restore': restore, 'packages': compare_packages, 'apt-plan': apt_plan}[operation](request)
+    value = {'compression-status': compression_status, 'install-pigz': install_pigz, 'inventory': environment_info, 'selection-inventory': selection_inventory, 'create': create, 'inspect': inspect, 'restore': restore, 'packages': compare_packages, 'apt-plan': apt_plan, 'restored-inventory': restored_inventory, 'remove-restored': remove_restored}[operation](request)
     event('DONE', result=value)
 
 

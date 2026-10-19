@@ -76,7 +76,12 @@ final class PackageCatalog {
     }
     static WorkspaceStore.Session operationProfile(WorkspaceStore.Session source,String command){
         String env=ProjectFiles.environment(source);
-        if(!env.equals("termux")&&!env.equals("ubuntu"))throw new IllegalArgumentException();
-        WorkspaceStore.Session target=new WorkspaceStore.Session();target.name=WorkspaceText.tr("Пакеты · ")+(env.equals("ubuntu")?"Ubuntu":"Termux");target.environment=env;target.directory="~";target.startup=command;return target;
+        if(!env.equals("termux")&&!env.equals("ubuntu")&&!env.startsWith("proot:"))throw new IllegalArgumentException();
+        WorkspaceStore.Session target=new WorkspaceStore.Session();target.name=WorkspaceText.tr("Пакеты · ")+ProjectFiles.environmentLabel(source);target.environment=env.startsWith("proot:")?"termux":env;target.prootAlias=env.startsWith("proot:")?env.substring(6):"";target.prootIsolated=source.prootIsolated;target.directory="~";target.startup=command;
+        if(!target.prootAlias.isEmpty()){
+            if(!WorkspaceLocalFilePicker.validAlias(target.prootAlias))throw new IllegalArgumentException("INVALID_ENVIRONMENT");
+            target.startup="if [ \"${TERMUX_JOBS_ENVIRONMENT_ALIAS:-}\" = "+SessionShell.quote(target.prootAlias)+" ]; then\n"+EnvironmentPackages.nativeCommand(command)+"\nelse printf '%s\\n' 'Wrong environment. Open a new session in the selected environment.' >&2; false; fi";
+        }
+        return target;
     }
 }

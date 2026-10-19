@@ -1,10 +1,10 @@
-# Termux Job’s — сборка v1.6.5
+# Termux Job’s — сборка v1.7.0
 
-Пакет com.termux, versionName1.6.5, versionCode1198, Android8+/ARM64.
+Пакет com.termux, versionName1.7.0, versionCode1215, Android8+/ARM64.
 Прежний сертификат выпуска, библиотекаschema8. Локальные ИИ удалены;
 специальный TERMUX_PUBLIC_RELEASE больше не нужен и ничего не включает.
-[Совместимость](docs/fork/RELEASE-v1.6.5.md),
-[проверки](docs/fork/VALIDATION-v1.6.5.md),
+[Совместимость](docs/fork/RELEASE-v1.7.0.md),
+[проверки](docs/fork/VALIDATION-v1.7.0.md),
 [исследование удалённой функции](docs/fork/LOCAL-AI-RESEARCH.md).
 
 Нужны существующие JDK11, Gradle7.2, SDK и ARM64 AAPT2/clang/ld.lld/NDK sysroot
@@ -148,7 +148,7 @@ Media3 1.5.1 использует системные кодеки; лиценз�
 теге `v0.118.3`, коммите `5b657c6adf4304e5198951ce815fe0205dcac29c`.
 Ветка разработки — `fork/base`; `upstream` указывает на оригинал.
 Текущий выпуск — `v1.3.3`, versionCode1086, Android8.0+/ARM64, com.termux.
-Менеджер резервных копий (тестирование): выбор компонентов,
+Менеджер резервных копий: выбор компонентов,
 прогресс, сжатие, защита окон. [BACKUP-RESTORE](docs/fork/BACKUP-RESTORE.md).
 Ручное/автоматическое обновление объединено: [UPDATES](docs/fork/UPDATES.md).
 Менеджер пакетов, текстовый редактор файлов, действия библиотек в просмотре и выбор категорий включены в релиз.

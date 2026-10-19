@@ -1,5 +1,47 @@
-# Unreleased — 1.6.8-test (private verification)
+# v1.7.0 — Linux environments, native packages and backups
 
+- Add confirmed removal of restored instances using nonblocking native proot
+  session/removal locks; preserve Download archives/originals/reports, clean linked
+  presets after success. Unknown copies cannot be removed by name alone. Track
+  new partial restores and successful deletion tombstones. Remove testing labels.
+  code1215; same package/signing identity/schema8, no data reset.
+- Include an empty private .l2s runtime directory in freshly restored rootfs
+  when absent, before restrictive root modes are applied. Preserve Arch0555
+  root permissions; refuse foreign file/symlink at the runtime path. code1214.
+- Permit literal systemd hex-escaped filenames in archives (backslash-xHH),
+  without decoding them. Preserve traversal/link and nonstandard backslash
+  rejection. Fix false unsafe-path failure creating Arch backups. code1213.
+- Recognize regular bin/busybox and usr/bin/busybox ELF for Alpine archive
+  architecture. Do not dereference sh/env symlinks; mismatched/unknown binaries
+  remain blocked. code1212. Debian/Void restored and original restarts confirmed.
+- Fix proot archive rebasing: regenerate PAX path/linkpath headers from new
+  jobs-* names rather than retaining source aliases on long paths. Normalize
+  sparse inputs to regular logical file data. Existing backup files unchanged.
+  code1211; prior failed native restore may leave an incomplete fresh instance.
+- Rebuild restored proot launch metadata from safe defaults instead of foreign
+  OCI commands/environment. Preserve rootfs/passwd; allow sh-only Void to use
+  native run in the fresh isolated restored instance. No live rootfs replacement.
+- Show separate Install/disabled Installed badges beside environment names.
+  code1210 during development; full six-system restore cycles subsequently verified by the developer.
+- Accept valid XBPS versions starting with letters (e.g. mksh R59c_2),
+  preserving the required revision suffix and package-name validation. Fix
+  Void catalogue rejection caused by13 such entries; checked14204 cached rows.
+  code1209. Fedora/openSUSE tree installation and execution confirmed on device.
+- Fix Fedora DNF5 catalogue format: pass an actual tab in queryformat rather
+  than backslash-t, which DNF5 prints literally. Preserve strict row parsing.
+  code1208. Developer confirmed Alpine tree2.3.2 installation and execution.
+- Fix empty Alpine available list: read the cached apk list without the
+  --available filter that excludes remote-only packages with --no-network.
+  Keep installed/upgradable filters and offline catalogue reads. code1207.
+- Fix host Termux APT being falsely detected inside Alpine through proot PATH
+  fallback. Restrict guest package discovery, reads and confirmed commands to
+  guest Linux paths in a subshell, without changing the interactive shell PATH.
+  code1206 during development; six-system package checks subsequently passed.
+- Connect environment-local package catalogues/descriptions/confirmed operations for
+  APT, APK, DNF, Zypper, XBPS and Pacman. Preserve concrete proot aliases and
+  reject package operations after falling back to the host shell. Native catalogues
+  use cached metadata; refresh is explicit. Pacman actions use full system upgrade
+  with a warning. In-panel version selection remains APT-only. code1205.
 - Add the Termux environments launch family, concrete proot instance selection,
   explicit entry command, confirmed missing-distribution setup and readiness check.
 - Bind session files and restored ordinary presets to the selected/new instance;

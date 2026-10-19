@@ -1,0 +1,36 @@
+{
+  "ru": [
+    "Большое обновление: раздел «Окружения Termux» — Debian, Alpine, Fedora, openSUSE, Void Linux, Arch Linux ARM наряду с Termux/Ubuntu.",
+    "Установка с подтверждением и прогрессом, отдельные плашки «Установить / Установлено», проверка окружения и точная команда входа.",
+    "Свои каталоги, описания и подтверждённые пакетные команды APT/APK/DNF/Zypper/XBPS/Pacman для выбранного экземпляра. Установка и запуск тестового пакета проверены разработчиком во всех шести системах.",
+    "Файловый менеджер и полный бэкап/отдельное восстановление Linux. Полный цикл с файлами, пакетами и повторным запуском проверен разработчиком для всех шести окружений.",
+    "Исправлены длинные PAX-пути, архитектура BusyBox, имена systemd и восстановленный запуск Void/Arch. Пометка «тестирование» в меню бэкапа убрана.",
+    "Удаление подтверждённых восстановленных копий с подтверждением и блокировкой занятых систем; связанные пресеты убираются после успеха. Архивы Download и исходные системы сохраняются.",
+    "Arch: пакетные установка/обновление выполняют полный pacman -Syu с предупреждением. Выбор конкретной версии в панели пока APT-only."
+  ],
+  "en": [
+    "Major update: Termux environments adds Debian, Alpine, Fedora, openSUSE, Void Linux and Arch Linux ARM alongside Termux/Ubuntu.",
+    "Confirmed setup with progress, separate Install / Installed badges, environment check and exact manual entry command.",
+    "Per-instance catalogues, descriptions and confirmed APT/APK/DNF/Zypper/XBPS/Pacman commands. The developer tested package installation and execution in all six systems.",
+    "Environment-bound files and full Linux backup/separate restore. The developer tested the full cycle including files, packages and reopening in all six environments.",
+    "Fixed long PAX paths, BusyBox architecture, systemd filenames and restored Void/Arch startup. Removed the testing label from backup menus.",
+    "Confirmed removal of identified restored instances, with active-session locks and linked-preset cleanup after success. Download archives and originals are retained.",
+    "Arch installs/upgrades run a full pacman -Syu with a warning. In-panel version selection remains APT-only."
+  ],
+  "compatibility": {
+    "ru": [
+      "С публичной1.6.5 и проверочных1.6.x сброс не предусмотрен: библиотекаschema8, серверы и форматы бэкапа1/2 сохраняются; данные автоматически не очищаются. Прежние com.termux/сертификат; Android8+/ARM64, code1215 выше1.6.5 и1.6.18-test. Обновление доступно из приложения.",
+      "Ubuntu и AI Agents остаются общими, авторизация не переносится в другую систему. Завершите важные задачи: Android может завершить процессы при обновлении.",
+      "Новые proot-поля старый APK может потерять при пересохранении пресетов. Перед откатом сохраните библиотеку новой версией; для установки поверх нужен более высокий versionCode.",
+      "Удаление требует proot-distro с поддерживаемыми блокировками; иначе оно заблокировано. Старые копии без подтверждения происхождения удалять из меню нельзя.",
+      "При обновлении с версий до1.5.3 сохраняется удаление приватных данных старой локальной AI-функции; внешние модели/proot не удаляются. Сохраните нужные старые локальные данные заранее."
+    ],
+    "en": [
+      "No reset is planned from public1.6.5 or private1.6.x: library schema8, servers and backup formats1/2 retained; no automatic data clearing. Same com.termux/signer; Android8+/ARM64, code1215 above1.6.5 and1.6.18-test. Available through the in-app updater.",
+      "Ubuntu and AI Agents remain shared, without moving authentication to another system. Finish important jobs: Android may terminate processes during updates.",
+      "An older APK may lose new proot preset fields when resaving. Export the library with the new version before rollback; an overlay APK requires a higher versionCode.",
+      "Removal requires proot-distro with supported session locks, otherwise it is blocked. Old copies without provenance cannot be removed through this menu.",
+      "Upgrades from before1.5.3 retain old local-AI private-data removal; external models/proot are not deleted. Export needed old local data first."
+    ]
+  }
+}

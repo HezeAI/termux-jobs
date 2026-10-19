@@ -17,8 +17,11 @@ final class WorkspacePackages implements AutoCloseable {
     private Runnable onClosed;
     void setOnClosed(Runnable callback){onClosed=callback;}
     private AlertDialog dialog;private LinearLayout rows,tabs;private TextView status;private EditText search;
+    private EnvironmentPackages.Kind backend;
+    private TextView catalogHint,refreshButton;
     private List<PackageCatalog.Entry> entries=Collections.emptyList();private int tab,limit=100,generation;private volatile boolean closed;private boolean busy;
-    WorkspacePackages(TermuxActivity activity,WorkspaceStore.Session profile,Launch launch){this.activity=activity;this.files=new ProjectFiles(activity,profile);this.launch=launch;}
+    WorkspacePackages(TermuxActivity activity,WorkspaceStore.Session profile,Launch launch){this.activity=activity;this.files=new ProjectFiles(activity,profile);this.launch=launch;String environment=ProjectFiles.environment(profile);if(environment.equals("termux")||environment.equals("ubuntu"))backend=EnvironmentPackages.Kind.APT;}
+    private String tr(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
     private int dp(int n){return WorkspaceDialogs.dp(activity,n);}
     private LinearLayout column(){LinearLayout v=new LinearLayout(activity);v.setOrientation(LinearLayout.VERTICAL);return v;}
     private TextView text(String value,int size){TextView t=new TextView(activity);t.setText(value);t.setTextColor(WorkspaceDialogs.TEXT);t.setTextSize(size);return t;}
@@ -37,14 +40,14 @@ final class WorkspacePackages implements AutoCloseable {
         tabs=new LinearLayout(activity);tabs.setGravity(Gravity.CENTER_VERTICAL);body.addView(tabs);renderTabs();
         search=new EditText(activity);search.setSingleLine(true);search.setTextColor(WorkspaceDialogs.TEXT);search.setHintTextColor(WorkspaceDialogs.MUTED);search.setHint(WorkspaceText.tr("Поиск пакетов"));body.addView(search);
         search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int before,int count){limit=100;render();}public void afterTextChanged(Editable e){}});
-        body.addView(text(WorkspaceText.tr("Список из локального каталога APT. Для свежих данных обновите каталог."),12));
-        LinearLayout controls=new LinearLayout(activity);controls.addView(compactAction(activity,WorkspaceText.tr("Перечитать список"),this::load),compactParams());controls.addView(compactAction(activity,WorkspaceText.tr("Обновить каталог"),()->confirm("refresh",null)),compactParams());body.addView(controls);
+        catalogHint=text(WorkspaceLanguage.code(activity).equals("ru")?"Пакеты выбранного окружения. Для свежих данных обновите каталог.":"Packages in the selected environment. Refresh the catalogue for current metadata.",12);body.addView(catalogHint);
+        LinearLayout controls=new LinearLayout(activity);controls.addView(compactAction(activity,WorkspaceText.tr("Перечитать список"),this::load),compactParams());refreshButton=compactAction(activity,WorkspaceText.tr("Обновить каталог"),()->confirm("refresh",null));controls.addView(refreshButton,compactParams());body.addView(controls);
         status=text("",12);body.addView(status);rows=column();ScrollView scroll=new ScrollView(activity);scroll.addView(rows);
         int height=Math.min(dp(330),Math.max(dp(120),(int)(activity.getResources().getDisplayMetrics().heightPixels*0.32)));body.addView(scroll,new LinearLayout.LayoutParams(-1,height));
         dialog=WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Пакеты · ")+ProjectFiles.environmentLabel(files.profile)).setView(body).setNegativeButton(WorkspaceText.tr("Закрыть"),null).create();dialog.setOnDismissListener(d->close());dialog.show();load();
     }
     private void renderTabs(){tabs.removeAllViews();String[] names={WorkspaceText.tr("Установленные"),WorkspaceText.tr("Доступные"),WorkspaceText.tr("Обновления")};for(int i=0;i<3;i++){final int next=i;TextView t=compactAction(activity,names[i],()->{if(tab==next)return;tab=next;limit=100;entries=Collections.emptyList();renderTabs();load();});t.setSelected(tab==i);t.setBackground(WorkspaceDialogs.background(activity,tab==i));tabs.addView(t,compactParams());}}
-    private void load(){if(closed)return;int request=++generation,selected=tab;busy=true;entries=Collections.emptyList();render();status.setText(WorkspaceText.tr("Загрузка пакетов…"));worker.submit(()->{if(closed)return;List<PackageCatalog.Entry> result=null;String error=null;try{result=PackageCatalog.parse(files.packageQuery(selected),selected);}catch(Exception e){error=e.getMessage();}List<PackageCatalog.Entry> loaded=result;String message=error;activity.runOnUiThread(()->{if(closed||generation!=request)return;busy=false;if(message!=null){status.setText(message);return;}entries=loaded;status.setText(Integer.toString(entries.size()));render();});});}
+    private void load(){if(closed)return;int request=++generation,selected=tab;busy=true;entries=Collections.emptyList();render();status.setText(WorkspaceText.tr("Загрузка пакетов…"));worker.submit(()->{if(closed)return;List<PackageCatalog.Entry> result=null;String error=null;try{if(backend==null)backend=files.packageBackend();result=EnvironmentPackages.parse(backend,files.packageQuery(backend,selected),selected);}catch(Exception e){error=e.getMessage();}List<PackageCatalog.Entry> loaded=result;String message=error;activity.runOnUiThread(()->{if(closed||generation!=request)return;busy=false;if(backend!=null){catalogHint.setText(backend.name()+" · "+ProjectFiles.environmentLabel(files.profile)+"\n"+tr("Чтение локального каталога. Если он пуст или устарел, обновите его явно.","Reads local metadata. Refresh it explicitly if empty or outdated."));refreshButton.setText(backend==EnvironmentPackages.Kind.PACMAN?tr("Обновить систему","Upgrade system"):WorkspaceText.tr("Обновить каталог"));}if(message!=null){status.setText(message);return;}entries=loaded;status.setText(Integer.toString(entries.size()));render();});});}
     private void render(){if(rows==null)return;rows.removeAllViews();String query=search.getText().toString().trim().toLowerCase(Locale.ROOT);int shown=0,total=0;for(PackageCatalog.Entry e:entries){if(!e.name.toLowerCase(Locale.ROOT).contains(query))continue;total++;if(shown++>=limit)continue;TextView row=action(e.name+"\n"+WorkspaceText.tr("Версия: ")+e.version,()->details(e));rows.addView(row,new LinearLayout.LayoutParams(-1,-2));}if(total>limit)rows.addView(action(WorkspaceText.tr("Показать ещё"),()->{limit+=100;render();}));else if(total==0&&!busy)rows.addView(text(WorkspaceText.tr("Пакеты не найдены"),14));}
     private void details(PackageCatalog.Entry entry){
         if(closed)return;final int selected=tab;LinearLayout body=column();body.setPadding(dp(16),0,dp(16),dp(8));
@@ -52,9 +55,9 @@ final class WorkspacePackages implements AutoCloseable {
         String[] full={""};TextView more=action(WorkspaceText.tr("Подробнее"),()->fullDescription(entry,full[0]));more.setVisibility(android.view.View.GONE);body.addView(more);
         AlertDialog card=WorkspaceDialogs.builder(activity).setTitle(entry.name+" · "+entry.version).setView(body).setNegativeButton(WorkspaceText.tr("Закрыть"),null).create();
         body.addView(action(selected==1?WorkspaceText.tr("Установить"):WorkspaceText.tr("Обновить пакет"),()->{card.dismiss();confirm(selected==1?"install":"upgrade",entry);}));
-        body.addView(action(WorkspaceText.tr("Выбрать версию"),()->{card.dismiss();chooseVersion(entry);}));
+        if(backend==EnvironmentPackages.Kind.APT)body.addView(action(WorkspaceText.tr("Выбрать версию"),()->{card.dismiss();chooseVersion(entry);}));else body.addView(text(tr("Выбор отдельных версий в этой панели пока доступен только для APT. Менеджер покажет план установки в терминале.","Version selection in this panel is currently available for APT only. The package manager shows its installation plan in the terminal."),12));
         if(selected==0)body.addView(action(WorkspaceText.tr("Удалить пакет"),()->{card.dismiss();confirm("remove",entry);}));card.show();
-        worker.submit(()->{if(closed)return;String result="";try{result=PackageCatalog.parseDescription(files.packageDescription(entry,selected==0));}catch(Exception ignored){}String value=result;
+        worker.submit(()->{if(closed)return;String result="";try{result=EnvironmentPackages.parseDescription(backend,files.packageDescription(backend,entry,selected==0));}catch(Exception ignored){}String value=result;
             activity.runOnUiThread(()->{if(closed||!card.isShowing())return;full[0]=value;description.setText(value.isEmpty()?WorkspaceText.tr("Описание недоступно. Обновите каталог или проверьте выбранное окружение."):value);more.setVisibility(value.isEmpty()?android.view.View.GONE:android.view.View.VISIBLE);});
         });
     }
@@ -73,11 +76,12 @@ final class WorkspacePackages implements AutoCloseable {
         });
     }
     private void confirm(String action,PackageCatalog.Entry entry){
-        if(closed)return;String command=action.equals("version")?PackageCatalog.versionOperation(entry):PackageCatalog.operation(action,entry==null?null:entry.name);
+        if(closed||backend==null)return;String command=action.equals("version")?PackageCatalog.versionOperation(entry):EnvironmentPackages.operation(backend,action,entry==null?null:entry.name);
         LinearLayout body=column();body.setPadding(dp(16),0,dp(16),dp(8));
         body.addView(text(command,14));
+        if(backend==EnvironmentPackages.Kind.PACMAN&&!action.equals("remove"))body.addView(text(WorkspaceLanguage.code(activity).equals("ru")?"Pacman выполнит полное обновление окружения вместе с выбранным действием. Частичные обновления Arch не поддерживает; проверьте план перед подтверждением.":"Pacman performs a full environment upgrade with this action. Arch does not support partial upgrades; review the plan before confirming.",13));
         if(action.equals("version")&&entry.downgrade){TextView warning=text(WorkspaceText.tr("Выбрана более старая версия. Понижение может потребовать изменения зависимостей; проверьте план APT перед подтверждением."),13);warning.setTextColor(WorkspaceDialogs.DANGER);body.addView(warning);}
-        body.addView(text(WorkspaceText.tr("В выбранной сессии должен быть свободный Bash без незавершённого ввода. Если выполняется команда или работает Codex, откройте в новой сессии того же окружения. Пользователь сам проверяет, свободна ли оболочка."),13));
+        body.addView(text(tr("В выбранной сессии должна быть свободная оболочка без незавершённого ввода. Если работает агент или выполняется команда, выберите новую сессию того же окружения. Пользователь сам проверяет, свободна ли оболочка.","The selected session must have an idle shell with no unfinished input. If an agent or command is running, choose a new session in the same environment. Check that the shell is idle yourself."),13));
         RadioGroup choices=new RadioGroup(activity);
         RadioButton selected=new RadioButton(activity);selected.setId(android.view.View.generateViewId());selected.setText(WorkspaceText.tr("В выбранной сессии"));selected.setTextColor(WorkspaceDialogs.TEXT);choices.addView(selected);
         RadioButton separate=new RadioButton(activity);separate.setId(android.view.View.generateViewId());separate.setText(WorkspaceText.tr("В новой сессии того же окружения"));separate.setTextColor(WorkspaceDialogs.TEXT);choices.addView(separate);

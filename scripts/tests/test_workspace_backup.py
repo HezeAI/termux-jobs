@@ -141,5 +141,147 @@ class BackupTests(unittest.TestCase):
         self.assertEqual(['jobs-abcdef123456'],result['environments'])
         self.assertEqual('debian',create.call_args.args[1]['environmentAlias'])
 
+    def test_restore_void_synthesizes_safe_manifest_and_preserves_rootfs(self):
+        passwd=b'root:x:0:0:root:/root:/bin/bash\n'
+        foreign=json.dumps(dict(image_ref='https://untrusted.invalid/image',image_config=dict(config=dict(Entrypoint=['evil'],Cmd=['evil'],Env=['LD_PRELOAD=evil'],WorkingDir='/evil')))).encode()
+        p=self.tar([('void/rootfs/usr/bin/dash',elf()),('void/rootfs/bin',(tarfile.SYMTYPE,'usr/bin')),('void/rootfs/usr/bin/sh',(tarfile.SYMTYPE,'dash')),('void/rootfs/etc/passwd',passwd),('void/rootfs/etc/os-release',b'ID=void'),('void/manifest.json',foreign)])
+        before=p.read_bytes();seen=[]
+        def native(args):
+            with tarfile.open(args[-1]) as tar:
+                names=tar.getnames();alias=names[0].split('/')[0];meta=tar.getmember(alias+'/manifest.json');self.assertTrue(meta.isfile());self.assertEqual(meta.mode,0o600)
+                config=json.load(tar.extractfile(meta));seen.append(config)
+                self.assertEqual(config,dict(image_config=dict(config=dict(Entrypoint=None,Cmd=['/bin/sh'],WorkingDir='/',Env=['PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin']))))
+                self.assertEqual(tar.extractfile(alias+'/rootfs/etc/passwd').read(),passwd)
+                self.assertEqual(tar.getmember(alias+'/rootfs/bin').linkname,'usr/bin')
+                self.assertNotIn('void/manifest.json',names)
+        with patch.object(b,'run_tool',side_effect=native):
+            alias=b.restore_ubuntu(p,dict(status='compatible',root='void/rootfs'),self.prefix,self.work)
+        self.assertEqual(p.read_bytes(),before);self.assertEqual(len(seen),1);self.assertFalse((self.work/(alias+'.tar')).exists())
+
+    def test_restore_ignores_foreign_manifest_symlink_and_rejects_rootfs_write_through_link(self):
+        p=self.tar([('debian/rootfs/usr/bin/sh',elf()),('debian/rootfs/etc/os-release',b'ID=debian'),('debian/manifest.json',(tarfile.SYMTYPE,'/private/authorization'))])
+        def native(args):
+            with tarfile.open(args[-1]) as tar:
+                members=[m for m in tar if m.name.endswith('/manifest.json')];self.assertEqual(len(members),1);self.assertTrue(members[0].isfile())
+        with patch.object(b,'run_tool',side_effect=native) as tool:
+            b.restore_ubuntu(p,dict(status='compatible',root='debian/rootfs'),self.prefix,self.work)
+        self.assertEqual(tool.call_count,1)
+        p=self.tar([('void/rootfs/etc',(tarfile.SYMTYPE,'/outside')),('void/rootfs/etc/passwd',b'bad')],name='unsafe.tar.gz')
+        with patch.object(b,'run_tool') as tool:
+            self.assertRaises(b.BackupError,b.restore_ubuntu,p,dict(status='compatible',root='void/rootfs'),self.prefix,self.work)
+        tool.assert_not_called()
+
+    def test_proot_rebase_regenerates_pax_paths_and_hardlinks_under_fresh_alias(self):
+        p=self.root/'pax-long.tar';root='debian/rootfs';longname=root+'/var/lib/apt/lists/'+('repository-'*14)+'Packages';target=root+'/usr/share/'+('documentation-'*10)+'file'
+        with tarfile.open(p,'w',format=tarfile.PAX_FORMAT) as tar:
+            for name,payload in [(root+'/etc/os-release',b'ID=debian'),(longname,b'index'),(target,b'document')]:
+                m=tarfile.TarInfo(name);m.size=len(payload);m.pax_headers={'path':name,'mtime':'123.5'};tar.addfile(m,io.BytesIO(payload))
+            m=tarfile.TarInfo(root+'/usr/share/alias');m.type=tarfile.LNKTYPE;m.linkname=target;m.pax_headers={'linkpath':target};tar.addfile(m)
+        original=p.read_bytes();seen=[]
+        def native(args):
+            with tarfile.open(args[-1]) as tar:
+                rows=list(tar);aliases={m.name.split('/')[0] for m in rows};self.assertEqual(len(aliases),1);alias=next(iter(aliases));self.assertTrue(alias.startswith('jobs-'))
+                for m in rows:
+                    self.assertFalse(m.name.startswith('debian/'))
+                    if m.islnk():self.assertTrue(m.linkname.startswith(alias+'/rootfs/'))
+                self.assertEqual(tar.extractfile(alias+'/rootfs/'+longname.split('/rootfs/',1)[1]).read(),b'index')
+                self.assertEqual(tar.extractfile(alias+'/rootfs/usr/share/alias').read(),b'document');seen.append(alias)
+        with patch.object(b,'run_tool',side_effect=native):
+            alias=b.restore_ubuntu(p,dict(status='compatible',root=root),self.prefix,self.work)
+        self.assertEqual(seen,[alias]);self.assertEqual(p.read_bytes(),original)
+
+    def test_alpine_busybox_establishes_architecture_without_following_host_symlinks(self):
+        p=self.tar([('alpine/rootfs/bin/busybox',elf()),('alpine/rootfs/bin/sh',(tarfile.SYMTYPE,'/bin/busybox')),('alpine/rootfs/usr/bin/env',(tarfile.SYMTYPE,'/bin/busybox')),('alpine/rootfs/etc/os-release',b'ID=alpine')])
+        with patch.object(b,'proot_modern',return_value=True),patch.object(b,'current_arch',return_value='aarch64'):
+            self.assertEqual(self.inspect(p)['components'][0]['status'],'compatible')
+        with patch.object(b,'proot_modern',return_value=True),patch.object(b,'current_arch',return_value='x86_64'):
+            self.assertEqual(self.inspect(p)['components'][0]['status'],'blocked')
+        p=self.tar([('alpine/rootfs/bin/busybox',b'not an ELF'),('alpine/rootfs/bin/sh',(tarfile.SYMTYPE,'/bin/busybox')),('alpine/rootfs/etc/os-release',b'ID=alpine')],name='unknown.tar.gz')
+        with patch.object(b,'proot_modern',return_value=True):self.assertEqual(self.inspect(p)['components'][0]['status'],'blocked')
+
+    def test_systemd_hex_escaped_filenames_are_literal_and_do_not_allow_traversal(self):
+        name=r'usr/lib/systemd/system/system-systemd\x2dcryptsetup.slice'
+        self.assertEqual(b.clean(name),name)
+        p=self.tar([('home/'+name,b'unit'),(r'home/literal\x2f..\x2foutside',b'literal')])
+        b.scan_tar(p);dest=self.home/'restored';b.extract_new(p,'home',dest)
+        self.assertEqual((dest/name).read_bytes(),b'unit')
+        self.assertEqual((dest/r'literal\x2f..\x2foutside').read_bytes(),b'literal')
+        self.assertFalse((self.root/'outside').exists())
+        for unsafe in [r'home\escape',r'home/..\evil',r'home/\x2gfile',r'home/\x2d/../../escape']:
+            self.assertRaises(b.BackupError,b.clean,unsafe)
+
+    def test_readonly_arch_root_gets_runtime_directory_without_changing_root_mode(self):
+        p=self.root/'readonly-root.tar'
+        with tarfile.open(p,'w') as tar:
+            root=tarfile.TarInfo('archlinux/rootfs');root.type=tarfile.DIRTYPE;root.mode=0o555;tar.addfile(root)
+            file=tarfile.TarInfo('archlinux/rootfs/etc/os-release');data=b'ID=arch';file.size=len(data);tar.addfile(file,io.BytesIO(data))
+        def native(args):
+            with tarfile.open(args[-1]) as tar:
+                members=list(tar);alias=members[0].name.split('/')[0]
+                self.assertEqual(tar.getmember(alias+'/rootfs').mode,0o555)
+                runtime=[m for m in members if m.name==alias+'/rootfs/.l2s'];self.assertEqual(len(runtime),1);self.assertTrue(runtime[0].isdir());self.assertEqual(runtime[0].mode,0o700)
+        with patch.object(b,'run_tool',side_effect=native):b.restore_ubuntu(p,dict(status='compatible',root='archlinux/rootfs'),self.prefix,self.work)
+
+    def test_runtime_directory_cannot_be_a_foreign_file_or_symlink(self):
+        for value in [b'not a directory',(tarfile.SYMTYPE,'/outside')]:
+            p=self.tar([('arch/rootfs/etc/os-release',b'ID=arch'),('arch/rootfs/.l2s',value)])
+            with patch.object(b,'run_tool') as tool:self.assertRaises(b.BackupError,b.restore_ubuntu,p,dict(status='compatible',root='arch/rootfs'),self.prefix,self.work)
+            tool.assert_not_called()
+        p=self.root/'runtime-dir.tar'
+        with tarfile.open(p,'w') as tar:
+            m=tarfile.TarInfo('arch/rootfs/.l2s');m.type=tarfile.DIRTYPE;m.mode=0o700;tar.addfile(m)
+        def native(args):
+            with tarfile.open(args[-1]) as tar:self.assertEqual(sum(m.name.endswith('/rootfs/.l2s') for m in tar),1)
+        with patch.object(b,'run_tool',side_effect=native):b.restore_ubuntu(p,dict(status='compatible',root='arch/rootfs'),self.prefix,self.work)
+
+    def restored_fixture(self, alias='jobs-abcdef123456', reported=True):
+        self.req['files']=str(self.root/'private');Path(self.req['files']).mkdir(exist_ok=True)
+        target=self.prefix/'var/lib/proot-distro/containers'/alias;(target/'rootfs').mkdir(parents=True)
+        (target/'manifest.json').write_text('{}');(target/'rootfs/keep.txt').write_text('owned')
+        if reported:
+            report=self.home/'restored-20261019-120000-abcdef12';report.mkdir(exist_ok=True)
+            (report/'RESTORE-RESULT.json').write_text(json.dumps(dict(environments=[alias],environmentBindings={'debian':alias})))
+        return target
+
+    def test_restored_removal_requires_provenance_and_fresh_identity(self):
+        target=self.restored_fixture();row=b.restored_inventory(self.req)['environments'][0];self.assertTrue(row['confirmed']);self.assertEqual(row['source'],'debian')
+        for alias,identity in [('ubuntu',row['identity']),('jobs-000000000000',row['identity']),('jobs-abcdef123456','changed')]:
+            with patch.object(b,'run_tool') as tool:self.assertRaises(b.BackupError,b.remove_restored,dict(self.req,alias=alias,identity=identity))
+            tool.assert_not_called();self.assertEqual((target/'rootfs/keep.txt').read_text(),'owned')
+        unknown=self.restored_fixture('jobs-112233445566',False)
+        row=next(r for r in b.restored_inventory(self.req)['environments'] if r['alias']==unknown.name);self.assertFalse(row['confirmed'])
+        with patch.object(b,'run_tool') as tool:self.assertRaises(b.BackupError,b.remove_restored,dict(self.req,alias=unknown.name,identity=row['identity']))
+        tool.assert_not_called()
+
+    def test_native_lock_refusal_preserves_files_and_does_not_write_deleted_receipt(self):
+        target=self.restored_fixture();row=b.restored_inventory(self.req)['environments'][0]
+        with patch.object(b,'locked_remove_available',return_value=True),patch.object(b,'run_tool',side_effect=b.BackupError('PROOT_DISTRO_FAILED')) as tool:
+            self.assertRaises(b.BackupError,b.remove_restored,dict(self.req,alias=target.name,identity=row['identity']))
+        self.assertEqual(tool.call_args.args[0],[str(self.prefix/'bin/proot-distro'),'remove',target.name]);self.assertEqual((target/'rootfs/keep.txt').read_text(),'owned');self.assertIn(target.name,b.restored_sources(self.req))
+
+    def test_successful_removal_retains_archives_reports_and_tombstones_old_receipts(self):
+        target=self.restored_fixture();row=b.restored_inventory(self.req)['environments'][0];archive=self.root/'backup.tar';archive.write_bytes(b'archive')
+        def native(args):self.assertEqual(args[1:],['remove',target.name]);shutil.rmtree(target)
+        with patch.object(b,'locked_remove_available',return_value=True),patch.object(b,'run_tool',side_effect=native):
+            self.assertEqual(b.remove_restored(dict(self.req,alias=target.name,identity=row['identity']))['removed'],target.name)
+        self.assertEqual(archive.read_bytes(),b'archive');self.assertTrue(next(self.home.glob('restored-*/RESTORE-RESULT.json')).is_file());self.assertNotIn(target.name,b.restored_sources(self.req))
+        target.mkdir();self.assertFalse(b.restored_inventory(self.req)['environments'][0]['confirmed'])
+
+    def test_removal_refuses_missing_lock_support_and_symlink_container(self):
+        target=self.restored_fixture();row=b.restored_inventory(self.req)['environments'][0]
+        with patch.object(b,'run_tool') as tool:self.assertRaises(b.BackupError,b.remove_restored,dict(self.req,alias=target.name,identity=row['identity']))
+        tool.assert_not_called();shutil.rmtree(target);os.symlink(self.home,target)
+        self.assertRaises(b.BackupError,b.restored_target,self.prefix,target.name);self.assertEqual(b.restored_inventory(self.req)['environments'],[])
+
+    def test_new_failed_restore_records_ownership_of_partial_copy_before_native_call(self):
+        self.req['files']=str(self.root/'private');Path(self.req['files']).mkdir()
+        archive=self.tar([('void/rootfs/bin/sh',elf()),('void/rootfs/etc/os-release',b'ID=void')])
+        def failing_native(args):
+            with tarfile.open(args[-1]) as tar:alias=next(iter(tar)).name.split('/')[0]
+            (self.prefix/'var/lib/proot-distro/containers'/alias/'rootfs').mkdir(parents=True)
+            raise b.BackupError('PROOT_DISTRO_FAILED')
+        with patch.object(b,'run_tool',side_effect=failing_native):self.assertRaises(b.BackupError,b.restore_ubuntu,archive,dict(status='compatible',root='void/rootfs',alias='void'),self.prefix,self.work,self.req)
+        row=b.restored_inventory(self.req)['environments'][0];self.assertTrue(row['confirmed']);self.assertTrue(row['incomplete']);self.assertEqual(row['source'],'void')
+
 
 if __name__=='__main__':unittest.main()

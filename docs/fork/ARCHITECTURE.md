@@ -1,3 +1,33 @@
+# Current architecture: v1.7.0
+
+Ordinary proot sessions bind to explicit prootAlias/prootIsolated fields in schema8;
+legacy startup remains fail-closed. Existing shared Ubuntu/AI startup unchanged.
+Native package backends use guest-only PATH, strict output parsing and quoted
+confirmed commands; an alias marker prevents accidental host-shell execution.
+
+Backup protocol versions1/2 retained. Full restore repacks only rootfs to a fresh
+jobs-*; regenerated PAX/sparse records, minimal generated OCI launch metadata and
+private empty .l2s avoid carrying source host commands or stale paths. Architecture
+includes regular BusyBox ELF; literal systemd hex escapes are never decoded.
+
+Restored removal accepts exact jobs-hex aliases with local restore provenance
+(legacy HOME result receipts or private per-attempt registry). Inventory records
+dev:ino; removal rechecks it. Native proot exclusive nonblocking lock refuses
+shared active session locks. No force/kill/manual rmtree fallback. Known lock
+capability is required; unsupported native code fails closed. Successful removal
+marks a tombstone to prevent old reports reauthorizing a reused alias, then UI
+removes linked presets. Archives/reports/originals retained. New partial attempts
+have provenance; old unconfirmed copies remain disabled. UI cannot cancel destructive
+removal after confirmation. Cancellation/OS process death can leave a partial copy;
+it is not treated as rollback or success. Receipt is retained for retry.
+
+Receipt directory walks use O_NOFOLLOW descriptors. JSON records are bounded;
+unknown aliases and symlink containers cannot become removal targets. Same-UID
+malicious processes can already manipulate app data; this is not a sandbox boundary.
+No change to agent transports, server tasks or user-session process stopping.
+
+Historical v1.6.5 architecture follows.
+
 # Current architecture: v1.6.5
 
 Shared stable action cards use typed native events, preserving original detail
