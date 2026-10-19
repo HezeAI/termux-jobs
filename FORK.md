@@ -1,10 +1,10 @@
-# Termux Job’s — сборка v1.5.3
+# Termux Job’s — сборка v1.6.0
 
-Пакет com.termux, versionName1.5.3, versionCode1165, Android8+/ARM64.
+Пакет com.termux, versionName1.6.0, versionCode1192, Android8+/ARM64.
 Прежний сертификат выпуска, библиотекаschema8. Локальные ИИ удалены;
 специальный TERMUX_PUBLIC_RELEASE больше не нужен и ничего не включает.
-[Совместимость](docs/fork/RELEASE-v1.5.3.md),
-[проверки](docs/fork/VALIDATION-v1.5.3.md),
+[Совместимость](docs/fork/RELEASE-v1.6.0.md),
+[проверки](docs/fork/VALIDATION-v1.6.0.md),
 [исследование удалённой функции](docs/fork/LOCAL-AI-RESEARCH.md).
 
 Нужны существующие JDK11, Gradle7.2, SDK и ARM64 AAPT2/clang/ld.lld/NDK sysroot
@@ -17,10 +17,10 @@ FORK_AAPT2=/path/to/arm64/aapt2 bash scripts/verify-java.sh
 python3 -m unittest discover -s scripts/tests -p 'test_*.py'
 FORK_AAPT2=/path/to/arm64/aapt2 \
 FORK_NATIVE_SYSROOT=/path/to/ndk/sysroot \
-TERMUX_APP_VERSION_NAME=1.5.3 bash scripts/build-local-arm64.sh
+TERMUX_APP_VERSION_NAME=1.6.0 bash scripts/build-local-arm64.sh
 ```
 
-Результат build/apk/Termux-Jobs-v1.5.3-arm64.apk. Скрипт использует
+Результат build/apk/Termux-Jobs-v1.6.0-arm64.apk. Скрипт использует
 изолированный staging, проверенный bootstrap и финальный runtime-аудит.
 Нужны локальные инструменты, описанные в scripts/build-env.sh/build-local-arm64.sh;
 готовая установленная Termux/Ubuntu не заменяется. Для идентичной подписи
@@ -31,7 +31,7 @@ TERMUX_APP_VERSION_NAME=1.5.3 bash scripts/build-local-arm64.sh
 ## Историческая справка
 
 Текст ниже сохранён для истории. Номера версий, прежние публичные flags,
-планы и промежуточные элементы UI не описывают v1.5.3. В частности, верхние
+планы и промежуточные элементы UI не описывают v1.6.0. В частности, верхние
 кружочки отменены, локальные ИИ удалены. Актуальны сведения выше и release notes.
 
 ---

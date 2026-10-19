@@ -51,11 +51,15 @@ public final class WorkspaceStore {
         public String aiSavedThread = "";
         // Optional v8 fields: older readers retain a plain Ubuntu profile.
         public boolean claudeAgent;
+        public String claudeEffort="default";
         public String claudeModel="", claudeMode="manual", claudeChat="new", claudeThread=UUID.randomUUID().toString(), claudeSocketId=UUID.randomUUID().toString();
+        public transient boolean agentSetupAllowed;
         public boolean geminiAgent;
         public boolean extendedDebug;
         public boolean keepHistory=false;
-        public String geminiAuth="google", geminiModel="", geminiMode="default", geminiChat="new", geminiThread=UUID.randomUUID().toString(), geminiSocketId=UUID.randomUUID().toString();
+        public String geminiThinking="default";
+        public String geminiCloudProject="",geminiCloudLocation="global";
+        public String geminiAuth="api", geminiModel="", geminiMode="default", geminiChat="new", geminiThread=UUID.randomUUID().toString(), geminiSocketId=UUID.randomUUID().toString();
         public long updated;
         public boolean saved;
         public List<String> startupCommands() {
@@ -69,8 +73,8 @@ public final class WorkspaceStore {
             s.sshHost = sshHost; s.sshUser = sshUser; s.sshPort = sshPort; s.sshKeepOpen = sshKeepOpen; s.sshAuth = sshAuth; s.sshIdentity = sshIdentity; // Password is bound to the original profile ID.
             s.codexConfirmActions=codexConfirmActions; s.aiProjectOnly=aiProjectOnly; s.codexEnvironment = codexEnvironment; s.codexAccess = codexAccess; s.codexChat = codexChat; s.codexThread = codexThread; s.codexThreadName = codexThreadName; s.codexSourceDirectory=codexSourceDirectory;
             s.aiAgent=aiAgent; s.aiConnection=aiConnection; s.aiModel=aiModel; s.aiVariant=aiVariant; s.aiMode=aiMode; s.aiAccess=aiAccess;
-            s.claudeAgent=claudeAgent; s.claudeModel=claudeModel; s.claudeMode=claudeMode;
-            s.geminiAgent=geminiAgent; s.geminiAuth=geminiAuth; s.geminiModel=geminiModel; s.geminiMode=geminiMode;
+            s.claudeEffort=claudeEffort;s.claudeAgent=claudeAgent; s.claudeModel=claudeModel; s.claudeMode=claudeMode;
+            s.geminiCloudProject=geminiCloudProject;s.geminiCloudLocation=geminiCloudLocation;s.geminiThinking=geminiThinking;s.geminiAgent=geminiAgent; s.geminiAuth=geminiAuth; s.geminiModel=geminiModel; s.geminiMode=geminiMode;
             // A duplicate starts with its own independent history.
             return s;
         }
@@ -123,6 +127,10 @@ public final class WorkspaceStore {
         for (Session s : sessions) if (!handle.isEmpty() && handle.equals(s.handle)) return s;
         return null;
     }
+    boolean applyGeminiMode(Session profile,String run,String before,String mode){
+        if(!writable||!sessions.contains(profile)||!profile.geminiAgent||!profile.geminiSocketId.equals(run)||!profile.geminiMode.equals(before)||!java.util.Arrays.asList("default","auto_edit","plan").contains(mode))return false;
+        profile.geminiMode=mode;profile.updated=System.currentTimeMillis();save();return true;
+    }
     public void save() {
         if (!writable) { errors.onError(WorkspaceText.tr("Библиотека недоступна для записи; исходные данные сохранены.")); return; }
         final byte[] snapshot;
@@ -150,9 +158,9 @@ public final class WorkspaceStore {
             .put("codexConfirmActions",s.codexConfirmActions==null?JSONObject.NULL:s.codexConfirmActions).put("aiProjectOnly",s.aiProjectOnly)
             .put("codexEnvironment", s.codexEnvironment).put("codexAccess", s.codexAccess).put("codexChat", s.codexChat).put("codexThread", s.codexThread).put("codexThreadName", s.codexThreadName).put("codexSocketId", s.codexSocketId).put("codexSourceDirectory",s.codexSourceDirectory)
             .put("aiAgent",s.aiAgent).put("aiConnection",s.aiConnection).put("aiModel",s.aiModel).put("aiVariant",s.aiVariant).put("aiMode",s.aiMode).put("aiAccess",s.aiAccess).put("aiChat",s.aiChat).put("aiThread",s.aiThread).put("aiSavedThread",s.aiSavedThread)
-            .put("claudeAgent",s.claudeAgent).put("claudeModel",s.claudeModel).put("claudeMode",s.claudeMode).put("claudeChat",s.claudeChat).put("claudeThread",s.claudeThread).put("claudeSocketId",s.claudeSocketId)
+            .put("claudeEffort",s.claudeEffort).put("claudeAgent",s.claudeAgent).put("claudeModel",s.claudeModel).put("claudeMode",s.claudeMode).put("claudeChat",s.claudeChat).put("claudeThread",s.claudeThread).put("claudeSocketId",s.claudeSocketId)
             .put("keepHistory",s.keepHistory)
-            .put("geminiAuth",s.geminiAuth).put("geminiAgent",s.geminiAgent).put("geminiModel",s.geminiModel).put("geminiMode",s.geminiMode).put("geminiChat",s.geminiChat).put("geminiThread",s.geminiThread).put("geminiSocketId",s.geminiSocketId)
+            .put("geminiCloudProject",s.geminiCloudProject).put("geminiCloudLocation",s.geminiCloudLocation).put("geminiThinking",s.geminiThinking).put("geminiAuth",s.geminiAuth).put("geminiAgent",s.geminiAgent).put("geminiModel",s.geminiModel).put("geminiMode",s.geminiMode).put("geminiChat",s.geminiChat).put("geminiThread",s.geminiThread).put("geminiSocketId",s.geminiSocketId)
             .put("restoreReview",s.restoreReview).put("extendedDebug",s.extendedDebug).put("updated", s.updated).put("saved", s.saved));
         JSONArray ns = new JSONArray();
         for (Note n : notes) ns.put(new JSONObject().put("id", n.id).put("name", n.name)
@@ -208,10 +216,10 @@ public final class WorkspaceStore {
             s.aiSavedThread=o.optString("aiSavedThread","");
             if(!s.aiSavedThread.isEmpty()&&!AiAgents.validThread(s.aiSavedThread))throw new JSONException("Invalid saved AI thread");
             if(!s.aiAgent.isEmpty() && (!s.aiAgent.equals("opencode") || !s.environment.equals("ubuntu") || !AiAgents.validThread(s.aiThread) || !AiAgents.validModel(s.aiModel) || !s.aiVariant.matches("[A-Za-z0-9_.-]{0,80}") || !(s.aiAccess.equals("full") || s.aiAccess.equals("ask") || s.aiAccess.equals("read")) || !(s.aiMode.equals("build") || s.aiMode.equals("plan")) || !(s.aiChat.equals("new") || s.aiChat.equals("resume"))))throw new JSONException("Invalid AI profile");
-            s.claudeAgent=o.optBoolean("claudeAgent",false); s.claudeModel=o.optString("claudeModel",""); s.claudeMode=o.optString("claudeMode","manual"); s.claudeChat=o.optString("claudeChat","new"); s.claudeThread=o.optString("claudeThread",s.claudeThread); s.claudeSocketId=o.optString("claudeSocketId",s.claudeSocketId);
+            s.claudeEffort=o.optString("claudeEffort","default");if(!java.util.Arrays.asList("default","low","medium","high","xhigh","max").contains(s.claudeEffort))s.claudeEffort="default";s.claudeAgent=o.optBoolean("claudeAgent",false); s.claudeModel=o.optString("claudeModel",""); s.claudeMode=o.optString("claudeMode","manual"); s.claudeChat=o.optString("claudeChat","new"); s.claudeThread=o.optString("claudeThread",s.claudeThread); s.claudeSocketId=o.optString("claudeSocketId",s.claudeSocketId);
             if(s.claudeAgent&&!ClaudeCode.valid(s))throw new JSONException("Invalid Claude profile");
-            s.geminiAuth=o.optString("geminiAuth","auto");
-            s.geminiAgent=o.optBoolean("geminiAgent",false); s.geminiModel=o.optString("geminiModel",""); s.geminiMode=o.optString("geminiMode","default"); s.geminiChat=o.optString("geminiChat","new"); s.geminiThread=o.optString("geminiThread",s.geminiThread); s.geminiSocketId=o.optString("geminiSocketId",s.geminiSocketId);
+            s.geminiAuth=o.optString("geminiAuth","auto");s.geminiCloudProject=o.optString("geminiCloudProject","");s.geminiCloudLocation=o.optString("geminiCloudLocation","global");
+            s.geminiThinking=o.optString("geminiThinking","default");if(!java.util.Arrays.asList("default","minimal","low","medium","high").contains(s.geminiThinking))s.geminiThinking="default";s.geminiAgent=o.optBoolean("geminiAgent",false); s.geminiModel=o.optString("geminiModel",""); s.geminiMode=o.optString("geminiMode","default"); s.geminiChat=o.optString("geminiChat","new"); s.geminiThread=o.optString("geminiThread",s.geminiThread); s.geminiSocketId=o.optString("geminiSocketId",s.geminiSocketId);
             if(s.geminiAgent&&!GeminiCli.valid(s))throw new JSONException("Invalid Gemini profile");
             s.restoreReview=o.optBoolean("restoreReview",false);
             s.extendedDebug=o.optBoolean("extendedDebug",false); s.updated = o.optLong("updated"); s.saved = o.optBoolean("saved", true); ss.add(s);

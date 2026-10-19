@@ -1,0 +1,124 @@
+diff --git a/packages/tui/src/mini/types.ts b/packages/tui/src/mini/types.ts
+--- a/packages/tui/src/mini/types.ts
++++ b/packages/tui/src/mini/types.ts
+@@ -122,6 +122,7 @@
+   version: string
+   terminal: {
+     stdin: NodeJS.ReadStream
++    replayOnResize?: boolean
+   }
+   platform: NodeJS.Platform
+   stdout: {
+diff --git a/packages/cli/src/mini-host.ts b/packages/cli/src/mini-host.ts
+--- a/packages/cli/src/mini-host.ts
++++ b/packages/cli/src/mini-host.ts
+@@ -139,7 +139,7 @@
+   }
+   return {
+     version: OPENCODE_VERSION,
+-    terminal: { stdin: input.terminal.stdin },
++    terminal: { stdin: input.terminal.stdin, replayOnResize: process.env.TERMUX_JOBS_DISABLE_RESIZE_REPLAY !== "1" },
+     platform: process.platform,
+     stdout: {
+       write(value) {
+diff --git a/packages/tui/src/mini/runtime.ts b/packages/tui/src/mini/runtime.ts
+--- a/packages/tui/src/mini/runtime.ts
++++ b/packages/tui/src/mini/runtime.ts
+@@ -831,7 +831,9 @@
+   }
+ 
+   let resizeTimer: ReturnType<typeof setTimeout> | undefined
+-  const offResize = shell.onResize(() => {
++  let jobsWidthChanged = false
++  const offResize = shell.onResize((widthChanged) => {
++    jobsWidthChanged ||= widthChanged
+     if (resizeTimer) {
+       clearTimeout(resizeTimer)
+     }
+@@ -843,7 +845,9 @@
+       }
+ 
+       shell.refreshTheme()
+-      if (!input.replay || !state.stream) {
++      const restoreWidth = jobsWidthChanged
++      jobsWidthChanged = false
++      if (!input.replay || !state.stream || (input.host.terminal.replayOnResize === false && !restoreWidth)) {
+         return
+       }
+ 
+diff --git a/packages/tui/src/mini/runtime.lifecycle.ts b/packages/tui/src/mini/runtime.lifecycle.ts
+--- a/packages/tui/src/mini/runtime.lifecycle.ts
++++ b/packages/tui/src/mini/runtime.lifecycle.ts
+@@ -84,7 +84,7 @@
+ 
+ export type Lifecycle = {
+   footer: FooterApi
+-  onResize(fn: () => void): () => void
++  onResize(fn: (widthChanged: boolean) => void): () => void
+   refreshTheme(): void
+   setTitle(title?: string): void
+   resetForReplay(): Promise<void>
+@@ -356,9 +356,10 @@
+           return
+         }
+ 
++        const widthChanged = width !== renderer.terminalWidth
+         width = renderer.terminalWidth
+         height = renderer.terminalHeight
+-        fn()
++        fn(widthChanged)
+       }
+       renderer.on(CliRenderEvents.RESIZE, resize)
+       return () => renderer.off(CliRenderEvents.RESIZE, resize)
+diff --git a/packages/tui/src/mini/stream-v2.transport.ts b/packages/tui/src/mini/stream-v2.transport.ts
+--- a/packages/tui/src/mini/stream-v2.transport.ts
++++ b/packages/tui/src/mini/stream-v2.transport.ts
+@@ -477,6 +477,12 @@
+ }
+ 
+ export async function createSessionTransport(input: StreamInput): Promise<SessionTransport> {
++  type JobsReceipt = { key: string; token: string; title: string; body: string; outcome: string }
++  type JobsStore = { get(key: string): JobsReceipt | undefined; add(key: string, outcome: string, title: string, body: string): JobsReceipt | null; label(row: JobsReceipt, ru: boolean): string }
++  const jobsStore: JobsStore | undefined = process.env.JOBS_RECEIPT_HELPER && process.env.JOBS_RECEIPT_FILE
++    ? new (require(process.env.JOBS_RECEIPT_HELPER).ReceiptStore)(process.env.JOBS_RECEIPT_FILE, "O")
++    : undefined
++  const jobsPrinted = new Set<string>()
+   const controller = new AbortController()
+   let sdk = input.sdk
+   let generation = 0
+@@ -716,11 +722,20 @@
+     )
+   }
+ 
++  const jobsPrintReceipt = (receipt: JobsReceipt) => {
++    if (!jobsStore || jobsPrinted.has(receipt.token)) return
++    jobsPrinted.add(receipt.token)
++    const label = jobsStore.label(receipt, process.env.JOBS_AI_LANGUAGE === "ru")
++    write([{ kind: "system", source: "system", phase: "final", text: `╭─ ${label} ─╮\n╰${"─".repeat([...label].length + 6)}╯` }])
++  }
++
+   const renderTool = (messageID: string, item: SessionMessageAssistantTool, render = true) => {
+     if (!showTools()) {
+       rememberToolMessage(messageID)
+       render = false
+     }
++    const receipt = jobsStore?.get(item.id)
++    if (receipt) jobsPrintReceipt(receipt)
+     const part = normalizeTool(item)
+     const key = permissionSourceKey(messageID, part.id)
+     if (state.finishedTools.has(key)) {
+@@ -1343,6 +1358,14 @@
+       return
+     }
+     if (event.type === "permission.replied") {
++      const pending = state.permissions.find((item) => item.id === event.data.requestID)
++      if (jobsStore && pending && event.data.sessionID === input.sessionID) {
++        try {
++          const outcome = event.data.reply === "once" ? "proceed_once" : event.data.reply === "always" ? "proceed_always" : "cancel"
++          const receipt = jobsStore.add(pending.source?.id ?? pending.id, outcome, pending.action, JSON.stringify(pending, null, 2))
++          if (receipt) jobsPrintReceipt(receipt)
++        } catch { /* Receipt storage failure must not interrupt native permission settlement. */ }
++      }
+       state.permissions = state.permissions.filter((item) => item.id !== event.data.requestID)
+       pruneToolSources()
+       syncBlockers()

@@ -16,6 +16,7 @@ final class ClaudeCode {
         return s.claudeAgent && s.environment.equals("ubuntu") && s.aiAgent.isEmpty()
             && java.util.Arrays.asList("","sonnet","opus","haiku").contains(s.claudeModel)
             && java.util.Arrays.asList("manual","acceptEdits","plan").contains(s.claudeMode)
+            && java.util.Arrays.asList("default","low","medium","high","xhigh","max").contains(s.claudeEffort)
             && java.util.Arrays.asList("new","choose","id").contains(s.claudeChat)
             && validThread(s.claudeThread) && validThread(s.claudeSocketId);
     }
@@ -23,7 +24,7 @@ final class ClaudeCode {
         File dir=directory(context.getFilesDir());
         if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create Claude controls");
         protect(dir);
-        for(String asset:new String[]{"claude-bootstrap.sh","claude-control.js"}) {
+        for(String asset:new String[]{"claude-bootstrap.sh","claude-control.js","claude-control-v2.js","claude-chat.cjs","claude-native-hook.cjs","agent-receipts.cjs"}) {
             File temporary=File.createTempFile("claude-",".tmp",dir);
             try {
                 try(InputStream in=context.getAssets().open(asset);OutputStream out=new FileOutputStream(temporary)) {
@@ -41,15 +42,16 @@ final class ClaudeCode {
     static String command(File files,WorkspaceStore.Session s) {
         if(!valid(s))throw new IllegalArgumentException("Invalid Claude profile");
         return "( set -e; export JOBS_CLAUDE_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")
+            +"; export JOBS_CLAUDE_EFFORT="+SessionShell.quote(s.claudeEffort)
             +"; source "+SessionShell.quote(GUEST+"/claude-bootstrap.sh")
-            +"; exec \"$JOBS_CLAUDE_NODE\" "+SessionShell.quote(GUEST+"/claude-control.js")+" run "
+            +"; exec \"$JOBS_CLAUDE_NODE\" "+SessionShell.quote(GUEST+"/claude-control-v2.js")+" run "
             +SessionShell.quote(GUEST+"/"+s.claudeSocketId+".sock")+" "+SessionShell.quote(s.claudeModel)+" "+SessionShell.quote(s.claudeMode)+" "+SessionShell.quote(s.claudeChat)+" "+SessionShell.quote(s.claudeThread)+" )";
     }
     /** Caller captures the unique run ID before scheduling; a later run cannot be stopped. */
     static void stop(Context context,String runId) throws Exception {
         if(!validThread(runId))throw new IllegalArgumentException("Invalid Claude run");
         String guest="node=$(cat \"$HOME/.local/share/termux-jobs/claude-code/controller-node\") && exec \"$node\" "
-            +SessionShell.quote(GUEST+"/claude-control.js")+" stop "+SessionShell.quote(GUEST+"/"+runId+".sock");
+            +SessionShell.quote(GUEST+"/claude-control-v2.js")+" stop "+SessionShell.quote(GUEST+"/"+runId+".sock");
         String script="exec proot-distro login --bind "+SessionShell.quote(directory(context.getFilesDir()).getAbsolutePath()+":"+GUEST)
             +" ubuntu -- /bin/bash --noprofile --norc -c "+SessionShell.quote(guest);
         ProcessBuilder pb=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c",script);

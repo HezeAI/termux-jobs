@@ -1,3 +1,22 @@
+# v1.6.0: navigation, selection and connection controls
+
+Selection is independent from row navigation: long press or checkboxes select;
+ordinary tap opens folders/file menus. Selection survives same-server navigation.
+Select all follows current search/filter (up to500), and × N clears selection and
+prepared moves. Downloads, moves and confirmed deletion share the same selection.
+Deletion across source folders groups by original parent and retains pinned SSH,
+no-follow validation and explicit partial results; destructive retry is not automatic.
+
+Connect/Disconnect controls this application's connections, not server power or
+remote tasks. Data auto-update retains the existing monitoring cadence. Ordinary
+SSH session access remains available. Existing server-agent payload, media and
+background transfer limitations described below remain applicable.
+[File selection](FILE-SELECTION.md) · [release](RELEASE-v1.6.0.md).
+
+## Earlier server documentation
+
+---
+
 # v1.5.3: selection, deletion and transfers
 
 Trash after Home enters selection; empty second tap cancels. With selected files

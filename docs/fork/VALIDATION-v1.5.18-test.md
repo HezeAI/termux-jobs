@@ -1,3 +1,11 @@
+# Historical private build records — v1.5.18-test
+
+Private version names were reused during development. These are distinct builds;
+versionCode, APK hash and the specific report identify each artifact. Neither
+record below is validation of current v1.6.0; see VALIDATION-v1.6.0.md.
+
+## Earlier record preserved from public v1.5.3
+
 # v1.5.18-test validation
 
 Private artifact verified and copied to Download. Real model/device checks below remain required.
@@ -19,3 +27,52 @@ Final release build and required packaged runtime definitions audit pass (build-
 APK bytes:108729563. SHA-256:`37c50d666a7789bb56a74b6725fb11f469e50bfd3722f0fdfdfea2228c893afd`. Certificate:`dd37d983cd2496ebe49c7e88ddbc0088f311d38b8a8503e4392c81b48a11a644`.
 
 Remaining device checks: repeat original Qwen write/read and two Gemma requests, inspect reset codes, latency and content. Parser formatting tests do not establish model judgment; prefix example detection is conservative syntax/wording filtering, not a universal intent detector. Actual NPU caching/speed and keyboard/gestures require device checks. No process stop, model modification or GitHub publication performed.
+
+
+---
+
+## Subsequent development record
+
+# v1.5.18-test — restore full-size native terminal keys
+
+Private test update to1.5.17; no GitHub publication. Built/audited and copied
+to Download; copied hash verified. Package com.termux, code1180, version1.5.18-test,
+minSdk26, ARM64, 36583538 bytes. Same signing certificate as1.5.17/code1179.
+SHA-256 `0fa4422b25f597ca7fffdd27f109b49397c923b42a85953d20a18ea954893b09`.
+
+The shared OpenCode/Gemini window previously skipped keys when the hidden toolbar
+pager had not created its ExtraKeysView. An existing but empty view also provided
+no buttons. The dialog now constructs a populated full-size native panel in either
+case, using configured keys or the two-row ESC/Tab/Ctrl/Alt/arrows/Home/End/Page
+fallback. Layout height uses the actual row count. It temporarily registers this
+panel for native modifier reads and restores the exact original reference on close;
+a populated existing panel keeps the previous reparent/restore path.
+
+Back to chat remains left, Enter right without dismissal, outside taps disabled.
+No small duplicate arrow row. Shared change applies to both OpenCode and Gemini.
+Bridge assets, native permission rules, model selection and history formats are
+unchanged. Gemini's reported unavailable model and duplicate Thinking text are
+outside this change; no user's running session/configuration was changed.
+
+Regression tests cover cold startup with no toolbar view for both agents, actual
+14 populated buttons/all4 arrows/native key client/80dp2-row panel, no compact row,
+footer and dismissal reference restoration. The existing empty-panel/window test
+also verifies populated buttons and original parent/keyboard restoration.
+Mocked tests do not prove physical key interaction, IME or device clipping.
+
+Device check: reopen both robot terminal windows with the main key toolbar hidden,
+verify large arrows select a native menu item, Enter accepts it, Back returns to
+chat, then verify the ordinary session's key panel and Ctrl/Alt after return.
+No data reset or history migration is introduced.
+
+Final focused JVM suite:59 tests, zero failures/errors/skips. Release assembly
+and required DEX runtime checks pass. All packaged assets and native libraries are
+byte-identical to1.5.17; final staged AgentChatUi matches source. ZIP integrity,
+package/version/ABI, v2 signature and private-file/secret-marker audits pass.
+Existing Lint Kotlin/UAST/JNA infrastructure warnings remain; no clean-Lint claim.
+Evidence: .verification/terminal-keys-v1.5.18/{tests-verified.log,tests.json,build.log,
+apk-audit.json,signature.txt,badging.txt,staged-source.json,delivery.json}.
+Review traced missing/empty/existing panel creation, native modifier registration,
+async window dismissal, original pointer/parent/client restoration and agent
+isolation. Initial test required draining Android's asynchronous dismiss callback;
+final test verifies state after that callback. Device key/IME tests remain above.

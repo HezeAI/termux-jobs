@@ -1,0 +1,22 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {ReceiptStore}=require('../../app/src/main/assets/agent-receipts.cjs');
+const {OpenCodePermissions}=require('../../app/src/main/assets/opencode-permissions.cjs');
+const root=fs.mkdtempSync(path.resolve('.verification/receipts-test-'));
+(async()=>{
+ const file=path.join(root,'private','chat.json'),store=new ReceiptStore(file,'G');
+ let r=store.add('call1','proceed_once','Shell','printf synthetic');assert.match(store.label(r,true),/Разрешено разово/);assert.equal(fs.statSync(file).mode&0o777,0o600);
+ assert.equal(store.add('call1','cancel','changed','changed').token,r.token);assert.equal(new ReceiptStore(file,'G').token(r.token).body,'printf synthetic');assert.equal(store.add('other','permanent','x','x'),null);
+ store.add('safe','cancel','x\x1b[2J','y\x1b[2J');assert(!store.get('safe').body.includes('\x1b'));
+ const session='sesSynthetic',native={id:'per_test',sessionID:session,action:'shell',resources:['printf synthetic'],metadata:{command:'printf synthetic'}};let pending=[native],posts=[],release;
+ const request=async(method,route,body)=>{assert(route.startsWith('/api/session/'+session+'/permission'));if(method==='GET')return {data:pending};posts.push(body);pending=[];return {};};
+ const control=new OpenCodePermissions(request,session,file);let p=(await control.command({op:'permission'})).permission;assert(p);assert.deepEqual(p.options,['proceed_once','cancel']);assert(!p.body.includes('credential'));
+ await assert.rejects(()=>control.command({op:'answer',id:p.id,outcome:'proceed_always'}));assert.equal(posts.length,0);
+ pending=[{...native,resources:['changed']}];await assert.rejects(()=>control.command({op:'answer',id:p.id,outcome:'proceed_once'}));assert.equal(posts.length,0);
+ p=(await control.command({op:'permission'})).permission;const ack=await control.command({op:'answer',id:p.id,outcome:'proceed_once'});assert.equal(ack.resolved.id,p.id);assert.deepEqual(posts,[{decision:'once'}]);await assert.rejects(()=>control.command({op:'answer',id:p.id,outcome:'proceed_once'}));
+ pending=[{...native,sessionID:'sesOther'}];assert.equal((await control.command({op:'permission'})).permission,null);
+ pending=[{...native,action:'external_directory'}];assert.equal((await control.command({op:'permission'})).permission,null);
+ pending=[native];let c=new OpenCodePermissions(async(method)=>{if(method==='GET')return {data:pending};await new Promise(r=>release=r);return {};},session,file);p=(await c.command({op:'permission'})).permission;const first=c.command({op:'answer',id:p.id,outcome:'cancel'});await new Promise(r=>setImmediate(r));await assert.rejects(()=>c.command({op:'answer',id:p.id,outcome:'cancel'}));release();await first;
+ const receipt=(await control.command({op:'receipt',token:r.token})).receipt;assert.equal(receipt.body,'printf synthetic');await assert.rejects(()=>control.command({op:'receipt',token:'../../passwd'}));
+ console.log('PASS: receipt persistence/mode/dedup/sanitization, native once/deny, changed/stale/double/concurrent/foreign/warning rejection, scoped receipt lookup');
+})().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>fs.rmSync(root,{recursive:true,force:true}));

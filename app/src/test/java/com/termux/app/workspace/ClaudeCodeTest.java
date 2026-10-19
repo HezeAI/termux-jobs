@@ -16,9 +16,9 @@ public class ClaudeCodeTest {
     @After public void close(){store.close();}
     private WorkspaceStore.Session profile(){WorkspaceStore.Session s=new WorkspaceStore.Session();s.claudeAgent=true;s.environment="ubuntu";s.directory="/root/project";return s;}
     @Test public void settingsAndSelectedHistorySurviveReloadWhileDuplicatesStartNew() throws Exception {
-        WorkspaceStore.Session s=profile();s.claudeChat="id";s.claudeModel="sonnet";s.claudeMode="acceptEdits";store.sessions.add(s);
+        WorkspaceStore.Session s=profile();s.claudeChat="id";s.claudeModel="sonnet";s.claudeMode="acceptEdits";s.claudeEffort="high";store.sessions.add(s);
         store.decode(store.encode().toString());WorkspaceStore.Session loaded=store.sessions.get(0);
-        assertTrue(loaded.claudeAgent);assertEquals(s.claudeThread,loaded.claudeThread);assertEquals("id",loaded.claudeChat);assertEquals("acceptEdits",loaded.claudeMode);
+        assertTrue(loaded.claudeAgent);assertEquals(s.claudeThread,loaded.claudeThread);assertEquals("id",loaded.claudeChat);assertEquals("acceptEdits",loaded.claudeMode);assertEquals("high",loaded.claudeEffort);
         WorkspaceStore.Session copy=loaded.copy();assertTrue(copy.claudeAgent);assertEquals("sonnet",copy.claudeModel);assertEquals("new",copy.claudeChat);assertNotEquals(s.claudeThread,copy.claudeThread);assertNotEquals(s.claudeSocketId,copy.claudeSocketId);
         assertEquals(8,store.encode().getInt("version"));assertEquals("",loaded.aiAgent);
     }
@@ -33,8 +33,8 @@ public class ClaudeCodeTest {
         WorkspaceStore.Session s=profile();ClaudeCode.prepare(context);File rc=SessionShell.prepare(context.getFilesDir(),s);
         String text=new String(java.nio.file.Files.readAllBytes(rc.toPath()),java.nio.charset.StandardCharsets.UTF_8);
         assertTrue(text.contains("/tmp/termux-jobs-claude"));assertTrue(text.contains("--work-dir '/root/project'"));assertFalse(text.contains("termux-jobs-ai"));assertFalse(text.contains("termux-jobs-codex"));
-        String command=ClaudeCode.command(context.getFilesDir(),s);assertTrue(command.contains(s.claudeSocketId));assertTrue(command.contains(s.claudeThread));assertFalse(command.contains(".codex"));assertFalse(command.contains("API_KEY"));
-        assertTrue(new File(ClaudeCode.directory(context.getFilesDir()),"claude-control.js").isFile());
+        String command=ClaudeCode.command(context.getFilesDir(),s);assertTrue(command.contains("claude-control-v2.js"));assertTrue(command.contains(s.claudeSocketId));assertTrue(command.contains(s.claudeThread));assertFalse(command.contains(".codex"));assertFalse(command.contains("API_KEY"));
+        assertTrue(new File(ClaudeCode.directory(context.getFilesDir()),"claude-control.js").isFile());for(String file:new String[]{"claude-control-v2.js","claude-chat.cjs","claude-native-hook.cjs","agent-receipts.cjs"})assertTrue(file,new File(ClaudeCode.directory(context.getFilesDir()),file).isFile());
     }
     @Test public void legacyProfilesDoNotAcquireClaudeAndKeepCommands() throws Exception {
         WorkspaceStore.Session s=new WorkspaceStore.Session();s.environment="ubuntu";s.startup="echo unchanged";store.sessions.add(s);

@@ -1,3 +1,35 @@
+# Current architecture: v1.6.0
+
+AgentChatUi/AgentChatView render native agent histories/events independently from
+TerminalView. Each backend retains its own private transport/auth/history:
+Codex app-server, Gemini native CLI adapter, Claude SDK/native handoff, OpenCode
+HTTP/SSE projection. No cross-agent shared protocol/state or prompt override.
+Bounded per-run/thread caches and stable row IDs avoid wholesale UI replacement.
+Robot dialogs reparent one terminal view and restore its parent/keys on dismissal;
+Minimize is distinct from explicit return. Codex UI-child shutdown uses PID/start
+identity and waits for active-turn completion; it does not stop the app-server.
+
+AgentPreparation performs read-only bounded checks before explicit setup consent;
+additional helpers live in private per-agent locations. Base Ubuntu dependencies
+may be shared; existing tools/rootfs are not wholesale replaced. VertexConnection
+stores nonsecret project/location and uses per-run request/response handshakes.
+Native credentials remain with the CLI; no credentials are bundled in the APK.
+
+ProjectFileTransfer uses the existing chosen-environment file transport, preflight,
+private staging/no-clobber publication and explicit partial-failure results.
+Selections are browser-scoped, survive same-profile navigation and are bounded;
+server groups preserve source-parent deletion validation. schema8 is unchanged;
+new persisted fields are optional with defaults. Server store/agent and backup
+formats remain unchanged. Feedback relay is not implemented.
+
+[Codex](CODEX-ANDROID-CHAT.md) · [Gemini](GEMINI-ANDROID-CHAT.md) ·
+[Claude](CLAUDE-ANDROID-CHAT.md) · [OpenCode](OPENCODE-ANDROID-CHAT.md) ·
+[Files](FILE-SELECTION.md).
+
+## Prior v1.5.3 architecture (historical)
+
+---
+
 # Current architecture: v1.5.3
 
 Local-AI engines/services/JNI/vendor payloads and UI were removed. RetiredModelData

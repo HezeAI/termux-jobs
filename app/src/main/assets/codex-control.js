@@ -82,7 +82,7 @@ class Connection {
     const result=new Promise((resolve,reject)=> {const timer=setTimeout(()=>{this.pending.delete(id);reject(new Error('Codex request timeout'));},25000);this.pending.set(id,{resolve,reject,timer,method});});
     this.send({id,method,params});return result;
   }
-  async initialize() {await this.ready;await this.call('initialize',{clientInfo:{name:'termux_jobs_control',version:'0.2.20'},capabilities:{experimentalApi:true}});this.send({method:'initialized'});}
+  async initialize() {await this.ready;await this.call('initialize',{clientInfo:{name:'termux_jobs_control',version:'0.2.21'},capabilities:{experimentalApi:true}});this.send({method:'initialized'});}
 }
 function writeStatus(path, value) {
   const temporary = path+'.state.json.tmp-'+process.pid;
@@ -90,9 +90,10 @@ function writeStatus(path, value) {
   fs.renameSync(temporary,path+'.state.json');
 }
 function limitedWindow(window) {
-  if (!window || typeof window.usedPercent!=='number') return null;
-  return {usedPercent:window.usedPercent,resetsAt:window.resetsAt,windowDurationMins:window.windowDurationMins};
+  if (!window || typeof window.usedPercent!=='number' || !Number.isFinite(window.usedPercent) || window.usedPercent<0) return null;
+  return {usedPercent:window.usedPercent,resetsAt:Number.isSafeInteger(window.resetsAt)&&window.resetsAt>0?window.resetsAt:null,windowDurationMins:Number.isSafeInteger(window.windowDurationMins)&&window.windowDurationMins>0?window.windowDurationMins:null};
 }
+function safePlan(value){return typeof value==='string'&&/^[a-z][a-z0-9_-]{0,47}$/.test(value)?value:'';}
 async function statusWorker(path, preferred) {
   let stage='initialize';
   const connection=new Connection(path);
@@ -114,11 +115,19 @@ async function statusWorker(path, preferred) {
       } while(cursor && models.length<100);
     } catch(unavailable) { /* Status and limits remain useful without a catalog. */ }
     while(!disconnected) {
-      const value={thread:'',model:'',effort:'',state:'',error:'',limits:{},models};
+      const value={thread:'',model:'',effort:'',state:'',error:'',limits:{},planType:'',accountType:'',models};
       stage='account/rateLimits/read';
       try {
-        const limits=(await connection.call(stage,{}))?.rateLimits;
+        const response=await connection.call(stage,{});const limits=response?.rateLimitsByLimitId?.codex || response?.rateLimits;
+        value.planType=safePlan(limits?.planType);
         for(const name of ['primary','secondary']) {const window=limitedWindow(limits?.[name]);if(window)value.limits[name]=window;}
+      } catch(unavailable) {if(disconnected)throw unavailable;}
+      stage='account/read';
+      try {
+        // Extract plan/type only. Never persist account email, identifiers or auth data.
+        const account=(await connection.call(stage,{refreshToken:false}))?.account;
+        value.accountType=['chatgpt','apiKey'].includes(account?.type)?account.type:'';
+        if(value.accountType==='chatgpt')value.planType=safePlan(account.planType)||value.planType;
       } catch(unavailable) {if(disconnected)throw unavailable;}
       stage='thread/loaded/list';
       const ids=(await connection.call(stage,{}))?.data || [];
@@ -174,4 +183,5 @@ async function main() {
     process.stdout.write(id+'\n');
   } finally {connection.close();}
 }
-main().catch(error=> {process.stderr.write('Termux Jobs: '+error.message+'\n');process.exit(1);});
+if(require.main===module)main().catch(error=> {process.stderr.write('Termux Jobs: '+error.message+'\n');process.exit(1);});
+module.exports={Connection,statusWorker};

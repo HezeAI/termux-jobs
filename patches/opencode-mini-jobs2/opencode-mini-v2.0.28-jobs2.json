@@ -1,0 +1,9 @@
+{
+  "version": "2.0.28",
+  "revision": "jobs2",
+  "upstreamCommit": "026b106bc5d41b679ffc413264229c340871e4d3",
+  "binarySha256": "2fe8edc95696c14fd4048720427e01d32fff29b31462b1ee54fcd4b4cf6275fb",
+  "bundleSha256": "f404aafb7d78aa9fae870d556b55a3484457d9444e71f5e31bcc4667ce920d0b",
+  "binaryBytes": 177588520,
+  "bundleBytes": 77286955
+}

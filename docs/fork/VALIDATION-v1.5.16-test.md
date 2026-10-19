@@ -1,3 +1,11 @@
+# Historical private build records — v1.5.16-test
+
+Private version names were reused during development. These are distinct builds;
+versionCode, APK hash and the specific report identify each artifact. Neither
+record below is validation of current v1.6.0; see VALIDATION-v1.6.0.md.
+
+## Earlier record preserved from public v1.5.3
+
 # v1.5.16-test validation
 
 ## Relevant evidence
@@ -29,3 +37,58 @@ Update over1.5.15-test without clearing data. Repeat the exact Qwen locations/wr
 ## Final suite and delivery
 
 Final full suite passed:664 app +145 emulator tests, zero failures/errors/skips. Updated fixed-CPU and216dp-popup/52dp-row assertions passed in final XML, alongside9service-context cases. Log: `.verification/local-ai-v1516/tests-final.log`; final counts saved in test-counts.json. Download copy SHA verified independently.
+
+
+---
+
+## Subsequent development record
+
+# v1.5.16-test — OpenCode connection state and native controls
+
+Private APK built/audited/copied to Download; no GitHub publication.
+
+Package `com.termux`, versionName `1.5.16-test`, versionCode1178, minSdk26,
+ARM64 only, 36578142 bytes. ZIP and v2 signature verified, certificate
+unchanged from v1.5.15-test/code1177 and versionCode increased. No data reset or
+migration. SHA-256 `9e5248de3b607cb350a55a6b87d6e533c51f0c8f6d82cca6d52a6f2a3198a3ff`. Copied APK hash verified.
+Final staged chat/controller/model UI sources match the originals; required
+runtime definitions verified. Native libraries and all unrelated assets are
+byte-identical to1.5.15. Only opencode-chat.cjs changes among assets (metadata
+allowlisting). Private-file/secret-marker audit passes.
+Release build succeeds; existing Lint Kotlin/UAST/JNA infrastructure warnings
+remain. This does not claim a warning-free Lint run.
+See build-final.log, apk-audit.json, signature.txt, badging.txt.
+
+Restart OpenCode with the existing chat after updating to load model metadata
+from the new bridge helper; the selected preset model is the display fallback.
+
+Changes:
+
+- Connecting appears inside the transcript immediately. Transport failures show
+  Could not connect / retry there; successful SSE connection clears that status.
+  Messages update in place, without adding entries to persisted native history.
+- Before connection, the main composer keeps its draft and does not fall through
+  to writing into the hidden bridge PTY. Generation/owner gates reject late reads.
+- Main-chat additional-keys button is disabled by the developer's final decision.
+  Enabling interactive mode or tapping Shell does not reveal a key panel. Shell
+  still requires interactive input; native mini uses its own keyboard normally.
+- A separate Esc/Tab/arrow row is present inside the native terminal window,
+  alongside the existing configured extra keys. Back to chat is the left footer
+  button; Enter on the right confirms a native selection without dismissing.
+  Both compact arrows and Enter check the captured TerminalSession is still
+  current and running before sending. Outside taps still cannot dismiss it.
+- The upper OpenCode card displays model/variant instead of connection name.
+  Native metadata supplies only allowlisted provider/model/variant strings; no
+  integration headers, settings or credentials are forwarded. Until available,
+  selected launch-profile model is shown. No model inference for this check.
+- Existing chat/window dimensions, permissions and history formats are unchanged.
+
+Evidence: .verification/opencode-chat-v1.5.16/. Full JVM suite passed565 tests
+(411app+154emulator). After input/model refinements,22 targeted tests passed;
+the final footer run also passes all22. Node projection tests
+include metadata allowlisting; syntax and git diff whitespace checks pass.
+
+Phone verification required: actual startup failure/recovery and a preset/new
+launch, draft kept before connection, native arrows/Enter accepting a choice,
+Back button position and return, IME and outside taps, model change/readback.
+Mocked UI tests do not establish physical keyboard, gestures or DPI behavior.

@@ -786,7 +786,7 @@ public class WorkspaceNavigationTest {
         AlertDialog form = ShadowAlertDialog.getLatestAlertDialog(); View decor = form.getWindow().getDecorView();
         findDescription(decor, "Среда запуска").performClick(); AlertDialog environments = ShadowAlertDialog.getLatestAlertDialog();
         assertEquals(4,environments.getListView().getCount()); assertEquals("Termux",environments.getListView().getItemAtPosition(0)); assertEquals("Ubuntu",environments.getListView().getItemAtPosition(1)); assertEquals("AI Agents", environments.getListView().getAdapter().getItem(3)); environments.getListView().performItemClick(null,3,3);
-        assertNotNull(findText(decor,"Среда Codex: Ubuntu"));
+        assertNull(findText(decor,"Среда Codex: Ubuntu")); assertNull(findDescription(decor,"Среда Codex"));
         assertEquals(View.GONE, findDescription(decor,"Добавить команду запуска").getVisibility());
         findDescription(decor,"Доступ Codex").performClick(); AlertDialog access = ShadowAlertDialog.getLatestAlertDialog();
         assertEquals(2,access.getListView().getAdapter().getCount()); access.getListView().performItemClick(null,0,0);
@@ -800,7 +800,7 @@ public class WorkspaceNavigationTest {
         form.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
         Field storeField = WorkspaceController.class.getDeclaredField("store"); storeField.setAccessible(true); WorkspaceStore store = (WorkspaceStore)storeField.get(controller);
         assertEquals(1,store.sessions.size()); WorkspaceStore.Session profile = store.sessions.get(0);
-        assertEquals("codex",profile.environment); assertEquals("read",profile.codexAccess); assertEquals("new",profile.codexChat); assertEquals("",profile.codexThread); assertEquals("/root",profile.directory); assertTrue(profile.saved);
+        assertEquals("codex",profile.environment); assertEquals("read",profile.codexAccess); assertEquals("new",profile.codexChat); assertEquals("",profile.codexThread); assertEquals("/root",profile.directory); assertEquals("ubuntu",profile.codexEnvironment); assertTrue(profile.saved);
         assertNull(activity.getCurrentSession()); assertEquals(View.GONE, activity.findViewById(R.id.workspace_codex_status).getVisibility());
         store.awaitWrites(); controller.close();
     }
@@ -904,4 +904,16 @@ public class WorkspaceNavigationTest {
             }
         } finally { c.close(); }
     }
+    @Test public void legacyTermuxCodexEditorKeepsEnvironmentAndPathsWithoutSelector() throws Exception {
+        TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();activity.setTheme(R.style.Theme_Termux_Black);activity.setContentView(R.layout.activity_termux);
+        Field terminal=TermuxActivity.class.getDeclaredField("mTerminalView");terminal.setAccessible(true);terminal.set(activity,activity.findViewById(R.id.terminal_view));
+        WorkspaceController controller=new WorkspaceController(activity);
+        WorkspaceStore.Session profile=new WorkspaceStore.Session();profile.name="Legacy Codex";profile.environment="codex";profile.codexEnvironment="termux";profile.directory=com.termux.shared.termux.TermuxConstants.TERMUX_HOME_DIR_PATH;profile.saved=true;
+        Field field=WorkspaceController.class.getDeclaredField("store");field.setAccessible(true);((WorkspaceStore)field.get(controller)).sessions.add(profile);
+        java.lang.reflect.Method edit=WorkspaceController.class.getDeclaredMethod("editSession",WorkspaceStore.Session.class,boolean.class);edit.setAccessible(true);edit.invoke(controller,profile,false);
+        AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();assertNull(findDescription(form.getWindow().getDecorView(),"Среда Codex"));
+        shadowOf(Looper.getMainLooper()).idle();form.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        assertFalse(form.isShowing());assertEquals("termux",profile.codexEnvironment);assertEquals(com.termux.shared.termux.TermuxConstants.TERMUX_HOME_DIR_PATH,profile.directory);assertEquals("new",profile.codexChat);controller.close();
+    }
+
 }

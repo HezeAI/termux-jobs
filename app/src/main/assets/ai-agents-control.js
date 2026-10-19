@@ -2,9 +2,11 @@
 // OpenCode v2.0.28 adapter. Only local, authenticated servers owned by this invocation.
 const fs = require('fs'), path = require('path'), net = require('net'), http = require('http');
 const {spawn} = require('child_process'), crypto = require('crypto');
+const {accessRules,OpenCodeSessionSettings,SerialControl}=require('./opencode-session-settings.cjs');
+const controlQueue=new SerialControl();let sessionSettings;
 const MAX = 2 * 1024 * 1024;
 const validID = s => typeof s === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(s);
-let server, client, socketServer, endpoint, password, connectionRoot, closing = false, reopenClient;
+let server, client, socketServer, endpoint, password, connectionRoot, closing = false, reopenClient, approvalControl, chatControl, finishChat, eventRequest, terminalControl, reconnectTimer;
 const originalParent=process.ppid;
 const parentWatch=setInterval(()=>{if(process.ppid!==originalParent){stop();setTimeout(()=>process.exit(143),500).unref();}},500);parentWatch.unref();
 function stop() {
@@ -12,6 +14,7 @@ function stop() {
   if (socketServer) socketServer.close();
   if (client) client.kill('SIGTERM');
   if (server) server.kill('SIGTERM');
+  if(reconnectTimer)clearTimeout(reconnectTimer);if(eventRequest)eventRequest.destroy();if(chatControl)chatControl.close();if(finishChat)finishChat();
 }
 process.on('SIGTERM', () => {stop(); setTimeout(() => process.exit(143), 500).unref();});
 process.on('SIGHUP', () => {stop(); setTimeout(() => process.exit(129), 500).unref();});
@@ -77,6 +80,10 @@ function models(data) {
     variants:(m.variants || []).map(v => ({id:v.id})), enabled:m.enabled === true}));
 }
 async function handle(q, session) {
+  if(q.op.startsWith('settings-')&&sessionSettings)return sessionSettings.command(q);
+  if(session&&['terminal-open','terminal-close'].includes(q.op)&&terminalControl)return terminalControl(q.op==='terminal-open');
+  if(session&&q.op.startsWith('chat-')&&chatControl){const r=await chatControl.command(q);if(q.op==='chat-snapshot')r.permission=(await approvalControl.command({op:'permission'})).permission;return r;}
+  if(session&&['permission','answer','receipt'].includes(q.op)&&approvalControl)return approvalControl.command(q);
   if (q.op === 'models') return {models:models(await request('GET','/api/model'))};
   if (q.op === 'connect') {
     if (!['openai','anthropic','google','openrouter'].includes(q.provider) || typeof q.key !== 'string' || !q.key.trim() || q.key.length > 4096 || /[\r\n\x00]/.test(q.key)) throw new Error('Invalid credential');
@@ -90,7 +97,7 @@ async function handle(q, session) {
   }
   if (q.op === 'status' && session) {
     const data = await request('GET','/api/session/' + session), s=data.data || data;
-    return {id:s.id, name:s.title || '', model:s.model || {}, agent:s.agent || 'build',permissions:(s.permissions || []).map(p=>({action:p.action,resource:p.resource,effect:p.effect}))};
+    return {nativeChat:!!chatControl,id:s.id, name:s.title || '', model:s.model || {}, agent:s.agent || 'build',permissions:(s.permissions || []).map(p=>({action:p.action,resource:p.resource,effect:p.effect}))};
   }
   if (q.op === 'model' && session && validID(q.provider) && typeof q.model === 'string' && q.model.length <= 256 && typeof (q.variant || '') === 'string' && (q.variant || '').length <= 80) {
     const model={providerID:q.provider,id:q.model}; if(q.variant)model.variant=q.variant;
@@ -104,20 +111,7 @@ function readJSON(stream) {return new Promise((resolve,reject) => {
   let data='',size=0;stream.on('data',b=>{size+=b.length;if(size>65536){reject(new Error('Oversized request'));stream.destroy();}else data+=b;});
   stream.on('end',()=>{try{resolve(JSON.parse(data));}catch(_){reject(new Error('Invalid JSON'));}});stream.on('error',reject);
 });}
-function accessRules(access,scope='unrestricted') {
-  if(!['full','ask','read'].includes(access)||!['unrestricted','project'].includes(scope))throw new Error('Invalid permission scope');
-  if(scope==='project')return [
-    {action:'*',resource:'*',effect:'deny'},
-    ...['read','glob','grep','question'].map(action=>({action,resource:'*',effect:'allow'})),
-    ...(access==='read'?[]:[{action:'edit',resource:'*',effect:access==='ask'?'ask':'allow'}]),
-    {action:'external_directory',resource:'*',effect:'deny'}
-  ];
-  if(access==='full')return [{action:'*',resource:'*',effect:'allow'}];
-  if(access==='ask')return [{action:'*',resource:'*',effect:'ask'}];
-  if(access==='read')return [{action:'*',resource:'*',effect:'deny'},...['read','glob','grep','question','external_directory'].map(action=>({action,resource:'*',effect:'allow'}))];
-  throw new Error('Invalid access mode');
-}
-async function run(root,sock,id,model,mode,resume,variant,access='ask',scope='unrestricted') {
+async function run(root,sock,id,model,mode,resume,variant,access='ask',scope='unrestricted',headless=false) {
   if (!/^ses[A-Za-z0-9_-]{1,124}$/.test(id) || !['build','plan'].includes(mode)) throw new Error('Invalid session');
   const permissions=accessRules(access,scope);
   const runtime=await start(root);
@@ -130,9 +124,17 @@ async function run(root,sock,id,model,mode,resume,variant,access='ask',scope='un
     if(model){const i=model.indexOf('/');if(i<1)throw new Error('Model must be provider/model');spec.model={providerID:model.slice(0,i),id:model.slice(i+1)};if(variant)spec.model.variant=variant;}
     const created=await request('POST','/api/session',spec),info=created.data || created;id=info.id;rememberID(root,alias,id);
   }
+  const receiptFile=path.join(root,'receipts',id+'.json');
+  approvalControl=new (require('./opencode-permissions.cjs').OpenCodePermissions)(request,id,receiptFile);
+  if(headless)chatControl=new (require('./opencode-chat.cjs').OpenCodeChat)(request,id,receiptFile);
+  sessionSettings=new OpenCodeSessionSettings(request,id,scope,async()=>{
+    if(!headless||closing||client&&client.exitCode===null&&client.signalCode===null||chatControl&&chatControl.shells.size||await busy())return false;
+    const permissions=await request('GET','/api/session/'+id+'/permission'),forms=await request('GET','/api/session/'+id+'/form');
+    return !(permissions.data||[]).length&&!(forms.data||[]).some(f=>!f.state||f.state.status==='pending');
+  });
   await new Promise((resolve,reject)=>{
     socketServer=net.createServer({allowHalfOpen:true},connection=>{connection.setTimeout(35000,()=>connection.destroy());
-      readJSON(connection).then(q=>{if(!['models','status','model','stop'].includes(q.op))throw new Error('Unsupported live operation');return handle(q,id);}).then(result=>connection.end(JSON.stringify({ok:true,...result})))
+      readJSON(connection).then(q=>{if(!['models','status','model','settings-read','settings-mode','settings-permissions','stop','permission','answer','receipt','chat-snapshot','chat-detail','chat-send','chat-interrupt','chat-form','terminal-open','terminal-close'].includes(q.op))throw new Error('Unsupported live operation');return ['chat-send','chat-form','answer','chat-interrupt','model','settings-mode','settings-permissions','terminal-open'].includes(q.op)?controlQueue.run(()=>handle(q,id)):handle(q,id);}).then(result=>connection.end(JSON.stringify({ok:true,...result})))
         .catch(()=>connection.end(JSON.stringify({ok:false,error:'OpenCode request failed'})));
     });socketServer.on('error',reject);socketServer.listen(sock,()=>{fs.chmodSync(sock,0o600);resolve();});
   });
@@ -141,16 +143,23 @@ async function run(root,sock,id,model,mode,resume,variant,access='ask',scope='un
   function launchClient() {
     if(closing)throw new Error('OpenCode closing');
     client=spawn(runtime.exe,['mini','--server',endpoint,'--session',id,'--replay'],{env:runtime.env,stdio:'inherit'});
-    client.once('error',()=>{if(!reopening)finishRun();});
-    client.once('exit',()=>{if(!reopening)finishRun();});
+    client.once('error',()=>{if(!reopening&&!headless)finishRun();});
+    client.once('exit',()=>{if(!reopening&&!headless)finishRun();});
     const next=client;return new Promise((resolve,reject)=>{next.once('spawn',resolve);next.once('error',reject);});
   }
   async function busy() {
     const active=await request('GET','/api/session/active');
     const inbox=await request('GET','/api/session/'+id+'/inbox');
-    return Object.keys(active.data || {}).length>0 || (inbox.data || []).length>0;
+    return !!(active.data || {})[id] || (headless?(inbox.data || []).some(item=>item.type!=='synthetic'):(inbox.data || []).length>0);
   }
   reopenClient=async model=>{
+    if(headless){
+      if(closing||await busy())return {applied:false,reason:'busy'};
+      if(client&&client.exitCode===null&&client.signalCode===null)return {applied:false,reason:'busy'};
+      await request('POST','/api/session/'+id+'/model',{model});
+      const r=await request('GET','/api/session/'+id),actual=(r.data||r).model||{};
+      return {applied:actual.providerID===model.providerID&&actual.id===model.id,reopened:true,id,model:actual};
+    }
     if(reopening || closing || !client || client.exitCode!==null || client.signalCode!==null)return {applied:false,reason:'unavailable'};
     if(await busy())return {applied:false,reason:'busy'};
     if(reopening || closing)return {applied:false,reason:'unavailable'};
@@ -177,8 +186,24 @@ async function run(root,sock,id,model,mode,resume,variant,access='ask',scope='un
       return {applied:false,reason:'unavailable'};
     } finally {reopening=false;if(closing || (client && (client.exitCode!==null || client.signalCode!==null)))finishRun();}
   };
-  await launchClient();await finished;
-  reopenClient=undefined;
+  if(headless){
+    finishChat=finishRun;server.once('exit',finishRun);if(server.exitCode!==null||server.signalCode!==null)throw Error('OpenCode exited');
+    const retry=()=>{chatControl.connected=false;if(closing||reconnectTimer)return;reconnectTimer=setTimeout(()=>{reconnectTimer=null;subscribe();},1000);reconnectTimer.unref();};
+    const subscribe=()=>{
+      if(closing)return;
+      eventRequest=http.get(endpoint+'/api/event',{headers:{Authorization:'Basic '+Buffer.from('opencode:'+password).toString('base64')}},res=>{
+        chatControl.connected=res.statusCode===200;let buffer='';res.setEncoding('utf8');
+        res.on('data',chunk=>{buffer+=chunk.replace(/\r/g,'');if(buffer.length>2*1024*1024){res.destroy();return;}let split;while((split=buffer.indexOf('\n\n'))>=0){const frame=buffer.slice(0,split);buffer=buffer.slice(split+2);const raw=frame.split('\n').filter(l=>l.startsWith('data:')).map(l=>l.slice(5).trimStart()).join('\n');try{const e=JSON.parse(raw);chatControl.event(e);}catch{}}});
+        res.on('error',()=>{});res.once('close',retry);
+      });eventRequest.on('error',retry);
+    };subscribe();
+    terminalControl=async open=>{if(open){if(!client||client.exitCode!==null||client.signalCode!==null)await launchClient();return {opened:true};}if(client&&client.exitCode===null&&client.signalCode===null){const previous=client;await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Frontend did not exit')),5000);previous.once('exit',()=>{clearTimeout(timer);resolve();});previous.kill('SIGTERM');});if(client===previous)client=undefined;}return {closed:true};};
+    process.stdout.write('OpenCode chat ready.\r\n');
+  }else await launchClient();
+  await finished;
+  terminalControl=undefined;
+
+  sessionSettings=undefined;reopenClient=undefined;
 }
 async function main() {
   const [kind,...args]=process.argv.slice(2);
@@ -190,12 +215,12 @@ async function main() {
   }
   try {
     if(kind==='request') {const q=await readJSON(process.stdin);await start(args[0]);process.stdout.write(JSON.stringify({ok:true,...await handle(q,null)}));}
-    else if(kind==='run') await run(...args);
+    else if(kind==='run'||kind==='run-chat') await run(...args,...(kind==='run-chat'?[true]:[]));
     else throw new Error('Unknown mode');
   } finally {
-    stop(); if(kind==='run' && args[1]) {try{fs.unlinkSync(args[1]);}catch(_) {}}
+    stop(); if((kind==='run'||kind==='run-chat') && args[1]) {try{fs.unlinkSync(args[1]);}catch(_) {}}
   }
 }
-if(require.main===module)main().catch(()=>{if(process.argv[2]==='run')process.stderr.write('OpenCode could not start. Install v2.0.28 and Node.js 20+ in Ubuntu; check the project and selected connection.\n');else process.stdout.write(JSON.stringify({ok:false,error:'OpenCode unavailable. Check v2.0.28, Node.js 20+ and Ubuntu.'}));stop();process.exitCode=1;});
+if(require.main===module)main().catch(()=>{if(['run','run-chat'].includes(process.argv[2]))process.stderr.write('OpenCode could not start. Install v2.0.28 and Node.js 20+ in Ubuntu; check the project and selected connection.\n');else process.stdout.write(JSON.stringify({ok:false,error:'OpenCode unavailable. Check v2.0.28, Node.js 20+ and Ubuntu.'}));stop();process.exitCode=1;});
 
 module.exports={accessRules};

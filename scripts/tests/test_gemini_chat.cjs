@@ -1,0 +1,28 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {createBridge}=require('../../app/src/main/assets/gemini-live.cjs');
+(async()=>{
+ let session='11111111-1111-4111-8111-111111111111',messages=0,shells=0,shellMode=false;
+ const c={model:'flash',getSessionId:()=>session,getProjectRoot:()=>'/project',isTrustedFolder:()=>true,getContentGenerator:()=>({}),getContentGeneratorConfig:()=>({authType:'gemini-api-key'}),getApprovalMode:()=> 'default',setModel(){}};
+ const b=createBridge(()=>{},()=>{throw Error('No network in tests');});b.attach(c);b.ui('idle');
+ let data={ready:true,native:false,history:[{id:1,type:'user',text:'PRIVATE_CHAT_SENTINEL'},{id:2,type:'tool_group',tools:[{callId:'call-owned',name:'read_file',description:'read /project/a',status:'success',resultDisplay:'actual result'}]},{id:3,type:'gemini',text:'answer'}],pending:[],thought:{subject:'Reasoning summary',description:'Provided by native UI'}};
+ const submit=async text=>{messages++;assert.equal(text,'hello');},toggle=mode=>{shellMode=mode;b.chatUI(c,data,submit,mode,toggle);};
+ b.chatUI(c,data,submit,false,toggle);b.chatShell(c,text=>{shells++;assert.equal(text,'printf test');return true;});
+ let snapshot=await b.command({op:'chat-snapshot'});assert(snapshot.connected);assert.deepEqual(snapshot.rows.map(r=>r.kind),['user','reasoning','tool','text']);assert(!JSON.stringify(b.snapshot()).includes('PRIVATE_CHAT_SENTINEL'));
+ const q={op:'chat-send',id:'msg_one',kind:'message',text:'hello',session};await Promise.all([b.command(q),b.command(q)]);assert.equal(messages,1);await assert.rejects(()=>b.command({...q,text:'changed'}));
+ assert.equal((await b.command({...q,id:'msg_wrong_session',session:'other'})).ok,false);assert.equal(messages,1);
+ await assert.rejects(()=>b.command({...q,id:'msg_large',text:'я'.repeat(32000)}));
+ shellMode=true;b.chatUI(c,data,submit,true,toggle);await b.command({...q,id:'msg_switch_mode'});assert.equal(shellMode,false);assert.equal(messages,2);assert.equal(shells,0);
+ await b.command({...q,id:'msg_shell',kind:'shell',text:'printf test'});assert.equal(shells,1);await b.command({...q,id:'msg_shell',kind:'shell',text:'printf test'});assert.equal(shells,1);
+ await b.command({op:'terminal-open'});assert.equal((await b.command({...q,id:'msg_native_window'})).ok,false);await b.command({op:'terminal-close'});
+ b.permission('call-owned',{type:'exec',command:'PRIVATE_PERMISSION_SENTINEL'},c,async id=>b.consumePermission(id),[{value:'proceed_once'},{value:'cancel'}],true,'Shell',false);
+ snapshot=await b.command({op:'chat-snapshot'});assert(snapshot.permission);const permission=snapshot.permission;assert((await b.command({op:'answer',id:permission.id,outcome:'proceed_once'})).ok);snapshot=await b.command({op:'chat-snapshot'});assert.deepEqual(snapshot.rows.map(r=>r.kind),['user','reasoning','receipt','tool','text']);assert(!JSON.stringify(b.snapshot()).includes('PRIVATE_PERMISSION_SENTINEL'));assert.equal((await b.command({op:'answer',id:permission.id,outcome:'cancel'})).ok,false);
+ b.ui('waiting_for_confirmation');assert((await b.command({op:'chat-snapshot'})).needsTerminal);b.ui('idle');
+ data={...data,history:Array.from({length:50},(_,i)=>({id:10+i,type:'gemini',text:'row '+i})),thought:null};b.chatUI(c,data,submit,false,toggle);snapshot=await b.command({op:'chat-snapshot'});assert.equal(snapshot.rows.length,20);assert(snapshot.older);const old=await b.command({op:'chat-snapshot',cursor:snapshot.older});assert.equal(old.rows.length,20);assert.notEqual(old.rows[0].message,snapshot.rows[0].message);
+ data={...data,history:[{id:100,type:'gemini',text:'X'.repeat(30000)}]};b.chatUI(c,data,submit,false,toggle);snapshot=await b.command({op:'chat-snapshot'});const row=snapshot.rows[0];assert(row.more);const full=await b.command({op:'chat-detail',message:row.message,part:row.part,session});assert.equal(full.body.length,24000);assert.equal(full.next,24000);
+ session='22222222-2222-4222-8222-222222222222';b.chatUI(c,{...data,history:[{id:200,type:'user',text:'new session'}]},submit,false,toggle);assert.equal((await b.command(q)).ok,false);await assert.rejects(()=>b.command({op:'chat-detail',message:row.message,part:row.part,session}));
+ b.chatUI(c,{...data,native:true},submit,false,toggle);assert((await b.command({op:'chat-snapshot'})).needsTerminal);assert.equal((await b.command({...q,id:'msg_modal',session})).ok,false);
+ data={ready:true,native:false,history:[],pending:[]};b.chatUI(c,data,submit,false,toggle);const cleared=await b.command({op:'chat-snapshot'});assert.equal(cleared.rows.length,0);assert.equal(cleared.knownMessages.length,0);
+ b.unsupported();assert.equal((await b.command({op:'chat-snapshot'})).nativeChat,false);
+ console.log('PASS Gemini native projection/reasoning/receipt anchors, paged history/details, native callback sends, shell isolation, dedup, bounds, session guards, terminal/auth fallback, scalar privacy');
+})().catch(e=>{console.error(e);process.exitCode=1;});

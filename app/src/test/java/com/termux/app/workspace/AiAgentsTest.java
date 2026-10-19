@@ -43,6 +43,11 @@ public class AiAgentsTest {
         assertFalse(AiAgentsUi.showConfirmedModel(profile,new JSONObject(),label,()->saves[0]++));assertEquals("opencode/exo-free",profile.aiModel);assertEquals("opencode / exo-free · high",label.getText().toString());assertEquals(1,saves[0]);
         actual.put("id","ling-3.1-flash-free").put("variant","");assertTrue(AiAgentsUi.showConfirmedModel(profile,actual,label,()->saves[0]++));assertEquals("opencode / ling-3.1-flash-free",label.getText().toString());assertEquals("",profile.aiVariant);
     }
+    @Test public void sessionCardUsesNativeModelOrSelectedPresetInsteadOfConnectionName()throws Exception{
+        WorkspaceStore.Session profile=new WorkspaceStore.Session();profile.aiModel="openrouter/vendor/chosen-model";profile.aiVariant="high";
+        assertEquals("vendor/chosen-model · high",AiAgentsUi.sessionModelLabel(profile,null));
+        JSONObject actual=new JSONObject().put("providerID","opencode").put("id","actual-model");assertEquals("actual-model",AiAgentsUi.sessionModelLabel(profile,actual));assertEquals("vendor/chosen-model · high",AiAgentsUi.sessionModelLabel(profile,new JSONObject()));assertEquals("openrouter/vendor/chosen-model",profile.aiModel);
+    }
     @Test public void accessPersistsAndOldAiProfilesDefaultToConfirmations() throws Exception {
         WorkspaceStore.Session profile=new WorkspaceStore.Session();profile.environment="ubuntu";profile.aiAgent="opencode";profile.aiAccess="read";store.sessions.add(profile);store.decode(store.encode().toString());assertEquals("read",store.sessions.get(0).aiAccess);assertEquals("read",store.sessions.get(0).copy().aiAccess);
         JSONObject data=store.encode();data.getJSONArray("sessions").getJSONObject(0).remove("aiAccess");store.decode(data.toString());assertEquals("ask",store.sessions.get(0).aiAccess);

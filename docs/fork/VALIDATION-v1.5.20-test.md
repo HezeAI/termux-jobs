@@ -1,3 +1,11 @@
+# Historical private build records — v1.5.20-test
+
+Private version names were reused during development. These are distinct builds;
+versionCode, APK hash and the specific report identify each artifact. Neither
+record below is validation of current v1.6.0; see VALIDATION-v1.6.0.md.
+
+## Earlier record preserved from public v1.5.3
+
 > Historical private test. LoRA pilot cancelled by the developer; superseded by [v1.5.21-test](RELEASE-v1.5.21-test.md), which restores v1.5.19 behavior. No trained adapter was produced.
 
 # v1.5.20-test validation
@@ -33,3 +41,71 @@ APK bytes: 104926136. SHA-256: 2e1510a56c232a315c2bbbab67abdb89e73b86c09054d3ebd
 - Genuine matching trained Qwen adapter: load/reload/Off, same-chat retention, actual tool quality, memory and speed for Android/Termux/dedicated Ubuntu. This build provides loader infrastructure, not trained behavior.
 - Draft22 synthetic episodes (11train/11validation) have schema-checked tool arguments, no personal data. Need expansion/manual review, original base/revision identification, tokenizer/template/loss-mask parity, actual training and held-out base-vs-adapter evaluation. Training has not been started; adapter not distributed.
 - No promised speedup, universal command-following, new Qwen vision or NPU LoRA support.
+
+
+---
+
+## Subsequent development record
+
+# v1.5.20-test — preserve OpenCode/Gemini chat while switching sessions
+
+Private update to1.5.19, built/audited/copied to Download; copy hash verified.
+Package com.termux, version1.5.20-test/code1182, minSdk26, ARM64,36590750 bytes.
+Same signing certificate as1.5.19/code1181; versionCode increased. No data reset
+or history-format migration. SHA-256:
+`e4c150ca824a92d06d88d9e88d69511b8bab1443bbb7f01058f19c623581bf07`.
+
+The prior shared view cleared rows and scroll whenever the selected terminal
+changed, producing a blank Connecting screen while reading the same native chat
+again. A bounded in-memory presentation cache now restores the exact profile +
+thread/run + terminal-handle presentation synchronously. Native refresh follows
+without clearing it. Upper workspace tabs retain the same row views. Native agent
+process/history/subscription lifecycle is unchanged; no hidden polling is added.
+
+The cache retains rows/model/status/Shell draft/scroll anchor or bottom position.
+It has at most8 inactive entries,512Ki serialized characters of rows per entry,
+2Mi serialized characters overall plus small metadata. Trimming/eviction affects
+display only, not saved native history. No disk cache or model-context change.
+Pending permission/form buttons are never cached and require fresh native state.
+Real transport errors still show a notice next to retained rows; cached connection
+metadata is explicitly last-known. Gemini actual native-session changes replace
+old restored rows. Unsupported native interfaces still reveal their legacy view.
+
+Review traces: ownership/run keys, cache transfer and bounded eviction, late async
+result generation guards, Gemini resume invalidation, temporary dialog dismissal
+and key restoration, after-layout scroll restoration/gesture cancellation and
+fresh-only permission controls. No native policy/credentials/bootstrap changes.
+
+Device checks: return between OpenCode/Gemini/ordinary sessions and upper tabs;
+old rows should be visible immediately without a blank Connecting screen. Read
+older text, switch away and return, then verify streaming does not force bottom.
+Repeat while model replies in background; verify fresh additions, actual failure
+notices and fresh permission cards. Authenticated/physical IME/gesture behavior
+remains developer testing; mocked UI tests do not establish all phone behavior.
+
+Claude migration is the next stage after this check, not included in this APK.
+
+Final targeted JVM suite passes73 tests, zero failures/errors/skips: immediate
+return with blocked transport for both agents, Shell draft preservation, fresh-only
+permission controls, same-row upper-tab return with no hidden polling/stop, actual
+Gemini resume invalidating old cached rows, above-bottom and bottom restoration,
+cache ownership transfer/eviction and global character budget. Existing connection,
+Shell, generation, error, large native-key/window and Gemini tests stay green.
+Initial cache helper tests needed the existing Android/Robolectric JSON runner;
+corrected final suite passes. No native/model inference test was added or claimed.
+
+Release assembly/runtime required-definition checks pass;31 optional missing types
+retain explicit review notes. Existing Lint Kotlin/UAST/JNA infrastructure warnings
+remain, not a clean-Lint claim. Final staged changed sources match originals.
+ZIP/package/version/ABI/v2 signature and private-file/secret-marker audits pass.
+All assets/native libraries are byte-identical to1.5.19. No APK installation or
+GitHub publication. Evidence: .verification/chat-cache-v1.5.20/{tests-final.log,
+tests.json,build.log,staged-source.json,apk-audit.json,signature.txt,badging.txt,
+delivery.json}.
+
+## Developer acceptance
+
+The developer confirmed this build as the working baseline after testing
+("отлично!!! фиксируем!!"). This records acceptance of the current switching
+behavior; it is not evidence that every device/scenario above was tested.
+Next stage is Claude Android chat integration. No new release is authorized.

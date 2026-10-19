@@ -96,6 +96,18 @@ final class ProjectFiles implements AutoCloseable {
         try {return bytes(PackageCatalog.query(tab),PackageCatalog.MAX_BYTES);}
         catch(Exception error){if(closed)throw error;throw new IOException(WorkspaceText.tr("Не удалось прочитать пакеты. Проверьте наличие APT/dpkg и доступность выбранного окружения."));}
     }
+    static final class TransferFailure extends IOException {
+        final int completed;TransferFailure(int completed,Throwable cause){super("TRANSFER_FAILED",cause);this.completed=completed;}
+    }
+    boolean transferReady(List<Entry> entries,String folder,boolean move,boolean rename)throws Exception {
+        try{return new String(bytes(ProjectFileTransfer.script(entries,folder,move,rename,true),1024),StandardCharsets.UTF_8).equals("READY");}
+        catch(Exception error){return false;}
+    }
+    void transfer(List<Entry> entries,String folder,boolean move,boolean rename)throws Exception {
+        ByteArrayOutputStream output=new ByteArrayOutputStream();
+        try{run(ProjectFileTransfer.script(entries,folder,move,rename,false),output,4096,null,6*60*60);}
+        catch(Exception error){int completed=output.toString("UTF-8").split("DONE",-1).length-1;throw new TransferFailure(completed,error);}
+    }
     private byte[] bytes(String script,int max) throws Exception {ByteArrayOutputStream out=new ByteArrayOutputStream();run(script,out,max);return out.toByteArray();}
     static String command(WorkspaceStore.Session s,String script) {
         String e=environment(s);String bash="bash --noprofile --norc -c "+SessionShell.quote(script);
@@ -113,7 +125,8 @@ final class ProjectFiles implements AutoCloseable {
         return "ssh -T"+options+" -p "+s.sshPort+" -l "+SessionShell.quote(s.sshUser)+" -- "+SessionShell.quote(s.sshHost)+" "+SessionShell.quote(bash);
     }
     private void run(String script,OutputStream out,long max) throws Exception {run(script,out,max,null);}
-    private synchronized void run(String script,OutputStream out,long max,byte[] input) throws Exception {
+    private void run(String script,OutputStream out,long max,byte[] input) throws Exception {run(script,out,max,input,90);}
+    private synchronized void run(String script,OutputStream out,long max,byte[] input,int timeoutSeconds) throws Exception {
         if(closed||serverKnownHosts!=null&&ServerConnection.disconnected(activity,profile.id))throw new IOException(WorkspaceText.tr("Окно закрыто"));
         String invocation=command(profile,script);
         if(serverKnownHosts!=null&&environment(profile).equals("ssh"))invocation=invocation.replaceFirst("ssh -T",java.util.regex.Matcher.quoteReplacement("ssh -T -o "+SessionShell.quote("UserKnownHostsFile="+serverKnownHosts.getAbsolutePath())+" -o GlobalKnownHostsFile=/dev/null"));
@@ -131,7 +144,7 @@ final class ProjectFiles implements AutoCloseable {
                 builder.environment().put("SSH_ASKPASS",askpass.getAbsolutePath());builder.environment().put("SSH_ASKPASS_REQUIRE","force");builder.environment().put("DISPLAY",":0");builder.environment().put("TERMUX_JOBS_SSH_SOCKET",broker.address);builder.environment().put("LC_ALL","C");
             }
             builder.redirectError(new File("/dev/null"));Process owned=builder.start();process=owned;if(closed||serverKnownHosts!=null&&ServerConnection.disconnected(activity,profile.id)){owned.destroy();throw new IOException("CANCELLED");}
-            timer.schedule(owned::destroy,90,TimeUnit.SECONDS);
+            timer.schedule(owned::destroy,timeoutSeconds,TimeUnit.SECONDS);
             try(OutputStream stdin=owned.getOutputStream()){if(input!=null)stdin.write(input);}
             try(InputStream in=owned.getInputStream()) {byte[] buffer=new byte[32768];int n;long total=0;while((n=in.read(buffer))!=-1){if(closed||Thread.currentThread().isInterrupted())throw new IOException(WorkspaceText.tr("Операция отменена"));total+=n;if(total>max)throw new IOException(WorkspaceText.tr("Файл или список слишком большой"));out.write(buffer,0,n);}}
             if(owned.waitFor()!=0)throw new IOException(environment(profile).equals("ssh")?WorkspaceText.tr("SSH недоступен: проверьте вход, пароль и доверенный ключ сервера в терминале"):WorkspaceText.tr("Каталог или файл недоступен; проверьте путь и выбранную среду"));

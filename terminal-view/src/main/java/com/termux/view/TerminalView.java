@@ -66,6 +66,59 @@ public final class TerminalView extends View {
     public static final int TERMINAL_CURSOR_BLINK_RATE_MIN = 100;
     public static final int TERMINAL_CURSOR_BLINK_RATE_MAX = 2000;
 
+    // OpenCode-only via TerminalSession opt-in. Timers collect geometry, never output.
+    private static final long RESIZE_QUIET_MS = 96, RESIZE_MAX_MS = 320;
+    private final Handler mResizeHandler = new Handler(Looper.getMainLooper());
+    private Runnable mPendingResize;
+    private long mResizeStarted = -1;
+    private boolean mWorkspaceTerminalVisible = true;
+    private boolean mResizeDetached;
+
+    public void setWorkspaceTerminalVisible(boolean visible) {
+        if (mWorkspaceTerminalVisible == visible) return;
+        mWorkspaceTerminalVisible = visible;
+        cancelPendingResize();
+        if (visible && mTermSession != null && mTermSession.usesStableResize()) updateSize();
+    }
+    private void cancelPendingResize() {
+        if (mResizeHandler != null && mPendingResize != null) mResizeHandler.removeCallbacks(mPendingResize);
+        mPendingResize = null; mResizeStarted = -1;
+    }
+    private boolean canApplyStableResize() {
+        return mWorkspaceTerminalVisible && !mResizeDetached && getWindowVisibility() == VISIBLE;
+    }
+    @Override protected void onWindowVisibilityChanged(int visibility) {
+        super.onWindowVisibilityChanged(visibility);
+        if (mResizeHandler == null) return;
+        if (visibility != VISIBLE) cancelPendingResize();
+        else if (mTermSession != null && mTermSession.usesStableResize()) updateSize();
+    }
+    private boolean adaptiveResizeViewport() {
+        return mPendingResize != null && mTermSession != null && mTermSession.usesStableResize()
+            && mEmulator != null && mRenderer != null && getHeight() > 0
+            && columnsForView() == mEmulator.mColumns && !mEmulator.isAlternateBufferActive() && !mEmulator.isMouseTrackingActive();
+    }
+    /** Drawing/hit-test position while geometry settles; logical transcript scroll stays unchanged. */
+    public int getVisibleTopRow() {
+        if (!adaptiveResizeViewport() || mTopRow < 0) return mTopRow;
+        return Math.max(-mEmulator.getScreen().getActiveTranscriptRows(), mEmulator.mRows - rowsForView());
+    }
+    private void finishResizeForInteraction() {
+        if (mPendingResize == null || mTermSession == null || !mTermSession.usesStableResize()) return;
+        cancelPendingResize();
+        if (canApplyStableResize() && mTermSession.isRunning()) applySize();
+    }
+
+    private java.util.function.Predicate<String> mTranscriptTapListener;
+    private boolean mTranscriptTapConsumed;
+    public void setTranscriptTapListener(java.util.function.Predicate<String> listener){mTranscriptTapListener=listener;}
+    private boolean handleTranscriptTap(MotionEvent event){
+        if(mTranscriptTapConsumed)return true;
+        if(mTranscriptTapListener==null||mEmulator==null)return false;
+        int row=getColumnAndRow(event,true)[1];String line=mEmulator.getScreen().getSelectedText(0,row,mEmulator.mColumns-1,row);
+        return mTranscriptTapConsumed=mTranscriptTapListener.test(line);
+    }
+
     /** The top row of text to display. Ranges from -activeTranscriptRows to 0. */
     int mTopRow;
     int[] mDefaultSelectors = new int[]{-1,-1,-1,-1};
@@ -135,12 +188,15 @@ public final class TerminalView extends View {
 
             @Override
             public boolean onUp(MotionEvent event) {
+                if(mTranscriptTapConsumed){scrolledWithFinger=false;return true;}
                 mScrollRemainder = 0.0f;
                 if (mEmulator != null && mEmulator.isMouseTrackingActive() && !event.isFromSource(InputDevice.SOURCE_MOUSE) && !isSelectingText() && !scrolledWithFinger) {
+                    if(handleTranscriptTap(event)){scrolledWithFinger=false;return true;}
                     // Quick event processing when mouse tracking is active - do not wait for check of double tapping
                     // for zooming.
                     sendMouseEventCode(event, TerminalEmulator.MOUSE_LEFT_BUTTON, true);
                     sendMouseEventCode(event, TerminalEmulator.MOUSE_LEFT_BUTTON, false);
+                    mClient.onTerminalMouseTap(event);
                     return true;
                 }
                 scrolledWithFinger = false;
@@ -155,6 +211,7 @@ public final class TerminalView extends View {
                     stopTextSelectionMode();
                     return true;
                 }
+                if(handleTranscriptTap(event))return true;
                 if (mSoftKeyboardInputEnabled) requestFocus();
                 mClient.onSingleTapUp(event);
                 return true;
@@ -283,6 +340,7 @@ public final class TerminalView extends View {
      */
     public boolean attachSession(TerminalSession session) {
         if (session == mTermSession) return false;
+        cancelPendingResize();
         if(mClient!=null)mClient.onTerminalViewportChanged();
         mTopRow = 0;
 
@@ -467,6 +525,12 @@ public final class TerminalView extends View {
             }
         }
 
+        if (!skipScrolling && mTopRow < 0 && mTermSession != null && mTermSession.preservesTranscriptScroll()
+            && !mEmulator.isAlternateBufferActive()) {
+            // Keep the same transcript text visible as new output pushes rows into history.
+            mTopRow=Math.max(-rowsInHistory,mTopRow-mEmulator.getScrollCounter());
+            skipScrolling=true;
+        }
         if (!skipScrolling && mTopRow != 0) {
             // Scroll down if not already there.
             if (mTopRow < -3) {
@@ -540,7 +604,7 @@ public final class TerminalView extends View {
         int column = (int) (event.getX() / mRenderer.mFontWidth);
         int row = (int) ((event.getY() - mRenderer.mFontLineSpacingAndAscent) / mRenderer.mFontLineSpacing);
         if (relativeToScroll) {
-            row += mTopRow;
+            row += getVisibleTopRow();
         }
         return new int[] { column, row };
     }
@@ -565,6 +629,7 @@ public final class TerminalView extends View {
 
     /** Perform a scroll, either from dragging the screen or by scrolling a mouse wheel. */
     void doScroll(MotionEvent event, int rowsDown) {
+        finishResizeForInteraction();
         if(mClient!=null)mClient.onTerminalScrolled();
         boolean up = rowsDown < 0;
         int amount = Math.abs(rowsDown);
@@ -600,6 +665,7 @@ public final class TerminalView extends View {
     public boolean onTouchEvent(MotionEvent event) {
         if (mEmulator == null) return true;
         final int action = event.getAction();
+        if (action == MotionEvent.ACTION_DOWN) {mTranscriptTapConsumed=false;finishResizeForInteraction();}
 
         if (isSelectingText()) {
             updateFloatingToolbarVisibility(event);
@@ -971,28 +1037,51 @@ public final class TerminalView extends View {
 
     /** Check if the terminal size in rows and columns should be updated. */
     public void updateSize() {
-        int viewWidth = getWidth();
-        int viewHeight = getHeight();
-        if (viewWidth == 0 || viewHeight == 0 || mTermSession == null) return;
-
-        // Set to 80 and 24 if you want to enable vttest.
-        int newColumns = Math.max(4, (int) (viewWidth / mRenderer.mFontWidth));
-        int newRows = Math.max(4, (viewHeight - mRenderer.mFontLineSpacingAndAscent) / mRenderer.mFontLineSpacing);
-
-        if (mEmulator == null || (newColumns != mEmulator.mColumns || newRows != mEmulator.mRows)) {
-            if(mClient!=null)mClient.onTerminalSizeChanged();
-            mTermSession.updateSize(newColumns, newRows, (int) mRenderer.getFontWidth(), mRenderer.getFontLineSpacing());
-            mEmulator = mTermSession.getEmulator();
-            mClient.onEmulatorSet();
-
-            // Update mTerminalCursorBlinkerRunnable inner class mEmulator on session change
-            if (mTerminalCursorBlinkerRunnable != null)
-                mTerminalCursorBlinkerRunnable.setEmulator(mEmulator);
-
-            mTopRow = 0;
-            scrollTo(0, 0);
-            invalidate();
+        if (getWidth() == 0 || getHeight() == 0 || mTermSession == null || mRenderer == null) return;
+        if (!mTermSession.usesStableResize()) {
+            cancelPendingResize(); applySize(); return;
         }
+        if (!canApplyStableResize()) { cancelPendingResize(); return; }
+        // Reattaching an existing session at the same geometry must not send SIGWINCH.
+        if (mEmulator == null && mTermSession.getEmulator() != null) {
+            mEmulator = mTermSession.getEmulator(); notifyEmulatorSet();
+        }
+        if (mEmulator == null) { cancelPendingResize(); applySize(); return; }
+        int columns = columnsForView(), rows = rowsForView();
+        if (columns == mEmulator.mColumns && rows == mEmulator.mRows) { cancelPendingResize(); return; }
+        long now = SystemClock.uptimeMillis();
+        if (mResizeStarted < 0) mResizeStarted = now;
+        if (mPendingResize != null) mResizeHandler.removeCallbacks(mPendingResize);
+        TerminalSession captured = mTermSession;
+        mPendingResize = () -> {
+            mPendingResize = null; mResizeStarted = -1;
+            if (mTermSession == captured && captured.usesStableResize() && captured.isRunning() && canApplyStableResize()) applySize();
+        };
+        mResizeHandler.postAtTime(mPendingResize, Math.min(now + RESIZE_QUIET_MS, mResizeStarted + RESIZE_MAX_MS));
+    }
+    private int columnsForView() { return Math.max(4, (int) (getWidth() / mRenderer.mFontWidth)); }
+    private int rowsForView() { return Math.max(4, (getHeight() - mRenderer.mFontLineSpacingAndAscent) / mRenderer.mFontLineSpacing); }
+    private void notifyEmulatorSet() {
+        if (mClient != null) mClient.onEmulatorSet();
+        if (mTerminalCursorBlinkerRunnable != null) mTerminalCursorBlinkerRunnable.setEmulator(mEmulator);
+    }
+    private void applySize() {
+        if (getWidth() == 0 || getHeight() == 0 || mTermSession == null || mRenderer == null) return;
+        int newColumns = columnsForView(), newRows = rowsForView();
+        if (mEmulator != null && newColumns == mEmulator.mColumns && newRows == mEmulator.mRows) return;
+        if (mClient != null) mClient.onTerminalSizeChanged();
+        // Flushing may advance the transcript and its viewport. Take the anchor afterwards.
+        boolean stable = mTermSession.usesStableResize();
+        if (stable) mTermSession.flushFrameBeforeResize();
+        boolean preserve = stable && mEmulator != null && mTopRow < 0
+            && newColumns == mEmulator.mColumns && !mEmulator.isAlternateBufferActive() && !mEmulator.isMouseTrackingActive();
+        int oldTop = mTopRow, oldHistory = preserve ? mEmulator.getScreen().getActiveTranscriptRows() : 0;
+        mTermSession.updateSize(newColumns, newRows, (int) mRenderer.getFontWidth(), mRenderer.getFontLineSpacing());
+        mEmulator = mTermSession.getEmulator(); notifyEmulatorSet();
+        int history = mEmulator.getScreen().getActiveTranscriptRows();
+        mTopRow = preserve ? Math.max(-history, Math.min(0, oldTop - (history - oldHistory))) : 0;
+        if (stable && isSelectingText()) stopTextSelectionMode();
+        scrollTo(0, 0); invalidate();
     }
 
     @Override
@@ -1006,7 +1095,8 @@ public final class TerminalView extends View {
                 mTextSelectionCursorController.getSelectors(sel);
             }
 
-            mRenderer.render(mEmulator, canvas, mTopRow, sel[0], sel[1], sel[2], sel[3]);
+            int rows = adaptiveResizeViewport() ? rowsForView() : mEmulator.mRows;
+            mRenderer.render(mEmulator, canvas, getVisibleTopRow(), sel[0], sel[1], sel[2], sel[3], rows);
 
             // render the text selection handles
             renderTextSelection();
@@ -1018,7 +1108,8 @@ public final class TerminalView extends View {
     }
 
     private CharSequence getText() {
-        return mEmulator.getScreen().getSelectedText(0, mTopRow, mEmulator.mColumns, mTopRow + mEmulator.mRows);
+        int top = getVisibleTopRow(), rows = adaptiveResizeViewport() ? rowsForView() : mEmulator.mRows;
+        return mEmulator.getScreen().getSelectedText(0, top, mEmulator.mColumns, Math.min(mEmulator.mRows, top + rows));
     }
 
     public int getCursorX(float x) {
@@ -1026,7 +1117,7 @@ public final class TerminalView extends View {
     }
 
     public int getCursorY(float y) {
-        return (int) (((y - 40) / mRenderer.mFontLineSpacing) + mTopRow);
+        return (int) (((y - 40) / mRenderer.mFontLineSpacing) + getVisibleTopRow());
     }
 
     public int getPointX(int cx) {
@@ -1037,7 +1128,7 @@ public final class TerminalView extends View {
     }
 
     public int getPointY(int cy) {
-        return Math.round((cy - mTopRow) * mRenderer.mFontLineSpacing);
+        return Math.round((cy - getVisibleTopRow()) * mRenderer.mFontLineSpacing);
     }
 
     public int getTopRow() {
@@ -1423,6 +1514,8 @@ public final class TerminalView extends View {
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
+        mResizeDetached = false;
+        if (mTermSession != null && mTermSession.usesStableResize()) updateSize();
 
         if (mTextSelectionCursorController != null) {
             getViewTreeObserver().addOnTouchModeChangeListener(mTextSelectionCursorController);
@@ -1431,6 +1524,8 @@ public final class TerminalView extends View {
 
     @Override
     protected void onDetachedFromWindow() {
+        mResizeDetached = true;
+        cancelPendingResize();
         super.onDetachedFromWindow();
 
         if (mTextSelectionCursorController != null) {

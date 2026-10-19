@@ -29,6 +29,7 @@ public final class SessionShell {
         if (session.claudeAgent) startup = java.util.Collections.singletonList(ClaudeCode.command(files, session));
         if (session.aiAgent.equals("opencode")) startup = java.util.Collections.singletonList(AiAgents.command(files, session));
         if (session.environment.equals("codex")) startup = java.util.Collections.singletonList(CodexSessionShell.command(files, session));
+        if (AgentPreparation.supports(session)&&!startup.isEmpty())startup=java.util.Collections.singletonList(AgentPreparation.wrap(session,startup.get(0)));
         if (guest) {
             String mount = "/tmp/termux-fork-session-" + session.id;
             File guestRc = new File(dir, "ubuntu-bashrc");
@@ -36,8 +37,10 @@ public final class SessionShell {
             String cwd = session.directory.isEmpty() || session.directory.equals("~") ? "/root" : session.directory;
             if (cwd.startsWith("~/")) cwd = "/root/" + cwd.substring(2);
             script = buildRc(TermuxConstants.TERMUX_HOME_DIR_PATH, history.getAbsolutePath(), "")
+                + AgentPreparation.host(files,session)
                 + WorkspaceText.tr("printf '%s\\n' 'Ожидание оболочки Ubuntu…'\n")
                 + "proot-distro login --bind " + quote(dir.getAbsolutePath() + ":" + mount)
+                + (AgentPreparation.supports(session)?" --bind "+quote(AgentPreparation.directory(files).getAbsolutePath()+":"+AgentPreparation.GUEST):"")
                 + (session.geminiAgent ? " --bind " + quote(GeminiCli.directory(files).getAbsolutePath() + ":" + GeminiCli.GUEST) : "")
                 + (session.claudeAgent ? " --bind " + quote(ClaudeCode.directory(files).getAbsolutePath() + ":" + ClaudeCode.GUEST) : "")
                 + (session.aiAgent.equals("opencode") ? " --bind " + quote(AiAgents.directory(files).getAbsolutePath() + ":/tmp/termux-jobs-ai") : "")

@@ -46,7 +46,7 @@ public class CodexSessionShellTest {
         String error = readError(missing);
         assertTrue(error.contains("JOBS_CONTROL:NO_BRIDGE"));
         CodexSessionShell.socketDirectory(files).mkdirs();
-        Files.write(new File(CodexSessionShell.socketDirectory(files),"bridge-v0.2.20.js").toPath(),new byte[0]);
+        Files.write(new File(CodexSessionShell.socketDirectory(files),"bridge-v0.2.21.js").toPath(),new byte[0]);
         Process socket = new ProcessBuilder("/bin/bash", "-c", CodexSessionShell.proxyCommand(files,s)).start();
         assertTrue(socket.waitFor(5,TimeUnit.SECONDS)); assertEquals(3,socket.exitValue());
         assertTrue(readError(socket).contains("JOBS_CONTROL:NO_SOCKET"));

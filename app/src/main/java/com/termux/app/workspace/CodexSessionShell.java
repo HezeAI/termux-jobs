@@ -50,11 +50,11 @@ public final class CodexSessionShell {
             + WorkspaceText.tr("_jobs_codex_wait=$((_jobs_codex_wait+1)); [ \"$_jobs_codex_wait\" -lt 100 ] || { printf '%s\\n' 'Истекло ожидание Codex.' >&2; exit 1; }; sleep 0.1\ndone\n")
             + "( while kill -0 \"$_jobs_codex_pid\" 2>/dev/null; do if [ -f " + SessionShell.quote(stop) + " ]; then kill \"$_jobs_codex_pid\" 2>/dev/null; printf x > " + SessionShell.quote(stopped) + "; exit; fi; sleep 0.1; done ) &\n_jobs_codex_watch_pid=$!\n"
             + "node " + SessionShell.quote(bridgePath(files,s)) + " status " + SessionShell.quote(endpoint) + " " + SessionShell.quote(s.codexChat.equals("id") ? s.codexThread : "") + " >/dev/null 2>&1 &\n_jobs_codex_status_pid=$!\n"
-            + resumePreflight(files, s, endpoint) + client + "\n)";
+            + (CodexChatControl.enabled(files,s)?CodexChatControl.command(files,s,endpoint):resumePreflight(files, s, endpoint) + client) + "\n)";
     }
     public static synchronized void prepareBridge(android.content.Context context) throws IOException {
         File directory = socketDirectory(context.getFilesDir()); if (!directory.isDirectory() && !directory.mkdirs()) throw new IOException("Cannot create controls");
-        File bridge = new File(directory, "bridge-v0.2.20.js");
+        File bridge = new File(directory, "bridge-v0.2.21.js");
         if (bridge.isFile()) return;
         File temporary=File.createTempFile("codex-bridge-",".tmp",directory);
         try {
@@ -66,7 +66,7 @@ public final class CodexSessionShell {
         } finally {temporary.delete();}
     }
     private static String bridgePath(File files, WorkspaceStore.Session s) {
-        return s.codexEnvironment.equals("ubuntu") ? "/tmp/termux-jobs-codex/bridge-v0.2.20.js" : new File(socketDirectory(files), "bridge-v0.2.20.js").getAbsolutePath();
+        return s.codexEnvironment.equals("ubuntu") ? "/tmp/termux-jobs-codex/bridge-v0.2.21.js" : new File(socketDirectory(files), "bridge-v0.2.21.js").getAbsolutePath();
     }
     public static String resumePreflight(WorkspaceStore.Session s, String endpoint) {
         return resumePreflight(new File(TermuxConstants.TERMUX_FILES_DIR_PATH), s, endpoint);
@@ -83,7 +83,7 @@ public final class CodexSessionShell {
     }
     public static String proxyCommand(File files, WorkspaceStore.Session s) {
         String sock = s.codexEnvironment.equals("ubuntu") ? "/tmp/termux-jobs-codex/" + socket(files, s).getName() : socket(files, s).getAbsolutePath();
-        String proxy = "command -v node >/dev/null 2>&1 || { printf '%s\\n' 'JOBS_CONTROL:NO_NODE' >&2; exit 127; }; "
+        String proxy = (s.codexEnvironment.equals("ubuntu")?AgentPreparation.codexPath():"")+"command -v node >/dev/null 2>&1 || { printf '%s\\n' 'JOBS_CONTROL:NO_NODE' >&2; exit 127; }; "
             + "[ -r " + SessionShell.quote(bridgePath(files, s)) + " ] || { printf '%s\\n' 'JOBS_CONTROL:NO_BRIDGE' >&2; exit 2; }; "
             + "[ -S " + SessionShell.quote(sock) + " ] || { printf '%s\\n' 'JOBS_CONTROL:NO_SOCKET' >&2; exit 3; }; "
             + "exec node " + SessionShell.quote(bridgePath(files, s)) + " proxy " + SessionShell.quote(sock);
@@ -91,6 +91,6 @@ public final class CodexSessionShell {
             : proxy;
     }
     public static String historyCommand(WorkspaceStore.Session s) {
-        return s.codexEnvironment.equals("ubuntu") ? "proot-distro login ubuntu -- codex --no-daemon app-server --stdio" : "codex --no-daemon app-server --stdio";
+        return s.codexEnvironment.equals("ubuntu") ? "proot-distro login ubuntu -- /bin/sh -c "+SessionShell.quote(AgentPreparation.codexPath()+"exec codex --no-daemon app-server --stdio") : "codex --no-daemon app-server --stdio";
     }
 }

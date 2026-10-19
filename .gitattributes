@@ -6,6 +6,7 @@
 
 # Unified diff context lines intentionally contain a single space.
 docs/fork/patches/*.patch whitespace=-blank-at-eol,-blank-at-eof
+patches/*.patch whitespace=-blank-at-eol,-blank-at-eof
 
 # Preserve upstream license notices byte-for-byte, including their existing whitespace.
 app/src/main/assets/workspace-local-ai-notices.txt whitespace=-blank-at-eol,-blank-at-eof

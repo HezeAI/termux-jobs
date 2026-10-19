@@ -85,6 +85,10 @@
             android:layout_above="@+id/terminal_toolbar_view_pager"
             android:layout_height="match_parent">
 
+            <FrameLayout
+                android:id="@+id/workspace_terminal_surface"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
             <com.termux.view.TerminalView
                 android:id="@+id/terminal_view"
                 android:layout_marginStart="16dp"
@@ -96,6 +100,7 @@
                 android:scrollbarThumbVertical="@drawable/terminal_scroll_shape"
                 android:scrollbars="vertical"
                 tools:ignore="UnusedAttribute" />
+            </FrameLayout>
 
             <LinearLayout
                 android:id="@+id/left_drawer"

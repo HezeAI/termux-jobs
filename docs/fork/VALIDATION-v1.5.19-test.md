@@ -1,3 +1,11 @@
+# Historical private build records — v1.5.19-test
+
+Private version names were reused during development. These are distinct builds;
+versionCode, APK hash and the specific report identify each artifact. Neither
+record below is validation of current v1.6.0; see VALIDATION-v1.6.0.md.
+
+## Earlier record preserved from public v1.5.3
+
 # v1.5.19-test validation
 
 Final private artifact verified and delivered. Device tests below remain required.
@@ -21,3 +29,58 @@ Focused final-source88 tests passed (tests-focused.log, focused-counts.json), wi
 APK bytes:104918676. SHA-256:`4d3dcfa22282ca1451d3a30c806e94a476b48b869ebe1ba989b89d2019978b51`. Certificate:`dd37d983cd2496ebe49c7e88ddbc0088f311d38b8a8503e4392c81b48a11a644`. Download copy atomically written and independently hashed.
 
 No database schema or preset/history migration/reset. Running user environments, shared SDK, Bridge, model files and processes unchanged. No GitHub publication. Remaining: actual Qwen/Gemma task performance, SDK reuse rates, quality of claims, ambiguous wording and UI/device interactions. Wording guard does not prove exact targets/content/order or arbitrary shell side effects. The actual SDK tests use fake inference and do not prove NPU speed.
+
+
+---
+
+## Subsequent development record
+
+# v1.5.19-test — clear chat connection/errors and early native terminal access
+
+Private update to1.5.18; built/audited/copied to Download. Copy hash verified.
+Package com.termux, version1.5.19-test/code1181, minSdk26, ARM64 only,
+36587686 bytes. Certificate matches1.5.18/code1180, versionCode increased.
+SHA-256 `e3301d1a66b858517c81d09235fc73b1a429eb2ed7a5abb23723a5f39a9f7515`. No data reset or history migration.
+
+- Empty connected OpenCode/Gemini chat explicitly shows local session connected /
+  send a message. It is not proof of remote API access. Pending startup explains
+  what to check in the robot terminal. No-connection notice describes automatic
+  retries and offers a read-only snapshot retry on tap.
+- Native API error rows receive RU/EN guidance with original details retained on
+  tap. Known region/model/auth/quota/context/overload/network errors are distinct;
+  unknown errors are not guessed. Legacy native F12 hint is explained for chat.
+- Unconfirmed action feedback remains across polls and keeps the user's draft;
+  actions/prompts are never automatically resent. Ambiguous results may still
+  arrive, so the notice asks users to check execution before retrying actions.
+- Robot replaces the packages button immediately for selected Gemini/OpenCode,
+  before capability resolution. Window opens without a successful control RPC,
+  with full-size native keys and original footer. Bridge-specific native open
+  happens asynchronously; unavailable bridge shows a local terminal explanation.
+  Close queues owned terminal-close after open. No process restart or auth change.
+
+Final focused JVM suite passes65 tests, zero failures/errors/skips. New tests cover
+error guidance and unchanged original details in both agents, native hint text,
+empty-ready status/failure-recovery, unconfirmed-send persistence/no automatic
+resend, immediate robot window with blocked/unavailable transport for both agents
+and large keys present/restored. Existing Shell/session-generation/permission/key
+restoration and Gemini bridge tests remain green. Mocked tests are not phone tests.
+
+Review traced control vs provider-error states, safe read-only retry, stale-owner
+responses, action dedup behavior, asynchronous window open/close order, local view
+and native-key restoration. No bridge assets or policies change. These edits do
+not correct a provider region refusal or make an unavailable model accessible.
+
+Device checks: start/preset with no bridge yet; robot should appear/open immediately;
+confirm large arrows/Enter and return. Empty connected chat should invite a message.
+Provider errors should be readable and show original details on tap. Confirm a
+working reply and Shell; then switch sessions/keyboard with the native window open.
+These authenticated/device-dependent scenarios remain for developer testing.
+
+Release assembly succeeds in51s. Required runtime definitions pass,31 optional
+missing types retain explicit review notes. Existing Lint Kotlin/UAST/JNA tooling
+warnings remain; not a clean-Lint claim. Final staged changed sources match the
+originals. ZIP/package/version/ABI/v2 signature and private-file/secret-marker
+checks pass. All assets/native libraries are byte-identical to1.5.18; no agent
+bootstrap or transport scripts changed. No APK installation/publication.
+Evidence: .verification/chat-status-v1.5.19/{tests.log,tests.json,build.log,
+staged-source.json,apk-audit.json,signature.txt,badging.txt,delivery.json}.

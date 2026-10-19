@@ -25,8 +25,9 @@ public final class AiAgents {
     }
     public static void prepare(Context context) throws IOException {
         File dir=directory(context.getFilesDir());if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create AI controls");protect(dir);
-        for(String asset:new String[]{"ai-agents-control.js","ai-agents-bootstrap.sh"}) {
-        File bridge=new File(dir,asset.endsWith(".sh")?"bootstrap-v1.sh":"bridge-v1.js");
+        for(String asset:new String[]{"ai-agents-control.js","ai-agents-bootstrap.sh","agent-receipts.cjs","opencode-permissions.cjs","opencode-chat.cjs","opencode-session-settings.cjs"}) {
+        File bridge=new File(dir,asset.equals("ai-agents-bootstrap.sh")?"bootstrap-v1.sh":asset.equals("ai-agents-control.js")?"bridge-v1.js":asset);
+        if(asset.endsWith(".bundle")&&bridge.isFile()&&bridge.length()>0)continue;
         File temporary=File.createTempFile("bridge-",".tmp",dir);
         try(InputStream in=context.getAssets().open(asset);OutputStream out=new FileOutputStream(temporary)) {byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}
         protect(temporary);if(!temporary.renameTo(bridge)){temporary.delete();throw new IOException("Cannot replace AI bridge");}
@@ -34,7 +35,18 @@ public final class AiAgents {
     }
     static String command(File files,WorkspaceStore.Session s) {
         if(!s.aiAgent.equals("opencode")||!s.environment.equals("ubuntu")||!validThread(s.aiThread)||!validModel(s.aiModel))throw new IllegalArgumentException("Invalid AI profile");
-        return "( set -e; export JOBS_AI_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")+"; source "+SessionShell.quote(GUEST+"/bootstrap-v1.sh")+"; exec node "+SessionShell.quote(GUEST+"/bridge-v1.js")+" run "+SessionShell.quote(GUEST+"/connections/"+s.aiConnection)+" "+SessionShell.quote(GUEST+"/"+socket(files,s).getName())+" "+SessionShell.quote(s.aiThread)+" "+SessionShell.quote(s.aiModel)+" "+SessionShell.quote(s.aiMode)+" "+SessionShell.quote(s.aiChat)+" "+SessionShell.quote(s.aiVariant)+" "+SessionShell.quote(s.aiAccess)+" "+SessionShell.quote(s.aiProjectOnly?"project":"unrestricted")+" )";
+        return "( set -e; export JOBS_AI_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")+"; source "+SessionShell.quote(GUEST+"/bootstrap-v1.sh")+"; exec node "+SessionShell.quote(GUEST+"/bridge-v1.js")+" run-chat "+SessionShell.quote(GUEST+"/connections/"+s.aiConnection)+" "+SessionShell.quote(GUEST+"/"+socket(files,s).getName())+" "+SessionShell.quote(s.aiThread)+" "+SessionShell.quote(s.aiModel)+" "+SessionShell.quote(s.aiMode)+" "+SessionShell.quote(s.aiChat)+" "+SessionShell.quote(s.aiVariant)+" "+SessionShell.quote(s.aiAccess)+" "+SessionShell.quote(s.aiProjectOnly?"project":"unrestricted")+" )";
+    }
+    static JSONObject liveRequest(Context c,WorkspaceStore.Session s,JSONObject request)throws Exception {
+        java.util.UUID.fromString(s.id);if(!s.aiAgent.equals("opencode"))throw new IOException("Not OpenCode");
+        try(android.net.LocalSocket client=new android.net.LocalSocket()){
+            GeminiLiveControl.connect(client,socket(c.getFilesDir(),s).getAbsolutePath());client.setSoTimeout(35000);
+            byte[] data=request.toString().getBytes(StandardCharsets.UTF_8);if(data.length>65536)throw new IOException("Request too large");
+            client.getOutputStream().write(data);client.getOutputStream().flush();client.shutdownOutput();
+            ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] b=new byte[4096];int n;
+            while((n=client.getInputStream().read(b))!=-1){if(out.size()+n>524288)throw new IOException("Response too large");out.write(b,0,n);}
+            JSONObject value=new JSONObject(out.toString("UTF-8"));if(!value.optBoolean("ok"))throw new IOException("OpenCode request failed");return value;
+        }
     }
     static JSONObject call(Context c,String connection,WorkspaceStore.Session live,JSONObject request) throws Exception {
         java.util.UUID.fromString(connection);prepare(c);

@@ -100,6 +100,19 @@ final class ServerConnection implements AutoCloseable {
         JSONObject reply=remote(ServerDiagnostics.Op.SCHEDULE,"python3 -I -c "+SessionShell.quote(code),request.toString().getBytes(StandardCharsets.UTF_8),2*1024*1024);
         if(!reply.optBoolean("ok"))throw new IOException(reply.optString("error","SCHEDULE_ERROR"));return reply.getJSONObject("result");
     }
+    static java.util.Map<String,JSONArray> deletionGroups(JSONArray entries)throws Exception{
+        if(entries.length()<1||entries.length()>500)throw new IOException("INVALID_SELECTION");
+        java.util.Map<String,JSONArray> groups=new java.util.LinkedHashMap<>();java.util.Set<String> seen=new java.util.HashSet<>();
+        for(int i=0;i<entries.length();i++){JSONObject e=entries.getJSONObject(i);String path=e.getString("path");int slash=path.lastIndexOf('/');
+            if(!path.startsWith("/")||path.contains("\0")||path.endsWith("/")||path.contains("//")||java.util.Arrays.asList(path.split("/")).contains("..")||java.util.Arrays.asList(path.split("/")).contains(".")||!seen.add(path))throw new IOException("INVALID_PATH");
+            String parent=slash==0?"/":path.substring(0,slash);JSONArray group=groups.get(parent);if(group==null){group=new JSONArray();groups.put(parent,group);}group.put(e);
+        }return groups;
+    }
+    JSONObject deleteFiles(JSONArray entries)throws Exception{
+        java.util.Map<String,JSONArray> groups=deletionGroups(entries);JSONArray deleted=new JSONArray();long nodes=0;String error="";
+        for(java.util.Map.Entry<String,JSONArray> group:groups.entrySet()){JSONObject result=deleteFiles(group.getKey(),group.getValue());JSONArray done=result.getJSONArray("deleted");for(int i=0;i<done.length();i++)deleted.put(done.get(i));nodes+=result.optLong("removedNodes");error=result.optString("error");if(!error.isEmpty())break;}
+        return new JSONObject().put("deleted",deleted).put("removedNodes",nodes).put("error",error);
+    }
     JSONObject deleteFiles(String directory,JSONArray entries)throws Exception{
         String code;try(InputStream in=activity.getAssets().open("workspace-server-delete.py")){ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);code=out.toString("UTF-8");}
         JSONObject request=new JSONObject().put("directory",directory).put("entries",entries);

@@ -12,11 +12,15 @@ final class GeminiCli {
     private GeminiCli() {}
     static File directory(File files) {return new File(files,".gemini-control");}
     static boolean validThread(String id) {return id!=null && id.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");}
+    static boolean validCloudProject(String value){return value!=null&&(value.isEmpty()||value.matches("[a-z][a-z0-9-]{4,28}[a-z0-9]|[0-9]{6,20}"));}
+    static boolean validCloudLocation(String value){return value!=null&&(value.isEmpty()||value.length()<=63&&value.matches("global|[a-z]+(?:-[a-z0-9]+){1,4}"));}
     static boolean valid(WorkspaceStore.Session s) {
         return s.geminiAgent && s.environment.equals("ubuntu") && s.aiAgent.isEmpty() && !s.claudeAgent
-            && java.util.Arrays.asList("auto","google","api").contains(s.geminiAuth)
+            && java.util.Arrays.asList("auto","google","api","vertex").contains(s.geminiAuth)
+            && validCloudProject(s.geminiCloudProject)&&validCloudLocation(s.geminiCloudLocation)
             && java.util.Arrays.asList("","auto","flash","pro").contains(s.geminiModel)
             && java.util.Arrays.asList("default","auto_edit","plan").contains(s.geminiMode)
+            && java.util.Arrays.asList("default","minimal","low","medium","high").contains(s.geminiThinking)
             && java.util.Arrays.asList("new","choose","id").contains(s.geminiChat)
             && validThread(s.geminiThread) && validThread(s.geminiSocketId);
     }
@@ -24,14 +28,14 @@ final class GeminiCli {
         File dir=directory(context.getFilesDir());
         if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create Gemini controls");
         protect(dir);
-        for(String asset:new String[]{"gemini-bootstrap.sh","gemini-control.js"}) {
+        for(String asset:new String[]{"gemini-bootstrap.sh","gemini-control.js","gemini-live.cjs","gemini-thinking.cjs","gemini-live-loader.mjs","gemini-chat.cjs","agent-receipts.cjs"}) {
             File temporary=File.createTempFile("gemini-",".tmp",dir);
             try {
                 try(InputStream in=context.getAssets().open(asset);OutputStream out=new FileOutputStream(temporary)) {
                     byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);
                 }
                 protect(temporary);
-                if(!temporary.renameTo(new File(dir,asset)))throw new IOException("Cannot replace Gemini controls");
+                if(!temporary.renameTo(new File(dir,asset.equals("gemini-control.js")?"gemini-control-v2.js":asset)))throw new IOException("Cannot replace Gemini controls");
             } finally {temporary.delete();}
         }
     }
@@ -42,16 +46,18 @@ final class GeminiCli {
     static String command(File files,WorkspaceStore.Session s) {
         if(!valid(s))throw new IllegalArgumentException("Invalid Gemini profile");
         return "( set -e; export JOBS_GEMINI_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")
+            +(s.geminiAuth.equals("vertex")&&!s.geminiCloudProject.isEmpty()?"; export JOBS_GEMINI_VERTEX_PROJECT="+SessionShell.quote(s.geminiCloudProject)+"; export JOBS_GEMINI_VERTEX_LOCATION="+SessionShell.quote(s.geminiCloudLocation):"")
+            +"; export JOBS_GEMINI_THINKING="+SessionShell.quote(s.geminiThinking)
             +"; export JOBS_GEMINI_DEBUG="+(s.extendedDebug?"1":"0")
             +"; source "+SessionShell.quote(GUEST+"/gemini-bootstrap.sh")
-            +"; exec \"$JOBS_GEMINI_NODE\" "+SessionShell.quote(GUEST+"/gemini-control.js")+" run "
+            +"; exec \"$JOBS_GEMINI_NODE\" "+SessionShell.quote(GUEST+"/gemini-control-v2.js")+" run "
             +SessionShell.quote(GUEST+"/"+s.geminiSocketId+".sock")+" "+SessionShell.quote(s.geminiModel)+" "+SessionShell.quote(s.geminiMode)+" "+SessionShell.quote(s.geminiChat)+" "+SessionShell.quote(s.geminiThread)+" "+SessionShell.quote(s.geminiAuth)+" )";
     }
     /** Caller captures the unique run ID before scheduling; a later run cannot be stopped. */
     static void stop(Context context,String runId) throws Exception {
         if(!validThread(runId))throw new IllegalArgumentException("Invalid Gemini run");
         String guest="node=$(cat \"$HOME/.local/share/termux-jobs/gemini-cli/controller-node\") && exec \"$node\" "
-            +SessionShell.quote(GUEST+"/gemini-control.js")+" stop "+SessionShell.quote(GUEST+"/"+runId+".sock");
+            +SessionShell.quote(GUEST+"/gemini-control-v2.js")+" stop "+SessionShell.quote(GUEST+"/"+runId+".sock");
         String script="exec proot-distro login --bind "+SessionShell.quote(directory(context.getFilesDir()).getAbsolutePath()+":"+GUEST)
             +" ubuntu -- /bin/bash --noprofile --norc -c "+SessionShell.quote(guest);
         ProcessBuilder pb=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c",script);

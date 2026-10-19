@@ -24,6 +24,25 @@ public class WorkspaceStoreTest {
         new File(context.getFilesDir(), "workspace-v1.json").delete();
         new File(context.getFilesDir(), "workspace-v1.json.bak").delete();
     }
+    @Test public void v153LibraryWithoutNewAgentFieldsReopensWithoutReset() throws Exception {
+        WorkspaceStore original=new WorkspaceStore(context,errors::add);
+        WorkspaceStore.Command cmd=new WorkspaceStore.Command();cmd.name="Legacy command";cmd.command="pwd";original.commands.add(cmd);
+        WorkspaceStore.Note note=new WorkspaceStore.Note();note.text="Legacy note";original.notes.add(note);
+        WorkspaceStore.Session codex=new WorkspaceStore.Session();codex.environment="codex";codex.saved=true;codex.codexChat="id";codex.codexThread="01900000-0000-7000-8000-000000000001";codex.codexConfirmActions=false;codex.codexAccess="read";
+        WorkspaceStore.Session gemini=new WorkspaceStore.Session();gemini.environment="ubuntu";gemini.geminiAgent=true;gemini.geminiModel="pro";gemini.geminiAuth="api";gemini.saved=true;
+        WorkspaceStore.Session claude=new WorkspaceStore.Session();claude.environment="ubuntu";claude.claudeAgent=true;claude.claudeModel="sonnet";claude.saved=true;
+        WorkspaceStore.Session ssh=new WorkspaceStore.Session();ssh.environment="ssh";ssh.sshHost="example.invalid";ssh.sshAuth="password";ssh.sshEncryptedPassword="1:iv:ciphertext";ssh.saved=true;
+        original.sessions.add(codex);original.sessions.add(gemini);original.sessions.add(claude);original.sessions.add(ssh);
+        org.json.JSONObject legacy=original.encode();original.close();
+        for(int n=0;n<4;n++)for(String field:new String[]{"claudeEffort","geminiCloudProject","geminiCloudLocation","geminiThinking"})legacy.getJSONArray("sessions").getJSONObject(n).remove(field);
+        try(FileOutputStream out=new FileOutputStream(new File(context.getFilesDir(),"workspace-v1.json"))){out.write(legacy.toString().getBytes(StandardCharsets.UTF_8));}
+        WorkspaceStore loaded=new WorkspaceStore(context,errors::add);
+        assertTrue(errors.toString(),errors.isEmpty());assertEquals(4,loaded.sessions.size());assertEquals("pwd",loaded.commands.get(0).command);assertEquals("Legacy note",loaded.notes.get(0).text);
+        org.json.JSONArray roundtrip=loaded.encode().getJSONArray("sessions");
+        for(int n=0;n<4;n++){org.json.JSONObject before=legacy.getJSONArray("sessions").getJSONObject(n),after=roundtrip.getJSONObject(n);java.util.Iterator<String> fields=before.keys();while(fields.hasNext()){String field=fields.next();assertEquals(field,String.valueOf(before.get(field)),String.valueOf(after.get(field)));}}
+        assertEquals("default",loaded.sessions.get(2).claudeEffort);assertEquals("default",loaded.sessions.get(1).geminiThinking);assertEquals("",loaded.sessions.get(1).geminiCloudProject);assertEquals("global",loaded.sessions.get(1).geminiCloudLocation);
+        loaded.save();loaded.awaitWrites();loaded.close();WorkspaceStore reopened=new WorkspaceStore(context,errors::add);assertEquals(4,reopened.sessions.size());assertEquals(codex.codexThread,reopened.sessions.get(0).codexThread);assertEquals("1:iv:ciphertext",reopened.sessions.get(3).sshEncryptedPassword);reopened.close();
+    }
     @Test public void retiredLocalProfilesAreSkippedWithoutResettingOtherData() throws Exception {
         WorkspaceStore store = new WorkspaceStore(context, errors::add);
         WorkspaceStore.Command command = new WorkspaceStore.Command(); command.name="Keep command";command.command="pwd";store.commands.add(command);

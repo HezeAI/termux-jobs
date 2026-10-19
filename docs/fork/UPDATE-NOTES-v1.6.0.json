@@ -1,0 +1,34 @@
+{
+  "ru": [
+    "Новые чаты Codex, Gemini, Claude и OpenCode: рассуждения, действия, вопросы и подтверждения в интерфейсе приложения.",
+    "Робот открывает терминальное окно с крупными клавишами: Свернуть / Вернуться в чат; исправлен вызов клавиатуры.",
+    "Карточки моделей, прав и поддержанных рассуждений; правильное единственное недельное окно лимита Codex Pro.",
+    "Проверка среды запуска и подтверждённая подготовка недостающих компонентов; настройка Gemini Vertex AI.",
+    "Файлы: независимое выделение, копировать/переместить сюда, выбрать всё по поиску/фильтру, отмена выделения.",
+    "Серверы: общее выделение для скачивания/перемещения/удаления, выбор всех по фильтру и отмена выделения.",
+    "Claude и Vertex пока не прошли полный цикл с реальным аккаунтом; возможности зависят от установленного CLI."
+  ],
+  "en": [
+    "Android chats for Codex, Gemini, Claude and OpenCode: reasoning, tool actions, questions and approvals.",
+    "Robot terminal with large keys, Minimize and Return to chat; fixed keyboard invocation in terminal dialogs.",
+    "Consistent model/permission/capability cards; correct single weekly Codex Pro quota window.",
+    "Launch-environment checks and confirmed missing-component setup; guided Gemini Vertex AI configuration.",
+    "Files: independent selection, Copy/Move here, Select all matching search/filter, clear selection.",
+    "Servers: shared download/move/delete selection, filter-aware Select all and clear selection.",
+    "Claude and Vertex have not completed full real-account validation; capabilities depend on the installed CLI."
+  ],
+  "compatibility": {
+    "ru": [
+      "С v1.5.3 сброс не нужен: библиотека schema8, команды/заметки/пресеты, серверы, внешние истории и авторизация сохраняются; новые поля необязательны.",
+      "Новый чат доступен при следующем запуске сессии. Завершите важные задачи и выберите ту же историю; обновление не гарантирует сохранения работающих процессов.",
+      "При переходе с версий до1.5.3 удаляются приватные данные прежней локальной AI-функции; внешние модели и proot-дистрибутивы не удаляются. Сохраните нужное заранее.",
+      "com.termux, прежний сертификат, Android8+/ARM64, code1192 выше публичной1.5.3 и частной1.5.33. Формат бэкапов и серверное хранилище прежние."
+    ],
+    "en": [
+      "No reset from v1.5.3: schema8, commands/notes/presets, servers, external agent histories/auth remain; new fields are optional.",
+      "New chat UI activates on the next session launch. Finish important tasks and choose the same history; updating cannot guarantee live-process survival.",
+      "Upgrades from before1.5.3 retain removal of old local-AI private data; external models/proot distributions are not deleted. Export needed local data first.",
+      "Same com.termux/signing identity, Android8+/ARM64, code1192 above public1.5.3 and private1.5.33. Backup format and server store unchanged."
+    ]
+  }
+}

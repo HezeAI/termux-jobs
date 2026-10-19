@@ -1,3 +1,17 @@
+# Текущие проверки — v1.6.0
+
+[Итоговый отчёт](VALIDATION-v1.6.0.md):630 JVM-тестов полного запуска,
+дополнительная проверка совместимости schema8,119 Python-тестов и19 наборов
+Node/native-CLI fixtures. Release-сборка и runtime/ZIP/package/version/ABI/
+подпись/SHA-256 проверены. Все assets/native libraries совпадают с проверенной
+разработчиком v1.5.33. Чистый полный Lint не заявляется; реальные Cloud-сценарии
+Claude/Vertex и полный набор Android UI/обновления не объявляются проверенными.
+[Совместимость](RELEASE-v1.6.0.md) · [исследование удалённых local AI](LOCAL-AI-RESEARCH.md).
+
+Ниже исторические отчёты; они не являются проверками текущего выпуска.
+
+## Previously published v1.5.3 validation (historical)
+
 # Текущие проверки — v1.5.3
 
 [Итоговый отчёт](VALIDATION-v1.5.3.md):496 JVM-тестов (неизменённый emulator

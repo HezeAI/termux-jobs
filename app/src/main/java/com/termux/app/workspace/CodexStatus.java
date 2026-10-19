@@ -5,9 +5,9 @@ import org.json.JSONObject;
 
 /** Account limits are shared; thread model/effort belong to this dedicated Codex terminal. */
 final class CodexStatus {
-    String cwd = "", title = "";
+    String cwd = "", title = "", planType = "", accountType = "";
     String thread = "", model = "", effort = "", state = "", error = "";
-    long updated;
+    long updated;boolean modelPending;
     JSONArray models = new JSONArray();
     JSONObject limits = new JSONObject();
     static CodexStatus fromFile(java.io.File file) throws Exception {
@@ -24,7 +24,7 @@ final class CodexStatus {
         if(System.currentTimeMillis()-result.updated>90000 || result.updated>System.currentTimeMillis()+5000)throw new java.io.IOException("Status helper stopped responding");
         result.cwd=value.optString("cwd");result.title=value.optString("title");result.thread=value.optString("thread");result.model=value.optString("model");result.effort=value.optString("effort");result.state=value.optString("state");result.error=value.optString("error");
         JSONArray models=value.optJSONArray("models");if(models!=null)result.models=models;
-        JSONObject limits=value.optJSONObject("limits");if(limits!=null)result.limits=limits;return result;
+        JSONObject limits=value.optJSONObject("limits");if(limits!=null)result.limits=limits;result.planType=plan(value.optString("planType",result.limits.optString("planType")));result.accountType=accountType(value.optString("accountType"));return result;
     }
     static CodexStatus local(java.io.File files,WorkspaceStore.Session profile) throws Exception {
         java.io.File socket=CodexSessionShell.socket(files,profile);
@@ -34,12 +34,16 @@ final class CodexStatus {
         long until=System.currentTimeMillis()+3000;
         while(state.lastModified()==previous && System.currentTimeMillis()<until)Thread.sleep(50);
         if(!state.isFile()) {CodexStatus pending=new CodexStatus();pending.error=WorkspaceText.tr("Помощник статуса ещё не запущен. Для сессии, созданной до v0.2.13, откройте новый терминал Codex с тем же ID чата.");return pending;}
-        return fromFile(state);
+        CodexStatus result=fromFile(state);
+        if(CodexChatControl.enabled(files,profile))try{JSONObject choice=CodexChatControl.request(files,profile,new JSONObject().put("op","status"));if(choice.optString("thread").equals(result.thread)&&!result.thread.isEmpty()){result.model=choice.optString("model",result.model);result.effort=choice.optString("effort",result.effort);result.modelPending=choice.optBoolean("pending");}}catch(Exception ignored){}
+        return result;
     }
     static CodexStatus read(CodexRpc rpc, String preferredThread) throws Exception {
         CodexStatus result = new CodexStatus();
         try { result.limits = rpc.call("account/rateLimits/read", new JSONObject()).optJSONObject("rateLimits"); } catch (java.io.IOException unavailable) { result.limits = new JSONObject(); }
         if (result.limits == null) result.limits = new JSONObject();
+        result.planType=plan(result.limits.optString("planType"));
+        try {JSONObject account=rpc.call("account/read",new JSONObject().put("refreshToken",false)).optJSONObject("account");if(account!=null){result.accountType=accountType(account.optString("type"));if(result.accountType.equals("chatgpt"))result.planType=plan(account.optString("planType",result.planType));}}catch(java.io.IOException unavailable){}
         JSONObject listed = rpc.call("thread/loaded/list", new JSONObject());
         JSONArray ids = listed.optJSONArray("data");
         if (ids != null) for (int i = 0; i < ids.length(); i++) {
@@ -54,11 +58,34 @@ final class CodexStatus {
         }
         result.updated = System.currentTimeMillis(); return result;
     }
-    static String limit(JSONObject limits, String window, String label) {
-        JSONObject value = limits == null ? null : limits.optJSONObject(window);
-        if (value == null || !value.has("usedPercent")) return label + WorkspaceText.tr(": нет данных");
-        int remaining = Math.max(0, Math.min(100, (int)Math.round(100 - value.optDouble("usedPercent", 100))));
-        return label + ": " + remaining + "%";
+    private static String tr(String ru,String en){return WorkspaceText.tr("нет данных").equals("нет данных")?ru:en;}
+    static String plan(String value){return value!=null&&value.matches("[a-z][a-z0-9_-]{0,47}")?value:"";}
+    private static String accountType(String value){return value.equals("chatgpt")||value.equals("apiKey")?value:"";}
+    String planLabel(){
+        if(accountType.equals("apiKey"))return tr("Вход: API-ключ","Sign-in: API key");
+        String name;
+        switch(planType){case "free":name="Free";break;case "go":name="Go";break;case "plus":name="Plus";break;case "pro":name="Pro";break;case "team":name="Team";break;case "business":name="Business";break;case "enterprise":name="Enterprise";break;case "edu":name="Edu";break;case "":case "unknown":case "none":return tr("Подписка: нет данных","Subscription: unavailable");default:name=planType;}
+        return tr("Подписка: ChatGPT ","Subscription: ChatGPT ")+name;
     }
-    String summary() { return limit(limits, "primary", WorkspaceText.tr("5ч")) + " · " + limit(limits, "secondary", WorkspaceText.tr("7д")); }
+    java.util.List<String> windows(){java.util.List<String> out=new java.util.ArrayList<>();for(String key:new String[]{"primary","secondary"})if(limits.optJSONObject(key)!=null)out.add(key);return out;}
+    static Integer remaining(JSONObject value){
+        Object used=value==null?null:value.opt("usedPercent");if(!(used instanceof Number))return null;
+        double percent=((Number)used).doubleValue();if(!Double.isFinite(percent)||percent<0)return null;
+        return Math.max(0,Math.min(100,(int)Math.round(100-percent)));
+    }
+    static String windowLabel(JSONObject limits,String key,boolean compact){
+        JSONObject value=limits==null?null:limits.optJSONObject(key);Object durationValue=value==null?null:value.opt("windowDurationMins");long minutes=durationValue instanceof Number?((Number)durationValue).longValue():0;if(durationValue instanceof Number&&((Number)durationValue).doubleValue()!=minutes)minutes=0;
+        if(minutes==300)return compact?WorkspaceText.tr("5ч"):WorkspaceText.tr("Пятичасовой лимит");
+        if(minutes==10080)return compact?WorkspaceText.tr("7д"):WorkspaceText.tr("Недельный лимит");
+        if(minutes>0){String duration=minutes%1440==0?(minutes/1440)+tr("д","d"):minutes%60==0?(minutes/60)+tr("ч","h"):minutes+tr("мин","min");return compact?duration:tr("Лимит за ","Limit over ")+duration;}
+        return compact?tr("Лимит ","Limit ")+(key.equals("primary")?"1":"2"):tr("Лимит · период не указан","Limit · period unspecified");
+    }
+    static String limit(JSONObject limits, String window, String label) {
+        Integer remaining=remaining(limits==null?null:limits.optJSONObject(window));
+        return label+(remaining==null?WorkspaceText.tr(": нет данных"):": "+remaining+"%");
+    }
+    String summary() {
+        java.util.List<String> values=new java.util.ArrayList<>();for(String key:windows())values.add(limit(limits,key,windowLabel(limits,key,true)));
+        return values.isEmpty()?tr("Лимиты: нет данных","Limits: unavailable"):android.text.TextUtils.join(" · ",values);
+    }
 }

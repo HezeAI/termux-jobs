@@ -1,0 +1,164 @@
+'use strict';
+// Android presentation of the native app-server protocol. No model prompts or auth-file reads.
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),net=require('node:net');
+const {spawn}=require('node:child_process');
+const {Connection}=require('./codex-wire-v0.2.22.js');
+const {ReceiptStore,clean}=require('./agent-receipts.cjs');
+const text=v=>typeof v==='string'?clean(v).slice(0,200000):'';
+const key=v=>'msg_x'+crypto.createHash('sha256').update(String(v)).digest('hex').slice(0,28);
+const valid=v=>typeof v==='string'&&/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(v);
+const normalize=v=>path.posix.normalize(String(v||'')).replace(/\/$/,'')||'/';
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+function processTree(root){const all=new Map();for(const id of fs.readdirSync('/proc'))if(/^\d+$/.test(id))try{const raw=fs.readFileSync('/proc/'+id+'/stat','utf8'),f=raw.slice(raw.lastIndexOf(')')+2).split(' ');all.set(Number(id),{parent:Number(f[1]),start:f[19],state:f[0]});}catch{}const owned=new Map();if(!all.has(root))return owned;owned.set(root,all.get(root));let changed=true;while(changed){changed=false;for(const [id,v]of all)if(!owned.has(id)&&owned.has(v.parent)){owned.set(id,v);changed=true;}}return owned;}
+function sameProcess(id,start){try{const raw=fs.readFileSync('/proc/'+id+'/stat','utf8'),f=raw.slice(raw.lastIndexOf(')')+2).split(' ');return f[19]===start&&f[0]!=='Z';}catch{return false;}}
+async function terminateTree(p){if(!p||p.exitCode!==null||p.signalCode!==null)return;const members=processTree(p.pid);if(!members.has(p.pid))return;for(const [id,v]of [...members].reverse())if(sameProcess(id,v.start))try{process.kill(id,'SIGTERM');}catch{}for(let i=0;i<30&&[...members].some(([id,v])=>sameProcess(id,v.start));i++)await pause(50);for(const [id,v]of [...members].reverse())if(sameProcess(id,v.start))try{process.kill(id,'SIGKILL');}catch{}await Promise.race([new Promise(r=>p.exitCode!==null||p.signalCode!==null?r():p.once('exit',r)),pause(1000)]);}
+
+class CodexChat {
+ constructor(connection,options={}){
+  this.rpc=connection;this.endpoint=options.endpoint;this.root=path.dirname(options.endpoint);this.access=options.access;this.approval=options.approval;this.cwd=options.cwd;this.confirmed=options.confirmed;this.chat=options.chat;this.requested=options.thread;this.language=options.language||'en';
+  this.thread='';this.turn='';this.busy=false;this.ready=false;this.closed=false;this.setting=false;this.model='';this.effort='';this.turns=new Map();this.pending=new Map();this.sent=new Map();this.receipts=new ReceiptStore(null,'X');this.full=new Map();this.older='';this.failure='';this.native=null;this.historySupported=true;
+  this.rpc.onMessage=m=>this.event(m);this.rpc.onFailure=()=>{this.ready=false;this.busy=false;this.pending.clear();this.error('Codex disconnected. Restart this session with its chat history.');};
+ }
+ expected(){return this.access==='full'?'dangerFullAccess':this.access==='read'?'readOnly':'workspaceWrite';}
+ params(){return {cwd:this.cwd,approvalPolicy:this.approval,sandbox:this.access==='full'?'danger-full-access':this.access==='read'?'read-only':'workspace-write'};}
+ verify(r){if(normalize(r.cwd)!==normalize(this.cwd)||r.approvalPolicy!==this.approval||r.sandbox?.type!==this.expected())throw Error('Codex did not confirm the requested directory and permissions');}
+ async start(){
+  await this.rpc.initialize();let r;
+  if(this.chat==='id'){
+   if(!valid(this.requested))throw Error('Choose a specific chat ID');
+   const metadata=(await this.rpc.call('thread/read',{threadId:this.requested,includeTurns:false})).thread;
+   if(!metadata?.cwd||(normalize(metadata.cwd)!==normalize(this.cwd)&&(!this.confirmed||normalize(metadata.cwd)!==normalize(this.confirmed))))throw Error('The chat directory changed. Confirm its original folder in session settings.');
+   r=await this.rpc.call('thread/resume',{threadId:this.requested,excludeTurns:true,...this.params()});
+  }else if(this.chat==='new')r=await this.rpc.call('thread/start',this.params());else throw Error('Choose a specific chat or create a new chat');
+  this.verify(r);if(!valid(r.thread?.id))throw Error('Codex returned an invalid chat');this.thread=r.thread.id;this.model=text(r.model);this.effort=text(r.reasoningEffort);this.receipts=new ReceiptStore(path.join(this.root,this.thread+'.codex-receipts.json'),'X');
+  if(this.chat==='id')try{await this.history();}catch{this.historySupported=false;this.error('The current Codex cannot load paginated history. Open its native terminal to view older messages.');}this.ready=true;this.refresh();
+ }
+ error(body){this.failure=text(body);const id='error_'+crypto.randomUUID();this.put('local',{id,type:'localError',text:this.failure});}
+ put(turn,item){if(!item||typeof item.id!=='string')return;let entries=this.turns.get(turn);if(!entries){entries=new Map();this.turns.set(turn,entries);}entries.set(item.id,item);this.bound();}
+ bound(force=false){if(!force&&((this.boundCalls=(this.boundCalls||0)+1)%32))return;let size=0,count=0;const turns=[...this.turns];for(let i=turns.length-1;i>=0;i--){const entries=[...turns[i][1]];for(let j=entries.length-1;j>=0;j--){size+=JSON.stringify(entries[j][1]).length;if(++count>800||size>2*1024*1024)turns[i][1].delete(entries[j][0]);}if(!turns[i][1].size)this.turns.delete(turns[i][0]);}}
+ async history(cursor){
+  if(!this.thread)return;const r=await this.rpc.call('thread/turns/list',{threadId:this.thread,limit:8,sortDirection:'desc',itemsView:'full',...(cursor?{cursor}:{})});
+  if(!Array.isArray(r.data))throw Error('Unsupported history response');const before=new Map();
+  for(const turn of [...r.data].reverse())if(valid(turn.id)){const old=this.turns.get(turn.id);const entries=new Map((turn.items||[]).filter(i=>i&&typeof i.id==='string').map(i=>[i.id,i]));if(old)for(const [id,item]of old)if(!entries.has(id))entries.set(id,item);if(old)for(const [id,item]of old)entries.set(id,item);before.set(turn.id,entries);}
+  for(const [id,items]of this.turns)if(!before.has(id))before.set(id,items);this.turns=before;this.older=typeof r.nextCursor==='string'?r.nextCursor:'';this.bound(true);
+ }
+ refresh(){try{fs.writeFileSync(this.endpoint+'.refresh','1',{mode:0o600});}catch{}}
+ event(m){
+  const p=m.params||{};
+  if(m.method&&m.id!==undefined){this.request(m);return;}
+  if(p.threadId!==this.thread||!this.thread)return;
+  if(m.method==='serverRequest/resolved'){this.pending.delete(String(p.requestId));return;}
+  if(m.method==='thread/settings/updated'){const v=p.threadSettings||{};if(v.model)this.model=text(v.model);if(v.reasoningEffort)this.effort=text(v.reasoningEffort);this.refresh();return;}
+  if(m.method==='turn/started'){this.turn=p.turn?.id||'';this.busy=true;return;}
+  if(m.method==='turn/completed'){if(!this.turn||p.turn?.id===this.turn){this.busy=false;this.shellRunning=false;this.turn='';this.pending.clear();this.refresh();}if(this.returnToChat)this.closeTerminal().catch(()=>{});if(p.turn?.error)this.error(p.turn.error.message||'Codex turn failed');return;}
+  if(m.method==='error'){if(!p.willRetry)this.error(p.error?.message||'Codex reported an error');return;}
+  if(['item/started','item/completed'].includes(m.method)){this.put(p.turnId,p.item);return;}
+  if(!p.itemId||!p.turnId)return;let item=this.turns.get(p.turnId)?.get(p.itemId);
+  if(m.method==='item/agentMessage/delta'){item=item||{id:p.itemId,type:'agentMessage',text:''};item.text=(item.text||'')+text(p.delta);}
+  else if(m.method==='item/reasoning/summaryTextDelta'||m.method==='item/reasoning/textDelta'){item=item||{id:p.itemId,type:'reasoning',summary:[],content:[]};const field=m.method.includes('summary')?'summary':'content',i=field==='summary'?p.summaryIndex:p.contentIndex;if(!Number.isInteger(i)||i<0||i>256)return;item[field]=item[field]||[];item[field][i]=(item[field][i]||'')+text(p.delta);}
+  else if(m.method==='item/commandExecution/outputDelta'){item=item||{id:p.itemId,type:'commandExecution',command:'',aggregatedOutput:''};item.aggregatedOutput=(item.aggregatedOutput||'')+text(p.delta);}
+  else return;this.put(p.turnId,item);
+ }
+ request(m){
+  const p=m.params||{},id=String(m.id);if(!this.thread||p.threadId!==this.thread){this.rpc.send({id:m.id,error:{code:-32601,message:'Unsupported request or foreign chat'}});return;}
+  const type=m.method;
+  if((type==='item/tool/requestUserInput'&&(p.questions||[]).some(q=>q.isSecret))||!['item/commandExecution/requestApproval','item/fileChange/requestApproval','item/permissions/requestApproval','item/tool/requestUserInput'].includes(type)||this.pending.size>=32){this.rpc.send({id:m.id,error:{code:-32601,message:'This request is not supported in the Android chat'}});this.error('Codex requested an unsupported interactive action. It was not approved. Open the native terminal after this turn ends.');return;}
+  const nonce=crypto.randomBytes(24).toString('hex'),token=crypto.randomUUID();this.pending.set(id,{rpcId:m.id,id:token,nonce,type,params:structuredClone(p),thread:this.thread,turn:p.turnId});
+ }
+ permission(){const p=[...this.pending.values()].find(v=>v.type!=='item/tool/requestUserInput');if(!p)return null;let body=p.params.command||JSON.stringify(this.turns.get(p.turn)?.get(p.params.itemId)?.changes||p.params.permissions||{},null,2);if(p.params.networkApprovalContext)body=JSON.stringify(p.params.networkApprovalContext,null,2)+'\n'+body;if(p.params.cwd)body+='\n'+p.params.cwd;if(p.params.reason)body+='\n'+p.params.reason;return {id:p.id,nonce:p.nonce,type:p.type,title:p.type.includes('commandExecution')?'Codex · Command':p.type.includes('fileChange')?'Codex · Files':'Codex · Permissions',body:text(body),options:['proceed_once','cancel']};}
+ forms(){return [...this.pending.values()].filter(v=>v.type==='item/tool/requestUserInput').map(p=>({id:p.id,nonce:p.nonce,title:'Codex · '+(p.params.questions||[]).map(q=>q.header).join(' / '),fields:(p.params.questions||[]).map(q=>({key:q.id,title:q.question,type:q.isSecret?'secret':'string',custom:q.isOther===true,options:q.options?.map(o=>({label:o.label+' — '+o.description,value:o.label}))}))}));}
+ answer(q){
+  const entry=[...this.pending.entries()].find(([,p])=>p.id===q.id);if(!entry)return {ok:false,error:'STALE_PERMISSION'};const [id,p]=entry;
+  if(q.session!==this.thread||q.nonce!==p.nonce||p.thread!==this.thread||p.turn!==this.turn)return {ok:false,error:'STALE_PERMISSION'};
+  let result;
+  if(p.type==='item/tool/requestUserInput'){
+   if(q.op!=='chat-form'||!q.answer||typeof q.answer!=='object')return {ok:false,error:'INVALID_PERMISSION'};const answers={};
+   for(const field of p.params.questions||[]){const value=q.answer[field.id];if(field.isSecret||typeof value!=='string'||value.length>10000||field.options?.length&&!field.isOther&&!field.options.some(o=>o.label===value))return {ok:false,error:'INVALID_PERMISSION'};answers[field.id]={answers:[value]};}result={answers};
+  }else{if(q.op!=='answer'||!['proceed_once','cancel'].includes(q.outcome))return {ok:false,error:'INVALID_PERMISSION'};result=p.type==='item/permissions/requestApproval'?{permissions:q.outcome==='proceed_once'?p.params.permissions:{},scope:'turn'}:{decision:q.outcome==='proceed_once'?'accept':'decline'};}
+  this.rpc.send({id:p.rpcId,result});this.pending.delete(id);
+  if(p.type!=='item/tool/requestUserInput'){const receiptKey=p.params.itemId+':'+p.id,body=this.permissionBody(p);try{this.receipts.add(receiptKey,q.outcome,'Codex',body);}catch{}}
+  return {ok:true};
+ }
+ permissionBody(p){return text(p.params.command||JSON.stringify(p.params.permissions||this.turns.get(p.turn)?.get(p.params.itemId)?.changes||{},null,2));}
+ groups(){
+  this.full=new Map();const groups=[];for(const [turn,entries]of this.turns)for(const [id,item]of entries){const message=key(turn+':'+id),rows=[];const add=(part,kind,body,title='')=>{body=text(body);if(!body)return;const k=message+':'+part;this.full.set(k,body);rows.push({key:k,message,part,kind,title,body:body.slice(0,12000),more:body.length>12000});};
+   for(const receipt of this.receipts.rows.filter(r=>r.key.startsWith(item.id+':')))add('receipt:'+receipt.token,'receipt',receipt.body,this.receipts.label(receipt,this.language==='ru'));
+   if(item.type==='userMessage')add('text','user',(item.content||[]).map(b=>b.type==='text'?b.text:b.type==='image'?'[Image]':b.type==='localImage'?'[Image: '+b.path+']':'').join('\n'));
+   else if(item.type==='agentMessage')add('text','text',item.text);
+   else if(item.type==='reasoning')add('thinking','reasoning',(item.summary?.length?item.summary:item.content||[]).join('\n'));
+   else if(item.type==='commandExecution')add('command','tool',[item.command,item.aggregatedOutput,item.exitCode!=null?'Exit: '+item.exitCode:''].filter(Boolean).join('\n'),'Shell · '+(item.status||'running'));
+   else if(item.type==='fileChange')add('files','tool',JSON.stringify(item.changes||[],null,2),'Files · '+item.status);
+   else if(item.type==='plan')add('plan','tool',item.text,'Plan');
+   else if(item.type==='localError')add('error','error',item.text,'Codex');
+   else if(item.type==='localReceipt'){const r=this.receipts.get(item.receiptKey);if(r)add('receipt','receipt',r.body,this.receipts.label(r,this.language==='ru'));}
+   else if(item.type==='functionCallOutput')add('output','tool',typeof item.output==='string'?item.output:JSON.stringify(item.output),[item.namespace,item.name].filter(Boolean).join('.'));
+   else if(item.type==='contextCompaction')add('context','tool',this.language==='ru'?'Контекст чата сокращён штатным Codex.':'Chat context compacted by Codex.','Codex');
+   else if(!['hookPrompt','sleep'].includes(item.type))add('event','tool',JSON.stringify(item,null,2),item.type||'Codex');
+   if(rows.length)groups.push({id:message,rows});
+  }return groups;
+ }
+ async snapshot(q={}){
+  if(q.cursor&&this.ready&&this.historySupported)await this.history(q.cursor);const groups=this.groups(),rows=groups.slice(-100).flatMap(g=>g.rows);let budget=90000;
+  const limited=rows.map((r,i)=>{const n=Math.max(100,Math.floor(budget/(rows.length-i)));budget-=Math.min(n,r.body.length);return {...r,body:r.body.slice(0,n),more:r.more||r.body.length>n};});
+  return {ok:true,nativeChat:true,connected:this.ready&&!this.closed,session:this.thread,busy:this.busy,directShell:!!this.shellRunning,rows:limited,knownMessages:groups.map(g=>g.id),older:this.older||null,permission:this.permission(),forms:this.forms(),needsTerminal:!!this.native,model:{model:this.model},connectionNotice:this.native?(this.language==='ru'?'Завершите действие в терминале или нажмите «Вернуться в чат Codex». Выполняющийся запрос продолжится до завершения.':'Finish the action in the terminal or tap Return to Codex chat. A running request continues until completion.'):''};
+ }
+ async send(q){
+  if(this.returnToChat&&!this.busy)await this.closeTerminal();
+  if(!this.ready||this.closed||this.native||this.setting||q.session!==this.thread||!/^msg_[a-f0-9]{32}$/.test(q.id||'')||!['message','shell'].includes(q.kind)||typeof q.text!=='string'||!q.text.trim()||Buffer.byteLength(q.text)>60000)return {ok:false,error:'NOT_READY'};
+  const digest=crypto.createHash('sha256').update(q.kind+'\0'+q.text).digest('hex');const prior=this.sent.get(q.id);if(prior)return prior.digest===digest?prior.promise:{ok:false,error:'INVALID_SEND'};
+  if(this.sent.size>=2000)return {ok:false,error:'SEND_LIMIT'};
+  if(this.shellRunning||q.kind==='shell'&&(this.busy||this.pending.size))return {ok:false,error:'MODE_BUSY'};
+  if(q.kind==='message'&&q.text.trim().startsWith('/')){this.error('Slash commands belong in the native Codex terminal. Open the robot button; ordinary messages are sent here.');return {ok:false,error:'NATIVE_COMMAND'};}
+  const input=[{type:'text',text:q.text,text_elements:[]}];let method,params;
+  if(q.kind==='shell'){method='thread/shellCommand';params={threadId:this.thread,command:q.text};}
+  else if(this.busy&&this.turn){method='turn/steer';params={threadId:this.thread,expectedTurnId:this.turn,input,clientUserMessageId:q.id};}
+  else if(this.busy)return {ok:false,error:'MODE_BUSY'};
+  else{method='turn/start';params={threadId:this.thread,input,clientUserMessageId:q.id,...(this.choiceModel?{model:this.choiceModel,effort:this.choiceEffort}:{})};}
+  const oldBusy=this.busy;this.busy=true;if(q.kind==='shell')this.shellRunning=true;
+  const promise=this.rpc.call(method,params).then(r=>{if(method==='turn/start'&&r.turn?.id){this.turn=r.turn.id;if(params.model){this.model=params.model;this.effort=params.effort;this.modelPending=false;this.refresh();}}return {ok:true,accepted:true};}).catch(()=>{if(!oldBusy&&!this.turn){this.busy=false;this.shellRunning=false;}this.error('Codex did not confirm the request. Before retrying, check whether it already ran.');return {ok:false,error:'SEND_UNCONFIRMED'};});this.sent.set(q.id,{digest,promise});return promise;
+ }
+ async changeModel(q){
+  if(!this.ready||this.native||this.busy||this.setting)return {ok:false,error:'MODE_BUSY'};
+  if(!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(q.model||'')||!['none','minimal','low','medium','high','xhigh','max','ultra'].includes(q.effort))return {ok:false,error:'INVALID_MODEL'};
+  this.setting=true;try{
+   const models=(await this.rpc.call('model/list',{includeHidden:false,limit:100})).data||[];const model=models.find(m=>m.model===q.model);if(!model||!(model.supportedReasoningEfforts||[]).some(e=>e.reasoningEffort===q.effort))return {ok:false,error:'INVALID_MODEL'};
+   this.choiceModel=q.model;this.choiceEffort=q.effort;this.modelPending=true;this.refresh();return {ok:true,pending:true};
+  }finally{this.setting=false;}
+ }
+ async openTerminal(){
+  if(this.terminalClosing)await this.terminalClosing;this.returnToChat=false;if(this.native)return {ok:true,terminalReady:true};if(this.busy||this.setting||this.pending.size)return {ok:true,terminalReady:false,terminalNotice:this.language==='ru'?'Codex выполняет запрос. Подтверждения и вопросы доступны в чате. Штатный терминал можно открыть после завершения.':'Codex is running a request. Answer questions and approvals in the chat. Open the native terminal after it finishes.'};
+  if(!this.ready)return {ok:true,terminalReady:false,terminalNotice:this.failure||'Codex is starting.'};
+  const child=spawn('codex',['--remote','unix://'+this.endpoint,'resume',this.thread],{cwd:this.cwd,stdio:'inherit'});this.native=child;
+  child.once('error',()=>{if(this.native===child){this.native=null;this.error('Could not open the native Codex terminal.');}});
+  child.once('exit',()=>{if(this.native===child){this.native=null;if(!this.closed)this.history().catch(()=>{});}});return {ok:true,terminalReady:true};
+ }
+ async closeTerminal(){
+  this.returnToChat=true;
+  if(this.terminalClosing)return this.terminalClosing;
+  // A hidden TUI may own an active turn. Keep it until completion; never interrupt it on Back.
+  if(this.busy||this.pending.size)return {ok:true,deferred:true};
+  const child=this.native;if(!child){this.returnToChat=false;return {ok:true};}
+  this.terminalClosing=(async()=>{await terminateTree(child);if(this.native===child)this.native=null;this.returnToChat=false;return {ok:true};})().finally(()=>{this.terminalClosing=null;});
+  return this.terminalClosing;
+ }
+ async handle(q){
+  if(q.op==='chat-snapshot')return this.snapshot(q);if(q.op==='status')return {ok:true,nativeChat:true,connected:this.ready,thread:this.thread,model:this.choiceModel||this.model,effort:this.choiceEffort||this.effort,pending:!!this.modelPending};
+  if(q.op==='chat-send')return this.send(q);if(q.op==='answer'||q.op==='chat-form')return this.answer(q);if(q.op==='model')return this.changeModel(q);
+  if(q.op==='terminal-open')return this.openTerminal();if(q.op==='terminal-close')return {ok:true};if(q.op==='terminal-exit')return this.closeTerminal();
+  if(q.op==='chat-interrupt'){if(this.turn&&q.session===this.thread)await this.rpc.call('turn/interrupt',{threadId:this.thread,turnId:this.turn});return {ok:true};}
+  if(q.op==='chat-detail'){this.groups();const body=this.full.get(q.message+':'+q.part);if(body===undefined||q.session!==this.thread||!Number.isInteger(q.offset)||q.offset<0||q.offset>body.length)return {ok:false,error:'NOT_FOUND'};return {ok:true,body:body.slice(q.offset,q.offset+30000),next:q.offset+30000<body.length?q.offset+30000:null};}
+  return {ok:false,error:'UNSUPPORTED'};
+ }
+ async close(){this.closed=true;this.pending.clear();this.rpc.onMessage=null;this.rpc.onFailure=null;this.rpc.close();await terminateTree(this.native);}
+}
+async function run(){
+ const [endpoint,access,chat,thread,cwd,confirmed,approval,language]=process.argv.slice(3);
+ if(!endpoint||!path.isAbsolute(endpoint)||!['full','project','read'].includes(access)||!['new','id'].includes(chat)||!['never','on-request'].includes(approval)||!path.isAbsolute(cwd))throw Error('Invalid Codex chat launch');
+ const rpc=new Connection(endpoint),controller=new CodexChat(rpc,{endpoint,access,chat,thread,cwd,confirmed,approval,language});const socket=endpoint+'.chat';
+ const peers=new Set();const server=net.createServer(peer=>{peers.add(peer);peer.on('error',()=>{});peer.once('close',()=>peers.delete(peer));peer.setTimeout(15000,()=>peer.destroy());let buffer='',done=false;peer.setEncoding('utf8');peer.on('data',data=>{if(done)return;buffer+=data;if(Buffer.byteLength(buffer)>65536){done=true;peer.destroy();return;}if(!buffer.includes('\n'))return;done=true;let q;try{q=JSON.parse(buffer.slice(0,buffer.indexOf('\n')));}catch{peer.end('{"ok":false}\n');return;}Promise.resolve(controller.handle(q)).catch(()=>({ok:false,error:'CONTROL_FAILED'})).then(r=>{if(!peer.destroyed)peer.end(JSON.stringify(r)+'\n');});});});
+ await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(socket,()=>{fs.chmodSync(socket,0o600);resolve();});});
+ let closing=false;const close=async()=>{if(closing)return;closing=true;for(const peer of peers)peer.destroy();server.close();await controller.close();try{fs.unlinkSync(socket);}catch{}process.exit(0);};for(const s of ['SIGINT','SIGTERM','SIGHUP'])process.on(s,close);
+ controller.start().catch(e=>{controller.ready=false;controller.error(e.message);});
+}
+if(require.main===module)run().catch(e=>{process.stderr.write('Termux Jobs: '+text(e.message)+'\n');process.exit(1);});
+module.exports={CodexChat,valid,normalize,processTree,terminateTree};

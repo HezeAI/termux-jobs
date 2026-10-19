@@ -1,3 +1,27 @@
+# v1.6.0 — changes since public v1.5.3
+
+- Android-native chats for Codex, Gemini CLI, Claude Code and OpenCode, with stable
+  message rows, expandable reasoning/tools, supported forms and native approvals.
+- Compact robot terminal, large extra keys/Enter, separate Minimize and Return to
+  agent chat; keyboard works through dialog IME/mouse-tracking touch handling.
+- Native model/permission/thinking controls where supported; pending next-turn
+  Codex selection and correct Pro weekly-only quota presentation.
+- Confirmed launch-environment checks/setup; guided Gemini Vertex project/region
+  connection. Native free Google sign-in remains disabled; billing/IAM are external.
+- Session file browser: independent selection/navigation, clear/Select all by
+  visible filter, Copy/Move here with no automatic overwrite or cross-environment move.
+- Server selection shared by download/move/delete, multi-folder safe deletion,
+  cancel selection/prepared moves and filter-aware Select all; retained connection
+  vs data auto-update controls. Existing agent/SSH/backup payloads retained.
+- Same package/certificate, schema8 and server store; optional added fields,
+  code1192, no general reset from1.5.3. Earlier local-AI removal remains for older
+  installations. New chat UI applies to new launches; native histories retained.
+- Developer confirmed Codex chat/keyboard/return. Full real-account Claude/Vertex
+  validation remains incomplete; exact automated evidence is in VALIDATION-v1.6.0.md.
+- Feedback relay/server and anonymous issue submission are deferred, not included.
+
+---
+
 # v1.5.3 — changes since public v1.5.0
 
 - Remove local-AI code/runtimes/dependencies; migrate away old local profiles and

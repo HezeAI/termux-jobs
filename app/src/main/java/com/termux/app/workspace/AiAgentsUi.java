@@ -80,33 +80,14 @@ public final class AiAgentsUi {
         if(actual==null||!AiAgents.validModel(actual.optString("providerID")+"/"+actual.optString("id")))return false;
         label.setText(modelLabel(actual));profile.aiModel=actual.optString("providerID")+"/"+actual.optString("id");profile.aiVariant=actual.optString("variant");changed.run();return true;
     }
+    static String sessionModelLabel(WorkspaceStore.Session profile,JSONObject actual){
+        String value=actual==null?"":actual.optString("providerID")+"/"+actual.optString("id");String variant=actual==null?"":actual.optString("variant");
+        if(value.isEmpty()||!AiAgents.validModel(value)){value=profile.aiModel;variant=profile.aiVariant;}
+        if(value.isEmpty())return WorkspaceText.tr("По умолчанию");int slash=value.indexOf('/');return (slash<0?value:value.substring(slash+1))+(variant.isEmpty()?"":" · "+variant);
+    }
     static String modelLabel(JSONObject model) {
         if(model==null||model.optString("id").isEmpty())return WorkspaceText.tr("По умолчанию");
         String variant=model.optString("variant");return model.optString("providerID")+" / "+model.optString("id")+(variant.isEmpty()?"":" · "+variant);
     }
-    static void active(Activity a,WorkspaceStore.Session s,Runnable changed){LinearLayout body=column(a);body.addView(text(a,"OpenCode · Ubuntu\n"+title(a,s.aiConnection)+"\n"+s.directory+"\n"+s.aiThread));
-        int[] modelGeneration={0};TextView current=text(a,WorkspaceText.tr("Проверка окружения и чтение данных…"));body.addView(current);query(a,s.aiConnection,s,op("status"),value->{if(modelGeneration[0]==0)current.setText(modelLabel(value.optJSONObject("model")));});
-        body.addView(action(a,WorkspaceText.tr("Выбрать модель"),()->chooseModel(a,s.aiConnection,s,(p,m,v)->{
-            WorkspaceDialogs.builder(a).setTitle(WorkspaceText.tr("Сменить модель и переоткрыть OpenCode?"))
-                .setMessage(p+" / "+m+(v.isEmpty()?"":" · "+v)+"\n\n"+WorkspaceText.tr("OpenCode переоткроется в этой же вкладке с историей текущего чата. Сервер и чат сохранятся. Неотправленный текст внутри OpenCode может потеряться; поле ввода приложения не изменится. Во время ответа или при наличии очереди смена недоступна."))
-                .setNegativeButton(WorkspaceText.tr("Отмена"),null)
-                .setPositiveButton(WorkspaceText.tr("Переоткрыть"),(dialog,which)->{
-                    JSONObject q=op("model");try{q.put("provider",p).put("model",m).put("variant",v).put("reopen",true);}catch(JSONException e){return;}
-                    int generation=++modelGeneration[0];query(a,s.aiConnection,s,q,value->{
-                        if(generation!=modelGeneration[0])return;
-                        if(!value.optBoolean("applied")||!value.optBoolean("reopened")) {
-                            WorkspaceDialogs.builder(a).setMessage(WorkspaceText.tr(value.optString("reason").equals("busy")?"OpenCode занят или есть очередь сообщений. Дождитесь завершения и повторите смену модели.":"Не удалось переоткрыть OpenCode. Проверьте терминал; выбранная модель не подтверждена."))
-                                .setPositiveButton(WorkspaceText.tr("Закрыть"),null).show();return;
-                        }
-                        JSONObject actual=value.optJSONObject("model");if(!showConfirmedModel(s,actual,current,changed))return;
-                        Toast.makeText(a,WorkspaceText.tr("Модель изменена, OpenCode переоткрывается с историей чата"),Toast.LENGTH_SHORT).show();
-                    });
-                }).show();
-        })));
-
-        body.addView(text(a,WorkspaceLanguage.code(a).equals("ru")?(s.aiProjectOnly?"Профиль: ограничение внешних путей OpenCode (не изоляция); shell и внешние инструменты запрещены. Настройки применяются при запуске.":"Профиль: внешние каталоги регулируются штатными правами. Настройки применяются при запуске."):(s.aiProjectOnly?"Profile: OpenCode external-path policy (not isolation); shell and external tools denied. Settings apply on launch.":"Profile: native permissions govern external directories. Settings apply on launch.")));
-        body.addView(text(a,modeDescription(s.aiMode)));body.addView(text(a,accessLabel(s.aiAccess)));body.addView(text(a,accessDescription(s.aiAccess)));
-        body.addView(text(a,WorkspaceText.tr("Разрешения и авторизация отображаются в терминале OpenCode. Лимиты аккаунта здесь не вычисляются.")));
-        WorkspaceDialogs.builder(a).setTitle("OpenCode").setView(body).setPositiveButton(WorkspaceText.tr("Закрыть"),null).show();
-    }
+    static void active(Activity a,WorkspaceStore.Session s,Runnable changed){new OpenCodeStatusUi(a,s,changed,null).show();}
 }

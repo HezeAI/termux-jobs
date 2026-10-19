@@ -201,12 +201,36 @@ public class TermuxTerminalViewClient extends TermuxTerminalViewClientBase {
             }
         }
 
+        if (showDialogTerminalKeyboard(e)) return;
+
         if (!term.isMouseTrackingActive() && !e.isFromSource(InputDevice.SOURCE_MOUSE)) {
             if (mActivity.getTerminalView().isSoftKeyboardInputEnabled() && !KeyboardUtils.areDisableSoftKeyboardFlagsSet(mActivity))
                 KeyboardUtils.showSoftKeyboard(mActivity, mActivity.getTerminalView());
             else
                 Logger.logVerbose(LOG_TAG, "Not showing soft keyboard onSingleTapUp since its disabled");
         }
+    }
+
+    @Override public void onTerminalMouseTap(MotionEvent e) {
+        showDialogTerminalKeyboard(e);
+    }
+
+    private boolean showDialogTerminalKeyboard(MotionEvent e) {
+        // The agent terminal is reparented into a dialog. Native TUIs enable mouse
+        // tracking; taps must still be able to open Android's keyboard in this window.
+        View terminalView = mActivity.getTerminalView();
+        boolean dialogTerminal = terminalView.getRootView() != mActivity.getWindow().getDecorView().getRootView();
+        if (dialogTerminal && mActivity.getTerminalView().isSoftKeyboardInputEnabled()
+            && !e.isFromSource(InputDevice.SOURCE_MOUSE)) {
+            terminalView.requestFocus();
+            android.view.inputmethod.InputMethodManager keyboard = (android.view.inputmethod.InputMethodManager)
+                mActivity.getSystemService(Context.INPUT_METHOD_SERVICE);
+            terminalView.post(() -> keyboard.showSoftInput(terminalView,
+                android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT));
+            return true;
+        }
+
+        return false;
     }
 
     @Override

@@ -1,3 +1,11 @@
+# Historical private build records — v1.5.23-test
+
+Private version names were reused during development. These are distinct builds;
+versionCode, APK hash and the specific report identify each artifact. Neither
+record below is validation of current v1.6.0; see VALIDATION-v1.6.0.md.
+
+## Earlier record preserved from public v1.5.3
+
 # Проверки v1.5.23-test
 
 Приватная сборка для проверки разработчиком; публикация не выполнялась.
@@ -59,3 +67,70 @@ Schema8 и текущие данные сохранены, автоматиче�
 в живом приложении, не защищены от уничтожения процесса и не имеют автопродолжения.
 Индикаторы показывают доступную активность вывода/локальной задачи, а не точную
 занятость всех агентов или тихого удалённого SSH-процесса.
+
+
+---
+
+## Subsequent development record
+
+# v1.5.23-test — selection-only Select all controls
+
+Private update to1.5.22-test/code1184. Session file browser: Select all appears in
+the left footer, opposite Close, only after selection begins. It adds visible
+entries using the same search/type filter as the displayed list; selected entries
+from other folders remain.50-entry cap retained with explanation. Dialog stays open.
+File/directory/import/upload pickers do not acquire this selection action.
+
+Server: `× N` and a vector Select all icon share the transfer row, with8dp spacing
+and independent measured slots. Transfer arrows narrow to share the available
+width. The selection group disappears when selection is
+empty. It chooses current listing entries, keeps earlier folder selections and
+reports the500-entry cap. The all action is unavailable while a move is already
+prepared; it cannot silently replace the pending move. Row opening, checkboxes,
+last-checkbox cancellation and the pending move's clear action are retained.
+
+No new I/O, poller, credentials, permission, copy/move/delete implementation or
+server-agent change. Selection uses bounded existing in-memory collections. No
+installed environment or user/server files are used for verification.
+
+Focused tests include: initial/cleared action hiding; visible filter/search matching;
+retention from another folder; selection caps; non-dismissing footer; shared
+server-row parentage and measured non-overlap at296dp usable width (320dp with
+side padding), enlarged count text and at least48dp arrow targets;
+download admission validating the entire selection (including an oversized second
+entry), plus existing file operation, picker, server and agent-chat regressions. Mock geometry
+is evidence for that layout case, not physical gesture/DPI certification.
+
+Review: zero/active/busy/pending states, preserving picker-specific neutral buttons,
+shared visibility predicate, no selection-triggered mutations, bounded additions,
+server-profile isolation and independent layout slots. No data reset or schema
+migration is introduced. Developer should check the server row on the phone and
+select-all with a filter and after navigation.
+
+136 focused JVM tests pass, zero failures/errors/skips. Initial two new session
+button tests ran before the dialog's onShow callback; the fixture now drains its
+main looper before clicking. Final tests include the actual configured listener.
+Evidence: .verification/select-all-v1.5.23/tests-delivery.log and tests.json.
+
+Download data-flow review: select-all populates the same downloadSelection map as
+individual checkbox selection; the download action snapshots all map values, and
+the existing downloader collects every path before asking for a destination. Its
+per-file/batch limits and confirmation remain. No transfer starts on Select all.
+
+## Final artifact
+
+`Termux-Jobs-v1.5.23-test-arm64.apk`, 36615662 bytes. Package com.termux,
+version1.5.23-test/code1185, minSdk26, ARM64. Same signing certificate as1.5.22,
+increased code, no data reset/schema migration.
+SHA-256: `e5f8c94e3de5d1aa76948fdf90c61a46cf2aeb8df54dd384d7d68889229a3ff2`.
+
+Assembly, packaged required runtime definitions, ZIP integrity, package/ABI,
+v2 signature, private-file/secret-marker and staged-source/resource checks pass.
+All packaged assets and native libraries are byte-identical to1.5.22; the vector
+is an Android resource. Existing Lint Kotlin/UAST/JNA infrastructure warnings and
+31 reviewed optional missing types remain; not a clean-Lint claim. Robolectric
+CloseGuard/Gradle filesystem-watch notices remain in test logs.
+
+Download copy hash verified. Evidence in .verification/select-all-v1.5.23 includes
+build.log, staged-source.json, apk-audit.json, signature.txt, badging.txt,
+delivery.json. No GitHub publication. Next stable versionCode must exceed1185.

@@ -5,9 +5,11 @@ const net = require('node:net');
 const path = require('node:path');
 const os = require('node:os');
 const {spawn} = require('node:child_process');
+const {safeModel}=require('./gemini-live.cjs');
+const safeMode=v=>['default','auto_edit','plan'].includes(v);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function argsFor(model, mode, chat, thread) {
-  if (!['', 'auto', 'flash', 'pro'].includes(model) || !['default', 'auto_edit', 'plan'].includes(mode)
+  if (!(model===''||safeModel(model)) || !['default', 'auto_edit', 'plan'].includes(mode)
       || !['new', 'choose', 'id'].includes(chat) || !uuid.test(thread)) throw new Error('Invalid Gemini profile');
   const args = ['--approval-mode', mode];
   if (model) args.push('--model', model);
@@ -18,7 +20,7 @@ function argsFor(model, mode, chat, thread) {
 }
 // Explicit session preference uses the native enforcedType setting, never simulated keys.
 function authEnvironment(mode, file, original = process.env) {
-  if (!['auto','google','api'].includes(mode)) throw new Error('Invalid Gemini auth mode');
+  if (!['auto','google','api','vertex'].includes(mode)) throw new Error('Invalid Gemini auth mode');
   const env = {...original};
   if (mode === 'auto') return {env, cleanup:()=>{}};
   // Preserve externally managed settings/policy discovery. Do not replace them.
@@ -26,7 +28,14 @@ function authEnvironment(mode, file, original = process.env) {
       || fs.existsSync('/etc/gemini-cli')) {
     throw new Error('External Gemini system settings detected. Select terminal authentication mode.');
   }
-  const type = mode === 'google' ? 'oauth-personal' : 'gemini-api-key';
+  const type = mode === 'google' ? 'oauth-personal' : mode === 'vertex' ? 'vertex-ai' : 'gemini-api-key';
+  if(mode==='vertex'){
+    const project=original.JOBS_GEMINI_VERTEX_PROJECT||'',location=original.JOBS_GEMINI_VERTEX_LOCATION||'';
+    if(/[\r\n]/.test(project+location)||project&&!/^(?:[a-z][a-z0-9-]{4,28}[a-z0-9]|[0-9]{6,20})$/.test(project)||location&&(location.length>63||!/^(?:global|[a-z]+(?:-[a-z0-9]+){1,4})$/.test(location)))throw new Error('Invalid Vertex AI project or location');
+    if(project)env.GOOGLE_CLOUD_PROJECT=project;
+    if(location)env.GOOGLE_CLOUD_LOCATION=location;
+    env.GOOGLE_GENAI_USE_VERTEXAI='true';
+  }
   // Native Gemini rejects system settings with a world-writable ancestor (/tmp).
   // Keep only the control socket in /tmp; settings belong to the private runtime.
   const directory = path.dirname(file);
@@ -41,7 +50,21 @@ function authEnvironment(mode, file, original = process.env) {
   delete env.GEMINI_CLI_AUTH_OVERRIDE;
   return {env, cleanup:()=>{try{fs.unlinkSync(file);}catch{}}};
 }
+// Permission text is never included in the status writer or logs.
+function permissionReply(value,request){
+  if(!value||value.ok!==true)return {ok:false,error:['STALE_PERMISSION','PERMISSION_FAILED'].includes(value?.error)?value.error:'CONTROL_FAILED'};
+  if(request.op==='answer'){
+    const r=value.resolved;
+    return r&&r.id===request.id&&r.outcome===request.outcome?{ok:true,resolved:{id:r.id,outcome:r.outcome}}:{ok:false,error:'CONTROL_FAILED'};
+  }
+  if(request.op==='receipt'){const r=value.receipt;return r&&r.token===request.token&&typeof r.title==='string'&&r.title.length<=160&&typeof r.body==='string'&&r.body.length<=40000&&['proceed_once','proceed_always','cancel'].includes(r.outcome)?{ok:true,receipt:{token:r.token,title:r.title,body:r.body,outcome:r.outcome}}:{ok:false,error:'CONTROL_FAILED'};}
+  const p=value.permission;if(p==null)return {ok:true,permission:null};
+  if(!uuid.test(p.id||'')||!['exec','edit','info'].includes(p.type)||typeof p.body!=='string'||!p.body||p.body.length>40000||typeof p.title!=='string'||p.title.length>80||!Array.isArray(p.options)||p.options.length>3||!p.options.includes('proceed_once')||!p.options.includes('cancel')||p.options.some(v=>!['proceed_once','proceed_always','cancel'].includes(v)))return {ok:false,error:'CONTROL_FAILED'};
+  const result={ok:true,permission:{id:p.id,type:p.type,title:p.title,body:p.body,options:p.options}};
+  return Buffer.byteLength(JSON.stringify(result),'utf8')<=60000?result:{ok:false,error:'CONTROL_FAILED'};
+}
 async function run(socket, model, mode, chat, thread, auth = 'auto') {
+  process.env.JOBS_GEMINI_RECEIPT_DIR=require('node:path').join(require('node:path').dirname(socket),'receipts');
   const args = argsFor(model, mode, chat, thread);
   if (process.env.JOBS_GEMINI_DEBUG === '1') args.push('--debug');
   if (!uuid.test(require('node:path').basename(socket, '.sock'))) throw new Error('Invalid control socket');
@@ -54,25 +77,65 @@ async function run(socket, model, mode, chat, thread, auth = 'auto') {
   if (!path.isAbsolute(authRoot)) throw new Error('Invalid Gemini authentication directory');
   const authConfig = authEnvironment(auth, path.join(authRoot, path.basename(socket, '.sock') + '.json'));
   let child, finished = false, stopping = false, timer, watch;
-  const peers = new Set();
+  const peers = new Set(), commands=new Map();let serial=0,childEpoch=0;
+  const startedAt=Date.now(),statusPath=socket.replace(/\.sock$/,'.status.json');
+  let status={schema:1,available:false,state:'starting',model:'',selectedModel:model,mode,requests:0,input:0,output:0,cache:0,thoughts:0,total:0,apiMs:0,quotaAvailable:false};
+  function publish(value){
+    // Explicit scalar allowlist. Never write the child's arbitrary IPC/auth payload.
+    const next={schema:1,run:path.basename(socket,'.sock'),startedAt,updated:Date.now(),available:value.available===true,quotaAvailable:false};
+    for(const key of ['model','selectedModel'])next[key]=safeModel(value[key]);
+    next.state=['starting','idle','responding','waiting_for_confirmation','unsupported','ended'].includes(value.state)?value.state:'starting';
+    next.mode=['default','autoEdit','auto_edit','plan','yolo'].includes(value.mode)?value.mode:'';
+    next.auth=['gemini-api-key','oauth-personal','vertex-ai','gateway','compute-default-credentials'].includes(value.auth)?value.auth:'';
+    for(const key of ['requests','input','output','cache','thoughts','total','apiMs'])next[key]=Number.isSafeInteger(value[key])&&value[key]>=0?value[key]:0;
+    if(value.thinking&&['default','minimal','low','medium','high'].includes(value.thinking.value)){const t=value.thinking;next.thinking={value:t.value,model:safeModel(t.model),options:Array.isArray(t.options)?t.options.filter(v=>['default','minimal','low','medium','high'].includes(v)).slice(0,5):[],available:!!t.available,effective:!!t.effective};}
+    if(value.change&&/^[-a-zA-Z0-9]{1,64}$/.test(value.change.id)&&safeModel(value.change.model)&&['queued','applied','failed','cancelled'].includes(value.change.state))next.change={id:value.change.id,model:value.change.model,state:value.change.state};
+    next.permissionId=uuid.test(value.permissionId||'')?value.permissionId:'';
+    next.canChangeMode=value.canChangeMode===true;next.canPlan=value.canPlan===true;next.canEdit=value.canEdit===true;
+    if(value.modeChange&&/^[-a-zA-Z0-9]{1,64}$/.test(value.modeChange.id)&&safeMode(value.modeChange.mode)&&['queued','applied','failed','cancelled'].includes(value.modeChange.state))next.modeChange={id:value.modeChange.id,mode:value.modeChange.mode,state:value.modeChange.state};
+    status=next;
+    const temporary=statusPath+'.'+require('node:crypto').randomUUID()+'.tmp';
+    try{fs.writeFileSync(temporary,JSON.stringify(status),{mode:0o600,flag:'wx'});fs.renameSync(temporary,statusPath);}catch{}finally{try{fs.unlinkSync(temporary);}catch{}}
+  }
+  function childRequest(request){return new Promise(resolve=>{
+    if(stopping||!child?.connected)return resolve({ok:false,error:'NOT_READY'});
+    const id=++serial,epoch=childEpoch;
+    const timer=setTimeout(()=>{commands.delete(id);resolve({ok:false,error:'CONTROL_TIMEOUT'});},12000);
+    commands.set(id,{resolve,timer,epoch});
+    child.send({...request,type:'jobs-gemini-command',serial:id},error=>{if(error){clearTimeout(timer);commands.delete(id);resolve({ok:false,error:'NOT_READY'});}});
+  });}
+  publish(status);
   const parent = process.ppid;
   const server = net.createServer(peer => {
     peers.add(peer); peer.on('close', () => peers.delete(peer)); peer.on('error', () => {});
-    peer.setTimeout(6000, () => peer.destroy());
-    let input = '';
+    peer.setTimeout(15000, () => peer.destroy());
+    let input = '',inputBytes=0;const decoder=new (require('node:string_decoder').StringDecoder)('utf8');
     peer.on('data', data => {
-      input += data; if (input.length > 1024) return peer.destroy();
+      inputBytes+=data.length;if(inputBytes>65536)return peer.destroy();input+=decoder.write(data);
       if (input.includes('\n')) {
         let request; try { request = JSON.parse(input.split('\n')[0]); } catch { return peer.destroy(); }
+        if(peer.jobsHandled)return;peer.jobsHandled=true;
+        if(!request||typeof request!=='object'||Array.isArray(request))return peer.end('{\"ok\":false,\"error\":\"INVALID_REQUEST\"}\n');
+        if(request.op==='status')return peer.end(JSON.stringify({ok:true,status})+'\n');
+        if(request.op==='receipt'&&!/^[a-f0-9]{8}$/.test(request.token||''))return peer.end('{"ok":false}\n');
+        if(['chat-snapshot','chat-detail','chat-send','terminal-open','terminal-close'].includes(request.op)){const value={op:request.op};for(const k of ['id','kind','text','message','part','cursor','offset','session'])if(request[k]!==undefined)value[k]=request[k];childRequest(value).then(value=>{if(!peer.destroyed)peer.end(JSON.stringify(value)+'\n');});return;}
+        if(['models','model','mode','thinking','permission','answer','receipt'].includes(request.op)){
+          if(request.op==='model'&&(!safeModel(request.model)||!/^[-a-zA-Z0-9]{1,64}$/.test(request.id||'')))return peer.end('{"ok":false,"error":"INVALID_MODEL"}\n');
+          if(request.op==='mode'&&(!safeMode(request.mode)||!/^[-a-zA-Z0-9]{1,64}$/.test(request.id||'')))return peer.end('{\"ok\":false,\"error\":\"INVALID_MODE\"}\n');
+          if(request.op==='answer'&&(!uuid.test(request.id||'')||!['proceed_once','proceed_always','cancel'].includes(request.outcome)))return peer.end('{"ok":false,"error":"INVALID_PERMISSION"}\n');
+          childRequest({op:request.op,model:request.model,level:request.level,mode:request.mode,id:request.id,outcome:request.outcome,token:request.token}).then(value=>{if(['permission','answer','receipt'].includes(request.op))value=permissionReply(value,request);if(!peer.destroyed)peer.end(JSON.stringify(value)+'\n');});return;
+        }
         if (request.op !== 'stop') return peer.end('{"ok":false}\n');
-        stop(); // Acknowledge only after the owned child exits.
+        peer.jobsStop=true;stop(); // Acknowledge only after the owned child exits.
       }
     });
   });
   const finish = code => {
     if (finished) return; finished = true;
     clearTimeout(timer); clearInterval(watch);
-    for (const peer of peers) peer.end('{"ok":true}\n');
+    for(const task of commands.values()){clearTimeout(task.timer);task.resolve({ok:false,error:'ENDED'});}commands.clear();
+    publish({...status,available:false,state:'ended'});
+    for (const peer of peers) peer.end(JSON.stringify(peer.jobsStop?{ok:true}:{ok:false,error:'ENDED'})+'\n');
     server.close();
     authConfig.cleanup();
     try { fs.unlinkSync(socket); } catch {}
@@ -92,18 +155,28 @@ async function run(socket, model, mode, chat, thread, auth = 'auto') {
   for (const signal of ['SIGTERM','SIGHUP','SIGINT']) process.on(signal, stop);
   let restarts = 0, lastRestart = 0, authOverride = process.env.GEMINI_CLI_AUTH_OVERRIDE;
   const launch = () => {
-    const env = {...authConfig.env, GEMINI_CLI_NO_RELAUNCH:'1'};
+    const env = {...authConfig.env, GEMINI_CLI_NO_RELAUNCH:'1',JOBS_GEMINI_LIVE:'1'};
+    childEpoch++;publish({...status,available:false,state:'starting'});
     delete env.GEMINI_CLI_AUTH_OVERRIDE;
     if (auth === 'auto' && authOverride) env.GEMINI_CLI_AUTH_OVERRIDE = authOverride;
-    const next = spawn(process.execPath, [binary, ...args], {stdio:['inherit','inherit','inherit','ipc'], env});
+    const loader=require('node:url').pathToFileURL(path.join(__dirname,'gemini-live-loader.mjs')).href;
+    // Node22's supported registration API avoids the experimental-loader warning.
+    const registration='data:text/javascript,'+encodeURIComponent('import {register} from \"node:module\";register('+JSON.stringify(loader)+');');
+    const next = spawn(process.execPath, ['--require',path.join(__dirname,'gemini-live.cjs'),'--import',registration,binary, ...args], {stdio:['inherit','inherit','inherit','ipc'], env});
     child = next; authOverride = undefined;
     next.on('message', message => {
+      if(next!==child||finished||stopping)return;
+      if(message?.type==='jobs-gemini-status'&&message.value&&typeof message.value==='object')publish(message.value);
+      if(message?.type==='jobs-gemini-result'){
+        const task=commands.get(message.serial);if(task&&task.epoch===childEpoch){clearTimeout(task.timer);commands.delete(message.serial);task.resolve(message.value&&typeof message.value==='object'?message.value:{ok:false,error:'INVALID_RESPONSE'});}
+      }
       if (message && message.type === 'auth-selected-type' && typeof message.authType === 'string'
           && /^[a-z-]{1,64}$/.test(message.authType)) authOverride = message.authType;
     });
     next.once('error', () => {console.error('Cannot start Gemini CLI'); finish(1);});
     next.once('exit', code => {
       // Official CLI uses 199 after trust/auth changes. Keep one owned control socket.
+      for(const task of commands.values()){clearTimeout(task.timer);task.resolve({ok:false,error:'RESTARTED'});}commands.clear();
       if (code === 199 && !stopping && !finished) {
         const now = Date.now(); if (now-lastRestart > 60000) restarts = 0;
         lastRestart = now;
@@ -126,7 +199,7 @@ function stopProxy(socket) {
     client.on('end', () => {try {if (!JSON.parse(response).ok) throw new Error('Stop failed'); resolve();} catch(e) {reject(e);}});
   });
 }
-module.exports = {argsFor, run, stopProxy, authEnvironment};
+module.exports = {argsFor, run, stopProxy, authEnvironment, permissionReply};
 if (require.main === module) {
   const [op, socket, ...args] = process.argv.slice(2);
   (op === 'run' ? run(socket, ...args) : op === 'stop' ? stopProxy(socket) : Promise.reject(new Error('Unknown operation')))

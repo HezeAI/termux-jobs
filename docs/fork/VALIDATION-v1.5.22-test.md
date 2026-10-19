@@ -1,3 +1,11 @@
+# Historical private build records — v1.5.22-test
+
+Private version names were reused during development. These are distinct builds;
+versionCode, APK hash and the specific report identify each artifact. Neither
+record below is validation of current v1.6.0; see VALIDATION-v1.6.0.md.
+
+## Earlier record preserved from public v1.5.3
+
 # v1.5.22-test — validation
 
 Private local build, not published. Production local-model Java classes, service,
@@ -56,3 +64,88 @@ its history/settings; type and switch tabs; open files and server connection/SFT
 These Android input/gesture/data-migration interactions have not yet been checked
 on this new APK. Removal is not proof of the cause or resolution of the earlier
 ANR: no system ANR stack was available. No APK install or GitHub publication.
+
+
+---
+
+## Subsequent development record
+
+# v1.5.22-test — file selection and copy/move destination actions
+
+Private update from v1.5.21-test/code1183, not a GitHub release.
+Session and server file browsers separate row opening from checkbox selection.
+Long press enters selection, folder navigation preserves chosen paths and `× N`
+clears them. Session browser parent arrow faces left; destination arrow below Home
+opens Copy here / Move here / Back. Outside taps do not dismiss action/confirmation
+menus. Conflicts require confirmation to allocate new names, retaining extensions.
+No implicit overwrite/merge, recursive self-copy or overlapping tree selection.
+
+Session copies stage per entry before no-clobber publication; moves use native
+no-clobber mv. The operation belongs to the selected environment, independent of
+terminal input. Whole-batch preflight runs again when executing. Main browser
+normal dismissal is disabled during mutation, restored on completion/failure.
+Completed entries remain on interrupted batches; there is no automatic retry or
+rollback promise. Cross-environment destination picking was not introduced.
+See [FILE-SELECTION.md](FILE-SELECTION.md) for behavior and limits.
+
+Server download/SFTP/move transports remain unchanged. Selection can survive into
+another folder on the same server. Row taps keep opening file menus even in delete
+selection mode; checkboxes select. Delete confirmation includes exact source paths.
+Delete requests are grouped by original parent and retain the existing server-side
+safe dir-fd traversal; failure stops subsequent groups and reports partial status.
+No server agent update, live server action or installed-app operation was performed.
+
+## Automated verification
+
+131 focused JVM tests pass with zero failures/errors/skips. Includes seven backend tests, with real
+shell fixtures for recursive copying, native moves, names with quotes/shell
+metacharacters/Unicode, symlink preservation, conflict preflight before mutation,
+explicit conflict rename, APK extension retention, missing sources, dangling
+collision links, canonical alias destinations, overlapping parent/child rejection,
+and server deletion-group validation. Fixtures live under repository verification
+temporary directories, not user projects or shared phone files.
+
+UI tests exercise the actual browser dialog controls with listing data injected to
+avoid launching installed environments. They verify long press, independent
+checkboxes, file-menu availability while selected, directory/filter retention,
+current destination in actions, Back retaining selection and the real `× N` clear
+handler. Server tests cover navigation retention, selected outlines, checkbox-only
+selection in delete mode, confirmation cancellation, pending moves, clear button, automatic last-checkbox exit,
+adjacent server workspace/transfers/downloads, local pickers and text editor.
+Existing AgentChatUi and cache tests also pass. Mock tests do not establish physical
+IME/gestures/DPI or actual filesystem access from Android.
+
+Code review traces independent picker modes, fresh browser identity/destination,
+batch preflight, conflict races handled by no-clobber publication, staging cleanup,
+partial failure/count reporting, UI busy state/dismissal recovery, server-profile
+selection isolation, source-parent grouping and no automatic retry. Agent chat
+integration sources match verified1.5.21 hashes; no AI controller asset changed.
+No system dependency, installed Ubuntu, shared SDK or user process was modified.
+
+Evidence: `.verification/file-actions-v1.5.22/` — tests-final-cancel.log, tests.json,
+tested-source.json and baseline source copies. An initial launcher was expanded
+while its process was still running; Gradle tests passed but the shell launcher
+reported a trailing parse error. The final launcher/suite pass cleanly. Existing
+Robolectric CloseGuard/Gradle filesystem-watching messages are retained in logs.
+
+Device check: select a file and folder, tap through folders, uncheck one entry,
+copy into a destination, repeat as a move, check a name conflict and clear selection.
+Confirm action menus stay open on outside taps. On a server, verify folder opening
+while selected, download/pending move, checkbox-only delete selection and `× N`.
+No exhaustive device or real server transfer/deletion verification is claimed.
+
+## Final artifact
+
+Package com.termux, version1.5.22-test/code1184, minSdk26, ARM64 only.
+APK `Termux-Jobs-v1.5.22-test-arm64.apk`, 36614894 bytes.
+SHA-256: `797e5e3c9e5ed1f420e18ea325bcbecb20609d0d5ac0058c6069a1c06859d734`.
+Same certificate as1.5.21/code1183, increased versionCode. No data reset or schema
+migration. Final ZIP/ABI/v2 signature/private-file/secret-marker audits pass; release
+stage matches tested sources. All packaged assets and native libraries match1.5.21
+byte for byte, including every agent adapter and bootstrap. Assembly/runtime required
+definition verification passes,31 optional missing types retain review notes.
+Existing Lint Kotlin/UAST/JNA tooling warnings remain, not a clean-Lint claim.
+
+Final evidence: build-final.log, staged-source.json, apk-audit.json,
+audit-final.log, signature.txt, badging.txt, delivery.json. Download copy hash verified.
+New stable release versionCode must exceed1184. No GitHub publication.

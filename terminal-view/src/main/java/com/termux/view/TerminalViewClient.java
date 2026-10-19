@@ -37,6 +37,9 @@ public interface TerminalViewClient {
      */
     void onSingleTapUp(MotionEvent e);
 
+    /** Touch tap already consumed by a mouse-tracking TUI. */
+    default void onTerminalMouseTap(MotionEvent e) {}
+
     boolean shouldBackButtonBeMappedToEscape();
 
     boolean shouldEnforceCharBasedInput();

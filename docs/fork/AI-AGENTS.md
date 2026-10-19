@@ -1,13 +1,202 @@
+# AI Agents — v1.6.0
+
+Текущий выпуск включает Android-чаты Codex, Gemini, Claude и OpenCode с отдельными
+нативными transport/auth/history. В терминальном окне «Свернуть» только скрывает
+окно; «Вернуться в чат [агент]» возвращает управление поддержанным способом.
+Рассуждения, модели, права и вопросы доступны в пределах возможностей CLI/backend.
+Неизвестный запрос не одобряется автоматически. Команда Shell — действие самого
+пользователя с правами окружения, а не запрос модели.
+
+Проверка среды и подтверждённая подготовка компонентов применяются к новым
+запускам; галочка не подтверждает авторизацию, квоту или биллинг. Для нового
+интерфейса перезапустите ту же историю после окончания важных задач. Кодекс
+по умолчанию Ubuntu; старые Termux-профили читаются по прежнему пути.
+
+Разработчик подтвердил Codex-чат/клавиатуру/возврат и проверял промежуточные сборки.
+Claude/Vertex не прошли полный цикл с реальным аккаунтом. Gemini API key доступен,
+Google free login пока выключен; Vertex требует Cloud project/IAM/API/billing.
+[Релиз](RELEASE-v1.6.0.md) · [проверки](VALIDATION-v1.6.0.md).
+
+## Historical private implementation notes
+
+Следующие записи относятся к промежуточным версиям; поведение текущего выпуска
+описано выше и в документах Android-chat. Старые эксперименты мини-фронтенда
+не являются текущим интерфейсом.
+
+---
+
 # AI Agents — v1.0.18
 
 **Экспериментальная интеграция.** Поддержка в меню не означает, что все аккаунты,
 модели, способы входа и восстановление истории проверены на реальном устройстве.
 
+## Частная v1.5.32-test — чат Codex
+
+Новые запуски Codex в Ubuntu используют общий чат приложения: обычные сообщения,
+раскрываемые плашки рассуждений/действий, подтверждения и поддержанные вопросы.
+Кнопка робота открывает компактный штатный терминал с большими клавишами. Карточка
+модели и лимитов остаётся сверху. Существующие работающие сессии не переключаются:
+для нового вида запустите ту же историю заново, не создавая новый чат.
+Модель/рассуждение отмечены «следующий ответ» и передаются штатному turn/start.
+История и права остаются нативными. Неподдержанные запросы не одобряются автоматически.
+Подробности и ограничения: [CODEX-ANDROID-CHAT.md](CODEX-ANDROID-CHAT.md),
+[проверки v1.5.32](VALIDATION-v1.5.32-test.md).
+
+## Частная проверочная v1.5.31-test — продолжение настройки Vertex
+
+После штатного входа Google Cloud, если проект не указан ни в запуске, ни в
+окружении, запуск Gemini ждёт данные от приложения. В чате показано пояснение
+«Учётные данные Google Cloud найдены»; окно предлагает ID облачного проекта,
+регион и «Сохранить и продолжить». ID — не рабочая папка и не код авторизации.
+Окно не закрывается случайным нажатием снаружи. «Назад» оставляет ожидание;
+повторно открыть окно можно нажатием на пояснение в чате. Ожидание ограничено
+15 минутами; затем требуется повторный запуск этой сессии.
+
+ID и регион сохраняются отдельно, в приватных настройках подключения Vertex
+приложения. Это не создание/сохранение пресета или истории чата. При следующих
+запусках Vertex они подставляются, если у профиля не указан собственный проект.
+Настройки сессии/пресета позволяют указать другой ID; явно заданный проект имеет
+приоритет. Сохранение указанного там проекта обновляет также параметры Vertex
+для будущих новых подключений. Эти значения общие для приложения, не привязаны
+автоматически к конкретному Google-аккаунту. Смена аккаунта может потребовать
+другого проекта и прав на него. API-вход и остальные агенты их не используют.
+
+Браузерное подтверждение и код авторизации по-прежнему обрабатывает штатный
+gcloud в терминале. Этот код не сохраняется в параметрах подключения. Наличие
+учётных данных не доказывает их действительность или доступ к облачному проекту.
+Vertex Express с GOOGLE_API_KEY и проект из переменных окружения продолжают
+работать без обязательного нового диалога. Облачный проект/IAM/billing не создаются.
+
+Ответ передаётся только ожидающему запуску через приватный файл с уникальным ID.
+Он содержит две проверенные строки данных, никогда не исполняется как shell-код.
+Текущий запуск продолжает работу без ручного перезапуска; выбранный регион не
+заменяется обратно на global. Перед обновлением уже открытой старой сессии
+потребуется её перезапуск, чтобы использовать новый порядок первого подключения.
+Схема библиотеки8 без сброса. См. [проверки v1.5.31](VALIDATION-v1.5.31-test.md).
+
+## Частная проверочная v1.5.30-test — проверка и подготовка окружения
+
+После «Среда запуска» в редакторе сессии/пресета AI Agents находится «Проверка
+среды запуска». Проверка выполняется по нажатию, без установки и входа в аккаунт.
+Галочка справа означает наличие компонентов выбранного агента в Ubuntu, а не
+действительность ключа, доступность модели или остаток квоты. Изменение агента,
+способа входа либо облачных параметров сбрасывает результат.
+
+При создании/запуске пресета компоненты проверяются повторно. Если чего-то нет,
+приложение предлагает подготовку с явным подтверждением. После согласия установка
+идёт в терминале новой сессии: недостающие proot-distro/Ubuntu, базовые APT-пакеты
+и CLI выбранного агента. Существующая Ubuntu не заменяется. Базовые пакеты общие
+для этой Ubuntu, приватные CLI хранятся в подпапках `~/.local/share/termux-jobs`.
+Существующий глобальный Codex используется без замены; отсутствующий CLI ставится
+отдельно. Согласие действует на один запуск и не сохраняется в пресете.
+
+Для Vertex без известных Cloud-учётных данных подготовка может установить
+Google Cloud CLI и Python, затем открыть штатный ADC-вход в терминале; браузерное
+подтверждение выполняет пользователь. Имеющиеся данные авторизации не сбрасываются.
+В отличие от предыдущей v1.5.29, предварительная ручная установка gcloud теперь
+не обязательна. Облачный проект, IAM, включение API и billing не создаются.
+Выбор региона предлагает несколько значений и ручной ввод другого региона.
+
+Обычные Termux/Ubuntu/SSH-сессии и старые профили Codex в Termux не получают этот
+установщик. Данные библиотеки и история не сбрасываются, схема остаётся8.
+Проверки и ограничения: [VALIDATION-v1.5.30-test.md](VALIDATION-v1.5.30-test.md).
+
+## Частная проверочная v1.5.29-test — вход Gemini
+
+В приложении три пункта: Google-аккаунт (серый/недоступный), Gemini API-ключ,
+Vertex AI · Google Cloud. Недоступность Google отражает сообщение текущего CLI
+при входе личным аккаунтом; это не утверждение о работе всех продуктов Google.
+Google-вход не удаляется из сохранённых профилей и не заменяется без выбора
+пользователя. Новые профили по умолчанию используют Gemini API-ключ.
+
+«Выбрать в терминале» заменён в новом выборе на Vertex AI. Старый `auto` остаётся
+читаемым/исполняемым; редактор поясняет, что сохранён прежний способ CLI, и даёт
+выбрать API-ключ или Vertex. Обновление само не выполняет вход/выход, не меняет
+аккаунт и не перезапускает работающие агенты.
+
+Vertex использует штатный auth type `vertex-ai`, а не Google OAuth или Gemini
+API. Только для Vertex показаны облачный ID проекта и регион (`global`,
+`us-central1` и т.п.). Это параметры Google Cloud, отдельно от рабочей папки.
+Они экспортируются только в процесс выбранной Vertex-сессии. Пустые поля
+сохраняют значения окружения; регион по умолчанию global. Путь к папке вместо
+ID, перенос строки и shell-синтаксис не принимаются.
+
+В Ubuntu нужны уже настроенные Google Cloud ADC/сервисный аккаунт либо
+`GOOGLE_API_KEY` для Vertex Express. Обычный `GEMINI_API_KEY` не является заменой
+этим данным. Метаданные проекта и региона можно хранить в пресете; ключи через
+эти поля не вводятся и в библиотеку не записываются. Условия оплаты/квоты Google
+Cloud отдельные; приложение не создаёт облачный проект, не подключает billing и
+не устанавливает gcloud. При отсутствии учётных данных CLI покажет причину.
+Существующая защита внешней системной политики настроек сохранена.
+
+Данные не сбрасываются, схема8. Новый auth enum `vertex` старые сборки могут не
+понимать: перед намеренным откатом переключите такие профили на API-ключ в новой
+версии и сохраните резервную копию библиотеки. Обновление вперёд сохраняет старые
+Google/auto/API-профили. Проверки: [VALIDATION-v1.5.29-test.md](VALIDATION-v1.5.29-test.md).
+
+## Частная проверочная v1.5.28-test
+
+Карточки Codex, Claude, Gemini и OpenCode используют общий стиль: шрифт12sp,
+минимальная высота34dp, прежние отступы12/4dp, максимум две строки. Внутри
+модель и доступные настройки представлены отдельными строками. Возможности
+остаются штатными для каждого CLI; одинаковый вид не означает одинаковые права.
+Codex сохраняет прежнее управление моделью/рассуждениями; нового переключения
+прав Codex нет. У Claude/Gemini остаются их собственные режимы прав.
+
+OpenCode: отдельные «Права» (полный/с подтверждениями/чтение) и «Режим работы»
+(Build/Plan), выбор и подтверждение. Изменение допускается только для свободного
+собственного чата, без активного Shell, нативного терминала, вопросов и запросов
+разрешения. Применение проверяется чтением текущей сессии; настройки запуска/
+сохранённого пресета меняются только после подтверждения. Существующие правила
+чата заменяются выбранным набором; ограничение проекта при этом сохраняется.
+Изменённые отдельно правила отображаются как свои, а не как один из трёх режимов.
+При неопределённом результате автоматического повтора нет: сначала «Обновить».
+
+Claude: «Рассуждения» использует поддержанные текущей моделью уровни из native
+initialize-каталога. Применение — через session-scoped `apply_flag_settings`
+(`effortLevel`), без изменения общего settings.json, авторизации или системного
+промпта. Выбор применяется к следующим запросам и сохраняется в профиле после
+ACK. «По умолчанию CLI» сбрасывает явное значение. Выбор недоступен во время
+действия, вопроса, Shell или открытого нативного терминала.
+
+Gemini: «Рассуждения» изменяет `thinkingConfig` основного чата в памяти своего CLI.
+Gemini2.5: бюджеты1024/8192/24576 токенов (Pro:32768 для высокого); совместимые
+Gemini3/3.1 и проверенные по официальной таблице новые семейства — штатный уровень.
+Неизвестные модели и явно не поддерживающие thinking не получают выдуманных
+вариантов. «По умолчанию CLI» возвращает исходную конфигурацию. Служебные запросы
+и отдельные агенты не изменяются; tools, temperature, includeThoughts и другие
+поля сохраняются. Нативные хуки пользователя могут далее менять запрос по своим
+правилам. Изменение доступно в свободном чате, права не затрагивает.
+
+Для новых функций управления ранее открытый процесс агента нужно перезапустить
+с тем же чатом после обновления приложения. Старые контроллеры не заменяются
+в работающих процессах. История и данные не очищаются; схема библиотеки остаётся8,
+новые поля имеют безопасное значение default. Реальный доступ к модели и оплата
+проверяются провайдером при запросе. Usage не выдаётся за остаток подписки.
+
+Официальные сведения: [Claude effort](https://code.claude.com/docs/en/model-config),
+[Gemini CLI configuration](https://geminicli.com/docs/cli/generation-settings/),
+[Gemini thinking](https://ai.google.dev/gemini-api/docs/thinking).
+Проверки и ограничения: [VALIDATION-v1.5.28-test.md](VALIDATION-v1.5.28-test.md).
+
+## Частная проверочная v1.5.21-test
+
+Новые запуски Claude используют Android-чат, как OpenCode/Gemini, через отдельный
+штатный stream-json протокол Claude. Есть карточка модели/режима и инструменты,
+запросы разрешений и терминальное окно. Старую сессию Claude перезапустите с тем
+же ID истории. В полном CLI для возврата к отправке через чат нужен `/exit` или
+Ctrl+D; кнопка «Назад в чат» только скрывает окно. Пояснение есть в интерфейсе.
+Данные и история не очищаются. Подробнее: [Claude](CLAUDE-ANDROID-CHAT.md).
+Ниже сведения о ранних этапах; текущие OpenCode/Gemini Android-чаты описаны в
+[OpenCode](OPENCODE-ANDROID-CHAT.md) и [Gemini](GEMINI-ANDROID-CHAT.md).
+
 ## Запуск и окружение
 
 Создать сессию → Среда запуска → AI Agents → агент. Задайте проект/папку и
 поддерживаемый вариант истории: новый чат, выбор чата или конкретный ID.
-Codex сохраняет выбор Termux/Ubuntu; OpenCode, Claude Code и Gemini CLI — Ubuntu.
+В тестовой v1.5.4-test новые сессии Codex, OpenCode, Claude Code и Gemini CLI
+используют Ubuntu. Прежние Codex-пресеты Termux сохраняют прежнюю среду,
+каталог и историю без автоматической миграции; для Ubuntu создайте новый профиль.
 Саму Ubuntu необходимо заранее установить через proot-distro. «Создать и запустить»
 проверяет/готовит частные компоненты агента, затем запускает его в этой вкладке.
 Системные пакеты, shell-профили, Node/Codex/Bridge не обновляются адаптерами.
@@ -503,3 +692,306 @@ Local AI → Settings → Engine settings → Model communication format: Curren
 ## v1.4.30-test operating mode
 
 Engine settings → Operating mode → CPU / GPU (OpenCL, testing). CPU is default; its ARM/compatible settings and threads reappear unchanged after returning from GPU. Initially only catalog Qwen3.5 2B on Snapdragon8EliteSM8750 is supported. GPU inference runs in an Android child process; Ubuntu tool environment remains selected independently. Select CPU if GPU initialization fails. Compare actual request diagnostics; CPU prefill benchmark is unavailable while GPU selected. Error cards now contain original calls and precise schema feedback. Empty write truncates, never deletes. See [release notes](RELEASE-v1.4.30-test.md).
+
+
+## Частная v1.5.4-test: карточка Gemini и отправка из поля
+
+Это локальный APK для проверки, не опубликованный стабильный выпуск.
+
+- Нижняя кнопка отправки Gemini вставляет текст и через 160 мс передаёт один Enter.
+  Это обходит штатные защиты CLI0.64.0 от случайного Enter после вставки (30/40 мс).
+  Смена сессии, режима ввода, остановка или изменение текста отменяют отложенный Enter.
+  Уже вставленный в CLI текст при отмене остаётся черновиком; не отправляйте его
+  повторной вставкой — используйте интерактивный ввод. Другие агенты и shell не изменены.
+- Интерактивный ввод в собственное поле CLI доступен только при включённой кнопке
+  интерактивного ввода. Нижнее поле приложения сохраняется.
+- Карточка Gemini читает локальный снимок состояния только активной видимой сессии
+  раз в 1,5 с. Обновляется текст карточки, не терминал/поле ввода/вся страница.
+  Снимок содержит модель, штатный режим, состояние и числовую статистику запуска
+  (включая вспомогательные запросы CLI). Это не статистика всего аккаунта.
+- Остаток квоты здесь не читается: «Квота недоступна». Поддерживается собственная
+  авторизация каждого пользователя; персональные API-ключи не включены в APK.
+- Через карточку можно получить каталог моделей и подтвердить смену. Каталог API
+  запрашивается только по нажатию; ключ остаётся в дочернем CLI и передаётся только
+  фиксированному официальному Google API, без тестовой генерации. Пользовательские
+  API endpoints не перенаправляются на Google. При недоступном каталоге показываются
+  варианты штатного CLI. Доступность/тариф конкретной модели проверяет сервер.
+- Изменение использует тот же временный Config.setModel, что `/model set` без persist:
+  чат не пересоздаётся, история/права/авторизация не меняются. Во время ответа запрос
+  ждёт idle; ручная смена модели в CLI отменяет ожидающий запрос. После перезапуска
+  используются прежние параметры пресета. Подтверждение означает применение выбора
+  конфигурацией CLI, не успешную генерацию через выбранную модель.
+- Мост привязан к целостности шести модулей CLI0.64.0. Наблюдение добавляется загрузчиком
+  в память; установленные файлы SDK не переписываются. При несовместимости управление
+  недоступно, исходный CLI продолжает запуск. При разработке приложения установленный
+  CLI и работающие сессии не менялись. Для новой карточки требуется новый запуск Gemini.
+- Частный Unix socket и JSON0600 связаны с UUID одного запуска. В снимках нет переписки,
+  ключей и произвольных payload. Остановка сохраняет прежнюю проверенную схему владения
+  дочерним процессом; Codex/Claude/OpenCode не используют этот мост.
+
+Автоматические проверки не заменяют примерку клавиатуры и реальный ответ Gemini.
+
+
+### Частная v1.5.5-test: исправление управления Gemini
+
+- Исправлена платформенная ошибка LocalSocket: сначала connect() создаёт fd,
+  затем устанавливается тайм-аут. В v1.5.4-test тайм-аут до connect() мог завершать
+  запрос ошибкой Android `socket not created`, несмотря на успешную авторизацию.
+  Node socket-тесты предыдущего этапа не проверяли Android-клиент.
+- Получение состояния перенесено с временного потребителя StreamingContext
+  (например, ShowMoreLines) в постоянный расчёт streamingState. Передача состояния
+  вызывается React useEffect после commit. Это сохраняет idle после исчезновения
+  временных компонентов; ожидающая смена модели может корректно продолжиться.
+- Открытое окно статистики также обновляет текст/доступность кнопки без пересоздания
+  страницы, терминала, поля ввода или самого диалога.
+- Вместо ошибочного «проверьте вход» показывается категория ошибки локального
+  управления: подключение, тайм-аут, перезапуск, неподготовленный CLI или протокол.
+  Сырые исключения/пути/данные авторизации не показываются.
+- Используется штатный Node22 module.register через --import. Предупреждение
+  experimental-loader убрано без глобального отключения предупреждений Node.
+- «Токены всего» — сумма native totalTokenCount ответов API в этом запуске.
+  Вход включает cached tokens; кэш не складывается повторно. Отдельно показаны
+  выход и рассуждения. Повторно передаваемая история учитывается API на каждом
+  вызове: это расход запуска, а не длина уникальной истории или квота аккаунта.
+  При смене модели накопленные счётчики запуска сохраняются. Перезапуск CLI,
+  включая его штатный auth-restart, создаёт новые счётчики дочернего CLI.
+- Фактическая модель из основного ответа API имеет приоритет над выбранным
+  alias/ID, чтобы учитывать возможный backend fallback. При ручной смене модели
+  устаревшее наблюдение сбрасывается.
+
+Область изменений — только Gemini CLI и модели в нём. Codex, Claude, OpenCode,
+обычные Ubuntu/Termux-сессии и их счётчики не используют этот механизм.
+Для новых hooks/module.register требуется новый запуск Gemini-сессии.
+
+
+### Частная v1.5.6-test: подписка и фактические окна Codex
+
+В v1.5.5-test и ранее UI ошибочно называл `primary` пятичасовым, а `secondary`
+недельным независимо от длительности окна. Теперь название берётся из
+`windowDurationMins`:300мин →5ч,10080мин →7д, остальные длительности отображаются
+как переданы сервером. При неизвестной длительности показывается нейтральный
+период, а не предположение по Pro/Plus или дате сброса. Отсутствующие окна не
+рисуются как дополнительные лимиты. Процент/полоса означают оставшуюся долю.
+
+В окне Codex отдельно показана подписка из native account/read (refreshToken:false).
+Сохраняются только enum плана и тип входа; email/ID/авторизация не записываются.
+Неизвестный план не подменяется Pro или Plus. Вход API-ключом отмечается отдельно.
+Оба запроса — metadata app-server, без model inference и без изменения прав/чата.
+Файл помощника новый immutable bridge-v0.2.21.js, прежние файлы не заменяются.
+Название подписки появляется после нового запуска Codex с этим помощником;
+новые названия окон работают и со старыми снимками, если в них есть длительность.
+
+Для Gemini API-ключ не используется для попыток чтения Google Cloud Monitoring.
+В окно добавлен переход «Квоты AI Studio» на официальный https://aistudio.google.com/rate-limit,
+без ключа или других личных данных в URL. Статистика текущего CLI не объявляется
+остатком квоты всего Google-проекта. Полная интеграция метрик проекта отдельно
+требует авторизации и разрешений; заголовки x-ratelimit-remaining-* из ответа модели
+не считаются подтверждённым официальным контрактом Gemini API.
+
+Первоисточники: [Codex app-server](https://developers.openai.com/codex/app-server/),
+[Gemini rate limits](https://ai.google.dev/gemini-api/docs/rate-limits),
+[Cloud Monitoring authorization scopes](https://cloud.google.com/monitoring/api/ref_v3/rest/v3/projects.timeSeries/list).
+
+
+### Частная v1.5.7-test: live режим прав Gemini и прокрутка
+
+В карточке Gemini «Режим прав: … ▾» открывает три native варианта столбиком:
+подтверждать действия/default, разрешать редактирование/autoEdit и планирование/plan.
+Выбор отправляет один запрос; исходное окно остаётся открытым и показывает фактически
+применённое состояние. Отдельной нижней кнопки прав нет. Названия совпадают с формой
+сессии/пресета. Недоступные native варианты отображаются выключенными.
+
+Путь переключения тот же, что у native useApprovalModeIndicator: Config.setApprovalMode,
+обновление индикатора и onApprovalModeChange (включая обычное уведомление истории
+при выходе из plan). Ничего не печатается в терминальный ввод, чат не пересоздаётся.
+Штатные ограничения доверия/plan не обходятся; YOLO не предлагается.
+
+Во время ответа/ожидания подтверждения запрос ждёт idle. Если native выбор прав,
+контроллер или проект изменились, ожидающий запрос отменяется, а не применяется
+в новом контексте. Новая выбранная опция заменяет прежнюю ожидающую опцию. Чужие
+инструменты и существующие подтверждения не одобряются приложением автоматически.
+
+После native ack с совпадающими UUID запуска/request ID/режимом обновляются запись
+текущей сессии и тот же сохранённый пресет. Несохранённая сессия не превращается
+в пресет автоматически. Если настройки были отредактированы отдельно, объект удалён
+или запуск изменился, старая операция не перезаписывает их. Запись использует прежний
+AtomicFile writer; ошибки сохранения показываются общим обработчиком библиотеки.
+Подтверждение отслеживается локальными файлами и после перехода в другую вкладку;
+новый сервис, inference-запросы и частый запуск proot для этого не добавлены.
+Неподтверждённое изменение после уничтожения UI не записывается как выполненное.
+
+Для Gemini-сессий включено opt-in сохранение позиции transcript в TerminalView.
+При чтении выше конца вывод больше не принудительно сбрасывает mTopRow в0: позиция
+сдвигается вместе с scrollCounter и ограничивается имеющейся историей. Новые данные
+не отбрасываются. При возврате в конец обычное следование за выводом сохраняется.
+Флаг принадлежит конкретной TerminalSession, по умолчанию false. Alternate screen,
+mouse routing, алгоритм выделения и поведение других агентов не переписаны.
+Изменения размера/клавиатуры по-прежнему используют прежний путь updateSize.
+
+OpenCode оставлен без этой правки: разбор его прокрутки согласован на следующее обновление.
+Для новых approval hooks требуется новый запуск Gemini после установки APK.
+
+
+### Частная v1.5.8-test: кадры Gemini
+
+Запись показала краткое исчезновение нижней строки Gemini. В отдельном тесте
+native Ink createStandard стирает и перерисовывает строку ввода даже при изменении
+только spinner. Этот legacy путь не выставляет границы синхронного кадра.
+
+Hash-pinned in-memory loader теперь добавляет DEC2026 begin/end вокруг записей
+native log-update трёх проверенных renderer chunks Gemini0.64.0. Содержимое и порядок
+байтов внутри кадра сохраняются; уже помеченные записи повторно не оборачиваются.
+Глобальный stdout/stderr и выбор renderer не меняются, файлы SDK не переписываются.
+При несовпадении hash остаётся прежний CLI с неподдерживаемой live-интеграцией.
+
+Только Gemini TerminalSession включает SynchronizedFrameBuffer: он собирает кадр
+до изменения emulator, поэтому сторонний invalidate не показывает полустёртую панель.
+Это ограниченный буфер текущего кадра, не снимок истории. Разорванные маркеры/UTF-8,
+несколько кадров в чтении и обычные ANSI сохраняют порядок; обычный вывод проходит
+сразу. Завершённый кадр не ждёт таймер. Предельный объём256KiB, аварийное освобождение
+через200ms от первого удержанного байта без продления повторными begin. Disable,
+reset, resize и выход освобождают остаток и снимают callback; нового фонового сервиса
+нет. Задержка1.2с и прежние resize-batches не возвращены.
+
+OpenCode проверен в отдельном native mini с private HOME/XDG, синтетической историей
+и заблокированным inference:50 кадров DEC2026, обычный экран без mouse tracking,
+шесть resize с сохранением тестовой истории, owned stop. Живые пользовательские
+чаты не затрагивались. Применимость протокола подтверждена, но Android-жесты и
+непрерывная генерация OpenCode ещё не проверены. Frame-флаг и transcript anchoring
+в этой сборке для него выключены. Codex, Claude, SSH и обычные терминалы используют
+прежний путь вывода. Подробные ограничения probes описаны в VALIDATION-v1.5.8-test.md.
+
+
+### Частная v1.5.9-test: запросы Gemini и вывод OpenCode
+
+Разработчик подтвердил исчезновение мерцания Gemini в v1.5.8-test.
+В новой сборке ToolConfirmationMessage после native React commit регистрирует
+поддерживаемый запрос разрешения. Передаётся фактический confirm из useToolActions;
+ввод цифр/Enter и исполнение shell из Java не используются. Ответ связан с UUID
+запуска, opaque nonce, текущим Config/проектом и неизменённым содержимым запроса.
+Одноразовый nonce потребляется также при ответе штатной клавиатурой CLI.
+
+Над нижней частью терминала появляется компактная карточка с просмотром полного
+запроса и native вариантами «Разрешить разово», «На эту сессию» (если разрешено CLI),
+«Нет». После совпавшего подтверждения карточка сворачивается с указанием срока:
+один раз / текущая сессия без повторного запроса / отклонено. Сессионное правило
+Gemini может охватывать префиксы команд или похожие действия; оно сбрасывается
+при завершении запуска, не меняет права пресета и не сохраняется для будущих сессий.
+Постоянное разрешение proceed_always_and_save из приложения не предлагается.
+
+Поддержаны обычные exec/edit/info. Ask-user, exit-plan, MCP, расширение sandbox,
+нестандартные/слишком большие запросы, build/untrusted/deceptive-URL предупреждения
+остаются в штатном CLI. Так их специальные варианты и предупреждения сохраняются.
+Оригинальный CLI-запрос остаётся доступным в интерактивном режиме.
+
+Карточка — overlay внутри FrameLayout поверхности терминала: TerminalView сохраняет
+свой размер, открытие/сворачивание карточки не запускает изменение PTY. Меняется
+только её содержимое. При переходе на другую сессию/вкладку или уходе приложения
+карточка скрывается; поздний ответ не рисуется в другом чате. Повторные нажатия
+блокируются. Неоднозначный/ошибочный ack не показывается как выданное разрешение.
+
+Текст команды/диффа передаётся только через private Unix socket/IPC и остаётся
+в памяти UI/CLI; в status JSON записывается только nonce. Workspace/preset/history
+приложения не используются для хранения карточки. Штатная история/диагностика
+самого CLI сохраняет прежнее поведение. Новых запросов к модели нет.
+
+OpenCode теперь тоже opt-in использует bounded DEC2026 buffer и primary transcript
+anchoring. Подтверждено отдельным native mini с private HOME/XDG и блокировкой
+inference:53 полных кадра, тестовая история остаётся после шести resize, owned stop.
+Фикс не переносит Gemini SDK hooks в OpenCode и не меняет Codex/Claude/SSH/shell.
+Alternate/mouse scroll и прежний updateSize не переписываются. Реальные жесты,
+клавиатура и генерация OpenCode требуют проверки разработчиком после установки.
+
+
+## Private v1.5.10-test: OpenCode geometry
+
+OpenCode alone opts into stable geometry updates. Hidden workspace/window geometry
+is not sent to its PTY; equal existing geometry does not emit another SIGWINCH.
+Visible changes settle for96ms, bounded by320ms from the first change. Pending work
+is tied to the session and cancelled on hide/background/detach/close/switch; fresh
+PTY creation is immediate. Gemini/Codex/Claude/SSH/shell keep immediate sizing.
+
+A height-only primary-buffer resize preserves above-bottom text by the actual
+change in active transcript rows. Width changes, alternate buffers and mouse
+tracking keep their previous reset policy. While awaiting final geometry, drawing
+and hit-test helpers project the bottom into the existing buffer; interaction
+flushes geometry before selecting/scrolling. No replay capture/history buffer is
+introduced. The existing bounded DEC2026 output path remains unchanged.
+
+The isolated native mini redraws its synthetic chat on each required resize; this
+is distinct from duplicated persisted history. Coalescing avoids intermediate
+redraws but cannot remove a redraw required by a genuine final size change.
+Physical keyboard/nav/selection checks remain separate from JVM/native probes.
+
+
+## Private v1.5.11-test: native approval receipts and OpenCode height replay
+
+Jobs2 mini replaces only the OpenCode frontend. Initial history/model reopen and
+width replay remain; height-only replay is suppressed. This avoids replay when
+keyboard/extra-key controls change height. The immutable frontend adds ~77MB to APK;
+read [OPENCODE-MINI-JOBS2.md](OPENCODE-MINI-JOBS2.md) for build/storage/provenance.
+
+OpenCode gets once/deny cards via owned native permission routes. Security/complex
+requests and project-persistent permission choices remain native. Confirmed replies
+hide overlays. OpenCode/Gemini add native scrolling approval records and tap details;
+private bounded sidecars hold details per chat, not status/presets. Approval is not
+proof of execution, and replaying an old record never grants a new permission.
+Codex and Claude keep native menus pending separate integrations. Current sessions
+need a new launch after the APK update. Android gesture/render behavior remains a
+developer device check; isolated source/native tests do not prove every phone path.
+
+## Private v1.5.12-test: restore OpenCode resize replay
+
+Developer reported interleaving of chat and footer text in1.5.11-test. The adapter
+now enables upstream height/width replay again using the unchanged jobs2 binary.
+A real OpenTUI/PTY comparison reproduced lost subsequent output without restore;
+reset plus replay preserved marker order. The native mini probe preserved initial
+history, permission receipts through shrink/grow, model reopen and owned stop.
+This is a correctness rollback, not proof that keyboard jitter is fixed: a resize
+may visibly replay history. Native approval cards, transcript receipts and Android
+hidden/same-size resize suppression stay. Real streaming keyboard checks remain.
+See VALIDATION-v1.5.12-test.md.
+
+## Private v1.5.13-test: OpenCode Android chat
+
+New OpenCode launches use the owned native server with Android-rendered chat,
+reasoning/tool/permission pills and supported forms. The original composer sends
+to the model; a separate Shell composer executes explicit non-interactive commands.
+The existing top model card remains. Its48dp package button becomes the vector
+robot, opening official mini on demand; known unsupported requests light its border.
+Custom jobs2 no longer ships. Other agents retain their interfaces. Existing data
+is not cleared, existing running old frontends are not converted. See
+OPENCODE-ANDROID-CHAT.md for scope/limitations and VALIDATION-v1.5.13-test.md.
+
+
+## Private v1.5.17-test: Gemini Android chat
+
+Gemini uses the same Android chat renderer and robot terminal window as OpenCode,
+with its own native callback/transport integration. Main input calls the native
+model submit handler directly; interactive-only Shell calls the native shell
+execution lifecycle. Native authentication/history/permissions and upper card
+remain. The duplicate compact terminal key row is removed from both agents; full
+configured extra keys remain. Restart Gemini with its existing chat after update.
+See [GEMINI-ANDROID-CHAT.md](GEMINI-ANDROID-CHAT.md) and validation for boundaries,
+source/build evidence and required device tests. Codex/Claude chat is unchanged.
+
+
+## Private v1.5.19-test: clear chat connection and early terminal access
+
+Gemini/OpenCode robot opens the session terminal before the chat connects; a
+working bridge is still needed for OpenCode mini. Empty local connected chat
+explicitly invites a message. API errors have concise RU/EN guidance and native
+details on tap. Connection retries read status only, never resend user actions.
+No authentication, native history, policy or bootstrap changes. See
+[VALIDATION-v1.5.19-test.md](VALIDATION-v1.5.19-test.md).
+
+
+## Private v1.5.20-test: preserve agent chat on session switching
+
+OpenCode/Gemini keep a bounded in-memory presentation per running session. Return
+restores rows and reading position immediately, then refreshes native data without
+a blank Connecting screen. No hidden-session polling, disk history changes or
+auth/policy changes. Pending permission/form controls require a fresh native
+snapshot. Gemini resume tokens invalidate old restored rows. Claude migration is
+next after developer checking; not included. See
+[VALIDATION-v1.5.20-test.md](VALIDATION-v1.5.20-test.md).

@@ -1,4 +1,582 @@
-# Latest public release: v1.5.3
+# Latest stable release: v1.6.0
+
+## Stable v1.6.0/code1192 — release prepared
+
+User explicitly authorized publication of current agreed work; anonymous feedback
+relay/API/Issues service was discussed then deferred. No feedback component is
+included, no server deployment/token setup authorized as part of this release.
+
+Compared with public1.5.3: Android agent chats for Codex/Gemini/Claude/OpenCode,
+robot terminal with large keys/Enter, separate Minimize/Return and IME fix;
+capability/model/permission/thinking cards, accurate weekly-only Codex quota;
+confirmed missing-component environment setup and guided Gemini Vertex;
+session file copy/move/select-all and shared server selection/navigation actions.
+Existing SSH/server-agent/media/backup behavior remains as documented.
+
+com.termux, schema8, server store unchanged, signer retained, Android8+/ARM64.
+APK Termux-Jobs-v1.6.0-arm64.apk,36663894bytes; SHA256
+2df1b376677e98e2f7c4da4dcda00229f7c9ae33846648fbe2ae858e1ba87cf3.
+All APK assets/native libraries byte-identical to developer-tested1.5.33-test.
+630 full JVM tests + additional24 WorkspaceStore tests including new optional-field
+compatibility case,119 Python tests,19 Node fixture suites pass. Real Codex/Claude
+CLI tested with loopback synthetic provider, no real cloud accounts/inference.
+APK/runtime/pkg/ABI/certificate/privacy/source/docs/update-schema audits pass.
+Existing Lint warnings remain. Developer confirmed Codex chat/keyboard/minimize/
+return; exhaustive Android/upgrade/Claude/Vertex account checks are not claimed.
+
+Localized update notes explicitly state no general reset from1.5.3, new UI on
+next launch, active Android processes not guaranteed through install and retained
+local-AI removal behavior for upgrades from before1.5.3. Older private version
+names were reused; old/public and later report text preserved separately.
+See RELEASE-v1.6.0.md, VALIDATION-v1.6.0.md, .verification/release-v1.6.0/.
+
+## Private v1.5.33-test/code1191 — agent terminal controls delivered
+
+APK `Termux-Jobs-v1.5.33-test-arm64.apk` (36663950 bytes), SHA256
+`d5c85e59dc2a85c99b8182bf577e697c955750ea599a6fe60a0a2d709dd45a24`. Download copy/checksum verified.
+Same com.termux certificate, Android8+/ARM64, no schema/data clearing.
+
+Developer resumed this Codex chat successfully in1.5.32, then found robot CLI
+retained control after hiding and tapping its composer did not open IME.
+1.5.33 adds Minimize plus Return to [agent] chat. Codex terminal-close is
+visibility-only; explicit terminal-exit closes its owned native UI tree at idle,
+or after its active turn completes. Server/RPC/history remain running. Claude
+explicit exit uses existing SDK resume lifecycle, refuses while nativeBusy.
+Gemini/OpenCode reuse existing terminal-close. Chat provides terminal guidance
+and explicit Return button; no generic /exit text is injected.
+Dialog IME flags cleared; mouse-tracking touch callback opens IME only in
+reparented terminal dialogs. Main terminals keep their old path.
+
+151 JVM tests, Node Codex/Claude adapter and Claude lifecycle, existing Codex quota
+fixtures pass. Final runtime/ZIP/package/version/ABI/certificate/privacy/assets
+and build staging audits pass. Existing Lint warnings remain. Device keyboard,
+Minimize/Return, active turn and subsequent send need developer verification.
+See VALIDATION-v1.5.33-test.md and .verification/codex-chat-v1.5.33.
+Do not publish/install without instructions. Future stable code must exceed1191.
+
+## Private v1.5.32-test/code1190 — Codex Android chat delivered
+
+APK `Termux-Jobs-v1.5.32-test-arm64.apk` (36662098 bytes), SHA256
+`26c51c92e8c6def4ed026c07d45893b4f97ef5b3d356f742fcad57286bfe941f`. Download APK/checksum copy verified.
+com.termux/certificate retained, Android8+/ARM64, library schema8/no reset.
+No GitHub publication, APK installation or modification of the running user chat.
+
+New Ubuntu Codex runs opt into shared AgentChatUi/View via CodexChatControl private
+per-run marker. Old running sessions and legacy Termux-Codex keep old presentation.
+Same native app-server/history/policy/cwd; no added prompt, account or config edits.
+Reopen same chat ID after updating to see normal transcript and expandable native
+reasoning/tools, approvals/forms, robot compact terminal with native large keys.
+New controller codex-chat.cjs uses a separate immutable wire copy exported from the
+existing codex-control.js asset; old bridge0.2.21 remains unchanged on device.
+
+Messages use turn/start or expected-turn turn/steer. Explicit interactive Shell
+uses native thread/shellCommand (Ubuntu user privileges, outside agent sandbox),
+explained in UI. Model/reasoning are native-catalog-validated choices, marked as
+next response and passed explicitly to subsequent turn/start. Loaded thread/resume
+ignored reasoning config in the native probe, so it is not used to fake a model
+change ACK. Pending clears on accepted native turn. Status/account limits stay on
+old read-only worker; new card overlays current-run choice/pending state only.
+
+Approvals require current native thread/turn/request nonce, allow once/deny only;
+permission deny grants empty subset. Structured non-secret questions supported.
+Unknown/secret/MCP/custom requests fail closed with guidance to native CLI after
+turn. Dedup never blindly repeats an unconfirmed request. Stable receipts attach
+to original tool items. History pages8 turns, bounded wire/cache; huge/unsupported
+history may need native terminal. New unmaterialized chats start empty normally.
+Native full CLI handoff requires idle, /exit or Ctrl+D resumes chat; Back hides only.
+Controller closes only owned captured PID/start-time descendants, no broad kill.
+
+150 JVM tests pass, adapter/status fixtures pass. Exact Codex0.163.0 generated
+schemas; isolated native stdio app-server executed Shell and two turns via a
+loopback synthetic model with correct streaming/history/high effort on both requests.
+No real account/model API used. Native Unix socket verification path was inaccessible
+in this proot location; existing private-Unix wire fixture passes, actual phone
+chat socket/UI/login/TUI handoff still require developer checks. Source/build/pkg/
+ZIP/ABI/cert/privacy/runtime audits pass; existing Lint warnings, not clean Lint.
+See CODEX-ANDROID-CHAT.md, VALIDATION-v1.5.32-test.md and .verification/codex-chat-v1.5.32.
+Future stable release code must exceed1190. Preserve prior1.5.31 APK.
+
+## Developer checking: Vertex and Claude deferred
+
+Developer reached native Google Cloud browser sign-in and Vertex API responses:
+first SERVICE_DISABLED, then BILLING_DISABLED after API enablement. Cloud Console
+billing setup then failed with OR_BACR2_59 (reported screenshot). The exact reason
+for that Cloud billing failure is unknown. No successful Vertex model response was
+verified. User explicitly chose to leave Vertex and Claude available as implemented
+and defer their end-to-end checks because account/billing access prevents testing.
+Do not describe either as fully device-validated in a future release. Do not
+change billing/accounts or remove/disable these integrations on that basis.
+
+## Private v1.5.31-test/code1189 — Vertex guided project setup
+
+Delivered `Termux-Jobs-v1.5.31-test-arm64.apk`, 36651111 bytes, SHA256
+`eededc180a9dedc11cb1fd42efb72dd1bed78745f7947267a070adddbca9efc6`. Download copy verified. Package/cert unchanged,
+API26/ARM64, no library schema/data reset. No GitHub publication or APK install.
+
+User requested connection-level project/location reuse, NOT saving the chat or
+creating a preset. New VertexConnection keeps non-secret application-private
+Vertex defaults; selected Vertex with blank project inherits, explicit profile
+project wins, API/other agents do not load these settings. Editor nonempty Vertex
+metadata also updates defaults. These are app-wide, not per-Google-account.
+
+After existing ADC/bootstrap, new vertex-project.sh requests missing project
+through per-run private Gemini UUID request/response files. AgentChatUi's existing
+poller shows a localized chat notice and ID/location dialog (hides mini-terminal).
+Save and continue validates, remembers defaults, atomically answers only current
+waiting run. No eval/source of response, no OAuth code in defaults. Bounded15min
+shell wait; Express key or existing project bypasses it. Gemini command no longer
+overrides newly selected metadata with old blank/global values. Back leaves
+startup waiting and chat notice reopens prompt. Stale/changed run callbacks are
+refused. No changes to agent permissions, native bridges or process shutdown.
+
+133 JVM tests pass plus isolated shell handshake/injection fixtures and pinned
+native Gemini Vertex auth regression. Final assembly/runtime/ZIP/pkg/ABI/cert/
+privacy/source-vs-test/build audits pass. Prior assets and native libs unchanged;
+one new shell asset. Existing Lint Kotlin/UAST/JNA warnings, not clean Lint.
+Real Cloud auth/project/IAM/model access and Android UI require developer checks:
+update then restart Gemini Vertex once, fill project, Save and continue, check
+next launch reuses metadata. Existing valid ADC should avoid another browser login.
+See docs/fork/VALIDATION-v1.5.31-test.md and AI-AGENTS.md. Future stable code>1189.
+
+## Private v1.5.30-test/code1188 — prepared for developer checking
+
+Delivered `Termux-Jobs-v1.5.30-test-arm64.apk` (36646157 bytes), SHA256
+`ce5a143cca15a45501aef073c8323d021adf6d200757f7b706315b58a4980545`. Download copy checksum verified. Package/certificate retained;
+code1188 exceeds last private1187. Android8+/ARM64, schema8, no data reset.
+No GitHub publication or APK installation in this task.
+
+Manual environment check row follows environment selection in AI agent session/
+preset editors; right vector checkmark means found components, not valid account
+or quota. Agent/auth/cloud changes clear it. Launch checks again and offers explicit
+missing-only setup. Transient consent is neither copied nor serialized. Standard
+Termux/Ubuntu/SSH and legacy Codex-Termux bypass setup. Existing Ubuntu/global
+Codex/credentials are preserved; new CLI tools are private. Missing base APT packages
+are shared in Ubuntu. Vertex can install gcloud589/Python and open native ADC
+browser sign-in; project/IAM/APIs/billing remain manual. Common region selector
+plus custom location; stale Google-free hint removed.
+
+98 JVM tests pass, isolated shell and Vertex native fixtures pass, owned PTY-close
+probe leaves no fixture worker/child. Final build/runtime/ZIP/pkg/ABI/cert/privacy/
+source-vs-test/build staging audits pass. Existing native libs/all previous assets
+byte-identical; four new setup assets only. Known Lint Kotlin/UAST/JNA warnings,
+not clean Lint. Real Android clean-install/preparation interruption, UI/checkmark,
+Cloud browser sign-in and real model requests still need developer checking.
+Details: docs/fork/VALIDATION-v1.5.30-test.md and AI-AGENTS.md.
+
+Pinned new references in ignored .tools/downloads/agent-setup; not bundled.
+Codex0.163.0 npm integrity and gcloud589 embedded VERSION verified (downloads.json).
+Future stable release must exceed1188 and include updater assets/docs per AGENTS.
+After user checks, next requested work is Codex chat redesign; not started.
+
+## Private Gemini authentication update: v1.5.29-test (code1187)
+
+Delivered Termux-Jobs-v1.5.29-test-arm64.apk, 36628736 bytes,
+SHA256 9d96a0086f9f8c2666420c7366569d977b0d46fbdb388b79deaad76def02ff0e. Download copy verified.
+Google sign-in dimmed/disabled with current-client explanation; new profiles use
+Gemini API. Choose in terminal replaced with Vertex AI; old auto/Google preserved.
+Vertex has separate cloud project/location fields, scoped exports and enforced
+native vertex-ai. Needs existing Cloud ADC/service-account or Express key;
+no auth credentials/system packages installed, no real Cloud request made.
+89 JVM tests, Node auth/live regressions and exact pinned native auth/generator
+fixtures pass. Build/runtime/package/signature/privacy/asset/source checks pass.
+Only Gemini controller asset changed from1.5.28; unrelated assets/libs identical.
+Same package/cert, schema8, no data reset. New vertex enum is not guaranteed
+readable by older builds: switch Vertex presets to API and back up before downgrade.
+Device/provider checks pending; no installation/GitHub publication. Next stable
+code must exceed1187. See VALIDATION-v1.5.29-test.md, AI-AGENTS.md and evidence
+.verification/gemini-auth-v1.5.29. Codex chat redesign remains after user checks.
+
+## Private agent status update: v1.5.28-test (code1186)
+
+Delivered Termux-Jobs-v1.5.28-test-arm64.apk, 36626000 bytes, SHA256
+67bee5f46fd9618728da9d41d2641cbf4d47cfc9fdf0fd4bb7d173bb0d431015.
+Download copy/checksum verified. Shared agent card presentation; OpenCode live
+rights/Build-Plan with ACK+revision+idle guards and same scope; Claude native effort
+catalog/apply_flag_settings; Gemini main-chat thinkingConfig with model-specific
+levels/budgets. Choices persist after ACK. No Codex rights switch, no chat rewrite.
+126 focused JVM tests and14 Node suites pass; real pinned Claude loopback/native
+OpenCode no-inference probes pass; build/runtime/ZIP/package/version/signature/
+privacy/source staging checks pass. Unrelated assets/native libraries unchanged
+from1.5.23. Device/provider checks pending. User will check then requests Codex chat
+redesign. No GitHub publication or install authorized. Schema8/default optional
+fields; same package/cert; next stable code must exceed1186. Historical private
+1.5.24–27 reports/artifacts are preserved. See VALIDATION-v1.5.28-test.md,
+AI-AGENTS.md and .verification/agent-cards-v1.5.24 evidence.
+
+## Private Select all update: v1.5.23-test (code1185)
+
+Delivered `Termux-Jobs-v1.5.23-test-arm64.apk`, 36615662 bytes, SHA256
+`e5f8c94e3de5d1aa76948fdf90c61a46cf2aeb8df54dd384d7d68889229a3ff2`; Download copy verified. Same package/certificate; increased code,
+no reset/schema migration. Select all appears only during active selection.
+Session browser: left footer opposite Close, applies current type/search filter,
+retains selections from other folders, capped50 with notice; does not dismiss.
+Pickers retain their existing neutral buttons. Server: vector Select all and × N
+share the transfer row to the right; arrows narrow. Separate slots/8dp spacing,
+no overlap measured at296dp usable width with enlarged count text and at least48dp
+arrow targets. Adds current displayed folder entries to the same downloadSelection
+map used by download/move/delete; retains earlier folder entries, cap500 with notice.
+Prepared move disables all action until completed/cancelled. Controls hide at zero.
+No new filesystem operation or poller; transfers/policy/agent adapters unchanged.
+
+136 targeted JVM tests pass, including filtered and limit selection, visibility,
+no-dismiss footer, row geometry and all-selected download validation. Build/runtime/
+ZIP/package/ABI/signature/privacy/staged-source/resource checks pass. ALL packaged
+assets/native libraries identical to1.5.22. Known Lint tooling warnings remain.
+Device geometry/gesture and real transfer checks remain developer testing. No app
+installation/GitHub publication. Next stable code must exceed1185.
+See FILE-SELECTION.md, VALIDATION-v1.5.23-test.md and
+.verification/select-all-v1.5.23 evidence.
+
+## Previous private file browser update: v1.5.22-test (code1184)
+
+Delivered `Termux-Jobs-v1.5.22-test-arm64.apk`, 36614894 bytes, SHA256
+`797e5e3c9e5ed1f420e18ea325bcbecb20609d0d5ac0058c6069a1c06859d734`; Download copy verified. Same package/certificate, increased code.
+No reset/schema migration. User decided NOT to add cross-environment destinations.
+Session browser: left parent vector, destination arrow below Home/search, long press
+and independent checkboxes, navigation/filter-persistent selection, × N clear button.
+Row taps still open folders/file menus. Copy here / Move here / Back and confirmation
+menus reject outside dismissal. Whole-batch path preflight, staged copies, native
+no-clobber moves, confirmed conflict suffixes retaining extensions;50 selections.
+Self-descendant/overlap/missing paths rejected. Completed batches are not rolled back
+on interruption; no automatic retry. Browser dismissal disabled during mutation.
+
+Server: same row/checkbox separation, persistent same-profile navigation selection,
+× N also clears prepared move. Unchecking last entry ends delete selection and its
+outlines; × N hidden at zero. Empty trash-initiated mode can still be toggled off by
+trash. Multiple-source-parent deletion groups keep existing safe server validation,
+explicit full-path confirmation and partial/error reporting. SFTP/download/move,
+agent/server assets, monitoring and AI transports remain unchanged.
+131 focused JVM tests pass, including real shell fixtures and UI/adjacent server/
+chat regressions. Build/runtime/ZIP/package/ABI/signature/privacy/staged-source
+checks pass. ALL existing APK assets/native libraries identical to1.5.21; Claude/
+shared agent integration source hashes unchanged. Existing Lint tooling warnings.
+Phone geometry/gestures/filesystem and real-server checks remain developer tests;
+no actual server action, app installation or GitHub publication. Next stable code
+must exceed1184. See FILE-SELECTION.md and VALIDATION-v1.5.22-test.md.
+Evidence .verification/file-actions-v1.5.22; baseline source restore map retained.
+
+## Previous private agent update: v1.5.21-test (code1183)
+
+Delivered Claude Android chat for newly launched Claude sessions, sharing the
+OpenCode/Gemini view, cache and native key dialog through its own stream-json
+controller. Existing Claude binary/auth/history/policies and all existing agent
+assets/native libraries are unchanged. No reset or history-format migration.
+Restart an old Claude session with the same saved chat to use the new controller.
+Top card supports acknowledged model/native mode changes and last-request usage.
+Main input sends native user messages; interactive-only Shell stores separate
+application output, not model-context history. Native tools/questions/permissions
+project to pills/forms with nonce/session-scoped once/deny callbacks.
+
+Important native-window behavior: auth login naturally returns to SDK chat. Full
+native CLI keeps working on Back; /exit or Ctrl+D in that CLI resumes SDK chat.
+Visible RU/EN explanations exist in both terminal and chat. Busy model/tasks block
+native handoff; no implicit interruption. Explicit stop is owned-process-only.
+82 focused JVM tests and12 Node regression entrypoints pass; actual pinned native
+CLI verified against isolated loopback synthetic provider (native tools/approval,
+dedup/history resume); owned lifecycle/Back/descendant safety tests pass.
+Assembly/runtime/ZIP/signature/privacy/staged-source audits pass; known Lint tooling
+warnings remain. Physical Claude sign-in/IME/gestures/provider interaction still
+need developer checks. No installation/GitHub publication. Baseline1.5.20 retained,
+including restore map in .verification/baselines/v1.5.20-source.
+APK SHA256 `256c594fcebd508f92909c85810343fd91cd1d2360934450a638174ba255a77b`, 36609110 bytes. Copy in Download verified.
+Next stable versionCode must exceed1183. See VALIDATION-v1.5.21-test.md and
+CLAUDE-ANDROID-CHAT.md. No new release is authorized.
+
+## Accepted baseline: v1.5.20-test (code1182)
+
+Developer accepted v1.5.20-test after phone checking ("отлично!!! фиксируем!!").
+This is the agreed working baseline before Claude chat integration. Acceptance
+does not establish exhaustive device coverage or authorize GitHub publication.
+
+Delivered `Termux-Jobs-v1.5.20-test-arm64.apk` (36590750 bytes), SHA256
+`e4c150ca824a92d06d88d9e88d69511b8bab1443bbb7f01058f19c623581bf07`.
+Same package/certificate, increased code. No reset/history migration.
+Fix OpenCode/Gemini switching: AgentChatCache holds bounded presentation by exact
+profile+thread/run+terminal handle, restores rows/model/status/Shell draft/scroll
+anchor or bottom immediately, then visible native refresh. No blank Connecting on
+return to known chat. Upper workspace tabs retain the same view. No hidden-session
+polling or native process/transport change. Pending forms/permission buttons are NOT
+cached; fresh native state required. Gemini actual-session token change clears old
+restored data; legacy capability fallback remains available. Native/real transport
+failures remain visible alongside preserved messages. Cache bound8inactive entries,
+512Ki serialized characters rows/entry,2Mi chars overall plus metadata, in memory
+only; eviction affects display, not native history or model context.
+73 focused JVM tests pass including stale ownership, cache bounds, position, blocked
+transport restore for both agents, fresh permissions, actual Gemini resume and no
+hidden polling/stop. Build/runtime/package/ABI/ZIP/signature/privacy/staged-source
+audits pass; ALL assets/native libraries identical to1.5.19. Existing Lint tooling
+warnings remain. Developer phone switching/scroll/streaming/IME checks pending.
+No install/publication. Next stable code must exceed1182. See
+VALIDATION-v1.5.20-test.md and architecture docs. User agreed next stage after this
+fix/check: same Android chat for Claude; NOT implemented in this APK.
+
+## Previous private agent update: v1.5.19-test (code1181)
+
+Delivered `Termux-Jobs-v1.5.19-test-arm64.apk` (36587686 bytes), SHA256
+`e3301d1a66b858517c81d09235fc73b1a429eb2ed7a5abb23723a5f39a9f7515`.
+Same package/certificate; code increased. No reset or history migration.
+Gemini/OpenCode empty connected chat now explicitly says local session connected /
+send a message. No-connection notice explains robot startup/login and a safe
+read-only snapshot retry tap. Shared AgentChatErrors presents native errors with
+RU/EN region/model/auth/quota/context/network guidance; original details on tap.
+Legacy F12 error hint replaced with a tap-details explanation. Unconfirmed actions
+keep notice/draft across polls; no automatic action/prompt resend. Local connection
+is not a claim that remote API/model is usable; region refusal remains provider-side.
+Robot is available immediately for both agents, even before chat capability or
+connection resolves. Local terminal dialog opens without waiting for control RPC;
+owned terminal-open request runs asynchronously, unavailable bridge is explained
+inside window. Existing native large keys/footer/dimensions retained. Dismissal
+queues owned close after open; generation/owner result gates remain. Other agent
+UI/policy/transport unchanged.65 targeted JVM tests pass. Build/runtime/ZIP/signature/
+ABI/privacy/staged-source audits pass; ALL assets/native libs unchanged from1.5.18.
+Existing Lint infrastructure warnings remain. Device connection/API/error-detail/
+robot-arrow/IME checks pending. No install or publication. Next stable code must
+exceed1181. See VALIDATION-v1.5.19-test.md and GEMINI-ANDROID-CHAT.md.
+
+## Previous private agent update: v1.5.18-test (code1180)
+
+Delivered `Termux-Jobs-v1.5.18-test-arm64.apk` (36583538 bytes), SHA256
+`0fa4422b25f597ca7fffdd27f109b49397c923b42a85953d20a18ea954893b09`.
+Fix both OpenCode/Gemini native robot windows: create fully populated large native
+keys if hidden ViewPager has not created them or existing key view is empty.
+Use selected config, two-row fallback, actual row height, native key client;
+temporary activity reference supports modifiers and restores exact original on
+asynchronous dismissal. Existing populated panel reparent/restore retained.
+No tiny duplicate row. Back left/Enter right retained.59 focused JVM tests pass,
+build/runtime/package/ABI/ZIP/signature/privacy/staged-source audits pass. All assets
+and native libraries byte-identical to1.5.17; no history migration/reset. Certificate
+unchanged. Device arrow selection/IME checks pending. Gemini unavailable
+2.5-flash-lite model and duplicate Thinking are outside task. No session/process
+changes, APK installation or GitHub publication. Next stable code must exceed1180.
+See VALIDATION-v1.5.18-test.md. Existing Lint infrastructure warnings remain.
+
+## Previous private agent update: v1.5.17-test (code1179)
+
+Built/audited/delivered `Termux-Jobs-v1.5.17-test-arm64.apk` (36583330 bytes), SHA256
+`e7cd24f29501e482b75631650ecfc33bc1395bfc20946ce6938f9676bc5aa33a`.
+Same package/signing certificate, increased code, no reset/history migration.
+Gemini gets shared AgentChatUi/View with its own native callbacks/Unix transport:
+main input directly submits to model, interactive-only Shell invokes native shell
+lifecycle. Existing Gemini top card and native auth/history/permissions stay.
+Robot opens same-size native window; Back left, Enter right. Only full configured
+large extra keys remain in BOTH Gemini/OpenCode; duplicate compact row removed.
+Native Gemini window close never stops CLI. Permission overlay suppressed only
+while structured chat shows; native complex dialogs/auth fallback remain.
+Native session guards, stable rows, clear/rewind invalidation, bounded/lazy projection
+and batched UTF-8 reads verified.566 full tests before final refinements and58 final
+focused tests pass;10 Node scripts plus actual isolated CLI auth-screen probe pass.
+Build/package/ABI/ZIP/signature/runtime/staged-source/privacy audit pass. Native libs
+and unrelated assets byte-identical to1.5.16. Lint infrastructure warnings remain.
+Restart Gemini with same chat after updating. Device-authenticated streaming,
+tool confirmation, Shell, keyboard/scroll and native arrows still need user tests.
+No installation/publication. Next stable code must exceed1179. See
+VALIDATION-v1.5.17-test.md and GEMINI-ANDROID-CHAT.md. Codex chat not ported yet.
+
+## Previous private agent update: v1.5.16-test (code1178)
+
+Built/audited/delivered `Termux-Jobs-v1.5.16-test-arm64.apk` (36578142 bytes), SHA256
+`9e5248de3b607cb350a55a6b87d6e533c51f0c8f6d82cca6d52a6f2a3198a3ff`. Same package/cert, increased code, no data migration.
+OpenCode: Connecting/failure/retry messages inside transcript, hidden after SSE
+connection; pre-connection send keeps draft and never falls through to hidden
+PTY. Main-chat extra-keys button DISABLED per final user steering; no automatic
+keys on Shell tap/interactive activation. Shell lock preserved. Native dialog
+retains configured keys plus large compact Esc/Tab/arrows; Back to chat LEFT,
+Enter RIGHT (does not dismiss). Key sends guard captured/current/running session.
+Top card now model/variant instead of connection name; metadata allowlists only
+provider/id/variant, fallback profile selection, no model inference. Restart same
+OpenCode chat for helper reload. Other agents/native libraries/assets unchanged.
+565 full JVM tests pass and22 final targeted tests pass including footer/connection
+failure/recovery, input guard and model label; Node/syntax/runtime/ZIP/signature/
+privacy pass. Phone tests still needed for actual startup, native arrow choice,
+Enter/Back placement, IME and model readback. Lint infrastructure warnings remain.
+Do not install/publish. Next stable code must exceed1178. See VALIDATION-v1.5.16-test.md.
+Future Gemini/Codex Android chat discussed, not implemented.
+
+## Previous private agent update: v1.5.15-test (code1177)
+
+Built/audited/delivered `Termux-Jobs-v1.5.15-test-arm64.apk` (36577202 bytes), SHA256
+`c42e816a5298be747fe20f21d62172219e93e249370ec1812273cfaa6758eb55`. Same package/cert, increased code; no data migration.
+Shell and send gated by interactive input, draft retained. OpenCode: prefix replaces
+AI:; normal reply taps do not duplicate dialogs (truncated/detail pills retained).
+Additional keys now enabled in Android chat: mount only existing ExtraKeysView,
+ChatExtraKeys routes editing to enabled focused Shell or main model composer;
+never hidden bridge PTY or native toolbar alternate raw-input page. Parent/layout/
+visibility/native client restored on hide/switch/native dialog/close. The native
+window dimensions and native arrows/input remain as approved in v1.5.14.
+561 full JVM tests pass; final11 targeted tests pass, including key event routing
+and restoration. Build/runtime/ZIP/package/version/ABI/signature/privacy audits
+pass; all assets/native libraries identical to1.5.14. Phone IME/caret/gestures still
+need developer check; do not infer device behavior from mocked tests. Existing
+Lint infrastructure warnings. No installation or GitHub publication. Next stable
+code must exceed1177. See VALIDATION-v1.5.15-test.md and OPENCODE-ANDROID-CHAT.md.
+Future Gemini/Codex chat adapters discussed but not implemented/authorized yet.
+
+## Previous private agent update: v1.5.14-test (code1176)
+
+Built/audited/delivered `Termux-Jobs-v1.5.14-test-arm64.apk` (36575234 bytes), SHA256
+`8678a7da2a2a3f0bd97fa4acc0df7d205307b85330b481013797b4f93e3942e1`. Same package/cert, no data migration; no GitHub publication.
+OpenCode Android chat: remove Stop/status rows, follow confirmed sends, cover PTY
+until capability resolved (legacy status fallback), smaller native dialog with
+normal input and existing extra keys automatically mounted/restored. Interactive
+input focuses direct Shell in main chat. Synthetic shell context is an inspectable
+pill instead of raw transcript text; duplicate native shell notice suppressed on
+same projected page. Other agents/native libraries/bootstrap assets unchanged.
+560 full JVM tests pass plus8 final focused tests; Node/syntax/runtime/ZIP/signature/
+privacy audit pass. Existing Lint infrastructure warnings, not a clean Lint claim.
+Phone keyboard/navigation/scroll checks pending. New OpenCode launch with existing
+chat needed for helper update. No APK installation. See VALIDATION-v1.5.14-test.md.
+Next stable versionCode must exceed1176.
+
+## Previous private agent update: v1.5.13-test (code1175)
+
+Built/audited/delivered structured Android chat for new OpenCode launches.
+APK Termux-Jobs-v1.5.13-test-arm64.apk, 36573650 bytes,
+SHA256 f6bb4ff6d2ae9ab66c1ddd4cf0904c8cf6c23d07429c7199fa1a8125b1de0f3a.
+559 JVM tests pass, native headless/cancel/protocol probes pass. APK/signature/
+package/code/ABI/runtime/privacy checked; physical keyboard/scroll checks pending.
+ Existing top model card
+retained; packages button becomes same48dp robot only for structured OpenCode,
+paint-only border for native-only requests. Main composer always addresses model;
+separate Shell field above it executes native non-interactive commands. No mode
+switch. Native supported forms/permissions in chat, stable anchored receipts and
+Thinking pills/details. Generic AgentChatView + OpenCodeChatUi adapter.
+Official mini only on demand; closing mini retains native server/session. Custom
+jobs2 bundle removed from APK (historical patch/templates retained). Codex/Gemini/
+Claude/SSH/shell paths preserved. Do not publish/install. New launch required.
+Native protocol probe passes headless/history/resizes, direct shell/cancel,
+model/native ID, idle interrupt, admission/dedup, permissions, forms, official mini,
+back/queued-input retention and owned shutdown without model inference.
+See OPENCODE-ANDROID-CHAT.md and VALIDATION-v1.5.13-test.md. Next stable code>1175.
+
+## Previous private agent update: v1.5.12-test (code1174)
+
+Built/audited/delivered correctness rollback after developer reported1.5.11 chat/footer interleaving.
+APK Termux-Jobs-v1.5.12-test-arm64.apk, 113533859 bytes,
+SHA256 14e7510c82fd50ce4209e7f32f244ced8e1ffb169a7f4993b27e18c329c0e5c1.
+552 JVM +75 frontend tests pass; package/cert/code/ABI/ZIP/runtime/privacy verified.
+Only production delta vs1.5.11: version and OpenCode frontend env flag0 restoring
+upstream height replay. Jobs2 binary unchanged; permissions/receipts and Android
+geometry stabilization retained. Keyboard may visibly replay history again.
+Real OpenTUI differential reproduced lost second output block without reset/replay,
+and ordered retained blocks with reset/replay. Native mini probe verified eight
+resizes including post-permission shrink/grow, receipt retention, model reopen,
+owned stop. Dynamic external shell probe did not render markers (not a passing
+streaming test); native model-streaming/keyboard check still needed on device.
+See VALIDATION-v1.5.12-test.md. NO publish/install. Next stable code must exceed1174.
+
+## Previous private agent update: v1.5.11-test (code1173)
+
+Superseded due to reported text interleaving; height replay suppression was unsafe.
+
+
+Final private APK built/audited/delivered in Download: Termux-Jobs-v1.5.11-test-arm64.apk,
+113533795bytes, SHA256712c71282300985233b32b1619292cd454587ed2c727ace2acf8c3cb2cc063b5.
+552 JVM tests +107 frontend tests passed, native height/width/reopen/permission and
+owned stop passed. Physical keyboard/receipt checks pending developer feedback.
+Canonical upstream check blocked by existing oxlint TypeScript-plugin loader;
+TUI/CLI typechecks passed. See validation for precise limitations.
+
+User authorized private OpenCode keyboard fix and in-transcript permission receipts
+for OpenCode/Gemini. NO GitHub publish/APK install. Developer confirmed1.5.10 fixed
+nav return, keyboard/keys remained. Native mini --replay repeats history on resize.
+Jobs2 frontend is separate from official serve/runtime: skip only height replay,
+retain initial/model-reopen/width replay. Width replay is necessary: native probe
+showed history disappears if all resize replay is disabled. Includes ~77MB bundle,
+177MB extracted runtime under private .ai-control; generated bundle ignored by Git.
+Build/patch/provenance: OPENCODE-MINI-JOBS2.md and patches/opencode-v2.0.28-jobs2.patch.
+
+OpenCode once/deny UI uses owned private socket/direct Java LocalSocket (no proot
+polling subprocess), GET native request + recheck + native POST reply. Native complex
+requests/always project rules remain in CLI. Gemini confirmed ack hides overlay.
+OpenCode permission.replied and Gemini successful native callbacks add small native
+transcript receipts, with tap details backed by private per-chat200/2MiB receipt
+store, not scalar status/presets. Guard owner, reply staleness, concurrent answers,
+preview generations and touch mouse-mode duplicate delivery. Permission != execution.
+Codex/Claude were inspected, still native prompts: current bridges lack required
+permission integration. Do not claim those two have new cards.
+See VALIDATION-v1.5.11-test.md for final evidence and remaining device checks.
+Next stable must use code>1173 for updating these private builds.
+
+## Previous private agent update: v1.5.10-test (code1172)
+
+Current private work: OpenCode geometry stabilization. Developer confirmed1.5.9
+flicker/incoming-output scrolling fixed; latest recording shows keyboard/top-tab
+re-entry replay. Workspace hiding changes layout while TerminalView stays INVISIBLE;
+previous path sent intermediate PTY sizes. OpenCode-only stableResize flag ignores
+hidden geometry, skips same-size existing-session attach and coalesces visible
+changes (96ms quiet,320ms first-event hard limit). Cancel pending resize on hide,
+background,detach,session change or close. Fresh PTY initialization is immediate.
+Height-only primary resize anchors actual transcript movement for a scrolled reader;
+width/alternate-screen/mouse tracking retain their reset policy. During the short
+settling interval, primary bottom-follow drawing projects the visible bottom into
+the old buffer; touch/scroll first applies final geometry so selection coordinates
+match. No text/history replay buffer added; output frame policy remains1.5.9.
+Native mini smoke with private HOME/XDG, synthetic history and inference-blocking
+proxy: two final resizes, seed visible, balanced frames, owned stop. Java fixture
+uses synthetic font metrics/window visibility and a JNI shadow, not device gestures.
+Necessary native resize still redraws: keyboard/re-entry and selection need device
+checks. See VALIDATION-v1.5.10-test.md for final build/verification evidence.
+
+## Previous private Gemini update: v1.5.9-test (code1171)
+
+Codex rate-limit follow-up: remove hardcoded primary5h/secondary7d labels, display
+actual windowDurationMins, omit absent windows, show native account/read plan/type
+without personal account data. New immutable Codex helper bridge-v0.2.21.js; never
+replace v20/v19 or change working processes. Plan requires a new Codex launch;
+old status files already carry windowDurationMins for label correction.
+Gemini quota button opens official AI Studio; no fabricated remaining quota or
+Google Cloud Monitoring credential integration. Live Gemini mode selection is now authorized/implemented: clickable Permission mode
+row opens three choices; use native Config + indicator + onApprovalModeChange hooks,
+idle queue and confirmed current-run sync to the same session/preset. No YOLO UI.
+Gemini+OpenCode now opt into primary transcript anchoring and bounded DEC2026 frames.
+Gemini frame fix confirmed by developer on v1.5.8-test. OpenCode isolated native mini
+with frames: 53 complete frames, seed retained through six resizes, owned stop passed,
+no inference or user credentials. Android gestures/keyboard remain device checks.
+
+Gemini permission card: native committed ToolConfirmationMessage hook, actual confirm
+callback, single-use opaque nonce, only offered once/session/cancel choices. Consume
+nonce on native keyboard confirmation too. Guard config/project/body/trust, do not
+approve stale/changed/double requests. Complex/native-security warning prompts stay
+in CLI. Card is a bottom overlay in terminal surface; no PTY resize/page rebuild.
+Preview full command/diff, explain session rule scope (can cover command prefixes),
+collapse only matching native ack with once/session/denied result. Permission text
+travels only over private RPC and stays in memory, never scalar status/workspace files.
+No permanent approval offered. Old Gemini launch needs restart for new hooks.
+
+Implementation and Gemini follow-up fixes authorized on 2026-10-18. Next stable must use code>1173 so the private build can update through the app.
+Private APK for device checks; NO GitHub
+publication, installation or modifications to working sessions/environments authorized.
+Developer confirmed real Gemini response + live model/stats in1166; model picker
+failed. Found Android LocalSocket.setSoTimeout before fd creation; now connect first.
+Status producer is now a committed native useMemo state instead of temporary consumers.
+Open details refresh locally, error categories replace the misleading auth toast,
+module.register removes ExperimentalWarning, native totalTokenCount is shown.
+GeminiLiveUi reads per-run local scalar snapshots; in-memory pinned CLI instrumentation
+provides native model/state/counters + temporary native model setter, queued until idle.
+Quota is unavailable, no user credential is embedded. See AI-AGENTS.md and
+VALIDATION-v1.5.9-test.md for compatibility, evidence and remaining device checks.
+
+- Codex: remove the Termux/Ubuntu environment selector from new sessions, presets
+  and session/preset settings. Use Ubuntu automatically, matching Gemini/Claude/
+  OpenCode. Do not add a replacement informational row. Existing Termux Codex
+  profiles retain Termux without migration, with an editor notice; creating a new
+  profile is required for Ubuntu. Paths, credentials and history are not moved. The current Ubuntu Codex process is untouched.
+- Gemini: make one press of the app's bottom Send button submit the message to
+  Gemini rather than leave it in the CLI composer. Current sendInput() pastes
+  then immediately writes CR. Inspected pinned CLI0.64.0 contains a fast-Enter
+  guard30ms and recent-unsafe-paste guard40ms that turn immediate Enter into a
+  newline. Implemented Gemini-only delayed single CR160ms, guarded by run/session/input ownership.
+  Real-device confirmation remains pending.
+- Keep interactive input: with it enabled, tapping TerminalView must still allow
+  direct typing into Gemini's own composer, navigation and native confirmations,
+  just as for Codex. Keep the native composer visible; no separate API chat UI.
+- Restrict any deferred-submit path to Gemini, capture the original session/run,
+  and cancel on close/switch/incompatible input instead of typing into another
+  session. Do not change Codex, Claude, OpenCode or ordinary shell Send behavior.
+  Avoid blindly sending a second Enter; check ownership and meaningful failure
+  cases. Validate direct and app-field input, multiline text and session switching.
+
+---
 
 User authorized GitHub publication as stable1.5.3, code1165 (> private1164).
 Changes since public1.5.0: complete local-AI removal/data compatibility warning,

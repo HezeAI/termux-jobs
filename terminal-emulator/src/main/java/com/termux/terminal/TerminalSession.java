@@ -34,6 +34,43 @@ public final class TerminalSession extends TerminalOutput {
     private static final int MSG_PROCESS_EXITED = 4;
 
     public final String mHandle = UUID.randomUUID().toString();
+    /** Opt-in transcript viewport anchoring; false preserves existing terminal behavior. */
+    private boolean preserveTranscriptScroll;
+    public void setPreserveTranscriptScroll(boolean enabled){preserveTranscriptScroll=enabled;}
+    public boolean preservesTranscriptScroll(){return preserveTranscriptScroll;}
+
+    private boolean stableResize;
+    /** Opt-in layout resize coalescing; no output is captured by this flag. */
+    public void setStableResizeEnabled(boolean enabled) { stableResize = enabled; }
+    public boolean usesStableResize() { return stableResize; }
+    /** Flush on the main thread before taking a viewport anchor for a real resize. */
+    public void flushFrameBeforeResize() { flushSynchronizedFrame(); }
+
+    private SynchronizedFrameBuffer synchronizedFrames;
+    private final Runnable frameTimeout = () -> {
+        if (synchronizedFrames != null) {
+            synchronizedFrames.expire(android.os.SystemClock.uptimeMillis(), this::appendVisibleOutput);
+            scheduleFrameTimeout();
+        }
+    };
+    /** Gemini/OpenCode opt-in. Flush on disable, resize, reset or exit; never withhold indefinitely. */
+    public void setSynchronizedFramesEnabled(boolean enabled) {
+        if (enabled == (synchronizedFrames != null)) return;
+        flushSynchronizedFrame();
+        synchronizedFrames = enabled ? new SynchronizedFrameBuffer() : null;
+    }
+    private void appendVisibleOutput(byte[] bytes) {
+        if (mEmulator != null) { mEmulator.append(bytes, bytes.length); notifyScreenUpdate(); }
+    }
+    private void flushSynchronizedFrame() {
+        mMainThreadHandler.removeCallbacks(frameTimeout);
+        if (synchronizedFrames != null) synchronizedFrames.flush(this::appendVisibleOutput);
+    }
+    private void scheduleFrameTimeout() {
+        mMainThreadHandler.removeCallbacks(frameTimeout);
+        if (synchronizedFrames != null && synchronizedFrames.deadline() >= 0)
+            mMainThreadHandler.postAtTime(frameTimeout, synchronizedFrames.deadline());
+    }
 
     TerminalEmulator mEmulator;
 
@@ -104,6 +141,7 @@ public final class TerminalSession extends TerminalOutput {
         if (mEmulator == null) {
             initializeEmulator(columns, rows, cellWidthPixels, cellHeightPixels);
         } else {
+            flushSynchronizedFrame();
             JNI.setPtyWindowSize(mTerminalFileDescriptor, rows, columns, cellWidthPixels, cellHeightPixels);
             mEmulator.resize(columns, rows, cellWidthPixels, cellHeightPixels);
         }
@@ -226,6 +264,7 @@ public final class TerminalSession extends TerminalOutput {
 
     /** Reset state for terminal emulator state. */
     public void reset() {
+        flushSynchronizedFrame();
         mEmulator.reset();
         notifyScreenUpdate();
     }
@@ -341,12 +380,18 @@ public final class TerminalSession extends TerminalOutput {
         public void handleMessage(Message msg) {
             int bytesRead = mProcessToTerminalIOQueue.read(mReceiveBuffer, false);
             if (bytesRead > 0) {
-                mEmulator.append(mReceiveBuffer, bytesRead);
-                notifyScreenUpdate();
+                if (synchronizedFrames == null) {
+                    mEmulator.append(mReceiveBuffer, bytesRead);
+                    notifyScreenUpdate();
+                } else {
+                    synchronizedFrames.append(mReceiveBuffer, bytesRead, android.os.SystemClock.uptimeMillis(), TerminalSession.this::appendVisibleOutput);
+                    scheduleFrameTimeout();
+                }
             }
 
             if (msg.what == MSG_PROCESS_EXITED) {
                 int exitCode = (Integer) msg.obj;
+                flushSynchronizedFrame();
                 cleanupResources(exitCode);
 
                 String exitDescription = "\r\n[Process completed";
