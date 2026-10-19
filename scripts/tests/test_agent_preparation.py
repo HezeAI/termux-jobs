@@ -9,6 +9,26 @@ def run(name,text,ok=True):
  assert (r.returncode==0)==ok,(name,r.returncode,r.stdout,r.stderr)
  return r
 r=run('check-readonly','jobs_agent_check gemini vertex\n');assert 'CHECK:done' in r.stdout and 'MISSING:gemini-cli' in r.stdout and 'AUTH:needed' in r.stdout
+# Private OpenCode paths must match launch, including the legacy npm layout.
+# These fixture executables do not install packages or make network requests.
+agents=Path(env['HOME'])/'.local/share/termux-jobs/agents'
+legacy=agents/'node_modules/.bin/opencode';legacy.parent.mkdir(parents=True)
+legacy.write_text('#!/bin/bash\nprintf "opencode v2.0.28\\n"\n');legacy.chmod(0o700)
+r=run('opencode-legacy','jobs_agent_check opencode api\n');assert 'READY:opencode-cli' in r.stdout and 'MISSING:opencode-cli' not in r.stdout
+# A private runtime is needed by a script-based CLI even if absent in ambient PATH.
+private_node=agents/'node-v22.22.1-linux-arm64/bin/node';private_node.parent.mkdir(parents=True)
+private_node.write_text('#!/bin/bash\nif [[ $1 == -e ]];then exit 0;fi;printf "opencode v2.0.28\\n"\n');private_node.chmod(0o700)
+legacy.write_text('#!/usr/bin/env node\n');legacy.chmod(0o700)
+r=run('opencode-private-node','jobs_agent_check opencode api\n');assert 'READY:opencode-cli' in r.stdout and 'READY:node' in r.stdout
+# A broken private direct binary must not be hidden by the old valid npm CLI.
+direct=agents/'bin/opencode';direct.parent.mkdir(parents=True);direct.write_text('#!/bin/bash\nprintf "opencode v0.0.1\\n"\n');direct.chmod(0o700)
+r=run('opencode-old-direct','jobs_agent_check opencode api\n');assert 'MISSING:opencode-cli' in r.stdout
+direct.write_text('#!/bin/bash\nprintf "opencode v2.0.28\\n"\n')
+r=run('opencode-private-direct','jobs_agent_check opencode api\n');assert 'READY:opencode-cli' in r.stdout
+# No exports leak to the outer launcher or other agents.
+r=run('opencode-path-local','before="$PATH";jobs_agent_check opencode api;[[ "$PATH" == "$before" ]]\n')
+direct.unlink();legacy.unlink();private_node.unlink()
+r=run('opencode-really-missing','jobs_agent_check opencode api\n');assert 'MISSING:opencode-cli' in r.stdout
 r=run('key-no-cloud',"export GOOGLE_API_KEY=SYNTHETIC_PRIVATE_KEY\njobs_agent_check gemini vertex\n");assert 'AUTH:needed' not in r.stdout and 'gcloud' not in r.stdout and 'SYNTHETIC' not in r.stdout
 r=run('gemini-key-not-vertex',"export GEMINI_API_KEY=SYNTHETIC_GEMINI_KEY\njobs_agent_check gemini vertex\n");assert 'AUTH:needed' in r.stdout and 'SYNTHETIC' not in r.stdout
 run('blocked',"apt-get(){ printf bad > apt-called; }; export JOBS_AGENT_SETUP_ALLOWED=0\njobs_agent_prepare gemini vertex\n",False);assert not (fixture/'apt-called').exists()

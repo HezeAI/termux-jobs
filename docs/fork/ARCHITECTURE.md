@@ -1,4 +1,12 @@
-# Current architecture: v1.6.0
+# Current architecture: v1.6.5
+
+Shared stable action cards use typed native events, preserving original detail
+IDs and message/receipt/reasoning boundaries. Codex history uses one-turn pages
+and a chat-only32MiB response limit; ordinary control clients retain2MiB. Streaming
+bottom-follow uses scrollTo to avoid moving keyboard focus. OpenCode read-only
+inventory matches its bootstrap's private PATH inside a subshell. No changes to
+agent policy, process ownership, schema8, server store or backup formats.
+
 
 AgentChatUi/AgentChatView render native agent histories/events independently from
 TerminalView. Each backend retains its own private transport/auth/history:

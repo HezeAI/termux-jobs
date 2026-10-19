@@ -18,7 +18,8 @@ function rpcError(error) {
   return '(code='+code+', '+reason+')';
 }
 class Connection {
-  constructor(path) {
+  constructor(path, options = {}) {
+    this.max = options.largeHistory === true ? 32 * 1024 * 1024 : MAX; this.failed = false;
     this.socket = net.createConnection({path}); this.buffer = Buffer.alloc(0); this.fragments = []; this.size = 0;
     this.pending = new Map(); this.serial = 0; this.upgraded = false;
     this.ready = new Promise((resolve, reject) => { this.resolve = resolve; this.reject = reject; });
@@ -30,6 +31,7 @@ class Connection {
     this.socket.on('data', chunk => { try { this.parse(chunk); } catch(e) { this.fail(e); } });
   }
   fail(error) {
+    if (this.failed) return; this.failed = true;
     clearTimeout(this.timeout); this.reject(error);
     for (const item of this.pending.values()) { clearTimeout(item.timer); item.reject(error); } this.pending.clear();
     if (this.onFailure) this.onFailure(error); this.socket.destroy();
@@ -37,7 +39,7 @@ class Connection {
   close() { clearTimeout(this.timeout); this.socket.destroy(); }
   send(message) { this.frame(1, Buffer.from(JSON.stringify(message))); }
   frame(opcode, payload) {
-    if(payload.length>MAX) throw new Error('Message too large');
+    if(payload.length>this.max) throw new Error('Message too large');
     let header;
     if(payload.length<126) header=Buffer.from([0x80|opcode,0x80|payload.length]);
     else if(payload.length<65536) {header=Buffer.alloc(4);header[0]=0x80|opcode;header[1]=254;header.writeUInt16BE(payload.length,2);}
@@ -62,8 +64,8 @@ class Connection {
       if(first&0x70 || second&0x80) throw new Error('Invalid server frame');
       let size=second&127,offset=2;
       if(size===126) {if(this.buffer.length<4)return;size=this.buffer.readUInt16BE(2);offset=4;}
-      else if(size===127) {if(this.buffer.length<10)return;const n=this.buffer.readBigUInt64BE(2);if(n>BigInt(MAX))throw new Error('Message too large');size=Number(n);offset=10;}
-      if(size>MAX || this.size+size>MAX)throw new Error('Message too large');
+      else if(size===127) {if(this.buffer.length<10)return;const n=this.buffer.readBigUInt64BE(2);if(n>BigInt(this.max))throw new Error('Message too large');size=Number(n);offset=10;}
+      if(size>this.max || this.size+size>this.max)throw new Error('Message too large');
       if(this.buffer.length<offset+size)return;
       const data=Buffer.from(this.buffer.subarray(offset,offset+size));this.buffer=this.buffer.subarray(offset+size);
       if(opcode===8) {this.close();return;} if(opcode===9) {this.frame(10,data);continue;} if(opcode===10)continue;

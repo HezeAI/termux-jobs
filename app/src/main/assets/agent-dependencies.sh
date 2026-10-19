@@ -10,6 +10,11 @@ jobs_agent_cloud_path() { printf '%s\n' "$HOME/.local/share/termux-jobs/gemini-c
 jobs_agent_check() (
     local agent=${1:-} auth=${2:-api} root="$HOME/.local/share/termux-jobs" tool path node_ok=0
     jobs_agent_valid "$agent" || return 2
+    # Match jobs_ai_prepare's private executable/runtime search path. This is a
+    # subshell-local inventory only: never source bootstrap or install anything.
+    if [[ $agent == opencode ]]; then
+        export PATH="$root/agents/bin:$root/agents/node-v22.22.1-linux-arm64/bin:$root/agents/node_modules/.bin:$PATH"
+    fi
     for tool in $(jobs_agent_base_tools); do if command -v "$tool" >/dev/null; then printf 'READY:%s\n' "$tool"; else printf 'MISSING:%s\n' "$tool"; fi; done
     if [[ -r /etc/ssl/certs/ca-certificates.crt ]]; then printf 'READY:ca-certificates\n'; else printf 'MISSING:ca-certificates\n'; fi
     if jobs_agent_has_node; then node_ok=1; fi

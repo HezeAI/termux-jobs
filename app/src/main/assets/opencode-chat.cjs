@@ -34,7 +34,7 @@ class OpenCodeChat {
   const receipts=new ReceiptStore(this.file,'O');const rows=[];const unlinked=receipts.rows.map(r=>{try{return {row:r,anchor:JSON.parse(r.body).anchorMessage};}catch{return {row:r};}});const used=new Set();
   for(const m of messages){
    if(!id(m.id))continue;
-   const push=(key,kind,body,title='')=>rows.push({key:m.id+':'+key,message:m.id,part:key,kind,title:text(title),body:text(body).slice(0,12000),more:text(body).length>12000});
+   const push=(key,kind,body,title='',meta={})=>rows.push({...meta,key:m.id+':'+key,message:m.id,part:key,kind,title:text(title),body:text(body).slice(0,12000),more:text(body).length>12000});
    if(m.type==='user')push('user','user',m.text);
    else if(m.type==='assistant'){
     const ord={text:0,reasoning:0};
@@ -46,7 +46,7 @@ class OpenCodeChat {
      }else if(part.type==='tool'){
       const receipt=receipts.get(part.id);
       if(receipt){used.add(receipt.key);push('receipt:'+part.id,'receipt',receipt.body,receipts.label(receipt,false));}
-      push('tool:'+part.id,'tool',JSON.stringify(part.state||{},null,2),part.name+' · '+(part.state?.status||''));
+      push('tool:'+part.id,'tool',JSON.stringify(part.state||{},null,2),part.name+' · '+(part.state?.status||''),{toolName:text(part.name),toolType:text(part.name),status:text(part.state?.status),toolPath:text(part.state?.input?.filePath||part.state?.input?.file_path||part.state?.input?.path).slice(0,2048),...(['bash','run_shell_command'].includes(part.name)&&typeof part.state?.input?.command==='string'?{actionType:'shell',command:text(part.state.input.command).slice(0,2000)}:{})});
      }
     }
     if(m.error)push('error','error',JSON.stringify(m.error,null,2));

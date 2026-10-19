@@ -83,7 +83,7 @@ final class AgentChatUi {
         if(!next.equals(owner)){
             if(!owner.isEmpty()){shellDrafts.put(owner,view.shellInput.getText().toString());savePresentation();}
             generation++;owner=next;actionNotice="";currentModel="";nativeSession="";connected=false;transportFailed=false;
-            view.assistantName(name());view.shellInput.setText(shellDrafts.getOrDefault(next,""));nativeChat=false;resolved=false;loading=false;olderLoading=false;busy=false;directShell=false;requiresTerminal=false;rows.clear();older="";requestStamp="";view.clear();
+            view.assistantName(name());view.actionCards(current.get()!=null&&!current.get().environment.equals("codex"));view.shellInput.setText(shellDrafts.getOrDefault(next,""));nativeChat=false;resolved=false;loading=false;olderLoading=false;busy=false;directShell=false;requiresTerminal=false;rows.clear();older="";requestStamp="";view.clear();
             AgentChatCache.State saved=cache.take(next);
             if(saved==null)view.connection(next.isEmpty()?"":tr("Подключение…","Connecting…"));else restorePresentation(saved);
             if(terminal!=null)terminal.dismiss();if(details!=null)details.dismiss();if(formDialog!=null)formDialog.dismiss();if(vertexDialog!=null)vertexDialog.dismiss();
@@ -168,7 +168,7 @@ final class AgentChatUi {
     private void details(JSONObject row){
         if(!selected())return;if(details!=null)details.dismiss();thinkingBody=null;thinkingScroll=null;thinkingKey="";LinearLayout box=new LinearLayout(activity);box.setOrientation(LinearLayout.VERTICAL);TextView body=view.label(row.optString("body"),14);body.setTextIsSelectable(true);ScrollView scroll=new ScrollView(activity);scroll.addView(body);box.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         TextView next=view.pill(tr("Загрузить полный текст","Load full text"),()->{});box.addView(next);next.setVisibility(row.optBoolean("more")?View.VISIBLE:View.GONE);
-        details=WorkspaceDialogs.builder(activity).setTitle(row.optString("kind").equals("reasoning")?tr("Рассуждение","Thinking"):row.optString("title")).setView(box).setPositiveButton(tr("Назад","Back"),null).create();details.show();details.getWindow().setLayout(-1,Math.round(activity.getResources().getDisplayMetrics().heightPixels*.72f));
+        details=WorkspaceDialogs.builder(activity).setTitle(row.optString("kind").equals("reasoning")?tr("Рассуждение","Thinking"):CodexActionLabels.title(row,WorkspaceLanguage.code(activity).equals("ru"))).setView(box).setPositiveButton(tr("Назад","Back"),null).create();details.show();details.getWindow().setLayout(-1,Math.round(activity.getResources().getDisplayMetrics().heightPixels*.72f));
         if(row.optString("kind").equals("reasoning")){thinkingBody=body;thinkingScroll=scroll;thinkingKey=row.optString("key");}
         final AlertDialog dialog=details;final int[] offset={0};final int g=generation;final WorkspaceStore.Session p=snapshot();
         Runnable[] page=new Runnable[1];page[0]=()->{next.setEnabled(false);JSONObject q=op("chat-detail");try{if(p.geminiAgent||p.claudeAgent||p.environment.equals("codex"))q.put("session",nativeSession);q.put("message",row.optString("message")).put("part",row.optString("part")).put("offset",offset[0]);}catch(JSONException ignored){}

@@ -1,4 +1,120 @@
+## Release v1.6.5 /1198 — publication in progress
+
+User explicitly authorized stable GitHub v1.6.5 fix after confirming OpenCode
+component-check fix, shared cards and composer focus. Previous public v1.6.0/code1192.
+Stable source includes all private1.6.1–1.6.5 changes, preserves other Codex's large
+history fix and no data schema reset. Current versionName1.6.5/code1198, same
+com.termux/signer/Android8+/ARM64. Public stable must include final update.json.
+Known native Codex terminal mouse escape echo/stale component-check text remains
+deferred by user. No actual account end-to-end Claude/Vertex validation claimed.
+Use explicit --repo HezeAI/termux-jobs with gh: upstream Termux can otherwise be
+inferred as default. Final artifacts/validation in .verification/release-v1.6.5.
+No APK installation or user session/environment modifications authorized here.
+
+## Current private v1.6.5-test /1197
+
+Developer confirmed1.6.4 composer-focus fix and action cards in other agents.
+Reports component check always says missing opencode-cli, including presets,
+creation and manual environment check; relaunch can run OpenCode.
+Found and reproduced inventory/launch path mismatch: bootstrap prepends private
+agents/bin, private Node/bin and agents/node_modules/.bin; inventory did not.
+Added exactly those paths inside the inventory subshell for OpenCode only.
+Isolated fixture before fix falsely reports missing despite compatible old npm
+layout; after fix direct/npm/private Node succeed, wrong pinned version and
+really missing CLI still fail. PATH does not escape check subshell, no installs.
+Actual installed guest runtime was not visible at standard local paths in this
+session; developer's particular installation cause still needs device confirmation.
+Do not claim every possible missing-component cause fixed. Core pinned CLI itself
+reports expected version twice in isolated copies. Current private build only;
+public stable still1.6.0. No native terminal deferred issue changes.
+
+## Current private v1.6.4-test /1196
+
+Shared action-card presentation enabled for OpenCode/Gemini/Claude; Codex keeps
+its existing grouping/history fix. Existing Codex* card class names are internal;
+providers project typed toolName/status/path/command metadata without changing
+execution, approvals, prompts or lifecycle. Generic grouping stops at transcript
+barriers; explicit successful structured Read of absolute */SKILL.md gives skill
+chronological context, never proof of causal application. Gemini only exposes
+native name/status, so no inferred skill path there. Unknown tool/status preserved.
+
+Urgent developer report: streamed cards/answers steal composer focus, not text.
+Reproduced by regression test before fix. AgentChatView.bottomAfterLayout used
+ScrollView.fullScroll(FOCUS_DOWN), which selects a focusable transcript child.
+Changed to scrollTo(bottom); regression now preserves composer focus, draft,
+selection and IME composing span. Shared by all four native agent chats.
+Terminal stale component-check text/mouse tracking escape echo remains deferred
+at user's request; no terminal/process changes were made for this task.
+
+Focused143 JVM tests pass; final labels/card targeted checks and APK verification
+recorded in docs/fork/VALIDATION-v1.6.4-test.md and .verification/agent-cards-v1.6.4.
+No GitHub publication authorized for this private build. Public latest1.6.0.
+
 # Latest stable release: v1.6.0
+
+## Private v1.6.3-test/code1195 — compact Codex skill/action clouds delivered
+
+Keeps1.6.2 one-turn/32MiB-history wire/disconnect fix (codex-control.js byte-identical).
+Compact successful timeline (summary hidden); explicit failed-command/action text,
+no generic app-error heading. Codex-only RU/EN friendly image view/generation/web
+labels. Unknown tool names/details preserved.
+
+Skill clouds: arbitrary explicit native skill inputs or conservative literal
+single-file cat of absolute SKILL.md (bash/sh wrapper/quoted path/-- supported).
+No interpolation/compound/echo guesses, no extra file read/execution. Attached or
+reading is not successful application. Subsequent same-turn tools carry context
+until new user/new turn/new skill; failed reads do not propagate it. This is
+chronological context, not proof of causality. Text/receipt/reasoning barriers
+stay ordered. Cloud expands to steps and original details, collapsed content width.
+Native generic tool status follows events/history; phase annotations excluded from
+raw JSON. Other agents, prompts/rights/native execution unchanged. No new requests.
+
+138 focused JVM tests + adapter/native loopback/history-wire fixtures pass.
+Final build/runtime/pkg/ZIP/ABI/cert/privacy/source audit passes. Existing Lint
+warnings remain. APK Termux-Jobs-v1.6.3-test-arm64.apk,36667970bytes,
+SHA256 4bdea959c553380188bb1a97c0f0a30fb163478de082d6a9b8c8606d303399d1.
+Download copy/hash verified; relaunch same history for new metadata. Phone checks
+of cloud/gestures/DPI still needed. No installation/publication/runtime changes.
+Latest stable1.6.0; next stable code must exceed1195. See
+VALIDATION-v1.6.3-test.md and .verification/codex-skills-v1.6.3/.
+
+## Private v1.6.2-test/code1194 — large-history startup fix
+
+Developer screenshots showed Codex disconnected after1.6.1. Read-only snapshot
+confirmed failed history load. Isolated copied-history native reproduction:
+eight turns2,898,482bytes > old2MiB limit; one turn142,233bytes. Copy removed.
+History now pages one turn; chat-only32MiB wire bound, idempotent failures,
+no false ready state after disconnect. No user helper/session/environment edits.
+Wire/adapter/native-loopback/permissions/status fixtures pass, signed isolated
+build and runtime/ZIP/pkg/version/ABI/cert/privacy/source checks pass.
+Same com.termux/certificate/schema8, code1194 exceeds1193. APK/checksum in
+Download, destination verified. SHA256 dab6c2453074500a01195c455b05cc7cf7b0bb6952920fd63c8d80cc369e4c49.
+Class definitions/resources/libs match1.6.1; generated version fields updated;
+grouping retained. Phone reconnect/send/
+Shell/history/card checks pending. See VALIDATION-v1.6.2-test.md.
+Latest stable remains1.6.0; future stable must exceed1194.
+
+## Private v1.6.1-test/code1193 — Codex shell chronology delivered
+
+User requested grouped Shell actions for Codex only, bilingual RU/EN. Consecutive
+same-turn commandExecution rows -> one collapsed/expandable card, current command,
+native state/exit/optional duration, original detail/output per step. Text, user,
+reasoning, receipts/errors remain ordered barriers. Compound command stays one
+step. No new model call, protocol, permission or execution behavior. Other agents
+keep existing presentation. Shared renderer map now holds View (TextView/card),
+with existing stable row/scroll anchoring; expansion survives native updates.
+
+135 focused JVM tests + Codex adapter/native loopback fixture pass. Final assembly,
+runtime/ZIP/pkg/ABI/cert/privacy/source/staging audit passes. Native libs and all
+assets except codex-chat.cjs identical to1.6.0. Existing Lint warnings remain.
+APK Termux-Jobs-v1.6.1-test-arm64.apk,36665742bytes, SHA256
+70a106060dda294f8d7cc1dd0906cd44154f39eb07fe804c3c645b9c8f5f8d89.
+Download copy/checksum verified; relaunch same history for typed metadata. Old
+helper rows can already group through Shell title (no invented time/exit fields).
+Device card interaction/gestures still need developer check. No install/GitHub
+publication/user-process changes. Latest stable remains1.6.0/code1192; a future
+stable update must exceed1193. See VALIDATION-v1.6.1-test.md and
+.verification/codex-timeline-v1.6.1/. The PNG concepts remain untracked previews.
 
 ## Stable v1.6.0/code1192 — published and verified
 

@@ -5,7 +5,7 @@ const {ReceiptStore}=require('../../app/src/main/assets/agent-receipts.cjs');
 const root=fs.mkdtempSync(path.resolve('.verification/opencode-chat-test-'));
 (async()=>{
  const session='ses_synthetic',file=path.join(root,'receipts.json');let posts=0,formState='pending';
- const assistant={id:'msg_assistant',type:'assistant',content:[{type:'reasoning',text:'first thought'},{type:'text',text:'answer'},{type:'tool',id:'tool_one',name:'read',state:{status:'completed',content:[{type:'text',text:'data'}]}}]};
+ const assistant={id:'msg_assistant',type:'assistant',content:[{type:'reasoning',text:'first thought'},{type:'text',text:'answer'},{type:'tool',id:'tool_one',name:'read',state:{status:'completed',input:{filePath:'/project/skills/example/SKILL.md'},content:[{type:'text',text:'data'}]}}]};
  const form={id:'frm_test',sessionID:session,title:'Question',fields:[{key:'q',type:'string'}]};
  const request=async(method,route,body)=>{
   if(route==='/api/shell/sh_foreign'){assert.equal(method,'GET');return {data:{id:'sh_foreign',status:'running',metadata:{sessionID:'ses_other'}}};}
@@ -20,6 +20,7 @@ const root=fs.mkdtempSync(path.resolve('.verification/opencode-chat-test-'));
  };
  const chat=new OpenCodeChat(request,session,file);chat.connected=true;
  let r=await chat.command({op:'chat-snapshot'});assert(r.nativeChat);assert.deepEqual(r.model,{providerID:'opencode',id:'test-model',variant:'high'});assert(r.busy);assert.equal(r.rows[0].kind,'user');assert.deepEqual(r.rows.slice(1).map(r=>r.kind),['reasoning','text','tool']);
+ const action=r.rows.find(r=>r.kind==='tool');assert.equal(action.toolName,'read');assert.equal(action.status,'completed');assert.equal(action.toolPath,'/project/skills/example/SKILL.md');
  chat.event({type:'session.reasoning.delta',data:{sessionID:'ses_other',assistantMessageID:'msg_assistant',ordinal:0,delta:'foreign'}});assert.equal(chat.live.size,0);
  chat.event({type:'session.reasoning.delta',data:{sessionID:session,assistantMessageID:'msg_assistant',ordinal:0,delta:'live thought longer'}});
  r=await chat.command({op:'chat-snapshot'});assert.equal(r.rows[1].body,'live thought longer');

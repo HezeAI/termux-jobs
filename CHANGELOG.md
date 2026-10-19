@@ -1,3 +1,21 @@
+# v1.6.5 fix — changes since public v1.6.0
+
+- Fix Codex large-history startup disconnect with one-turn pages and a bounded
+  chat-only32MiB wire limit; preserve the first failure and refuse false ready.
+- Fix composer focus loss on streaming messages/action updates in all four chats;
+  scroll the viewport without fullScroll focus navigation. Preserve draft/IME.
+- Add compact expandable action timelines, RU/EN tool/status labels, original
+  details and supported skill-read/attachment clouds. No transcript reordering.
+- Share action cards with OpenCode, Gemini and Claude, using native metadata;
+  unknown statuses/tools and unsupported skill loading are not guessed.
+- Align OpenCode inventory with launch CLI/private Node/legacy npm paths; retain
+  pinned-version verification and consent guards.
+- Same com.termux/signer, Android8+/ARM64, code1198. schema8/server/backup formats
+  unchanged; no reset from1.6.0/private1.6.x. Reopen the same native history after
+  finishing important tasks. Pre1.5.3 local-AI cleanup warning remains in metadata.
+- Developer confirmed focus/cards/OpenCode check on private builds. Native Codex
+  terminal mouse-escape echo/stale startup text is separately deferred.
+
 # v1.6.0 — changes since public v1.5.3
 
 - Android-native chats for Codex, Gemini CLI, Claude Code and OpenCode, with stable

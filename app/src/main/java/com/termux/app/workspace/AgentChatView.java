@@ -18,9 +18,12 @@ final class AgentChatView extends LinearLayout {
     final EditText shellInput;
     private WorkspaceIconButton shellSend;
     private String assistant="AI";
+    private boolean codexActions,groupAllTools;
+    void actionCards(boolean allTools){codexActions=true;groupAllTools=allTools;}
+    void codexActions(boolean enabled){codexActions=enabled;}
     void assistantName(String name){assistant=name;}
     void shellEnabled(boolean enabled){shellInput.setEnabled(enabled);shellInput.setFocusable(enabled);shellInput.setFocusableInTouchMode(enabled);shellInput.setClickable(enabled);shellSend.setEnabled(enabled);shellSend.setAlpha(enabled?1f:.4f);if(!enabled)shellInput.clearFocus();}
-    private final Map<String,TextView> views=new LinkedHashMap<>();
+    private final Map<String,View> views=new LinkedHashMap<>();
     private final Map<String,String> values=new HashMap<>();
     private final Map<String,JSONObject> data=new HashMap<>();
     private final Consumer<JSONObject> open;
@@ -34,16 +37,18 @@ final class AgentChatView extends LinearLayout {
     Position position(){
         if(restoring!=null)return restoring;
         String anchor=null;int offset=0;
-        for(int i=1;i<timeline.getChildCount();i++){View v=timeline.getChildAt(i);if(v.getBottom()>scroll.getScrollY()){for(Map.Entry<String,TextView> e:views.entrySet())if(e.getValue()==v){anchor=e.getKey();offset=v.getTop()-scroll.getScrollY();break;}if(anchor!=null)break;}}
+        for(int i=1;i<timeline.getChildCount();i++){View v=timeline.getChildAt(i);if(v.getBottom()>scroll.getScrollY()){for(Map.Entry<String,View> e:views.entrySet())if(e.getValue()==v){anchor=e.getKey();offset=v.getTop()-scroll.getScrollY();break;}if(anchor!=null)break;}}
         return new Position(anchor,offset,scroll.getScrollY(),timeline.getHeight()-scroll.getHeight()-scroll.getScrollY()<dp(48));
     }
     void restorePosition(Position p){cancelRestore();gestures++;followNextRows=false;followLayout=false;restoring=p;if(p==null)return;restoreObserver=scroll.getViewTreeObserver();restoreListener=()->{restorePositionAfterLayout();return true;};restoreObserver.addOnPreDrawListener(restoreListener);scroll.post(this::restorePositionAfterLayout);}
     private void restorePositionAfterLayout(){
         if(restoring==null||timeline.getWidth()==0||scroll.getHeight()==0||timeline.isLayoutRequested())return;
-        Position p=restoring;cancelRestore();gestures++;followNextRows=false;followLayout=false;TextView anchor=p.anchor==null?null:views.get(p.anchor);
+        Position p=restoring;cancelRestore();gestures++;followNextRows=false;followLayout=false;View anchor=p.anchor==null?null:views.get(p.anchor);
         scroll.scrollTo(0,p.bottom?Math.max(0,timeline.getHeight()-scroll.getHeight()):anchor==null?p.y:anchor.getTop()-p.offset);
     }
-    void bottomAfterLayout(){final int gesture=gestures;scroll.post(()->{if(gesture==gestures)scroll.fullScroll(View.FOCUS_DOWN);});}
+    // ScrollView.fullScroll also moves keyboard focus to a transcript child.
+    // Streaming must only move the viewport, leaving both composers and IME composition alone.
+    void bottomAfterLayout(){final int gesture=gestures;scroll.post(()->{if(gesture==gestures)scroll.scrollTo(0,Math.max(0,timeline.getHeight()-scroll.getHeight()));});}
     void followAfterSend(){followNextRows=true;followLayout=true;bottomAfterLayout();}
     AgentChatView(Context c,Consumer<JSONObject> open,Runnable loadOlder,Runnable sendShell,Runnable terminal,Runnable interrupt){
         super(c);this.open=open;setOrientation(VERTICAL);setBackgroundColor(Color.BLACK);
@@ -68,13 +73,21 @@ final class AgentChatView extends LinearLayout {
     TextView pill(String s,Runnable action){TextView t=label(s,12);GradientDrawable bg=new GradientDrawable();bg.setColor(0xff0b1b19);bg.setCornerRadius(dp(22));bg.setStroke(dp(1),0xff28433d);t.setBackground(bg);t.setOnClickListener(v->action.run());LayoutParams lp=new LayoutParams(-2,-2);lp.setMargins(dp(3),dp(5),dp(3),dp(5));t.setLayoutParams(lp);t.setMinHeight(dp(36));return t;}
     void clear(){cancelRestore();gestures++;followNextRows=false;followLayout=false;views.clear();values.clear();data.clear();timeline.removeViews(1,timeline.getChildCount()-1);clearRequests();timeline.addView(requests);scroll.scrollTo(0,0);}
     void rows(List<JSONObject> rows,boolean hasOlder){
+        if(codexActions)rows=CodexActionTimeline.group(rows,groupAllTools);
         final boolean bottom=followNextRows||timeline.getHeight()-scroll.getHeight()-scroll.getScrollY()<dp(48);
-        String anchor=null;int offset=0;for(int i=1;i<timeline.getChildCount();i++){View child=timeline.getChildAt(i);if(child.getBottom()>scroll.getScrollY()){for(Map.Entry<String,TextView> e:views.entrySet())if(e.getValue()==child){anchor=e.getKey();offset=child.getTop()-scroll.getScrollY();break;}if(anchor!=null)break;}}
+        String anchor=null;int offset=0;for(int i=1;i<timeline.getChildCount();i++){View child=timeline.getChildAt(i);if(child.getBottom()>scroll.getScrollY()){for(Map.Entry<String,View> e:views.entrySet())if(e.getValue()==child){anchor=e.getKey();offset=child.getTop()-scroll.getScrollY();break;}if(anchor!=null)break;}}
         final int gesture=gestures;boolean changed=false;Set<String> present=new HashSet<>();int index=1;
-        for(JSONObject r:rows){String key=r.optString("key");present.add(key);data.put(key,r);String value=r.toString();TextView t=views.get(key);
+        for(JSONObject r:rows){String key=r.optString("key");present.add(key);data.put(key,r);String value=r.toString()+(codexActions?WorkspaceLanguage.code(getContext()):"");
+            if(r.optString("kind").equals("actionGroup")){
+                View existing=views.get(key);CodexActionsView card=existing instanceof CodexActionsView?(CodexActionsView)existing:new CodexActionsView(this,open);
+                views.put(key,card);
+                if(!value.equals(values.get(key))){changed=true;values.put(key,value);card.update(r);}
+                if(card.getParent()==null){changed=true;timeline.addView(card,index);}else if(timeline.indexOfChild(card)!=index){changed=true;timeline.removeView(card);timeline.addView(card,index);}index++;continue;
+            }
+            TextView t=(TextView)views.get(key);
             if(t==null){t=label("",14);views.put(key,t);}
             if(!value.equals(values.get(key))){changed=true;values.put(key,value);String kind=r.optString("kind");boolean error=kind.equals("error");boolean chip=kind.equals("reasoning")||kind.equals("tool")||kind.equals("receipt");
-                String caption=kind.equals("reasoning")?tr("Рассуждение ▾","Thinking ▾"):kind.equals("receipt")?receiptTitle(r):r.optString("title")+" ▾";
+                String caption=kind.equals("reasoning")?tr("Рассуждение ▾","Thinking ▾"):kind.equals("receipt")?receiptTitle(r):(codexActions?CodexActionLabels.title(r,WorkspaceLanguage.code(getContext()).equals("ru")):r.optString("title"))+" ▾";
                 String body=r.optString("body");String shown=AgentChatErrors.nativeDiagnosticHint(body)?tr("Подробности доступны по нажатию на сообщение об ошибке.","Tap the error message for details."):body;
                 t.setText(error?tr("Ошибка · ","Error · ")+assistant+"\n"+AgentChatErrors.explain(body,WorkspaceLanguage.code(getContext()).equals("ru"))+tr("\nПодробности ▾","\nDetails ▾"):chip?caption:(kind.equals("user")?tr("Вы: ","You: "):kind.equals("text")?assistant+": ":"")+shown+(r.optBoolean("more")?tr("\nНажмите для полного текста…","\nTap for full text…"):""));
                 t.setTextIsSelectable(!chip&&!error);final String k=key;t.setOnClickListener(error||chip||r.optBoolean("more")?v->{JSONObject row=data.get(k);if(row!=null)open.accept(row);}:null);t.setTextSize(chip?12:14);t.setTypeface(chip?Typeface.DEFAULT:Typeface.DEFAULT);

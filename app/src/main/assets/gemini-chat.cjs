@@ -28,13 +28,13 @@ class GeminiChat {
   this.groups=[];this.full.clear();let remaining=2*1024*1024;
   const project=(item,index,live=false)=>{
    if(!item||typeof item!=='object')return;const message=live?hash('pending:'+item.type+':'+index):hash(item.id+':'+item.type);const rows=[];
-   const row=(part,kind,body,title='')=>{body=text(body).slice(0,Math.max(0,Math.min(200000,remaining)));remaining-=body.length;if(!body)return;const key=message+':'+part;this.full.set(key,body);rows.push({key,message,part,kind,title:text(title).slice(0,160),body:body.slice(0,12000),more:body.length>12000,...(live?{queued:true}:{})});};
+   const row=(part,kind,body,title='',meta={})=>{body=text(body).slice(0,Math.max(0,Math.min(200000,remaining)));remaining-=body.length;if(!body&&kind!=='tool')return;const key=message+':'+part;this.full.set(key,body);rows.push({key,message,part,kind,...meta,title:text(title).slice(0,160),body:body.slice(0,12000),more:body.length>12000,...(live?{queued:true}:{})});};
    if(item.type==='user')row('user','user',item.text);else if(item.type==='user_shell')row('shell-input','user','Shell: '+text(item.text));
    else if(['gemini','gemini_content'].includes(item.type))row('text','text',item.text);
    else if(item.type==='thinking')row('thought','reasoning',[text(item.thought?.subject),text(item.thought?.description)].filter(Boolean).join('\n'));
    else if(item.type==='tool_group')for(const tool of (item.tools||[]).slice(0,100)){
     const id=typeof tool.callId==='string'?tool.callId.slice(0,160):'';if(!id)continue;const receipt=this.api.receipt(id);if(receipt)row('receipt:'+id,'receipt',receipt.body,receipt.label);
-    row('tool:'+id,'tool',[text(tool.description),display(tool.resultDisplay)].filter(Boolean).join('\n\n'),text(tool.name)+' · '+text(tool.status));
+    row('tool:'+id,'tool',[text(tool.description),display(tool.resultDisplay)].filter(Boolean).join('\n\n'),text(tool.name)+' · '+text(tool.status),{toolName:text(tool.name),toolType:text(tool.name),status:text(tool.status)});
    }
    else if(['info','error','warning','hint'].includes(item.type))row(item.type,item.type==='error'?'error':'info',item.text);
    if(!live&&this.thoughts.has(message))row('summary','reasoning',this.thoughts.get(message));

@@ -102,3 +102,64 @@ Claude returns through its existing SDK resume lifecycle only when idle; Gemini
 and OpenCode retain their existing terminal-close path. No generic /exit text is
 written to agents or shells. Touch in the dialog can open the Android keyboard
 even when a TUI consumes the tap for mouse tracking. Phone IME checks are required.
+
+### Private v1.6.1-test: shell chronology
+
+Consecutive commandExecution rows in one turn are projected into an expandable
+Android card, enabled only for Codex. Ordinary messages/reasoning/receipts/errors
+remain ordered barriers. Each native item stays one step; compound commands are
+not split into invented subtasks. Status/exit and optional duration are typed native
+metadata. No summarization model, inference or extra native request is added.
+The card keeps expansion while steps update, and each step opens the original
+detail/output. RU/EN captions; raw commands/output unchanged. Old live helpers
+can group existing Shell rows but do not gain nonexistent timing/exit metadata.
+See VALIDATION-v1.6.1-test.md. Stable GitHub latest remains v1.6.0.
+
+### Private v1.6.2-test: large-history startup
+
+History pages now contain one native turn instead of eight. The chat connection
+opts into a bounded 32 MiB wire message limit; status and legacy clients retain
+2 MiB. The Android snapshot/detail/cache bounds stay unchanged. A connection
+failure is emitted once and prevents startup from marking a disconnected chat
+ready. Size/timeout causes use fixed diagnostic text without raw server content.
+
+A copied developer history reproduced an eight-turn response above 2 MiB;
+one turn fit the previous limit. New launches use the fixed helper. Reopen
+the same history after updating; no history reset or schema migration is needed.
+See VALIDATION-v1.6.2-test.md for automated evidence and pending phone checks.
+
+### Private v1.6.3-test: compact action and skill clouds
+
+Timeline groups hide the redundant completed summary and name command failures
+explicitly. Codex-only RU/EN names describe image viewing/generation/web search.
+Explicit native skill input or a conservatively recognized literal SKILL.md read
+starts a skill context for subsequent same-turn tools. Clouds show that context,
+not proof the skill caused every tool call or completed successfully. Text and
+permission receipt boundaries are preserved; unsupported read forms are not guessed.
+No model instructions, native execution, rights or quota behavior changes. Large
+history/disconnect fixes from1.6.2 are retained. See VALIDATION-v1.6.3-test.md.
+
+
+## Shared action-card presentation (v1.6.5)
+
+OpenCode, Gemini and Claude now reuse the compact expandable action card. This
+is a view projection, not shared agent execution or policy. Codex retains its
+existing timeline and history-wire behavior. Others group consecutive tool rows;
+user/text/reasoning/receipt/error boundaries and original message/part identities
+remain intact. Native success/error/executing states are localized, unknown
+states remain unknown. Claude tool-use status is associated with its exact
+native tool_result ID; an unresolved use is not assumed complete. Direct Claude
+Shell carries its actual command/status/exit code rather than output as command.
+
+Successful structured Read/read/read_file with an absolute */SKILL.md path can
+identify a skill name from its parent and context for following tools until a
+new user/turn/read. It describes chronology rather than causal skill execution;
+failed/relative/dynamic unsupported reads are not attributed. Gemini's current
+history projection supplies name/status/description but no verified file argument,
+so it receives no guessed skill context. No file inspection/inference is added.
+
+Streaming viewport-follow uses scrollTo, not fullScroll(FOCUS_DOWN), because the
+latter moves keyboard focus into selectable transcript text. Neither composer
+text nor selection/composition is reset for transcript changes. This view path
+is shared by Codex, Gemini, Claude and OpenCode. Native-terminal stale startup
+text and mouse-mode escape echo are separately deferred, not fixed by this UI.

@@ -1,0 +1,30 @@
+{
+  "ru": [
+    "Исправлена загрузка больших историй Codex: чат больше не теряет соединение из-за прежнего ограничения ответа истории.",
+    "Исправлен сброс фокуса ввода при новых сообщениях и обновлении карточек у Codex, OpenCode, Gemini и Claude.",
+    "Компактная раскрываемая хронология действий, понятные статусы и названия инструментов; навыки показываются, когда их чтение или подключение можно определить.",
+    "Карточки действий оформлены единообразно у всех четырёх агентов, на русском и английском.",
+    "Проверка OpenCode находит CLI и Node.js в тех же каталогах, что использует запуск, включая прежнее npm-расположение."
+  ],
+  "en": [
+    "Fixed loading large Codex histories: the chat no longer disconnects due to the former history-response size limit.",
+    "Fixed composer focus loss on incoming messages and action-card updates in Codex, OpenCode, Gemini and Claude.",
+    "Compact expandable action timelines with clearer tool names and statuses; skills are labeled where instruction reads or attachment can be identified.",
+    "Consistent action cards across all four agents, with Russian and English labels.",
+    "OpenCode component checks now use the same CLI/Node search paths as launch, including the legacy npm layout."
+  ],
+  "compatibility": {
+    "ru": [
+      "С v1.6.0 и промежуточных1.6.x сброс данных не требуется: команды, заметки, пресеты, серверы, история и авторизация сохраняют прежние форматы.",
+      "Пакет com.termux и сертификат прежние; Android8+/ARM64, versionCode1198 выше публичной1.6.0 и частной1.6.5-test. Обновление доступно из приложения.",
+      "Новые помощники агента применяются при следующем запуске сессии. Завершите важные задачи и откройте прежнюю историю; сохранение работающих процессов при обновлении не гарантируется.",
+      "При переходе с версий до1.5.3 сохраняется удаление приватных данных прежней локальной AI-функции; внешние модели и proot-дистрибутивы не удаляются. Нужные локальные данные сохраните заранее."
+    ],
+    "en": [
+      "No reset from v1.6.0 or private1.6.x builds: commands, notes, presets, servers, histories and authentication keep their existing formats.",
+      "Same com.termux package and signer; Android8+/ARM64, versionCode1198 above public1.6.0 and private1.6.5-test. Available through the in-app updater.",
+      "Updated agent helpers activate on the next session launch. Finish important tasks and reopen the same history; live-process survival during an app update is not guaranteed.",
+      "Upgrades from before1.5.3 retain removal of old local-AI private data; external models and proot distributions are not deleted. Export needed old local data first."
+    ]
+  }
+}
