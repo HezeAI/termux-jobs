@@ -16,6 +16,9 @@ Ubuntu, Debian, Alpine, Fedora, openSUSE, Void Linux и Arch Linux ARM.
 Void устанавливается из официального OCI-образа; Arch на ARM64 — отдельный
 проект Arch Linux ARM, из закреплённого архива Termux с проверкой SHA-256.
 Поддержка установки зависит от архитектуры и доступного proot-distro.
+Debian, Alpine, Fedora, openSUSE, Void и Arch — самостоятельные Linux-окружения
+со своими rootfs, файлами и пакетами. Для них не создаётся «своя Ubuntu»: они
+не привязаны к основной Ubuntu и не используют её.
 **Существующая Ubuntu и AI Agents остаются в прежнем общем окружении**;
 миграция авторизации/агентов в другую Ubuntu не выполняется.
 
