@@ -1,15 +1,32 @@
-## Release v1.6.5 /1198 — publication in progress
+## Published v1.6.5 fix /1198
 
-User explicitly authorized stable GitHub v1.6.5 fix after confirming OpenCode
-component-check fix, shared cards and composer focus. Previous public v1.6.0/code1192.
-Stable source includes all private1.6.1–1.6.5 changes, preserves other Codex's large
-history fix and no data schema reset. Current versionName1.6.5/code1198, same
-com.termux/signer/Android8+/ARM64. Public stable must include final update.json.
-Known native Codex terminal mouse escape echo/stale component-check text remains
-deferred by user. No actual account end-to-end Claude/Vertex validation claimed.
-Use explicit --repo HezeAI/termux-jobs with gh: upstream Termux can otherwise be
-inferred as default. Final artifacts/validation in .verification/release-v1.6.5.
-No APK installation or user session/environment modifications authorized here.
+Stable/latest: https://github.com/HezeAI/termux-jobs/releases/tag/v1.6.5
+Source/tag commit: e8bdf258064b1722054e1df1dd8dc23e044b7437. Previous public1.6.0/code1192.
+APK: Termux-Jobs-v1.6.5-arm64.apk, 36669474 bytes,
+SHA-256 eabb1e69bdf4c99e8a560fc6576a2da254838529e13a08e36cea4bf00e8c4d51.
+Same com.termux/signer/Android8+/ARM64, schema8/server/backup formats unchanged.
+No reset from1.6.0/private1.6.x; old pre1.5.3 local-AI cleanup warning remains in
+RU/EN update highlights and release notes. Final update.json schema1/code1198
+is above developer's private1.6.5-test/code1197.
+
+Developer confirmed input focus, other-agent cards and OpenCode component check
+on private builds. Stable assets/native libraries exactly match that private
+build. Full644 JVM tests,119 Python tests and20 Node/native fixture suites pass;
+release runtime/ZIP/identity/version/signature/SHA and source credential scan pass.
+All four uploaded files verified against GitHub digest/size; all four downloaded
+back and matched local bytes/hash. Anonymous latest and updater endpoint verified;
+public tagged documentation checked. Full Lint clean and real-account Claude/
+Vertex completion are not claimed. Known Codex native terminal stale startup text/
+mouse escape echo is deferred at user's request. No GitHub feedback service or
+local AI restoration added. No working user environment/session was changed.
+
+Evidence: .verification/release-v1.6.5/. Stable APK/checksum also in Download.
+Always use --repo HezeAI/termux-jobs with gh because upstream Termux can otherwise
+be inferred as default. Remaining design/ PNG is an untracked concept, not release
+source; it was deliberately not published or removed. Subsequent source must use
+versionCode>1198 for compatible forward updates. Do not move the published tag.
+
+## Historical private checkpoints
 
 ## Current private v1.6.5-test /1197
 
