@@ -9,6 +9,8 @@ final class AgentChatErrors {
         String s=raw.toLowerCase(Locale.ROOT);
         if(s.contains("user location is not supported")||s.contains("unsupported_country")||s.contains("unsupported region"))
             return ru?"Сервис недоступен в текущем регионе.\nПроверьте доступность сервиса для вашего подключения. Повтор без изменения подключения не устранит этот отказ.":"The service is unavailable in your current region.\nCheck service availability for your connection. Retrying with the same connection will not resolve this refusal.";
+        if(s.contains("история выбранного чата пока недоступна")||s.contains("thread not loaded")||s.contains("not materialized"))
+            return ru?"Выбранный чат ещё не сохранён или недоступен.\nОткройте настройки сессии и выберите «Новый чат» либо другой сохранённый разговор. Существующая история автоматически не удаляется.":"The selected chat has not been saved yet or is unavailable.\nOpen session settings and choose New chat or another saved conversation. Existing history is not deleted automatically.";
         if((s.contains("model")&&(s.contains("not found")||s.contains("not_found")||s.contains("does not exist")||s.contains("is invalid")))||s.contains("model_not_found"))
             return ru?"Выбранная модель не найдена или недоступна.\nВыберите доступную модель в верхней карточке и повторите запрос.":"The selected model was not found or is unavailable.\nChoose an available model in the top card and send your request again.";
         if(s.contains("insufficient_quota")||s.contains("billing")||s.contains("credit balance"))

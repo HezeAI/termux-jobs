@@ -96,6 +96,9 @@ final class ProjectFiles implements AutoCloseable {
         try {return bytes(environment(profile).startsWith("proot:")?EnvironmentPackages.nativeCommand("exec bash --noprofile --norc -c "+SessionShell.quote(PackageCatalog.versionsQuery(name))):PackageCatalog.versionsQuery(name),1024*1024);}
         catch(Exception error){if(closed)throw error;throw new IOException(WorkspaceText.tr("Не удалось прочитать доступные версии пакета. Проверьте APT и выбранное окружение."));}
     }
+    byte[] packageVersions(EnvironmentPackages.Kind kind,String name)throws Exception {
+        return bytes(packageScript(EnvironmentPackageVersions.query(kind,name)),EnvironmentPackageVersions.MAX_BYTES);
+    }
     byte[] packageQuery(int tab) throws Exception {
         try {return bytes(PackageCatalog.query(tab),PackageCatalog.MAX_BYTES);}
         catch(Exception error){if(closed)throw error;throw new IOException(WorkspaceText.tr("Не удалось прочитать пакеты. Проверьте наличие APT/dpkg и доступность выбранного окружения."));}

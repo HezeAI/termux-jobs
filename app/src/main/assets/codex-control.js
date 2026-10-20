@@ -9,6 +9,7 @@ function rpcError(error) {
   const message=String(error?.message || '').toLowerCase();
   let reason='причина не распознана';
   if(/already.*(running|active|loaded|use)|locked|busy/.test(message))reason='чат или хранилище уже заняты';
+  else if(/thread not loaded|not materialized|rollout.*not.*(ready|available)/.test(message))reason='история выбранного чата пока недоступна; выберите сохранённый чат или Новый чат';
   else if(/not found|no.*(thread|rollout)|does not exist/.test(message))reason='история чата не найдена сервером';
   else if(/sandbox|approval|permission/.test(message))reason='сервер отклонил параметры доступа';
   else if(/sqlite|database/.test(message))reason='ошибка базы истории';
@@ -139,6 +140,7 @@ async function statusWorker(path, preferred) {
         const thread=response?.thread;
         if(!thread || thread.parentThreadId || (preferred && id!==preferred))continue;
         if(value.thread) {value.thread='';value.error='Несколько чатов: выберите чат в терминале';break;}
+        value.materialized=false;try{const rollout=typeof thread.path==='string'?fs.lstatSync(thread.path):null;value.materialized=!!rollout&&rollout.isFile()&&rollout.size>0;}catch{}
         value.thread=id;value.cwd=thread.cwd || '';value.title=String(thread.name || '').slice(0,256);value.model=thread.model || response.model || '';value.effort=thread.reasoningEffort || response.reasoningEffort || '';value.state=thread.status?.type || '';
       }
       writeStatus(path,value);

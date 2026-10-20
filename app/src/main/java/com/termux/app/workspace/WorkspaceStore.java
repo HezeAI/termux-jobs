@@ -37,6 +37,8 @@ public final class WorkspaceStore {
     public static final class Session {
         public String id = UUID.randomUUID().toString();
         public String name = "Bash", directory = "", startup = "", handle = "";
+        transient String packageRuntimeStartup="";
+        transient PackageOperationJournal.Intent packageOperation;
         public String startup2 = "", startup3 = "", environment = "legacy";
         public String prootAlias="";
         public boolean prootIsolated;
@@ -47,6 +49,8 @@ public final class WorkspaceStore {
         public String sshAuth = "auto", sshIdentity = "", sshEncryptedPassword = "";
         public String codexEnvironment = "ubuntu", codexAccess = "full", codexChat = "new", codexThread = "", codexThreadName = "", codexSocketId = UUID.randomUUID().toString();
         public String codexSourceDirectory = "";
+        /** Old live run must not overwrite an explicitly edited next-launch chat. */
+        public String codexBindingBlockedRun = "";
         public Boolean codexConfirmActions; // null preserves legacy approval mapping
         public boolean aiProjectOnly;
         public String aiAgent = "", aiConnection = "00000000-0000-4000-8000-000000000002", aiModel = "", aiVariant = "", aiMode = "build", aiAccess = "ask", aiChat = "new", aiThread = "ses" + UUID.randomUUID().toString().replace("-", "");
@@ -134,7 +138,8 @@ public final class WorkspaceStore {
         if(!writable||!sessions.contains(profile)||!profile.geminiAgent||!profile.geminiSocketId.equals(run)||!profile.geminiMode.equals(before)||!java.util.Arrays.asList("default","auto_edit","plan").contains(mode))return false;
         profile.geminiMode=mode;profile.updated=System.currentTimeMillis();save();return true;
     }
-    public void save() {
+    public void save() { save(null); }
+    void save(Runnable completed) {
         if (!writable) { errors.onError(WorkspaceText.tr("Библиотека недоступна для записи; исходные данные сохранены.")); return; }
         final byte[] snapshot;
         try { snapshot = encode().toString().getBytes(StandardCharsets.UTF_8); }
@@ -142,7 +147,7 @@ public final class WorkspaceStore {
         writer.execute(() -> {
             FileOutputStream out = null;
             try {
-                out = file.startWrite(); out.write(snapshot); file.finishWrite(out);
+                out = file.startWrite(); out.write(snapshot); file.finishWrite(out); if(completed!=null)main.post(completed);
             } catch (IOException e) {
                 if (out != null) file.failWrite(out);
                 main.post(() -> errors.onError(WorkspaceText.tr("Ошибка записи библиотеки. Проверьте свободное место.")));
@@ -159,7 +164,7 @@ public final class WorkspaceStore {
         for (Session s : sessions) ss.put(new JSONObject().put("id", s.id).put("name", s.name)
             .put("directory", s.directory).put("prootAlias",s.prootAlias).put("prootIsolated",s.prootIsolated).put("prootStartup",s.prootAlias.isEmpty()?JSONObject.NULL:new JSONArray(Arrays.asList(s.startup,s.startup2,s.startup3))).put("startup", s.prootAlias.isEmpty()?s.startup:WorkspaceEnvironments.OLD_READER_GUARD).put("startup2", s.prootAlias.isEmpty()?s.startup2:"").put("startup3", s.prootAlias.isEmpty()?s.startup3:"").put("sshAuth", s.sshAuth).put("sshIdentity", s.sshIdentity).put("sshEncryptedPassword", s.sshEncryptedPassword).put("sshHost", s.sshHost).put("sshUser", s.sshUser).put("sshPort", s.sshPort).put("sshKeepOpen", s.sshKeepOpen).put("environment", s.environment).put("handle", s.handle)
             .put("codexConfirmActions",s.codexConfirmActions==null?JSONObject.NULL:s.codexConfirmActions).put("aiProjectOnly",s.aiProjectOnly)
-            .put("codexEnvironment", s.codexEnvironment).put("codexAccess", s.codexAccess).put("codexChat", s.codexChat).put("codexThread", s.codexThread).put("codexThreadName", s.codexThreadName).put("codexSocketId", s.codexSocketId).put("codexSourceDirectory",s.codexSourceDirectory)
+            .put("codexEnvironment", s.codexEnvironment).put("codexAccess", s.codexAccess).put("codexChat", s.codexChat).put("codexThread", s.codexThread).put("codexThreadName", s.codexThreadName).put("codexSocketId", s.codexSocketId).put("codexSourceDirectory",s.codexSourceDirectory).put("codexBindingBlockedRun",s.codexBindingBlockedRun)
             .put("aiAgent",s.aiAgent).put("aiConnection",s.aiConnection).put("aiModel",s.aiModel).put("aiVariant",s.aiVariant).put("aiMode",s.aiMode).put("aiAccess",s.aiAccess).put("aiChat",s.aiChat).put("aiThread",s.aiThread).put("aiSavedThread",s.aiSavedThread)
             .put("claudeEffort",s.claudeEffort).put("claudeAgent",s.claudeAgent).put("claudeModel",s.claudeModel).put("claudeMode",s.claudeMode).put("claudeChat",s.claudeChat).put("claudeThread",s.claudeThread).put("claudeSocketId",s.claudeSocketId)
             .put("keepHistory",s.keepHistory)
@@ -219,6 +224,7 @@ public final class WorkspaceStore {
             if(o.has("aiProjectOnly")&&!(o.get("aiProjectOnly") instanceof Boolean))throw new JSONException("Invalid agent project scope");
             s.codexConfirmActions=o.has("codexConfirmActions")&&!o.isNull("codexConfirmActions")?o.getBoolean("codexConfirmActions"):null; s.aiProjectOnly=o.optBoolean("aiProjectOnly",false);
             s.codexEnvironment = o.optString("codexEnvironment", "ubuntu"); s.codexAccess = o.optString("codexAccess", "full");
+            s.codexBindingBlockedRun=o.optString("codexBindingBlockedRun", "");
             s.codexChat = o.optString("codexChat", "new"); s.codexThread = o.optString("codexThread", ""); s.codexThreadName = o.optString("codexThreadName", ""); s.codexSocketId = validId(o.optString("codexSocketId", s.codexSocketId));
             if (s.environment.equals("codex") && (version < 8 || !(s.codexEnvironment.equals("ubuntu") || s.codexEnvironment.equals("termux"))
                 || !(s.codexAccess.equals("full") || s.codexAccess.equals("project") || s.codexAccess.equals("read"))

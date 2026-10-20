@@ -9,7 +9,7 @@ final class AgentChatCache {
     static final class State {
         final LinkedHashMap<String,JSONObject> rows=new LinkedHashMap<>();
         String older="",model="",session="",notice="";
-        boolean nativeChat,resolved,busy,directShell,needsTerminal,connected,failed;
+        boolean trimmed,historyExhausted,nativeChat,resolved,busy,directShell,needsTerminal,connected,failed;
         AgentChatView.Position position;
         private int chars;
     }
@@ -21,6 +21,7 @@ final class AgentChatCache {
         LinkedHashMap<String,JSONObject> reverse=new LinkedHashMap<>();
         for(int i=list.size()-1;i>=0;i--){Map.Entry<String,JSONObject> row=list.get(i);int n=row.getKey().length()+row.getValue().toString().length();if(size+n>MAX_ENTRY_CHARS)break;reverse.put(row.getKey(),row.getValue());size+=n;}
         List<String> keys=new ArrayList<>(reverse.keySet());for(int i=keys.size()-1;i>=0;i--){String key=keys.get(i);state.rows.put(key,reverse.get(key));}
+        state.trimmed=state.rows.size()<list.size();
         state.chars=size+state.older.length()+state.model.length()+state.session.length()+state.notice.length();
         if(state.chars>MAX_TOTAL_CHARS)return;entries.put(owner,state);chars+=state.chars;
         while(entries.size()>MAX_ENTRIES||chars>MAX_TOTAL_CHARS)take(entries.keySet().iterator().next());

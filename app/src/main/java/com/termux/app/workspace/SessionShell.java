@@ -25,6 +25,7 @@ public final class SessionShell {
         if (cancel.exists() && !cancel.delete()) throw new IOException("Cannot reset startup cancellation");
         String script;
         java.util.List<String> startup = session.startupCommands();
+        if(!session.packageRuntimeStartup.isEmpty())startup=java.util.Collections.singletonList(session.packageRuntimeStartup);
         boolean otherGuest=!WorkspaceEnvironments.alias(session).isEmpty()&&!session.environment.equals("ubuntu");
         boolean guest = otherGuest || session.environment.equals("ubuntu") || (session.environment.equals("codex") && session.codexEnvironment.equals("ubuntu"));
         if (session.geminiAgent) startup = java.util.Collections.singletonList(GeminiCli.command(files, session));

@@ -51,4 +51,8 @@ public class AgentChatViewTest {
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);List<JSONObject> rows=new ArrayList<>();for(int i=0;i<30;i++)rows.add(row("r"+i,"text","line "+i+"\nmore"));v.rows(rows,false);layout(v);v.scroll.fullScroll(View.FOCUS_DOWN);AgentChatView.Position p=v.position();assertTrue(p.bottom);v.clear();v.rows(rows,false);v.restorePosition(p);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();assertEquals(v.timeline.getHeight()-v.scroll.getHeight(),v.scroll.getScrollY());
  }
 
+ @Test public void olderPageStartsAtTopWhenPreviousContentFitsViewport()throws Exception{
+  Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView view=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(view);List<JSONObject> rows=new ArrayList<>();rows.add(row("current","text","newest"));view.rows(rows,true);layout(view);AgentChatView.Position held=view.position();assertTrue(held.bottom);
+  List<JSONObject> expanded=new ArrayList<>();for(int i=0;i<35;i++)expanded.add(row("old"+i,"text","older\nmessage\ntext"));expanded.addAll(rows);view.olderRows(expanded,false);layout(view);view.getViewTreeObserver().dispatchOnPreDraw();assertEquals(0,view.scroll.getScrollY());assertFalse(view.position().bottom);assertEquals("old0",view.position().anchor);
+ }
 }

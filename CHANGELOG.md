@@ -1,3 +1,21 @@
+# v1.7.5 — Storage cleanup, package history and chat fixes
+
+- Add storage overview/selective cleanup for library data, HOME entries, package
+  caches, reports, recognised backups and complete supported Linux instances.
+  Require explicit consent, protect busy environments and native remove locks;
+  PREFIX remains view-only. Unify restored-copy removal in cleanup; show inline
+  scanning progress. See STORAGE-CLEANUP.md for irreversible/partial behaviour.
+- Record per-environment package history and operation results, including errors,
+  cancellation and unknown outcomes; add APK/DNF/Zypper version selection.
+- Fix older-chat pagination, queued clicks, retained rows, cache trimming/frontier,
+  retry/end cursor and prepend scrolling without changing cache budgets/drafts.
+- Protect Codex new→id binding until history is materialized; preserve explicit
+  next-chat settings against old-run status, including store reload. Explain
+  unavailable history without silently replacing it.
+- code1220, same package/signer/schema8; no general reset from1.7.0. Private
+  1.7.5-test also uses1220; no artificial update code for testers. Retain previously
+  announced pre1.5.3 local-AI private-data cleanup on upgrades from those versions.
+
 # v1.7.0 — Linux environments, native packages and backups
 
 - Add confirmed removal of restored instances using nonblocking native proot

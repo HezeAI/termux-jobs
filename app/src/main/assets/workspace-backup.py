@@ -861,6 +861,14 @@ def create(request):
         raise BackupError('INSUFFICIENT_SPACE')
     out = parent / ('Termux-Jobs-' + time.strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:8])
     out.mkdir(mode=0o700)
+    if request.get('files') and Path(request['files']).is_dir():
+        # Private provenance for cleaning a future interrupted attempt, never inferred by name.
+        receipt_fd=directory_fd(Path(request['files']),['workspace-backup-ownership'])
+        try:
+            record=os.open(out.name+'.json',os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600,dir_fd=receipt_fd)
+            st=out.stat()
+            with os.fdopen(record,'wb') as stream:stream.write(json.dumps(dict(path=str(out),identity=[st.st_dev,st.st_ino])).encode())
+        finally:os.close(receipt_fd)
     protected_write(out / 'INCOMPLETE', b'Not verified. Do not use as a complete backup.\n')
     meta = dict(format='termux-jobs-backup', version=2 if plans else 1, created=time.time(), live=True,
                 consistency='Best effort live copy; user must finish writers before backup. No process memory.',
@@ -1445,6 +1453,11 @@ def main():
         return
     request = read_json(args.request)
     operation = request['operation']
+    if operation in ('cleanup-inventory','cleanup-execute','cleanup-prepare-home'):
+        import importlib.util
+        spec=importlib.util.spec_from_file_location('workspace_cleanup',Path(__file__).with_name('workspace-cleanup.py'))
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        event('DONE',result=module.run(request,sys.modules[__name__]));return
     value = {'compression-status': compression_status, 'install-pigz': install_pigz, 'inventory': environment_info, 'selection-inventory': selection_inventory, 'create': create, 'inspect': inspect, 'restore': restore, 'packages': compare_packages, 'apt-plan': apt_plan, 'restored-inventory': restored_inventory, 'remove-restored': remove_restored}[operation](request)
     event('DONE', result=value)
 

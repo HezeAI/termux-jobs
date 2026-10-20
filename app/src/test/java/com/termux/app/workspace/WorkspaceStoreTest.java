@@ -343,4 +343,13 @@ public class WorkspaceStoreTest {
         assertTrue(script.contains("HISTFILE='/tmp/history file'"));
         assertTrue(script.endsWith("echo hello\n"));
     }
+    @Test public void explicitNextChatBindingGuardSurvivesStoreReloadWithoutChangingCopiedRun() throws Exception {
+        WorkspaceStore store=new WorkspaceStore(context,errors::add);
+        WorkspaceStore.Session p=new WorkspaceStore.Session();p.environment="codex";p.codexBindingBlockedRun=p.codexSocketId;store.sessions.add(p);
+        org.json.JSONObject data=store.encode();store.decode(data.toString());
+        WorkspaceStore.Session loaded=store.sessions.get(0);
+        assertEquals(p.codexSocketId,loaded.codexBindingBlockedRun);assertEquals("",loaded.copy().codexBindingBlockedRun);
+        data.getJSONArray("sessions").getJSONObject(0).remove("codexBindingBlockedRun");store.decode(data.toString());assertEquals("",store.sessions.get(0).codexBindingBlockedRun);store.close();
+    }
+
 }

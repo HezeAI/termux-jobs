@@ -3,6 +3,7 @@
 const http=require('node:http'),crypto=require('node:crypto'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
 const root=path.resolve(__dirname,'../..'),directory=path.join(root,'.verification/rate-limit-v1.5.6');fs.mkdirSync(directory,{recursive:true});
 const endpoint=path.join(directory,'status-'+process.pid+'.sock'),bridge=path.join(root,'app/src/main/assets/codex-control.js');
+const rollout=path.join(directory,'materialized-'+process.pid+'.jsonl');fs.writeFileSync(rollout,'');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));let phase=0,peer;
 const window=(minutes,used)=>({windowDurationMins:minutes,usedPercent:used,resetsAt:1792888860});
 const snapshots=[{primary:window(10080,14),secondary:null},{primary:window(300,20),secondary:window(10080,40)},{primary:{usedPercent:14},secondary:null},null,{primary:window(10080,25)}];
@@ -15,7 +16,7 @@ const server=http.createServer();server.on('upgrade',(request,socket)=>{
   else if(q.method==='account/rateLimits/read')result={rateLimits:{primary:window(60,99)},rateLimitsByLimitId:{codex:snapshots[phase]}};
   else if(q.method==='account/read'){assert.equal(q.params.refreshToken,false);if(phase===2){socket.write(frame({id:q.id,error:{code:-32601,message:'unsupported optional endpoint'}}));continue;}result={account:accounts[phase]};}
   else if(q.method==='thread/loaded/list')result={data:['fixture-thread']};
-  else if(q.method==='thread/read')result={thread:{id:'fixture-thread',model:'fixture-model',reasoningEffort:'medium',cwd:'/fixture',status:{type:'idle'}}};
+  else if(q.method==='thread/read')result={thread:{id:'fixture-thread',path:phase===0?undefined:phase===3?null:rollout,model:'fixture-model',reasoningEffort:'medium',cwd:'/fixture',status:{type:'idle'}}};
   else assert.equal(q.method,'initialize','Unexpected write/inference call: '+q.method);
   socket.write(frame({id:q.id,result}));
  }});
@@ -24,9 +25,10 @@ const server=http.createServer();server.on('upgrade',(request,socket)=>{
  try{
   let previous=0;
   for(phase=0;phase<5;phase++){
+   if(phase===4)fs.writeFileSync(rollout,'fixture history');
    if(phase)fs.writeFileSync(endpoint+'.refresh','1');let value;
    for(let i=0;i<100;i++){try{const next=JSON.parse(fs.readFileSync(endpoint+'.state.json'));if(next.updated>previous){value=next;break;}}catch{}await sleep(50);}
-   assert(value,'No status: '+err);previous=value.updated;assert.equal(value.thread,'fixture-thread');assert(!JSON.stringify(value).includes('PRIVATE_ACCOUNT_EMAIL'));assert(!JSON.stringify(value).includes('PRIVATE_ID'));
+   assert(value,'No status: '+err);previous=value.updated;assert.equal(value.thread,'fixture-thread');assert.equal(value.materialized,phase===4);assert(!JSON.stringify(value).includes('PRIVATE_ACCOUNT_EMAIL'));assert(!JSON.stringify(value).includes('PRIVATE_ID'));
    if(phase===0){assert.equal(value.planType,'pro');assert.equal(value.limits.primary.windowDurationMins,10080);assert.equal(value.limits.secondary,undefined);}
    if(phase===1){assert.equal(value.planType,'plus');assert.equal(value.limits.primary.windowDurationMins,300);assert.equal(value.limits.secondary.windowDurationMins,10080);}
    if(phase===2){assert.equal(value.planType,'');assert.equal(value.limits.primary.windowDurationMins,null);}

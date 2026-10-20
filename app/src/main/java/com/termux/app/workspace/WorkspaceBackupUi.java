@@ -20,6 +20,7 @@ final class WorkspaceBackupUi {
     private String t(String ru,String en){return text(activity,ru,en);}
     static String label(Activity a){return text(a,"Резервное копирование","Backup and restore");}
     static void show(TermuxActivity a,WorkspaceStore s,Runnable changed,Consumer<String> install){new WorkspaceBackupUi(a,s,changed,install).menu();}
+    static void showRestored(TermuxActivity a,WorkspaceStore s,Runnable changed){new WorkspaceBackupUi(a,s,changed,command->{}).restoredEnvironments();}
     static WorkspaceDialogs.Builder backupBuilder(Activity a){return WorkspaceDialogs.builder(a).blockOutsideDismiss();}
     private void backupCreated(JSONObject result){message(t("Бэкап создан и проверен","Backup created and verified")+"\n"+result.optString("path"));}
     private void message(String text){if(!activity.isDestroyed())backupBuilder(activity).setTitle(label(activity)).setMessage(text).setPositiveButton("OK",null).show();}
@@ -58,7 +59,7 @@ final class WorkspaceBackupUi {
             if(!started){installingPigz=false;control.setEnabled(true);control.setText(compressionName());message(t("Другая операция ещё выполняется. Дождитесь её завершения и повторите установку.","Another operation is running. Wait for it to finish and retry installation."));}
         }).setNegativeButton(t("Не сейчас","Not now"),null).show();
     }
-    private void menu(){backupBuilder(activity).setTitle(label(activity)).setItems(new String[]{t("Создать резервную копию","Create backup"),t("Проверить резервную копию","Verify backup"),t("Восстановить из файла","Restore from file"),t("Удаление восстановленных окружений","Delete restored environments")},(d,w)->{if(w==0)inventory();else if(w==3)restoredEnvironments();else chooseFile(w==2);}).setNegativeButton(WorkspaceText.tr("Закрыть"),null).show();}
+    private void menu(){backupBuilder(activity).setTitle(label(activity)).setItems(new String[]{t("Создать резервную копию","Create backup"),t("Проверить резервную копию","Verify backup"),t("Восстановить из файла","Restore from file")},(d,w)->{if(w==0)inventory();else chooseFile(w==2);}).setNegativeButton(WorkspaceText.tr("Закрыть"),null).show();}
     static boolean restoredProfileInUse(WorkspaceStore store,String alias,Set<String> runningHandles){
         for(WorkspaceStore.Session profile:store.sessions)if(runningHandles.contains(profile.handle)&&WorkspaceEnvironments.alias(profile).equals(alias))return true;
         return false;
@@ -85,16 +86,14 @@ final class WorkspaceBackupUi {
             String title=(entry.optString("source").isEmpty()?alias:WorkspaceEnvironments.label(entry.optString("source"))+" · "+alias)+"\n"+(confirmed?size(entry.optLong("bytes")):t("Происхождение не подтверждено — удаление недоступно","Origin unconfirmed — deletion unavailable"))+(entry.optBoolean("incomplete")?"\n"+t("Незавершённое восстановление","Incomplete restore"):"");
             TextView row=WorkspaceDialogs.action(activity,title,0);row.setEnabled(confirmed);if(!confirmed)row.setAlpha(.55f);form.addView(row);
             row.setOnClickListener(v->{if(restoredInUse(alias)){message(t("Окружение используется. Сначала закройте его сессии. Принудительная остановка не выполняется.","Environment is in use. Close its sessions first. No sessions are forcibly stopped."));return;}
-                backupBuilder(activity).setTitle(t("Удалить окружение?","Delete environment?"))
-                    .setMessage(alias+"\n"+t("Все файлы и установленные пакеты этой восстановленной копии будут удалены без возможности отмены, вместе со связанными пресетами. Исходная система и архив бэкапа сохранятся.","All files and installed packages in this restored copy will be permanently deleted, together with linked presets. The original system and backup archive are retained."))
-                    .setNegativeButton(t("Нет","No"),null).setPositiveButton(t("Да, удалить","Yes, delete"),(d,w)->{
+                StorageDeletionConsent.show(activity,t("Удалить окружение?","Delete environment?"),alias+"\n"+t("Все файлы и установленные пакеты этой восстановленной копии будут удалены без возможности отмены, вместе со связанными пресетами. Исходная система и архив бэкапа сохранятся.","All files and installed packages in this restored copy will be permanently deleted, together with linked presets. The original system and backup archive are retained."),()->{
                         if(restoredInUse(alias)){message(t("Окружение используется. Закройте его сессии.","Environment is in use. Close its sessions."));return;}
                         list.dismiss();try{run(request("remove-restored").put("alias",alias).put("identity",entry.optString("identity")),removed->{
                             if(!alias.equals(removed.optString("removed")))return;
                             removeRestoredPresets(store,alias);store.save();changed.run();
                             message(t("Восстановленное окружение удалено. Архив бэкапа сохранён.","Restored environment deleted. Backup archive retained."));
                         });}catch(Exception error){message(errorText("RESTORED_REMOVE_FAILED"));}
-                    }).show();
+                    });
             });
         }
         list.show();

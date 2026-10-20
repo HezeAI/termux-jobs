@@ -21,7 +21,7 @@
 первый шаг интерактивным. Для ошибки обновления важно указать прежний источник
 APK: совпадение названия приложения не означает совпадение подписи.
 
-Для чата v1.6.5 укажите, воспроизводится ли проблема в чате приложения
+Для чата v1.7.5 укажите, воспроизводится ли проблема в чате приложения
 или окне робота, после «Свернуть» или «Вернуться в чат», а также состояние клавиатуры.
 Для выбора файлов: навигация/галочки/Выбрать всё, фильтр, исходные и целевая среды,
 частичный результат (без личных путей и содержимого).
@@ -86,12 +86,12 @@ versionCode, release tag, результат проверки/ошибку ус�
 профиль JSON/Keystore. TCP-проверка не доказывает авторизацию, наличие agent.py
 не доказывает работоспособность агента. См. docs/fork/SERVERS.md.
 
-## Current stable build configuration (v1.6.5)
+## Current stable build configuration (v1.7.5)
 
 Local AI and its runtimes/dependencies were removed, not just gated. No
 TERMUX_PUBLIC_RELEASE flag or local-model preparation is required. Use the
 isolated environment, SDK copy and ARM64 overrides from FORK.md and build scripts.
-Stable versionName1.6.5/code1198; same release certificate is required for updates.
+Stable versionName1.7.5/code1220; same release certificate is required for updates.
 Historical protocols, source links and SDK/LoRA experiments are documented in
 [LOCAL-AI-RESEARCH.md](docs/fork/LOCAL-AI-RESEARCH.md). Do not reintroduce model
 weights, vendor SDK binaries, private prompts/chats or credentials in a PR.
@@ -101,3 +101,5 @@ For transfer issues provide app version, Download/Upload/Move, file sizes/count,
 For action-card/input issues, specify the agent, native CLI version, history size,
 streaming/idle state, composer focus versus text loss, keyboard and last safe
 action status. Never include full private chats, credentials or skill secrets.
+
+For cleanup issues include selected categories/paths without private names, busy-session state, scan/consent/cancel stage and partial-result summary. For package history/version selection include manager, available repository variants and confirmed command/result.

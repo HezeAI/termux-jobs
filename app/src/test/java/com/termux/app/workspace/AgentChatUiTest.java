@@ -157,4 +157,26 @@ public class AgentChatUiTest {
   try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);WorkspaceStore.Session other=profile();other.aiAgent="";other.geminiAgent=true;selected.set(other);ui.sync();selected.set(first);ui.sync();assertTrue(hasText(chat,"Claude: Claude cache"));ui.send("hello",()->{});for(int i=0;i<30&&sent.get()==0;i++)drain();assertEquals(1,sent.get());}finally{ui.close();}
  }
 
+ @Test public void previousClickDuringPollIsQueuedAndCodexCacheStillReopensImmediately()throws Exception{
+  TermuxActivity a=activity();WorkspaceStore.Session first=profile();first.aiAgent="";first.environment="codex";first.codexEnvironment="ubuntu";
+  java.io.File marker=CodexChatControl.marker(a.getFilesDir(),first);marker.getParentFile().mkdirs();marker.createNewFile();
+  AtomicReference<WorkspaceStore.Session> selected=new AtomicReference<>(first);AtomicBoolean hold=new AtomicBoolean();CountDownLatch entered=new CountDownLatch(1),release=new CountDownLatch(1);AtomicInteger previous=new AtomicInteger();
+  AgentChatUi ui=new AgentChatUi(a,selected::get,()->true,(p,q)->{
+   boolean old=q.has("cursor");if(!old&&hold.get()){entered.countDown();release.await(3,TimeUnit.SECONDS);}if(old){assertEquals("page-1",q.getString("cursor"));previous.incrementAndGet();}
+   String id=old?"old":"new";
+   return result().put("connected",true).put("session","thread-fixture").put("partialHistory",true).put("knownMessages",new JSONArray().put(id)).put("older",old?JSONObject.NULL:"page-1").put("rows",new JSONArray().put(new JSONObject().put("key",id).put("message",id).put("kind","text").put("body",id+" reply")));
+  });
+  try{
+   for(int i=0;i<30&&!ui.showing();i++)drain();assertTrue(ui.showing());FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);assertTrue(hasText(chat,"Codex: new reply"));
+   hold.set(true);java.lang.reflect.Method load=AgentChatUi.class.getDeclaredMethod("load",boolean.class);load.setAccessible(true);load.invoke(ui,false);assertTrue(entered.await(2,TimeUnit.SECONDS));chat.older.performClick();assertFalse(chat.older.isEnabled());assertEquals(0,previous.get());hold.set(false);release.countDown();
+   for(int i=0;i<40&&!hasText(chat,"Codex: old reply");i++)drain();assertEquals(1,previous.get());assertTrue(hasText(chat,"Codex: old reply"));assertTrue(hasText(chat,"Codex: new reply"));assertEquals(android.view.View.GONE,chat.older.getVisibility());
+   load.invoke(ui,false);for(int i=0;i<8;i++)drain();assertTrue(hasText(chat,"Codex: old reply"));assertEquals(android.view.View.GONE,chat.older.getVisibility());
+   chat.shellInput.setText("draft stays");WorkspaceStore.Session other=profile();other.aiAgent="";selected.set(other);ui.sync();assertFalse(ui.showing());selected.set(first);ui.sync();assertTrue(ui.showing());assertTrue(hasText(chat,"Codex: old reply"));assertTrue(hasText(chat,"Codex: new reply"));assertEquals("draft stays",chat.shellInput.getText().toString());assertEquals(android.view.View.GONE,chat.older.getVisibility());
+  }finally{release.countDown();ui.close();marker.delete();}
+ }
+ @Test public void failedOlderRequestKeepsChatAndAllowsRetry()throws Exception{
+  TermuxActivity a=activity();WorkspaceStore.Session selected=profile();AtomicInteger tries=new AtomicInteger();
+  AgentChatUi ui=new AgentChatUi(a,()->selected,()->true,(p,q)->{if(q.has("cursor")&&tries.incrementAndGet()==1)throw new java.io.IOException("history failed");return result().put("connected",true).put("older",q.has("cursor")?JSONObject.NULL:"page").put("rows",new JSONArray().put(new JSONObject().put("key",q.has("cursor")?"old":"new").put("message",q.has("cursor")?"old":"new").put("kind","text").put("body",q.has("cursor")?"old":"new")));});
+  try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);chat.older.performClick();for(int i=0;i<30&&!chat.older.isEnabled();i++)drain();assertTrue(ui.showing());assertTrue(chat.older.isEnabled());assertTrue(hasText(chat,"OpenCode: new"));chat.older.performClick();for(int i=0;i<30&&!hasText(chat,"OpenCode: old");i++)drain();assertEquals(2,tries.get());assertTrue(hasText(chat,"OpenCode: old"));}finally{ui.close();}
+ }
 }

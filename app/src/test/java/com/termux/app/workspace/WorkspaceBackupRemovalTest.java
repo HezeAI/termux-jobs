@@ -15,8 +15,8 @@ public class WorkspaceBackupRemovalTest {
   assertEquals(5,store.sessions.size());WorkspaceBackupUi.removeRestoredPresets(store,target.prootAlias);
   assertEquals(Arrays.asList(other,source,agent),store.sessions);
  }
- @Test public void backupMenuOffersRemovalInBothLanguagesWithoutTestingLabel(){
+ @Test public void backupMenuHasNoDuplicateRemovalEntryInEitherLanguage(){
   TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();activity.setTheme(R.style.Theme_Termux_Black);WorkspaceStore store=new WorkspaceStore(activity,m->{});
-  for(String lang:new String[]{"ru","en"}){WorkspaceLanguage.select(activity,lang);WorkspaceBackupUi.show(activity,store,()->fail("menu must not mutate"),cmd->fail("menu must not install"));AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();assertEquals(4,dialog.getListView().getCount());String label=dialog.getListView().getAdapter().getItem(3).toString();assertTrue(label.contains(lang.equals("ru")?"Удаление":"Delete"));assertFalse(WorkspaceBackupUi.label(activity).contains("("));dialog.dismiss();}
+  for(String lang:new String[]{"ru","en"}){WorkspaceLanguage.select(activity,lang);WorkspaceBackupUi.show(activity,store,()->fail("menu must not mutate"),cmd->fail("menu must not install"));AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();assertEquals(3,dialog.getListView().getCount());for(int i=0;i<3;i++){String label=dialog.getListView().getAdapter().getItem(i).toString();assertFalse(label.contains(lang.equals("ru")?"Удаление":"Delete"));}assertFalse(WorkspaceBackupUi.label(activity).contains("("));dialog.dismiss();}
  }
 }

@@ -33,7 +33,7 @@ async function terminateTree(p){if(!p||p.exitCode!==null||p.signalCode!==null)re
 class CodexChat {
  constructor(connection,options={}){
   this.rpc=connection;this.endpoint=options.endpoint;this.root=path.dirname(options.endpoint);this.access=options.access;this.approval=options.approval;this.cwd=options.cwd;this.confirmed=options.confirmed;this.chat=options.chat;this.requested=options.thread;this.language=options.language||'en';
-  this.thread='';this.turn='';this.busy=false;this.ready=false;this.closed=false;this.setting=false;this.model='';this.effort='';this.turns=new Map();this.pending=new Map();this.sent=new Map();this.receipts=new ReceiptStore(null,'X');this.full=new Map();this.older='';this.failure='';this.native=null;this.historySupported=true;
+  this.thread='';this.turn='';this.busy=false;this.ready=false;this.closed=false;this.setting=false;this.model='';this.effort='';this.turns=new Map();this.pending=new Map();this.sent=new Map();this.receipts=new ReceiptStore(null,'X');this.full=new Map();this.historyWindows=new Map();this.historyWindowChars=0;this.older='';this.failure='';this.native=null;this.historySupported=true;
   this.rpc.onMessage=m=>this.event(m);this.rpc.onFailure=e=>{this.disconnected=true;this.ready=false;this.busy=false;this.pending.clear();const reason=e?.message==='Message too large'?' The native history or event exceeded the local size limit.':e?.message==='Connection timeout'?' The local connection timed out.':'';this.error('Codex disconnected.'+reason+' Restart this session with its chat history.');};
  }
  expected(){return this.access==='full'?'dangerFullAccess':this.access==='read'?'readOnly':'workspaceWrite';}
@@ -52,12 +52,13 @@ class CodexChat {
  }
  error(body){this.failure=text(body);const id='error_'+crypto.randomUUID();this.put('local',{id,type:'localError',text:this.failure});}
  put(turn,item){if(!item||typeof item.id!=='string')return;let entries=this.turns.get(turn);if(!entries){entries=new Map();this.turns.set(turn,entries);}entries.set(item.id,item);this.bound();}
- bound(force=false){if(!force&&((this.boundCalls=(this.boundCalls||0)+1)%32))return;let size=0,count=0;const turns=[...this.turns];for(let i=turns.length-1;i>=0;i--){const entries=[...turns[i][1]];for(let j=entries.length-1;j>=0;j--){size+=JSON.stringify(entries[j][1]).length;if(++count>800||size>2*1024*1024)turns[i][1].delete(entries[j][0]);}if(!turns[i][1].size)this.turns.delete(turns[i][0]);}}
- async history(cursor){
+ bound(force=false){if(!force&&((this.boundCalls=(this.boundCalls||0)+1)%32))return;let size=0,count=0;const turns=[...this.turns];for(let i=turns.length-1;i>=0;i--){const entries=[...turns[i][1]];for(let j=entries.length-1;j>=0;j--){size+=JSON.stringify(entries[j][1]).length;if(++count>800||size>2*1024*1024){this.droppedLiveItems=true;turns[i][1].delete(entries[j][0]);}}if(!turns[i][1].size)this.turns.delete(turns[i][0]);}}
+ async history(cursor,detached=false){
   if(!this.thread)return;const r=await this.rpc.call('thread/turns/list',{threadId:this.thread,limit:1,sortDirection:'desc',itemsView:'full',...(cursor?{cursor}:{})});
-  if(!Array.isArray(r.data))throw Error('Unsupported history response');const before=new Map();
-  for(const turn of [...r.data].reverse())if(valid(turn.id)){const old=this.turns.get(turn.id);const entries=new Map((turn.items||[]).filter(i=>i&&typeof i.id==='string').map(i=>[i.id,itemPhase(i,turn.status==='completed'?'completed':'')]));if(old)for(const [id,item]of old)if(!entries.has(id))entries.set(id,item);if(old)for(const [id,item]of old)entries.set(id,item);before.set(turn.id,entries);}
-  for(const [id,items]of this.turns)if(!before.has(id))before.set(id,items);this.turns=before;this.older=typeof r.nextCursor==='string'?r.nextCursor:'';this.bound(true);
+  if(!Array.isArray(r.data))throw Error('Unsupported history response');const before=new Map(),page=new Map();
+  for(const turn of [...r.data].reverse())if(valid(turn.id)){const old=this.turns.get(turn.id);const entries=new Map((turn.items||[]).filter(i=>i&&typeof i.id==='string').map(i=>[i.id,itemPhase(i,turn.status==='completed'?'completed':'')]));if(old)for(const [id,item]of old)if(!entries.has(id))entries.set(id,item);if(old)for(const [id,item]of old)entries.set(id,item);page.set(turn.id,new Map(entries));before.set(turn.id,entries);}
+  page.nextCursor=typeof r.nextCursor==='string'?r.nextCursor:'';if(cursor||detached)return page;
+  for(const [id,items]of this.turns)if(!before.has(id))before.set(id,items);this.turns=before;this.older=page.nextCursor;this.bound(true);return page;
  }
  refresh(){try{fs.writeFileSync(this.endpoint+'.refresh','1',{mode:0o600});}catch{}}
  event(m){
@@ -97,8 +98,8 @@ class CodexChat {
   return {ok:true};
  }
  permissionBody(p){return text(p.params.command||JSON.stringify(p.params.permissions||this.turns.get(p.turn)?.get(p.params.itemId)?.changes||{},null,2));}
- groups(){
-  this.full=new Map();const groups=[];for(const [turn,entries]of this.turns){let skillContext='';for(const [id,item]of entries){const message=key(turn+':'+id),rows=[];const add=(part,kind,body,title='')=>{body=text(body);if(!body)return;const k=message+':'+part;this.full.set(k,body);rows.push({key:k,message,part,kind,title,body:body.slice(0,12000),more:body.length>12000});};
+ groups(turns=this.turns){
+  const groups=[];for(const [turn,entries]of turns){let skillContext='';for(const [id,item]of entries){const message=key(turn+':'+id),rows=[];const add=(part,kind,body,title='')=>{body=text(body);if(!body)return;const k=message+':'+part;this.full.delete(k);this.full.set(k,body);rows.push({key:k,message,part,kind,title,body:body.slice(0,12000),more:body.length>12000});};
    for(const receipt of this.receipts.rows.filter(r=>r.key.startsWith(item.id+':')))add('receipt:'+receipt.token,'receipt',receipt.body,this.receipts.label(receipt,this.language==='ru'));
    if(item.type==='userMessage'){
     const skills=(item.content||[]).filter(input=>input.type==='skill'&&text(input.name));skillContext=skills.length===1?text(skills[0].name).slice(0,120):'';
@@ -120,12 +121,40 @@ class CodexChat {
    else if(item.type==='contextCompaction')add('context','tool',this.language==='ru'?'Контекст чата сокращён штатным Codex.':'Chat context compacted by Codex.','Codex');
    else if(!['hookPrompt','sleep'].includes(item.type))add('event','tool',JSON.stringify(item,null,2),item.type||'Codex');
    if(rows.length){for(const row of rows)if(row.kind==='tool'){row.turn=turn;if(!row.toolType&&item.type!=='commandExecution')Object.assign(row,{toolType:item.type,toolName:text(item.tool||item.name).slice(0,160),status:item.status||item._jobsStatus||''});if(skillContext)row.skillContextName=skillContext;}groups.push({id:message,rows});}
-  }}return groups;
+  }}let chars=0;for(const body of this.full.values())chars+=body.length;for(const [k,body]of this.full){if(chars<=2*1024*1024&&this.full.size<=800)break;this.full.delete(k);chars-=body.length;}return groups;
+ }
+ historyWindow(groups,next){
+  const start=Math.max(0,groups.length-100);let older=next;
+  if(start){
+   const token='jobs-history:'+key(groups[0].id+':'+groups[start].id+':'+String(next)),hidden=groups.slice(0,start);
+   const chars=JSON.stringify(hidden).length;
+   const prior=this.historyWindows.get(token);if(prior)this.historyWindowChars-=prior.chars;
+   this.historyWindows.delete(token);this.historyWindows.set(token,{groups:hidden,next,chars});this.historyWindowChars+=chars;
+   // A cursor that was just returned must remain usable. One native page is
+   // bounded by the wire limit; older cached windows are evicted first.
+   while(this.historyWindows.size>1&&(this.historyWindows.size>8||this.historyWindowChars>2*1024*1024)){
+    const key=this.historyWindows.keys().next().value;this.historyWindowChars-=this.historyWindows.get(key).chars;this.historyWindows.delete(key);
+   }
+   older=token;
+  }
+  return {groups:groups.slice(start),older};
  }
  async snapshot(q={}){
-  if(q.cursor&&this.ready&&this.historySupported)await this.history(q.cursor);const groups=this.groups(),rows=groups.slice(-100).flatMap(g=>g.rows);let budget=90000;
+  let groups,next=this.droppedLiveItems?'jobs-history:head':this.older;
+  if(q.cursor){
+   if(typeof q.cursor!=='string'||q.cursor.length>4096||!this.ready)throw Error('History is not ready');
+   if(q.cursor==='jobs-history:head'){const page=await this.history(null,true);groups=this.groups(page);next=page.nextCursor;}
+   else if(q.cursor.startsWith('jobs-history:')){
+    const cached=this.historyWindows.get(q.cursor);if(!cached)return {...await this.snapshot(),historyReset:true};
+    groups=cached.groups;next=cached.next;
+   }else{
+    if(!this.historySupported)throw Error('Paginated history is unavailable');
+    const page=await this.history(q.cursor);groups=this.groups(page);next=page.nextCursor;
+   }
+  }else groups=this.groups();
+  const page=this.historyWindow(groups,next),rows=page.groups.flatMap(g=>g.rows);let budget=90000;
   const limited=rows.map((r,i)=>{const n=Math.max(100,Math.floor(budget/(rows.length-i)));budget-=Math.min(n,r.body.length);return {...r,body:r.body.slice(0,n),more:r.more||r.body.length>n};});
-  return {ok:true,nativeChat:true,connected:this.ready&&!this.closed,session:this.thread,busy:this.busy,directShell:!!this.shellRunning,rows:limited,knownMessages:groups.map(g=>g.id),older:this.older||null,permission:this.permission(),forms:this.forms(),needsTerminal:!!this.native,model:{model:this.model},connectionNotice:this.native?(this.language==='ru'?'Завершите действие в терминале или нажмите «Вернуться в чат Codex». Выполняющийся запрос продолжится до завершения.':'Finish the action in the terminal or tap Return to Codex chat. A running request continues until completion.'):''};
+  return {ok:true,nativeChat:true,connected:this.ready&&!this.closed,session:this.thread,busy:this.busy,directShell:!!this.shellRunning,rows:limited,knownMessages:groups.map(g=>g.id),partialHistory:true,older:page.older||null,permission:this.permission(),forms:this.forms(),needsTerminal:!!this.native,model:{model:this.model},connectionNotice:this.native?(this.language==='ru'?'Завершите действие в терминале или нажмите «Вернуться в чат Codex». Выполняющийся запрос продолжится до завершения.':'Finish the action in the terminal or tap Return to Codex chat. A running request continues until completion.'):''};
  }
  async send(q){
   if(this.returnToChat&&!this.busy)await this.closeTerminal();

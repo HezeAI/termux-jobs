@@ -1084,6 +1084,7 @@ public final class WorkspaceController {
         CheckBox codexConfirm=new CheckBox(activity);codexConfirm.setText(tr("Подтверждать действия · Codex","Confirm actions · Codex"));codexConfirm.setTextColor(TEXT);codexConfirm.setChecked(CodexSessionShell.approval(draft).equals("on-request"));codexConfirm.setContentDescription("Codex action confirmations");codexFields.addView(codexConfirm);
         codexFields.addView(text(tr("on-request: подтверждения запрашивает сам Codex по своей политике, не перед каждым действием. Выключено: never, запросы повышения прав не разрешаются; выбранная песочница сохраняется.","on-request: Codex requests approvals under its own policy, not before every action. Off: never, no escalation approvals; the selected sandbox remains in force."),12,MUTED));
 
+        boolean[] codexChatEdited={false};
         Runnable updateCodex = () -> {
             codexAccessButton.setText(tr("Права: ","Permissions: ")+(codexAccess[0].equals("read")?tr("Чтение · read-only","Read · read-only"):tr("Чтение и запись","Read and write")));
             codexScope.setEnabled(!codexAccess[0].equals("read"));
@@ -1095,9 +1096,9 @@ public final class WorkspaceController {
         codexScope.setOnCheckedChangeListener((b,on)->{codexWriteScope[0]=on;if(!codexAccess[0].equals("read"))codexAccess[0]=on?"project":"full";updateCodex.run();});
         codexChatButton.setOnClickListener(v -> WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Чат Codex"))
             .setItems(new String[]{WorkspaceText.tr("Новый чат"), WorkspaceText.tr("Выбрать чат"), WorkspaceText.tr("Ввести ID чата")}, (d, which) -> {
-                if (which == 0) { codexChat[0] = "new"; codexThread[0] = ""; codexThreadName[0]="";codexSourceDirectory[0]="";codexConfirmedDirectory[0]=""; updateCodex.run(); }
+                if (which == 0) { codexChatEdited[0]=true; codexChat[0] = "new"; codexThread[0] = ""; codexThreadName[0]="";codexSourceDirectory[0]="";codexConfirmedDirectory[0]=""; updateCodex.run(); }
                 else if (which == 1) chooseCodexChat(codexEnvironment[0], directory.getText().toString().trim(), (id, title, source) -> {
-                    codexChat[0] = id.isEmpty() ? "new" : "id"; codexThread[0] = id; codexThreadName[0] = title;codexSourceDirectory[0]=source;codexConfirmedDirectory[0]=directory.getText().toString().trim(); updateCodex.run();
+                    codexChatEdited[0]=true; codexChat[0] = id.isEmpty() ? "new" : "id"; codexThread[0] = id; codexThreadName[0] = title;codexSourceDirectory[0]=source;codexConfirmedDirectory[0]=directory.getText().toString().trim(); updateCodex.run();
                 });
                 else {
                     EditText id = field(WorkspaceText.tr("ID чата Codex"), codexThread[0], false);
@@ -1105,7 +1106,7 @@ public final class WorkspaceController {
                     picker.setOnShowListener(x -> picker.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(y -> {
                         String value = id.getText().toString().trim(); if (!CodexSessionShell.validThread(value)) { id.setError(WorkspaceText.tr("Некорректный ID")); return; }
                         String env=codexEnvironment[0],cwd=directory.getText().toString().trim();
-                        verifyCodexChat(env,cwd,value,(title,source)->{if(!picker.isShowing()||!env.equals(codexEnvironment[0])||!cwd.equals(directory.getText().toString().trim()))return;codexChat[0]="id";codexThread[0]=value;codexThreadName[0]=title;codexSourceDirectory[0]=source;codexConfirmedDirectory[0]=cwd;updateCodex.run();picker.dismiss();});
+                        verifyCodexChat(env,cwd,value,(title,source)->{if(!picker.isShowing()||!env.equals(codexEnvironment[0])||!cwd.equals(directory.getText().toString().trim()))return;codexChatEdited[0]=true;codexChat[0]="id";codexThread[0]=value;codexThreadName[0]=title;codexSourceDirectory[0]=source;codexConfirmedDirectory[0]=cwd;updateCodex.run();picker.dismiss();});
                     })); picker.show();
                 }
             }).setNegativeButton(WorkspaceText.tr("Отмена"), null).show());
@@ -1268,6 +1269,7 @@ public final class WorkspaceController {
             if(draft.aiAgent.equals("opencode"))draft.environment="ubuntu";
             if(!draft.aiConnection.equals(aiConnection[0]) || aiChat[0].equals("new") || !draft.aiSavedThread.equals(aiThread[0]))draft.aiSavedThread="";
             draft.aiConnection=aiConnection[0];draft.aiModel=aiModel[0];draft.aiVariant=aiVariant[0];draft.aiMode=aiMode[0];draft.aiAccess=aiAccess[0];draft.aiChat=aiChat[0];draft.aiThread=aiThread[0];
+            if(existing!=null&&codexChatEdited[0])draft.codexBindingBlockedRun=draft.codexSocketId;
             draft.codexConfirmActions=codexConfirm.isChecked();draft.aiProjectOnly=aiProjectScope.isChecked();draft.codexEnvironment = codexEnvironment[0]; draft.codexAccess = codexAccess[0]; draft.codexChat = codexChat[0]; draft.codexThread = codexThread[0]; draft.codexThreadName = codexThreadName[0];draft.codexSourceDirectory=codexSourceDirectory[0];
             draft.prootIsolated=draft.prootIsolated&&draft.prootAlias.equals(nextAlias);
             draft.prootAlias=chosenEnvironment[0].startsWith("proot:")?chosenEnvironment[0].substring(6):"";
@@ -1596,14 +1598,20 @@ public final class WorkspaceController {
         String heldHandle=profile.handle;
         WorkspacePackages browser=new WorkspacePackages(activity,profile,(operation,selectedSession)->{
             if(closed)return;
-            if(!selectedSession){launchNew(operation,true);return;}
+            if(!selectedSession){operation.packageRuntimeStartup=packageJournalCommand(profile,operation,operation.id);launchNew(operation,true);return;}
             TerminalSession target=liveFor(profile);
             if(target==null||!target.isRunning()||!PackageCatalog.matchesTarget(profile,heldHandle,target.mHandle,ProjectFiles.environment(operation))){
                 activity.showToast(WorkspaceText.tr("Выбранная сессия закрыта или изменилась. Откройте меню пакетов заново либо выберите новую сессию."),true);return;
             }
             activity.getTermuxTerminalSessionClient().setCurrentSession(target);show(Screen.TERMINAL,true);
-            if(target.getEmulator()!=null){target.getEmulator().paste(operation.startup);target.write("\r");}else target.write(operation.startup+"\r");
+            String command=packageJournalCommand(profile,operation,profile.id);
+            if(target.getEmulator()!=null){target.getEmulator().paste(command);target.write("\r");}else target.write(command+"\r");
         });browser.setOnClosed(()->packageBrowsers.remove(browser));packageBrowsers.add(browser);browser.show();
+    }
+    private String packageJournalCommand(WorkspaceStore.Session source,WorkspaceStore.Session operation,String sessionId){
+        if(operation.packageOperation==null)return operation.startup;
+        try{return PackageOperationJournal.prepare(activity.getFilesDir(),WorkspacePackageHistory.key(source),sessionId,!ProjectFiles.environment(source).equals("termux"),operation.packageOperation,operation.startup);}
+        catch(Exception error){activity.showToast(tr("Журнал результата недоступен; команда выполнится без записи результата.","Result journal unavailable; the command will run without a result record."),true);return operation.startup;}
     }
     private void sessionMenu(WorkspaceStore.Session s) { sessionMenu(s, false); }
     private void sessionMenu(WorkspaceStore.Session s, boolean terminalTab) {
@@ -1721,6 +1729,7 @@ public final class WorkspaceController {
         char[] secret = pendingSshPasswords.remove(profile.id); if (secret != null) java.util.Arrays.fill(secret, '\0');
         File dir = SessionShell.directory(activity.getFilesDir(), profile.id);
         reader.execute(() -> {
+            try{PackageOperationJournal.collect(activity.getFilesDir(),profile.id);}catch(Exception ignored){}
             File[] files = dir.listFiles(); boolean removed = true;
             if (files != null) for (File f : files) if (!f.delete()) removed = false;
             if (dir.exists() && !dir.delete()) removed = false;
@@ -1899,10 +1908,31 @@ public final class WorkspaceController {
         settingsRow(form,WorkspaceText.tr("Язык / Language"),()->{menu[0].dismiss();WorkspaceLanguage.showPicker(activity,this::refreshLanguage);});
         form.addView(WorkspaceUpdates.menuRow(activity,()->{menu[0].dismiss();WorkspaceUpdates.check(activity);}));
         settingsRow(form,WorkspaceBackupUi.label(activity),()->{menu[0].dismiss();WorkspaceBackupUi.show(activity,store,()->{refreshLanguage();},command->{WorkspaceStore.Session installation=new WorkspaceStore.Session();installation.name=WorkspaceLanguage.code(activity).equals("ru")?"Пакеты из бэкапа":"Backup packages";installation.environment="termux";installation.directory=TermuxConstants.TERMUX_HOME_DIR_PATH;installation.startup=command;launchNew(installation,true);});});
-        settingsRow(form,tr("Истории чатов","Chat histories"),()->{menu[0].dismiss();new WorkspaceChatHistories(activity,store,reader,e->{for(WorkspaceStore.Session p:store.sessions)if((p.environment.equals("codex")||p.aiAgent.equals("codex"))&&!p.claudeAgent&&!p.geminiAgent&&p.codexEnvironment.equals(e.environment)&&liveFor(p)!=null&&(p.codexThread.equals(e.id)||!p.codexChat.equals("id")))return true;return false;},()->{}).show();});
+        settingsRow(form,tr("Истории чатов","Chat histories"),()->{menu[0].dismiss();showChatHistories();});
         settingsRow(form,WorkspaceErrorLibraryUi.label(activity),()->{menu[0].dismiss();WorkspaceErrorLibraryUi.show(activity,text->{WorkspaceStore.Command command=new WorkspaceStore.Command();command.command=text;insertCommand(command);});});
         settingsRow(form,WorkspaceText.tr("Настройки приложения"),()->{menu[0].dismiss();activity.startActivity(new android.content.Intent(activity,SettingsActivity.class));});
+        settingsRow(form,WorkspaceStorageCleanup.label(activity),()->{menu[0].dismiss();new WorkspaceStorageCleanup(activity,store,this::cleanupScopeInUse,p->liveFor(p)!=null,()->WorkspaceBackupUi.showRestored(activity,store,this::refreshLanguage),()->showChatHistories(true),this::refreshLanguage).show();});
         menu[0]=WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Настройки приложения")).setView(formScroll(form)).setNegativeButton(WorkspaceText.tr("Закрыть"),null).create();menu[0].show();
+    }
+    private void showChatHistories(){showChatHistories(false);}
+    private void showChatHistories(boolean guarded){new WorkspaceChatHistories(activity,store,reader,e->{for(WorkspaceStore.Session p:store.sessions)if((p.environment.equals("codex")||p.aiAgent.equals("codex"))&&!p.claudeAgent&&!p.geminiAgent&&p.codexEnvironment.equals(e.environment)&&liveFor(p)!=null&&(p.codexThread.equals(e.id)||!p.codexChat.equals("id")))return true;return false;},()->{},guarded).show();}
+    private boolean cleanupScopeInUse(String scope){
+        if(activity.getTermuxService()==null)return true;
+        if(scope.startsWith("history:")){String id=scope.substring(8);for(WorkspaceStore.Session p:store.sessions)if(p.id.equals(id)&&liveFor(p)!=null)return true;return false;}
+        Set<String> running=new java.util.HashSet<>();
+        for(com.termux.shared.shell.TermuxSession item:activity.getTermuxService().getTermuxSessions()){
+            com.termux.terminal.TerminalSession terminal=item.getTerminalSession();if(terminal.isRunning())running.add(terminal.mHandle);
+        }
+        if(WorkspaceStorageCleanup.scopeInUse(store,scope,running))return true;
+        if(scope.equals("termux"))for(com.termux.shared.shell.TermuxSession item:activity.getTermuxService().getTermuxSessions()){
+            TerminalSession terminal=item.getTerminalSession();WorkspaceStore.Session profile=store.findByHandle(terminal.mHandle);
+            if(terminal.isRunning()&&WorkspaceStore.isBase(profile))try{
+                String stat=new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get("/proc",Integer.toString(terminal.getPid()),"stat")),java.nio.charset.StandardCharsets.UTF_8);
+                if(!WorkspaceStorageCleanup.idleBaseShell(stat))return true;
+            }catch(Exception unavailable){return true;}
+        }
+        if(scope.equals("termux"))for(String handle:running){boolean known=false;for(WorkspaceStore.Session profile:store.sessions)if(handle.equals(profile.handle)){known=true;break;}if(!known)return true;}
+        return false;
     }
     private void showDiagnostics(WorkspaceStore.Session profile){WorkspaceDiagnostics.register(profile,false);WorkspaceDiagnosticsUi.show(activity,profile,()->liveFor(profile));}
     private void confirmCancelStartup(WorkspaceStore.Session profile){
@@ -2130,6 +2160,7 @@ public final class WorkspaceController {
     }
     public boolean onFinished(TerminalSession session) {
         WorkspaceStore.Session profile = store.findByHandle(session.mHandle);
+        if(profile!=null&&!closed&&new File(activity.getFilesDir(),"workspace-package-jobs").isDirectory())try{reader.execute(()->{try{PackageOperationJournal.collect(activity.getFilesDir(),profile.id);}catch(Exception ignored){}});}catch(java.util.concurrent.RejectedExecutionException ignored){}
         WorkspaceDiagnostics.finished(session);
         if (profile != null) { store.save(); }
         if(WorkspaceStore.isBase(profile)&&activity.getTermuxService()!=null&&!activity.getTermuxService().wantsToStop()) {

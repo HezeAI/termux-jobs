@@ -7,7 +7,7 @@ import org.json.JSONObject;
 final class CodexStatus {
     String cwd = "", title = "", planType = "", accountType = "";
     String thread = "", model = "", effort = "", state = "", error = "";
-    long updated;boolean modelPending;
+    long updated;boolean modelPending;Boolean materialized;
     JSONArray models = new JSONArray();
     JSONObject limits = new JSONObject();
     static CodexStatus fromFile(java.io.File file) throws Exception {
@@ -22,6 +22,7 @@ final class CodexStatus {
         if(value.optInt("schema")!=1)throw new java.io.IOException("Unsupported status format");
         CodexStatus result=new CodexStatus();result.updated=value.optLong("updated");
         if(System.currentTimeMillis()-result.updated>90000 || result.updated>System.currentTimeMillis()+5000)throw new java.io.IOException("Status helper stopped responding");
+        if(value.opt("materialized") instanceof Boolean)result.materialized=value.getBoolean("materialized");
         result.cwd=value.optString("cwd");result.title=value.optString("title");result.thread=value.optString("thread");result.model=value.optString("model");result.effort=value.optString("effort");result.state=value.optString("state");result.error=value.optString("error");
         JSONArray models=value.optJSONArray("models");if(models!=null)result.models=models;
         JSONObject limits=value.optJSONObject("limits");if(limits!=null)result.limits=limits;result.planType=plan(value.optString("planType",result.limits.optString("planType")));result.accountType=accountType(value.optString("accountType"));return result;

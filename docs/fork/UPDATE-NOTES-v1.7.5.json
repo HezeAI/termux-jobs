@@ -1,0 +1,30 @@
+{
+  "ru": [
+    "Очистить хранилище: обзор HOME/PREFIX/окружений, выбор данных библиотеки, кэшей, отчётов и бэкапов; обязательное согласие и защита занятых сред.",
+    "Удаление целых поддерживаемых Linux-окружений через штатные блокировки. PREFIX только для просмотра; после начала удаления целой среды отмена недоступна.",
+    "История пакетов по окружениям, включая ошибки/отмену/неопределённый результат. Выбор доступной версии для Alpine, Fedora и openSUSE, дополнительно к APT.",
+    "Исправлены предыдущие сообщения, сохранение подгруженных страниц и кэша/черновиков; новый чат Codex защищён от преждевременной и устаревшей привязки к ID."
+  ],
+  "en": [
+    "Storage cleanup: HOME/PREFIX/environment overview, selective library/cache/report/backup removal, mandatory consent and active-environment protection.",
+    "Whole supported Linux environments are removed using native locks. PREFIX is view-only; whole-environment removal cannot be cancelled after it begins.",
+    "Per-environment package history including failed/cancelled/unknown results. Available version selection for Alpine, Fedora and openSUSE alongside APT.",
+    "Fixed earlier messages, retaining loaded pages and cache/drafts; protected Codex new-chat choices from premature and stale ID binding."
+  ],
+  "compatibility": {
+    "ru": [
+      "С публичной1.7.0 общий сброс не требуется: прежние com.termux/сертификат, Android8+/ARM64, schema8. Команды, пресеты, серверы, окружения и авторизация автоматически не очищаются. Code1220 выше1215; обновление доступно из приложения.",
+      "Проверочная1.7.5-test уже имеет code1220 и не требует повторного обновления. Завершите важные задачи перед установкой: Android может завершить процессы. Новые JS-адаптеры применяются при следующем запуске соответствующей сессии.",
+      "Недоступный старый ID не исправляется удалением данных или скрытым новым чатом: выберите Новый чат либо существующую историю вручную. Прежняя недоступная история этим не восстанавливается.",
+      "Удаление целых сред требует поддерживаемого proot-distro с native locks. Удаление необратимо, возможно частичное выполнение; проверяйте пути HOME, где могут быть проекты и авторизация.",
+      "С версий до1.5.3 сохраняется ранее объявленное удаление приватных данных старого локального AI. Экспортируйте нужное заранее; внешние модели/proot не удаляются."
+    ],
+    "en": [
+      "No general reset from public1.7.0: same com.termux/signer, Android8+/ARM64, schema8. Commands, presets, servers, environments and auth are not automatically cleared. Code1220 above1215; available in the app updater.",
+      "Private1.7.5-test already has code1220 and needs no repeat update. Finish important work before installation: Android may stop processes. Updated JS adapters apply on the next corresponding session launch.",
+      "An unavailable old ID is not silently replaced or repaired by deleting data: explicitly choose New chat or an existing history. This does not recover unavailable history.",
+      "Whole-environment removal needs supported proot-distro native locks. Deletion is irreversible and may be partial; inspect selected HOME paths containing projects and auth.",
+      "Upgrades from before1.5.3 retain the announced retired local-AI private-data removal. Export needed data first; external models/proot are not deleted."
+    ]
+  }
+}

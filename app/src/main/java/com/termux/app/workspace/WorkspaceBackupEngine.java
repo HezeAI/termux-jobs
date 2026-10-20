@@ -26,6 +26,7 @@ final class WorkspaceBackupEngine {
             File jobs=new File(a.getFilesDir(),"workspace-backup-jobs");if(!jobs.isDirectory()&&!jobs.mkdirs())throw new IOException("PRIVATE_STORAGE");
             work=new File(jobs,UUID.randomUUID().toString());if(!work.mkdir())throw new IOException("PRIVATE_STORAGE");
             File script=new File(work,"backup.py");try(InputStream in=a.getAssets().open("workspace-backup.py");OutputStream out=new FileOutputStream(script)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}
+            if(request.optString("operation").startsWith("cleanup-"))try(InputStream in=a.getAssets().open("workspace-cleanup.py");OutputStream out=new FileOutputStream(new File(work,"workspace-cleanup.py"))){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}
             request.put("work",work.getAbsolutePath());File input=new File(work,"request.json");try(OutputStream out=new FileOutputStream(input)){out.write(request.toString().getBytes(StandardCharsets.UTF_8));}
             ProcessBuilder pb=new ProcessBuilder(python.getAbsolutePath(),"-I","-S",script.getAbsolutePath(),"--request",input.getAbsolutePath());
             pb.directory(new File(home()));pb.environment().clear();for(String item:TermuxShellUtils.buildEnvironment(a,false,home())){int i=item.indexOf('=');if(i>0)pb.environment().put(item.substring(0,i),item.substring(i+1));}

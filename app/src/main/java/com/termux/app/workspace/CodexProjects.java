@@ -17,7 +17,7 @@ final class CodexProjects {
     }
     static boolean matches(String environment,String expected,String actual) {String a=directory(environment,expected);return !a.isEmpty()&&a.equals(directory(environment,actual));}
     static boolean bind(WorkspaceStore.Session profile,CodexStatus status) {
-        if(!profile.environment.equals("codex")||!profile.codexChat.equals("new")||!status.error.isEmpty()||!CodexSessionShell.validThread(status.thread)||status.cwd.isEmpty()||!matches(profile.codexEnvironment,profile.directory,status.cwd))return false;
+        if(profile.codexSocketId.equals(profile.codexBindingBlockedRun)||Boolean.FALSE.equals(status.materialized)||!profile.environment.equals("codex")||!profile.codexChat.equals("new")||!status.error.isEmpty()||!CodexSessionShell.validThread(status.thread)||status.cwd.isEmpty()||!matches(profile.codexEnvironment,profile.directory,status.cwd))return false;
         profile.codexSourceDirectory=status.cwd;profile.codexChat="id";profile.codexThread=status.thread;profile.codexThreadName=status.title.isEmpty()?profile.name:status.title;return true;
     }
 }
