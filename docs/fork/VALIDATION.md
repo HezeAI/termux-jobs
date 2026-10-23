@@ -8,6 +8,14 @@ Developer reports RedMagic10Pro and SamsungS26Ultra checks; other devices requir
 verification. Final Ubuntu VirGL GPU INFO and all-combination fresh-device/GUI
 coverage remain limited as described in the report. Sources: [THIRD-PARTY](THIRD-PARTY.md).
 
+
+Publication verified2026-10-23: [v2.0.0 stable/latest](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.0).
+All four assets were downloaded and compared. APK SHA256
+`492626100bb3500145fa84f28d030b8cac3e00841967ceff64cf080fae6b5dda`,
+45794028bytes; package/code/signature/ZIP and updater size/hash match. Public
+unauthenticated update.json equals the generated metadata; seven tagged current
+documentation links return200. No APK rebuild or tag movement for this record.
+
 The previous sections below are historical release records.
 
 # Текущие проверки — v1.7.5

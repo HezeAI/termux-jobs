@@ -1,5 +1,12 @@
 # v2.0.0 — release continuation
 
+Published stable/latest v2.0.0: Termux-job's X11 AVAILABLE.
+URL: https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.0
+Source tag commit2dbb4c5b; APK45794028bytes,
+SHA256492626100bb3500145fa84f28d030b8cac3e00841967ceff64cf080fae6b5dda.
+All four assets downloaded/compared; APK signature/package/version/ZIP and
+update.json coherence verified. Anonymous metadata and seven tagged docs return200.
+Source tag is immutable; this documentation follow-up does not rebuild the APK.
 Developer-authorized release: Termux-job's X11 AVAILABLE. App version2.0.0,
 code1320, header italic Termux Job’s plus v2.0. Release descriptions and future
 public release notes default to English; in-app updates remain RU/EN.
