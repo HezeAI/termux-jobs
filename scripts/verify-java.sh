@@ -2,6 +2,7 @@
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/build-env.sh"
 cd "$FORK_ROOT"
+python3 scripts/prepare-x11.py
 python3 scripts/prepare-java-verification.py
 cd "$FORK_ROOT/.verification/source"
 FORK_GRADLE="$FORK_ROOT/.tools/gradle-7.2/bin/gradle"

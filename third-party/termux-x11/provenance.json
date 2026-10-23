@@ -1,0 +1,15 @@
+{
+  "upstream": "https://github.com/termux/termux-x11",
+  "commit": "fa3a8b430e2896a19f44c99a9cb056254615ae06",
+  "apk": {
+    "url": "https://github.com/termux/termux-x11/releases/download/nightly/termux-x11-universal-debug.apk",
+    "sha256": "64995746d1887a0e70bc8977d4a9c5ea56e3e00eadd4a6eeab32ae6048ba733a",
+    "size": 14693944
+  },
+  "xkb": {
+    "url": "https://packages.termux.dev/apt/termux-x11/pool/main/x/xkeyboard-config/xkeyboard-config_2.48-1_all.deb",
+    "sha256": "5e7317d47130aee16d8e18014423f1b1ab23601ca57cea81cd160ec4c1424167",
+    "size": 356888,
+    "version": "2.48-1"
+  }
+}

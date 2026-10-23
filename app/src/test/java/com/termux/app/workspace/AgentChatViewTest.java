@@ -55,4 +55,22 @@ public class AgentChatViewTest {
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView view=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(view);List<JSONObject> rows=new ArrayList<>();rows.add(row("current","text","newest"));view.rows(rows,true);layout(view);AgentChatView.Position held=view.position();assertTrue(held.bottom);
   List<JSONObject> expanded=new ArrayList<>();for(int i=0;i<35;i++)expanded.add(row("old"+i,"text","older\nmessage\ntext"));expanded.addAll(rows);view.olderRows(expanded,false);layout(view);view.getViewTreeObserver().dispatchOnPreDraw();assertEquals(0,view.scroll.getScrollY());assertFalse(view.position().bottom);assertEquals("old0",view.position().anchor);
  }
+ @Test public void firstDrawAfterMessageGrowthAlreadyHasFinalScrollWithoutRunningPostedTasks()throws Exception{
+  Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);
+  List<JSONObject> rows=new ArrayList<>();for(int i=0;i<30;i++)rows.add(row("r"+i,"text","line "+i+"\nmore"));v.rows(rows,false);layout(v);
+  v.shellEnabled(true);v.shellInput.requestFocus();v.shellInput.setText("draft");
+  for(String kind:new String[]{"user","text","tool"}){
+   rows.add(row("new-"+kind,kind,"new content\nline2\nline3\nline4"));v.rows(rows,false);
+   v.measure(View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(700,View.MeasureSpec.EXACTLY));v.layout(0,0,600,700);
+   v.scroll.getViewTreeObserver().dispatchOnPreDraw();
+   assertEquals(kind,v.timeline.getHeight()-v.scroll.getHeight(),v.scroll.getScrollY());assertTrue(v.shellInput.hasFocus());assertEquals("draft",v.shellInput.getText().toString());
+  }
+ }
+ @Test public void manualTouchCancelsPendingAutomaticScrollBeforeFirstDraw()throws Exception{
+  Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);List<JSONObject> rows=new ArrayList<>();for(int i=0;i<30;i++)rows.add(row("r"+i,"text","line "+i+"\nmore"));v.rows(rows,false);layout(v);
+  rows.add(row("new","text","growing\nmessage"));v.rows(rows,false);
+  android.view.MotionEvent e=android.view.MotionEvent.obtain(0,0,android.view.MotionEvent.ACTION_DOWN,50,100,0);v.scroll.dispatchTouchEvent(e);e.recycle();v.scroll.scrollTo(0,50);
+  layout(v);v.scroll.getViewTreeObserver().dispatchOnPreDraw();assertEquals(50,v.scroll.getScrollY());
+ }
+
 }

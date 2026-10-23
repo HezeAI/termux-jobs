@@ -34,7 +34,7 @@ public final class AiAgents {
         }
     }
     static String command(File files,WorkspaceStore.Session s) {
-        if(!s.aiAgent.equals("opencode")||!s.environment.equals("ubuntu")||!validThread(s.aiThread)||!validModel(s.aiModel))throw new IllegalArgumentException("Invalid AI profile");
+        if(!s.aiAgent.equals("opencode")||!s.environment.equals("ubuntu")||!AgentEnvironments.ubuntu(s.codexEnvironment)||!validThread(s.aiThread)||!validModel(s.aiModel))throw new IllegalArgumentException("Invalid AI profile");
         return "( set -e; export JOBS_AI_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")+"; source "+SessionShell.quote(GUEST+"/bootstrap-v1.sh")+"; exec node "+SessionShell.quote(GUEST+"/bridge-v1.js")+" run-chat "+SessionShell.quote(GUEST+"/connections/"+s.aiConnection)+" "+SessionShell.quote(GUEST+"/"+socket(files,s).getName())+" "+SessionShell.quote(s.aiThread)+" "+SessionShell.quote(s.aiModel)+" "+SessionShell.quote(s.aiMode)+" "+SessionShell.quote(s.aiChat)+" "+SessionShell.quote(s.aiVariant)+" "+SessionShell.quote(s.aiAccess)+" "+SessionShell.quote(s.aiProjectOnly?"project":"unrestricted")+" )";
     }
     static JSONObject liveRequest(Context c,WorkspaceStore.Session s,JSONObject request)throws Exception {
@@ -50,8 +50,8 @@ public final class AiAgents {
     }
     static JSONObject call(Context c,String connection,WorkspaceStore.Session live,JSONObject request) throws Exception {
         java.util.UUID.fromString(connection);prepare(c);
-        String args=live==null?"request "+SessionShell.quote(GUEST+"/connections/"+connection):"proxy "+SessionShell.quote(GUEST+"/"+socket(c.getFilesDir(),live).getName());
-        String script="exec proot-distro login --bind "+SessionShell.quote(directory(c.getFilesDir()).getAbsolutePath()+":"+GUEST)+" ubuntu -- /bin/bash --noprofile --norc -c "+SessionShell.quote("export PATH=\"$HOME/.local/share/termux-jobs/agents/bin:$HOME/.local/share/termux-jobs/agents/node-v22.22.1-linux-arm64/bin:$HOME/.local/share/termux-jobs/agents/node_modules/.bin:$PATH\"; exec node "+SessionShell.quote(GUEST+"/bridge-v1.js")+" "+args);
+        String args=live==null||!live.aiAgent.equals("opencode")?"request "+SessionShell.quote(GUEST+"/connections/"+connection):"proxy "+SessionShell.quote(GUEST+"/"+socket(c.getFilesDir(),live).getName());
+        String script="exec proot-distro login --bind "+SessionShell.quote(directory(c.getFilesDir()).getAbsolutePath()+":"+GUEST)+" "+SessionShell.quote(live==null?AgentEnvironments.defaultUbuntu():AgentEnvironments.alias(live))+" -- /bin/bash --noprofile --norc -c "+SessionShell.quote("export PATH=\"$HOME/.local/share/termux-jobs/agents/bin:$HOME/.local/share/termux-jobs/agents/node-v22.22.1-linux-arm64/bin:$HOME/.local/share/termux-jobs/agents/node_modules/.bin:$PATH\"; exec node "+SessionShell.quote(GUEST+"/bridge-v1.js")+" "+args);
         ProcessBuilder pb=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c",script);
         pb.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));pb.environment().clear();
         for(String v:TermuxShellUtils.buildEnvironment(c,false,TermuxConstants.TERMUX_HOME_DIR_PATH)){int i=v.indexOf('=');if(i>0)pb.environment().put(v.substring(0,i),v.substring(i+1));}

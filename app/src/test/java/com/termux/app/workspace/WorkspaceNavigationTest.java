@@ -368,7 +368,7 @@ public class WorkspaceNavigationTest {
         assertNotNull(findText(content, "Недавние команды"));
         controller.close();
     }
-    @Test public void ordinaryTerminalNeedsExplicitLongPressSave() throws Exception {
+    @Test public void ordinaryTerminalNeedsExplicitSettingsSave() throws Exception {
         TermuxActivity activity = Robolectric.buildActivity(TermuxActivity.class).get();
         activity.setTheme(R.style.Theme_Termux_Black); activity.setContentView(R.layout.activity_termux);
         Field terminalView = TermuxActivity.class.getDeclaredField("mTerminalView");
@@ -396,7 +396,7 @@ public class WorkspaceNavigationTest {
         assertNotNull(findText(content, "Пресетов запуска нет"));
         findDescription(activity.findViewById(R.id.workspace_navigation), "Терминал").performClick();
         View tab = findDescription(activity.findViewById(R.id.workspace_tabs), "Temporary Bash");
-        assertNotNull(tab); assertTrue(tab.performLongClick());
+        assertNotNull(tab); assertTrue(activity.findViewById(R.id.workspace_tabs).findViewWithTag("session-current-settings").performClick());
         shadowOf(Looper.getMainLooper()).idle();
         AlertDialog menu = ShadowAlertDialog.getLatestAlertDialog();
         assertEquals(5, menu.getListView().getAdapter().getCount());
@@ -407,7 +407,7 @@ public class WorkspaceNavigationTest {
         assertEquals("Закрыть сессию", menu.getListView().getAdapter().getItem(3));
         menu.getListView().performItemClick(null, 0, 0);
         store.awaitWrites(); assertTrue(store.sessions.get(0).saved); assertEquals(1, store.sessions.size());
-        tab.performLongClick(); shadowOf(Looper.getMainLooper()).idle();
+        activity.findViewById(R.id.workspace_tabs).findViewWithTag("session-current-settings").performClick(); shadowOf(Looper.getMainLooper()).idle();
         menu = ShadowAlertDialog.getLatestAlertDialog();
         assertEquals(4, menu.getListView().getAdapter().getCount());
         assertEquals("Диагностика сессии",menu.getListView().getAdapter().getItem(3));
@@ -419,7 +419,7 @@ public class WorkspaceNavigationTest {
         AlertDialog confirmation = ShadowAlertDialog.getLatestAlertDialog();
         assertNotNull(findText(confirmation.getWindow().getDecorView(), "Остановить текущий процесс и повторно выполнить стартовую команду?"));
         confirmation.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();
-        tab.performLongClick(); shadowOf(Looper.getMainLooper()).idle();
+        activity.findViewById(R.id.workspace_tabs).findViewWithTag("session-current-settings").performClick(); shadowOf(Looper.getMainLooper()).idle();
         menu = ShadowAlertDialog.getLatestAlertDialog(); menu.getListView().performItemClick(null, 2, 2);
         shadowOf(Looper.getMainLooper()).idle(); confirmation = ShadowAlertDialog.getLatestAlertDialog();
         assertNotNull(findText(confirmation.getWindow().getDecorView(), "Процесс будет остановлен, вкладка терминала закрыта. Сохранённые настройки и история останутся."));
@@ -800,7 +800,7 @@ public class WorkspaceNavigationTest {
         form.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
         Field storeField = WorkspaceController.class.getDeclaredField("store"); storeField.setAccessible(true); WorkspaceStore store = (WorkspaceStore)storeField.get(controller);
         assertEquals(1,store.sessions.size()); WorkspaceStore.Session profile = store.sessions.get(0);
-        assertEquals("codex",profile.environment); assertEquals("read",profile.codexAccess); assertEquals("new",profile.codexChat); assertEquals("",profile.codexThread); assertEquals("/root",profile.directory); assertEquals("ubuntu",profile.codexEnvironment); assertTrue(profile.saved);
+        assertEquals("codex",profile.environment); assertEquals("read",profile.codexAccess); assertEquals("new",profile.codexChat); assertEquals("",profile.codexThread); assertEquals("/root",profile.directory); assertEquals("ubuntu-ai",profile.codexEnvironment); assertTrue(profile.saved);
         assertNull(activity.getCurrentSession()); assertEquals(View.GONE, activity.findViewById(R.id.workspace_codex_status).getVisibility());
         store.awaitWrites(); controller.close();
     }
@@ -823,6 +823,7 @@ public class WorkspaceNavigationTest {
         ViewGroup statusRow=activity.findViewById(R.id.workspace_terminal_tools);View server=statusRow.findViewWithTag("server-entry");assertNotNull(server);
         assertSame(statusRow,activity.findViewById(R.id.workspace_codex_status).getParent());
         assertEquals(WorkspaceDialogs.dp(activity,106),server.getLayoutParams().width);
+        TextView programs=AgentStatusUi.chip(activity,"Программы","Programs",()->{});assertEquals(programs.getMinimumHeight(),server.getMinimumHeight());assertEquals(programs.getPaddingTop(),server.getPaddingTop());assertEquals(-2,server.getLayoutParams().height);assertTrue(server.getBackground() instanceof android.graphics.drawable.LayerDrawable);android.graphics.drawable.LayerDrawable background=(android.graphics.drawable.LayerDrawable)server.getBackground();assertTrue(background.getDrawable(background.getNumberOfLayers()-1) instanceof WorkspaceTransferBorder);
         assertEquals(WorkspaceDialogs.dp(activity,112),((android.widget.FrameLayout.LayoutParams)activity.findViewById(R.id.workspace_codex_status).getLayoutParams()).getMarginEnd());
         View icons=((ViewGroup)tabs).getChildAt(1);assertEquals(2,((ViewGroup)icons).getChildCount());assertNotNull(findDescription(icons,"Пакеты"));assertNotNull(findDescription(icons,"Файлы проекта"));controller.close();
     }
@@ -891,6 +892,8 @@ public class WorkspaceNavigationTest {
             com.termux.app.TermuxService service=new com.termux.app.TermuxService();
             service.getTermuxSessions().add(ctor.newInstance(first,new com.termux.shared.models.ExecutionCommand(),null,false));service.getTermuxSessions().add(ctor.newInstance(second,new com.termux.shared.models.ExecutionCommand(),null,false));
             Field sf=TermuxActivity.class.getDeclaredField("mTermuxService");sf.setAccessible(true);sf.set(activity,service);
+            Field storeField=WorkspaceController.class.getDeclaredField("store");storeField.setAccessible(true);WorkspaceStore stored=(WorkspaceStore)storeField.get(c);
+            for(com.termux.terminal.TerminalSession terminal:new com.termux.terminal.TerminalSession[]{first,second}){WorkspaceStore.Session p=new WorkspaceStore.Session();p.name=terminal.mSessionName;p.handle=terminal.mHandle;p.environment="termux";stored.sessions.add(p);}
             java.lang.reflect.Method stack=WorkspaceController.class.getDeclaredMethod("showSessionStack",View.class);stack.setAccessible(true);View anchor=activity.findViewById(R.id.workspace_tabs);
             for(com.termux.terminal.TerminalSession selected:new com.termux.terminal.TerminalSession[]{first,second}) {
                 activity.getTerminalView().mTermSession=selected;
@@ -898,9 +901,10 @@ public class WorkspaceNavigationTest {
                 assertFalse(create.isSelected());
                 for(com.termux.terminal.TerminalSession terminal:new com.termux.terminal.TerminalSession[]{first,second}) {
                     TextView row=root.findViewWithTag("session-stack-"+terminal.mHandle);assertNotNull(row);assertEquals(terminal==selected,row.isSelected());assertNotNull(row.getCompoundDrawables()[0]);
-                    assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,row.getLayoutParams().height);assertEquals(create.getLayoutParams().height,row.getLayoutParams().height);assertEquals(14f,row.getTextSize()/activity.getResources().getDisplayMetrics().scaledDensity,.01f);
+                    assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,row.getLayoutParams().height);assertEquals(create.getLayoutParams().height,row.getLayoutParams().height);assertEquals(14f,row.getTextSize()/activity.getResources().getDisplayMetrics().scaledDensity,.01f);assertFalse(row.isLongClickable());assertNotNull(root.findViewWithTag("session-stack-settings-"+terminal.mHandle));
                 }
-                assertEquals(Math.min(Math.round(340*activity.getResources().getDisplayMetrics().density),activity.getResources().getDisplayMetrics().widthPixels-Math.round(24*activity.getResources().getDisplayMetrics().density)),popup.getWidth());popup.dismiss();
+                assertEquals(Math.min(Math.round(340*activity.getResources().getDisplayMetrics().density),activity.getResources().getDisplayMetrics().widthPixels-Math.round(24*activity.getResources().getDisplayMetrics().density)),popup.getWidth());
+                com.termux.terminal.TerminalSession other=selected==first?second:first;root.findViewWithTag("session-stack-settings-"+other.mHandle).performClick();assertSame(selected,activity.getCurrentSession());assertFalse(popup.isShowing());AlertDialog menu=ShadowAlertDialog.getLatestAlertDialog();assertTrue(menu.isShowing());assertEquals(other.mSessionName,shadowOf(menu).getTitle().toString());menu.dismiss();
             }
         } finally { c.close(); }
     }

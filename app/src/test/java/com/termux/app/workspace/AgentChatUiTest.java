@@ -21,6 +21,14 @@ public class AgentChatUiTest {
  private WorkspaceStore.Session profile(){WorkspaceStore.Session s=new WorkspaceStore.Session();s.aiAgent="opencode";s.aiThread="ses_test";return s;}
  private JSONObject result()throws Exception{return new JSONObject().put("ok",true).put("nativeChat",true).put("rows",new JSONArray()).put("forms",new JSONArray());}
  private void drain()throws Exception{Thread.sleep(30);Shadows.shadowOf(Looper.getMainLooper()).idle();}
+ @Test public void pollingDoesNotUncoverTerminalBehindAnExternalDesktop()throws Exception{
+  TermuxActivity a=activity();WorkspaceStore.Session local=profile();local.aiAgent="";AtomicBoolean desktop=new AtomicBoolean(true);
+  AgentChatUi ui=new AgentChatUi(a,()->local,()->true,(p,q)->result());
+  try{ui.externalDisplay(desktop::get);ui.sync();assertEquals(android.view.View.INVISIBLE,a.getTerminalView().getVisibility());
+   Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2));assertEquals(android.view.View.INVISIBLE,a.getTerminalView().getVisibility());
+   desktop.set(false);ui.sync();assertEquals(android.view.View.VISIBLE,a.getTerminalView().getVisibility());
+  }finally{ui.close();}
+ }
  @Test public void lateSnapshotCannotReplaceAnotherSessionsScreen()throws Exception{
   TermuxActivity a=activity();AtomicReference<WorkspaceStore.Session> selected=new AtomicReference<>(profile());CountDownLatch entered=new CountDownLatch(1),release=new CountDownLatch(1);
   AgentChatUi ui=new AgentChatUi(a,selected::get,()->true,(p,q)->{entered.countDown();release.await(2,TimeUnit.SECONDS);return result();});
@@ -179,4 +187,15 @@ public class AgentChatUiTest {
   AgentChatUi ui=new AgentChatUi(a,()->selected,()->true,(p,q)->{if(q.has("cursor")&&tries.incrementAndGet()==1)throw new java.io.IOException("history failed");return result().put("connected",true).put("older",q.has("cursor")?JSONObject.NULL:"page").put("rows",new JSONArray().put(new JSONObject().put("key",q.has("cursor")?"old":"new").put("message",q.has("cursor")?"old":"new").put("kind","text").put("body",q.has("cursor")?"old":"new")));});
   try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);chat.older.performClick();for(int i=0;i<30&&!chat.older.isEnabled();i++)drain();assertTrue(ui.showing());assertTrue(chat.older.isEnabled());assertTrue(hasText(chat,"OpenCode: new"));chat.older.performClick();for(int i=0;i<30&&!hasText(chat,"OpenCode: old");i++)drain();assertEquals(2,tries.get());assertTrue(hasText(chat,"OpenCode: old"));}finally{ui.close();}
  }
+ @Test public void sharedToolbarCannotReappearInAnAlreadyVisibleChat()throws Exception{
+  TermuxActivity a=activity();androidx.viewpager.widget.ViewPager pager=new androidx.viewpager.widget.ViewPager(a);pager.setId(R.id.terminal_toolbar_view_pager);((FrameLayout)a.findViewById(R.id.workspace_terminal_surface)).addView(pager);WorkspaceStore.Session p=profile();AgentChatUi ui=new AgentChatUi(a,()->p,()->true,(profile,q)->result());
+  try{for(int i=0;i<30&&!ui.showing();i++)drain();assertTrue(ui.showing());for(int i=0;i<3;i++){a.getTerminalToolbarViewPager().setVisibility(android.view.View.VISIBLE);ui.sync();assertEquals(android.view.View.GONE,a.getTerminalToolbarViewPager().getVisibility());}}
+  finally{ui.close();}
+ }
+ @Test public void chatExtraKeyStateDoesNotTransferBetweenAgentSessions()throws Exception{
+  TermuxActivity a=activity();WorkspaceStore.Session first=profile(),second=profile();second.id="another-agent";java.util.concurrent.atomic.AtomicReference<WorkspaceStore.Session> selected=new java.util.concurrent.atomic.AtomicReference<>(first);AgentChatUi ui=new AgentChatUi(a,selected::get,()->true,(p,q)->result());
+  try{for(int i=0;i<30&&!ui.showing();i++)drain();ui.toggleExtraKeys();assertTrue(ui.extraKeysVisible());selected.set(second);ui.sync();assertFalse(ui.extraKeysVisible());for(int i=0;i<30&&!ui.showing();i++)drain();assertFalse(ui.extraKeysVisible());selected.set(first);ui.sync();assertTrue(ui.extraKeysVisible());}
+  finally{ui.close();}
+ }
+
 }

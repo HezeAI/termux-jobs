@@ -1,0 +1,14 @@
+{
+  "tool": "built-in image_gen",
+  "reference": "../x11-linux-concepts-v1.7.94/Termux-Jobs-X11-linux-kali.png",
+  "prompts": [
+    "prompt.txt",
+    "generated.json"
+  ],
+  "dimensions": [
+    971,
+    1619
+  ],
+  "bytes": 1821196,
+  "sha256": "d5014613d7d16b1e047052ab48c5868d879a666b6e8038e08bd4f5392aeeec18"
+}

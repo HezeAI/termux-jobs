@@ -9,7 +9,9 @@ root = Path(__file__).resolve().parent.parent
 stage = root / ('.verification/arm64' if '--arm64' in sys.argv else '.verification/source')
 stage.mkdir(parents=True, exist_ok=True)
 (stage / '.tools/test-home').mkdir(parents=True, exist_ok=True)
-for name in ['app', 'terminal-emulator', 'terminal-view', 'termux-shared', 'gradle']:
+x11_cache=stage/'.tools/x11-runtime'
+if not x11_cache.exists():x11_cache.symlink_to(root/'.tools/x11-runtime',target_is_directory=True)
+for name in ['app', 'terminal-emulator', 'terminal-view', 'termux-shared', 'x11', 'gradle']:
     # Stage source trees are disposable. Recreate them so deleted assets, native
     # payloads and resources cannot leak back into a later APK.
     staged_src = stage / name / 'src'
@@ -30,7 +32,7 @@ def remove_block(text, name):
         text = text[:match.start()] + text[end:]
     return text
 
-for name in ['app', 'terminal-emulator', 'terminal-view', 'termux-shared']:
+for name in ['app', 'terminal-emulator', 'terminal-view', 'termux-shared', 'x11']:
     p = stage / name / 'build.gradle'
     text = remove_block(p.read_text(), 'externalNativeBuild')
     text = re.sub(r'^\s*ndkVersion\s*=.*$', '', text, flags=re.MULTILINE)

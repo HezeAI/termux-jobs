@@ -1,0 +1,14 @@
+{
+  "upstream": "https://github.com/leegao/bionic-vulkan-wrapper",
+  "version": "v0.0.5r5",
+  "packaging": "https://github.com/sabamdarif/termux-desktop/releases/tag/bionic-vulkan-wrapper-0.0.5r5",
+  "url": "https://github.com/sabamdarif/termux-desktop/releases/download/bionic-vulkan-wrapper-0.0.5r5/vulkan-wrapper-android-leegaos-fork-aarch64.zip",
+  "bytes": 3280408,
+  "sha256": "c50f3a9f884ca2c54ca76d4eb55709a4012cff77ff279216a0f04920c05bcc55",
+  "wrapperLibrarySha256": "520ec0ba1b5a404b12282d18f863761a44703012be6e2421b0f5adcb9d47be11",
+  "wrapperLibraryMatchesAuthorReleaseAsset": true,
+  "buildRecipe": "https://github.com/leegao/vulkan_wrapper_termux-packages/blob/dev/wrapper/wrapper/build_termux.sh",
+  "adrenotools": "https://github.com/bylaws/libadrenotools",
+  "scope": "Termux desktop only; optional runtime download, not embedded in APK",
+  "provenanceLimit": "Pinned prebuilt packaging; no claim of reproducible upstream binary build"
+}

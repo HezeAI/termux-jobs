@@ -64,8 +64,10 @@ command(){ if [[ $1 == -v && $2 == proot-distro ]];then return 1;fi;builtin comm
 pkg(){ printf bad > pkg-called; }
 source "'''+str(assets/'agent-host-setup.sh')+'"\nJOBS_AGENT_SETUP_ALLOWED=0 jobs_agent_host_prepare\n',False);assert not (fixture/'pkg-called').exists()
 run('host-approved',r'''
+export PREFIX="$PWD/host-prefix"
+mkdir -p "$PREFIX/var/lib/proot-distro/containers/ubuntu-ai/rootfs"
 command(){ if [[ $1 == -v && $2 == proot-distro && ! -e proot-installed ]];then return 1;fi;builtin command "$@"; }
 pkg(){ printf '%s\n' "$*" >> pkg-log;touch proot-installed; }
-proot-distro(){ printf '%s\n' "$*" >> proot-log;if [[ $1 == install ]];then touch ubuntu-installed;return 0;fi;[[ -e ubuntu-installed ]]; }
-source "'''+str(assets/'agent-host-setup.sh')+'"\nJOBS_AGENT_SETUP_ALLOWED=1 jobs_agent_host_prepare\n');assert (fixture/'pkg-log').read_text()=='install -y proot-distro\n';assert 'install ubuntu' in (fixture/'proot-log').read_text()
+proot-distro(){ printf '%s\n' "$*" >> proot-log; [[ $1 == login ]]; }
+source "'''+str(assets/'agent-host-setup.sh')+'"\nJOBS_AGENT_SETUP_ALLOWED=1 jobs_agent_host_prepare\n');assert (fixture/'pkg-log').read_text()=='install -y proot-distro\n';assert (fixture/'proot-log').read_text()=='login ubuntu-ai -- /bin/true\n'
 print('PASS isolated agent setup: read-only inventory, component-only/key privacy, consent guards, missing-only APT, APT failure abort, corrupt archive abort before extraction, existing ADC retained, host preparation consent/no rootfs deletion')

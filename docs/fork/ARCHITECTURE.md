@@ -1,3 +1,32 @@
+# v2.0 — embedded X11 and environment routing
+
+The x11 Android module integrates the pinned upstream Termux:X11 native core.
+Each supported local target has a private service/process/display; the original
+TestUbuntu service remains only for legacy compatibility, not new-session choice.
+No separate X11 application or new Linux kernel is installed. Surface lifecycle,
+keyboard bridge and selected-session state stay separate from agent chat rendering.
+
+DesktopProcess extracts current app helpers into target-local control paths.
+Guardians own only their children; close/cancel/error paths must not discover
+and kill arbitrary terminal/rootfs PIDs. Renderer setup is explicit: CPU, optional
+per-target pinned Turnip+Zink, or per-desktop VirGL server/socket. Wrapper is
+Termux-only. VirGL POSIX helper selects swrast-loader plus virpipe, disables
+Kopper and clears conflicting paths; Turnip/wrapper clear VirGL flags on entry.
+Alpine receives its private musl client; other guest Mesa ABIs remain separate.
+
+Program transactions and catalog/resume state are target-scoped. Base installation
+requests an explicit full runtime set; optional application fixes attach to the
+application. Checks reject absent required executables. Agent rootfs routing is
+centralized in AgentEnvironments; Ubuntu AI migration uses bounded source/target
+locks, scan tokens, read-back hashes and staged publication. No general schema8
+reset or silent agent-environment switch is introduced.
+
+Personal connection launchers/configs remain outside APK/assets. The optional
+absolute-path wrapper only changes the new agent process's environment/route.
+See [agent environments](AGENT-ENVIRONMENTS.md), [X11](X11-INTEGRATION.md),
+[renderers](X11-GPU.md), [sources](THIRD-PARTY.md) and
+[validation](VALIDATION-v2.0.0.md). Earlier chapters are historical.
+
 # 1.7.5-test: явный выбор следующего чата
 
 Редактор запоминает явный выбор чата отдельно от фонового статуса. При сохранении

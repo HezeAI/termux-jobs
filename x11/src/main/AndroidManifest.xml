@@ -1,0 +1,18 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.termux.x11">
+    <application>
+        <activity android:name="com.termux.x11.MainActivity" android:exported="false"
+            android:process=":jobs_x11" android:theme="@android:style/Theme.Material.NoActionBar"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
+            android:windowSoftInputMode="adjustResize" />
+        <service android:name="com.termux.x11.X11Service" android:exported="false"
+            android:process=":jobs_x11" android:stopWithTask="false" />
+        <service android:name="com.termux.x11.X11Service$Ubuntu" android:exported="false" android:process=":jobs_x11_ubuntu" android:stopWithTask="false" />
+        <service android:name="com.termux.x11.X11Service$TestUbuntu" android:exported="false" android:process=":jobs_x11_test" android:stopWithTask="false" />
+        <service android:name="com.termux.x11.X11Service$Debian" android:exported="false" android:process=":jobs_x11_debian" android:stopWithTask="false" />
+        <service android:name="com.termux.x11.X11Service$Alpine" android:exported="false" android:process=":jobs_x11_alpine" android:stopWithTask="false" />
+        <service android:name="com.termux.x11.X11Service$Fedora" android:exported="false" android:process=":jobs_x11_fedora" android:stopWithTask="false" />
+        <service android:name="com.termux.x11.X11Service$OpenSuse" android:exported="false" android:process=":jobs_x11_opensuse" android:stopWithTask="false" />
+        <service android:name="com.termux.x11.X11Service$VoidLinux" android:exported="false" android:process=":jobs_x11_void" android:stopWithTask="false" />
+        <service android:name="com.termux.x11.X11Service$ArchLinux" android:exported="false" android:process=":jobs_x11_archlinux" android:stopWithTask="false" />
+    </application>
+</manifest>

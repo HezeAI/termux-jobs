@@ -34,7 +34,7 @@ public final class CodexSessionShell {
             || !controls.setReadable(true, true) || !controls.setWritable(true, true) || !controls.setExecutable(true, true)) throw new IOException("Cannot protect control directory");
         String host = socket(files, s).getAbsolutePath();
         if (host.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 100) throw new IOException("Codex socket path too long");
-        String endpoint = s.codexEnvironment.equals("ubuntu") ? "/tmp/termux-jobs-codex/" + socket(files, s).getName() : host;
+        String endpoint = AgentEnvironments.ubuntu(s.codexEnvironment) ? "/tmp/termux-jobs-codex/" + socket(files, s).getName() : host;
         String stop = endpoint + ".stop", stopped = endpoint + ".stopped";
         String client = invocation(s, endpoint);
         if (!s.codexChat.equals("new")) client = "codex --remote " + SessionShell.quote("unix://" + endpoint) + " resume \"$_jobs_codex_thread\"";
@@ -66,7 +66,7 @@ public final class CodexSessionShell {
         } finally {temporary.delete();}
     }
     private static String bridgePath(File files, WorkspaceStore.Session s) {
-        return s.codexEnvironment.equals("ubuntu") ? "/tmp/termux-jobs-codex/bridge-v0.2.21.js" : new File(socketDirectory(files), "bridge-v0.2.21.js").getAbsolutePath();
+        return AgentEnvironments.ubuntu(s.codexEnvironment) ? "/tmp/termux-jobs-codex/bridge-v0.2.21.js" : new File(socketDirectory(files), "bridge-v0.2.21.js").getAbsolutePath();
     }
     public static String resumePreflight(WorkspaceStore.Session s, String endpoint) {
         return resumePreflight(new File(TermuxConstants.TERMUX_FILES_DIR_PATH), s, endpoint);
@@ -74,7 +74,7 @@ public final class CodexSessionShell {
     public static String resumePreflight(File files, WorkspaceStore.Session s, String endpoint) {
         if (s.codexChat.equals("new")) return "";
         if (!(s.codexChat.equals("id") && validThread(s.codexThread))) throw new IllegalArgumentException("Select a specific Codex chat");
-        String home = s.codexEnvironment.equals("ubuntu") ? "/root" : TermuxConstants.TERMUX_HOME_DIR_PATH;
+        String home = AgentEnvironments.ubuntu(s.codexEnvironment) ? "/root" : TermuxConstants.TERMUX_HOME_DIR_PATH;
         String cwd = s.directory.isEmpty() || s.directory.equals("~") ? home : s.directory;
         if (cwd.startsWith("~/")) cwd = home + cwd.substring(1);
         return "_jobs_codex_thread=$(node " + SessionShell.quote(bridgePath(files, s)) + " resume " + SessionShell.quote(endpoint)
@@ -82,15 +82,15 @@ public final class CodexSessionShell {
             + WorkspaceText.tr(") || { printf '%s\\n' 'Не удалось продолжить чат с выбранными правами.' >&2; exit 1; }\n");
     }
     public static String proxyCommand(File files, WorkspaceStore.Session s) {
-        String sock = s.codexEnvironment.equals("ubuntu") ? "/tmp/termux-jobs-codex/" + socket(files, s).getName() : socket(files, s).getAbsolutePath();
-        String proxy = (s.codexEnvironment.equals("ubuntu")?AgentPreparation.codexPath():"")+"command -v node >/dev/null 2>&1 || { printf '%s\\n' 'JOBS_CONTROL:NO_NODE' >&2; exit 127; }; "
+        String sock = AgentEnvironments.ubuntu(s.codexEnvironment) ? "/tmp/termux-jobs-codex/" + socket(files, s).getName() : socket(files, s).getAbsolutePath();
+        String proxy = (AgentEnvironments.ubuntu(s.codexEnvironment)?AgentPreparation.codexPath():"")+"command -v node >/dev/null 2>&1 || { printf '%s\\n' 'JOBS_CONTROL:NO_NODE' >&2; exit 127; }; "
             + "[ -r " + SessionShell.quote(bridgePath(files, s)) + " ] || { printf '%s\\n' 'JOBS_CONTROL:NO_BRIDGE' >&2; exit 2; }; "
             + "[ -S " + SessionShell.quote(sock) + " ] || { printf '%s\\n' 'JOBS_CONTROL:NO_SOCKET' >&2; exit 3; }; "
             + "exec node " + SessionShell.quote(bridgePath(files, s)) + " proxy " + SessionShell.quote(sock);
-        return s.codexEnvironment.equals("ubuntu") ? "proot-distro login --bind " + SessionShell.quote(socketDirectory(files).getAbsolutePath() + ":/tmp/termux-jobs-codex") + " ubuntu -- /bin/sh -c " + SessionShell.quote(proxy)
+        return AgentEnvironments.ubuntu(s.codexEnvironment) ? "proot-distro login --bind " + SessionShell.quote(socketDirectory(files).getAbsolutePath() + ":/tmp/termux-jobs-codex") + " "+SessionShell.quote(AgentEnvironments.alias(s))+" -- /bin/sh -c " + SessionShell.quote(proxy)
             : proxy;
     }
     public static String historyCommand(WorkspaceStore.Session s) {
-        return s.codexEnvironment.equals("ubuntu") ? "proot-distro login ubuntu -- /bin/sh -c "+SessionShell.quote(AgentPreparation.codexPath()+"exec codex --no-daemon app-server --stdio") : "codex --no-daemon app-server --stdio";
+        return AgentEnvironments.ubuntu(s.codexEnvironment) ? "proot-distro login "+SessionShell.quote(AgentEnvironments.alias(s))+" -- /bin/sh -c "+SessionShell.quote(AgentPreparation.codexPath()+"exec codex --no-daemon app-server --stdio") : "codex --no-daemon app-server --stdio";
     }
 }

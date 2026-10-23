@@ -17,7 +17,7 @@ final class WorkspaceEnvironments {
         if(s.environment.startsWith("proot:"))return s.environment.substring(6);
         return s.environment.equals("ubuntu")?"ubuntu":"";
     }
-    static String label(String alias){switch(alias){case "ubuntu":return "Ubuntu";case "debian":return "Debian";case "alpine":return "Alpine";case "archlinux":return "Arch Linux";case "fedora":return "Fedora";case "opensuse":return "openSUSE";case "void":return "Void Linux";default:return alias;}}
+    static String label(String alias){switch(alias){case "jobs-x11-ubuntu":return "Ubuntu X11 Test";case "ubuntu-ai":return "Ubuntu AI";case "ubuntu":return "Ubuntu";case "debian":return "Debian";case "alpine":return "Alpine";case "archlinux":return "Arch Linux";case "fedora":return "Fedora";case "opensuse":return "openSUSE";case "void":return "Void Linux";default:return alias;}}
     static File root(File proot,String alias){
         if(!WorkspaceLocalFilePicker.validAlias(alias))return null;
         for(String layout:new String[]{"containers","installed-rootfs"}){

@@ -46,7 +46,7 @@ final class WorkspaceStorageCleanup {
             case "CLEANUP_ENVIRONMENT_REMOVE_FAILED":return t("Окружение не удалено полностью. Оно может использоваться другой сессией. Закройте её и обновите список; принудительная остановка не выполняется.","Environment removal did not complete. Another session may be using it. Close it and refresh; no sessions are forcibly stopped.");
             case "CLEANUP_OVERLAPPING_SELECTION":return t("Выбрано окружение целиком и данные внутри него. Снимите отдельные пункты внутри этой среды.","A whole environment and data inside it are both selected. Deselect the nested items.");
             case "RESTORED_LOCKS_REQUIRED":return t("Для очистки окружения нужен proot-distro с поддерживаемой блокировкой сессий.","Environment cleanup requires proot-distro with supported session locking.");
-            case "CLEANUP_TOO_MANY_FILES":return t("Слишком много файлов. Выберите более узкую папку с бэкапами.","Too many files. Choose a narrower backup folder.");
+            case "CLEANUP_TOO_MANY_FILES":return t("Список слишком большой для этой операции. Выберите меньше пунктов или более узкую папку.","The list is too large for this operation. Select fewer items or a narrower folder.");
             case "PYTHON_REQUIRED":return t("Для анализа нужен Python в Termux: pkg install python.","Scanning requires Python in Termux: pkg install python.");
             case "CANCELLED":return t("Анализ отменён. Выбранные данные не удалялись.","Scan cancelled. Selected data was not deleted.");
             default:return t("Операция не завершена. Выполните анализ заново; часть уже удалённых файлов восстановить автоматически нельзя.","Operation did not complete. Rescan; files already deleted cannot be restored automatically.");

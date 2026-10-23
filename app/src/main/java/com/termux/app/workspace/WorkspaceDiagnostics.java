@@ -73,7 +73,7 @@ public final class WorkspaceDiagnostics {
         b.append("\nDetailed collection now: ").append(r!=null&&r.extended).append("\nLaunches observed: ").append(r==null?0:r.launches).append("\nLast event timestamp: ").append(r==null?0:r.lastEvent);
         b.append("\nCollector paused: ").append(r!=null&&r.paused).append("\nProcess: ").append(terminal==null?"unavailable":terminal.isRunning()?"running pid="+terminal.getPid():"exited status="+terminal.getExitStatus());
         b.append("\nLimit: 2 MiB per session, 32 MiB total; dropped old entries: ").append(r==null?0:r.dropped);
-        b.append("\nPrivacy: structured events/codes only. No prompts, terminal transcript, environment variables, custom commands, URLs, auth files or keys.\nHTTP/internal details depend on native agent output; this is not a network trace.\nNative verbose mode currently supported for Gemini only, enabled before launch. Other agents: extended activity timeline and observed error codes.\nRuntime events retained while app process lives; saved report files survive restart.\n\n");
+        b.append("\nPrivacy: structured events/codes; X11 may include redacted installer transfer failures. No terminal transcript is exported. URL, credential and path redaction is best-effort; review the report before sharing.\nHTTP/internal details depend on native agent output; this is not a network trace.\nNative verbose mode currently supported for Gemini only, enabled before launch. Other agents: extended activity timeline and observed error codes.\nRuntime events retained while app process lives; saved report files survive restart.\n\n");
         if(r==null)b.append("No collector attached for this session.\n");else for(String line:r.lines)b.append(line);
         return b.toString();
     }

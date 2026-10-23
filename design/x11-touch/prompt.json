@@ -1,0 +1,7 @@
+{
+  "reference": "design/x11-mobile-concepts-v1.7.95/Termux-Jobs-X11-creative-touch-cards.png",
+  "tool": "image_gen.imagegen",
+  "prompt": "Create the clean standalone wallpaper background from the reference Touch Workspace design, with all interface elements removed. Portrait wallpaper 2:3 or taller, high quality cinematic dark charcoal and deep teal alpine lake, shadowy pine silhouettes along the bottom and left bank, layered mountain silhouettes, one large soft mint moon near the lower right third reflected on the water, sparse subtle stars. Upper 55 percent must stay very dark, low detail, calm and empty for actual application cards placed over it. No UI, no cards, no buttons, no icons, absolutely no lettering or text. Preserve the beautiful black, deep teal, pale mint atmosphere from the reference. This is a real desktop wallpaper asset, not a screenshot or device mockup.",
+  "original": "/root/.codex/generated_images/01a129bb-f154-7252-9a9d-c4a7425895b1/exec-48261de3-dc27-49fd-9e33-61fd7bc5edfc.png",
+  "sha256": "59fa3bbde0c4fd3f7ddfcb58a4b9403111873159392f342a6f9b7155485d37f7"
+}

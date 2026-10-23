@@ -14,6 +14,11 @@
 
 ## Документация перед публикацией
 
+GitHub release titles/descriptions and new public release notes must be written
+in English unless the developer explicitly requests another language. Keep the
+in-app update highlights and compatibility notes localized in both Russian and
+English. This is the developer's standing preference for future updates.
+
 Обязательно проверить и обновить по фактическому состоянию:
 
 - `README.md`: текущая версия, возможности, установка, ссылки и ограничения.

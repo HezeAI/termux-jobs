@@ -78,6 +78,52 @@ class CleanupTests(unittest.TestCase):
         with self.assertRaisesRegex(b.BackupError,'UNSAFE_LINK'):self.prepare('termux',entries)
         self.assertTrue(f.exists())
 
+    def test_large_home_snapshot_exceeds_old_limits_and_deletes_sparse_40gib(self):
+        folder=self.root/'home/large';folder.mkdir()
+        # Real directory cardinality and >8 MiB manifest, without using 40 GiB
+        # of phone storage: truncate creates a sparse fixture inside the repo.
+        with patch.object(b,'progress',lambda *a,**k:None):
+            for i in range(60005):
+                (folder/(str(i).zfill(6)+'x'*90)).touch()
+            sparse=folder/'large.bin'
+            with sparse.open('wb') as out:out.truncate(40*1024**3)
+            kept=self.write('home/keep.txt');external=self.write('personal/keep.txt')
+            (folder/'external').symlink_to(external.parent,target_is_directory=True)
+            entry=dict(name=folder.name,identity=c.identity(folder.lstat()))
+            plan=self.prepare('termux',[entry]);group=plan['groups'][0]
+            self.assertEqual(60007,group['count']);self.assertGreaterEqual(group['bytes'],40*1024**3)
+            private=self.root/'files/workspace-cleanup-plans'
+            raw=json.loads((private/(plan['plan']+'.json')).read_text())
+            meta=raw['groups'][0]['spool']['files']
+            self.assertGreater((private/meta['name']).stat().st_size,8*1024**2)
+            self.assertLess((private/(plan['plan']+'.json')).stat().st_size,4096)
+            result=self.run_groups(plan,plan['groups'])
+            self.assertEqual([],result['errors']);self.assertFalse(folder.exists())
+            self.assertTrue(kept.exists());self.assertTrue(external.exists())
+            self.assertFalse(list(private.iterdir()))
+
+    def test_disk_snapshot_replacement_is_rejected_before_any_unlink(self):
+        target=self.write('home/p/a');entries=next(e for e in c.overview(self.request,b) if e['kind']=='home')['entries']
+        plan=self.prepare('termux',entries);private=self.root/'files/workspace-cleanup-plans'
+        raw=json.loads((private/(plan['plan']+'.json')).read_text());path=private/raw['groups'][0]['spool']['files']['name']
+        old=path.with_suffix('.old');path.rename(old);path.write_bytes(old.read_bytes())
+        result=self.run_groups(plan,plan['groups'])
+        self.assertEqual('CLEANUP_CHANGED_RESCAN',result['errors'][0]['code']);self.assertTrue(target.exists())
+
+    def test_failed_disk_scan_cleans_private_lists_and_retains_user_files(self):
+        target=self.write('home/p/a');os.mkfifo(self.root/'home/p/pipe')
+        entry=dict(name='p',identity=c.identity((self.root/'home/p').lstat()))
+        with self.assertRaisesRegex(b.BackupError,'UNSAFE_LINK'):self.prepare('termux',[entry])
+        self.assertFalse(list((self.root/'files/workspace-cleanup-plans').iterdir()));self.assertTrue(target.exists())
+
+    def test_disk_directory_reverse_stream_crosses_blocks(self):
+        folder=self.root/'home/p';folder.mkdir()
+        for i in range(1200):(folder/(str(i)+'d'*65)).mkdir()
+        with patch.object(b,'progress',lambda *a,**k:None):
+            plan=self.prepare('termux',[dict(name='p',identity=c.identity(folder.lstat()))])
+            result=self.run_groups(plan,plan['groups'])
+        self.assertEqual([],result['errors']);self.assertFalse(folder.exists())
+
     def test_app_histories_are_individually_selected_without_touching_native_chats(self):
         chosen=self.write('files/workspace-sessions/session-a/transcript.txt','saved shell')
         kept=self.write('files/workspace-sessions/session-b/transcript.txt','keep')

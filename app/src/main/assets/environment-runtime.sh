@@ -6,6 +6,19 @@ op=${1:-};alias=${2:-}
 [[ $alias == termux || $alias =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$ ]] || exit 2
 : "${PREFIX:?Termux PREFIX is required}"
 root="$PREFIX/var/lib/proot-distro"
+# Explicitly consented prerequisite preparation; never enters/modifies a guest rootfs.
+if [[ $op == install && $alias == agent-migration-tools ]];then
+    needed=()
+    command -v python3 >/dev/null || needed+=(python)
+    if ! command -v proot-distro >/dev/null || ! python3 -B -c 'from proot_distro.constants import RUNTIME_DIR; from proot_distro.locking import LOCKS_DIR; import os; assert RUNTIME_DIR==os.environ["PREFIX"]+"/var/lib/proot-distro" and LOCKS_DIR==RUNTIME_DIR+"/locks"' >/dev/null 2>&1;then needed+=(proot-distro);fi
+    if (( ${#needed[@]} ));then
+        command -v pkg >/dev/null || { printf 'ERROR:PKG_REQUIRED\n';exit 2; }
+        printf 'STAGE:prepare-migration-tools\n'
+        pkg install -y "${needed[@]}"
+    fi
+    python3 -B -c 'from proot_distro.constants import RUNTIME_DIR; from proot_distro.locking import LOCKS_DIR; import os; assert RUNTIME_DIR==os.environ["PREFIX"]+"/var/lib/proot-distro" and LOCKS_DIR==RUNTIME_DIR+"/locks"' >/dev/null 2>&1 || { printf 'ERROR:NATIVE_LOCKS_REQUIRED\n';exit 1; }
+    printf 'READY:environment\nREADY:shell\nCHECK:done\n';exit
+fi
 find_root() {
     local candidate
     for candidate in "$root/containers/$alias/rootfs" "$root/installed-rootfs/$alias"; do
@@ -30,8 +43,13 @@ check() {
 if [[ $op == check ]];then check;exit;fi
 [[ $alias != termux ]] || { check;exit; }
 # Never replace or reset an existing environment, even if installation was raced.
-if find_root >/dev/null;then check;exit;fi
-case $alias in ubuntu|debian|alpine|archlinux|fedora|opensuse|void) ;;*)printf 'ERROR:UNSUPPORTED_DISTRIBUTION\n';exit 2;;esac
+if find_root >/dev/null;then
+    if [[ ${JOBS_ENVIRONMENT_RETRY:-0} == 1 || -f ${JOBS_ENVIRONMENT_DOWNLOAD_DIR:-$PREFIX/tmp}/downloads/$alias/state.json ]];then
+        printf 'ERROR:INCOMPLETE_ROOTFS_REQUIRES_REMOVAL\n';exit 1
+    fi
+    check;exit
+fi
+case $alias in ubuntu-ai|jobs-x11-ubuntu|ubuntu|debian|alpine|archlinux|fedora|opensuse|void) ;;*)printf 'ERROR:UNSUPPORTED_DISTRIBUTION\n';exit 2;;esac
 if ! command -v proot-distro >/dev/null;then
     printf 'STAGE:install-proot-distro\n'
     command -v pkg >/dev/null || { printf 'ERROR:PROOT_REQUIRED\n';exit 2; }
@@ -62,14 +80,20 @@ install_arch_arm() {
 }
 if [[ $help == *--name* ]];then
     case $alias in
+        ubuntu-ai|jobs-x11-ubuntu) image=ubuntu;;
         ubuntu|debian|alpine|fedora) image=$alias;;
         opensuse) image=opensuse/leap;;
         void) image=ghcr.io/void-linux/void-glibc-full:latest;;
         archlinux) install_arch_arm;printf 'STAGE:verify\n';check;exit;;
         *)printf 'ERROR:DISTRIBUTION_UNAVAILABLE\n';exit 2;;
     esac
+    # Use the public CLI directly. No private Python callbacks or custom OCI prefetch.
     proot-distro install "$image" --name "$alias"
 else
+    if [[ $alias == jobs-x11-ubuntu || $alias == ubuntu-ai ]];then
+        proot-distro install --override-alias "$alias" ubuntu
+        printf 'STAGE:verify\n';check;exit
+    fi
     [[ -f $PREFIX/etc/proot-distro/$alias.sh ]] || { printf 'ERROR:DISTRIBUTION_UNAVAILABLE\n';exit 2; }
     proot-distro install "$alias"
 fi

@@ -1,3 +1,24 @@
+# v2.0 — X11 and session UI
+
+The existing header dimensions and controls remain; the brand is bold italic
+with a compact separate v2.0 label. Session settings move into visible gears
+on the selected-session card and running-session rows.
+
+Ordinary local sessions expose Terminal/Desktop plus a separate Programs card.
+The selected target owns its surface; terminal and X11 are not rendered at once.
+Central check/install/startup stages carry progress and a consent prompt, with
+cancellation below. Programs use inline progress in the corresponding row,
+not a dismissible operation window. Per-target catalog state survives list
+navigation; the animated card invalidates its own element.
+
+Agent chat input stays idle until touched; incoming cards/messages must not
+rebuild/focus the composer or briefly render behind Shell. Keyboard/extra-key
+state is scoped to the selected session. Optional style applies only to base
+Termux XFCE and keeps normal pointer/window handling.
+
+Current scope and device limits: [release](RELEASE-v2.0.0.md),
+[validation](VALIDATION-v2.0.0.md). Older sections below are historical.
+
 # v1.7.5: очистка, история и выбор версий
 
 Обзор очистки расположен под настройками приложения. Кнопка «Обновить»

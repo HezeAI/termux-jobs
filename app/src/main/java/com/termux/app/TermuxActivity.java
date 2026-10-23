@@ -736,9 +736,10 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
      * For processes to access shared internal storage (/sdcard) we need this permission.
      */
     private com.termux.app.workspace.WorkspaceStorageAccess mWorkspaceStorageAccess;
-    public void requestWorkspaceStorageAccess(Runnable ready){
+    public void requestWorkspaceStorageAccess(Runnable ready){requestWorkspaceStorageAccess(ready,null);}
+    public void requestWorkspaceStorageAccess(Runnable ready,Runnable cancelled){
         if(mWorkspaceStorageAccess==null)mWorkspaceStorageAccess=new com.termux.app.workspace.WorkspaceStorageAccess(this);
-        mWorkspaceStorageAccess.request(ready);
+        mWorkspaceStorageAccess.request(ready,cancelled);
     }
     public boolean ensureStoragePermissionGranted() {
         if (PermissionUtils.checkPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {

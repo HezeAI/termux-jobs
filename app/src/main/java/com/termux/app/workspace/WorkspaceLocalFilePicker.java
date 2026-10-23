@@ -24,6 +24,16 @@ final class WorkspaceLocalFilePicker implements AutoCloseable {
     WorkspaceLocalFilePicker(TermuxActivity a){activity=a;}
     private String t(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
     void choose(String title,WorkspaceFileBrowser.FileChoice choice){choose(title,choice,null,null);}
+    void choosePhoneFile(WorkspaceFileBrowser.FileChoice choice){
+        if(closed)return;final int epoch=++selectionEpoch;
+        activity.requestWorkspaceStorageAccess(()->{
+            if(closed||epoch!=selectionEpoch)return;
+            WorkspaceStore.Session source=new WorkspaceStore.Session();source.name=t("Память устройства","Device storage");source.environment="termux";
+            WorkspaceFileBrowser browser=new WorkspaceFileBrowser(activity,source,"/sdcard",null);
+            browser.setRootBoundary("/sdcard");
+            browser.setFileChoice((profile,entry)->{if(!closed&&epoch==selectionEpoch)choice.selected(profile,entry);});browsers.add(browser);browser.show();
+        });
+    }
     void chooseDirectory(String title,java.util.function.BiConsumer<WorkspaceStore.Session,String> choice){choose(title,null,null,choice);}
     void chooseMultiple(String title,java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> choice){choose(title,null,choice,null);}
     private void choose(String title,WorkspaceFileBrowser.FileChoice choice,java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> multiple,java.util.function.BiConsumer<WorkspaceStore.Session,String> directory){

@@ -1,0 +1,6 @@
+{
+  "tool": "built-in image_gen",
+  "source": "/root/.codex/generated_images/01a129bb-f154-7252-9a9d-c4a7425895b1/exec-28cbe980-ffcd-43be-8e5c-73b0c555ac98.png",
+  "prompt": "Convert this wallpaper into a TALL PORTRAIT wallpaper, aspect ratio 3:5, approximately 1536 wide x 2560 high. This is NOT square: the final canvas must be substantially taller than wide. Preserve the current artwork, exact electric-blue thin dragon silhouette and white italic three-line Termux-job’s / & / X11 lettering. Extend the dark mountain/lake scenery vertically with matching style instead of stretching the artwork. Compose the ENTIRE recognizable dragon head inside the right edge, centered around 72 percent of width and 52 percent of height, with blue neck curving downward. White text sits centered slightly left of the head, within central 45 percent of width. Leave upper third mostly dark for desktop windows to appear over later. Wallpaper ONLY: no desktop icons, panels, windows, buttons or other UI. Keep natural proportions and high-quality thin continuous lines, no distortion, no extra text.",
+  "reference": "../x11-linux-concepts-v1.7.94/Termux-Jobs-X11-linux-kali.png"
+}

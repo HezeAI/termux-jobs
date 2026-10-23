@@ -39,6 +39,7 @@ final class AgentChatUi {
     void onVisibilityChanged(Runnable listener){visibilityChanged=listener;}
     private final Map<String,String> shellDrafts=new HashMap<>();
     private boolean extraVisible;
+    private final LinkedHashMap<String,Boolean> extraByOwner=new LinkedHashMap<>();
     private View mountedKeys;private ViewGroup keysHome;private ViewGroup.LayoutParams keysHomeParams;private int keysHomeIndex,keysHomeVisibility;
     boolean extraKeysVisible(){return extraVisible;}
     void toggleExtraKeys(){extraVisible=!extraVisible;sync();}
@@ -77,10 +78,14 @@ final class AgentChatUi {
     boolean requiresTerminal(){return showing()&&requiresTerminal;}
     boolean working(){return showing()&&busy;}
     boolean showing(){return selected()&&nativeChat&&terminal==null;}
+    private java.util.function.BooleanSupplier externalDisplay=()->false;
+    void externalDisplay(java.util.function.BooleanSupplier value){externalDisplay=value;}
     void sync(){
         String next=eligible()?key(current.get()):"";
         boolean nowVisible=selected();if(wasVisible&&!nowVisible){generation++;loading=false;olderLoading=false;olderQueued=false;view.olderState(false,null);if(terminal!=null)terminal.dismiss();if(details!=null)details.dismiss();if(formDialog!=null)formDialog.dismiss();if(vertexDialog!=null)vertexDialog.dismiss();}wasVisible=nowVisible;
         if(!next.equals(owner)){
+            if(!owner.isEmpty()){extraByOwner.put(owner,extraVisible);while(extraByOwner.size()>32)extraByOwner.remove(extraByOwner.keySet().iterator().next());}
+            restoreChatKeys();extraVisible=extraByOwner.getOrDefault(next,false);
             if(!owner.isEmpty()){shellDrafts.put(owner,view.shellInput.getText().toString());savePresentation();}
             generation++;owner=next;actionNotice="";currentModel="";nativeSession="";connected=false;transportFailed=false;
             view.assistantName(name());view.actionCards(current.get()!=null&&!current.get().environment.equals("codex"));view.shellInput.setText(shellDrafts.getOrDefault(next,""));nativeChat=false;resolved=false;loading=false;olderLoading=false;olderQueued=false;busy=false;directShell=false;requiresTerminal=false;rows.clear();older="";historyExhausted=false;requestStamp="";view.clear();
@@ -91,9 +96,12 @@ final class AgentChatUi {
         boolean cover=showing()||(selected()&&!resolved&&terminal==null);
         boolean changed=(view.getVisibility()==View.VISIBLE)!=cover||presented!=showing();presented=showing();
         view.setVisibility(cover?View.VISIBLE:View.GONE);
-        activity.getTerminalView().setVisibility(cover?View.INVISIBLE:View.VISIBLE);
+        // show(TERMINAL) may restore the shared toolbar even without a chat visibility
+        // transition. Enforce the structured-chat boundary on every synchronization.
+        if((cover||terminal!=null)&&activity.getTerminalToolbarViewPager()!=null)activity.getTerminalToolbarViewPager().setVisibility(View.GONE);
+        activity.getTerminalView().setVisibility(cover||externalDisplay.getAsBoolean()?View.INVISIBLE:View.VISIBLE);
         layoutChatKeys();syncExtraKeys();if(changed)visibilityChanged.run();
-        activity.getTerminalView().setWorkspaceTerminalVisible(!closed&&visible.getAsBoolean()&&!cover);
+        activity.getTerminalView().setWorkspaceTerminalVisible(!closed&&visible.getAsBoolean()&&!cover&&!externalDisplay.getAsBoolean());
     }
     private void savePresentation(){
         if(!resolved&&!nativeChat)return;
@@ -183,7 +191,7 @@ final class AgentChatUi {
         }
         if(needsTerminal){view.requests.addView(view.label(tr("Завершите действие в терминале или нажмите «Вернуться в чат ","Finish the action in the terminal or tap Return to ")+name()+tr("»."," chat."),13));view.requests.addView(view.pill(tr("Открыть терминал ›","Open terminal ›"),this::terminal));view.requests.addView(view.pill(returnChatLabel(),this::returnAgentChat));}
         if(forms!=null)for(int i=0;i<forms.length();i++){JSONObject f=forms.optJSONObject(i);if(f!=null)view.requests.addView(view.pill(f.optString("title")+" ▾",()->form(f)));}
-        if(bottom)view.scroll.post(()->view.scroll.scrollTo(0,Math.max(0,view.timeline.getHeight()-view.scroll.getHeight())));
+        if(bottom)view.bottomAfterLayout();
     }
     private void form(JSONObject f){
         final int g=generation;LinearLayout box=new LinearLayout(activity);box.setOrientation(LinearLayout.VERTICAL);JSONArray fields=f.optJSONArray("fields");Map<String,Supplier<Object>> inputs=new LinkedHashMap<>();boolean simple=fields!=null;

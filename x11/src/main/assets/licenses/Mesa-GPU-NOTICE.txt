@@ -1,0 +1,52 @@
+Optional Turnip + Zink graphics components
+
+Mesa / Turnip / Zink are third-party projects, not drivers authored by Termux Job's.
+No graphics driver binary is embedded in this APK. Optional downloads are pinned by
+SHA-256 and unpacked in private application storage, without replacing system Mesa.
+
+Ubuntu, Debian and Alpine bundles: lfdevs/mesa-for-android-container
+Release mesa-26.3.0-devel-20260824 (experimental development build)
+https://github.com/lfdevs/mesa-for-android-container/tree/mesa-26.3.0-devel-20260824
+Mesa license overview and per-file terms:
+https://github.com/lfdevs/mesa-for-android-container/blob/mesa-26.3.0-devel-20260824/docs/license.rst
+https://github.com/lfdevs/mesa-for-android-container/tree/mesa-26.3.0-devel-20260824/licenses
+
+Termux Mesa/Turnip 26.2.5 and Vulkan Loader 1.4.365 packages:
+https://github.com/termux/termux-packages/tree/master/packages/mesa
+https://github.com/termux/termux-packages/tree/master/packages/vulkan-loader-generic
+Mesa is primarily MIT licensed; individual components use additional licenses.
+Khronos Vulkan Loader: Apache-2.0 (https://github.com/KhronosGroup/Vulkan-Loader).
+Upstream authors retain all copyright and license rights. See package source and
+included distribution metadata for component-specific terms.
+
+openSUSE Leap 16.0 compatibility uses the pinned Debian bundle in private storage.
+Private libsensors5 3.6.2-2 (Debian arm64), LGPL-2.1-or-later:
+https://packages.debian.org/trixie/arm64/libsensors5/download
+https://sources.debian.org/src/lm-sensors/1%3A3.6.2-2/
+The downloaded Debian package contains its copyright/license text.
+No openSUSE system libraries are replaced.
+
+Void glibc ARM64 uses the pinned Void bundle from the same lfdevs release above,
+with its separate LLVM18 runtime requirement. No Ubuntu image is substituted.
+
+Optional VirGL uses packages installed from the Termux repositories at consented
+setup time (no VirGL/ANGLE binary is embedded in this APK):
+https://github.com/termux/termux-packages/tree/master/packages/virglrenderer-android
+https://gitlab.freedesktop.org/virgl/virglrenderer (MIT)
+https://github.com/termux/termux-packages/tree/master/packages/angle-android
+https://chromium.googlesource.com/angle/angle (BSD-3-Clause, Apache-2.0 and
+per-file third-party notices). Package-provided notices remain with the runtime.
+
+Optional Termux Bionic Wrapper (no Wrapper/AdrenoTools binary in this APK):
+Lee Gao's bionic-vulkan-wrapper v0.0.5r5 (Mesa fork):
+https://github.com/leegao/bionic-vulkan-wrapper/tree/v0.0.5r5
+https://github.com/leegao/bionic-vulkan-wrapper/blob/v0.0.5r5/docs/license.rst
+Termux packaging by sabamdarif/termux-desktop:
+https://github.com/sabamdarif/termux-desktop/releases/tag/bionic-vulkan-wrapper-0.0.5r5
+The pinned main library matches the SHA256 published with Lee Gao's release.
+The build recipe and native hooks are based on:
+https://github.com/leegao/vulkan_wrapper_termux-packages
+AdrenoTools by Billy Laws and contributors (BSD-2-Clause):
+https://github.com/bylaws/libadrenotools/blob/master/LICENSE
+The app supplies import/UI/launch integration, not authorship of these drivers.
+Native user drivers retain the licenses and provenance of their publishers.

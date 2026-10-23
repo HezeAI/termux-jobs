@@ -21,7 +21,7 @@ final class ProjectFiles implements AutoCloseable {
         this.profile.name=profile.name;this.profile.handle=profile.handle;this.profile.codexSocketId=profile.codexSocketId;
         this.profile.sshEncryptedPassword=profile.sshEncryptedPassword;}
     void setPassword(char[] value) {if(password!=null)Arrays.fill(password,'\0');password=value.clone();}
-    static String environment(WorkspaceStore.Session s) {return !s.prootAlias.isEmpty()?"proot:"+s.prootAlias:s.environment.equals("codex")?s.codexEnvironment:s.environment.equals("legacy")?"termux":s.environment;}
+    static String environment(WorkspaceStore.Session s) {return !AgentPreparation.agent(s).isEmpty()&&s.codexEnvironment.equals("ubuntu-ai")?"proot:ubuntu-ai":!s.prootAlias.isEmpty()?"proot:"+s.prootAlias:s.environment.equals("codex")?s.codexEnvironment:s.environment.equals("legacy")?"termux":s.environment;}
     static String environmentLabel(WorkspaceStore.Session s) {String e=environment(s);return e.startsWith("proot:")?WorkspaceEnvironments.label(e.substring(6)):e.equals("ubuntu")?"Ubuntu":e.equals("ssh")?"SSH · "+s.sshHost:"Termux";}
     static String target(String path) {
         if(path==null || path.indexOf('\0')>=0 || path.contains("\n") || path.contains("\r"))throw new IllegalArgumentException(WorkspaceText.tr("Некорректный путь"));

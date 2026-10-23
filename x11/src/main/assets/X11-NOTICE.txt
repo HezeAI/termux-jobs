@@ -1,0 +1,25 @@
+Termux Job's v2.0 X11 integration
+
+Termux:X11 contributors: original native core, GPL-3.0.
+Pinned upstream source and dependencies:
+https://github.com/termux/termux-x11/tree/fa3a8b430e2896a19f44c99a9cb056254615ae06
+The ARM64 library is extracted from the hash-verified upstream APK, not rebuilt
+or modified by this fork. Android/session adapters are integrated by HezeAI with
+Codex assistance. The standalone Termux:X11 APK is not installed.
+License: licenses/Termux-X11-GPL-3.0.txt.
+
+Keyboard data: xkeyboard-config 2.48-1, HPND/MIT.
+https://gitlab.freedesktop.org/xkeyboard-config/xkeyboard-config
+Copyright/notices: x11-keyboard.zip/COPYRIGHT.
+
+Alpine VirGL: unmodified Mesa26.1.6, minimal private aarch64-musl build.
+https://archive.mesa3d.org/mesa-26.1.6.tar.xz
+License notices: x11-virgl-alpine-LICENSE.txt.
+
+OpenH264: Cisco v2.6.0, pinned Debian package2.6.0+dfsg-2, BSD-2-Clause.
+https://github.com/cisco/openh264/tree/v2.6.0
+Copyright/notices: licenses/OpenH264-copyright.txt.
+
+Source, hashes, build notes, driver providers and acknowledgements:
+https://github.com/HezeAI/termux-jobs/blob/v2.0.0/docs/fork/THIRD-PARTY.md
+Retired GTK/Garcon diagnostics are not included in this APK.

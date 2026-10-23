@@ -1,3 +1,22 @@
+## v2.0.0 — Termux-job's X11 AVAILABLE
+
+A major release since v1.7.5: integrated XFCE for eight systems; CPU,
+Turnip+Zink, VirGL and a Termux-only custom-driver Wrapper; per-target desktop
+services, keyboard/audio/storage integration, a program manager with progress,
+Stop/Continue, removal and cached catalogs. Optional Kali-inspired Termux style.
+Independent Ubuntu AI, opt-in verified migration and selected-environment
+files/packages; native environment installation/error reports; agent chat,
+focus and per-session input fixes; visible session gears and an optional
+connection command. Italic app header with v2.0.
+
+Tested on RedMagic10Pro and SamsungS26Ultra; other devices require testing.
+No blanket Mali/Dimensity or all-combinations claim. Android8+/ARM64,
+unchanged package/signer, code1320, schema8, no general reset from1.7.5.
+Migration is optional; the original Ubuntu is not automatically removed.
+[English release notes](docs/fork/RELEASE-v2.0.0.md),
+[validation](docs/fork/VALIDATION-v2.0.0.md),
+[upstream credits](docs/fork/THIRD-PARTY.md).
+
 # v1.7.5 — Storage cleanup, package history and chat fixes
 
 - Add storage overview/selective cleanup for library data, HOME entries, package

@@ -1,0 +1,11 @@
+{
+  "tool": "built-in image_gen",
+  "prompt": "prompt.txt",
+  "dimensions": [
+    1254,
+    1254
+  ],
+  "bytes": 2357771,
+  "sha256": "9e62205aea33b778c582058ca0db3bf8e96fc2c203f285100ce464d0f6130f52",
+  "note": "Original generated wallpaper, not Microsoft artwork; no app UI"
+}

@@ -1,0 +1,21 @@
+{
+  "libxfce4util-dev": {
+    "Version": "4.20.1-1build1",
+    "Filename": "pool/universe/libx/libxfce4util/libxfce4util-dev_4.20.1-1build1_arm64.deb",
+    "SHA256": "a732c20708cdce104f7e538f8ed66430de68eff9d615b3252edf755495131934"
+  },
+  "libxfce4util7": {
+    "Version": "4.20.1-1build1",
+    "Filename": "pool/universe/libx/libxfce4util/libxfce4util7_4.20.1-1build1_arm64.deb",
+    "SHA256": "8b536f200682298a800d6880011e08ade88cef4f34fd327bb2da2f0b49956cdb"
+  },
+  "source": {
+    "url": "https://archive.xfce.org/src/xfce/garcon/4.20/garcon-4.20.0.tar.bz2",
+    "sha256": "7fb8517c12309ca4ddf8b42c34bc0c315e38ea077b5442bfcc4509415feada8f"
+  },
+  "libgio-2.0-dev": {
+    "Version": "2.88.0-1ubuntu0.1",
+    "Filename": "pool/main/g/glib2.0/libgio-2.0-dev_2.88.0-1ubuntu0.1_arm64.deb",
+    "SHA256": "d07be4960836023abad51db81060963f61bf29bf705fbf8be5b57b46b480fdf7"
+  }
+}

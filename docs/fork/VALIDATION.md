@@ -1,3 +1,15 @@
+# Current validation — v2.0.0
+
+[Final artifact, tests and limits](VALIDATION-v2.0.0.md).
+862 app +154 emulator JVM tests pass. Full Python discovery544 with one skip;
+three stale fixture expectations were corrected and34 affected tests rerun green.
+Android8+/ARM64, unchanged signer/package, code1320, schema8, no general reset.
+Developer reports RedMagic10Pro and SamsungS26Ultra checks; other devices require
+verification. Final Ubuntu VirGL GPU INFO and all-combination fresh-device/GUI
+coverage remain limited as described in the report. Sources: [THIRD-PARTY](THIRD-PARTY.md).
+
+The previous sections below are historical release records.
+
 # Текущие проверки — v1.7.5
 
 [Итоговый отчёт](VALIDATION-v1.7.5.md):697 JVM-тестов финального поведения,

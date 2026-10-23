@@ -21,7 +21,7 @@
 первый шаг интерактивным. Для ошибки обновления важно указать прежний источник
 APK: совпадение названия приложения не означает совпадение подписи.
 
-Для чата v1.7.5 укажите, воспроизводится ли проблема в чате приложения
+Для чата v2.0 укажите, воспроизводится ли проблема в чате приложения
 или окне робота, после «Свернуть» или «Вернуться в чат», а также состояние клавиатуры.
 Для выбора файлов: навигация/галочки/Выбрать всё, фильтр, исходные и целевая среды,
 частичный результат (без личных путей и содержимого).
@@ -30,9 +30,9 @@ APK: совпадение названия приложения не означ�
 
 Для AI Agents укажите CLI/Node версии, способ входа без данных авторизации,
 модель/режим, новый чат/выбор/ID (ID допустимо скрыть), папку и состояние
-расширенного журнала. Отчёт: долгий тап сессии → диагностика → Download.
+расширенного журнала. Отчёт: шестерёнка сессии → диагностика → Download.
 Уточните, был ли debug включён до запуска; цитата ошибки не доказывает сбой.
-Мерцание OpenCode — известная проблема OC-001; не смешивайте её с ошибкой входа.
+Различайте чат приложения и терминальный интерфейс CLI; не смешивайте проблему отрисовки с ошибкой входа.
 
 Не публикуйте auth.json, токены, приватные ключи, credentials и keystore.
 Для проблем пакета сначала отделите их от поведения интерфейса форка;
@@ -103,3 +103,13 @@ streaming/idle state, composer focus versus text loss, keyboard and last safe
 action status. Never include full private chats, credentials or skill secrets.
 
 For cleanup issues include selected categories/paths without private names, busy-session state, scan/consent/cancel stage and partial-result summary. For package history/version selection include manager, available repository variants and confirmed command/result.
+
+## X11 reports and upstream sources
+
+For v2.0 X11 issues, specify phone/Android, distribution and version, renderer,
+desktop startup versus program install, keyboard mode and clean/existing rootfs.
+Export session diagnostics in X11 mode. Remove secrets, usernames and paths you
+do not want public. Tested phones are RedMagic10Pro and SamsungS26Ultra; report
+other devices explicitly. See [sources/credits](docs/fork/THIRD-PARTY.md) before
+reusing third-party components. Public release descriptions default to English;
+in-app update/compatibility notes remain RU/EN.

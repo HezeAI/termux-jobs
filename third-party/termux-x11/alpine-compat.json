@@ -1,0 +1,15 @@
+{
+  "purpose": "Build headers only for our Alpine/PRoot desktop compatibility module",
+  "headers": {
+    "project": "musl",
+    "version": "1.2.6-r2",
+    "license": "MIT",
+    "url": "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/aarch64/musl-dev-1.2.6-r2.apk",
+    "bytes": 2539434,
+    "sha256": "ca72b84f4eb3c36bbbec04d919eb10159d414c7a43413cc2253841d301fa9486"
+  },
+  "moduleSource": "x11/src/main/cpp/x11-alpine-compat.c",
+  "abi": "aarch64-linux-musl",
+  "scope": "Only the owned Alpine X11 desktop; not loaded by Android or other environments",
+  "security": "Glycin 2 image loader uses NotSandboxed because Bubblewrap namespaces cannot start in PRoot. Does not disable browser or Android sandboxes."
+}

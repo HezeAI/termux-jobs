@@ -1,0 +1,35 @@
+{
+  "source": "https://archive.mesa3d.org/mesa-26.1.6.tar.xz",
+  "sourceSHA256": "5296b88a0f1e012e2cb9ada150a2bbadf728ca81e5a4fb2ab43c83a4d2158606",
+  "sourceSHA512": "6746b73f5b87e8ff3723eee586b4b5f033dbe6d13cd0309d743b7fa484c350268859ec8ff21aadcbca7a04070cdaa7828146dd28dde4b1935bb879891d687f0b",
+  "sourceChanges": [],
+  "target": "aarch64-linux-musl",
+  "galliumDrivers": [
+    "virgl"
+  ],
+  "llvm": false,
+  "vulkanDrivers": [],
+  "backend": "EGL and GLX, X11 and surfaceless",
+  "compiler": "Clang 21.1.8",
+  "compilerFlags": [
+    "--target=aarch64-linux-musl",
+    "--sysroot=<private Alpine 3.24 sysroot>",
+    "-stdlib=libstdc++",
+    "-mno-outline-atomics",
+    "-rtlib=compiler-rt",
+    "--unwindlib=libgcc"
+  ],
+  "GCCStartupObjects": "Alpine gcc 15.2.0-r5, PIE crtbegin.o/crtend.o",
+  "runtimeIsolation": "Only for selected Alpine VirGL session; application-owned cache, no global package replacement",
+  "archiveSHA256": "d226941f42b135c4e5cd58218b50758beb132e5a46d37f4aec8972a481c33739",
+  "archiveBytes": 4616451,
+  "libraries": {
+    "lib/libGL.so.1": "56cd622840bc35eb92c575ec2e269501b42305ebf82a44c01966dd7188ebe083",
+    "lib/libEGL.so.1": "7b62feb1b5bf02f1bb074f0a0c51f48eee85ebfa1784cb0ef81d2372044ec6d0",
+    "lib/libGLESv1_CM.so.1": "825b7b1ff3d3afbe3e8a2d0847cc668fc69ff7745670c854b5b0ac6e9dc44a27",
+    "lib/libGLESv2.so.2": "ef3577068e7eafc4b44590d9604a1fdb83bcb9501141a501b51331ad351c6e2f",
+    "lib/libgallium-26.1.6.so": "e96b9b937b8eab55d1b704db856d2f8f71c102fb64dfdd303727d2cf21ef76f6",
+    "lib/dri/swrast_dri.so": "7040c0e547384bac951913b687d470c8f92091236b465d6d7d036262fc97f816",
+    "lib/dri/virtio_gpu_dri.so": "7040c0e547384bac951913b687d470c8f92091236b465d6d7d036262fc97f816"
+  }
+}

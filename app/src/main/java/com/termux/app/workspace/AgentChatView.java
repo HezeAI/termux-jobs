@@ -27,7 +27,7 @@ final class AgentChatView extends LinearLayout {
     private final Map<String,String> values=new HashMap<>();
     private final Map<String,JSONObject> data=new HashMap<>();
     private final Consumer<JSONObject> open;
-    private int gestures;
+    private boolean touchingTimeline;
     private boolean followNextRows;
     private boolean followLayout;
     static final class Position {final String anchor;final int offset,y;final boolean bottom;Position(String anchor,int offset,int y,boolean bottom){this.anchor=anchor;this.offset=offset;this.y=y;this.bottom=bottom;}}
@@ -40,22 +40,37 @@ final class AgentChatView extends LinearLayout {
         for(int i=1;i<timeline.getChildCount();i++){View v=timeline.getChildAt(i);if(v.getBottom()>scroll.getScrollY()){for(Map.Entry<String,View> e:views.entrySet())if(e.getValue()==v){anchor=e.getKey();offset=v.getTop()-scroll.getScrollY();break;}if(anchor!=null)break;}}
         return new Position(anchor,offset,scroll.getScrollY(),timeline.getHeight()-scroll.getHeight()-scroll.getScrollY()<dp(48));
     }
-    void restorePosition(Position p){cancelRestore();gestures++;followNextRows=false;followLayout=false;restoring=p;if(p==null)return;restoreObserver=scroll.getViewTreeObserver();restoreListener=()->{restorePositionAfterLayout();return true;};restoreObserver.addOnPreDrawListener(restoreListener);scroll.post(this::restorePositionAfterLayout);}
+    void restorePosition(Position p){followNextRows=false;followLayout=false;queuePosition(p);}
+    private void queuePosition(Position p){
+        cancelRestore();restoring=p;if(p==null)return;
+        restoreObserver=scroll.getViewTreeObserver();restoreListener=()->{restorePositionAfterLayout();return true;};restoreObserver.addOnPreDrawListener(restoreListener);
+        // Fallback for hosts laid out off screen. Pre-draw settles the visible frame
+        // before any new row can be painted at the old scroll position.
+        scroll.post(this::restorePositionAfterLayout);
+    }
     private void restorePositionAfterLayout(){
-        if(restoring==null||timeline.getWidth()==0||scroll.getHeight()==0||timeline.isLayoutRequested())return;
-        Position p=restoring;cancelRestore();gestures++;followNextRows=false;followLayout=false;View anchor=p.anchor==null?null:views.get(p.anchor);
+        if(restoring==null||timeline.getWidth()==0||scroll.getHeight()==0||timeline.isLayoutRequested()||scroll.isLayoutRequested())return;
+        Position p=restoring;cancelRestore();View anchor=p.anchor==null?null:views.get(p.anchor);
         scroll.scrollTo(0,p.bottom?Math.max(0,timeline.getHeight()-scroll.getHeight()):anchor==null?p.y:anchor.getTop()-p.offset);
     }
     // ScrollView.fullScroll also moves keyboard focus to a transcript child.
     // Streaming must only move the viewport, leaving both composers and IME composition alone.
-    void bottomAfterLayout(){final int gesture=gestures;scroll.post(()->{if(gesture==gestures)scroll.scrollTo(0,Math.max(0,timeline.getHeight()-scroll.getHeight()));});}
+    void bottomAfterLayout(){queuePosition(new Position(null,0,0,true));}
     void followAfterSend(){followNextRows=true;followLayout=true;bottomAfterLayout();}
     AgentChatView(Context c,Consumer<JSONObject> open,Runnable loadOlder,Runnable sendShell,Runnable terminal,Runnable interrupt){
         super(c);this.open=open;setOrientation(VERTICAL);setBackgroundColor(Color.BLACK);
         status=label("",12);status.setVisibility(GONE);addView(status);
-        scroll=new ScrollView(c);scroll.setOnTouchListener((v,e)->{gestures++;cancelRestore();followNextRows=false;followLayout=false;return false;});scroll.setFillViewport(true);
-        scroll.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(restoring!=null)restorePositionAfterLayout();else if(followLayout)bottomAfterLayout();});scroll.setSmoothScrollingEnabled(false);
-        timeline=new LinearLayout(c);timeline.setOrientation(VERTICAL);timeline.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(restoring!=null)restorePositionAfterLayout();else if(followLayout){followLayout=false;bottomAfterLayout();}});timeline.setPadding(dp(12),dp(4),dp(12),dp(16));scroll.addView(timeline);
+        scroll=new ScrollView(c){
+            @Override public boolean dispatchTouchEvent(MotionEvent e){
+                // Selectable TextViews may consume DOWN before a parent's OnTouchListener.
+                // Observe dispatch without intercepting selection or the ScrollView gesture.
+                touchingTimeline=e.getActionMasked()!=MotionEvent.ACTION_UP&&e.getActionMasked()!=MotionEvent.ACTION_CANCEL;
+                cancelRestore();followNextRows=false;followLayout=false;
+                return super.dispatchTouchEvent(e);
+            }
+        };scroll.setFillViewport(true);
+        scroll.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(restoring==null&&followLayout)bottomAfterLayout();});scroll.setSmoothScrollingEnabled(false);
+        timeline=new LinearLayout(c);timeline.setOrientation(VERTICAL);timeline.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(followLayout){followLayout=false;if(restoring==null)bottomAfterLayout();}});timeline.setPadding(dp(12),dp(4),dp(12),dp(16));scroll.addView(timeline);
         older=pill(tr("Предыдущие сообщения","Earlier messages"),loadOlder);timeline.addView(older);
         addView(scroll,new LayoutParams(-1,0,1));requests=new LinearLayout(c);requests.setOrientation(VERTICAL);requests.setPadding(dp(12),0,dp(12),0);timeline.addView(requests,new LayoutParams(-1,-2));connection=label("",13);connection.setVisibility(GONE);requests.addView(connection);
         LinearLayout shell=new LinearLayout(c);shell.setGravity(Gravity.CENTER_VERTICAL);shell.setPadding(dp(8),dp(4),dp(8),dp(4));shell.addView(label("Shell",12));
@@ -73,12 +88,11 @@ final class AgentChatView extends LinearLayout {
     TextView pill(String s,Runnable action){TextView t=label(s,12);GradientDrawable bg=new GradientDrawable();bg.setColor(0xff0b1b19);bg.setCornerRadius(dp(22));bg.setStroke(dp(1),0xff28433d);t.setBackground(bg);t.setOnClickListener(v->action.run());LayoutParams lp=new LayoutParams(-2,-2);lp.setMargins(dp(3),dp(5),dp(3),dp(5));t.setLayoutParams(lp);t.setMinHeight(dp(36));return t;}
     void olderState(boolean loading,String error){older.setEnabled(!loading);older.setText(loading?tr("Загрузка сообщений…","Loading messages…"):error!=null?error:tr("Предыдущие сообщения","Earlier messages"));}
     void olderRows(List<JSONObject> rows,boolean hasOlder){boolean fits=timeline.getHeight()<=scroll.getHeight();Position held=position();rows(rows,hasOlder);restorePosition(fits?new Position(null,0,0,false):new Position(held.anchor,held.offset,held.y,false));}
-    void clear(){olderState(false,null);cancelRestore();gestures++;followNextRows=false;followLayout=false;views.clear();values.clear();data.clear();timeline.removeViews(1,timeline.getChildCount()-1);clearRequests();timeline.addView(requests);scroll.scrollTo(0,0);}
+    void clear(){olderState(false,null);cancelRestore();touchingTimeline=false;followNextRows=false;followLayout=false;views.clear();values.clear();data.clear();timeline.removeViews(1,timeline.getChildCount()-1);clearRequests();timeline.addView(requests);scroll.scrollTo(0,0);}
     void rows(List<JSONObject> rows,boolean hasOlder){
         if(codexActions)rows=CodexActionTimeline.group(rows,groupAllTools);
-        final boolean bottom=followNextRows||timeline.getHeight()-scroll.getHeight()-scroll.getScrollY()<dp(48);
-        String anchor=null;int offset=0;for(int i=1;i<timeline.getChildCount();i++){View child=timeline.getChildAt(i);if(child.getBottom()>scroll.getScrollY()){for(Map.Entry<String,View> e:views.entrySet())if(e.getValue()==child){anchor=e.getKey();offset=child.getTop()-scroll.getScrollY();break;}if(anchor!=null)break;}}
-        final int gesture=gestures;boolean changed=false;Set<String> present=new HashSet<>();int index=1;
+        Position held=position();final boolean bottom=!touchingTimeline&&(followNextRows||held.bottom);
+        boolean changed=false;Set<String> present=new HashSet<>();int index=1;
         for(JSONObject r:rows){String key=r.optString("key");present.add(key);data.put(key,r);String value=r.toString()+(codexActions?WorkspaceLanguage.code(getContext()):"");
             if(r.optString("kind").equals("actionGroup")){
                 View existing=views.get(key);CodexActionsView card=existing instanceof CodexActionsView?(CodexActionsView)existing:new CodexActionsView(this,open);
@@ -99,8 +113,8 @@ final class AgentChatView extends LinearLayout {
             if(t.getParent()==null){changed=true;timeline.addView(t,index);}else if(timeline.indexOfChild(t)!=index){changed=true;timeline.removeView(t);timeline.addView(t,index);}index++;
         }
         for(String key:new ArrayList<>(views.keySet()))if(!present.contains(key)){changed=true;timeline.removeView(views.remove(key));values.remove(key);data.remove(key);}
-        older.setVisibility(hasOlder?VISIBLE:GONE);final String held=anchor;final int delta=offset;
-        if(changed){if(bottom)followLayout=true;followNextRows=false;scroll.post(()->{if(gestures!=gesture)return;if(bottom)scroll.scrollTo(0,Math.max(0,timeline.getHeight()-scroll.getHeight()));else if(held!=null&&views.containsKey(held))scroll.scrollTo(0,views.get(held).getTop()-delta);});}
+        older.setVisibility(hasOlder?VISIBLE:GONE);
+        if(changed){if(bottom)followLayout=true;followNextRows=false;queuePosition(bottom?new Position(null,0,0,true):new Position(held.anchor,held.offset,held.y,false));}
     }
     private String receiptTitle(JSONObject r){String title=r.optString("title");return title.contains("Denied")?tr("Отклонено ▾","Denied ▾"):title.contains("project")?tr("Разрешено для проекта ▾","Allowed for project ▾"):tr("Разрешено разово ▾","Allowed once ▾");}
 }

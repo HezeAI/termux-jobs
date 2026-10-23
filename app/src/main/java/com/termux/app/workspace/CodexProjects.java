@@ -8,7 +8,7 @@ import org.json.JSONObject;
 /** Project association is a directory plus an environment, not a copied transcript. */
 final class CodexProjects {
     static String directory(String environment,String path) {
-        String home=environment.equals("ubuntu")?"/root":TermuxConstants.TERMUX_HOME_DIR_PATH;
+        String home=AgentEnvironments.ubuntu(environment)?"/root":TermuxConstants.TERMUX_HOME_DIR_PATH;
         if(path==null||path.isEmpty()||path.equals("~"))path=home;
         else if(path.startsWith("~/"))path=home+path.substring(1);
         if(!path.startsWith("/")||path.indexOf('\0')>=0||path.contains("\n")||path.contains("\r"))return "";

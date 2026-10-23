@@ -1,0 +1,32 @@
+[
+  {
+    "file": "Termux-Jobs-X11-creative-native-mint.png",
+    "title": "Native Mint",
+    "dimensions": [
+      887,
+      1774
+    ],
+    "bytes": 1608087,
+    "sha256": "bc4c36e711bffebd5222fc91750d87858dc5719199185c6011bfea3ba345a2a6"
+  },
+  {
+    "file": "Termux-Jobs-X11-creative-touch-cards.png",
+    "title": "Touch Workspace",
+    "dimensions": [
+      887,
+      1774
+    ],
+    "bytes": 1499424,
+    "sha256": "82e2b9a34790fbb7b0ab9c9261efd74ebfb34e205173bd162c7b86e79e3114f5"
+  },
+  {
+    "file": "Termux-Jobs-X11-creative-aurora-glass.png",
+    "title": "Aurora Glass",
+    "dimensions": [
+      887,
+      1774
+    ],
+    "bytes": 2143027,
+    "sha256": "b8d84377ac4356469e2dda9fc1d3669b19b7e9de42ad9578f5a906f85564e715"
+  }
+]

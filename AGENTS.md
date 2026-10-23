@@ -14,6 +14,10 @@ instructions; source edits and isolated builds are authorized.
 
 # Release documentation
 
+Write GitHub release descriptions and new public release notes in English by
+default, as requested by the developer. Preserve both Russian and English
+in-app update highlights and compatibility notes.
+
 The user requires documentation to be reviewed and updated with every GitHub
 release, including README.md. Follow docs/fork/RELEASING.md. Update the changelog,
 release notes, validation evidence, version and compatibility information, and
@@ -103,3 +107,21 @@ not installed the APK merely because the assistant did not install it. Attribute
 reported device checks to the developer, distinguish them from automated tests,
 and identify specific unverified scenarios without claiming exhaustive testing.
 Do not add statements about the assistant not installing APKs to release reports.
+
+# Clean-install baseline for every environment
+
+The developer requires installation logic to target a clean app/bootstrap and a
+fresh instance of each selected environment. Never infer required components
+from what happens to be installed on the development phone or in an existing
+rootfs. Maintain explicit required desktop/runtime packages for each supported
+target, including components omitted by a distribution metapackage. Request the
+complete required set in the package-manager transaction even if some packages
+are already installed; let that manager resolve installed state and dependencies.
+Keep optional application dependencies with their own application installation.
+
+Checks must reject a missing required desktop binary instead of reporting a
+complete installation merely because a metapackage, panel or window manager is
+present. Cover absent-component paths with isolated tests. Treat successful
+runs on a configured phone as regression evidence only; report fresh-device
+installation and GUI verification separately. Do not clear user data or alter
+installed environments to simulate a clean installation without authorization.

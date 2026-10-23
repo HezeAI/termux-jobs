@@ -19,7 +19,7 @@ class EnvironmentRuntimeTests(unittest.TestCase):
         (self.prefix / 'bin').mkdir(parents=True)
         self.log = self.root / 'calls'
         self.downloads=self.root/'downloads'
-        self.env = dict(os.environ, PREFIX=str(self.prefix), PATH=str(self.prefix / 'bin') + ':/usr/bin:/bin', FIXTURE_LOG=str(self.log), JOBS_ENVIRONMENT_DOWNLOAD_DIR=str(self.downloads))
+        self.env = dict(os.environ, PREFIX=str(self.prefix), PATH=str(self.prefix / 'bin') + ':/usr/bin:/bin', FIXTURE_LOG=str(self.log), JOBS_ENVIRONMENT_DOWNLOAD_DIR=str(self.downloads), JOBS_ENVIRONMENT_DOWNLOADER=str(self.root/"no-downloader.py"))
         self.stub('proot-distro', '''printf '%s\\n' "$*" >> "$FIXTURE_LOG"
 if [ "$*" = 'install --help' ]; then printf '%s\\n' "${FIXTURE_HELP:-legacy}"; exit 0; fi
 if [ "${FIXTURE_FAIL:-0}" = 1 ]; then exit 17; fi
@@ -71,6 +71,14 @@ printf 'SHA256\\n' >> "$FIXTURE_LOG"
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn('READY:shell', result.stdout)
         self.assertEqual(['install --help', 'install debian --name debian'], self.log.read_text().splitlines())
+
+    def test_x11_test_ubuntu_installs_under_separate_alias(self):
+        self.env['FIXTURE_HELP'] = 'install IMAGE --name NAME'
+        result = self.run_helper('install', 'jobs-x11-ubuntu')
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn('READY:shell', result.stdout)
+        self.assertEqual(['install --help', 'install ubuntu --name jobs-x11-ubuntu'], self.log.read_text().splitlines())
+        self.assertFalse((self.prefix/'var/lib/proot-distro/containers/ubuntu').exists())
 
     def test_legacy_install_requires_plugin(self):
         result = self.run_helper('install', 'alpine')
@@ -148,3 +156,47 @@ printf 'SHA256\\n' >> "$FIXTURE_LOG"
         result = self.run_helper('check', 'debian')
         self.assertIn('MISSING:environment', result.stdout)
         self.assertFalse(self.log.exists())
+
+    def test_clean_agent_ubuntu_installs_separately_without_creating_normal_ubuntu(self):
+        self.env['FIXTURE_HELP']='--name'
+        result=self.run_helper('install','ubuntu-ai')
+        self.assertEqual(0,result.returncode,result.stderr)
+        self.assertIn('READY:shell',result.stdout)
+        self.assertEqual(['install --help','install ubuntu --name ubuntu-ai'],self.log.read_text().splitlines())
+        self.assertFalse((self.prefix/'var/lib/proot-distro/containers/ubuntu').exists())
+
+    def test_existing_agent_ubuntu_is_never_replaced(self):
+        root=self.prefix/'var/lib/proot-distro/containers/ubuntu-ai/rootfs';root.mkdir(parents=True);(root/'keep').write_text('keep')
+        result=self.run_helper('install','ubuntu-ai')
+        self.assertEqual(0,result.returncode,result.stderr);self.assertFalse(self.log.exists());self.assertEqual('keep',(root/'keep').read_text())
+
+    def test_migration_tools_ready_does_not_reinstall_or_touch_ubuntu(self):
+        self.stub('python3','printf "CHECK_PYTHON\\n" >> "$FIXTURE_LOG"; exit 0\n')
+        result=self.run_helper('install','agent-migration-tools')
+        self.assertEqual(0,result.returncode,result.stderr);self.assertIn('CHECK:done',result.stdout)
+        self.assertNotIn('PKG:',self.log.read_text());self.assertNotIn('install ',self.log.read_text())
+        self.assertFalse((self.prefix/'var/lib/proot-distro').exists())
+
+    def test_migration_tools_install_failure_is_not_reported_ready(self):
+        self.stub('python3','exit 1\n')
+        result=self.run_helper('install','agent-migration-tools')
+        self.assertEqual(19,result.returncode,result.stderr);self.assertNotIn('READY:shell',result.stdout)
+        self.assertIn('PKG:install -y proot-distro',self.log.read_text())
+        self.assertFalse((self.prefix/'var/lib/proot-distro').exists())
+
+    def test_resume_never_overwrites_an_existing_partial_root(self):
+        self.env['FIXTURE_HELP']='install IMAGE --name NAME'
+        fs=self.prefix/'var/lib/proot-distro/containers/debian/rootfs';fs.mkdir(parents=True);keep=fs/'keep';keep.write_text('retained')
+        state=self.downloads/'downloads/debian/state.json';state.parent.mkdir(parents=True);state.write_text('{}')
+        result=self.run_helper('install','debian')
+        self.assertNotEqual(0,result.returncode);self.assertIn('ERROR:INCOMPLETE_ROOTFS_REQUIRES_REMOVAL',result.stdout);self.assertEqual('retained',keep.read_text());self.assertFalse(self.log.exists())
+
+    def test_all_oci_environments_use_only_public_cli_even_with_retired_helper_present(self):
+        self.env['FIXTURE_HELP']='--name';helper=self.root/'retired-download.py';helper.write_text('raise RuntimeError("RETIRED_HELPER_MUST_NOT_RUN")\n');self.env['JOBS_ENVIRONMENT_DOWNLOADER']=str(helper)
+        for alias,image in [('ubuntu','ubuntu'),('ubuntu-ai','ubuntu'),('debian','debian'),('alpine','alpine'),('fedora','fedora'),('opensuse','opensuse/leap'),('void','ghcr.io/void-linux/void-glibc-full:latest')]:
+            result=self.run_helper('install',alias);self.assertEqual(0,result.returncode,alias+result.stderr);self.assertIn('READY:shell',result.stdout);self.assertIn('install '+image+' --name '+alias,self.log.read_text())
+        self.assertNotIn('PKG:',self.log.read_text());self.assertNotIn('RESUME_UNSUPPORTED',result.stdout)
+
+    def test_retry_with_partial_root_is_refused_without_removal_or_native_install(self):
+        fs=self.prefix/'var/lib/proot-distro/containers/debian/rootfs';fs.mkdir(parents=True);(fs/'keep').write_text('keep');self.env['JOBS_ENVIRONMENT_RETRY']='1'
+        result=self.run_helper('install','debian');self.assertNotEqual(0,result.returncode);self.assertIn('INCOMPLETE_ROOTFS_REQUIRES_REMOVAL',result.stdout);self.assertEqual('keep',(fs/'keep').read_text());self.assertFalse(self.log.exists())

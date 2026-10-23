@@ -15,7 +15,7 @@ final class GeminiCli {
     static boolean validCloudProject(String value){return value!=null&&(value.isEmpty()||value.matches("[a-z][a-z0-9-]{4,28}[a-z0-9]|[0-9]{6,20}"));}
     static boolean validCloudLocation(String value){return value!=null&&(value.isEmpty()||value.length()<=63&&value.matches("global|[a-z]+(?:-[a-z0-9]+){1,4}"));}
     static boolean valid(WorkspaceStore.Session s) {
-        return s.geminiAgent && s.environment.equals("ubuntu") && s.aiAgent.isEmpty() && !s.claudeAgent
+        return s.geminiAgent && s.environment.equals("ubuntu") && AgentEnvironments.ubuntu(s.codexEnvironment) && s.aiAgent.isEmpty() && !s.claudeAgent
             && java.util.Arrays.asList("auto","google","api","vertex").contains(s.geminiAuth)
             && validCloudProject(s.geminiCloudProject)&&validCloudLocation(s.geminiCloudLocation)
             && java.util.Arrays.asList("","auto","flash","pro").contains(s.geminiModel)
@@ -53,13 +53,15 @@ final class GeminiCli {
             +"; exec \"$JOBS_GEMINI_NODE\" "+SessionShell.quote(GUEST+"/gemini-control-v2.js")+" run "
             +SessionShell.quote(GUEST+"/"+s.geminiSocketId+".sock")+" "+SessionShell.quote(s.geminiModel)+" "+SessionShell.quote(s.geminiMode)+" "+SessionShell.quote(s.geminiChat)+" "+SessionShell.quote(s.geminiThread)+" "+SessionShell.quote(s.geminiAuth)+" )";
     }
+    private static WorkspaceStore.Session profile(String environment){WorkspaceStore.Session p=new WorkspaceStore.Session();p.codexEnvironment=environment;return p;}
+    static void stop(Context context,String runId)throws Exception {stop(context,runId,"ubuntu");}
     /** Caller captures the unique run ID before scheduling; a later run cannot be stopped. */
-    static void stop(Context context,String runId) throws Exception {
+    static void stop(Context context,String runId,String environment) throws Exception {
         if(!validThread(runId))throw new IllegalArgumentException("Invalid Gemini run");
         String guest="node=$(cat \"$HOME/.local/share/termux-jobs/gemini-cli/controller-node\") && exec \"$node\" "
             +SessionShell.quote(GUEST+"/gemini-control-v2.js")+" stop "+SessionShell.quote(GUEST+"/"+runId+".sock");
         String script="exec proot-distro login --bind "+SessionShell.quote(directory(context.getFilesDir()).getAbsolutePath()+":"+GUEST)
-            +" ubuntu -- /bin/bash --noprofile --norc -c "+SessionShell.quote(guest);
+            +" "+SessionShell.quote(AgentEnvironments.alias(profile(environment)))+" -- /bin/bash --noprofile --norc -c "+SessionShell.quote(guest);
         ProcessBuilder pb=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c",script);
         pb.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));pb.environment().clear();
         for(String entry:TermuxShellUtils.buildEnvironment(context,false,TermuxConstants.TERMUX_HOME_DIR_PATH)) {

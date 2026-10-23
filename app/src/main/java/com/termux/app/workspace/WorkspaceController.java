@@ -76,7 +76,7 @@ public final class WorkspaceController {
     public void onTerminalViewportChanged(){outputSignal.viewport(android.os.SystemClock.uptimeMillis());updateActivityLine();}
     private boolean activityProbePending,foregroundCommand;private String activityProbeHandle="";
     private final Runnable activityPoll=new Runnable(){public void run(){
-        if(closed||activityStopped)return;updateActivityLine();
+        if(closed||activityStopped)return;updateActivityLine();updateDesktopProgramsBorder();
         TerminalSession session=activity.getCurrentSession();WorkspaceStore.Session profile=session==null?null:store.findByHandle(session.mHandle);
         boolean shell=profile==null||(!profile.environment.equals("ssh")&&!profile.environment.equals("codex")&&!profile.claudeAgent&&!profile.geminiAgent&&profile.aiAgent.isEmpty());
         if(screen==Screen.TERMINAL&&activity.isVisible()&&session!=null&&session.isRunning()&&shell&&!activityProbePending){
@@ -105,7 +105,11 @@ public final class WorkspaceController {
     private ClaudeLiveUi claudeLiveUi;
     private AgentReceiptsUi agentReceiptsUi;
     private AgentChatUi agentChatUi;
+    private WorkspaceDesktops desktopUi;
+    private DesktopSessionBar desktopSessionBar;
+    private void updateDesktopProgramsBorder(){if(desktopSessionBar!=null)desktopSessionBar.working(!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible()&&desktopUi!=null&&desktopUi.programsInstalling());}
     private EnvironmentSetup environmentSetup;
+    private AgentEnvironmentManager agentEnvironments;
     private final GeminiInputDispatch geminiInputDispatch=new GeminiInputDispatch();
     private boolean codexLoading;
     private int codexApplyGeneration;
@@ -127,8 +131,10 @@ public final class WorkspaceController {
     private int baseRestartFailures;
     private int toolbarVisibility = View.GONE;
     private boolean interactiveInput;
+    private TextView desktopInputButton;
     private float swipeStart;
     private final Set<String> pendingCloses = new java.util.HashSet<>();
+    private final Set<String> unstartedOnLoad = new java.util.HashSet<>();
     private final java.util.Map<String, WorkspaceStore.Session> pendingRestarts = new java.util.HashMap<>();
 
     private final java.util.Map<String, char[]> pendingSshPasswords = new java.util.HashMap<>();
@@ -137,6 +143,11 @@ public final class WorkspaceController {
         environmentSetup=new EnvironmentSetup(activity);
         prepareKeyboardWindow();
         store = new WorkspaceStore(activity, message -> activity.showToast(message, true));
+        for(WorkspaceStore.Session p:store.sessions)if(!WorkspaceStore.isBase(p)&&!p.saved&&p.handle.isEmpty())unstartedOnLoad.add(p.id);
+        agentEnvironments=new AgentEnvironmentManager(activity,store,alias->{for(WorkspaceStore.Session p:store.sessions){TerminalSession t=liveFor(p);if(alias.equals(AgentEnvironments.scope(p))&&t!=null&&t.isRunning())return true;}return false;});
+        environmentSetup.removal=(choice,refresh)->agentEnvironments.remove(choice,refresh);
+        agentEnvironments.freshInstall=environmentSetup::installAgentUbuntu;
+        agentEnvironments.prepareTools=environmentSetup::prepareMigrationTools;
         claudeLiveUi=new ClaudeLiveUi(activity,()->{TerminalSession t=activity.getCurrentSession();WorkspaceStore.Session p=t==null?null:store.findByHandle(t.mHandle);return t!=null&&t.isRunning()&&p!=null&&p.claudeAgent?p:null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible(),(p,run,model,mode)->{if(store.sessions.contains(p)&&run.equals(p.claudeSocketId)){p.claudeModel=model;p.claudeMode=mode;store.save();}});
         geminiLiveUi=new GeminiLiveUi(activity,()->{TerminalSession t=activity.getCurrentSession();WorkspaceStore.Session p=t==null?null:store.findByHandle(t.mHandle);return t!=null&&t.isRunning()&&p!=null&&p.geminiAgent?p:null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible(),(profile,run,before,mode)->store.applyGeminiMode(profile,run,before,mode));
         claudeLiveUi.effortApplied((p,value)->{if(store.sessions.contains(p)){p.claudeEffort=value;store.save();}});
@@ -188,7 +199,17 @@ public final class WorkspaceController {
         toolbarVisibility = activity.getTerminalToolbarViewPager().getVisibility();
         agentChatUi=new AgentChatUi(activity,()->{TerminalSession t=activity.getCurrentSession();return t!=null&&t.isRunning()?store.findByHandle(t.mHandle):null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible());
         geminiLiveUi.permissionVisibility(()->!agentChatUi.showing());agentChatUi.onShellCommand(store::recordCommand);agentChatUi.composer(terminalInput);
-        agentChatUi.onVisibilityChanged(()->{agentChatUi.shellMode(interactiveInput);boolean chat=agentChatUi.showing();boolean focus=chat&&!wasAgentChat;wasAgentChat=chat;terminalInput.setHint(chat?tr("Сообщение ","Message ")+agentChatUi.name()+"…":WorkspaceText.tr("Введите команду…"));activity.getTerminalToolbarViewPager().setVisibility(screen==Screen.TERMINAL&&!activityStopped&&!chat?toolbarVisibility:View.GONE);if(focus){terminalInput.requestFocus();((InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE)).restartInput(terminalInput);}renderHeader();renderTabs();});
+        agentChatUi.onVisibilityChanged(()->{agentChatUi.shellMode(interactiveInput);boolean chat=agentChatUi.showing();boolean focus=chat&&!wasAgentChat;wasAgentChat=chat;terminalInput.setHint(chat?tr("Сообщение ","Message ")+agentChatUi.name()+"…":WorkspaceText.tr("Введите команду…"));activity.getTerminalToolbarViewPager().setVisibility(screen==Screen.TERMINAL&&!activityStopped&&!chat?toolbarVisibility:View.GONE);if(focus)leaveAgentInputIdle();renderHeader();renderTabs();});
+        desktopUi=new WorkspaceDesktops(activity,()->{TerminalSession t=activity.getCurrentSession();return t!=null&&t.isRunning()?store.findByHandle(t.mHandle):null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL,inputRow,this::renderCodexStatus,()->{
+            boolean terminal=screen==Screen.TERMINAL&&!activityStopped;
+            activity.getTerminalView().setVisibility(terminal?View.VISIBLE:View.INVISIBLE);
+            activity.getTerminalView().setWorkspaceTerminalVisible(terminal);
+            inputRow.setVisibility(terminal?View.VISIBLE:View.GONE);
+            activity.getTerminalToolbarViewPager().setVisibility(terminal?toolbarVisibility:View.GONE);
+            if(agentChatUi!=null)agentChatUi.sync();
+        });
+        desktopUi.onKeyboardChanged(this::updateDesktopInputButton);
+        agentChatUi.externalDisplay(()->desktopUi!=null&&desktopUi.hasSurface());
         show(Screen.HOME, false);
         reader.execute(() -> {
             try { RetiredModelData.clean(activity.getApplicationContext()); }
@@ -198,8 +219,8 @@ public final class WorkspaceController {
         });
         codexHandler.postDelayed(codexPoll, 1000);
     }
-    public void onStop(){geminiInputDispatch.cancel();activityStopped=true;activity.getTerminalView().setWorkspaceTerminalVisible(false);geminiLiveUi.syncPermissionVisibility();agentReceiptsUi.syncVisibility();if(transferBorder!=null)transferBorder.active(false);codexHandler.removeCallbacks(activityPoll);if(activityLine!=null)activityLine.working(false);WorkspaceUpdates.background(activity);servers.pause();if(agentChatUi!=null)agentChatUi.sync();}
-    public void onResume(){activityStopped=false;activity.getTerminalView().setWorkspaceTerminalVisible(screen==Screen.TERMINAL);updateTransferBorder();codexHandler.removeCallbacks(activityPoll);codexHandler.post(activityPoll);servers.resume();if(agentChatUi!=null)agentChatUi.sync();WorkspaceUpdates.automatic(activity,()->{if(!closed)renderHeader();});}
+    public void onStop(){geminiInputDispatch.cancel();activityStopped=true;activity.getTerminalView().setWorkspaceTerminalVisible(false);geminiLiveUi.syncPermissionVisibility();agentReceiptsUi.syncVisibility();if(transferBorder!=null)transferBorder.active(false);if(desktopSessionBar!=null)desktopSessionBar.working(false);codexHandler.removeCallbacks(activityPoll);if(activityLine!=null)activityLine.working(false);WorkspaceUpdates.background(activity);servers.pause();if(agentChatUi!=null)agentChatUi.sync();if(desktopUi!=null)desktopUi.sync();}
+    public void onResume(){activityStopped=false;updateDesktopProgramsBorder();activity.getTerminalView().setWorkspaceTerminalVisible(screen==Screen.TERMINAL);updateTransferBorder();codexHandler.removeCallbacks(activityPoll);codexHandler.post(activityPoll);servers.resume();if(agentChatUi!=null)agentChatUi.sync();if(desktopUi!=null)desktopUi.sync();WorkspaceUpdates.automatic(activity,()->{if(!closed)renderHeader();});}
     public void refreshLanguage() {
         terminalInput.setHint(WorkspaceText.tr("Введите команду…"));
         inputRow.getChildAt(0).setContentDescription(WorkspaceText.tr("Вставить сохранённую команду"));
@@ -271,7 +292,7 @@ public final class WorkspaceController {
     private void show(Screen target, boolean animate) {
         if(target!=Screen.TERMINAL)activity.getTerminalView().setWorkspaceTerminalVisible(false);
         if(screen!=target)onTerminalViewportChanged();
-        if (screen == Screen.TERMINAL && target != Screen.TERMINAL && (agentChatUi==null||!agentChatUi.showing())) {
+        if (screen == Screen.TERMINAL && target != Screen.TERMINAL && (desktopUi==null||!desktopUi.showing()) && (agentChatUi==null||!agentChatUi.showing())) {
             toolbarVisibility = activity.getTerminalToolbarViewPager().getVisibility();
         }
         if (screen != target) {
@@ -295,23 +316,41 @@ public final class WorkspaceController {
         if (animate && !terminal) { content.setAlpha(0); content.animate().alpha(1).setDuration(180).start(); }
         activity.getTerminalView().setWorkspaceTerminalVisible(terminal && !activityStopped);
         if (terminal) activity.getTerminalView().requestFocus();
-        if(agentChatUi!=null)agentChatUi.sync();
+        if(agentChatUi!=null)agentChatUi.sync();if(desktopUi!=null)desktopUi.sync();
+        if(terminal&&agentChatUi!=null&&agentChatUi.showing())leaveAgentInputIdle();
+    }
+    private void updateDesktopInputButton() {
+        if(screen!=Screen.TERMINAL||desktopInputButton==null)return;
+        boolean active=desktopUi!=null&&desktopUi.hasSurface()?desktopUi.keyboardEnabled():interactiveInput;
+        if(desktopInputButton.isSelected()==active)return;
+        desktopInputButton.setSelected(active);desktopInputButton.setTextColor(active?Color.BLACK:TEXT);
+        desktopInputButton.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),shape(active?ACCENT:PANEL,active?ACCENT:BORDER,12),null));
     }
     private void renderHeader() {
+        desktopInputButton=null;
         // Keep the navigation container stable while rebuilding its surrounding header.
         if (navigation.getParent() != null) ((ViewGroup) navigation.getParent()).removeView(navigation);
         header.removeAllViews(); header.setPadding(dp(8), dp(4), dp(8), dp(4));
         LinearLayout top = row();
-        TextView name = text("Termux Job’s", 17, TEXT); name.setTypeface(null, Typeface.BOLD);
+        TextView name = text("Termux Job’s", 17, TEXT); name.setTypeface(null, Typeface.BOLD_ITALIC);
         name.setSingleLine(); name.setEllipsize(TextUtils.TruncateAt.END);
-        top.addView(name, new LinearLayout.LayoutParams(0, -2, 1));
+        LinearLayout brand = row();
+        brand.addView(name, new LinearLayout.LayoutParams(0, -2, 1));
+        TextView version = text("v2.0", 13, MUTED); version.setSingleLine();
+        version.setContentDescription("Termux Job’s v2.0");
+        LinearLayout.LayoutParams versionParams = new LinearLayout.LayoutParams(-2, -2);
+        versionParams.setMarginStart(dp(4)); versionParams.setMarginEnd(dp(6));
+        brand.addView(version, versionParams);
+        top.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
         if(screen==Screen.TERMINAL){
-            TextView direct=button("⌖",interactiveInput,()->{setInteractiveInput(!interactiveInput);renderHeader();});
-            direct.setContentDescription(WorkspaceText.tr("Интерактивный ввод"));direct.setSelected(interactiveInput);
+            boolean directActive=desktopUi!=null&&desktopUi.hasSurface()?desktopUi.keyboardEnabled():interactiveInput;
+            TextView direct=button("⌖",directActive,()->{if(desktopUi!=null&&desktopUi.showing()){desktopUi.keyboard();return;}setInteractiveInput(!interactiveInput);renderHeader();});
+            direct.setContentDescription(WorkspaceText.tr("Интерактивный ввод"));direct.setSelected(directActive);desktopInputButton=direct;
             LinearLayout.LayoutParams directParams=new LinearLayout.LayoutParams(dp(48),dp(48));directParams.setMarginEnd(dp(8));top.addView(direct,directParams);
-            boolean keysVisible=toolbarVisibility==View.VISIBLE;
-            TextView keys=button("⌨",keysVisible,()->{if(agentChatUi!=null&&agentChatUi.handlesComposer())return;activity.toggleTerminalToolbar();toolbarVisibility=activity.getTerminalToolbarViewPager().getVisibility();renderHeader();});
-            keys.setContentDescription(WorkspaceText.tr("Дополнительные клавиши"));keys.setSelected(keysVisible);if(agentChatUi!=null&&agentChatUi.handlesComposer()){keys.setEnabled(false);keys.setAlpha(.4f);keys.setSelected(false);}
+            boolean keysBlocked=(desktopUi!=null&&desktopUi.showing())||(agentChatUi!=null&&agentChatUi.handlesComposer());
+            boolean keysVisible=!keysBlocked&&toolbarVisibility==View.VISIBLE;
+            TextView keys=button("⌨",keysVisible,()->{if(desktopUi!=null&&desktopUi.showing())return;if(agentChatUi!=null&&agentChatUi.handlesComposer())return;activity.toggleTerminalToolbar();toolbarVisibility=activity.getTerminalToolbarViewPager().getVisibility();renderHeader();});
+            keys.setContentDescription(WorkspaceText.tr("Дополнительные клавиши"));keys.setSelected(keysVisible);if(keysBlocked){keys.setEnabled(false);keys.setAlpha(.4f);keys.setSelected(false);}
             LinearLayout.LayoutParams keyParams=new LinearLayout.LayoutParams(dp(48),dp(48));keyParams.setMarginEnd(dp(8));top.addView(keys,keyParams);
         }
         TextView settings=button("⚙",false,this::globalSettings);settings.setContentDescription(WorkspaceText.tr("Настройки приложения"));
@@ -394,6 +433,14 @@ public final class WorkspaceController {
         for (TermuxSession t : live()) if (t.getTerminalSession().mHandle.equals(profile.handle)) return t.getTerminalSession();
         return null;
     }
+    private void leaveAgentInputIdle() {
+        // Navigation must not activate either input. Explicit taps and the
+        // interactive-input button still request focus normally.
+        terminalInput.clearFocus();
+        header.setFocusableInTouchMode(true);header.requestFocus();
+        ((InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE))
+            .hideSoftInputFromWindow(terminalInput.getWindowToken(),0);
+    }
     private void syncTerminalInput() {
         TerminalSession current=activity.getCurrentSession();
         String handle=current==null?null:current.mHandle;
@@ -401,6 +448,8 @@ public final class WorkspaceController {
             geminiInputDispatch.cancel();
             if(terminalInputHandle!=null) terminalDrafts.put(terminalInputHandle,new InputDraft(terminalInput));
             terminalInputHandle=handle;
+            WorkspaceStore.Session selected=handle==null?null:store.findByHandle(handle);
+            if(selected!=null&&(selected.environment.equals("codex")||selected.claudeAgent||selected.geminiAgent||!selected.aiAgent.isEmpty()))leaveAgentInputIdle();
             InputDraft draft=terminalDrafts.get(handle);
             terminalInput.clearComposingText();terminalInput.setText(draft==null?"":draft.text);
             if(draft!=null) terminalInput.setSelection(Math.max(0,Math.min(draft.start,terminalInput.length())),Math.max(0,Math.min(draft.end,terminalInput.length())));
@@ -413,7 +462,7 @@ public final class WorkspaceController {
         if(terminalInput.hasFocus())((InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE)).restartInput(terminalInput);
     }
     private void renderTabs() {
-        syncTerminalInput();if(agentChatUi!=null)agentChatUi.sync(); updateActivityLine(); renderCodexStatus(); tabs.removeAllViews();
+        syncTerminalInput();if(agentChatUi!=null)agentChatUi.sync();if(desktopUi!=null)desktopUi.sync(); updateActivityLine(); renderCodexStatus(); tabs.removeAllViews();
         tabs.setPadding(dp(10),dp(4),dp(10),dp(8));tabs.setGravity(Gravity.TOP);
         TerminalSession current=activity.getCurrentSession();
         String name=current==null?WorkspaceText.tr("Сессии"):current.mSessionName==null?"Bash":current.mSessionName;
@@ -422,14 +471,19 @@ public final class WorkspaceController {
         TextView selector=button(name+"  ▾"+(subtitle.isEmpty()?"":"\n"+subtitle),false,()->{});
         selector.setTextSize(13);selector.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);selector.setMaxLines(2);selector.setEllipsize(TextUtils.TruncateAt.END);
         selector.setContentDescription(name);selector.setOnClickListener(v->showSessionStack(selector));
-        selector.setOnLongClickListener(v->{WorkspaceStore.Session selected=activity.getCurrentSession()==null?null:store.findByHandle(activity.getCurrentSession().mHandle);if(selected!=null)sessionMenu(selected,true);return true;});
-        if(SessionShell.hasCancellableStartup(profile)){
+        if(current!=null){
             FrameLayout panel=new FrameLayout(activity);panel.addView(selector,new FrameLayout.LayoutParams(-1,-1));
-            selector.setPadding(selector.getPaddingLeft(),selector.getPaddingTop(),dp(56),selector.getPaddingBottom());
-            TextView cancel=button("",false,()->confirmCancelStartup(profile));cancel.setTag("cancel-startup");cancel.setContentDescription(WorkspaceText.tr("Отменить команды запуска"));
-            android.graphics.drawable.Drawable icon=activity.getDrawable(R.drawable.workspace_cancel_startup).mutate();icon.setTint(MUTED);((WorkspaceIconButton)cancel).setIcon(icon,dp(22));
-            cancel.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),shape(Color.TRANSPARENT,Color.TRANSPARENT,12),null));
-            panel.addView(cancel,new FrameLayout.LayoutParams(dp(48),dp(48),Gravity.END|Gravity.CENTER_VERTICAL));tabs.addView(panel,new LinearLayout.LayoutParams(0,dp(48),1));
+            boolean cancellable=SessionShell.hasCancellableStartup(profile);
+            selector.setPadding(selector.getPaddingLeft(),selector.getPaddingTop(),dp(cancellable?96:52),selector.getPaddingBottom());
+            TextView settings=sessionSettingsButton(name,false,()->{if(profile!=null)sessionMenu(profile,true);});settings.setTag("session-current-settings");settings.setEnabled(profile!=null);
+            panel.addView(settings,new FrameLayout.LayoutParams(dp(40),dp(40),Gravity.END|Gravity.CENTER_VERTICAL));
+            if(cancellable){
+                TextView cancel=button("",false,()->confirmCancelStartup(profile));cancel.setTag("cancel-startup");cancel.setContentDescription(WorkspaceText.tr("Отменить команды запуска"));
+                android.graphics.drawable.Drawable icon=activity.getDrawable(R.drawable.workspace_cancel_startup).mutate();icon.setTint(MUTED);((WorkspaceIconButton)cancel).setIcon(icon,dp(22));
+                cancel.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),shape(Color.TRANSPARENT,Color.TRANSPARENT,12),null));
+                FrameLayout.LayoutParams cancelParams=new FrameLayout.LayoutParams(dp(48),dp(48),Gravity.END|Gravity.CENTER_VERTICAL);cancelParams.setMarginEnd(dp(40));panel.addView(cancel,cancelParams);
+            }
+            tabs.addView(panel,new LinearLayout.LayoutParams(0,dp(48),1));
         }else tabs.addView(selector,new LinearLayout.LayoutParams(0,dp(48),1));
         LinearLayout serverTools=row();LinearLayout toolIcons=serverTools;
         boolean chat=agentChatUi!=null&&agentChatUi.terminalAvailable();
@@ -442,9 +496,9 @@ public final class WorkspaceController {
         FrameLayout statusRow=activity.findViewById(R.id.workspace_terminal_tools);
         statusRow.setVisibility(screen==Screen.TERMINAL?View.VISIBLE:View.GONE);
         View oldServer=statusRow.findViewWithTag("server-entry");if(oldServer!=null)statusRow.removeView(oldServer);
-        TextView server=button(serverLabel,false,()->show(Screen.SERVERS,true));server.setTextSize(12);server.setPadding(dp(4),0,dp(4),0);server.setContentDescription(serverLabel);server.setTag("server-entry");
+        TextView server=AgentStatusUi.chip(activity,serverLabel,serverLabel,()->show(Screen.SERVERS,true));server.setTextColor(TEXT);server.setPadding(dp(4),dp(4),dp(4),dp(4));server.setTag("server-entry");
         if(transferBorder!=null)transferBorder.active(false);transferBorder=new WorkspaceTransferBorder(activity.getResources().getDisplayMetrics().density);server.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{server.getBackground(),transferBorder}));updateTransferBorder();
-        FrameLayout.LayoutParams serverParams=new FrameLayout.LayoutParams(dp(106),dp(48),Gravity.END|Gravity.CENTER_VERTICAL);statusRow.addView(server,serverParams);
+        FrameLayout.LayoutParams serverParams=new FrameLayout.LayoutParams(dp(106),-2,Gravity.END|Gravity.CENTER_VERTICAL);statusRow.addView(server,serverParams);
 
         LinearLayout.LayoutParams toolsParams=new LinearLayout.LayoutParams(dp(106),-2);toolsParams.setMarginStart(dp(6));tabs.addView(serverTools,toolsParams);
     }
@@ -460,6 +514,11 @@ public final class WorkspaceController {
         item.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),shape(active?ACCENT:PANEL,active?ACCENT:BORDER,12),null));
         android.graphics.drawable.Drawable image=activity.getDrawable(icon).mutate();image.setTint(active?Color.BLACK:TEXT);image.setBounds(0,0,dp(22),dp(22));item.setCompoundDrawables(image,null,null,null);item.setCompoundDrawablePadding(dp(8));item.setOnClickListener(v->click.run());
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=dp(6);item.setLayoutParams(lp);return item;
+    }
+    private TextView sessionSettingsButton(String title,boolean active,Runnable click){
+        TextView settings=button("",false,click);settings.setMinHeight(0);settings.setMinWidth(0);settings.setPadding(dp(8),dp(8),dp(8),dp(8));
+        android.graphics.drawable.Drawable icon=activity.getDrawable(R.drawable.workspace_settings).mutate();icon.setTint(active?Color.BLACK:TEXT);((WorkspaceIconButton)settings).setIcon(icon,dp(20));
+        settings.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),shape(Color.TRANSPARENT,Color.TRANSPARENT,12),null));settings.setContentDescription(tr("Меню сессии: ","Session menu: ")+title);return settings;
     }
     private android.widget.PopupWindow showSessionStack(View anchor) {
         LinearLayout body=column();body.setPadding(dp(8),dp(8),dp(8),dp(8));body.setBackground(shape(PANEL,BORDER,14));
@@ -477,12 +536,14 @@ public final class WorkspaceController {
             boolean active=activity.getCurrentSession()==terminal;
             TextView item=sessionStackItem(title+(active?"  ✓":"")+"\n"+info,active,sessionIcon(profile),()->{popup.dismiss();activity.getTermuxTerminalSessionClient().setCurrentSession(terminal);show(Screen.TERMINAL,false);});
             item.setTag("session-stack-"+terminal.mHandle);item.setContentDescription(WorkspaceText.tr("Сессия ")+title+" · "+info);
-            item.setOnLongClickListener(v->{popup.dismiss();if(profile!=null)sessionMenu(profile,true);return true;});list.addView(item);
+            FrameLayout frame=new FrameLayout(activity);frame.setLayoutParams(item.getLayoutParams());item.setPadding(item.getPaddingLeft(),item.getPaddingTop(),dp(52),item.getPaddingBottom());frame.addView(item,new FrameLayout.LayoutParams(-1,-2));
+            TextView settings=sessionSettingsButton(title,active,()->{popup.dismiss();if(profile!=null)sessionMenu(profile,true);});settings.setTag("session-stack-settings-"+terminal.mHandle);settings.setEnabled(profile!=null);
+            frame.addView(settings,new FrameLayout.LayoutParams(dp(40),dp(40),Gravity.END|Gravity.CENTER_VERTICAL));list.addView(frame);
         }
 
         if(live().isEmpty())list.addView(text(WorkspaceText.tr("Нет открытых сессий. Создайте новую сессию."),13,MUTED));
         body.addView(scroll,new LinearLayout.LayoutParams(-1,Math.min(dp(360),Math.max(dp(140),dp(86)+(live().size())*dp(76)))));
-        body.addView(text(WorkspaceText.tr("Долгий тап — действия сессии"),12,MUTED));
+        body.addView(text(tr("Шестерёнка — меню сессии","Gear — session menu"),12,MUTED));
         View cancel=tabs.findViewWithTag("cancel-startup");if(cancel!=null){cancel.setVisibility(View.INVISIBLE);popup.setOnDismissListener(()->cancel.setVisibility(View.VISIBLE));}
         popup.showAsDropDown(anchor,0,dp(4));return popup;
     }
@@ -908,6 +969,7 @@ public final class WorkspaceController {
         }
         return true;
     }
+    private static WorkspaceStore.Session agentQueryProfile(String env){WorkspaceStore.Session p=new WorkspaceStore.Session();p.codexEnvironment=env;return p;}
     private void unavailableAgentScope(LinearLayout form){
         CheckBox scope=new CheckBox(activity);scope.setText(tr("Работать только в пределах проекта · недоступно","Work only within the project · unavailable"));scope.setTextColor(MUTED);scope.setEnabled(false);scope.setChecked(false);form.addView(scope);
         form.addView(text(tr("Для этого агента ограничение папкой не реализовано в нашей среде Android/proot. Рабочий каталог не является защитной границей; действуют штатные права агента.","Project-folder enforcement is not implemented for this agent in our Android/proot environment. The working directory is not a security boundary; native agent permissions apply."),12,MUTED));
@@ -922,6 +984,7 @@ public final class WorkspaceController {
         LinearLayout form = column(); if(draft.restoreReview)form.addView(text(WorkspaceLanguage.code(activity).equals("ru")?"Импортированный пресет: проверьте среду, команды и пути. Отдельное восстановленное окружение доступно своим пресетом запуска. Сохраните настройки перед запуском.":"Imported preset: review environment, commands and paths. A separate restored environment has its own launch preset. Save settings before launching.",14,MUTED)); EditText name = labeled(form, WorkspaceText.tr("Название сессии"), existing == null ? "" : draft.name, false);
         EditText directory = labeled(form, WorkspaceText.tr("Рабочий каталог"), existing == null ? TermuxConstants.TERMUX_HOME_DIR_PATH : draft.directory, false);
         String[] chosenEnvironment = {existing == null ? "termux" : (draft.aiAgent.equals("opencode") || draft.claudeAgent || draft.geminiAgent) ? "codex" : draft.environment.equals("legacy")?"termux":!draft.prootAlias.isEmpty()?"proot:"+draft.prootAlias:draft.environment};
+        String[] codexEnvironment={AgentEnvironments.editorUbuntu(existing)};
         String[] chosenAgent={draft.geminiAgent?"gemini":draft.claudeAgent?"claude":draft.aiAgent.equals("opencode")?"opencode":"codex"};
         TextView chooseDirectory=button("▱",false,()->{});
         chooseDirectory.setContentDescription(WorkspaceText.tr("Выбрать рабочий каталог"));
@@ -1059,12 +1122,12 @@ public final class WorkspaceController {
         openCodeFields.addView(text(WorkspaceText.tr("OpenCode запускается в Ubuntu. При «Создать и запустить» компоненты проверяются и при необходимости устанавливаются в этой же вкладке. Node.js устанавливается отдельно от системного. Подключения и история отдельные от Codex; разрешения запрашиваются в терминале."),12,MUTED));
         Runnable updateOpenCode=()->{connectionButton.setText(WorkspaceText.tr("Подключение: ")+AiAgentsUi.title(activity,aiConnection[0]));modelButton.setText(WorkspaceText.tr("Модель: ")+(aiModel[0].isEmpty()?WorkspaceText.tr("По умолчанию"):aiModel[0]));modeButton.setText(WorkspaceText.tr("Режим: ")+ (aiMode[0].equals("build")?"Build":"Plan"));modeDescription.setText(AiAgentsUi.modeDescription(aiMode[0]));aiAccessButton.setText(tr("Права: ","Permissions: ")+AiAgentsUi.accessLabel(aiAccess[0]));aiAccessDescription.setText(AiAgentsUi.accessDescription(aiAccess[0]));chatButton.setText(WorkspaceText.tr("Чат: ")+(aiChat[0].equals("new")?WorkspaceText.tr("Новый чат"):aiThread[0]));};updateOpenCode.run();
         connectionButton.setOnClickListener(v->AiAgentsUi.chooseConnection(activity,aiConnection[0],(id,title)->{aiConnection[0]=id;aiModel[0]="";aiVariant[0]="";aiChat[0]="new";aiThread[0]="ses"+java.util.UUID.randomUUID().toString().replace("-","");updateOpenCode.run();}));
-        modelButton.setOnClickListener(v->AiAgentsUi.chooseModel(activity,aiConnection[0],null,(provider,model,variant)->{aiModel[0]=provider+"/"+model;aiVariant[0]=variant;updateOpenCode.run();}));
+        modelButton.setOnClickListener(v->AiAgentsUi.chooseModel(activity,aiConnection[0],agentQueryProfile(codexEnvironment[0]),(provider,model,variant)->{aiModel[0]=provider+"/"+model;aiVariant[0]=variant;updateOpenCode.run();}));
         modeButton.setOnClickListener(v->WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Режим OpenCode")).setSingleChoiceItems(new String[]{"Build\n"+AiAgentsUi.modeDescription("build"),"Plan\n"+AiAgentsUi.modeDescription("plan")},aiMode[0].equals("plan")?1:0,(d,w)->{aiMode[0]=w==0?"build":"plan";updateOpenCode.run();d.dismiss();}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
         aiAccessButton.setOnClickListener(v->WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Доступ OpenCode")).setSingleChoiceItems(new String[]{AiAgentsUi.accessLabel("full")+"\n"+AiAgentsUi.accessDescription("full"),AiAgentsUi.accessLabel("ask")+"\n"+AiAgentsUi.accessDescription("ask"),AiAgentsUi.accessLabel("read")+"\n"+AiAgentsUi.accessDescription("read")},java.util.Arrays.asList("full","ask","read").indexOf(aiAccess[0]),(d,w)->{String selected=new String[]{"full","ask","read"}[w];d.dismiss();if(selected.equals("full"))WorkspaceDialogs.builder(activity).setTitle(AiAgentsUi.accessLabel("full")).setMessage(AiAgentsUi.accessDescription("full")).setPositiveButton(WorkspaceText.tr("Выбрать"),(confirm,index)->{aiAccess[0]=selected;updateOpenCode.run();}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();else{aiAccess[0]=selected;updateOpenCode.run();}}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
-        chatButton.setOnClickListener(v->WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Чаты OpenCode")).setItems(new String[]{WorkspaceText.tr("Новый чат"),WorkspaceText.tr("Выбрать чат"),WorkspaceText.tr("Ввести ID чата")},(d,w)->{if(w==0){aiChat[0]="new";aiThread[0]="ses"+java.util.UUID.randomUUID().toString().replace("-","");updateOpenCode.run();}else if(w==1)AiAgentsUi.chooseChat(activity,aiConnection[0],(id,title)->{aiThread[0]=id;aiChat[0]="resume";updateOpenCode.run();});else{EditText id=field("ID OpenCode",aiThread[0],false);AlertDialog picker=WorkspaceDialogs.builder(activity).setTitle("ID OpenCode").setView(id).setPositiveButton(WorkspaceText.tr("Выбрать"),null).setNegativeButton(WorkspaceText.tr("Отмена"),null).create();picker.setOnShowListener(x->picker.getButton(-1).setOnClickListener(y->{if(!AiAgents.validThread(id.getText().toString().trim())){id.setError(WorkspaceText.tr("Некорректный ID"));return;}aiThread[0]=id.getText().toString().trim();aiChat[0]="resume";updateOpenCode.run();picker.dismiss();}));picker.show();}}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
+        chatButton.setOnClickListener(v->WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Чаты OpenCode")).setItems(new String[]{WorkspaceText.tr("Новый чат"),WorkspaceText.tr("Выбрать чат"),WorkspaceText.tr("Ввести ID чата")},(d,w)->{if(w==0){aiChat[0]="new";aiThread[0]="ses"+java.util.UUID.randomUUID().toString().replace("-","");updateOpenCode.run();}else if(w==1)AiAgentsUi.chooseChat(activity,aiConnection[0],agentQueryProfile(codexEnvironment[0]),(id,title)->{aiThread[0]=id;aiChat[0]="resume";updateOpenCode.run();});else{EditText id=field("ID OpenCode",aiThread[0],false);AlertDialog picker=WorkspaceDialogs.builder(activity).setTitle("ID OpenCode").setView(id).setPositiveButton(WorkspaceText.tr("Выбрать"),null).setNegativeButton(WorkspaceText.tr("Отмена"),null).create();picker.setOnShowListener(x->picker.getButton(-1).setOnClickListener(y->{if(!AiAgents.validThread(id.getText().toString().trim())){id.setError(WorkspaceText.tr("Некорректный ID"));return;}aiThread[0]=id.getText().toString().trim();aiChat[0]="resume";updateOpenCode.run();picker.dismiss();}));picker.show();}}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
         LinearLayout codexFields = column();
-        String[] codexEnvironment = {existing!=null&&draft.environment.equals("codex")?draft.codexEnvironment:"ubuntu"}, codexAccess = {draft.codexAccess}, codexChat = {draft.codexChat};
+        String[] codexAccess = {draft.codexAccess}, codexChat = {draft.codexChat};
         String[] codexThread = {draft.codexThread}, codexThreadName = {draft.codexThreadName};
         String[] codexSourceDirectory={draft.codexSourceDirectory};
         String[] codexConfirmedDirectory={existing!=null&&!draft.codexSourceDirectory.isEmpty()?draft.directory:""};
@@ -1111,7 +1174,7 @@ public final class WorkspaceController {
                 }
             }).setNegativeButton(WorkspaceText.tr("Отмена"), null).show());
         chooseDirectory.setOnClickListener(v->{
-            WorkspaceStore.Session location=new WorkspaceStore.Session();location.id=draft.id;location.environment=chosenEnvironment[0].equals("codex")&&!chosenAgent[0].equals("codex")?"ubuntu":chosenEnvironment[0];location.codexEnvironment=codexEnvironment[0];location.prootIsolated=draft.prootIsolated&&chosenEnvironment[0].equals("proot:"+draft.prootAlias);
+            WorkspaceStore.Session location=new WorkspaceStore.Session();location.id=draft.id;location.environment=chosenEnvironment[0];location.codexEnvironment=codexEnvironment[0];location.prootIsolated=draft.prootIsolated&&chosenEnvironment[0].equals("proot:"+draft.prootAlias);
             location.sshHost=sshHost.getText().toString().trim();location.sshUser=sshUser.getText().toString().trim();location.sshAuth=chosenAuth[0];location.sshIdentity=identity.getText().toString().trim();location.sshEncryptedPassword=draft.sshEncryptedPassword;
             try{location.sshPort=Integer.parseInt(sshPort.getText().toString());}catch(NumberFormatException e){sshPort.setError(WorkspaceText.tr("Порт от 1 до 65535"));return;}
             showFileBrowser(location,directory.getText().toString().trim(),path->{directory.setText(path);if(name.getText().toString().trim().isEmpty())name.setText(new File(path).getName());});
@@ -1124,15 +1187,18 @@ public final class WorkspaceController {
             public void afterTextChanged(Editable t){}
         });
         codexFields.addView(text(WorkspaceText.tr("Авторизация и история берутся из выбранной среды. Если вход не выполнен, Codex предложит авторизоваться. Для карточки управления нужна версия Codex с app-server и --remote. Полный доступ действует в пределах доступных среде файлов. На Android ограничения sandbox зависят от поддержки Codex; при ошибке запуск остановится, права не повышаются автоматически."), 12, MUTED));
+        TextView agentUbuntu=button("",false,()->{});
+        TextView migrateAgent=button(tr("Миграция среды агента","Agent environment migration"),false,()->{});
         Runnable updateEnvironment = () -> {
             resetEnvironmentCheck[0].run();environmentCheck.setVisibility(View.VISIBLE);
+            agentUbuntu.setText(tr("Окружение агента: ","Agent environment: ")+AgentEnvironments.label(codexEnvironment[0]));agentUbuntu.setVisibility(chosenEnvironment[0].equals("codex")?View.VISIBLE:View.GONE);migrateAgent.setVisibility(chosenEnvironment[0].equals("codex")?View.VISIBLE:View.GONE);AgentStatusUi.available(migrateAgent,!codexEnvironment[0].equals("ubuntu-ai"));
             localFields.setVisibility(!chosenEnvironment[0].equals("ssh")&&!chosenEnvironment[0].equals("codex")?View.VISIBLE:View.GONE);
             if(chosenEnvironment[0].equals("ssh"))environmentCheck.setVisibility(View.GONE);
             localEnvironment.setText(tr("Окружение: ","Environment: ")+(chosenEnvironment[0].startsWith("proot:")?WorkspaceEnvironments.label(chosenEnvironment[0].substring(6)):chosenEnvironment[0].equals("ubuntu")?"Ubuntu":"Termux"));
             String loginAlias=chosenEnvironment[0].startsWith("proot:")?chosenEnvironment[0].substring(6):chosenEnvironment[0].equals("ubuntu")?"ubuntu":"";
             environmentLogin.setText(loginAlias.isEmpty()?tr("Вход: локальная оболочка Termux.","Entry: local Termux shell."):
                 tr("Вход из Termux: ","Enter from Termux: ")+WorkspaceEnvironments.entryCommand(loginAlias,draft.prootIsolated&&loginAlias.equals(draft.prootAlias))+"\n"+
-                (loginAlias.equals("ubuntu")?tr("Сейчас это общая Ubuntu: её также используют AI Agents.","This is currently the shared Ubuntu, also used by AI Agents."):
+                (loginAlias.equals("ubuntu")?tr("Обычная Ubuntu. Для AI-агентов по умолчанию используется отдельная Ubuntu AI.","Ordinary Ubuntu. New AI agents use the separate Ubuntu AI by default."):
                 tr("Команда открывает именно этот экземпляр. Обычная команда входа в Ubuntu откроет другое окружение.","This command opens this exact instance. The ordinary Ubuntu login command opens a different environment.")));
             sshFields.setVisibility(chosenEnvironment[0].equals("ssh") ? View.VISIBLE : View.GONE);
             agentFields.setVisibility(chosenEnvironment[0].equals("codex") ? View.VISIBLE : View.GONE);
@@ -1147,10 +1213,13 @@ public final class WorkspaceController {
         java.util.function.Supplier<WorkspaceStore.Session> checkProfile=()->{WorkspaceStore.Session p=draft.copy();p.environment=chosenEnvironment[0].equals("codex")?(chosenAgent[0].equals("codex")?"codex":"ubuntu"):chosenEnvironment[0];p.codexEnvironment=codexEnvironment[0];p.geminiAgent=chosenAgent[0].equals("gemini")&&chosenEnvironment[0].equals("codex");p.claudeAgent=chosenAgent[0].equals("claude")&&chosenEnvironment[0].equals("codex");p.aiAgent=chosenAgent[0].equals("opencode")&&chosenEnvironment[0].equals("codex")?"opencode":"";p.geminiAuth=geminiAuth[0];p.geminiCloudProject=geminiCloudProject.getText().toString().trim();p.geminiCloudLocation=geminiCloudLocation.getText().toString().trim();return p;};
         environmentCheck.setOnClickListener(v->{if(!chosenEnvironment[0].equals("codex")){String captured=chosenEnvironment[0];environmentSetup.check(captured,result->{if(!editorOpen[0]||closed||!captured.equals(chosenEnvironment[0]))return;environmentCheck.setCompoundDrawablesRelativeWithIntrinsicBounds(0,0,result.ready()?com.termux.R.drawable.workspace_environment_ready:0,0);environmentCheck.setCompoundDrawablePadding(dp(10));});return;}WorkspaceStore.Session p=checkProfile.get();String captured=AgentPreparation.key(p);AgentPreparation.check(activity,p,plan->{if(!captured.equals(AgentPreparation.key(checkProfile.get()))||environmentCheck.getWindowToken()==null)return;environmentCheck.setCompoundDrawablesRelativeWithIntrinsicBounds(0,0,plan.ready()?com.termux.R.drawable.workspace_environment_ready:0,0);environmentCheck.setCompoundDrawablePadding(dp(10));WorkspaceDialogs.builder(activity).setTitle(tr("Проверка среды запуска","Launch environment check")).setMessage(AgentPreparation.summary(activity,plan)).setPositiveButton(tr("Назад","Back"),null).show();});});
         TextWatcher cloudChanged=new TextWatcher(){public void beforeTextChanged(CharSequence t,int start,int count,int after){}public void onTextChanged(CharSequence t,int start,int before,int count){resetEnvironmentCheck[0].run();}public void afterTextChanged(Editable t){}};geminiCloudProject.addTextChangedListener(cloudChanged);geminiCloudLocation.addTextChangedListener(cloudChanged);
-        updateEnvironment.run(); form.addView(environment);form.addView(localFields);form.addView(environmentCheck); form.addView(sshFields); form.addView(agentFields); form.addView(codexFields);
+        java.util.function.Consumer<String> switchUbuntu=alias->{if(!editorOpen[0]||closed)return;codexEnvironment[0]=alias;codexConfirmedDirectory[0]="";updateEnvironment.run();};
+        agentUbuntu.setOnClickListener(v->agentEnvironments.choose(codexEnvironment[0],switchUbuntu));
+        migrateAgent.setOnClickListener(v->{if(!codexEnvironment[0].equals("ubuntu-ai"))agentEnvironments.migrate(switchUbuntu);});
+        updateEnvironment.run(); form.addView(environment);form.addView(localFields);form.addView(agentUbuntu);form.addView(environmentCheck);form.addView(migrateAgent); form.addView(sshFields); form.addView(agentFields); form.addView(codexFields);
         agentButton.setOnClickListener(v->WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Выбрать агента")).setItems(new String[]{"Codex","OpenCode","Claude Code","Gemini CLI"},(d,w)->{
             chosenAgent[0]=new String[]{"codex","opencode","claude","gemini"}[w];
-            if(w>=0){if(java.util.Arrays.asList("","Codex","OpenCode","Claude Code","Gemini CLI").contains(name.getText().toString().trim()))name.setText(w==0?"Codex":w==1?"OpenCode":w==2?"Claude Code":"Gemini CLI");if(!(w==0&&existing!=null&&existing.environment.equals("codex")&&existing.codexEnvironment.equals("termux")))codexEnvironment[0]="ubuntu";if(codexEnvironment[0].equals("ubuntu")&&directory.getText().toString().equals(TermuxConstants.TERMUX_HOME_DIR_PATH))directory.setText("/root");}
+            if(w>=0){if(java.util.Arrays.asList("","Codex","OpenCode","Claude Code","Gemini CLI").contains(name.getText().toString().trim()))name.setText(w==0?"Codex":w==1?"OpenCode":w==2?"Claude Code":"Gemini CLI");if(!(w==0&&existing!=null&&existing.environment.equals("codex")&&existing.codexEnvironment.equals("termux"))&&!AgentEnvironments.ubuntu(codexEnvironment[0]))codexEnvironment[0]="ubuntu-ai";if(AgentEnvironments.ubuntu(codexEnvironment[0])&&directory.getText().toString().equals(TermuxConstants.TERMUX_HOME_DIR_PATH))directory.setText("/root");}
             updateEnvironment.run();
         }).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
         localEnvironment.setOnClickListener(v->environmentSetup.choose(choice->{
@@ -1191,13 +1260,21 @@ public final class WorkspaceController {
         });
         TextView hint = text(tr("Окружения Termux: вход выполняется автоматически в выбранный экземпляр. Команда ручного входа показана выше; добавлять её в команды запуска не нужно. До трёх шагов, при ошибке остановка. Для Ubuntu используется Bash, для остальных систем — Bash или sh. SSH: каталог и команды выполняются на сервере с Bash; пароль и подтверждение ключа — в терминале.","Termux environments: automatically enter the selected instance. The manual entry command is shown above; do not add it to startup commands. Up to three steps, stopping after a failure. Ubuntu uses Bash; other systems use Bash or sh. SSH: directories and commands run on the server with Bash; password and host-key confirmation are handled in the terminal."), 12, MUTED);
         hint.setPadding(0, dp(16), 0, 0); form.addView(hint);
-        CheckBox extendedDebug=new CheckBox(activity);extendedDebug.setText(WorkspaceText.tr("Расширенный дебаг-журнал"));extendedDebug.setTextColor(TEXT);extendedDebug.setChecked(draft.extendedDebug);form.addView(extendedDebug);
+        LinearLayout connectionFields=column();connectionFields.setTag("agent-connection-fields");form.addView(connectionFields);
+        EditText connectionCommand=labeled(connectionFields,tr("Команда подключения (необязательно)","Connection command (optional)"),draft.agentConnectionCommand,false);connectionCommand.setTag("agent-connection-command");connectionCommand.setContentDescription(tr("Команда подключения","Connection command"));
+        connectionCommand.setHint("/absolute/path/to/launcher");
+        connectionFields.addView(text(tr("Путь к исполняемому запускателю в выбранном окружении, без аргументов. Ему передаются штатная команда агента и её параметры. Пусто — обычное подключение. Для работающего чата после сохранения перезапустите эту сессию, продолжив тот же чат. Другие сессии не меняются.","Executable launcher path in the selected environment, without arguments. It receives the normal agent command and arguments. Empty means normal connection. After saving, restart this session and resume the same chat. Other sessions are unchanged."),12,MUTED));
+        Runnable toggleConnection=()->connectionFields.setVisibility(chosenEnvironment[0].equals("codex")&&AgentEnvironments.ubuntu(codexEnvironment[0])?View.VISIBLE:View.GONE);toggleConnection.run();
+        environment.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int b,int c){}public void onTextChanged(CharSequence s,int a,int b,int c){toggleConnection.run();}public void afterTextChanged(Editable s){}});
+        CheckBox extendedDebug=new CheckBox(activity);extendedDebug.setTag("agent-extended-debug");extendedDebug.setText(WorkspaceText.tr("Расширенный дебаг-журнал"));extendedDebug.setTextColor(TEXT);extendedDebug.setChecked(draft.extendedDebug);form.addView(extendedDebug);
         form.addView(text(WorkspaceText.tr("Базовый журнал ведётся автоматически. Расширенный: события и коды ошибок, для Gemini также штатный debug с запуска. Без записи ввода и диалога. Изменение действует при следующем запуске."),12,MUTED));
         AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(existing == null ? WorkspaceText.tr(launchAfterSave ? "Создать сессию" : "Создать пресет") : WorkspaceText.tr("Настройки сессии"))
             .setView(formScroll(form)).setPositiveButton(existing == null && launchAfterSave ? WorkspaceText.tr("Создать и запустить") : WorkspaceText.tr("Сохранить"), null).setNegativeButton(WorkspaceText.tr("Отмена"), null).create();
         if (existing == null && launchAfterSave) dialog.setButton(AlertDialog.BUTTON_NEUTRAL, WorkspaceText.tr("Пресеты"), (d, w) -> chooseSavedSession());
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             if (name.getText().toString().trim().isEmpty()) { name.setError(WorkspaceText.tr("Укажите название")); return; }
+            String agentConnection=connectionCommand.getText().toString().trim();if(chosenEnvironment[0].equals("codex")&&!AgentConnection.valid(agentConnection)){connectionCommand.setError(tr("Укажите абсолютный путь к запускателю без управляющих символов","Enter an absolute launcher path without control characters"));return;}
+            boolean connectionEdited=!draft.agentConnectionCommand.equals(agentConnection);
 
             if (!validDirectoryInput(directory)) return;
             String nextAlias=chosenEnvironment[0].startsWith("proot:")?chosenEnvironment[0].substring(6):"";
@@ -1216,6 +1293,7 @@ public final class WorkspaceController {
                 &&(existing.claudeAgent!=selectedClaude||!existing.claudeModel.equals(claudeModel[0])||!existing.claudeMode.equals(claudeMode[0])||!existing.claudeChat.equals(claudeChat[0])||!existing.claudeThread.equals(claudeThread[0]))) {
                 activity.showToast(WorkspaceText.tr("Сначала закройте сессию, чтобы сменить агента, подключение или уровень доступа."),true);return;
             }
+            if(existing!=null&&liveFor(existing)!=null&&liveFor(existing).isRunning()&&!existing.codexEnvironment.equals(codexEnvironment[0])){activity.showToast(tr("Сначала закройте сессию, чтобы сменить Ubuntu","Close the session before changing Ubuntu"),true);return;}
             if(existing!=null&&liveFor(existing)!=null&&liveFor(existing).isRunning()&&(!existing.aiAgent.isEmpty()||chosenAgent[0].equals("opencode"))&&(!existing.aiAgent.equals(chosenEnvironment[0].equals("codex")&&chosenAgent[0].equals("opencode")?"opencode":"")||!existing.aiConnection.equals(aiConnection[0])||!existing.aiAccess.equals(aiAccess[0])||!existing.environment.equals(chosenAgent[0].equals("opencode")&&chosenEnvironment[0].equals("codex")?"ubuntu":chosenEnvironment[0]))){activity.showToast(WorkspaceText.tr("Сначала закройте сессию, чтобы сменить агента, подключение или уровень доступа."),true);return;}
             if(chosenEnvironment[0].equals("codex")&&chosenAgent[0].equals("codex")&&codexChat[0].equals("id")&&!codexConfirmedDirectory[0].equals(directory.getText().toString().trim())) {
                 String env=codexEnvironment[0],cwd=directory.getText().toString().trim(),thread=codexThread[0];
@@ -1258,6 +1336,7 @@ public final class WorkspaceController {
             if (sshPasswordMode && secret.length > 0 && !rememberPassword.isChecked()) pendingSshPasswords.put(draft.id, secret.clone());
             java.util.Arrays.fill(secret, '\0'); password.setText("");
             draft.extendedDebug=extendedDebug.isChecked();
+            draft.agentConnectionCommand=chosenEnvironment[0].equals("codex")?agentConnection:"";
             draft.sshAuth = chosenAuth[0]; draft.sshIdentity = identity.getText().toString().trim(); draft.sshEncryptedPassword = encrypted;
             draft.sshHost = sshHost.getText().toString().trim(); draft.sshUser = sshUser.getText().toString().trim();
             draft.sshPort = port; draft.sshKeepOpen = sshKeepOpen.isChecked();
@@ -1276,13 +1355,16 @@ public final class WorkspaceController {
             draft.environment = (draft.aiAgent.equals("opencode")||draft.claudeAgent||draft.geminiAgent)?"ubuntu":chosenEnvironment[0].startsWith("proot:")?"termux":chosenEnvironment[0]; draft.name = name.getText().toString().trim(); draft.directory = directory.getText().toString().trim(); draft.startup = startupFields.get(0).getText().toString();
             draft.startup2 = startupFields.size() > 1 ? startupFields.get(1).getText().toString() : "";
             draft.startup3 = startupFields.size() > 2 ? startupFields.get(2).getText().toString() : ""; if(draft.aiAgent.equals("opencode")||draft.claudeAgent||draft.geminiAgent){draft.startup="";draft.startup2="";draft.startup3="";}
+            if(connectionEdited&&existing!=null&&!codexChatEdited[0]&&liveFor(draft)!=null&&liveFor(draft).isRunning()){
+                CodexStatus active=codexStatuses.get(draft.id);if(active!=null)CodexProjects.bind(draft,active);
+            }
             draft.updated = System.currentTimeMillis();
             draft.restoreReview=false;
-            if (existing == null) { draft.saved = !launchAfterSave; store.sessions.add(draft); }
+            if (existing == null) { draft.saved = !launchAfterSave; if(draft.saved)store.sessions.add(draft); }
             TerminalSession live = liveFor(draft); if (live != null) live.mSessionName = draft.name;
             store.save(); dialog.dismiss(); refresh();
-            if (existing == null && launchAfterSave) launch(draft);
-            else if (live != null) activity.showToast(tr("Имя обновлено. Каталог, команды и права применятся при следующем запуске; текущая сессия не изменена.","Name updated. Directory, commands and permissions apply on next launch; the current session is unchanged."), true);
+            if (existing == null && launchAfterSave) launchNew(draft,true);
+            else if (live != null) activity.showToast(connectionEdited?tr("Команда подключения сохранена. Применится после перезапуска этой сессии. Текущий процесс не изменён.","Connection command saved. Restart this session to apply it. The current process is unchanged."):tr("Имя обновлено. Каталог, команды и права применятся при следующем запуске; текущая сессия не изменена.","Name updated. Directory, commands and permissions apply on next launch; the current session is unchanged."), true);
         }));
         dialog.setOnDismissListener(d -> {editorOpen[0]=false;password.setText("");}); dialog.show();
     }
@@ -1313,7 +1395,7 @@ public final class WorkspaceController {
             }catch(Exception e){failure=WorkspaceText.tr("Не удалось прочитать всю историю. Проверьте Codex и авторизацию в выбранной среде.");}
             String error=failure;activity.runOnUiThread(()->{
                 if(closed||!dialog.isShowing())return;
-                loading.setText(error!=null?error:(environment.equals("ubuntu")?"Ubuntu":"Termux")+WorkspaceText.tr(" · новый каталог: ")+cwd+(chats.isEmpty()?WorkspaceText.tr("\nСохранённых чатов пока нет."):""));
+                loading.setText(error!=null?error:AgentEnvironments.label(environment)+WorkspaceText.tr(" · новый каталог: ")+cwd+(chats.isEmpty()?WorkspaceText.tr("\nСохранённых чатов пока нет."):""));
                 int[] selected={-1};boolean[] projectOnly={false};Runnable[] render=new Runnable[1];
                 render[0]=()->{
                     rows.removeAllViews();all.setTextColor(projectOnly[0]?MUTED:ACCENT);project.setTextColor(projectOnly[0]?ACCENT:MUTED);int shown=0;
@@ -1362,6 +1444,7 @@ public final class WorkspaceController {
     private void renderCodexStatus() {
         geminiLiveUi.syncPermissionVisibility();agentReceiptsUi.syncVisibility();
         if (codexStatus == null) return;
+        if(desktopSessionBar!=null)desktopSessionBar.working(false);desktopSessionBar=null;
         codexStatus.removeAllViews();
         TerminalSession aiLive=activity.getCurrentSession();WorkspaceStore.Session ai=aiLive==null?null:store.findByHandle(aiLive.mHandle);
         if(ai!=null&&ai.geminiAgent&&aiLive.isRunning()) {
@@ -1373,6 +1456,11 @@ public final class WorkspaceController {
             claudeLiveUi.render(codexStatus,ai);return;
         }
         if(ai!=null&&ai.aiAgent.equals("opencode")&&aiLive.isRunning()){codexStatus.setVisibility(screen==Screen.TERMINAL?View.VISIBLE:View.GONE);TextView chip=AgentStatusUi.chip(activity,"OpenCode · "+agentChatUi.modelLabel(ai)+"\n"+ai.aiMode+" · "+AiAgentsUi.accessLabel(ai.aiAccess)+" ›",tr("Статус и модель OpenCode","OpenCode status and model"),()->AiAgentsUi.active(activity,ai,()->{store.save();agentChatUi.modelChanged(ai);renderCodexStatus();}));AgentStatusUi.attach(codexStatus,chip);return;}
+        if(aiLive!=null&&aiLive.isRunning()&&WorkspaceDesktop.eligible(ai)){
+            codexStatus.setVisibility(screen==Screen.TERMINAL?View.VISIBLE:View.GONE);
+            desktopSessionBar=new DesktopSessionBar(activity,desktopUi==null?tr("Терминал","Terminal"):desktopUi.label(),()->{if(desktopUi!=null)desktopUi.menu();},()->{if(desktopUi!=null)desktopUi.openPrograms();});
+            LinearLayout.LayoutParams desktopRow=new LinearLayout.LayoutParams(-1,-2);desktopRow.topMargin=desktopRow.bottomMargin=dp(6);codexStatus.addView(desktopSessionBar,desktopRow);updateDesktopProgramsBorder();return;
+        }
         WorkspaceStore.Session profile = currentCodex();
         CodexStatus prior = profile == null ? null : codexStatuses.get(profile.id);
         boolean ended = profile != null && prior != null && prior.updated > 0 && liveFor(profile) == null;
@@ -1557,8 +1645,8 @@ public final class WorkspaceController {
     }
     private void finishWorkspaceSession(TerminalSession terminal) {
         WorkspaceStore.Session profile = store.findByHandle(terminal.mHandle);
-        if(profile!=null&&profile.geminiAgent){String runId=profile.geminiSocketId;codexReader.execute(()->{try{GeminiCli.stop(activity,runId);}catch(Exception ignored){}activity.runOnUiThread(()->{if(terminal.isRunning())terminal.finishIfRunning();});});return;}
-        if(profile!=null&&profile.claudeAgent){String runId=profile.claudeSocketId;codexReader.execute(()->{try{ClaudeCode.stop(activity,runId);}catch(Exception ignored){}activity.runOnUiThread(()->{if(terminal.isRunning())terminal.finishIfRunning();});});return;}
+        if(profile!=null&&profile.geminiAgent){String runId=profile.geminiSocketId;codexReader.execute(()->{try{GeminiCli.stop(activity,runId,profile.codexEnvironment);}catch(Exception ignored){}activity.runOnUiThread(()->{if(terminal.isRunning())terminal.finishIfRunning();});});return;}
+        if(profile!=null&&profile.claudeAgent){String runId=profile.claudeSocketId;codexReader.execute(()->{try{ClaudeCode.stop(activity,runId,profile.codexEnvironment);}catch(Exception ignored){}activity.runOnUiThread(()->{if(terminal.isRunning())terminal.finishIfRunning();});});return;}
         if(profile!=null&&profile.aiAgent.equals("opencode")){codexReader.execute(()->{try{AiAgents.call(activity,profile.aiConnection,profile,AiAgentsUi.op("stop"));}catch(Exception ignored){}activity.runOnUiThread(()->{if(terminal.isRunning())terminal.finishIfRunning();});});return;}
         if (profile == null || !profile.environment.equals("codex")) { terminal.finishIfRunning(); return; }
         codexReader.execute(() -> {
@@ -1688,11 +1776,13 @@ public final class WorkspaceController {
         if (target == null) { activity.showToast(WorkspaceText.tr("Сессия уже закрыта"), false); return; }
         if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
         AlertDialog.Builder dialog = WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Закрыть сессию «") + profile.name + "»?");
+        String desktopWarning=desktopUi!=null&&desktopUi.owns(profile)?tr("\nГрафический рабочий стол и его программы тоже будут закрыты. Сохраните изменения в них заранее.","\nThe graphical desktop and its programs will also close. Save their work first."):"";
         if (profile.saved) {
-            dialog.setMessage(WorkspaceText.tr("Процесс будет остановлен, вкладка терминала закрыта. Сохранённые настройки и история останутся."))
+            dialog.setMessage(WorkspaceText.tr("Процесс будет остановлен, вкладка терминала закрыта. Сохранённые настройки и история останутся.")+desktopWarning)
                 .setPositiveButton(WorkspaceText.tr("Закрыть сессию"), (d, which) -> finishClose(profile, target, true));
         } else {
             LinearLayout body=column();CheckBox keep=new CheckBox(activity);keep.setText(tr("Сохранить историю","Keep history"));keep.setTextColor(TEXT);keep.setChecked(true);keep.setTag("close-keep-history");body.addView(keep);body.addView(text(tr("Галочка сохраняет историю оболочки на стороне приложения. Собственные чаты Codex и других CLI-агентов не удаляются; для удаления используйте «Истории чатов». Пресет сохраняет настройки запуска и историю.","The checkbox keeps app-side shell history. Native Codex/CLI conversations are not deleted; use Chat histories for deletion. A preset keeps launch settings and history."),13,MUTED));
+            if(!desktopWarning.isEmpty())body.addView(text(desktopWarning,13,MUTED));
             dialog.setView(body).setPositiveButton(tr("Добавить в пресеты и закрыть","Add preset and close"), (d, which) -> {profile.keepHistory=true;finishClose(profile, target, true);})
                 .setNegativeButton(tr("Закрыть","Close"), (d, which) -> {profile.keepHistory=keep.isChecked();finishClose(profile, target, false);});
         }
@@ -1711,6 +1801,7 @@ public final class WorkspaceController {
             activity.showToast(WorkspaceText.tr("Дождитесь запуска сессии"), false); return;
         }
         if (save) { profile.saved = true; profile.updated = System.currentTimeMillis(); }
+        if(desktopUi!=null)desktopUi.sessionClosed(profile);
         store.save(); pendingRestarts.remove(target.mHandle);
         if (target.isRunning()) { pendingCloses.add(target.mHandle); finishWorkspaceSession(target); }
         else {
@@ -1747,7 +1838,7 @@ public final class WorkspaceController {
         if (command.trim().isEmpty()) return;
         WorkspaceStore.Session profile=store.findByHandle(current.mHandle);
         if(profile!=null&&(profile.aiAgent.equals("opencode")||profile.geminiAgent||profile.claudeAgent||CodexChatControl.enabled(activity.getFilesDir(),profile))&&agentChatUi.handlesComposer()){
-            agentChatUi.send(command,()->{store.recordCommand(command);if(activity.getCurrentSession()==current&&terminalInput.getText().toString().equals(command)){terminalInput.setText("");terminalDrafts.remove(current.mHandle);terminalInput.requestFocus();}});return;
+            agentChatUi.send(command,()->{store.recordCommand(command);if(activity.getCurrentSession()==current&&terminalInput.getText().toString().equals(command)){terminalInput.setText("");terminalDrafts.remove(current.mHandle);}});return;
         }
         if(profile!=null&&profile.geminiAgent&&current.getEmulator()!=null){
             final String run=profile.geminiSocketId;final boolean mode=interactiveInput;
@@ -1934,7 +2025,7 @@ public final class WorkspaceController {
         if(scope.equals("termux"))for(String handle:running){boolean known=false;for(WorkspaceStore.Session profile:store.sessions)if(handle.equals(profile.handle)){known=true;break;}if(!known)return true;}
         return false;
     }
-    private void showDiagnostics(WorkspaceStore.Session profile){WorkspaceDiagnostics.register(profile,false);WorkspaceDiagnosticsUi.show(activity,profile,()->liveFor(profile));}
+    private void showDiagnostics(WorkspaceStore.Session profile){WorkspaceDiagnostics.register(profile,false);WorkspaceDiagnosticsUi.show(activity,profile,()->liveFor(profile),()->desktopUi==null?"":desktopUi.diagnostics(profile),done->{if(desktopUi==null)done.run();else desktopUi.prepareDiagnostics(profile,done);});}
     private void confirmCancelStartup(WorkspaceStore.Session profile){
         if(!SessionShell.hasCancellableStartup(profile))return;
         StringBuilder commands=new StringBuilder();int step=0;for(String command:profile.startupCommands())commands.append(++step).append(". ").append(command).append("\n\n");
@@ -2027,6 +2118,7 @@ public final class WorkspaceController {
     }
 
     private void launchNew(WorkspaceStore.Session s, boolean add) {
+        if(AgentEnvironmentManager.busy(s)){activity.showToast(tr("Окружение занято миграцией или удалением","Environment migration or deletion is in progress"),true);return;}
 
         if (s.environment.equals("ssh") && s.sshAuth.equals("password") && s.sshEncryptedPassword.isEmpty() && !pendingSshPasswords.containsKey(s.id)) {
             requestSshPassword(s, add); return;
@@ -2073,16 +2165,18 @@ public final class WorkspaceController {
     }
     private TerminalSession create(WorkspaceStore.Session profile, boolean add, TerminalSession replaced) {
         if(profile.restoreReview){editSession(profile,false);return null;}
+        if(AgentEnvironmentManager.busy(profile)){activity.showToast(tr("Окружение занято миграцией или удалением","Environment migration or deletion is in progress"),true);return null;}
         TermuxService service = activity.getTermuxService();
         if (service == null) return null;
         if(WorkspaceStore.isBase(profile))baseStartedAt=System.currentTimeMillis();
         boolean replacing = replaced != null && !replaced.isRunning() && service.getIndexOfSession(replaced) >= 0;
         if (service.getTermuxSessionsSize() >= 8 && !replacing) { activity.showToast(WorkspaceText.tr("Максимум 8 терминалов. Закройте завершённую сессию."), true); return null; }
-        String directory = (!WorkspaceEnvironments.alias(profile).isEmpty() || profile.environment.equals("ssh") || (profile.environment.equals("codex") && profile.codexEnvironment.equals("ubuntu"))) ? TermuxConstants.TERMUX_HOME_DIR_PATH : resolve(profile.directory);
+        String directory = (!WorkspaceEnvironments.alias(profile).isEmpty() || profile.environment.equals("ssh") || (profile.environment.equals("codex") && AgentEnvironments.ubuntu(profile.codexEnvironment))) ? TermuxConstants.TERMUX_HOME_DIR_PATH : resolve(profile.directory);
         if (!new File(directory).isDirectory() || !new File(directory).canExecute()) {
             activity.showToast(WorkspaceText.tr("Каталог недоступен: ") + directory, true); return null;
         }
         SshPasswordBroker broker = null;
+        boolean registeredNew=false;
         try {
             String askpass = null, socket = null;
             if (profile.environment.equals("ssh") && profile.sshAuth.equals("password")) {
@@ -2103,19 +2197,19 @@ public final class WorkspaceController {
             File rc = SessionShell.prepare(activity.getFilesDir(), profile, askpass, socket);
             codexStatuses.remove(profile.id);
             // service notifications are synchronous; register the new profile before they fire.
-            if (add) store.sessions.add(profile);
+            if (add) {store.sessions.add(profile);registeredNew=true;}
             creating = true;
             TermuxSession created;
             try { created = service.createTermuxSession(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + "/bash",
                 new String[]{"--rcfile", rc.getAbsolutePath(), "-i"}, null, directory, false, profile.name);
             } finally { creating = false; }
-            if (created == null) { if (broker != null) broker.close(); if (add) store.sessions.remove(profile); activity.showToast(WorkspaceText.tr("Не удалось создать терминал"), true); return null; }
+            if (created == null) { if (broker != null) broker.close(); rollbackUnstarted(profile,registeredNew); activity.showToast(WorkspaceText.tr("Не удалось создать терминал"), true); return null; }
             TerminalSession session = created.getTerminalSession();
-            configureAgentOutput(session,profile);
             // The synchronous callback may have adopted it; discard that temporary record.
             WorkspaceStore.Session adopted = store.findByHandle(session.mHandle);
             if (adopted != null && adopted != profile) store.sessions.remove(adopted);
             profile.handle = session.mHandle; profile.updated = System.currentTimeMillis();
+            configureAgentOutput(session,profile);
             WorkspaceDiagnostics.register(profile,true);
             // Create first: removing the last old session would otherwise stop the service.
             if (replacing) service.removeTermuxSession(replaced);
@@ -2123,11 +2217,16 @@ public final class WorkspaceController {
             if (profile.environment.equals("codex")) codexHandler.postDelayed(() -> { if (!closed) loadCodexStatus(profile, null); }, 1500);
             return session;
         } catch (java.security.GeneralSecurityException e) {
+            rollbackUnstarted(profile,registeredNew);
             if (broker != null) broker.close(); activity.showToast(WorkspaceText.tr("Сохранённый пароль недоступен. Введите его заново в настройках сессии."), true); return null;
         } catch (IOException | RuntimeException e) {
+            rollbackUnstarted(profile,registeredNew);
             WorkspaceDiagnostics.failure(profile,e);
             if (broker != null) broker.close(); activity.showToast(WorkspaceText.tr("Не удалось подготовить сессию"), true); return null;
         }
+    }
+    private void rollbackUnstarted(WorkspaceStore.Session profile,boolean registeredNew) {
+        if(registeredNew&&!profile.saved&&profile.handle.isEmpty()&&store.sessions.remove(profile))store.save();
     }
     public void refresh() {
         if (closed || creating) return;
@@ -2149,11 +2248,12 @@ public final class WorkspaceController {
         }
         if (activity.getTermuxService() != null && store.isWritable()) {
             for (WorkspaceStore.Session profile : new ArrayList<>(store.sessions)) {
-                if (!WorkspaceStore.isBase(profile) && !profile.saved && !profile.handle.isEmpty() && liveFor(profile) == null) {
-                    store.sessions.remove(profile); if(!profile.keepHistory)eraseSessionFiles(profile); changed = true;
+                if (!WorkspaceStore.isBase(profile) && !profile.saved && liveFor(profile) == null && (!profile.handle.isEmpty()||unstartedOnLoad.contains(profile.id))) {
+                    store.sessions.remove(profile); if(!profile.handle.isEmpty()&&!profile.keepHistory)eraseSessionFiles(profile); changed = true;
                 }
             }
         }
+        if(activity.getTermuxService()!=null)unstartedOnLoad.clear();
         for(WorkspaceStore.Session profile:store.sessions)if(!profile.handle.isEmpty())WorkspaceDiagnostics.register(profile,false);
         if (changed) store.save();
         renderTabs(); renderHeader(); if(screen!=Screen.SERVERS)renderContent();
@@ -2162,6 +2262,7 @@ public final class WorkspaceController {
         WorkspaceStore.Session profile = store.findByHandle(session.mHandle);
         if(profile!=null&&!closed&&new File(activity.getFilesDir(),"workspace-package-jobs").isDirectory())try{reader.execute(()->{try{PackageOperationJournal.collect(activity.getFilesDir(),profile.id);}catch(Exception ignored){}});}catch(java.util.concurrent.RejectedExecutionException ignored){}
         WorkspaceDiagnostics.finished(session);
+        if(desktopUi!=null&&profile!=null)desktopUi.sessionClosed(profile);
         if (profile != null) { store.save(); }
         if(WorkspaceStore.isBase(profile)&&activity.getTermuxService()!=null&&!activity.getTermuxService().wantsToStop()) {
             if(System.currentTimeMillis()-baseStartedAt<5000)baseRestartFailures++;else baseRestartFailures=0;
@@ -2192,12 +2293,12 @@ public final class WorkspaceController {
     }
     public void close() {
         activity.getTerminalView().setWorkspaceTerminalVisible(false);
-        if(transferBorder!=null)transferBorder.active(false);if(agentTerminalBorder!=null)agentTerminalBorder.active(false);servers.close();if(activityLine!=null)activityLine.working(false);
-        geminiInputDispatch.cancel();if(agentChatUi!=null)agentChatUi.close();if(geminiLiveUi!=null)geminiLiveUi.close();if(claudeLiveUi!=null)claudeLiveUi.close();if(agentReceiptsUi!=null)agentReceiptsUi.close();activity.getTerminalView().setTranscriptTapListener(null);
+        if(transferBorder!=null)transferBorder.active(false);if(agentTerminalBorder!=null)agentTerminalBorder.active(false);if(desktopSessionBar!=null)desktopSessionBar.working(false);servers.close();if(activityLine!=null)activityLine.working(false);
+        if(desktopUi!=null)desktopUi.close();geminiInputDispatch.cancel();if(agentChatUi!=null)agentChatUi.close();if(geminiLiveUi!=null)geminiLiveUi.close();if(claudeLiveUi!=null)claudeLiveUi.close();if(agentReceiptsUi!=null)agentReceiptsUi.close();activity.getTerminalView().setTranscriptTapListener(null);
         terminalDrafts.clear();
         for(WorkspacePackages browser:new ArrayList<>(packageBrowsers))browser.close();packageBrowsers.clear();
         for(WorkspaceFileBrowser browser:new ArrayList<>(fileBrowsers))browser.close();fileBrowsers.clear();
         for (char[] secret : pendingSshPasswords.values()) java.util.Arrays.fill(secret, '\0'); pendingSshPasswords.clear();
-        environmentSetup.close();closed = true; codexApplyGeneration++; if(codexApplyDialog!=null)codexApplyDialog.dismiss(); codexHandler.removeCallbacksAndMessages(null); codexReader.shutdown(); reader.shutdown(); store.close();
+        agentEnvironments.close();environmentSetup.close();closed = true; codexApplyGeneration++; if(codexApplyDialog!=null)codexApplyDialog.dismiss(); codexHandler.removeCallbacksAndMessages(null); codexReader.shutdown(); reader.shutdown(); store.close();
     }
 }

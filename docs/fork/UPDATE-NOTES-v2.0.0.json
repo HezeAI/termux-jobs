@@ -1,0 +1,46 @@
+{
+  "ru": [
+    "Крупное обновление X11: встроенные XFCE-столы Termux, Ubuntu, Debian, Alpine, Fedora, openSUSE, Void и Arch Linux ARM; отдельные процессы и дисплеи. Дополнительный APK X11 не нужен.",
+    "Рендеры CPU, Turnip + Zink и VirGL; экспериментальный Wrapper только для Termux, импорт Bionic Turnip ZIP и выбор ранее загруженных драйверов.",
+    "Установка и запуск стола в центральной области: этапы, прогресс, подтверждение и отмена; остановка вместе с владеющей сессией.",
+    "Программы рабочего стола: рекомендуемые, установленные и поиск; прогресс в карточке, Стоп/Продолжить, удаление, отдельный кэш каталога и фоновые операции внутри приложения.",
+    "Клавиатура автоматическая/ручная, Return/Enter, мышь и окна, PulseAudio, сертификаты, Phone storage/Downloads и запрос доступа к памяти.",
+    "GPU & GPU INFO с зависимостями для каждой системы; исправления Debian/Termux VirGL и EGL-сведения вместо падающего GLX на затронутых Linux-системах.",
+    "Стиль Termux-job’s с оформлением в духе Kali для базового Termux; курсивное название приложения и v2.0 в шапке.",
+    "Ubuntu AI для новых агентов; необязательная проверяемая миграция из Ubuntu, раздельная маршрутизация файлов/пакетов и проверка компонентов.",
+    "Установка окружений в карточках, штатный proot-distro, повторное использование проверенных слоёв, подробности ошибок и экспорт.",
+    "Исправлены появление сообщений под shell-полем и фокус/черновики агента; интерактивный ввод и допклавиши привязаны к сессии; настройки через шестерёнки.",
+    "Необязательная команда подключения: запуск агента через свой сервер/SSH-туннель/прокси по пути к скрипту-запускателю. Пустое поле — обычный запуск; личных ключей/серверов в APK нет. Расширена диагностика X11.",
+    "Тестировалось на RedMagic 10 Pro и Samsung S26 Ultra. На других устройствах требуется проверка; все сочетания на обоих телефонах и Mali/Dimensity не подтверждены.",
+    "Источники, авторы, версии и лицензии X11/Mesa/ANGLE/VirGL/Wrapper и компонентов перечислены в описании релиза и документации."
+  ],
+  "en": [
+    "Major X11 release: integrated XFCE for Termux, Ubuntu, Debian, Alpine, Fedora, openSUSE, Void and Arch Linux ARM, with per-target processes/displays. No separate X11 APK required.",
+    "CPU, Turnip + Zink and VirGL renderers; experimental Termux-only Wrapper, Bionic Turnip ZIP import and saved-driver selection.",
+    "Central desktop installation/startup steps, progress, consent and cancellation; the desktop stops with its owning session.",
+    "Desktop Programs: recommended, installed and search lists, inline progress, Stop/Continue, removal, per-environment cached catalogs and in-app background operations.",
+    "Automatic/manual keyboard, Return/Enter, pointer/windows, PulseAudio, certificates, Phone storage/Downloads shortcuts and storage permission prompts.",
+    "GPU & GPU INFO with per-distribution dependencies; Debian/Termux VirGL fixes and EGL information queries on affected Linux targets.",
+    "Optional Kali-inspired Termux desktop style; italic app name and v2.0 header label.",
+    "Ubuntu AI for new agents; optional verified migration from Ubuntu, selected-environment files/packages and component checks.",
+    "Inline environment installation, native proot-distro, reuse of verified cached layers, error details and export.",
+    "Fixed agent chat content appearing under the shell field and protected focus/drafts; input/extra keys are session-scoped, with visible settings gears.",
+    "Optional connection command: launch an agent through your own server/SSH tunnel/proxy using an executable wrapper path. Empty keeps ordinary startup; no personal keys/servers are embedded. Expanded X11 diagnostics.",
+    "Tested on RedMagic 10 Pro and Samsung S26 Ultra. Other devices require testing; not every combination on both phones or Mali/Dimensity is confirmed.",
+    "Source repositories, authors, versions and licenses for X11/Mesa/ANGLE/VirGL/Wrapper and dependencies are credited in the release notes and documentation."
+  ],
+  "compatibility": {
+    "ru": [
+      "Android8+/ARM64, прежние com.termux/подпись, schema8. Code1320 выше публичной1.7.5 и частной1.7.104; общего сброса не требуется, команды/пресеты/истории/серверы/окружения сохраняются.",
+      "Ubuntu AI — по умолчанию только для новых агентов. Миграция добровольная, исходная Ubuntu автоматически не удаляется; файлы на внешних монтированиях не копируются. Перед изменениями сохраните проекты и ключи.",
+      "Завершите важные задачи перед обновлением: Android может остановить процессы. Новые скрипты применяются при следующем запуске сессии/стола. Для финального GPU INFO Ubuntu нужна повторная проверка.",
+      "Частный Touch Workspace заменяется сохранённым стилем Kali, Ubuntu X11 Test не предлагается для новых сессий. С версий до1.5.3 по-прежнему удаляются ранее объявленные приватные данные local-AI; внешние модели/proot не удаляются."
+    ],
+    "en": [
+      "Android8+/ARM64, unchanged com.termux/signer and schema8. Code1320 exceeds public1.7.5 and private1.7.104. No general reset; commands/presets/history/servers/environments are retained.",
+      "Ubuntu AI is the default only for new agents. Migration is optional and does not automatically delete the original Ubuntu; externally mounted phone files are not copied. Back up projects and credentials before changes.",
+      "Finish important work before updating: Android may terminate processes. New scripts apply on the next session/desktop launch. The final Ubuntu GPU INFO adjustment needs a device recheck.",
+      "Private Touch Workspace choices fall back to the retained Kali style; Ubuntu X11 Test is not offered for new sessions. Upgrades from before1.5.3 retain previously announced local-AI private-data cleanup; external models/proot are not removed."
+    ]
+  }
+}

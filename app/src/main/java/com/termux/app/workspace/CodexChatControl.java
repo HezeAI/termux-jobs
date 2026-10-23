@@ -10,9 +10,9 @@ import java.nio.charset.StandardCharsets;
 /** New-run Codex chat transport; existing terminal sessions retain their immutable bridge. */
 final class CodexChatControl {
     static File marker(File files,WorkspaceStore.Session p){return new File(CodexSessionShell.socketDirectory(files),p.codexSocketId+".android-chat");}
-    static boolean enabled(File files,WorkspaceStore.Session p){return p!=null&&p.environment.equals("codex")&&p.codexEnvironment.equals("ubuntu")&&CodexSessionShell.validThread(p.codexSocketId)&&marker(files,p).isFile();}
+    static boolean enabled(File files,WorkspaceStore.Session p){return p!=null&&p.environment.equals("codex")&&AgentEnvironments.ubuntu(p.codexEnvironment)&&CodexSessionShell.validThread(p.codexSocketId)&&marker(files,p).isFile();}
     static void prepare(Context c,WorkspaceStore.Session p)throws IOException{
-        if(!p.environment.equals("codex")||!p.codexEnvironment.equals("ubuntu"))return;
+        if(!p.environment.equals("codex")||!AgentEnvironments.ubuntu(p.codexEnvironment))return;
         if(!CodexSessionShell.validThread(p.codexSocketId))throw new IOException("Invalid Codex run");
         File dir=CodexSessionShell.socketDirectory(c.getFilesDir());if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create Codex controls");
         for(String asset:new String[]{"codex-chat.cjs","codex-control.js","agent-receipts.cjs"}){
@@ -23,7 +23,7 @@ final class CodexChatControl {
     }
     static void protect(File f)throws IOException{if(!f.setReadable(false,false)||!f.setWritable(false,false)||!f.setReadable(true,true)||!f.setWritable(true,true))throw new IOException("Cannot protect Codex chat file");}
     static String command(File files,WorkspaceStore.Session p,String endpoint){
-        String home=p.codexEnvironment.equals("ubuntu")?"/root":com.termux.shared.termux.TermuxConstants.TERMUX_HOME_DIR_PATH;
+        String home=AgentEnvironments.ubuntu(p.codexEnvironment)?"/root":com.termux.shared.termux.TermuxConstants.TERMUX_HOME_DIR_PATH;
         String cwd=p.directory.isEmpty()||p.directory.equals("~")?home:p.directory;if(cwd.startsWith("~/"))cwd=home+cwd.substring(1);
         return "node "+SessionShell.quote("/tmp/termux-jobs-codex/codex-chat-v1.cjs")+" run "+SessionShell.quote(endpoint)+" "+SessionShell.quote(p.codexAccess)+" "+SessionShell.quote(p.codexChat)+" "+SessionShell.quote(p.codexThread)+" "+SessionShell.quote(cwd)+" "+SessionShell.quote(p.codexSourceDirectory)+" "+SessionShell.quote(CodexSessionShell.approval(p))+" "+SessionShell.quote(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en");
     }

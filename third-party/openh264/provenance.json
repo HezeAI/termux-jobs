@@ -1,0 +1,14 @@
+{
+  "upstream": "https://github.com/cisco/openh264/tree/v2.6.0",
+  "source": "https://sources.debian.org/src/openh264/2.6.0%2Bdfsg-2/",
+  "url": "https://deb.debian.org/debian/pool/main/o/openh264/libopenh264-8_2.6.0+dfsg-2_arm64.deb",
+  "bytes": 335852,
+  "sha256": "dd40ffeeb006af3a610e015881340c704b8bb38627434a150b7d9e39e657dfbe",
+  "member": "usr/lib/aarch64-linux-gnu/libopenh264.so.2.6.0",
+  "asset": "x11-openh264.so",
+  "assetSha256": "79d49f67882c0744973158d7cccc4f0bcf29bfc597b294d77d5f3bbdaba221bf",
+  "soname": "libopenh264.so.8",
+  "abi": "aarch64-linux-gnu",
+  "license": "BSD-2-clause; see COPYRIGHT for per-file notices",
+  "scope": "private Parole launcher inside openSUSE, no RPM/system library replacement"
+}

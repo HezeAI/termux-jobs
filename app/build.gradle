@@ -31,6 +31,7 @@ android {
         implementation "io.noties.markwon:linkify:$markwonVersion"
         implementation "io.noties.markwon:recycler:$markwonVersion"
 
+        implementation project(":x11")
         implementation project(":terminal-view")
         implementation project(":termux-shared")
     }
@@ -40,8 +41,8 @@ android {
         ndk { abiFilters "arm64-v8a" }
         minSdkVersion project.properties.minSdkVersion.toInteger()
         targetSdkVersion project.properties.targetSdkVersion.toInteger()
-        versionCode 1220
-        versionName "1.7.5"
+        versionCode 1320
+        versionName "2.0.0"
 
         if (appVersionName) versionName = appVersionName
         validateVersionName(versionName)

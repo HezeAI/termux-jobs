@@ -44,4 +44,11 @@ public class LocalFileSourcesTest {
         for(int i=0;i<51;i++)choose.invoke(browser,new ProjectFiles.Entry(i%2==0?"/a":"/b","file"+i,false,i));
         Field selected=WorkspaceFileBrowser.class.getDeclaredField("selectedFiles");selected.setAccessible(true);Map<?,?> values=(Map<?,?>)selected.get(browser);assertEquals(50,values.size());assertFalse(values.containsKey("/a/file50"));choose.invoke(browser,new ProjectFiles.Entry("/a","file0",false,0));assertEquals(49,values.size());choose.invoke(browser,new ProjectFiles.Entry("/a","file50",false,50));assertEquals(50,values.size());browser.close();
     }
+    @Test public void optionalDesktopDenialCanContinueWithoutOpeningFilePicker(){
+        TermuxActivity a=activity();Shadows.shadowOf(RuntimeEnvironment.application).denyPermissions(Manifest.permission.WRITE_EXTERNAL_STORAGE);WorkspaceStorageAccess gate=new WorkspaceStorageAccess(a);AtomicInteger ready=new AtomicInteger(),cancel=new AtomicInteger();gate.request(ready::incrementAndGet,cancel::incrementAndGet);gate.permissionResult(WorkspaceStorageAccess.REQUEST);AlertDialog denied=ShadowAlertDialog.getLatestAlertDialog();denied.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals(0,ready.get());assertEquals(1,cancel.get());gate.permissionResult(WorkspaceStorageAccess.REQUEST);assertEquals(1,cancel.get());gate.close();
+    }
+    @Test public void optionalCancellationAfterOwnerClosedCannotContinue(){
+        TermuxActivity a=activity();Shadows.shadowOf(RuntimeEnvironment.application).denyPermissions(Manifest.permission.WRITE_EXTERNAL_STORAGE);WorkspaceStorageAccess gate=new WorkspaceStorageAccess(a);AtomicInteger calls=new AtomicInteger();gate.request(calls::incrementAndGet,calls::incrementAndGet);gate.permissionResult(WorkspaceStorageAccess.REQUEST);AlertDialog denied=ShadowAlertDialog.getLatestAlertDialog();gate.close();denied.cancel();assertEquals(0,calls.get());
+    }
+
 }

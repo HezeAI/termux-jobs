@@ -22,10 +22,10 @@ public class StartupEnvironmentTest {
         assertEquals("Environment: Alpine",((TextView)described(root,"Environment")).getText().toString());String login=((TextView)described(root,"Environment login command")).getText().toString();assertTrue(login.contains("proot-distro login 'alpine'"));assertTrue(login.contains("exact instance"));
         org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();firstEditor(root).setText("Alpine test");form.getButton(-1).performClick();org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();Field field=WorkspaceController.class.getDeclaredField("store");field.setAccessible(true);WorkspaceStore store=(WorkspaceStore)field.get(controller);assertEquals(1,store.sessions.size());assertEquals("alpine",store.sessions.get(0).prootAlias);assertEquals("termux",store.sessions.get(0).environment);assertEquals("/root",store.sessions.get(0).directory);store.awaitWrites();
     }
-    @Test public void ubuntuEntryExplicitlyExplainsExistingSharedAgentEnvironment()throws Exception{
+    @Test public void ubuntuEntryExplainsSeparateAiDefault()throws Exception{
         WorkspaceStore.Session profile=new WorkspaceStore.Session();profile.environment="ubuntu";profile.name="Ubuntu";profile.directory="/root";
         Method edit=WorkspaceController.class.getDeclaredMethod("editSession",WorkspaceStore.Session.class,boolean.class);edit.setAccessible(true);edit.invoke(controller,profile,false);AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();
-        String login=((TextView)described(form.getWindow().getDecorView(),"Environment login command")).getText().toString();assertTrue(login.contains("proot-distro login 'ubuntu'"));assertTrue(login.contains("shared Ubuntu"));assertTrue(login.contains("AI Agents"));form.dismiss();
+        String login=((TextView)described(form.getWindow().getDecorView(),"Environment login command")).getText().toString();assertTrue(login.contains("proot-distro login 'ubuntu'"));assertTrue(login.contains("Ordinary Ubuntu"));assertTrue(login.contains("Ubuntu AI"));form.dismiss();
     }
     @Test public void absentEnvironmentOffersInstallationWithoutStartingItOnSelection()throws Exception{
         EnvironmentSetup setup=new EnvironmentSetup(activity,()->java.util.Arrays.asList(new WorkspaceEnvironments.Choice("proot:alpine","alpine","Alpine","/root",false)));

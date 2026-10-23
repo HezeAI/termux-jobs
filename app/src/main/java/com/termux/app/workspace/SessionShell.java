@@ -27,15 +27,16 @@ public final class SessionShell {
         java.util.List<String> startup = session.startupCommands();
         if(!session.packageRuntimeStartup.isEmpty())startup=java.util.Collections.singletonList(session.packageRuntimeStartup);
         boolean otherGuest=!WorkspaceEnvironments.alias(session).isEmpty()&&!session.environment.equals("ubuntu");
-        boolean guest = otherGuest || session.environment.equals("ubuntu") || (session.environment.equals("codex") && session.codexEnvironment.equals("ubuntu"));
+        boolean guest = otherGuest || session.environment.equals("ubuntu") || (session.environment.equals("codex") && AgentEnvironments.ubuntu(session.codexEnvironment));
         if (session.geminiAgent) startup = java.util.Collections.singletonList(GeminiCli.command(files, session));
         if (session.claudeAgent) startup = java.util.Collections.singletonList(ClaudeCode.command(files, session));
         if (session.aiAgent.equals("opencode")) startup = java.util.Collections.singletonList(AiAgents.command(files, session));
         if (session.environment.equals("codex")) startup = java.util.Collections.singletonList(CodexSessionShell.command(files, session));
         if (AgentPreparation.supports(session)&&!startup.isEmpty())startup=java.util.Collections.singletonList(AgentPreparation.wrap(session,startup.get(0)));
+        if (AgentPreparation.supports(session)&&!startup.isEmpty())startup=java.util.Collections.singletonList(AgentConnection.wrap(session,startup.get(0)));
         if (guest) {
             String mount = "/tmp/termux-fork-session-" + session.id;
-            String alias=otherGuest?WorkspaceEnvironments.alias(session):"ubuntu";
+            String alias=otherGuest?WorkspaceEnvironments.alias(session):!AgentPreparation.agent(session).isEmpty()?AgentEnvironments.alias(session):"ubuntu";
             if(!WorkspaceLocalFilePicker.validAlias(alias))throw new IOException("Invalid environment alias");
             File guestRc = new File(dir, "ubuntu-bashrc");
             write(guestRc, ((otherGuest?"export TERMUX_JOBS_ENVIRONMENT_ALIAS="+quote(alias)+"\n":"")+buildReadyRc("$HOME", mount + "/history", mount + "/cancel-startup", startup, true)).getBytes(StandardCharsets.UTF_8));
@@ -51,7 +52,7 @@ public final class SessionShell {
                 + (session.claudeAgent ? " --bind " + quote(ClaudeCode.directory(files).getAbsolutePath() + ":" + ClaudeCode.GUEST) : "")
                 + (session.aiAgent.equals("opencode") ? " --bind " + quote(AiAgents.directory(files).getAbsolutePath() + ":/tmp/termux-jobs-ai") : "")
                 + (session.environment.equals("codex") ? " --bind " + quote(CodexSessionShell.socketDirectory(files).getAbsolutePath() + ":/tmp/termux-jobs-codex") : "")
-                + " --work-dir " + quote(cwd) + " " + (otherGuest?quote(alias):"ubuntu") + " -- "
+                + " --work-dir " + quote(cwd) + " " + (alias.equals("ubuntu")?"ubuntu":quote(alias)) + " -- "
                 + (otherGuest?"/bin/sh -c "+quote("if command -v bash >/dev/null 2>&1; then exec bash --rcfile "+quote(mount+"/ubuntu-bashrc")+" -i; else SHELL=/bin/sh; export SHELL; ENV="+quote(mount+"/proot-shrc")+"; export ENV; exec /bin/sh -i; fi")+"\n":"/bin/bash --rcfile " + quote(mount + "/ubuntu-bashrc") + " -i\n");
         } else if (session.environment.equals("ssh")) {
             script = buildReadyRc(TermuxConstants.TERMUX_HOME_DIR_PATH, history.getAbsolutePath(), cancel.getAbsolutePath(),

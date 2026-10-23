@@ -7,6 +7,7 @@ cd "$FORK_ROOT"
 FORK_CLANG="${FORK_NATIVE_CLANG:-clang}"
 FORK_LLD="${FORK_NATIVE_LLD:-ld.lld}"
 ./scripts/create-debug-key.sh
+python3 scripts/prepare-x11.py
 python3 scripts/prepare-java-verification.py --arm64
 FORK_STAGE="$FORK_ROOT/.verification/arm64"
 FORK_NATIVE="$FORK_ROOT/.verification/native"

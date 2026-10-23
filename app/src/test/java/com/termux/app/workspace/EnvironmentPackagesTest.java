@@ -87,4 +87,12 @@ public class EnvironmentPackagesTest{
   }
   try{EnvironmentPackages.parse(EnvironmentPackages.Kind.XBPS,data("[-] mksh-R59c Description\n"),1);fail();}catch(java.io.IOException expected){}
  }
+
+ @Test public void xbpsRequestsUseIpv4AndDoNotModifyTheCallingShell()throws Exception{
+  java.nio.file.Path fixture=java.nio.file.Files.createTempDirectory("xbps-ipv4");
+  for(String binary:new String[]{"xbps-query","xbps-install","xbps-remove"})executable(fixture.resolve(binary),"printf 'child:%s:%s\\n' \"$FORCE_IPV4\" \"${FORCE_IPV6-unset}\"");
+  List<String> commands=new ArrayList<>();for(int tab=0;tab<3;tab++)commands.add(EnvironmentPackages.query(EnvironmentPackages.Kind.XBPS,tab));for(String action:new String[]{"install","upgrade","remove","refresh"})commands.add(EnvironmentPackages.operation(EnvironmentPackages.Kind.XBPS,action,"mousepad"));
+  for(String command:commands){ProcessBuilder b=new ProcessBuilder("/bin/sh","-c",command+"; printf 'parent:%s:%s\\n' \"$FORCE_IPV4\" \"$FORCE_IPV6\"");b.environment().put("PATH",fixture.toString());b.environment().put("FORCE_IPV4","0");b.environment().put("FORCE_IPV6","1");Process p=b.start();String out=new String(p.getInputStream().readAllBytes(),StandardCharsets.UTF_8);assertEquals(command,0,p.waitFor());assertEquals(command,"child:1:unset\nparent:0:1\n",out);}
+  for(EnvironmentPackages.Kind kind:EnvironmentPackages.Kind.values())if(kind!=EnvironmentPackages.Kind.XBPS)for(int tab=0;tab<3;tab++)assertFalse(EnvironmentPackages.query(kind,tab).contains("FORCE_IPV4"));
+ }
 }

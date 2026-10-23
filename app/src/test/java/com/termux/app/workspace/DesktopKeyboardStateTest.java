@@ -1,0 +1,16 @@
+package com.termux.app.workspace;
+import org.junit.Test;
+import static org.junit.Assert.*;
+public class DesktopKeyboardStateTest {
+ @Test public void unknownInitialFocusDoesNotCloseManuallyOpenedKeyboard(){DesktopKeyboardState k=new DesktopKeyboardState();k.toggle();assertNull(k.focus(0,false));assertTrue(k.enabled);}
+ @Test public void realTextFieldFocusOpensTheSharedInputWithoutManualEnable(){DesktopKeyboardState k=new DesktopKeyboardState();assertNull(k.focus(0,false));assertEquals(Boolean.TRUE,k.focus(1,true));assertTrue(k.enabled);}
+ @Test public void backDismissalDisarmsAndFocusCannotReopen(){DesktopKeyboardState k=new DesktopKeyboardState();k.toggle();k.visibility(true);assertTrue(k.visibility(false));assertFalse(k.enabled);assertNull(k.focus(2,true));assertNull(k.focus(3,true));}
+ @Test public void automaticFocusLossCanHideWithoutDisarming(){DesktopKeyboardState k=new DesktopKeyboardState();k.toggle();k.visibility(true);assertEquals(Boolean.FALSE,k.focus(1,false));assertFalse(k.visibility(false));assertTrue(k.enabled);assertEquals(Boolean.TRUE,k.focus(2,true));}
+ @Test public void unchangedFocusDoesNotLoopKeyboardRequests(){DesktopKeyboardState k=new DesktopKeyboardState();k.toggle();assertEquals(Boolean.TRUE,k.focus(3,true));assertNull(k.focus(3,true));assertNull(k.focus(3,true));}
+ @Test public void manualOffAndDetachResetState(){DesktopKeyboardState k=new DesktopKeyboardState();k.toggle();assertFalse(k.toggle());assertNull(k.focus(1,true));k.toggle();k.reset();assertFalse(k.enabled);assertEquals(Boolean.TRUE,k.focus(1,true));}
+ @org.junit.Test public void visibleAnimationFramesDoNotTurnAutomaticHideIntoManualDismissal(){DesktopKeyboardState state=new DesktopKeyboardState();state.toggle();state.visibility(true);state.focus(1,false);state.visibility(true);org.junit.Assert.assertFalse(state.visibility(false));org.junit.Assert.assertTrue(state.enabled);org.junit.Assert.assertEquals(Boolean.TRUE,state.focus(2,true));}
+ @Test public void explicitRetapReopensSameFieldButRepeatedPollingDoesNot(){DesktopKeyboardState k=new DesktopKeyboardState();k.focus(1,true);k.tap(0,true);k.visibility(true);k.visibility(false);assertFalse(k.enabled);assertNull(k.focus(1,true));assertNull(k.tap(0,true));assertEquals(Boolean.TRUE,k.tap(1,true));assertTrue(k.enabled);assertNull(k.tap(1,true));}
+ @Test public void anotherFieldCanOpenAfterManualDismissal(){DesktopKeyboardState k=new DesktopKeyboardState();k.focus(1,true);k.visibility(true);k.visibility(false);assertNull(k.focus(2,true));assertNull(k.focus(3,false));assertEquals(Boolean.TRUE,k.focus(4,true));assertTrue(k.enabled);}
+ @Test public void tappingNonTextAreasCannotShowKeyboard(){DesktopKeyboardState k=new DesktopKeyboardState();assertNull(k.tap(1,false));assertFalse(k.enabled);}
+ @Test public void disabledAutomaticIgnoresFieldEventsButManualInputStillWorks(){DesktopKeyboardState k=new DesktopKeyboardState();k.automatic=false;assertNull(k.focus(1,true));assertNull(k.tap(1,true));assertFalse(k.enabled);assertTrue(k.toggle());assertNull(k.focus(2,false));assertTrue(k.enabled);assertNull(k.tap(2,true));k.visibility(true);assertTrue(k.visibility(false));assertFalse(k.enabled);k.automatic=true;assertEquals(Boolean.TRUE,k.tap(3,true));}
+}

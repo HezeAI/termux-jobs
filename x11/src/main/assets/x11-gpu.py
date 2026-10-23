@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+"""Optional pinned Mesa components in private app storage; never replaces system Mesa."""
+import fcntl
+import hashlib
+import io
+import json
+import os
+from pathlib import Path
+import platform
+import re
+import shutil
+import stat
+import subprocess
+import sys
+import tarfile
+import tempfile
+import time
+import urllib.request
+
+CANCEL_FILE = None
+
+def check_cancel():
+ if CANCEL_FILE is not None and CANCEL_FILE.exists():raise ValueError("GPU_CANCELLED")
+
+SPECS = {
+ 'ubuntu': {'directory':'ubuntu-26.04-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
+  ('https://github.com/lfdevs/mesa-for-android-container/releases/download/mesa-26.3.0-devel-20260824/mesa-for-android-container_26.3.0-devel-20260824_ubuntu_resolute_arm64.tar.gz', 'ee762f0855c47f9a245df3ce53a46d40b2240ede9b5c9ddf7606e724362fec77', 12069639, 'tar')]},
+ 'debian': {'directory':'debian-13-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
+  ('https://github.com/lfdevs/mesa-for-android-container/releases/download/mesa-26.3.0-devel-20260824/mesa-for-android-container_26.3.0-devel-20260824_debian_trixie_arm64.tar.gz','c014cf66bdbff96417ee30d34f006cf51df64ae04893d599711b0b6b73b52ccf',11648933,'tar')]},
+ 'alpine': {'directory':'alpine-3.24-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
+  ('https://github.com/lfdevs/mesa-for-android-container/releases/download/mesa-26.3.0-devel-20260824/mesa-for-android-container_26.3.0-devel-20260824_alpine_3.24_arm64.tar.gz','2f3e14dc57fa4ec75297a67af747872e7c460d3f3fcfff9e758e479874578ea3',12099886,'tar')]},
+ 'fedora': {'directory':'fedora-44-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
+  ('https://github.com/lfdevs/mesa-for-android-container/releases/download/mesa-26.3.0-devel-20260824/mesa-for-android-container_26.3.0-devel-20260824_fedora_44_arm64.tar.gz','fc5a7f80bdd99720b083ec0d6bf9d349c493858acb03753e9fd99af5e04bde0b',12449267,'tar')]},
+ 'opensuse': {'directory':'opensuse-16-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
+  ('https://github.com/lfdevs/mesa-for-android-container/releases/download/mesa-26.3.0-devel-20260824/mesa-for-android-container_26.3.0-devel-20260824_debian_trixie_arm64.tar.gz','c014cf66bdbff96417ee30d34f006cf51df64ae04893d599711b0b6b73b52ccf',11648933,'tar'),
+  ('https://deb.debian.org/debian/pool/main/l/lm-sensors/libsensors5_3.6.2-2_arm64.deb','7469f1ccce8afdba33d3b11847d0ecdf2221805a0694dee21ee4d622e8f72145',36444,'deb')]},
+ 'void': {'directory':'void-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
+  ('https://github.com/lfdevs/mesa-for-android-container/releases/download/mesa-26.3.0-devel-20260824/mesa-for-android-container_26.3.0-devel-20260824_void_arm64.tar.gz','9b6051ee45e2891de6c150598305814900f2e48088d5fedc3d75d8d50f644dc7',11533566,'tar')]},
+ 'archlinux': {'directory':'archlinux-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
+  ('https://github.com/lfdevs/mesa-for-android-container/releases/download/mesa-26.3.0-devel-20260824/mesa-for-android-container_26.3.0-devel-20260824_archlinux_arm64.tar','75b7638829b211c20c26b6110e525ca23ab28980ce58af824ab16c8e7afcfa26',14018560,'arch-bundle')]},
+ 'termux': {'directory':'termux-mesa26.2.5', 'version':'26.2.5', 'packages':[
+  ('https://packages.termux.dev/apt/termux-main/pool/main/m/mesa-vulkan-icd-freedreno/mesa-vulkan-icd-freedreno_26.2.5_aarch64.deb','79d4328e41b3b40edea91088c7992f5522469c682e44223efb69ef0861903c37',1599892,'deb'),
+  ('https://packages.termux.dev/apt/termux-main/pool/main/v/vulkan-loader-generic/vulkan-loader-generic_1.4.365_aarch64.deb','99b22e01c966aa1e3dc4ab827508ccc256bebe3fafb20cf7c4883e965a7c3311',152808,'deb')]},
+}
+
+class HttpsOnly(urllib.request.HTTPRedirectHandler):
+ def redirect_request(self, req, fp, code, msg, headers, newurl):
+  if not newurl.startswith('https://'): raise ValueError('INSECURE_REDIRECT')
+  return super().redirect_request(req,fp,code,msg,headers,newurl)
+
+def data_archive(data,kind):
+ if kind=='tar':return io.BytesIO(data)
+ if not data.startswith(b'!<arch>\n'):raise ValueError('INVALID_DEB')
+ offset=8
+ while offset+60<=len(data):
+  header=data[offset:offset+60]
+  if header[58:60]!=b'`\n':raise ValueError('INVALID_DEB_HEADER')
+  size=int(header[48:58]);name=header[:16].decode('ascii').strip().rstrip('/')
+  if size<0 or offset+60+size>len(data):raise ValueError('INVALID_DEB_SIZE')
+  if name.startswith('data.tar.'):return io.BytesIO(data[offset+60:offset+60+size])
+  offset+=60+size+(size%2)
+ raise ValueError('MISSING_DEB_DATA')
+
+def unpack(data,kind,destination):
+ if kind=='arch-bundle':
+  # Fixed reviewed payloads only. Never execute .INSTALL or install these globally.
+  expected={'mesa-1:26.3.0-1-aarch64.pkg.tar.xz','vulkan-freedreno-1:26.3.0-1-aarch64.pkg.tar.xz'}
+  found=set()
+  with tarfile.open(fileobj=io.BytesIO(data)) as bundle:
+   for entry in bundle:
+    check_cancel()
+    if entry.name not in expected:continue
+    if entry.name in found or not entry.isfile() or entry.size>64*1024*1024:raise ValueError('ARCH_BUNDLE_INVALID')
+    found.add(entry.name);unpack(bundle.extractfile(entry).read(),'tar',destination)
+  if found!=expected:raise ValueError('ARCH_BUNDLE_MISSING_PACKAGE')
+  return
+ with tarfile.open(fileobj=data_archive(data,kind)) as archive:
+  entries=[];total=0
+  for entry in archive:
+   check_cancel();total+=entry.size;entries.append(entry)
+   if len(entries)>5000 or total>192*1024*1024:raise ValueError('ARCHIVE_TOO_LARGE')
+   if not (entry.isfile() or entry.isdir() or entry.issym() or entry.islnk()):raise ValueError('ARCHIVE_SPECIAL_FILE')
+  archive.extractall(destination,members=entries,filter='data')
+
+def hashes(root):
+ result={}
+ for path in root.rglob('*'):
+  if path==root/'ready.json':continue
+  relative=str(path.relative_to(root))
+  if path.is_symlink():
+   if not path.resolve().is_relative_to(root.resolve()):raise ValueError('EXTERNAL_LINK')
+   result[relative]='link:'+os.readlink(path)
+  elif path.is_dir():continue
+  elif path.is_file():result[relative]=hashlib.sha256(path.read_bytes()).hexdigest()
+  else:raise ValueError('SPECIAL_FILE')
+ return result
+
+def ready(base,target):
+ try:
+  spec=SPECS[target];root=base/spec['directory']
+  if root.is_symlink() or not root.is_dir():return False
+  marker=root/'ready.json'
+  if marker.is_symlink() or marker.stat().st_size>262144:return False
+  state=json.loads(marker.read_text())
+  return state.get('version')==spec['version'] and state.get('files')==hashes(root)
+ except (OSError,ValueError,KeyError):return False
+
+def download(url,sha,size,update):
+ check_cancel()
+ opener=urllib.request.build_opener(HttpsOnly());start=time.monotonic();data=bytearray()
+ with opener.open(url,timeout=20) as response:
+  if not response.geturl().startswith('https://'):raise ValueError('INSECURE_RESPONSE')
+  while True:
+   check_cancel()
+   chunk=response.read(65536)
+   if not chunk:break
+   data.extend(chunk)
+   if len(data)>size or time.monotonic()-start>300:raise ValueError('DOWNLOAD_LIMIT')
+   update(len(data),size)
+ if len(data)!=size or hashlib.sha256(data).hexdigest()!=sha:raise ValueError('CHECKSUM_MISMATCH')
+ return bytes(data)
+
+def install(base,target,fetch=download):
+ spec=SPECS[target];base.mkdir(mode=0o700,parents=True,exist_ok=True)
+ if base.is_symlink():raise ValueError('CACHE_IS_A_LINK')
+ lock=os.open(base/'install.lock',os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
+ try:
+  if not stat.S_ISREG(os.fstat(lock).st_mode) or os.fstat(lock).st_nlink!=1:raise ValueError('UNSAFE_LOCK')
+  fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+  check_cancel()
+  if ready(base,target):return
+  destination=base/spec['directory']
+  if destination.exists() or destination.is_symlink():raise ValueError('CACHE_INCOMPLETE')
+  stage=Path(tempfile.mkdtemp(prefix='.stage-',dir=base));total=sum(p[2] for p in spec['packages']);done=0
+  try:
+   for url,sha,size,kind in spec['packages']:
+    print('GPU_STAGE:download',flush=True)
+    data=fetch(url,sha,size,lambda n,t:print('GPU_PROGRESS:%d:%d'%(done+n,total),flush=True))
+    # Recheck even with an injected fetcher, before any extraction.
+    if len(data)!=size or hashlib.sha256(data).hexdigest()!=sha:raise ValueError('CHECKSUM_MISMATCH')
+    print('GPU_STAGE:extract',flush=True);unpack(data,kind,stage);done+=size
+   (stage/'turnip-icd.json').write_text(json.dumps({'file_format_version':'1.0.0','ICD':{'library_path':'libvulkan_freedreno.so','api_version':'1.4.0'}}))
+   check_cancel()
+   files=hashes(stage);assert files
+   (stage/'ready.json').write_text(json.dumps({'version':spec['version'],'files':files}))
+   check_cancel()
+   os.rename(stage,destination)
+  finally:
+   if stage.exists():shutil.rmtree(stage)
+ finally:os.close(lock)
+
+def requirements(target):
+ if platform.machine() not in ('aarch64','arm64'):raise ValueError('ARM64_REQUIRED')
+ model=Path('/sys/class/kgsl/kgsl-3d0/gpu_model').read_text().strip()
+ if not re.search(r'Adreno[^0-9]*(?:7[0-9]{2}|830|840)(?:v[0-9]+)?$',model,re.I):raise ValueError('GPU_NOT_IN_TEST_TARGETS')
+ with open('/dev/kgsl-3d0','rb',buffering=0):pass
+ if target=='ubuntu':
+  command=[os.environ['PREFIX']+'/bin/proot-distro','login','ubuntu','--','/bin/sh','-c',
+   'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; export XDG_DATA_DIRS=/usr/local/share:/usr/share XDG_CONFIG_DIRS=/etc/xdg; unset LD_LIBRARY_PATH LD_PRELOAD DBUS_SYSTEM_BUS_ADDRESS; . /etc/os-release; [ "$ID" = ubuntu ] && [ "$VERSION_ID" = 26.04 ] || exit 72; dpkg-query -W -f=\'${Status}\\n\' libvulkan1 libegl1 2>/dev/null | grep -c "install ok installed" | grep -qx 2']
+  if subprocess.run(command,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=25).returncode:raise ValueError('UBUNTU_26_04_LIBVULKAN1_LIBEGL1_REQUIRED')
+
+ if target in ('debian','alpine','fedora','opensuse','void','archlinux'):
+  # Check only the selected rootfs. Never install or change its packages here.
+  os_check = '[ "$ID" = debian ] && [ "${VERSION_ID%%.*}" = 13 ]' if target=='debian' else '[ "$ID" = alpine ] && [ "${VERSION_ID%.*}" = 3.24 ]'
+  if target=='opensuse':os_check='[ "$ID" = opensuse-leap ] && [ "$VERSION_ID" = 16.0 ]'
+  if target=='archlinux':os_check='[ "$ID" = archarm ] || [ "$ID" = arch ]'
+  if target=='void':os_check='[ "$ID" = void ] && getconf GNU_LIBC_VERSION >/dev/null'
+  if target=='fedora':os_check='[ "$ID" = fedora ] && [ "$VERSION_ID" = 44 ]'
+  import shlex
+  probe = 'import ctypes; ctypes.CDLL("libvulkan.so.1"); ctypes.CDLL("libEGL.so.1")'
+  if target=='opensuse':probe+='; ctypes.CDLL("libLLVM.so.19.1")'
+  if target=='archlinux':probe+='; ctypes.CDLL("libLLVM.so.22.1"); ctypes.CDLL("libdisplay-info.so.3"); ctypes.CDLL("libSPIRV-Tools.so"); ctypes.CDLL("libsensors.so.5")'
+  if target=='void':probe+='; ctypes.CDLL("libLLVM.so.18.1")'
+  entry=['run','--work-dir','/root'] if target=='void' else ['login']
+  command=[os.environ['PREFIX']+'/bin/proot-distro',*entry,target,'--','/bin/sh','-c',
+   'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; export XDG_DATA_DIRS=/usr/local/share:/usr/share XDG_CONFIG_DIRS=/etc/xdg; unset LD_LIBRARY_PATH LD_PRELOAD DBUS_SYSTEM_BUS_ADDRESS; . /etc/os-release; { '+os_check+'; } || exit 72; python3 -c '+shlex.quote(probe)]
+  if subprocess.run(command,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=25).returncode:
+   if target=='opensuse':raise ValueError('OPENSUSE_16_VULKAN_EGL_LLVM19_REQUIRED')
+   if target=='archlinux':raise ValueError('ARCH_ARM_VULKAN_EGL_LLVM22_REQUIRED')
+   if target=='void':raise ValueError('VOID_GLIBC_VULKAN_EGL_REQUIRED')
+   if target=='fedora':raise ValueError('FEDORA_44_VULKAN_EGL_REQUIRED')
+   raise ValueError('DEBIAN_13_VULKAN_EGL_REQUIRED' if target=='debian' else 'ALPINE_3_24_VULKAN_EGL_REQUIRED')
+
+def main():
+ global CANCEL_FILE
+ if len(sys.argv) not in (4,5):raise ValueError('ARGUMENTS')
+ operation,target,path=sys.argv[1:4]
+ if target not in SPECS or operation not in ('install','check'):raise ValueError('ARGUMENTS')
+ base=Path(path);expected=Path(os.environ['PREFIX']).parent/'workspace-x11-gpu'
+ if base.name!=expected.name or not base.parent.samefile(expected.parent):raise ValueError('CACHE_PATH')
+ if len(sys.argv)==5:
+  CANCEL_FILE=Path(sys.argv[4])
+  if CANCEL_FILE.parent!=base.parent/'.gpu-control' or not re.fullmatch(r'cancel-[0-9a-f-]{36}',CANCEL_FILE.name):raise ValueError('CANCEL_PATH')
+ check_cancel()
+ requirements(target)
+ check_cancel()
+ if operation=='install':install(base,target)
+ if not ready(base,target):raise ValueError('GPU_COMPONENTS_MISSING')
+ check_cancel()
+ print('READY:gpu',flush=True)
+
+if __name__=='__main__':
+ try:main()
+ except Exception as error:
+  code=str(error) if isinstance(error,ValueError) else 'GPU_SETUP_FAILED'
+  print('ERROR:'+code,flush=True);sys.exit(1)

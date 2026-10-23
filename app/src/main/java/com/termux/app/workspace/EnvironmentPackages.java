@@ -11,6 +11,7 @@ final class EnvironmentPackages {
     // proot exposes Termux bin as a fallback; package commands must stay guest-native.
     static final String GUEST_PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin";
     static String nativeCommand(String script){return "( PATH="+SessionShell.quote(GUEST_PATH)+"; export PATH; "+script+"\n)";}
+    static String xbps(String script){return "( unset FORCE_IPV6; FORCE_IPV4=1 "+script+" )";}
     static String probe(){return "if command -v apt-get >/dev/null && command -v dpkg-query >/dev/null; then printf APT; elif command -v apk >/dev/null; then printf APK; elif command -v zypper >/dev/null; then printf ZYPPER; elif command -v dnf >/dev/null; then printf DNF; elif command -v xbps-query >/dev/null; then printf XBPS; elif command -v pacman >/dev/null; then printf PACMAN; else exit 2; fi";}
     static Kind kind(byte[] value)throws IOException{try{return Kind.valueOf(new String(value,StandardCharsets.UTF_8).trim());}catch(IllegalArgumentException error){throw new IOException("PACKAGE_MANAGER_NOT_FOUND");}}
     static String query(Kind kind,int tab){
@@ -20,7 +21,7 @@ final class EnvironmentPackages {
             case APK:return "LC_ALL=C apk --no-network list "+new String[]{"--installed","","--upgradable"}[tab];
             case DNF:return "LC_ALL=C dnf --quiet --cacheonly repoquery "+new String[]{"--installed","--available --latest-limit=1","--upgrades"}[tab]+" --queryformat '%{name}\t%{evr}\\n'";
             case ZYPPER:return "LC_ALL=C zypper --xmlout --no-refresh "+(tab==0?"--disable-repositories ":"")+(tab==2?"list-updates --type package":"search --details --type package"+(tab==0?" --installed-only":""));
-            case XBPS:return "LC_ALL=C "+new String[]{"xbps-query -l","xbps-query -Rs ''","xbps-install -un"}[tab];
+            case XBPS:return xbps("LC_ALL=C "+new String[]{"xbps-query -l","xbps-query -Rs ''","xbps-install -un"}[tab]);
             case PACMAN:return "LC_ALL=C pacman "+new String[]{"-Q","-Sl","-Qu"}[tab];
             default:throw new IllegalArgumentException();
         }
@@ -62,7 +63,7 @@ final class EnvironmentPackages {
             case APK:return "LC_ALL=C apk --no-network info --description -- "+name;
             case DNF:return "LC_ALL=C dnf --cacheonly info -- "+name;
             case ZYPPER:return "LC_ALL=C zypper --xmlout --no-refresh info --type package -- "+name;
-            case XBPS:return "LC_ALL=C xbps-query "+(installed?"":"-R ")+"-p short_desc -- "+name;
+            case XBPS:return xbps("LC_ALL=C xbps-query "+(installed?"":"-R ")+"-p short_desc -- "+name);
             case PACMAN:return "LC_ALL=C pacman "+(installed?"-Qi":"-Si")+" -- "+name;
             default:throw new IllegalArgumentException();
         }
@@ -75,13 +76,13 @@ final class EnvironmentPackages {
     }
     static String operation(Kind kind,String action,String name){
         if(kind==Kind.APT)return PackageCatalog.operation(action,name);
-        if(action.equals("refresh"))switch(kind){case APK:return "apk update";case DNF:return "dnf makecache";case ZYPPER:return "zypper refresh";case XBPS:return "xbps-install -S";case PACMAN:return "pacman -Syu";default:throw new IllegalArgumentException();}
+        if(action.equals("refresh"))switch(kind){case APK:return "apk update";case DNF:return "dnf makecache";case ZYPPER:return "zypper refresh";case XBPS:return xbps("xbps-install -S");case PACMAN:return "pacman -Syu";default:throw new IllegalArgumentException();}
         if(!validName(name))throw new IllegalArgumentException("INVALID_PACKAGE_NAME");String pkg=SessionShell.quote(name);boolean install=action.equals("install"),upgrade=action.equals("upgrade"),remove=action.equals("remove");if(!install&&!upgrade&&!remove)throw new IllegalArgumentException();
         switch(kind){
             case APK:return "apk --interactive "+(remove?"del":upgrade?"upgrade":"add")+" -- "+pkg;
             case DNF:return "dnf "+(remove?"remove":upgrade?"upgrade":"install")+" -- "+pkg;
             case ZYPPER:return "zypper "+(remove?"remove":upgrade?"update":"install")+" -- "+pkg;
-            case XBPS:return (remove?"xbps-remove":upgrade?"xbps-install -u":"xbps-install")+" -- "+pkg;
+            case XBPS:return xbps((remove?"xbps-remove":upgrade?"xbps-install -u":"xbps-install")+" -- "+pkg);
             case PACMAN:return "pacman "+(remove?"-R":"-Syu")+" -- "+pkg;
             default:throw new IllegalArgumentException();
         }

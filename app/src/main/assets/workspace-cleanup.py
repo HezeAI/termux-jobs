@@ -7,6 +7,7 @@ import re
 import stat
 import time
 import uuid
+from itertools import chain
 from contextlib import contextmanager, ExitStack
 
 MAX_ENTRIES = 60000
@@ -64,8 +65,9 @@ def package_file(name, flavor, parts):
     return False
 
 
-def snapshot(root, accept, b, strict=False, top=None, links=False):
-    files, dirs, total = [], [], 0
+def snapshot(root, accept, b, strict=False, top=None, links=False, stores=None):
+    files, dirs = stores if stores is not None else ([], [])
+    total = 0
     count = 0
     def walk(fd, parts):
         nonlocal total, count
@@ -74,7 +76,7 @@ def snapshot(root, accept, b, strict=False, top=None, links=False):
             for entry in entries:
                 if not parts and top is not None and entry.name not in top: continue
                 count += 1
-                if count > MAX_ENTRIES: fail(b, 'CLEANUP_TOO_MANY_FILES')
+                if stores is None and count > MAX_ENTRIES: fail(b, 'CLEANUP_TOO_MANY_FILES')
                 st = entry.stat(follow_symlinks=False)
                 child = parts + [entry.name]
                 if stat.S_ISDIR(st.st_mode):
@@ -95,6 +97,77 @@ def snapshot(root, accept, b, strict=False, top=None, links=False):
     try: walk(fd, [])
     finally: os.close(fd)
     return dict(root=str(root), files=files, dirs=dirs, bytes=total)
+
+
+class EntryWriter:
+    def __init__(self, parent, name):
+        self.name, self.count = name, 0
+        self.stream = os.fdopen(os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600, dir_fd=parent), 'wb')
+    def __enter__(self): return self
+    def __exit__(self, *args): self.stream.close()
+    def append(self, entry):
+        self.stream.write(json.dumps(entry, separators=(',', ':')).encode()+b'\n')
+        self.count += 1
+    def __len__(self): return self.count
+    def metadata(self):
+        self.stream.flush()
+        os.fsync(self.stream.fileno())
+        return dict(name=self.name, count=self.count, identity=identity(os.fstat(self.stream.fileno())))
+
+
+class DiskEntries:
+    def __init__(self, fd, count, b): self.fd, self.count, self.b = fd, count, b
+    def __len__(self): return self.count
+    def decode(self, raw):
+        try:
+            row=json.loads(raw)
+            if not isinstance(row,dict) or not isinstance(row.get('parts'),list) or not isinstance(row.get('identity'),list): raise ValueError()
+            return row
+        except (ValueError, UnicodeError): fail(self.b,'CLEANUP_PLAN_INVALID')
+    def __iter__(self):
+        # The descriptor stays open across both passes; never reopen by path.
+        offset, pending, count = 0, b'', 0
+        while True:
+            data=os.pread(self.fd,65536,offset)
+            if not data: break
+            offset+=len(data);pending+=data
+            lines=pending.split(b'\n');pending=lines.pop()
+            for line in lines:
+                count+=1
+                yield self.decode(line)
+            if len(pending)>1024*1024: fail(self.b,'CLEANUP_PLAN_INVALID')
+        if pending or count!=self.count: fail(self.b,'CLEANUP_PLAN_INVALID')
+    def __reversed__(self):
+        offset=os.fstat(self.fd).st_size;pending=b'';count=0
+        while offset:
+            size=min(65536,offset);offset-=size
+            pending=os.pread(self.fd,size,offset)+pending
+            lines=pending.split(b'\n');pending=lines.pop(0)
+            for line in reversed(lines):
+                if not line: continue  # Last line ends with a newline.
+                count+=1
+                yield self.decode(line)
+            if len(pending)>1024*1024: fail(self.b,'CLEANUP_PLAN_INVALID')
+        if pending:
+            count+=1
+            yield self.decode(pending)
+        if count!=self.count: fail(self.b,'CLEANUP_PLAN_INVALID')
+
+
+@contextmanager
+def open_entries(request, b, spool, kind):
+    meta=spool.get(kind,{})
+    name=meta.get('name','')
+    if not isinstance(name,str) or not re.fullmatch(r'[a-f0-9]{32}\.'+kind,name) or not isinstance(meta.get('count'),int) or meta['count']<0:
+        fail(b,'CLEANUP_PLAN_INVALID')
+    parent=private_fd(request,b)
+    try: fd=os.open(name,os.O_RDONLY|os.O_NOFOLLOW,dir_fd=parent)
+    finally: os.close(parent)
+    try:
+        st=os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode) or identity(st)!=meta.get('identity'): fail(b,'CLEANUP_CHANGED_RESCAN')
+        yield DiskEntries(fd,meta['count'],b)
+    finally: os.close(fd)
 
 
 def scope_for_path(path, request):
@@ -146,7 +219,7 @@ def write_plan(request, b, value):
         with os.fdopen(file, 'wb') as stream: stream.write(raw)
         # Only our expired scan plans; never backup jobs, archives or user files.
         for name in os.listdir(fd):
-            if not re.fullmatch(r'[a-f0-9]{32}\.json', name): continue
+            if not re.fullmatch(r'[a-f0-9]{32}\.(?:json|files|dirs)', name): continue
             st = os.stat(name, dir_fd=fd, follow_symlinks=False)
             if stat.S_ISREG(st.st_mode) and time.time()-st.st_mtime > 86400:
                 os.unlink(name, dir_fd=fd)
@@ -279,6 +352,15 @@ def stat_entry(rootfd, entry):
 
 
 def delete_group(group, request, b, totals):
+    with ExitStack() as stack:
+        if 'spool' in group:
+            group = dict(group)
+            for kind in ('files', 'dirs'):
+                group[kind] = stack.enter_context(open_entries(request, b, group['spool'], kind))
+        return delete_loaded_group(group, request, b, totals)
+
+
+def delete_loaded_group(group, request, b, totals):
     root=safe_dir(group['root'])
     if group['kind']=='cache':
         allowed={(alias,str(path)) for alias,path,_ in cache_scopes(request)}
@@ -298,7 +380,7 @@ def delete_group(group, request, b, totals):
     fd=open_dir(root)
     try:
         # All selected files and directories must still match before the first unlink.
-        for entry in group['dirs']+group['files']:
+        for entry in chain(group['dirs'], group['files']):
             actual=identity(stat_entry(fd,entry));expected=entry['identity']
             if group['kind']=='cache' and entry in group['dirs']:
                 actual,expected=actual[:2],expected[:2]
@@ -346,7 +428,7 @@ def execute(request,b):
     for k in selected:
         g=groups[k]
         if g['kind']!='environment' and g['scope'].split('/')[0] in env_aliases: fail(b,'CLEANUP_OVERLAPPING_SELECTION')
-    totals['totalFiles']=sum(len(groups[k]['files']) for k in selected)
+    totals['totalFiles']=sum(groups[k].get('spool', {}).get('files', {}).get('count', len(groups[k]['files'])) for k in selected)
     for key in selected:
         group=groups[key]
         try:
@@ -361,7 +443,15 @@ def execute(request,b):
             if isinstance(error,b.BackupError) and str(error)=='CANCELLED': raise
             errors.append(dict(id=key,code=str(error) if isinstance(error,b.BackupError) else 'CLEANUP_CHANGED_RESCAN'))
     fd=private_fd(request,b)
-    try: os.unlink(request['plan']+'.json',dir_fd=fd)
+    try:
+        os.unlink(request['plan']+'.json',dir_fd=fd)
+        for group in groups.values():
+            if 'spool' in group:
+                for kind in ('files', 'dirs'):
+                    name = group['spool'][kind]['name']
+                    if re.fullmatch(r'[a-f0-9]{32}\.(?:files|dirs)', name):
+                        try: os.unlink(name, dir_fd=fd)
+                        except FileNotFoundError: pass
     finally: os.close(fd)
     return dict(**totals,removed=removed,removedEnvironments=removed_envs,errors=errors)
 
@@ -474,11 +564,28 @@ def prepare_home(request,b):
         if not isinstance(e,dict) or not valid_name(e.get('name')) or e['name'] in names: fail(b,'CLEANUP_PLAN_INVALID')
         if identity((root/e['name']).lstat())!=e.get('identity'): fail(b,'CLEANUP_CHANGED_RESCAN')
         names.append(e['name'])
-    snap=snapshot(root,lambda n,p:True,b,strict=True,top=names,links=True)
-    snap.update(id=uuid.uuid4().hex,kind='app-history' if scope=='app-history' else 'home-data',name=', '.join(names),scope='' if scope=='app-history' else scope,dataScope=scope,removeRoot=False,top=names)
-    plan=dict(created=time.time(),prefix=str(Path(request['prefix']).resolve(strict=True)),filesRoot=str(Path(request['files']).resolve(strict=True)),groups=[snap])
-    token=write_plan(request,b,plan)
-    return dict(plan=token,groups=[dict(busyScopes=['history:'+n for n in names] if scope=='app-history' else [],**{k:snap[k] for k in ('id','kind','name','scope','bytes')}|dict(count=len(snap['files']),path=snap['root']))])
+    # Stream the full snapshot to private files: HOME trees may contain millions
+    # of entries. The small JSON plan retains only identities and counts.
+    token = uuid.uuid4().hex
+    fd = private_fd(request, b)
+    saved = False
+    try:
+        with ExitStack() as stack:
+            stores = [stack.enter_context(EntryWriter(fd, token+'.'+kind)) for kind in ('files', 'dirs')]
+            snap=snapshot(root,lambda n,p:True,b,strict=True,top=names,links=True,stores=stores)
+            spool = {kind: store.metadata() for kind,store in zip(('files','dirs'),stores)}
+            count = len(stores[0])
+            snap.update(files=[], dirs=[], spool=spool, id=uuid.uuid4().hex,kind='app-history' if scope=='app-history' else 'home-data',name=', '.join(names),scope='' if scope=='app-history' else scope,dataScope=scope,removeRoot=False,top=names)
+            plan=dict(created=time.time(),prefix=str(Path(request['prefix']).resolve(strict=True)),filesRoot=str(Path(request['files']).resolve(strict=True)),groups=[snap])
+            plan_token=write_plan(request,b,plan)
+            saved = True
+        return dict(plan=plan_token,groups=[dict(busyScopes=['history:'+n for n in names] if scope=='app-history' else [],**{k:snap[k] for k in ('id','kind','name','scope','bytes')}|dict(count=count,path=snap['root']))])
+    finally:
+        if not saved:
+            for kind in ('files','dirs'):
+                try: os.unlink(token+'.'+kind, dir_fd=fd)
+                except FileNotFoundError: pass
+        os.close(fd)
 
 
 def run(request,b):

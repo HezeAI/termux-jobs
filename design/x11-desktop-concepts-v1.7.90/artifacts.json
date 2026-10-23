@@ -1,0 +1,26 @@
+[
+  {
+    "variant": "classic",
+    "workspace": "/root/termux-fork/design/x11-desktop-concepts-v1.7.90/Termux-Jobs-X11-classic.png",
+    "phone": "/sdcard/Download/Termux-Jobs-X11-classic.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "98693667b2328ad3d08b4de126f143b3ea842d90682119ebfcaa4a5299f02bec"
+  },
+  {
+    "variant": "touch",
+    "workspace": "/root/termux-fork/design/x11-desktop-concepts-v1.7.90/Termux-Jobs-X11-touch.png",
+    "phone": "/sdcard/Download/Termux-Jobs-X11-touch.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "1d63368c10d5f85219ae3a1bb8a55b55d9e72c16699e243ec4eb391bc2baa0b8"
+  },
+  {
+    "variant": "minimal",
+    "workspace": "/root/termux-fork/design/x11-desktop-concepts-v1.7.90/Termux-Jobs-X11-minimal.png",
+    "phone": "/sdcard/Download/Termux-Jobs-X11-minimal.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "d5b4eca1b7c6e6ea3e91d919b61554a0dfd0be8b41ec4ace2fe5d5334a2f6edf"
+  }
+]
