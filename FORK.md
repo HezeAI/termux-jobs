@@ -1,3 +1,14 @@
+# v2.0.1 — Fix Wrapper
+
+Current maintenance release: versionName2.0.1/code1325, Android8+/ARM64,
+unchanged com.termux/signature/schema8. Fixes GPU window overlap, backup
+preset/history identity and renderer readiness/repair. No data reset.
+[Release notes](docs/fork/RELEASE-v2.0.1.md) ·
+[Validation](docs/fork/VALIDATION-v2.0.1.md).
+Build tools, pinned native inputs and requirements are unchanged from v2.0.
+
+Historical build/release records follow.
+
 # v2.0.0 — release build
 
 Current release: **Termux-job's X11 AVAILABLE**, versionName2.0.0/code1320,

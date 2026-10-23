@@ -14,6 +14,14 @@ Termux-only. VirGL POSIX helper selects swrast-loader plus virpipe, disables
 Kopper and clears conflicting paths; Turnip/wrapper clear VirGL flags on entry.
 Alpine receives its private musl client; other guest Mesa ABIs remain separate.
 
+In v2.0.1, desktop checking reports base and renderer readiness separately.
+Only matching authoritative Turnip/VirGL success can skip renderer preparation;
+launch retains independent validation. Non-composited GPU targets disable only
+native GPU Present-copy offload to retain X window clipping. Native binaries,
+compositor choices, selected GPU drivers and process ownership are unchanged.
+Backup import retains fresh preset IDs/history paths and verifies serialized
+preset content, including numerically equivalent JSON integer types.
+
 Program transactions and catalog/resume state are target-scoped. Base installation
 requests an explicit full runtime set; optional application fixes attach to the
 application. Checks reject absent required executables. Agent rootfs routing is

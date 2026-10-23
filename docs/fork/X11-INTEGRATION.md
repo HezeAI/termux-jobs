@@ -17,6 +17,12 @@ These reports do not establish every renderer/program/clean-install combination
 on both phones. Full final Ubuntu GPU INFO needs a device recheck; Mali/Dimensity
 and long-duration stability remain unconfirmed. See [validation](VALIDATION-v2.0.0.md).
 
+v2.0.1 separates selected-renderer validation from desktop component readiness.
+A missing optional driver is repaired after consent; it is not a request to
+reinstall the whole desktop. Non-composited GPU presentation uses the native
+clipped-copy fallback; see [graphics](X11-GPU.md). Native code and service/process
+ownership are unchanged.
+
 Older version-specific sections below document the development history.
 
 ## Частная v1.7.86: корень Arch / цикл Thunar

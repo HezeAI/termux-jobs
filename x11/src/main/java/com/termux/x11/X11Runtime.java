@@ -60,5 +60,12 @@ public final class X11Runtime {
     private static void field(DataOutputStream out,byte[] bytes)throws IOException{out.writeShort(bytes.length);out.write(bytes);}
     private static void privateDirectory(File dir)throws Exception{if(Files.isSymbolicLink(dir.toPath()))throw new IOException("Runtime directory is a link");if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create X11 runtime");Os.chmod(dir.getPath(),0700);}
     private static void removeStage(File f)throws IOException{if(f.isDirectory()&&!Files.isSymbolicLink(f.toPath())){File[] children=f.listFiles();if(children!=null)for(File child:children)removeStage(child);}if(!f.delete())throw new IOException("Cannot remove temporary keyboard data");}
-    String[] arguments(){return new String[]{":"+environment.display,"-tag","jobs-internal-"+environment.target,"-nolisten","tcp","-auth",authority.getPath(),"-noreset","-retro"};}
+    String[] arguments(){return arguments("cpu");}
+    String[] arguments(String renderer){
+        java.util.List<String> args=new java.util.ArrayList<>(java.util.Arrays.asList(":"+environment.display,"-tag","jobs-internal-"+environment.target,"-nolisten","tcp","-auth",authority.getPath(),"-noreset","-retro"));
+        // Pinned native GPU Present copies bypass the window clip when no compositor
+        // redirects windows. Retain GPU rendering, but use X's correctly clipped copy.
+        if(renderer.equals("wrapper")||renderer.equals("virgl")||renderer.equals("turnip")&&!environment.target.equals("termux"))args.add("-disable-gpu-present");
+        return args.toArray(new String[0]);
+    }
 }

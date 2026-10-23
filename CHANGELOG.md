@@ -1,3 +1,13 @@
+## v2.0.1 — Fix Wrapper
+
+Fix GPU window overlap with clipped presentation, preserve restored preset/history
+identities and verify saved settings. Validate renderer components before skipping
+setup and offer consented Turnip cache repair. Improve isolated test fixtures.
+Android8+/ARM64; unchanged package/signer/schema8, code1325, no data reset.
+Repeated imports create independent preset copies. GPU frame copying can cost
+more CPU. [Release notes](docs/fork/RELEASE-v2.0.1.md),
+[validation](docs/fork/VALIDATION-v2.0.1.md).
+
 ## v2.0.0 — Termux-job's X11 AVAILABLE
 
 A major release since v1.7.5: integrated XFCE for eight systems; CPU,

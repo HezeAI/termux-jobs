@@ -55,7 +55,9 @@ final class WorkspaceBackupImport {
         if(choice.replace){if(choice.commands)store.commands.clear();if(choice.notes)store.notes.clear();if(choice.presets)store.sessions.removeIf(s->s.saved&&s.handle.isEmpty()&&!WorkspaceStore.isBase(s));}
         for(WorkspaceStore.Command c:data.commands){WorkspaceStore.Command existing=store.commands.stream().filter(x->x.name.equals(c.name)&&x.command.equals(c.command)&&x.directory.equals(c.directory)).findFirst().orElse(null);if(existing==null)store.commands.add(c);else c.id=existing.id;}
         for(WorkspaceStore.Note n:data.notes){WorkspaceStore.Note existing=store.notes.stream().filter(x->x.name.equals(n.name)&&x.text.equals(n.text)).findFirst().orElse(null);if(existing==null)store.notes.add(n);else n.id=existing.id;}
-        for(WorkspaceStore.Session s:data.presets){WorkspaceStore.Session existing=store.sessions.stream().filter(x->x.saved&&x.name.equals(s.name)&&x.environment.equals(s.environment)&&x.prootAlias.equals(s.prootAlias)&&x.prootIsolated==s.prootIsolated&&x.startup.equals(s.startup)&&x.directory.equals(s.directory)).findFirst().orElse(null);if(existing==null)store.sessions.add(s);else s.id=existing.id;}
+        // Each restored preset retains its freshly allocated ID and history directory.
+        // Names are not identities: even otherwise identical copies can own different histories.
+        for(WorkspaceStore.Session s:data.presets)store.sessions.add(s);
         store.save();
     }
     static boolean persisted(JSONObject saved,Prepared data){
@@ -63,8 +65,17 @@ final class WorkspaceBackupImport {
             Set<String> ids=new HashSet<>();JSONArray array=saved.optJSONArray(kind);if(array==null)return false;for(int i=0;i<array.length();i++)ids.add(array.optJSONObject(i).optString("id"));
             if(kind.equals("commands"))for(WorkspaceStore.Command c:data.commands){if(!ids.contains(c.id))return false;}
             if(kind.equals("notes"))for(WorkspaceStore.Note n:data.notes){if(!ids.contains(n.id))return false;}
-            if(kind.equals("sessions"))for(WorkspaceStore.Session s:data.presets){if(!ids.contains(s.id))return false;}
+            if(kind.equals("sessions"))for(WorkspaceStore.Session s:data.presets){
+                JSONObject actual=null;for(int i=0;i<array.length();i++){JSONObject item=array.optJSONObject(i);if(item!=null&&s.id.equals(item.optString("id"))){actual=item;break;}}
+                try{if(actual==null||!sameJson(actual,WorkspaceStore.sessionJson(s)))return false;}catch(JSONException error){return false;}
+            }
         }return true;
+    }
+    private static boolean sameJson(Object left,Object right)throws JSONException{
+        if(left instanceof JSONObject&&right instanceof JSONObject){JSONObject a=(JSONObject)left,b=(JSONObject)right;if(a.length()!=b.length())return false;Iterator<String> keys=a.keys();while(keys.hasNext()){String key=keys.next();if(!b.has(key)||!sameJson(a.get(key),b.get(key)))return false;}return true;}
+        if(left instanceof JSONArray&&right instanceof JSONArray){JSONArray a=(JSONArray)left,b=(JSONArray)right;if(a.length()!=b.length())return false;for(int i=0;i<a.length();i++)if(!sameJson(a.get(i),b.get(i)))return false;return true;}
+        if(left instanceof Number&&right instanceof Number)return new java.math.BigDecimal(left.toString()).compareTo(new java.math.BigDecimal(right.toString()))==0;
+        return java.util.Objects.equals(left,right);
     }
     static JSONObject settings(Activity a)throws JSONException{
         JSONObject out=new JSONObject();for(String name:new String[]{"workspace-language","workspace-input","com.termux_preferences"}){JSONObject values=new JSONObject();for(Map.Entry<String,?> entry:a.getSharedPreferences(name,0).getAll().entrySet()){Object v=entry.getValue();if(v instanceof String||v instanceof Boolean||v instanceof Integer||v instanceof Long||v instanceof Float)values.put(entry.getKey(),v);}out.put(name,values);}return out;

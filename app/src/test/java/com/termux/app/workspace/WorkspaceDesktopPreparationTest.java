@@ -76,9 +76,9 @@ public class WorkspaceDesktopPreparationTest {
   visible[0]=false;set("remote",new Binder());set("preparationRenderer","turnip");set("launchCheckAcknowledged",true);accept(state("installed"));assertTrue((Boolean)get("rendererReadyForPreparation"));assertFalse((Boolean)get("preparationGpu"));assertFalse((Boolean)get("preparationLaunching"));assertEquals("cpu",WorkspaceDesktopGpu.mode(a,"debian"));
  }
 
- @Test public void cachedGpuOnInstalledDesktopDoesNotLaunchOrDownload()throws Exception{
+ @Test public void authoritativelyVerifiedGpuDoesNotLaunchOrDownload()throws Exception{
   java.io.File root=new java.io.File(new java.io.File(a.getFilesDir(),"workspace-x11-gpu"),WorkspaceDesktopGpu.directory("debian"));assertTrue(root.mkdirs()||root.isDirectory());java.io.File marker=new java.io.File(root,"ready.json");java.nio.file.Files.write(marker.toPath(),"{}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-  try{set("remote",new Binder());set("preparationRenderer","turnip");set("launchCheckAcknowledged",true);set("pending","unchanged");accept(state("installed"));assertEquals("turnip",WorkspaceDesktopGpu.mode(a,"debian"));assertNull(get("preparationProfile"));assertEquals("unchanged",get("pending"));}finally{marker.delete();}
+  try{set("remote",new Binder());set("preparationRenderer","turnip");set("launchCheckAcknowledged",true);set("pending","unchanged");Bundle checked=state("installed");checked.putString("renderer","turnip");checked.putBoolean("rendererComponents",true);accept(checked);assertEquals("turnip",WorkspaceDesktopGpu.mode(a,"debian"));assertNull(get("preparationProfile"));assertEquals("unchanged",get("pending"));}finally{marker.delete();}
  }
  @Test public void rendererControlsRemainBusyDuringOwnPreparationButBackendCanBeIdle()throws Exception{
   set("remote",new Binder());set("state",state("installed"));set("preparationGpu",true);Method uiBusy=WorkspaceDesktop.class.getDeclaredMethod("rendererBusy"),backend=WorkspaceDesktop.class.getDeclaredMethod("rendererBackendBusy");uiBusy.setAccessible(true);backend.setAccessible(true);assertTrue((Boolean)uiBusy.invoke(ui));assertFalse((Boolean)backend.invoke(ui));

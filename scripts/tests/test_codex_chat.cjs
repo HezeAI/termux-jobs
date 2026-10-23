@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{spawn}=require('node:child_process');
-const root=path.resolve(__dirname,'../..'),base=path.join(root,'.verification/codex-chat-v1.5.32'),dir=fs.mkdtempSync(path.join(base,'fixture-'));for(const [from,to]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],['agent-receipts.cjs','agent-receipts.cjs']])fs.copyFileSync(path.join(root,'app/src/main/assets',from),path.join(dir,to));
+const root=path.resolve(__dirname,'../..'),base=require('./fixture-paths.cjs').fixture('cx'),dir=base;for(const [from,to]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],['agent-receipts.cjs','agent-receipts.cjs']])fs.copyFileSync(path.join(root,'app/src/main/assets',from),path.join(dir,to));
 const {CodexChat,terminateTree,skillRead}=require(path.join(dir,'codex-chat.cjs'));const calls=[],replies=[];const response={cwd:dir,approvalPolicy:'on-request',sandbox:{type:'workspaceWrite'},thread:{id:'root-chat'},model:'fixture-model',reasoningEffort:'medium'};
 let release;
 const rpc={async initialize(){},send(v){replies.push(v);},close(){},async call(method,params){calls.push({method,params});

@@ -1,4 +1,19 @@
-# Current validation — v2.0.0
+# Current validation — v2.0.1
+
+[Artifact, tests and limits](VALIDATION-v2.0.1.md). Full Java869 app+154 emulator
+passed; final JSON correction covered by35 backup/store tests. Full Python546
+with one skip, then303 final X11 tests passed; all21 Node suites passed.
+ARM64 release APK, ZIP/runtime/package/version/signature/hash checks passed.
+Android8+/ARM64, code1325, schema8, same package/signer, no data reset.
+APK45794876bytes, SHA256
+`a0a2e86abfb3da4f91e24d3e3c824ecc6f0ca537d2f71fa04fb8f86361ebb7ca`.
+GPU overlap/performance remains a device check; the report distinguishes native
+fragment tests from Android GUI tests and records lint-toolchain limitations.
+Publication/download verification will be recorded after the release upload.
+
+Historical validation records follow.
+
+# Historical validation — v2.0.0
 
 [Final artifact, tests and limits](VALIDATION-v2.0.0.md).
 862 app +154 emulator JVM tests pass. Full Python discovery544 with one skip;

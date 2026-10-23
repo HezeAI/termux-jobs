@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {ReceiptStore}=require('../../app/src/main/assets/agent-receipts.cjs');
 const {OpenCodePermissions}=require('../../app/src/main/assets/opencode-permissions.cjs');
-const root=fs.mkdtempSync(path.resolve('.verification/receipts-test-'));
+const root=require('./fixture-paths.cjs').fixture('recv');
 (async()=>{
  const file=path.join(root,'private','chat.json'),store=new ReceiptStore(file,'G');
  let r=store.add('call1','proceed_once','Shell','printf synthetic');assert.match(store.label(r,true),/Разрешено разово/);assert.equal(fs.statSync(file).mode&0o777,0o600);

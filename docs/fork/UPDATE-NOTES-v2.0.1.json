@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "Исправлен путь вывода GPU-кадров без композитора: окна не должны закрашиваться тестом GPU. Видеокарта остаётся выбранной; скорость требует проверки на устройстве.",
+    "Пресеты из бэкапа восстанавливаются отдельными копиями с собственной историей. Проверяется сохранённое содержимое, а не только ID.",
+    "Перед запуском проверяются реальные компоненты выбранного рендера. Повреждённая управляемая копия Turnip восстанавливается после подтверждения."
+  ],
+  "en": [
+    "Use clipped native presentation for non-composited GPU desktops to prevent GPU content overwriting overlapping windows. GPU rendering remains selected; device performance needs verification.",
+    "Restore presets as independent copies with their own histories. Verify saved settings as well as preset IDs.",
+    "Validate actual selected-renderer components before skipping setup. Repair damaged application-owned Turnip caches after consent."
+  ],
+  "compatibility": {
+    "ru": [
+      "Android8+/ARM64, прежние com.termux/подпись, schema8. Code1325 выше Recovery1324; сброс данных и автоматическая миграция окружений не требуются.",
+      "Повторный импорт создаёт новые копии пресетов, даже при совпадении названий. Прежние истории не перезаписываются. Завершите важную работу перед обновлением: Android может остановить процессы; изменения X11 применятся при следующем запуске стола."
+    ],
+    "en": [
+      "Android8+/ARM64, unchanged com.termux/signer and schema8. Code1325 exceeds recovery1324; no data reset or automatic environment migration.",
+      "Repeated imports create new preset copies even when names match. Existing histories are not overwritten. Finish important work before updating: Android may terminate processes; X11 changes apply on the next desktop launch."
+    ]
+  }
+}

@@ -9,6 +9,11 @@ Search and install programs. Programs use that selected system's package manager
 Android may terminate background processes; Continue can reuse package-manager
 caches but does not guarantee byte-range resumption of every download.
 
+v2.0.1 backup restoration creates independent preset copies, including when names
+match existing presets; repeating an import creates further copies. Each imported
+history stays with its own preset. Existing histories are not overwritten.
+Restart an X11 desktop after updating to apply presentation and renderer checks.
+
 Keyboard: allow automatic input where supported, or use the top interactive-input
 button manually. Phone storage and Downloads desktop shortcuts require Android
 storage access. Permission refusal does not grant hidden storage access.

@@ -44,7 +44,7 @@ class CleanupTests(unittest.TestCase):
         overview=c.inventory(dict(self.request,overview=True),b)['overview']
         home=next(e for e in overview if e['kind']=='home' and e['scope']=='termux')
         link=next(e for e in home['entries'] if e['name']=='storage')
-        self.assertTrue(link['link']);self.assertEqual(1,link['count']);self.assertLess(link['bytes'],100)
+        self.assertTrue(link['link']);self.assertEqual(1,link['count']);self.assertEqual(len(os.fsencode(str(outside.parent))),link['bytes'])
         prefix=next(e for e in overview if e['kind']=='system' and e['scope']=='termux')
         self.assertEqual(len('runtime'),prefix['bytes'])
         self.assertTrue(any(e['kind']=='home' and e['scope']=='debian' for e in overview))

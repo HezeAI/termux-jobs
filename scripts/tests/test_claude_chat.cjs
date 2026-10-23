@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const {ClaudeChat,chain,readHistory}=require('../../app/src/main/assets/claude-chat.cjs');
-const root=fs.mkdtempSync(path.resolve('.verification/claude-chat-v1.5.21/unit-'));process.env.CLAUDE_CONFIG_DIR=path.join(root,'config');
+const root=require('./fixture-paths.cjs').fixture('clunit');process.env.CLAUDE_CONFIG_DIR=path.join(root,'config');
 const session='11111111-1111-4111-8111-111111111111';
 const b=new ClaudeChat({socket:path.join(root,session+'.sock'),binary:'/not-used',model:'sonnet',mode:'manual',chat:'new',thread:session,language:'en'});const writes=[];b.write=q=>writes.push(q);b.ready=true;b.auth=true;b.workerKind='sdk';
 (async()=>{

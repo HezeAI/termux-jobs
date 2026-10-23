@@ -1,7 +1,7 @@
 'use strict';
 // Read-only metadata RPC against our own private fake server; no real Codex/auth/history.
 const http=require('node:http'),crypto=require('node:crypto'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
-const root=path.resolve(__dirname,'../..'),directory=path.join(root,'.verification/rate-limit-v1.5.6');fs.mkdirSync(directory,{recursive:true});
+const root=path.resolve(__dirname,'../..'),directory=require('./fixture-paths.cjs').fixture('cxstat');fs.mkdirSync(directory,{recursive:true});
 const endpoint=path.join(directory,'status-'+process.pid+'.sock'),bridge=path.join(root,'app/src/main/assets/codex-control.js');
 const rollout=path.join(directory,'materialized-'+process.pid+'.jsonl');fs.writeFileSync(rollout,'');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));let phase=0,peer;

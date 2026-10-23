@@ -1,3 +1,14 @@
+## v2.0.1: restored preset and history identity
+
+Restored presets always receive independent IDs. Matching names/settings do not
+merge them with existing presets, so per-preset histories remain attached to the
+restored copy. Repeating an import intentionally creates further preset copies;
+review or delete unwanted copies through the normal UI. Command/note merge rules
+and explicit replacement of inactive presets are unchanged. Saved preset content
+is checked in addition to ID presence before reporting successful restoration.
+Existing histories are not overwritten. Previously orphaned histories are not
+automatically reassigned or deleted: their correct owner cannot be inferred.
+
 # v1.7.5: удаление перенесено в очистку хранилища
 
 Шестерёнка → «Очистить хранилище» объединяет удаление исходных и восстановленных

@@ -6,7 +6,8 @@ export TERMUX_FORK_SOURCE_ROOT="$FORK_ROOT"
 export GRADLE_USER_HOME="$FORK_ROOT/.tools/gradle-home"
 export ANDROID_HOME="${FORK_ANDROID_HOME:-$FORK_ROOT/.tools/sdk}"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
-export TMPDIR="$FORK_ROOT/.tools/tmp"
+mkdir -p "$FORK_ROOT/.tools/tmp"
+export TMPDIR="$(realpath "$FORK_ROOT/.tools/tmp")"
 mkdir -p "$GRADLE_USER_HOME" "$TMPDIR" "$FORK_ROOT/.tools/test-home"
 if [[ ! -d "$ANDROID_HOME" ]]; then
     echo "Prepare a local SDK in $FORK_ROOT/.tools/sdk before building." >&2

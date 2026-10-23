@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {OpenCodeChat}=require('../../app/src/main/assets/opencode-chat.cjs');
 const {ReceiptStore}=require('../../app/src/main/assets/agent-receipts.cjs');
-const root=fs.mkdtempSync(path.resolve('.verification/opencode-chat-test-'));
+const root=require('./fixture-paths.cjs').fixture('oc');
 (async()=>{
  const session='ses_synthetic',file=path.join(root,'receipts.json');let posts=0,formState='pending';
  const assistant={id:'msg_assistant',type:'assistant',content:[{type:'reasoning',text:'first thought'},{type:'text',text:'answer'},{type:'tool',id:'tool_one',name:'read',state:{status:'completed',input:{filePath:'/project/skills/example/SKILL.md'},content:[{type:'text',text:'data'}]}}]};

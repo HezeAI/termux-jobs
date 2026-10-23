@@ -24,6 +24,21 @@ class GpuTests(unittest.TestCase):
   gpu.install(self.base,'ubuntu',lambda *args:self.fail('cached package must not download'))
   (self.base/'ubuntu-fixture/usr/lib/driver.so').write_bytes(b'corrupt');self.assertFalse(gpu.ready(self.base,'ubuntu'))
   with self.assertRaisesRegex(ValueError,'CACHE_INCOMPLETE'):gpu.install(self.base,'ubuntu',lambda *args:data)
+ def test_consented_repair_replaces_corrupt_cache_and_keeps_neighbour(self):
+  data=self.archive([('usr/lib/driver.so',b'fake-driver','file')]);self.configure(data)
+  gpu.install(self.base,'ubuntu',lambda *args:data);(self.base/'ubuntu-fixture/usr/lib/driver.so').write_bytes(b'corrupt')
+  other=self.base/'other-target';other.mkdir();(other/'keep').write_bytes(b'keep')
+  gpu.install(self.base,'ubuntu',lambda *args:data,repair=True)
+  self.assertTrue(gpu.ready(self.base,'ubuntu'));self.assertEqual(b'keep',(other/'keep').read_bytes());self.assertFalse(list(self.base.glob('.retired-*')))
+ def test_failed_repair_preserves_previous_cache(self):
+  data=self.archive([('driver',b'old','file')]);self.configure(data);gpu.install(self.base,'ubuntu',lambda *args:data)
+  marker=self.base/'ubuntu-fixture/ready.json';marker.write_text('{}');before=(self.base/'ubuntu-fixture/driver').read_bytes()
+  with self.assertRaisesRegex(ValueError,'CHECKSUM'):gpu.install(self.base,'ubuntu',lambda *args:b'bad',repair=True)
+  self.assertEqual(before,(self.base/'ubuntu-fixture/driver').read_bytes());self.assertEqual('{}',marker.read_text());self.assertFalse(list(self.base.glob('.stage-*')))
+ def test_repair_never_follows_a_cache_link(self):
+  data=self.archive([('driver',b'old','file')]);self.configure(data);outside=self.base/'outside';outside.mkdir();(outside/'keep').write_bytes(b'keep');(self.base/'ubuntu-fixture').symlink_to(outside,target_is_directory=True)
+  with self.assertRaisesRegex(ValueError,'CACHE_IS_A_LINK'):gpu.install(self.base,'ubuntu',lambda *args:data,repair=True)
+  self.assertEqual(b'keep',(outside/'keep').read_bytes())
  def test_bad_checksum_never_publishes(self):
   data=self.archive([('driver',b'x','file')]);self.configure(data)
   with self.assertRaisesRegex(ValueError,'CHECKSUM'):gpu.install(self.base,'ubuntu',lambda *args:b'wrong')

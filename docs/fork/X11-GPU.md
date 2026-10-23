@@ -1,3 +1,24 @@
+## v2.0.1: window overlap and renderer preparation
+
+The pinned native core remains unmodified. Non-composited GPU targets now pass
+`-disable-gpu-present`: Termux Wrapper, all eight VirGL targets and Linux-guest
+Turnip. This bypasses native GPU copy offload that ignores window clipping;
+applications still render on the selected GPU. CPU desktops and composited
+Termux Turnip retain their existing presentation settings. Copying can cost
+more CPU; overlapping windows and real performance require device verification.
+No compositor, Mesa, ICD or ANGLE backend is changed by this mitigation.
+
+Desktop check/installation also reports authoritative renderer readiness,
+separately from desktop readiness. File markers are only preparation hints;
+stale/missing components offer the selected renderer's consented setup instead
+of treating a damaged renderer as ready or reinstalling XFCE. Launch retains its
+own fail-closed check. Consented Turnip repair verifies downloads in a new stage
+before replacing only the selected application cache; system Mesa and other
+rootfs/cache targets remain untouched. Failed download/verification retains the
+previous cache. Symlink cache roots are refused.
+
+Historical development notes follow.
+
 ## Частная v1.7.104: сведения Ubuntu VirGL
 
 После подтверждённого запуска XFCE/glmark2 Ubuntu на ANGLE GL выявлен

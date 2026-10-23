@@ -157,12 +157,8 @@ public final class WorkspaceStore {
     }
     void awaitWrites() throws Exception { writer.submit(() -> {}).get(10, java.util.concurrent.TimeUnit.SECONDS); }
     public void close() { writer.shutdown(); } // Queued atomic writes finish after Activity destruction.
-    JSONObject encode() throws JSONException {
-        JSONObject root = new JSONObject().put("version", 8);
-        JSONArray cs = new JSONArray(), ss = new JSONArray();
-        for (Command c : commands) cs.put(new JSONObject().put("id", c.id).put("name", c.name)
-            .put("command", c.command).put("category", c.category).put("directory", c.directory).put("favorite", c.favorite));
-        for (Session s : sessions) ss.put(new JSONObject().put("id", s.id).put("name", s.name)
+    static JSONObject sessionJson(Session s) throws JSONException {
+        return new JSONObject().put("id", s.id).put("name", s.name)
             .put("directory", s.directory).put("prootAlias",s.prootAlias).put("prootIsolated",s.prootIsolated).put("prootStartup",s.prootAlias.isEmpty()?JSONObject.NULL:new JSONArray(Arrays.asList(s.startup,s.startup2,s.startup3))).put("startup", s.prootAlias.isEmpty()?s.startup:WorkspaceEnvironments.OLD_READER_GUARD).put("startup2", s.prootAlias.isEmpty()?s.startup2:"").put("startup3", s.prootAlias.isEmpty()?s.startup3:"").put("sshAuth", s.sshAuth).put("sshIdentity", s.sshIdentity).put("sshEncryptedPassword", s.sshEncryptedPassword).put("sshHost", s.sshHost).put("sshUser", s.sshUser).put("sshPort", s.sshPort).put("sshKeepOpen", s.sshKeepOpen).put("environment", s.environment).put("handle", s.handle)
             .put("codexConfirmActions",s.codexConfirmActions==null?JSONObject.NULL:s.codexConfirmActions).put("aiProjectOnly",s.aiProjectOnly)
             .put("codexEnvironment", s.codexEnvironment).put("codexAccess", s.codexAccess).put("codexChat", s.codexChat).put("codexThread", s.codexThread).put("codexThreadName", s.codexThreadName).put("codexSocketId", s.codexSocketId).put("codexSourceDirectory",s.codexSourceDirectory).put("codexBindingBlockedRun",s.codexBindingBlockedRun)
@@ -170,7 +166,14 @@ public final class WorkspaceStore {
             .put("claudeEffort",s.claudeEffort).put("claudeAgent",s.claudeAgent).put("claudeModel",s.claudeModel).put("claudeMode",s.claudeMode).put("claudeChat",s.claudeChat).put("claudeThread",s.claudeThread).put("claudeSocketId",s.claudeSocketId)
             .put("keepHistory",s.keepHistory)
             .put("geminiCloudProject",s.geminiCloudProject).put("geminiCloudLocation",s.geminiCloudLocation).put("geminiThinking",s.geminiThinking).put("geminiAuth",s.geminiAuth).put("geminiAgent",s.geminiAgent).put("geminiModel",s.geminiModel).put("geminiMode",s.geminiMode).put("geminiChat",s.geminiChat).put("geminiThread",s.geminiThread).put("geminiSocketId",s.geminiSocketId)
-            .put("agentConnectionCommand",s.agentConnectionCommand).put("restoreReview",s.restoreReview).put("extendedDebug",s.extendedDebug).put("updated", s.updated).put("saved", s.saved));
+            .put("agentConnectionCommand",s.agentConnectionCommand).put("restoreReview",s.restoreReview).put("extendedDebug",s.extendedDebug).put("updated", s.updated).put("saved", s.saved);
+    }
+    JSONObject encode() throws JSONException {
+        JSONObject root = new JSONObject().put("version", 8);
+        JSONArray cs = new JSONArray(), ss = new JSONArray();
+        for (Command c : commands) cs.put(new JSONObject().put("id", c.id).put("name", c.name)
+            .put("command", c.command).put("category", c.category).put("directory", c.directory).put("favorite", c.favorite));
+        for (Session s : sessions) ss.put(sessionJson(s));
         JSONArray ns = new JSONArray();
         for (Note n : notes) ns.put(new JSONObject().put("id", n.id).put("name", n.name)
             .put("text", n.text).put("category", n.category).put("favorite", n.favorite));

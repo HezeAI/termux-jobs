@@ -52,4 +52,28 @@ public class WorkspaceBackupImportTest {
         assertEquals("jobs-abcdef123456",data.presets.get(0).prootAlias);assertEquals("pwd",data.presets.get(0).startup);assertTrue(data.presets.get(0).restoreReview);
         assertEquals("debian",data.presets.get(1).prootAlias);assertEquals("codex",data.presets.get(2).environment);assertEquals("",data.presets.get(2).prootAlias);
     }
+ @Test public void sameNamedAgentPresetsRetainDifferentIdentitiesAndSettings()throws Exception{
+  WorkspaceStore.Session existing=new WorkspaceStore.Session();existing.saved=true;existing.environment="ubuntu";existing.name="Agent";existing.aiAgent="opencode";store.sessions.add(existing);
+  WorkspaceStore.Session imported=existing.copy();imported.id=java.util.UUID.randomUUID().toString();imported.name=existing.name;imported.saved=true;imported.aiAgent="";imported.geminiAgent=true;
+  WorkspaceBackupImport.Prepared data=new WorkspaceBackupImport.Prepared();data.presets.add(imported);
+  WorkspaceBackupImport.apply(activity,store,data,new WorkspaceBackupImport.Choice());store.awaitWrites();
+  assertEquals(2,store.sessions.size());assertEquals("opencode",store.sessions.get(0).aiAgent);assertFalse(store.sessions.get(0).geminiAgent);assertNotEquals(existing.id,imported.id);assertTrue(store.sessions.get(1).geminiAgent);
+  assertTrue(WorkspaceBackupImport.persisted(store.encode(),data));
+ }
+ @Test public void sameNamedRestoredPresetKeepsHistoryAtItsOwnId()throws Exception{
+  WorkspaceStore.Session existing=new WorkspaceStore.Session();existing.saved=true;existing.name="History";store.sessions.add(existing);
+  java.io.File restored=new java.io.File(activity.getFilesDir(),"audit-restored");java.io.File source=new java.io.File(restored,"workspace-sessions/"+existing.id+"/history");assertTrue(source.getParentFile().mkdirs());java.nio.file.Files.write(source.toPath(),"from-backup".getBytes("UTF-8"));
+  JSONObject report=new JSONObject().put("workspace",store.encode()).put("components",new JSONArray().put(new JSONObject().put("kind","app-data"))).put("candidates",new JSONArray());
+  JSONObject restoredPaths=new JSONObject().put("paths",new JSONObject().put("0",restored.getPath()));
+  WorkspaceBackupImport.Choice choice=new WorkspaceBackupImport.Choice();choice.presets=true;choice.history=true;
+  WorkspaceBackupImport.Prepared data=WorkspaceBackupImport.prepare(activity,report,restoredPaths,choice);
+  String newId=data.presets.get(0).id;java.io.File copied=new java.io.File(SessionShell.directory(activity.getFilesDir(),newId),"history");assertTrue(copied.isFile());
+  WorkspaceBackupImport.apply(activity,store,data,choice);store.awaitWrites();
+  assertNotEquals(existing.id,data.presets.get(0).id);assertEquals(newId,data.presets.get(0).id);assertEquals(2,store.sessions.size());assertTrue(copied.isFile());assertFalse(new java.io.File(SessionShell.directory(activity.getFilesDir(),existing.id),"history").exists());assertTrue(WorkspaceBackupImport.persisted(new JSONObject(store.encode().toString()),data));
+ }
+
+ @Test public void persistedRejectsWrongSettingsEvenWhenIdExists()throws Exception{
+  WorkspaceStore.Session s=new WorkspaceStore.Session();s.saved=true;s.environment="codex";s.codexAccess="read";WorkspaceBackupImport.Prepared data=new WorkspaceBackupImport.Prepared();data.presets.add(s);store.sessions.add(s);
+  JSONObject saved=new JSONObject(store.encode().toString());assertTrue(WorkspaceBackupImport.persisted(saved,data));saved.getJSONArray("sessions").getJSONObject(0).put("codexAccess","full");assertFalse(WorkspaceBackupImport.persisted(saved,data));
+ }
 }

@@ -5,10 +5,17 @@
 Команды по-прежнему выполняются в настоящем Termux или выбранном окружении;
 интерфейс помогает организовать работу и не требует писать свою оболочку скриптов.
 
+## v2.0.1 — Fix Wrapper
+
+**[Download v2.0.1](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.1)**.
+Fixes GPU window overlap, backup preset/history restoration and renderer component
+validation/repair. Android8+/ARM64; same package/signature and schema8, code1325.
+No data reset. Repeated backup imports create separate preset copies.
+[Changes](docs/fork/RELEASE-v2.0.1.md) · [Validation](docs/fork/VALIDATION-v2.0.1.md).
+
 ## v2.0 — Termux-job's X11 AVAILABLE
 
-**[Download v2.0.0](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.0)** —
-integrated XFCE desktops, graphics renderers and desktop applications.
+Integrated XFCE desktops, graphics renderers and desktop applications.
 
 - **X11 in the app:** Termux, Ubuntu, Debian, Alpine, Fedora, openSUSE, Void and
   Arch Linux ARM, with separate per-target desktop services and runtime paths.
@@ -27,14 +34,14 @@ integrated XFCE desktops, graphics renderers and desktop applications.
 Coverage differs by device; this is not a claim that every renderer and clean
 installation was tested on both. Mali/Dimensity compatibility is not confirmed.
 
-Android8+/ARM64, unchanged `com.termux` package and signer, versionCode1320.
+Android8+/ARM64, unchanged `com.termux` package and signer, versionCode1325.
 No general reset from v1.7.5; existing agents keep their selected environment
 until explicit migration/change. The old local-AI feature remains removed.
 The Termux:X11 core is integrated; a separate X11 app is not needed.
 Desktop packages and optional drivers are downloaded after consent.
 
-[Release notes and compatibility](docs/fork/RELEASE-v2.0.0.md) ·
-[Validation](docs/fork/VALIDATION-v2.0.0.md) ·
+[Release notes and compatibility](docs/fork/RELEASE-v2.0.1.md) ·
+[Validation](docs/fork/VALIDATION-v2.0.1.md) ·
 [Sources and acknowledgements](docs/fork/THIRD-PARTY.md) ·
 [X11 guide](docs/fork/X11-INTEGRATION.md) · [Graphics](docs/fork/X11-GPU.md).
 
@@ -83,7 +90,7 @@ Desktop packages and optional drivers are downloaded after consent.
 
 ## Установка и обновление
 
-Скачайте **Termux-Jobs-v2.0.0-arm64.apk** из
+Скачайте **Termux-Jobs-v2.0.1-arm64.apk** из
 [GitHub Releases](https://github.com/HezeAI/termux-jobs/releases/latest).
 Требования: **Android8.0+/API26, ARM64**. Пакет **com.termux**.
 Для предыдущих APK Termux Job’s с тем же сертификатом доступно обновление

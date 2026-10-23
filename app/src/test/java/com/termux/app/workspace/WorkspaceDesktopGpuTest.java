@@ -46,4 +46,15 @@ public class WorkspaceDesktopGpuTest {
   WorkspaceDesktopGpu.select(a,"archlinux",()->false,v->{},()->{});AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();assertTrue(d.getListView().getAdapter().isEnabled(1));assertTrue(d.getListView().getAdapter().isEnabled(2));d.dismiss();
  }
 
+
+ @Test public void staleTurnipMarkerCannotBypassAuthoritativePreparation()throws Exception{
+  TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();
+  java.io.File root=new java.io.File(new java.io.File(a.getFilesDir(),"workspace-x11-gpu"),WorkspaceDesktopGpu.directory("termux"));root.mkdirs();java.nio.file.Files.write(new java.io.File(root,"ready.json").toPath(),"{}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+  a.getSharedPreferences("workspace-x11",0).edit().putString("renderer:termux","cpu").commit();
+  WorkspaceDesktopGpu.prepare(a,"termux","turnip",()->false,()->{},null,false);
+  AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();assertTrue(d.isShowing());assertEquals("cpu",WorkspaceDesktopGpu.mode(a,"termux"));d.getButton(-2).performClick();
+ }
+ @Test public void virglWithoutAuthoritativeCheckOffersRepairWithoutLaunchingAProcess(){
+  TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();WorkspaceDesktopVirgl.prepare(a,"debian",()->false,()->{},null,false);AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();assertTrue(d.isShowing());assertNotEquals("virgl",WorkspaceDesktopGpu.mode(a,"debian"));d.getButton(-2).performClick();
+ }
 }

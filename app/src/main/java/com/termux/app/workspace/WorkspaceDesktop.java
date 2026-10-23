@@ -293,7 +293,7 @@ final class WorkspaceDesktop {
             public void finished(boolean success,String report){if(closed||epoch!=rendererEpoch)return;rendererPreparationFailed=!success;rendererProgressText=success?tr("Рендер готов","Renderer ready"):report.contains("GPU_CANCELLED")?tr("Установка рендера отменена","Renderer installation cancelled"):tr("Не удалось подготовить рендер. ","Could not prepare renderer. ")+report;}
         };
         if(choice.equals("wrapper"))wrapper.prepare(rendererUnavailable,rendererUpdated,inline);
-        else WorkspaceDesktopGpu.prepare(activity,target(p),choice,rendererUnavailable,rendererUpdated,inline);
+        else WorkspaceDesktopGpu.prepare(activity,target(p),choice,rendererUnavailable,rendererUpdated,inline,state.getBoolean("rendererComponents",false)&&choice.equals(state.getString("renderer",""))&&target(p).equals(state.getString("target","")));
     }
     private void preparationAction(){
         WorkspaceStore.Session p=preparationProfile;if(p==null)return;

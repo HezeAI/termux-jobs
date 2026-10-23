@@ -93,13 +93,30 @@ if [[ $op == repair-launchers ]];then
     guest "$components"
     echo 'READY:desktop';exit
 fi
+# Authoritative read-only renderer check, separate from desktop readiness.
+# A missing/stale cache must offer renderer repair, not reinstall the desktop.
+check_renderer() {
+    local mode=${JOBS_X11_RENDERER:-cpu}
+    case $mode in
+        cpu|wrapper) echo "READY:renderer:$mode";; # Wrapper has its own validated preparation.
+        turnip)
+            if "$PREFIX/bin/python3" -B "$control/x11-gpu.py" check "$target" "${PREFIX%/usr}/workspace-x11-gpu";then echo READY:renderer:turnip
+            else echo MISSING:renderer:turnip;fi;;
+        virgl)
+            if bash "$control/x11-virgl-setup.sh" check "$target" "$control";then echo READY:renderer:virgl
+            else echo MISSING:renderer:virgl;fi;;
+        *) echo ERROR:INVALID_RENDERER;return 2;;
+    esac
+}
 if [[ $op == check ]]; then
     if [[ $target == archlinux ]] && installed && ! arch_root_permissions check;then echo MISSING:root-permissions;exit 0;fi
     command -v setsid >/dev/null || { echo 'MISSING:setsid';exit; }
+    desktop_ready=false
     if [[ $target == termux ]];then
-        if eval "$components" && jobs_audio_available;then echo 'READY:desktop';else echo 'MISSING:xfce';fi
+        if eval "$components" && jobs_audio_available;then desktop_ready=true;else echo 'MISSING:xfce';fi
     elif ! command -v proot-distro >/dev/null || ! installed;then echo 'MISSING:environment'
-    elif guest "$components";then if jobs_audio_available;then echo 'READY:desktop';else echo 'MISSING:audio';fi;else echo 'MISSING:xfce';fi
+    elif guest "$components";then if jobs_audio_available;then desktop_ready=true;else echo 'MISSING:audio';fi;else echo 'MISSING:xfce';fi
+    if $desktop_ready;then check_renderer;echo 'READY:desktop';fi
     exit
 fi
 if [[ $op == install ]]; then
@@ -132,7 +149,7 @@ if [[ $op == install ]]; then
     if ! jobs_audio_available;then pkg install -y pulseaudio;fi
     jobs_audio_available || { echo ERROR:AUDIO_COMPONENTS_REQUIRED;exit 1; }
     if [[ $target == termux ]];then eval "$components";else guest "$components";fi
-    echo 'READY:desktop';exit
+    check_renderer;echo 'READY:desktop';exit
 fi
 arch_root_permissions check || { echo ERROR:ARCH_ROOTFS_OWNER_ACCESS;exit 1; }
 gpu_mode=${JOBS_X11_RENDERER:-cpu}

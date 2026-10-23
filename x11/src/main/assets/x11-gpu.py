@@ -16,6 +16,7 @@ import tarfile
 import tempfile
 import time
 import urllib.request
+import uuid
 
 CANCEL_FILE = None
 
@@ -120,7 +121,7 @@ def download(url,sha,size,update):
  if len(data)!=size or hashlib.sha256(data).hexdigest()!=sha:raise ValueError('CHECKSUM_MISMATCH')
  return bytes(data)
 
-def install(base,target,fetch=download):
+def install(base,target,fetch=download,repair=False):
  spec=SPECS[target];base.mkdir(mode=0o700,parents=True,exist_ok=True)
  if base.is_symlink():raise ValueError('CACHE_IS_A_LINK')
  lock=os.open(base/'install.lock',os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
@@ -130,7 +131,12 @@ def install(base,target,fetch=download):
   check_cancel()
   if ready(base,target):return
   destination=base/spec['directory']
-  if destination.exists() or destination.is_symlink():raise ValueError('CACHE_INCOMPLETE')
+  previous=None
+  if destination.exists() or destination.is_symlink():
+   if destination.is_symlink() or not destination.is_dir():raise ValueError('CACHE_IS_A_LINK_OR_FILE')
+   if not repair:raise ValueError('CACHE_INCOMPLETE')
+   info=destination.stat();previous=(info.st_dev,info.st_ino)
+
   stage=Path(tempfile.mkdtemp(prefix='.stage-',dir=base));total=sum(p[2] for p in spec['packages']);done=0
   try:
    for url,sha,size,kind in spec['packages']:
@@ -144,7 +150,22 @@ def install(base,target,fetch=download):
    files=hashes(stage);assert files
    (stage/'ready.json').write_text(json.dumps({'version':spec['version'],'files':files}))
    check_cancel()
-   os.rename(stage,destination)
+   retired=None
+   if previous is not None:
+    info=destination.lstat()
+    if not stat.S_ISDIR(info.st_mode) or (info.st_dev,info.st_ino)!=previous:raise ValueError('CACHE_CHANGED')
+    retired=base/('.retired-'+uuid.uuid4().hex)
+    os.rename(destination,retired)
+   try:os.rename(stage,destination)
+   except BaseException:
+    if retired is not None:os.rename(retired,destination)
+    raise
+   if retired is not None:
+    # fd-relative rmtree refuses symlink replacement; do not use an unsafe fallback.
+    if shutil.rmtree.avoids_symlink_attacks:
+     try:shutil.rmtree(retired)
+     except OSError:print('GPU_WARNING:OLD_CACHE_RETAINED',flush=True)
+    else:print('GPU_WARNING:OLD_CACHE_RETAINED',flush=True)
   finally:
    if stage.exists():shutil.rmtree(stage)
  finally:os.close(lock)
@@ -185,7 +206,7 @@ def main():
  global CANCEL_FILE
  if len(sys.argv) not in (4,5):raise ValueError('ARGUMENTS')
  operation,target,path=sys.argv[1:4]
- if target not in SPECS or operation not in ('install','check'):raise ValueError('ARGUMENTS')
+ if target not in SPECS or operation not in ('install','repair','check'):raise ValueError('ARGUMENTS')
  base=Path(path);expected=Path(os.environ['PREFIX']).parent/'workspace-x11-gpu'
  if base.name!=expected.name or not base.parent.samefile(expected.parent):raise ValueError('CACHE_PATH')
  if len(sys.argv)==5:
@@ -194,7 +215,7 @@ def main():
  check_cancel()
  requirements(target)
  check_cancel()
- if operation=='install':install(base,target)
+ if operation in ('install','repair'):install(base,target,repair=operation=='repair')
  if not ready(base,target):raise ValueError('GPU_COMPONENTS_MISSING')
  check_cancel()
  print('READY:gpu',flush=True)

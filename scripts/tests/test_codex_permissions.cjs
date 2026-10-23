@@ -1,7 +1,7 @@
 'use strict';
 // Fake private websocket RPC only. Never launches Codex or reads user history/auth.
 const http=require('node:http'),crypto=require('node:crypto'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
-const root=path.resolve(__dirname,'../..'),directory=path.join(root,'.verification/agent-permissions-v1.4.10');fs.mkdirSync(directory,{recursive:true});
+const root=path.resolve(__dirname,'../..'),directory=require('./fixture-paths.cjs').fixture('cxperm');fs.mkdirSync(directory,{recursive:true});
 const bridge=path.join(root,'app/src/main/assets/codex-control.js');
 async function check(access,approval,mismatch=false){
  const endpoint=path.join(directory,'rpc-'+process.pid+'.sock');let resumed,peer;

@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {createBridge}=require('../../app/src/main/assets/gemini-live.cjs');
 (async()=>{
- const dir=fs.mkdtempSync(path.resolve('.verification/gemini-receipt-'));const old=process.env.JOBS_GEMINI_RECEIPT_DIR;process.env.JOBS_GEMINI_RECEIPT_DIR=dir;
+ const dir=require('./fixture-paths.cjs').fixture('grecv');const old=process.env.JOBS_GEMINI_RECEIPT_DIR;process.env.JOBS_GEMINI_RECEIPT_DIR=dir;
  try{
   const config={setModel(){},getSessionId:()=> 'synthetic-chat',getProjectRoot:()=> '/synthetic',isTrustedFolder:()=>true};
   const b=createBridge(()=>{});b.attach(config);

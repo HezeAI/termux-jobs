@@ -16,8 +16,8 @@ rebuild/focus the composer or briefly render behind Shell. Keyboard/extra-key
 state is scoped to the selected session. Optional style applies only to base
 Termux XFCE and keeps normal pointer/window handling.
 
-Current scope and device limits: [release](RELEASE-v2.0.0.md),
-[validation](VALIDATION-v2.0.0.md). Older sections below are historical.
+Current scope and device limits: [release](RELEASE-v2.0.1.md),
+[validation](VALIDATION-v2.0.1.md). Older sections below are historical.
 
 # v1.7.5: очистка, история и выбор версий
 

@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{spawn}=require('node:child_process'),{once}=require('node:events');
 const {request}=require('../../app/src/main/assets/claude-control-v2.js');
-const root=fs.mkdtempSync(path.resolve('.verification/cl-life-')),stub=path.join(root,'stub');
+const root=require('./fixture-paths.cjs').fixture('clife'),stub=path.join(root,'stub');
 fs.writeFileSync(stub,'#!'+process.execPath+'\n'+String.raw`
 const fs=require('fs'),net=require('net'),path=require('path'),{spawn}=require('child_process'),readline=require('readline');
 if(process.argv[2]==='auth'){console.log(JSON.stringify({loggedIn:true}));process.exit(0);}
