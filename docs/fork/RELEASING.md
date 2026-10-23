@@ -19,6 +19,10 @@ in English unless the developer explicitly requests another language. Keep the
 in-app update highlights and compatibility notes localized in both Russian and
 English. This is the developer's standing preference for future updates.
 
+End every GitHub release description with this exact credit line, as requested
+by HezeAI: `AI development assistance: OpenAI Codex`. Keep HezeAI credited as the fork developer;
+this line identifies AI assistance.
+
 Обязательно проверить и обновить по фактическому состоянию:
 
 - `README.md`: текущая версия, возможности, установка, ссылки и ограничения.

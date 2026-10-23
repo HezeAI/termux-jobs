@@ -7,3 +7,5 @@
 Android8+/ARM64; same package/signature, code1325, no data reset. Repeated imports create separate preset copies. Restart the desktop after updating. Frame copying may use more CPU.
 
 [Checks and compatibility](https://github.com/HezeAI/termux-jobs/blob/v2.0.1/docs/fork/VALIDATION-v2.0.1.md).
+
+AI development assistance: OpenAI Codex
