@@ -10,7 +10,12 @@ in VALIDATION-v2.0.2.md. Source/features match the tested private1330 build apar
 from release version metadata. Release description is English with the agreed
 OpenAI Codex assistance credit. Do not publish private filenames as separate releases.
 
-Publication verification will be appended after uploaded assets are compared.
+Published and verified2026-10-23: [v2.0.2 — Agent chat improvements](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.2) is stable/latest, not draft/prerelease.
+Source tag7aecf5af is unchanged. All four uploaded assets were downloaded and
+byte-compared; APK/metadata size/hash and code1331 agree. Anonymous latest API and
+update.json work, and six tagged documentation files match their local sources.
+Release title/body match the prepared English notes and include the assistance
+credit. This documentation-only record does not rebuild the APK or move the tag.
 Earlier entries below are historical.
 
 # v2.0.1 — Fix Wrapper

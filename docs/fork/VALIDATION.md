@@ -11,7 +11,12 @@ APK45828682bytes, SHA-256 `436a7803f9b4c93ad2c7c0dd25bf0bc22b9565c6f269a0d2e9278
 Build/package/version/ZIP/signature/runtime checks passed. Broad897 app test run
 had one stale invalid-ID fixture, corrected and covered by15 green targeted tests;
 154 emulator tests passed. Final four Node suites and earlier native fixtures pass.
-Publication round-trip verification will be added after upload.
+Published and verified2026-10-23: [v2.0.2 — Agent chat improvements](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.2) is stable/latest, not draft/prerelease.
+Source tag7aecf5af is unchanged. All four uploaded assets were downloaded and
+byte-compared; APK/metadata size/hash and code1331 agree. Anonymous latest API and
+update.json work, and six tagged documentation files match their local sources.
+Release title/body match the prepared English notes and include the assistance
+credit. This documentation-only record does not rebuild the APK or move the tag.
 
 Historical validation records follow.
 
