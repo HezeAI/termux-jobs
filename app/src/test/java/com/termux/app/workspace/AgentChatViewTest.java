@@ -73,4 +73,19 @@ public class AgentChatViewTest {
   layout(v);v.scroll.getViewTreeObserver().dispatchOnPreDraw();assertEquals(50,v.scroll.getScrollY());
  }
 
+ @Test public void attachmentCardsKeepIdentityFocusAndTheirOwnOpenTarget()throws Exception{
+  Activity a=Robolectric.buildActivity(Activity.class).setup().get();AtomicReference<JSONObject> opened=new AtomicReference<>();AgentChatView v=new AgentChatView(a,opened::set,()->{},()->{},()->{},()->{});a.setContentView(v);
+  JSONObject attachment=row("file","attachment","report.log").put("attachment",new JSONObject().put("type","file").put("name","report.log").put("path","/tmp/report.log"));JSONObject answer=row("reply","text","first");v.rows(Arrays.asList(attachment,answer),false);layout(v);View card=v.timeline.getChildAt(1);card.performClick();assertSame(attachment,opened.get());
+  v.shellEnabled(true);v.shellInput.setText("keep draft");v.shellInput.requestFocus();answer.put("body","streamed");v.rows(Arrays.asList(attachment,answer),false);layout(v);assertSame(card,v.timeline.getChildAt(1));assertTrue(v.shellInput.hasFocus());assertEquals("keep draft",v.shellInput.getText().toString());
+  v.shellEnabled(false);v.attachmentPicker(true);assertEquals(View.VISIBLE,v.folder.getVisibility());assertTrue(v.folder.isEnabled());assertFalse(v.shellInput.isEnabled());v.attachmentPicker(false);assertEquals(View.GONE,v.folder.getVisibility());
+ }
+
+ @Test public void apkCardPlacesBadgeLeftAndMetadataRightWithoutReplacingComposer()throws Exception{
+  Activity a=Robolectric.buildActivity(Activity.class).setup().get();AtomicReference<JSONObject> opened=new AtomicReference<>();AgentChatView v=new AgentChatView(a,opened::set,()->{},()->{},()->{},()->{});a.setContentView(v);
+  java.util.concurrent.atomic.AtomicInteger loads=new java.util.concurrent.atomic.AtomicInteger();v.apkDetails=(apk,label)->{loads.incrementAndGet();label.setText("44 MB\nSHA-256: abc123");};
+  JSONObject apk=row("apk","attachment","build.apk").put("attachment",new JSONObject().put("type","apk").put("name","build.apk").put("bytes",44000000).put("path","/tmp/build.apk"));v.rows(Arrays.asList(apk),false);layout(v);
+  android.widget.LinearLayout card=(android.widget.LinearLayout)v.timeline.getChildAt(1);assertEquals(android.widget.LinearLayout.HORIZONTAL,card.getOrientation());assertEquals(2,card.getChildCount());android.widget.LinearLayout badge=(android.widget.LinearLayout)card.getChildAt(0),info=(android.widget.LinearLayout)card.getChildAt(1);assertTrue(badge.getChildAt(0) instanceof android.widget.ImageView);assertEquals("APK",((TextView)badge.getChildAt(1)).getText().toString());assertEquals("build.apk",((TextView)info.getChildAt(0)).getText().toString());assertTrue(((TextView)info.getChildAt(1)).getText().toString().contains("SHA-256"));assertEquals(2,info.getChildCount());card.performClick();assertSame(apk,opened.get());
+  v.rows(Arrays.asList(apk),false);assertEquals(1,loads.get());assertSame(card,v.timeline.getChildAt(1));
+ }
+
 }

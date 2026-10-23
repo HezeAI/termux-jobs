@@ -134,7 +134,7 @@ function createBridge(send, fetcher=globalThis.fetch) {
     return {ok:true,models:nativeOptions(),source:'cli-options'};
   }
   const {GeminiChat}=require('./gemini-chat.cjs');
-  const chat=new GeminiChat({session:()=>config?.getSessionId?.()||'',status:snapshot,supported:()=>!unsupported,permission:()=>currentPermission()?.value||null,receipt:id=>{const r=receiptStore.get(id);return r?{body:r.body,label:receiptStore.label(r,false)}:null;}});
+  const chat=new GeminiChat({attachmentRoot:process.env.JOBS_GEMINI_ATTACHMENT_ROOT||__dirname,session:()=>config?.getSessionId?.()||'',status:snapshot,supported:()=>!unsupported,permission:()=>currentPermission()?.value||null,receipt:id=>{const r=receiptStore.get(id);return r?{body:r.body,label:receiptStore.label(r,false)}:null;}});
   const chatUI=(c,...args)=>{attach(c);return chat.observe(c,...args);},chatShell=(...args)=>chat.bindShell(...args);
   async function command(request){
     if(request&&(['terminal-open','terminal-close'].includes(request.op)||request.op?.startsWith('chat-')))return chat.command(request);

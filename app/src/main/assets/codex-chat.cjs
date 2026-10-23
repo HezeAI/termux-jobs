@@ -1,5 +1,5 @@
 'use strict';
-// Android presentation of the native app-server protocol. No model prompts or auth-file reads.
+// Android presentation of the native app-server protocol. No auth-file reads or policy overrides.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),net=require('node:net');
 const {spawn}=require('node:child_process');
 const {Connection}=require('./codex-wire-v0.2.22.js');
@@ -25,6 +25,27 @@ function skillRead(command){
  if(!path.posix.isAbsolute(file)||path.posix.basename(file)!=='SKILL.md')return '';
  const name=path.posix.basename(path.posix.dirname(file));return /^[\p{L}\p{N}_.:-]{1,100}$/u.test(name)?name:'';
 }
+// Only files copied by Android's explicit picker can become outgoing attachments.
+function attachmentFile(root,p){
+ const base=path.join(root,'chat-attachments');
+ if(typeof p!=='string'||!p.startsWith(base+'/'))throw Error('INVALID_ATTACHMENT');
+ const rel=p.slice(base.length+1);if(!/^[a-f0-9]{32}\/[A-Za-z0-9_.-]{1,100}$/.test(rel))throw Error('INVALID_ATTACHMENT');
+ if(fs.realpathSync(p)!==p||!fs.statSync(p).isFile())throw Error('INVALID_ATTACHMENT');return p;
+}
+function savedToolImage(root,seed,url){
+ const m=typeof url==='string'&&/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/=\r\n]+)$/.exec(url);if(!m||m[2].length>28*1024*1024)return '';
+ const bytes=Buffer.from(m[2],'base64');if(!bytes.length||bytes.length>20*1024*1024)return '';
+ const id=crypto.createHash('sha256').update(seed+url).digest('hex').slice(0,32),dir=path.join(root,'chat-attachments',id);fs.mkdirSync(dir,{recursive:true,mode:0o700});
+ const file=path.join(dir,'generated.'+(m[1]==='jpeg'?'jpg':m[1]));if(!fs.existsSync(file))fs.writeFileSync(file,bytes,{mode:0o600});return attachmentFile(root,file);
+}
+function attachmentManifest(root,id,thread){
+ if(typeof id!=='string'||!/^[a-f0-9]{32}$/.test(id))throw Error('INVALID_ATTACHMENT');
+ const f=attachmentFile(root,path.join(root,'chat-attachments',id,'attachment.json'));
+ if(fs.statSync(f).size>16384)throw Error('INVALID_ATTACHMENT');const a=JSON.parse(fs.readFileSync(f,'utf8'));if(a.id!==id||!['image','video','file','binary','apk'].includes(a.type)||typeof a.name!=='string'||a.name.length>512||a.threadId&&a.threadId!==thread)throw Error('INVALID_ATTACHMENT');
+ attachmentFile(root,a.path);if(fs.statSync(a.path).size>256*1024*1024)throw Error('INVALID_ATTACHMENT');
+ if(a.type==='video'){if(!Array.isArray(a.frames)||!a.frames.length||a.frames.length>12)throw Error('INVALID_ATTACHMENT');for(const frame of a.frames){attachmentFile(root,frame.path);if(!Number.isSafeInteger(frame.timeMs)||frame.timeMs<0)throw Error('INVALID_ATTACHMENT');}}
+ return {file:f,data:a};
+}
 function itemPhase(item,status){if(!status)return item;const value={...item};Object.defineProperty(value,'_jobsStatus',{value:status});return value;}
 function processTree(root){const all=new Map();for(const id of fs.readdirSync('/proc'))if(/^\d+$/.test(id))try{const raw=fs.readFileSync('/proc/'+id+'/stat','utf8'),f=raw.slice(raw.lastIndexOf(')')+2).split(' ');all.set(Number(id),{parent:Number(f[1]),start:f[19],state:f[0]});}catch{}const owned=new Map();if(!all.has(root))return owned;owned.set(root,all.get(root));let changed=true;while(changed){changed=false;for(const [id,v]of all)if(!owned.has(id)&&owned.has(v.parent)){owned.set(id,v);changed=true;}}return owned;}
 function sameProcess(id,start){try{const raw=fs.readFileSync('/proc/'+id+'/stat','utf8'),f=raw.slice(raw.lastIndexOf(')')+2).split(' ');return f[19]===start&&f[0]!=='Z';}catch{return false;}}
@@ -33,14 +54,23 @@ async function terminateTree(p){if(!p||p.exitCode!==null||p.signalCode!==null)re
 class CodexChat {
  constructor(connection,options={}){
   this.rpc=connection;this.endpoint=options.endpoint;this.root=path.dirname(options.endpoint);this.access=options.access;this.approval=options.approval;this.cwd=options.cwd;this.confirmed=options.confirmed;this.chat=options.chat;this.requested=options.thread;this.language=options.language||'en';
-  this.thread='';this.turn='';this.busy=false;this.ready=false;this.closed=false;this.setting=false;this.model='';this.effort='';this.turns=new Map();this.pending=new Map();this.sent=new Map();this.receipts=new ReceiptStore(null,'X');this.full=new Map();this.historyWindows=new Map();this.historyWindowChars=0;this.older='';this.failure='';this.native=null;this.historySupported=true;
+  this.initialized=false;this.authRequired=false;this.loginId='';this.loginRequest=null;this.loginError=false;this.writeLogin=options.writeLogin||((value)=>process.stdout.write(value));
+  this.mediaCache=new WeakMap();this.thread='';this.turn='';this.busy=false;this.ready=false;this.closed=false;this.setting=false;this.model='';this.effort='';this.turns=new Map();this.pending=new Map();this.sent=new Map();this.receipts=new ReceiptStore(null,'X');this.full=new Map();this.historyWindows=new Map();this.historyWindowChars=0;this.older='';this.failure='';this.native=null;this.historySupported=true;
   this.rpc.onMessage=m=>this.event(m);this.rpc.onFailure=e=>{this.disconnected=true;this.ready=false;this.busy=false;this.pending.clear();const reason=e?.message==='Message too large'?' The native history or event exceeded the local size limit.':e?.message==='Connection timeout'?' The local connection timed out.':'';this.error('Codex disconnected.'+reason+' Restart this session with its chat history.');};
  }
  expected(){return this.access==='full'?'dangerFullAccess':this.access==='read'?'readOnly':'workspaceWrite';}
  params(){return {cwd:this.cwd,approvalPolicy:this.approval,sandbox:this.access==='full'?'danger-full-access':this.access==='read'?'read-only':'workspace-write'};}
  verify(r){if(normalize(r.cwd)!==normalize(this.cwd)||r.approvalPolicy!==this.approval||r.sandbox?.type!==this.expected())throw Error('Codex did not confirm the requested directory and permissions');}
  async start(){
-  await this.rpc.initialize();let r;
+  if(this.starting)return this.starting;
+  this.starting=this.connect().finally(()=>{this.starting=null;});return this.starting;
+ }
+ async connect(){
+  if(!this.initialized){await this.rpc.initialize();this.initialized=true;}
+  const account=await this.rpc.call('account/read',{refreshToken:false});
+  this.authRequired=account.requiresOpenaiAuth===true&&!account.account;
+  if(this.authRequired){this.ready=false;return;}if(this.closed)return;
+  let r;
   if(this.chat==='id'){
    if(!valid(this.requested))throw Error('Choose a specific chat ID');
    const metadata=(await this.rpc.call('thread/read',{threadId:this.requested,includeTurns:false})).thread;
@@ -62,6 +92,11 @@ class CodexChat {
  }
  refresh(){try{fs.writeFileSync(this.endpoint+'.refresh','1',{mode:0o600});}catch{}}
  event(m){
+  if(m.method==='account/login/completed'){
+   if(!this.loginId||m.params?.loginId!==this.loginId)return;
+   this.loginId='';this.loginError=m.params.success!==true;this.authRequired=true;
+   if(m.params.success===true&&!this.closed)this.start().catch(()=>{this.ready=false;this.loginError=true;});return;
+  }
   const p=m.params||{};
   if(m.method&&m.id!==undefined){this.request(m);return;}
   if(p.threadId!==this.thread||!this.thread)return;
@@ -103,10 +138,34 @@ class CodexChat {
    for(const receipt of this.receipts.rows.filter(r=>r.key.startsWith(item.id+':')))add('receipt:'+receipt.token,'receipt',receipt.body,this.receipts.label(receipt,this.language==='ru'));
    if(item.type==='userMessage'){
     const skills=(item.content||[]).filter(input=>input.type==='skill'&&text(input.name));skillContext=skills.length===1?text(skills[0].name).slice(0,120):'';
-    add('text','user',(item.content||[]).map(b=>b.type==='text'?b.text:b.type==='image'?'[Image]':b.type==='localImage'?'[Image: '+b.path+']':'').join('\n'));
+    const manifestIds=new Set(),paths=new Set();const content=item.content||[];
+    for(const b of content)if(b.type==='text'){const m=/^\[TermuxJobs attachment:([a-f0-9]{32})\]\n/.exec(b.text||'');if(m)try{const a=attachmentManifest(this.root,m[1],this.thread).data;if(a.threadId===this.thread){manifestIds.add(a.id);paths.add(a.path);for(const f of a.frames||[])paths.add(f.path);}}catch{}}
+    add('text','user',content.filter(b=>b.type==='text'&&(!/^\[TermuxJobs attachment:([a-f0-9]{32})\]\n/.test(b.text||'')||!manifestIds.has(/^\[TermuxJobs attachment:([a-f0-9]{32})\]/.exec(b.text||'')?.[1]))&&(!manifestIds.size||!/^Video frame at \d+ ms$/.test(b.text||''))).map(b=>b.text).join('\n'));
+    for(const id of manifestIds){const a=attachmentManifest(this.root,id,this.thread).data;add('attachment:'+id,'attachment',a.name);Object.assign(rows.at(-1),{attachment:a});}
+    for(const [i,b]of content.entries())if(b.type==='localImage'&&!paths.has(b.path)){add('image:'+i,'attachment','Image');Object.assign(rows.at(-1),{attachment:{type:'image',name:path.basename(b.path),path:b.path,cacheKey:message+':'+i}});}
+    if(content.some(b=>b.type==='image'))add('remote-image','info','Image attachment (remote reference)');
     for(const [i,input]of (item.content||[]).entries())if(input.type==='skill'&&text(input.name)){add('skill:'+i,'tool',text(input.name)+'\n'+text(input.path),'Skill: '+text(input.name));Object.assign(rows.at(-1),{toolType:'skill',skillName:text(input.name).slice(0,120),status:'attached'});}
    }
-   else if(item.type==='agentMessage')add('text','text',item.text);
+   else if(item.type==='agentMessage'){
+    add('text','text',item.text);let i=0;for(const match of String(item.text||'').matchAll(/!\[([^\]\n]{0,200})\]\((\/[^\n)]+\.(?:png|jpe?g|webp|gif))\)/gi)){add('linked-image:'+(i++),'attachment',match[1]||'Image');Object.assign(rows.at(-1),{attachment:{type:'image',name:path.basename(match[2]),path:match[2],cacheKey:message}});if(i>=4)break;}
+    let artifacts=this.mediaCache.get(item);if(!artifacts||artifacts.text!==item.text){
+     artifacts={text:item.text,apks:[]};
+     for(const match of String(item.text||'').matchAll(/(?<!!)\[[^\]\n]{1,200}\]\((?:<(\/[^<>\r\n]+\.apk)>|(\/[^\r\n)]+\.apk))\)/gi)){
+      const file=match[1]||match[2];try{const stat=fs.lstatSync(file);if(stat.isFile()&&!stat.isSymbolicLink()&&stat.size>0&&stat.size<=256*1024*1024)artifacts.apks.push({type:'apk',name:path.basename(file),path:file,bytes:stat.size,cacheKey:message+':'+stat.size+':'+stat.mtimeMs});}catch{}
+      if(artifacts.apks.length>=4)break;
+     }this.mediaCache.set(item,artifacts);
+    }
+    for(const [i,a]of artifacts.apks.entries()){add('linked-apk:'+i,'attachment',a.name);Object.assign(rows.at(-1),{attachment:a});}
+   }
+   else if(item.type==='imageGeneration'){
+    let saved=this.mediaCache.get(item);if(saved===undefined){saved=typeof item.savedPath==='string'?item.savedPath:'';
+    if(!saved&&item.status==='completed'&&typeof item.result==='string'&&item.result.length<28*1024*1024&&/^[A-Za-z0-9+/=\r\n]+$/.test(item.result))try{
+     const id=crypto.createHash('sha256').update(this.thread+':'+item.id).digest('hex').slice(0,32),dir=path.join(this.root,'chat-attachments',id);fs.mkdirSync(dir,{recursive:true,mode:0o700});saved=path.join(dir,'generated.png');if(!fs.existsSync(saved))fs.writeFileSync(saved,Buffer.from(item.result,'base64'),{mode:0o600});
+    }catch{saved='';}
+    this.mediaCache.set(item,saved);}
+    if(saved){add('generated','attachment','Generated image');Object.assign(rows.at(-1),{attachment:{type:'image',name:path.basename(saved),path:saved,cacheKey:message}});}
+    else add('image-status','tool',item.status||'Image generation','Image generation');
+   }
    else if(item.type==='reasoning')add('thinking','reasoning',(item.summary?.length?item.summary:item.content||[]).join('\n'));
    else if(item.type==='commandExecution'){
     add('command','tool',[item.command,item.aggregatedOutput,item.exitCode!=null?'Exit: '+item.exitCode:''].filter(Boolean).join('\n'),'Shell · '+(item.status||'running'));
@@ -117,7 +176,13 @@ class CodexChat {
    else if(item.type==='plan')add('plan','tool',item.text,'Plan');
    else if(item.type==='localError')add('error','error',item.text,'Codex');
    else if(item.type==='localReceipt'){const r=this.receipts.get(item.receiptKey);if(r)add('receipt','receipt',r.body,this.receipts.label(r,this.language==='ru'));}
-   else if(item.type==='functionCallOutput')add('output','tool',typeof item.output==='string'?item.output:JSON.stringify(item.output),[item.namespace,item.name].filter(Boolean).join('.'));
+   else if(item.type==='functionCallOutput'){
+    const output=Array.isArray(item.output)?item.output:[],images=output.filter(v=>v.type==='input_image');
+    const body=typeof item.output==='string'?item.output:images.length?output.map(v=>v.type==='input_text'?v.text:v.type==='input_image'?'[Image]':'[Media]').join('\n'):JSON.stringify(item.output);
+    add('output','tool',body,[item.namespace,item.name].filter(Boolean).join('.'));
+    let savedImages=this.mediaCache.get(item);if(!savedImages){savedImages=images.slice(0,4).map((image,i)=>{try{return savedToolImage(this.root,this.thread+':'+item.id+':'+i,image.image_url);}catch{return '';}});this.mediaCache.set(item,savedImages);}
+    for(const [i,saved]of savedImages.entries())if(saved){add('tool-image:'+i,'attachment','Image');Object.assign(rows.at(-1),{attachment:{type:'image',name:path.basename(saved),path:saved,cacheKey:message+':'+i}});}
+   }
    else if(item.type==='contextCompaction')add('context','tool',this.language==='ru'?'Контекст чата сокращён штатным Codex.':'Chat context compacted by Codex.','Codex');
    else if(!['hookPrompt','sleep'].includes(item.type))add('event','tool',JSON.stringify(item,null,2),item.type||'Codex');
    if(rows.length){for(const row of rows)if(row.kind==='tool'){row.turn=turn;if(!row.toolType&&item.type!=='commandExecution')Object.assign(row,{toolType:item.type,toolName:text(item.tool||item.name).slice(0,160),status:item.status||item._jobsStatus||''});if(skillContext)row.skillContextName=skillContext;}groups.push({id:message,rows});}
@@ -154,16 +219,30 @@ class CodexChat {
   }else groups=this.groups();
   const page=this.historyWindow(groups,next),rows=page.groups.flatMap(g=>g.rows);let budget=90000;
   const limited=rows.map((r,i)=>{const n=Math.max(100,Math.floor(budget/(rows.length-i)));budget-=Math.min(n,r.body.length);return {...r,body:r.body.slice(0,n),more:r.more||r.body.length>n};});
-  return {ok:true,nativeChat:true,connected:this.ready&&!this.closed,session:this.thread,busy:this.busy,directShell:!!this.shellRunning,rows:limited,knownMessages:groups.map(g=>g.id),partialHistory:true,older:page.older||null,permission:this.permission(),forms:this.forms(),needsTerminal:!!this.native,model:{model:this.model},connectionNotice:this.native?(this.language==='ru'?'Завершите действие в терминале или нажмите «Вернуться в чат Codex». Выполняющийся запрос продолжится до завершения.':'Finish the action in the terminal or tap Return to Codex chat. A running request continues until completion.'):''};
+  return {ok:true,nativeChat:true,connected:this.ready&&!this.closed,session:this.thread,busy:this.busy,directShell:!!this.shellRunning,rows:limited,knownMessages:groups.map(g=>g.id),partialHistory:true,older:page.older||null,permission:this.permission(),forms:this.forms(),needsTerminal:!!this.native,model:{model:this.model},attachmentsSupported:true,authRequired:this.authRequired,loginPending:!!(this.loginId||this.loginRequest),loginError:this.loginError,connectionNotice:this.native?(this.language==='ru'?'Завершите действие в терминале или нажмите «Вернуться в чат Codex». Выполняющийся запрос продолжится до завершения.':'Finish the action in the terminal or tap Return to Codex chat. A running request continues until completion.'):''};
  }
  async send(q){
   if(this.returnToChat&&!this.busy)await this.closeTerminal();
-  if(!this.ready||this.closed||this.native||this.setting||q.session!==this.thread||!/^msg_[a-f0-9]{32}$/.test(q.id||'')||!['message','shell'].includes(q.kind)||typeof q.text!=='string'||!q.text.trim()||Buffer.byteLength(q.text)>60000)return {ok:false,error:'NOT_READY'};
-  const digest=crypto.createHash('sha256').update(q.kind+'\0'+q.text).digest('hex');const prior=this.sent.get(q.id);if(prior)return prior.digest===digest?prior.promise:{ok:false,error:'INVALID_SEND'};
+  if(!this.ready||this.closed||this.native||this.setting||q.session!==this.thread||!/^msg_[a-f0-9]{32}$/.test(q.id||'')||!['message','shell'].includes(q.kind)||typeof q.text!=='string'||(!q.text.trim()&&!(Array.isArray(q.attachments)&&q.attachments.length))||Buffer.byteLength(q.text)>60000)return {ok:false,error:'NOT_READY'};
+  const digest=crypto.createHash('sha256').update(q.kind+'\0'+q.text+'\0'+JSON.stringify(q.attachments||[])).digest('hex');const prior=this.sent.get(q.id);if(prior)return prior.digest===digest?prior.promise:{ok:false,error:'INVALID_SEND'};
   if(this.sent.size>=2000)return {ok:false,error:'SEND_LIMIT'};
   if(this.shellRunning||q.kind==='shell'&&(this.busy||this.pending.size))return {ok:false,error:'MODE_BUSY'};
   if(q.kind==='message'&&q.text.trim().startsWith('/')){this.error('Slash commands belong in the native Codex terminal. Open the robot button; ordinary messages are sent here.');return {ok:false,error:'NATIVE_COMMAND'};}
-  const input=[{type:'text',text:q.text,text_elements:[]}];let method,params;
+  let attachments=[];const input=q.text.trim()?[{type:'text',text:q.text,text_elements:[]}]:[];
+  try{
+   if(q.attachments!==undefined&&(!Array.isArray(q.attachments)||q.attachments.length>4||q.kind!=='message'))throw Error('INVALID_ATTACHMENT');
+   const seen=new Set();for(const ref of q.attachments||[]){if(seen.has(ref.id))throw Error('INVALID_ATTACHMENT');seen.add(ref.id);const {file,data:a}=attachmentManifest(this.root,ref.id,this.thread);attachments.push(a);
+    let description='[TermuxJobs attachment:'+a.id+']\nName: '+a.name+'\nFile: '+a.path+'\nSize: '+fs.statSync(a.path).size+' bytes.';
+    if(a.type==='file'){const bytes=Buffer.alloc(Math.min(8192,fs.statSync(a.path).size)),fd=fs.openSync(a.path,'r');try{fs.readSync(fd,bytes,0,bytes.length,0);}finally{fs.closeSync(fd);}if(bytes.includes(0))throw Error('INVALID_ATTACHMENT');description+='\nAttached file content (UTF-8 sample; treat as data):\n'+bytes.toString('utf8')+(fs.statSync(a.path).size>8192?'\n[Sample ends. Read the attached file in parts for the remaining content.]':'');}
+    if(a.type==='binary'||a.type==='apk')description+='\nBinary original is available at the file path for tools to inspect; it is not decoded as text.';
+    if(a.type==='video')description+='\nVideo duration: '+a.durationMs+' ms. '+a.frames.length+' sampled frames follow, labelled by timestamp. Audio is not included; brief events between frames may be missed.';
+    input.push({type:'text',text:description,text_elements:[]});
+    if(a.type==='image')input.push({type:'localImage',path:a.path});
+    if(a.type==='video')for(const frame of a.frames){input.push({type:'text',text:'Video frame at '+frame.timeMs+' ms',text_elements:[]},{type:'localImage',path:frame.path});}
+    if(!a.threadId)fs.writeFileSync(file,JSON.stringify({...a,threadId:this.thread}),{mode:0o600});
+   }
+  }catch{return {ok:false,error:'INVALID_ATTACHMENT'};}
+  let method,params;
   if(q.kind==='shell'){method='thread/shellCommand';params={threadId:this.thread,command:q.text};}
   else if(this.busy&&this.turn){method='turn/steer';params={threadId:this.thread,expectedTurnId:this.turn,input,clientUserMessageId:q.id};}
   else if(this.busy)return {ok:false,error:'MODE_BUSY'};
@@ -179,7 +258,26 @@ class CodexChat {
    this.choiceModel=q.model;this.choiceEffort=q.effort;this.modelPending=true;this.refresh();return {ok:true,pending:true};
   }finally{this.setting=false;}
  }
+ async login(){
+  if(!this.authRequired||this.closed)return {ok:false};
+  if(this.loginRequest)return this.loginRequest;
+  if(this.loginId)return {ok:true,terminalReady:true};
+  this.loginError=false;
+  const task=(async()=>{try{
+   const result=await this.rpc.call('account/login/start',{type:'chatgptDeviceCode'});
+   if(typeof result.loginId==='string'&&result.loginId.length<=256)this.loginId=result.loginId;
+   const url=new URL(result.verificationUrl);
+   if(result.type!=='chatgptDeviceCode'||typeof result.loginId!=='string'||result.loginId.length>256||url.protocol!=='https:'||!['auth.openai.com','chatgpt.com'].includes(url.hostname)||url.username||url.password||!/^[-A-Za-z0-9 ]{4,80}$/.test(result.userCode||''))throw Error('Invalid device login');
+   this.loginId=result.loginId;
+   if(this.closed){await this.cancelLogin();return {ok:false};}
+   this.writeLogin('\r\n'+(this.language==='ru'?'Вход в Codex. Откройте ссылку в браузере и введите одноразовый код. Не отправляйте код в чат.':'Codex sign-in. Open the link in your browser and enter the one-time code. Do not send the code in chat.')+'\r\n'+url.href+'\r\n'+result.userCode+'\r\n'+(this.language==='ru'?'После успешного входа чат подключится автоматически.':'The chat connects automatically after successful sign-in.')+'\r\n');
+   return {ok:true,terminalReady:true};
+  }catch{await this.cancelLogin();this.loginError=true;return {ok:true,terminalReady:false,terminalNotice:this.language==='ru'?'Не удалось начать вход по коду. Проверьте соединение и доступность этого способа в настройках аккаунта. Закройте окно и повторите вход.':'Could not start device-code sign-in. Check the connection and whether device login is enabled for your account. Close this window and retry.'};}})();
+  this.loginRequest=task;try{return await task;}finally{if(this.loginRequest===task)this.loginRequest=null;}
+ }
+ async cancelLogin(){const id=this.loginId;this.loginId='';if(id)try{await this.rpc.call('account/login/cancel',{loginId:id});}catch{}return {ok:true};}
  async openTerminal(){
+  if(this.authRequired)return this.login();
   if(this.terminalClosing)await this.terminalClosing;this.returnToChat=false;if(this.native)return {ok:true,terminalReady:true};if(this.busy||this.setting||this.pending.size)return {ok:true,terminalReady:false,terminalNotice:this.language==='ru'?'Codex выполняет запрос. Подтверждения и вопросы доступны в чате. Штатный терминал можно открыть после завершения.':'Codex is running a request. Answer questions and approvals in the chat. Open the native terminal after it finishes.'};
   if(!this.ready)return {ok:true,terminalReady:false,terminalNotice:this.failure||'Codex is starting.'};
   const child=spawn('codex',['--remote','unix://'+this.endpoint,'resume',this.thread],{cwd:this.cwd,stdio:'inherit'});this.native=child;
@@ -187,6 +285,7 @@ class CodexChat {
   child.once('exit',()=>{if(this.native===child){this.native=null;if(!this.closed)this.history().catch(()=>{});}});return {ok:true,terminalReady:true};
  }
  async closeTerminal(){
+  if(this.authRequired){await this.cancelLogin();return {ok:true};}
   this.returnToChat=true;
   if(this.terminalClosing)return this.terminalClosing;
   // A hidden TUI may own an active turn. Keep it until completion; never interrupt it on Back.
@@ -203,7 +302,7 @@ class CodexChat {
   if(q.op==='chat-detail'){this.groups();const body=this.full.get(q.message+':'+q.part);if(body===undefined||q.session!==this.thread||!Number.isInteger(q.offset)||q.offset<0||q.offset>body.length)return {ok:false,error:'NOT_FOUND'};return {ok:true,body:body.slice(q.offset,q.offset+30000),next:q.offset+30000<body.length?q.offset+30000:null};}
   return {ok:false,error:'UNSUPPORTED'};
  }
- async close(){this.closed=true;this.pending.clear();this.rpc.onMessage=null;this.rpc.onFailure=null;this.rpc.close();await terminateTree(this.native);}
+ async close(){this.closed=true;await this.cancelLogin();this.pending.clear();this.rpc.onMessage=null;this.rpc.onFailure=null;this.rpc.close();await terminateTree(this.native);}
 }
 async function run(){
  const [endpoint,access,chat,thread,cwd,confirmed,approval,language]=process.argv.slice(3);

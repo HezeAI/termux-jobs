@@ -1,0 +1,22 @@
+{
+  "ru": [
+    "Карточка APK открывает меню по тапу, без надписи «Открыть · установить».",
+    "В меню APK: «В Download» слева, «Установить» справа. Кнопка «Закрыть» убрана; окно закрывается тапом снаружи."
+  ],
+  "en": [
+    "Tap APK cards to open their menu; remove the redundant Open/install hint.",
+    "APK menu actions: To Download left, Install right. Remove Close; tap outside to dismiss."
+  ],
+  "compatibility": {
+    "ru": [
+      "Android8+/ARM64, прежние пакет com.termux, подпись и schema8, code1328. Сброс данных и миграция не требуются.",
+      "Подтверждение установки и разрешение источника остаются под управлением Android. Просмотр фото/видео и текста сохраняет свои действия.",
+      "Завершите важную работу перед обновлением: Android может остановить процессы."
+    ],
+    "en": [
+      "Android8+/ARM64, unchanged com.termux/signer/schema8, code1328. No data reset or migration.",
+      "Android retains installer consent and source permission. Image/video/text viewers retain their actions.",
+      "Finish important work before updating: Android may stop processes."
+    ]
+  }
+}

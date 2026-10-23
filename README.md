@@ -5,6 +5,23 @@
 Команды по-прежнему выполняются в настоящем Termux или выбранном окружении;
 интерфейс помогает организовать работу и не требует писать свою оболочку скриптов.
 
+## v2.0.2 — Agent chat improvements
+
+**[Download v2.0.2](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.2)**.
+Send files straight to Codex, OpenCode, Claude and Gemini chats without typing their
+paths on the phone. Work on projects in the conversation and receive supported local output
+files/builds as cards for preview, saving or explicit APK installation. Adds local
+photo/video thumbnails, compact previews, Codex first-login assistance and an
+optional protected Gemini API-key field. Fixes OpenCode attachment admission.
+
+Android8+/ARM64, code1331, unchanged com.termux/signer/schema8. No reset or environment
+migration. Restart agents with saved chats after updating. Gemini keys are device/
+profile-bound; duplicate/import requires re-entry. Video uses sampled frames without
+audio; model/CLI permissions still apply. HezeAI confirmed Codex image input and
+OpenCode sending; other device/provider combinations need testing.
+[Release notes](docs/fork/RELEASE-v2.0.2.md) ·
+[Validation](docs/fork/VALIDATION-v2.0.2.md) · [Usage](docs/fork/USAGE.md).
+
 ## v2.0.1 — Fix Wrapper
 
 **[Download v2.0.1](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.1)**.

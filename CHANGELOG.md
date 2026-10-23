@@ -1,3 +1,21 @@
+## v2.0.2 — Agent chat improvements
+
+Send varied files directly to Codex, OpenCode, Claude and Gemini chats, from phone
+storage or a selected local environment, with optional message text. Keep originals
+available to tools; use native media routes for images and timestamped video frames
+without audio. Return local outputs as file/media/APK cards for preview, saving and
+explicit Android installation. Add local media thumbnails, compact viewers and APK
+size/SHA-256 metadata. Add Codex first-login guidance and an optional Android
+Keystore-protected Gemini API-key field. Fix OpenCode staging-root integration and
+bounded native media replies. Refine the red remove cross, context notice and
+italic app/version header. No X11/renderer or unrelated session runtime changes.
+
+Android8+/ARM64, unchanged com.termux/signer/schema8, code1331. No reset or automatic
+environment migration. Restart agents with saved chats; duplicate/import requires
+Gemini key re-entry. HezeAI confirmed Codex image input and OpenCode file sending.
+Private development builds1326–1330 are archived under docs/fork/development; their
+labels are not public releases. [Notes](docs/fork/RELEASE-v2.0.2.md).
+
 ## v2.0.1 — Fix Wrapper
 
 Fix GPU window overlap with clipped presentation, preserve restored preset/history

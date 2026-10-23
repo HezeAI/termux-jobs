@@ -1,4 +1,19 @@
-# v2.0.1 — Fix Wrapper
+# v2.0.2 — Agent chat improvements
+
+Current release: versionName2.0.2/code1331, Android8+/ARM64, unchanged
+com.termux/signature/schema8. Combines private chat builds1326–1330 under the next
+public version after2.0.1; Android update ordering uses the increasing versionCode.
+Direct attachments, native agent media input, thumbnails/output cards and sign-in
+changes are described in [release notes](docs/fork/RELEASE-v2.0.2.md) and
+[validation](docs/fork/VALIDATION-v2.0.2.md). No reset or environment migration.
+Gemini preset keys are device/profile-bound and need re-entry on duplicate/import.
+Build tools, pinned native inputs and requirements are unchanged from v2.0.1.
+Native libraries are byte-compared with the verified previous APK. Keep additional
+tools/caches/build outputs inside ignored repository directories.
+
+Historical build/release records follow.
+
+# Historical v2.0.1 — Fix Wrapper
 
 Current maintenance release: versionName2.0.1/code1325, Android8+/ARM64,
 unchanged com.termux/signature/schema8. Fixes GPU window overlap, backup
@@ -1048,11 +1063,11 @@ X11 запоминает сессию и конкретный запуск, из
 
 # Проверка X11 · 1.7.21-x11-test
 
-Диагностика X11 переведена на компактную панель сессий: «Сводка»/«События», закреплённые действия копирования и экспорта в Download. При смене вкладки сохраняется соединение рендерера, пересоздаётся только Android-хост поверхности. Для фона используется постоянное имя X11-экрана screen; прежняя выбранная картинка переносится только при отсутствии собственного выбора у этого имени. [Проверки и ограничения](VALIDATION-v1.7.21-x11-test.md). Ниже — предыдущие этапы.
+Диагностика X11 переведена на компактную панель сессий: «Сводка»/«События», закреплённые действия копирования и экспорта в Download. При смене вкладки сохраняется соединение рендерера, пересоздаётся только Android-хост поверхности. Для фона используется постоянное имя X11-экрана screen; прежняя выбранная картинка переносится только при отсутствии собственного выбора у этого имени. [Проверки и ограничения](docs/fork/VALIDATION-v1.7.21-x11-test.md). Ниже — предыдущие этапы.
 
 # Диагностика X11 · 1.7.20-x11-test
 
-Исправлена полная пересборка верхней панели при смене состояния X11-ввода: обновляется только подсветка кнопки, название и навигация сохраняются. Добавлены ограниченный журнал событий всплывающих X11-окон/фокуса и метаданные Android-поверхности/клавиатуры. Это диагностика причины Applications, а не заявление об устранении мерцания. Проверяется декодирование выбранных фонов; только отсутствующий штатный фон заменяется встроенным нейтральным PNG. Выбранные пользовательские файлы сохраняются. В «Диагностике X11» есть обновление, копирование и экспорт в Download. [Проверки и ограничения](VALIDATION-v1.7.20-x11-test.md). Ниже — предыдущие этапы.
+Исправлена полная пересборка верхней панели при смене состояния X11-ввода: обновляется только подсветка кнопки, название и навигация сохраняются. Добавлены ограниченный журнал событий всплывающих X11-окон/фокуса и метаданные Android-поверхности/клавиатуры. Это диагностика причины Applications, а не заявление об устранении мерцания. Проверяется декодирование выбранных фонов; только отсутствующий штатный фон заменяется встроенным нейтральным PNG. Выбранные пользовательские файлы сохраняются. В «Диагностике X11» есть обновление, копирование и экспорт в Download. [Проверки и ограничения](docs/fork/VALIDATION-v1.7.20-x11-test.md). Ниже — предыдущие этапы.
 
 # Проверка X11 · 1.7.19-x11-test
 

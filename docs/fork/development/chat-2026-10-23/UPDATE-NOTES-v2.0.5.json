@@ -1,0 +1,26 @@
+{
+  "ru": [
+    "Вложения фото, видео-кадров и файлов доступны в чатах Claude, Gemini и OpenCode, как в Codex. Миниатюры и карточки файлов общие.",
+    "Первый вход в Codex запускается из чата. Для Gemini API можно заранее указать ключ в настройках сессии/пресета; пустое поле оставляет штатный вход.",
+    "Красный крестик удаления вложения, компактное уведомление контекста с закрытием тапом снаружи и курсивная версия рядом с названием."
+  ],
+  "en": [
+    "Extend image, video-frame and file attachments to Claude, Gemini and OpenCode with shared thumbnails and cards.",
+    "Start Codex first sign-in from chat. Add an optional protected Gemini API key field in session/preset settings; blank retains native authentication.",
+    "Red attachment remove cross, compact outside-dismissed context notice and italic version beside the app name."
+  ],
+  "compatibility": {
+    "ru": [
+      "Android8+/ARM64, прежние com.termux, подпись и schema8, code1329. Сброс данных и миграция окружений не требуются.",
+      "Ключ Gemini привязан к устройству и профилю. При копировании/импорте пресета введите ключ заново; смена применяется при следующем запуске.",
+      "Перезапустите агентов с сохранёнными чатами для поддержки вложений. Видео передаёт до12 кадров без звука; возможности зависят от модели/прав CLI.",
+      "Перед обновлением завершите важные задачи: Android может остановить процессы."
+    ],
+    "en": [
+      "Android8+/ARM64, unchanged com.termux/signer/schema8, code1329. No data reset or environment migration.",
+      "Gemini keys are device/profile-bound. Re-enter on duplicate/import; changes apply on the next launch.",
+      "Restart agents with saved chats for attachment support. Video supplies up to12 frames without audio; model/CLI permissions still apply.",
+      "Finish important tasks before updating: Android may stop processes."
+    ]
+  }
+}

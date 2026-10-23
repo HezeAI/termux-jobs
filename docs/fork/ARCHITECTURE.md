@@ -1,3 +1,30 @@
+# v2.0.2 — Agent attachment and authentication boundaries
+
+ChatAttachmentUi owns per-run drafts; ChatAttachments stages originals in separate
+per-agent control roots using the existing environment bind. Shared agent media
+projection validates regular files and conversation scope before native admission.
+Codex uses localImage, Claude native multipart, OpenCode file URIs and Gemini native
+@ references. Logs contain a bounded sample plus original path; generic binaries
+are tool-accessible originals. Sampled video has timestamps and no audio.
+
+OpenCode resolves staging beside its control socket, independently of nested
+connection/receipt paths. Native media responses have a scoped bounded limit;
+Android receives the compact projection, not raw base64. Dedup and retained drafts
+protect ambiguous admissions. Output Markdown links are local regular-file cards;
+APK installation uses an explicit read-only FileProvider copy and Android consent.
+
+Codex auth reuses its app-server/account store; an explicit first-login action keeps
+codes in the terminal and only reacts to its owned completion ID. Gemini keys are
+AES-GCM encrypted with a separate Android Keystore alias and profile AAD. A private
+one-time handoff is consumed/unlinked before CLI spawn; no key enters shell args,
+chat or status JSON. Duplicate/import clears the nonportable ciphertext. Abrupt
+kill before consumption can leave a private runtime handoff until next same-profile
+launch; private backups remain sensitive. Full app/environment access is not an
+isolation boundary against the configured agent. No global CLI config/proxy or X11
+runtime change is included. [Details](CODEX-ANDROID-CHAT.md).
+
+Earlier architecture sections are historical.
+
 # v2.0 — embedded X11 and environment routing
 
 The x11 Android module integrates the pinned upstream Termux:X11 native core.

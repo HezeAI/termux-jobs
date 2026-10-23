@@ -4,6 +4,7 @@ const root=path.resolve(__dirname,'../..'),base=require('./fixture-paths.cjs').f
 const {CodexChat,terminateTree,skillRead}=require(path.join(dir,'codex-chat.cjs'));const calls=[],replies=[];const response={cwd:dir,approvalPolicy:'on-request',sandbox:{type:'workspaceWrite'},thread:{id:'root-chat'},model:'fixture-model',reasoningEffort:'medium'};
 let release;
 const rpc={async initialize(){},send(v){replies.push(v);},close(){},async call(method,params){calls.push({method,params});
+ if(method==='account/read')return {requiresOpenaiAuth:false,account:null};
  if(method==='thread/start'||method==='thread/resume')return {...response,model:params.model||response.model,reasoningEffort:params.config?.model_reasoning_effort||response.reasoningEffort};
  if(method==='thread/read')return {thread:{id:'root-chat',cwd:dir}};
  if(method==='thread/turns/list')return {data:[{id:'old-turn',items:[{type:'userMessage',id:'old-user',content:[{type:'text',text:'Old user'}]},{type:'agentMessage',id:'old-answer',text:'Old answer'}]}],nextCursor:null};

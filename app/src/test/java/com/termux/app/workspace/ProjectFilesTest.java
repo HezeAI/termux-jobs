@@ -43,4 +43,13 @@ public class ProjectFilesTest {
         File dir=Files.createTempDirectory("project-export-").toFile();File existing=new File(dir,"app.apk");Files.write(existing.toPath(),new byte[]{1});
         try{assertEquals("app-2.apk",WorkspaceFileBrowser.unique(dir,"app.apk").getName());assertArrayEquals(new byte[]{1},Files.readAllBytes(existing.toPath()));}finally{existing.delete();dir.delete();}
     }
+    @Test public void versionedListingCarriesModificationTimeAndRejectsMalformedTimes()throws Exception{
+        String value="JOBS_FILES_2\0/root\0f\0photo.jpg\0"+"42\0"+"1761234567.1234567890\0";ProjectFiles.Listing list=ProjectFiles.parse(value.getBytes(StandardCharsets.UTF_8));assertEquals(1,list.entries.size());assertEquals(1761234567123L,list.entries.get(0).modified);
+        for(String invalid:new String[]{"NaN","Infinity","bad","999999999999999999999999"})try{ProjectFiles.parse(value.replace("1761234567.1234567890",invalid).getBytes(StandardCharsets.UTF_8));fail(invalid);}catch(IOException expected){}
+    }
+    @Test public void portableListingReadsRealMtimeAndHandlesQuotedNames()throws Exception{
+        File dir=Files.createTempDirectory("portable-media-").toFile();File photo=new File(dir,"photo ' $(no-exec).jpg");Files.write(photo.toPath(),new byte[]{1,2,3});assertTrue(photo.setLastModified(1700000000000L));
+        try{Process p=new ProcessBuilder("sh","-c",ProjectFiles.portableListScript(dir.getPath())).start();ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] b=new byte[4096];int n;while((n=p.getInputStream().read(b))!=-1)out.write(b,0,n);assertEquals(0,p.waitFor());ProjectFiles.Entry entry=ProjectFiles.parse(out.toByteArray()).entries.get(0);assertEquals(photo.getName(),entry.name);assertEquals(3,entry.size);assertEquals(1700000000000L,entry.modified);}finally{photo.delete();dir.delete();}
+    }
+
 }

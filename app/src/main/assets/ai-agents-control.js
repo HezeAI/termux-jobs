@@ -5,6 +5,7 @@ const {spawn} = require('child_process'), crypto = require('crypto');
 const {accessRules,OpenCodeSessionSettings,SerialControl}=require('./opencode-session-settings.cjs');
 const controlQueue=new SerialControl();let sessionSettings;
 const MAX = 2 * 1024 * 1024;
+const MEDIA_MAX = 40 * 1024 * 1024;
 const validID = s => typeof s === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(s);
 let server, client, socketServer, endpoint, password, connectionRoot, closing = false, reopenClient, approvalControl, chatControl, finishChat, eventRequest, terminalControl, reconnectTimer;
 const originalParent=process.ppid;
@@ -22,11 +23,14 @@ process.on('SIGINT', () => {stop(); setTimeout(() => process.exit(130), 500).unr
 function request(method, route, body) {
   return new Promise((resolve, reject) => {
     const data = body == null ? null : JSON.stringify(body);
+    // Native history/inbox/prompt replies can include image base64; Android receives
+    // only the bounded chat projection, never these raw media payloads.
+    const limit=/^\/api\/session\/[^/?]+\/(?:prompt|inbox|message)(?:[/?]|$)/.test(route)?MEDIA_MAX:MAX;
     const req = http.request(endpoint + route, {method, headers: {
       Authorization: 'Basic ' + Buffer.from('opencode:' + password).toString('base64'),
       'Content-Type': 'application/json', ...(data ? {'Content-Length':Buffer.byteLength(data)} : {})}}, res => {
       let buf = '', size = 0;
-      res.on('data', b => {size += b.length; if (size > MAX) req.destroy(new Error('Oversized response')); else buf += b;});
+      res.on('data', b => {size += b.length; if (size > limit) req.destroy(new Error('Oversized response')); else buf += b;});
       res.on('end', () => {if (res.statusCode >= 400) return reject(new Error('OpenCode HTTP ' + res.statusCode));
         try {resolve(buf ? JSON.parse(buf) : {});} catch (_) {reject(new Error('Invalid response'));}});
     });
@@ -111,6 +115,11 @@ function readJSON(stream) {return new Promise((resolve,reject) => {
   let data='',size=0;stream.on('data',b=>{size+=b.length;if(size>65536){reject(new Error('Oversized request'));stream.destroy();}else data+=b;});
   stream.on('end',()=>{try{resolve(JSON.parse(data));}catch(_){reject(new Error('Invalid JSON'));}});stream.on('error',reject);
 });}
+function createChat(request,id,receiptFile,sock){
+  // Attachments are staged beside the control socket; receipts live under the
+  // connection directory and must not determine the attachment namespace.
+  return new (require('./opencode-chat.cjs').OpenCodeChat)(request,id,receiptFile,{attachmentRoot:path.dirname(sock)});
+}
 async function run(root,sock,id,model,mode,resume,variant,access='ask',scope='unrestricted',headless=false) {
   if (!/^ses[A-Za-z0-9_-]{1,124}$/.test(id) || !['build','plan'].includes(mode)) throw new Error('Invalid session');
   const permissions=accessRules(access,scope);
@@ -126,7 +135,7 @@ async function run(root,sock,id,model,mode,resume,variant,access='ask',scope='un
   }
   const receiptFile=path.join(root,'receipts',id+'.json');
   approvalControl=new (require('./opencode-permissions.cjs').OpenCodePermissions)(request,id,receiptFile);
-  if(headless)chatControl=new (require('./opencode-chat.cjs').OpenCodeChat)(request,id,receiptFile);
+  if(headless)chatControl=createChat(request,id,receiptFile,sock);
   sessionSettings=new OpenCodeSessionSettings(request,id,scope,async()=>{
     if(!headless||closing||client&&client.exitCode===null&&client.signalCode===null||chatControl&&chatControl.shells.size||await busy())return false;
     const permissions=await request('GET','/api/session/'+id+'/permission'),forms=await request('GET','/api/session/'+id+'/form');
@@ -223,4 +232,4 @@ async function main() {
 }
 if(require.main===module)main().catch(()=>{if(['run','run-chat'].includes(process.argv[2]))process.stderr.write('OpenCode could not start. Install v2.0.28 and Node.js 20+ in Ubuntu; check the project and selected connection.\n');else process.stdout.write(JSON.stringify({ok:false,error:'OpenCode unavailable. Check v2.0.28, Node.js 20+ and Ubuntu.'}));stop();process.exitCode=1;});
 
-module.exports={accessRules};
+module.exports={accessRules,createChat};

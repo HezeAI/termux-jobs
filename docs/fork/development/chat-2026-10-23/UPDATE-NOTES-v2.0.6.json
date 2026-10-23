@@ -1,0 +1,24 @@
+{
+  "ru": [
+    "Исправлена отправка вложений в OpenCode: контроллер ищет файлы в правильной папке, независимо от папки подтверждений.",
+    "Исправлен лимит ответов с изображениями в OpenCode; текстовый чат и ограничения других запросов сохранены."
+  ],
+  "en": [
+    "Fix OpenCode attachment sending by using the control-socket attachment root independently of nested receipts.",
+    "Handle bounded native image payloads in OpenCode prompt/inbox/history replies while retaining other response limits."
+  ],
+  "compatibility": {
+    "ru": [
+      "Android8+/ARM64, прежние com.termux, подпись и schema8, code1330. Сброс данных и миграция окружений не требуются.",
+      "После обновления перезапустите OpenCode с сохранённым чатом и выберите файл заново.",
+      "Ключи Gemini остаются привязаны к устройству и профилю; при копировании/импорте введите ключ заново.",
+      "Завершите важные задачи перед обновлением: Android может остановить процессы."
+    ],
+    "en": [
+      "Android8+/ARM64, unchanged com.termux/signer/schema8, code1330. No data reset or environment migration.",
+      "Restart OpenCode with its saved chat after updating and select the attachment again.",
+      "Gemini keys remain device/profile-bound; re-enter after duplicate/import.",
+      "Finish important tasks before updating: Android may stop processes."
+    ]
+  }
+}

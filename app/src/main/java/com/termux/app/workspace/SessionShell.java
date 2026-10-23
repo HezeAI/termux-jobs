@@ -43,7 +43,10 @@ public final class SessionShell {
             if(otherGuest)write(new File(dir,"proot-shrc"),("export TERMUX_JOBS_ENVIRONMENT_ALIAS="+quote(alias)+"\n"+portableRc(mount+"/history",mount+"/cancel-startup",startup)).getBytes(StandardCharsets.UTF_8));
             String cwd = session.directory.isEmpty() || session.directory.equals("~") ? "/root" : session.directory;
             if (cwd.startsWith("~/")) cwd = "/root/" + cwd.substring(2);
+            boolean apiHandoff=session.geminiAgent&&session.geminiAuth.equals("api")&&!session.geminiEncryptedKey.isEmpty();
+            String handoff=apiHandoff?GeminiApiKeyVault.runtimePath(files,session).getAbsolutePath():"";
             script = buildRc(TermuxConstants.TERMUX_HOME_DIR_PATH, history.getAbsolutePath(), "")
+                + (apiHandoff?"( trap "+quote("rm -f -- "+quote(handoff))+" EXIT\n":"")
                 + AgentPreparation.host(files,session)
                 + (otherGuest?"printf '%s\\n' "+quote(WorkspaceText.tr("Ожидание оболочки ")+WorkspaceEnvironments.label(alias)+"…")+"\n":WorkspaceText.tr("printf '%s\\n' 'Ожидание оболочки Ubuntu…'\n"))
                 + "proot-distro "+(otherGuest?WorkspaceEnvironments.verb(alias):"login")+" "+(session.prootIsolated?"--isolated ":"")+"--bind " + quote(dir.getAbsolutePath() + ":" + mount)
@@ -54,6 +57,7 @@ public final class SessionShell {
                 + (session.environment.equals("codex") ? " --bind " + quote(CodexSessionShell.socketDirectory(files).getAbsolutePath() + ":/tmp/termux-jobs-codex") : "")
                 + " --work-dir " + quote(cwd) + " " + (alias.equals("ubuntu")?"ubuntu":quote(alias)) + " -- "
                 + (otherGuest?"/bin/sh -c "+quote("if command -v bash >/dev/null 2>&1; then exec bash --rcfile "+quote(mount+"/ubuntu-bashrc")+" -i; else SHELL=/bin/sh; export SHELL; ENV="+quote(mount+"/proot-shrc")+"; export ENV; exec /bin/sh -i; fi")+"\n":"/bin/bash --rcfile " + quote(mount + "/ubuntu-bashrc") + " -i\n");
+            if(apiHandoff)script+=")\n";
         } else if (session.environment.equals("ssh")) {
             script = buildReadyRc(TermuxConstants.TERMUX_HOME_DIR_PATH, history.getAbsolutePath(), cancel.getAbsolutePath(),
                 java.util.Collections.singletonList((session.sshAuth.equals("password") && askpass != null && socket != null

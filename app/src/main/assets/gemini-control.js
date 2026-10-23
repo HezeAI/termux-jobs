@@ -50,6 +50,14 @@ function authEnvironment(mode, file, original = process.env) {
   delete env.GEMINI_CLI_AUTH_OVERRIDE;
   return {env, cleanup:()=>{try{fs.unlinkSync(file);}catch{}}};
 }
+function takeApiKey(file,socket){
+  if(!file)return '';
+  const directory=path.join(path.dirname(socket),'keys');
+  if(path.dirname(file)!==directory||!uuid.test(path.basename(file,'.key'))||path.extname(file)!=='.key')throw Error('Invalid API handoff');
+  const folder=fs.lstatSync(directory);if(!folder.isDirectory()||folder.isSymbolicLink()||folder.mode&0o077)throw Error('Invalid API handoff');
+  const stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.mode&0o077||stat.size<=0||stat.size>4096)throw Error('Invalid API handoff');
+  try{const key=fs.readFileSync(file,'utf8');if(!/^[\x21-\x7e]{1,4096}$/.test(key))throw Error('Invalid API handoff');return key;}finally{fs.unlinkSync(file);}
+}
 // Permission text is never included in the status writer or logs.
 function permissionReply(value,request){
   if(!value||value.ok!==true)return {ok:false,error:['STALE_PERMISSION','PERMISSION_FAILED'].includes(value?.error)?value.error:'CONTROL_FAILED'};
@@ -64,6 +72,7 @@ function permissionReply(value,request){
   return Buffer.byteLength(JSON.stringify(result),'utf8')<=60000?result:{ok:false,error:'CONTROL_FAILED'};
 }
 async function run(socket, model, mode, chat, thread, auth = 'auto') {
+  process.env.JOBS_GEMINI_ATTACHMENT_ROOT=path.dirname(socket);
   process.env.JOBS_GEMINI_RECEIPT_DIR=require('node:path').join(require('node:path').dirname(socket),'receipts');
   const args = argsFor(model, mode, chat, thread);
   if (process.env.JOBS_GEMINI_DEBUG === '1') args.push('--debug');
@@ -75,7 +84,9 @@ async function run(socket, model, mode, chat, thread, auth = 'auto') {
   const authRoot = process.env.JOBS_GEMINI_AUTH_DIR
     || path.join(os.homedir(), '.local/share/termux-jobs/gemini-cli/auth');
   if (!path.isAbsolute(authRoot)) throw new Error('Invalid Gemini authentication directory');
-  const authConfig = authEnvironment(auth, path.join(authRoot, path.basename(socket, '.sock') + '.json'));
+  const selectedKey=auth==='api'?takeApiKey(process.env.JOBS_GEMINI_KEY_FILE,socket):'';
+  delete process.env.JOBS_GEMINI_KEY_FILE;
+  const authConfig = authEnvironment(auth, path.join(authRoot, path.basename(socket, '.sock') + '.json'),{...process.env,...(selectedKey?{GEMINI_API_KEY:selectedKey}:{})});
   let child, finished = false, stopping = false, timer, watch;
   const peers = new Set(), commands=new Map();let serial=0,childEpoch=0;
   const startedAt=Date.now(),statusPath=socket.replace(/\.sock$/,'.status.json');
@@ -118,7 +129,7 @@ async function run(socket, model, mode, chat, thread, auth = 'auto') {
         if(!request||typeof request!=='object'||Array.isArray(request))return peer.end('{\"ok\":false,\"error\":\"INVALID_REQUEST\"}\n');
         if(request.op==='status')return peer.end(JSON.stringify({ok:true,status})+'\n');
         if(request.op==='receipt'&&!/^[a-f0-9]{8}$/.test(request.token||''))return peer.end('{"ok":false}\n');
-        if(['chat-snapshot','chat-detail','chat-send','terminal-open','terminal-close'].includes(request.op)){const value={op:request.op};for(const k of ['id','kind','text','message','part','cursor','offset','session'])if(request[k]!==undefined)value[k]=request[k];childRequest(value).then(value=>{if(!peer.destroyed)peer.end(JSON.stringify(value)+'\n');});return;}
+        if(['chat-snapshot','chat-detail','chat-send','terminal-open','terminal-close'].includes(request.op)){const value={op:request.op};for(const k of ['id','kind','text','message','part','cursor','offset','session','attachments'])if(request[k]!==undefined)value[k]=request[k];childRequest(value).then(value=>{if(!peer.destroyed)peer.end(JSON.stringify(value)+'\n');});return;}
         if(['models','model','mode','thinking','permission','answer','receipt'].includes(request.op)){
           if(request.op==='model'&&(!safeModel(request.model)||!/^[-a-zA-Z0-9]{1,64}$/.test(request.id||'')))return peer.end('{"ok":false,"error":"INVALID_MODEL"}\n');
           if(request.op==='mode'&&(!safeMode(request.mode)||!/^[-a-zA-Z0-9]{1,64}$/.test(request.id||'')))return peer.end('{\"ok\":false,\"error\":\"INVALID_MODE\"}\n');
@@ -199,7 +210,7 @@ function stopProxy(socket) {
     client.on('end', () => {try {if (!JSON.parse(response).ok) throw new Error('Stop failed'); resolve();} catch(e) {reject(e);}});
   });
 }
-module.exports = {argsFor, run, stopProxy, authEnvironment, permissionReply};
+module.exports = {takeApiKey,argsFor, run, stopProxy, authEnvironment, permissionReply};
 if (require.main === module) {
   const [op, socket, ...args] = process.argv.slice(2);
   (op === 'run' ? run(socket, ...args) : op === 'stop' ? stopProxy(socket) : Promise.reject(new Error('Unknown operation')))

@@ -1,0 +1,28 @@
+{
+  "ru": [
+    "Миниатюры фотографий и видео в локальном файловом менеджере, включая выбор вложений для Codex. Кадр видео отмечен значком воспроизведения.",
+    "Изображения загружаются только для видимых строк, в фоне и с ограниченным кэшем. Миниатюры не отправляют файлы в чат.",
+    "Окно просмотра в чате подстраивается под пропорции фото/видео вместо фиксированной высоты.",
+    "Компактные карточки APK в чате Codex: значок, имя, размер и SHA-256. По нажатию — сведения, сохранение в Download и явный запуск установщика Android."
+  ],
+  "en": [
+    "Photo and video thumbnails throughout the local file browser, including the Codex attachment picker. Video frames have a play badge.",
+    "Viewport-only background decoding with bounded caches. Thumbnails never send files to the chat.",
+    "Chat image/video viewers fit media aspect ratio instead of a fixed-height window.",
+    "Compact Codex APK output cards: icon, filename, size and SHA-256. Tap for details, Save to Download and an explicit Android installer action."
+  ],
+  "compatibility": {
+    "ru": [
+      "Android8+/ARM64, прежние com.termux/подпись и schema8, code1327. Сброс данных и миграция окружений не требуются.",
+      "Миниатюры относятся к локальному менеджеру: память телефона, Termux и установленные окружения. SSH и серверный список пока без автоматических миниатюр. Возможность кадра видео зависит от кодеков Android; файл остаётся доступен для выбора.",
+      "Завершите важную работу перед обновлением: Android может остановить процессы.",
+      "Для новых карточек перезапустите сессию Codex с сохранённым чатом. Старые версии не показывают карточки APK. SHA-256 не подтверждает доверие к автору файла; Android запрашивает разрешение на установку."
+    ],
+    "en": [
+      "Android8+/ARM64, unchanged com.termux/signer and schema8, code1327. No data reset or environment migration.",
+      "Thumbnails cover the local browser: phone storage, Termux and installed environments. SSH/server lists have no automatic thumbnails yet. Video previews depend on Android codecs; files remain selectable.",
+      "Finish important work before updating: Android may terminate processes.",
+      "Restart Codex with its saved chat to load the card helper. Older builds cannot display APK cards. SHA-256 does not establish publisher trust; Android requests installation permission."
+    ]
+  }
+}

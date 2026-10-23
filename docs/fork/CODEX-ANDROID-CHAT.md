@@ -1,3 +1,14 @@
+# Agent chat — public v2.0.2
+
+The current release combines private chat builds1326–1330, including the OpenCode
+attachment-root correction. Those development labels are archived under
+[development/chat-2026-10-23](development/chat-2026-10-23/README.md). They are not
+public releases later than2.0.2. Current file input/output, auth and ownership
+behavior is described in the v2.0.5/v2.0.6 implementation sections below;
+[release validation](VALIDATION-v2.0.2.md) records final evidence and device limits.
+
+Earlier implementation history follows.
+
 # Codex Android chat — private v1.5.32-test
 
 New Ubuntu Codex launches can use the existing AgentChatView/AgentChatUi surface,
@@ -163,3 +174,150 @@ latter moves keyboard focus into selectable transcript text. Neither composer
 text nor selection/composition is reset for transcript changes. This view path
 is shared by Codex, Gemini, Claude and OpenCode. Native-terminal stale startup
 text and mouse-mode escape echo are separately deferred, not fixed by this UI.
+
+## v2.0.2: file and image exchange in the Codex chat (2026-10-23)
+
+Implemented for the updated Codex helper; phone verification remains pending.
+Support both directions in the existing Android chat:
+
+- Display assistant-generated images as inline previews. Tapping a preview opens
+  a larger viewer with zoom and an explicit Save to Download action.
+- Let the user choose an image from phone storage through the app's file manager,
+  preview or remove the attachment before sending, and send it with optional text
+  as native image input to the active Codex conversation.
+- Place a vector folder button at the left of the existing Shell row, replacing
+  the word Shell. Reduce the command field's width to accommodate it and retain
+  the shell send control. The folder opens the app's file manager for image
+  attachment selection; the selected image belongs to the model-message composer
+  and is never submitted as a direct shell command. Attachment selection must
+  remain available independently of the interactive shell-input toggle.
+- Preserve image/message association when loading history and reopening the chat.
+  An attachment must reach the agent as image input, rather than only a filename
+  or text placeholder. Show a clear failure if loading or sending is unsupported.
+
+The picker first offers Environments or Phone storage. Environments lists only
+installed local roots; storage permission is requested only after choosing Phone
+storage. File preparation and thumbnail decoding run off the UI thread. At most
+12 thumbnail targets retain decoded images; previews use sampled decoding and a
+64 MiB disk cache for images fetched from the agent environment.
+
+Up to4 attachments per message: PNG/JPEG/WebP/GIF images up to20 MiB; supported
+UTF-8 text/log files and Android-decodable video up to256 MiB. Originals are copied
+into private `.codex-control/chat-attachments/<id>/`; the existing control-directory
+bind exposes these at `/tmp/termux-jobs-codex/chat-attachments/` in the selected
+Ubuntu. Source files remain unchanged. Text/log input includes an explicitly
+labelled first8 KiB sample and the complete file path for further reading. Video
+input contains up to12 evenly sampled frames with timestamps, no audio; brief
+between-frame events may be missed. Playback in the viewer uses Android codecs.
+The viewer offers a bounded text preview, image zoom, video playback and explicit
+non-overwriting Save to Download. Sending an attachment without text is allowed.
+
+Native `localImage` inputs and generated/tool image outputs are projected into
+stable attachment rows, without putting image base64 in Android snapshots. Remote
+image URLs are not fetched automatically. Unsent removed drafts are deleted;
+files involved in a submitted request are retained even if its acknowledgement
+is lost, so retry/history/model reads cannot lose their underlying files. These
+private copies consume storage independently of the originals. Missing historical
+source images show an unavailable message instead of a successful preview.
+
+The helper checks staged manifests, file paths, symlinks, thread ownership and
+attachment count. Selected files are model inputs, never Shell commands. Native
+agent permissions remain unchanged. Existing running helpers are not hot-reloaded:
+restart the selected session with its saved chat after installing the update.
+Other agents retain their existing protocol and do not expose this picker yet.
+Installed Codex0.163.0 schema and a real loopback-only app-server fixture confirm
+native image input and history projection; Android permissions, zoom, video codecs,
+keyboard/focus and switching still require developer checks on a phone.
+
+
+### v2.0.3 media presentation
+
+The shared local file browser now supplies viewport-only photo/video thumbnails,
+with a video badge. Memory cache is bounded to6 MiB per open browser and the shared
+thumbnail JPEG cache to16 MiB; proot originals are temporary and deleted after
+reading. File-list format2 adds modification time for cache identity; the parser
+still accepts the original triple-field format. Reads use a separate ProjectFiles
+instance so thumbnail work cannot occupy the browser's listing/transfer reader.
+Generation guards reject late results after directory/filter changes or close.
+A failed thumbnail leaves file selection available. No background preview is
+added for SSH/server listings. Image/video chat viewers fit their aspect ratio
+with screen bounds instead of always requesting78 percent of screen height.
+
+### Local APK output cards (v2.0.3)
+
+Explicit local Markdown links such as `[APK](/absolute/build.apk)` (also
+`[APK](</absolute/path with (spaces).apk>)`) in Codex assistant messages become
+APK cards. The helper only stats regular files, up to256 MiB and four per message;
+missing files, symlink files and remote URLs do not become APK cards. It never
+reads/hashes the APK on the polling thread. Metadata is cached by native item.
+Android copies the artifact through the selected environment on background workers
+and shows filename, size and the private copy's full SHA-256 beside an APK badge.
+Private artifact cache is bounded to512 MiB, separate from image previews.
+Opening a card shows the same metadata and explicit Install / Save to Download.
+No installer or Android settings activity starts just by receiving/opening a card.
+
+Installation shares only that cached file through a read-only FileProvider URI;
+it does not expose arbitrary private app files. If Android's install-source
+permission is missing, an explanation offers Android settings. Return and press
+Install again; Android's package installer owns final consent and package checks.
+The checksum identifies the file and is not a publisher/signature trust claim.
+This does not add APKs to the outgoing image/log/video picker, remote downloads,
+background installation or a new agent execution path. Active helpers need a
+Codex session restart with the saved chat after updating.
+
+In v2.0.4 APK cards open on tap without the Open/install hint. Their menu uses
+To Download on the left and Install on the right. It has no Close button;
+tap outside or use Android Back to dismiss. Other media viewers keep their actions.
+
+
+## v2.0.5: shared attachments and native authentication
+
+This section supersedes the Codex-only attachment scope above. Agent execution,
+permission policies, session identity and history stores remain separate.
+
+- Android stages picked originals under each agent's private control directory;
+  the already-existing per-agent bind exposes the files in that selected Ubuntu.
+  A manifest and atomic claim bind each staged ID to its native conversation.
+  Path traversal, symlink, foreign-thread and Shell attachment requests are refused.
+- Shared agent-attachments.cjs projects valid markers to cards and stat-checks
+  explicit local Markdown output links. Original text/log samples are bounded to
+  8KiB with the full path retained. Binary/APK originals are path references.
+  Images are sent through native Claude multipart blocks, OpenCode local file URIs
+  and Gemini @ references; sampled video frames include timestamps and no audio.
+  Other agents use a bounded JPEG model copy for picked images, preserving originals.
+  Native CLI permission checks are not bypassed.
+- Dedup keys include native session, kind, text and attachment references. Failed
+  or ambiguous acknowledgements retain drafts; submitted copies remain for history.
+  The outgoing folder flow is distinct from the explicit Shell composer.
+- Codex initializes its existing app-server and reads native account status before
+  creating/resuming a thread. Missing auth exposes a chat action. Explicit terminal
+  opening starts chatgptDeviceCode; URL/code print only there. Only the owned login
+  ID can complete/cancel this flow. Account-free providers retain their native path.
+  Login completion reconnects the chat and closes only the dedicated login terminal.
+- Gemini stored keys use a separate AES-GCM Android Keystore alias and profile AAD,
+  with ciphertext in the optional schema8 geminiEncryptedKey field. Duplicates and
+  imports discard that field. The masked edit is not saved as Android view state.
+  A private0700 directory/0600 one-time file passes a selected key to the owned
+  controller; it is consumed/unlinked before spawning the CLI, then held in child
+  environment only. No key enters shell arguments, settings/status JSON or chat.
+  Bootstrap/setup/proot failures have scoped cleanup; synchronous failed launches
+  discard the file. An abrupt kill before consumption can leave a private handoff
+  until the next same-profile launch. Backups of runtime/private app data must still
+  be treated as sensitive. This does not hide a key from tools with equivalent app
+  or agent-environment access. Key replacement does not restart a running agent.
+
+Older running helpers do not gain new attachment support until session restart.
+No X11/native-renderer libraries, server tunneling, global auth/configuration or
+unrelated shell-session lifecycle changes are included.
+
+
+### v2.0.6 OpenCode integration correction
+
+Android's OpenCode stage is beside its control socket, while receipts are below
+connections/<id>/receipts/. The production controller now supplies the former root
+explicitly. The v2.0.5 isolated adapter test had co-located those directories and did
+not cover this boundary. A production Unix-controller fixture now uses the nested
+layout and checks file-only/mixed sends, dedup, rejection/recovery and bounded media
+HTTP replies. Prompt/inbox/history may contain native base64 and use a40MiB cap;
+other HTTP routes retain2MiB. The projected Android chat stays bounded and does not
+receive raw media bodies. Existing saved chats and receipt locations are preserved.

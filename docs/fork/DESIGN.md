@@ -1,3 +1,21 @@
+# v2.0.2 — Agent file workflow
+
+A folder beside Shell opens the environment/phone-storage picker. Selected files
+remain a per-chat draft with optional text; remove uses a slightly larger red ×
+without enlarging its touch target. Submitted history/output cards support compact
+image/video/text viewing, saving and an explicit APK installer action. The local
+file browser decodes visible photo/video thumbnails with bounded caches.
+
+Codex sign-in is a clickable chat notice only when native authorization is absent.
+Gemini's masked optional key field appears directly under the API-auth choice and
+explains saved/blank behavior. Keys are never shown in chat. Context-compaction
+notices use a content-sized outside-dismissed dialog without a Back button; long
+reasoning/tool output retains its paginated viewer. The header places italic v2.0
+immediately beside the equally styled app name without changing control sizes.
+
+See [usage](USAGE.md), [chat details](CODEX-ANDROID-CHAT.md) and
+[validation](VALIDATION-v2.0.2.md). Earlier design sections are historical.
+
 # v2.0 — X11 and session UI
 
 The existing header dimensions and controls remain; the brand is bold italic

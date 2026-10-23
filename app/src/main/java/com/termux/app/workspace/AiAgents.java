@@ -25,7 +25,7 @@ public final class AiAgents {
     }
     public static void prepare(Context context) throws IOException {
         File dir=directory(context.getFilesDir());if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create AI controls");protect(dir);
-        for(String asset:new String[]{"ai-agents-control.js","ai-agents-bootstrap.sh","agent-receipts.cjs","opencode-permissions.cjs","opencode-chat.cjs","opencode-session-settings.cjs"}) {
+        for(String asset:new String[]{"ai-agents-control.js","ai-agents-bootstrap.sh","agent-receipts.cjs","agent-attachments.cjs","opencode-permissions.cjs","opencode-chat.cjs","opencode-session-settings.cjs"}) {
         File bridge=new File(dir,asset.equals("ai-agents-bootstrap.sh")?"bootstrap-v1.sh":asset.equals("ai-agents-control.js")?"bridge-v1.js":asset);
         if(asset.endsWith(".bundle")&&bridge.isFile()&&bridge.length()>0)continue;
         File temporary=File.createTempFile("bridge-",".tmp",dir);

@@ -1,3 +1,30 @@
+# Agent files in public v2.0.2
+
+Tap the folder beside Shell, choose Environments or Phone storage and select a file.
+Phone storage requests Android access when needed. Review the draft, optionally
+add text, and press Send; × removes an unsent file. You do not need to type its path
+on the phone. The original is made available in the selected agent environment.
+Models/CLI permissions still determine which media and tool operations are possible.
+
+Ask the agent to work on the attached project/log/APK or build a project. Local
+output links can appear as cards in chat: tap to preview or save, and tap an APK
+card for Download/Install. The app does not automatically install returned APKs.
+Codex output cards currently cover images/APKs; the other updated agents also
+project supported local file links as cards.
+Images use native media input; video supplies sampled timestamped frames without
+audio, and binary files are handled by agent tools. No automatic archive unpacking,
+full video/audio ingestion or guaranteed model interpretation is implied.
+
+After updating, restart agents with their saved chats. The Codex sign-in notice
+opens its official terminal device-login flow when needed. For Gemini API, an
+optional masked key field is below the auth choice: blank retains an existing key
+or the CLI's normal auth/terminal fallback. Changes apply next launch. Stored keys
+are device/profile-bound; re-enter on preset duplicate/import.
+
+The sections below record earlier features and private implementation stages;
+private labels2.0.3–2.0.6 are not later public releases. Current release evidence is
+[VALIDATION-v2.0.2.md](VALIDATION-v2.0.2.md).
+
 # v2.0 — desktop and agent quick guide
 
 Create/select a local **Termux, Ubuntu, Debian, Alpine, Fedora, openSUSE, Void
@@ -1421,3 +1448,83 @@ DNS HTTPS отправляет DNS-запросы Firefox Cloudflare по HTTPS 
 устанавливаются в эту Fedora через DNF; отдельная система не создаётся.
 Меню программ, проверка, установка, отмена и диагностика работают как
 у остальных подключённых сред. Комплект GPU доступен для Fedora44.
+
+
+## Codex chat attachments (v2.0.2 development build)
+
+Tap the folder beside the Shell field, then choose Environments or Phone storage.
+The latter requests Android storage access when needed. Choose an image, text/log
+file or supported video, review the attachment and send with optional message text.
+Use × to remove an unsent attachment. Tap a history card to open its preview and
+Save to Download. Video analysis uses up to12 timestamped frames, without audio;
+short events between frames may be missed. Restart the Codex session with its
+saved chat after updating; older running helpers do not support attachments.
+
+
+## Local media thumbnails (v2.0.3 development build)
+
+Photo/video rows in the local file browser show a thumbnail; videos have a play
+badge. This is shared by file browsing and local file pickers. Only visible rows
+are decoded. Unsupported or unreadable media keep a placeholder and remain
+selectable; thumbnails do not grant storage access or send attachments. SSH and
+the separate server listing do not gain automatic previews in this build.
+Phone/Termux media are read directly; thumbnails inside proot are prepared from
+a temporary private copy (images up to20 MiB and videos up to64 MiB). Larger proot
+files remain selectable. Chat media opens in an aspect-ratio-sized dialog with
+zoom/playback and the existing save action.
+
+### Local APK output cards (v2.0.3)
+
+Explicit local Markdown links such as `[APK](/absolute/build.apk)` (also
+`[APK](</absolute/path with (spaces).apk>)`) in Codex assistant messages become
+APK cards. The helper only stats regular files, up to256 MiB and four per message;
+missing files, symlink files and remote URLs do not become APK cards. It never
+reads/hashes the APK on the polling thread. Metadata is cached by native item.
+Android copies the artifact through the selected environment on background workers
+and shows filename, size and the private copy's full SHA-256 beside an APK badge.
+Private artifact cache is bounded to512 MiB, separate from image previews.
+Opening a card shows the same metadata and explicit Install / Save to Download.
+No installer or Android settings activity starts just by receiving/opening a card.
+
+Installation shares only that cached file through a read-only FileProvider URI;
+it does not expose arbitrary private app files. If Android's install-source
+permission is missing, an explanation offers Android settings. Return and press
+Install again; Android's package installer owns final consent and package checks.
+The checksum identifies the file and is not a publisher/signature trust claim.
+This does not add APKs to the outgoing image/log/video picker, remote downloads,
+background installation or a new agent execution path. Active helpers need a
+Codex session restart with the saved chat after updating.
+
+In v2.0.4 APK cards open on tap without the Open/install hint. Their menu uses
+To Download on the left and Install on the right. It has no Close button;
+tap outside or use Android Back to dismiss. Other media viewers keep their actions.
+
+
+## All-agent attachments and sign-in (v2.0.5 development)
+
+The folder picker/send/history flow now also supports Claude, Gemini and OpenCode.
+Select an original from an environment or Phone storage, review the draft, then
+send it with optional text. The larger red × removes only that draft; its hit area
+is unchanged. APKs and other binary originals are supplied by path for agent tools,
+not treated as text. Model-specific media and native file permissions still apply;
+Gemini may request access to the staged @ file in its native terminal.
+
+For a Codex profile without native auth, tap Sign in to Codex in the chat notice.
+The native terminal shows the official device-login URL/code; follow that flow and
+return automatically after success. Closing cancels this login attempt; existing
+logged-in profiles use their saved authorization.
+
+For Gemini API authentication, an optional masked key field appears immediately
+below the auth choice. Blank preserves a saved key; if none was set, existing CLI
+auth is used or Gemini prompts in its terminal (robot button). New text replaces
+the saved key, and Remove saved key clears it when settings are saved. Changes take
+effect on next launch. Keys are device/profile-bound: duplicated/imported presets
+require re-entry. There is no automatic restart of an active session.
+
+Codex context-compaction notices open as compact text windows: dismiss by outside
+tap or Android Back. The normal reasoning/full-output viewer retains pagination.
+
+
+v2.0.6 fixes OpenCode attachment admission. Restart that session with its saved chat
+after updating; reselect the file and use Send, with optional text. No history reset
+or new provider login is needed for this helper fix.

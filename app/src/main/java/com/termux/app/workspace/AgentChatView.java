@@ -13,7 +13,10 @@ import java.util.function.Consumer;
 /** Agent-neutral Android transcript. Updates rows by stable identity, never rebuilds the terminal. */
 final class AgentChatView extends LinearLayout {
     final ScrollView scroll;
-    final LinearLayout timeline,requests,keysHost;
+    final LinearLayout timeline,requests,keysHost,attachmentDrafts;
+    final WorkspaceIconButton folder;private final TextView shellLabel;
+    java.util.function.BiConsumer<JSONObject,ImageView> thumbnail=(a,v)->{};
+    java.util.function.BiConsumer<JSONObject,TextView> apkDetails=(a,v)->{};
     final TextView status,older,connection;
     final EditText shellInput;
     private WorkspaceIconButton shellSend;
@@ -73,12 +76,14 @@ final class AgentChatView extends LinearLayout {
         timeline=new LinearLayout(c);timeline.setOrientation(VERTICAL);timeline.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(followLayout){followLayout=false;if(restoring==null)bottomAfterLayout();}});timeline.setPadding(dp(12),dp(4),dp(12),dp(16));scroll.addView(timeline);
         older=pill(tr("Предыдущие сообщения","Earlier messages"),loadOlder);timeline.addView(older);
         addView(scroll,new LayoutParams(-1,0,1));requests=new LinearLayout(c);requests.setOrientation(VERTICAL);requests.setPadding(dp(12),0,dp(12),0);timeline.addView(requests,new LayoutParams(-1,-2));connection=label("",13);connection.setVisibility(GONE);requests.addView(connection);
-        LinearLayout shell=new LinearLayout(c);shell.setGravity(Gravity.CENTER_VERTICAL);shell.setPadding(dp(8),dp(4),dp(8),dp(4));shell.addView(label("Shell",12));
+        attachmentDrafts=new LinearLayout(c);attachmentDrafts.setOrientation(VERTICAL);attachmentDrafts.setVisibility(GONE);addView(attachmentDrafts,new LayoutParams(-1,-2));
+        LinearLayout shell=new LinearLayout(c);shell.setGravity(Gravity.CENTER_VERTICAL);shell.setPadding(dp(8),dp(4),dp(8),dp(4));shellLabel=label("Shell",12);shell.addView(shellLabel);folder=new WorkspaceIconButton(c);folder.setIcon(c.getDrawable(com.termux.R.drawable.workspace_folder),dp(24));folder.setTextColor(0xff79dfcd);folder.setContentDescription(tr("Прикрепить файл","Attach file"));folder.setVisibility(GONE);shell.addView(folder,new LayoutParams(dp(44),dp(44)));
         shellInput=new EditText(c);shellInput.setTextColor(0xffd5e4e0);shellInput.setHintTextColor(0xff829b96);shellInput.setTextSize(13);shellInput.setMinLines(1);shellInput.setMaxLines(3);shellInput.setHint(tr("Команда без модели…","Command without model…"));shellInput.setTypeface(Typeface.MONOSPACE);shellInput.setSaveEnabled(false);shellInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE|android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);shellInput.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_NONE|android.view.inputmethod.EditorInfo.IME_FLAG_NO_ENTER_ACTION);shell.addView(shellInput,new LayoutParams(0,-2,1));
         WorkspaceIconButton send=new WorkspaceIconButton(c);shellSend=send;send.setIcon(c.getDrawable(com.termux.R.drawable.workspace_play),dp(24));send.setTextColor(0xff79dfcd);send.setContentDescription(tr("Выполнить shell-команду","Run shell command"));send.setOnClickListener(v->sendShell.run());shell.addView(send,new LayoutParams(dp(44),dp(44)));addView(shell,new LayoutParams(-1,-2));shellEnabled(false);
         keysHost=new LinearLayout(c);keysHost.setOrientation(VERTICAL);keysHost.setVisibility(GONE);addView(keysHost,new LayoutParams(-1,-2));
 
     }
+    void attachmentPicker(boolean enabled){folder.setVisibility(enabled?VISIBLE:GONE);shellLabel.setVisibility(enabled?GONE:VISIBLE);}
     void connection(String message){connection(message,null);}
     void connection(String message,Runnable retry){connection.setOnClickListener(retry==null?null:v->retry.run());connection.setClickable(retry!=null);if(connection.getText().toString().equals(message)&&connection.getVisibility()==(message.isEmpty()?GONE:VISIBLE))return;boolean bottom=timeline.getHeight()-scroll.getHeight()-scroll.getScrollY()<dp(48);connection.setText(message);connection.setVisibility(message.isEmpty()?GONE:VISIBLE);if(bottom){followLayout=true;bottomAfterLayout();}}
     void clearRequests(){requests.removeAllViews();requests.addView(connection);}
@@ -99,6 +104,24 @@ final class AgentChatView extends LinearLayout {
                 views.put(key,card);
                 if(!value.equals(values.get(key))){changed=true;values.put(key,value);card.update(r);}
                 if(card.getParent()==null){changed=true;timeline.addView(card,index);}else if(timeline.indexOfChild(card)!=index){changed=true;timeline.removeView(card);timeline.addView(card,index);}index++;continue;
+            }
+            if(r.optString("kind").equals("attachment")){
+                View existing=views.get(key);LinearLayout card=existing instanceof LinearLayout?(LinearLayout)existing:new LinearLayout(getContext());
+                if(!value.equals(values.get(key))){changed=true;values.put(key,value);card.removeAllViews();card.setOrientation(VERTICAL);JSONObject a=r.optJSONObject("attachment");
+                    if(a!=null&&a.optString("type").equals("apk")){
+                        card.setOrientation(HORIZONTAL);card.setGravity(Gravity.CENTER_VERTICAL);
+                        LinearLayout badge=new LinearLayout(getContext());badge.setOrientation(VERTICAL);badge.setGravity(Gravity.CENTER);
+                        ImageView icon=new ImageView(getContext());icon.setImageResource(com.termux.R.drawable.workspace_apk);badge.addView(icon,new LayoutParams(dp(36),dp(36)));
+                        TextView apk=label("APK",11);apk.setGravity(Gravity.CENTER);badge.addView(apk);card.addView(badge,new LayoutParams(dp(64),-2));
+                        LinearLayout info=new LinearLayout(getContext());info.setOrientation(VERTICAL);TextView filename=label(a.optString("name","APK"),13);filename.setMaxLines(2);info.addView(filename);
+                        TextView detail=label(android.text.format.Formatter.formatFileSize(getContext(),a.optLong("bytes"))+" · SHA-256: "+tr("подготовка…","preparing…"),11);info.addView(detail);card.addView(info,new LayoutParams(0,-2,1));apkDetails.accept(a,detail);
+                    }else if(a!=null){TextView title=label(a.optString("name",tr("Вложение","Attachment")),13);card.addView(title);
+                        String type=a.optString("type");if(type.equals("image")||type.equals("video")){ImageView image=new ImageView(getContext());image.setScaleType(ImageView.ScaleType.FIT_CENTER);image.setBackgroundColor(0xff111917);image.setContentDescription(title.getText());card.addView(image,new LayoutParams(-1,dp(160)));thumbnail.accept(a,image);}
+                        TextView hint=label(type.equals("video")?tr("Видео · выбранные кадры, без звука · открыть","Video · sampled frames, no audio · open"):tr("Нажмите, чтобы открыть","Tap to open"),11);card.addView(hint);
+                    }
+                    GradientDrawable bg=new GradientDrawable();bg.setColor(0xff0b1b19);bg.setCornerRadius(dp(14));bg.setStroke(dp(1),0xff28433d);card.setBackground(bg);LayoutParams lp=new LayoutParams(-1,-2);lp.setMargins(0,dp(6),0,dp(8));card.setLayoutParams(lp);final String k=key;card.setOnClickListener(v->{JSONObject row=data.get(k);if(row!=null)open.accept(row);});
+                }
+                views.put(key,card);if(card.getParent()==null){changed=true;timeline.addView(card,index);}else if(timeline.indexOfChild(card)!=index){changed=true;timeline.removeView(card);timeline.addView(card,index);}index++;continue;
             }
             TextView t=(TextView)views.get(key);
             if(t==null){t=label("",14);views.put(key,t);}

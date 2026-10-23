@@ -1,12 +1,13 @@
 'use strict';
 // Structured view of one owned native session. Never parses terminal escape output.
 const crypto=require('node:crypto');
+const {Attachments,attachmentRows}=require('./agent-attachments.cjs');
 const {ReceiptStore,clean}=require('./agent-receipts.cjs');
 const id=v=>typeof v==='string'&&/^msg_[A-Za-z0-9_-]{1,124}$/.test(v);
 const canonical=v=>JSON.stringify(v,(_,value)=>value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.keys(value).sort().map(k=>[k,value[k]])):value);
 const text=v=>typeof v==='string'?clean(v):'';
 class OpenCodeChat {
- constructor(request,session,file){this.request=request;this.session=session;this.file=file;this.live=new Map();this.asked=new Map();this.pending=new Map();this.forms=new Map();this.connected=false;this.closed=false;this.lastMessage='';this.shells=new Set();this.endedShells=new Set();this.admissions=new Map();}
+ constructor(request,session,file,options={}){this.request=request;this.session=session;this.file=file;this.attachments=new Attachments(options.attachmentRoot||require("node:path").dirname(file));this.live=new Map();this.asked=new Map();this.pending=new Map();this.forms=new Map();this.connected=false;this.closed=false;this.lastMessage='';this.shells=new Set();this.endedShells=new Set();this.admissions=new Map();}
  event(e){
   const d=e.data||{};if(d.sessionID!==this.session && d.form?.sessionID!==this.session)return;
   if(id(d.assistantMessageID))this.lastMessage=d.assistantMessageID;
@@ -35,14 +36,14 @@ class OpenCodeChat {
   for(const m of messages){
    if(!id(m.id))continue;
    const push=(key,kind,body,title='',meta={})=>rows.push({...meta,key:m.id+':'+key,message:m.id,part:key,kind,title:text(title),body:text(body).slice(0,12000),more:text(body).length>12000});
-   if(m.type==='user')push('user','user',m.text);
+   if(m.type==='user'){const projected=this.attachments.project(m.text,this.session);if(projected.text)push('user','user',projected.text);rows.push(...attachmentRows(m.id,projected.files));}
    else if(m.type==='assistant'){
     const ord={text:0,reasoning:0};
     for(const part of m.content||[]){
      if(part.type==='text'||part.type==='reasoning'){
       const key=part.type+':'+ord[part.type]++;const live=this.live.get(m.id+':'+key);
       const body=live&&live.text.length>(part.text||'').length?live.text:part.text;
-      if(body)push(key,part.type,body);
+      if(body){push(key,part.type,body);if(part.type==='text')rows.push(...attachmentRows(m.id,this.attachments.output(body),'output:'+key));}
      }else if(part.type==='tool'){
       const receipt=receipts.get(part.id);
       if(receipt){used.add(receipt.key);push('receipt:'+part.id,'receipt',receipt.body,receipts.label(receipt,false));}
@@ -72,8 +73,8 @@ class OpenCodeChat {
   const pending=(forms.data||[]).filter(f=>f.sessionID===this.session&&(!f.state||f.state.status==='pending'));
   this.forms=new Map(pending.map(f=>[f.id,{raw:canonical(f),nonce:crypto.createHash('sha256').update(canonical(f)).digest('hex')} ]));
   for(const m of page.messages)if(m.type==='shell'&&m.status==='running'&&!this.endedShells.has(m.shellID)&&/^sh_[A-Za-z0-9_-]+$/.test(m.shellID||''))this.shells.add(m.shellID);
-  const rows=this.rows(page.messages);if(!q.cursor)for(const pending of inbox.data||[])if(pending.type==='user'&&id(pending.id)&&!rows.some(r=>r.message===pending.id))rows.push({key:pending.id+':user',message:pending.id,part:'user',kind:'user',body:text(pending.payload?.text).slice(0,12000),queued:true});let budget=60000;for(const r of rows){const max=Math.max(100,Math.floor(budget/Math.max(1,rows.length)));if(r.body.length>max){r.body=r.body.slice(0,max);r.more=true;}}
-  return {nativeChat:true,session:this.session,model:{providerID:text(model.providerID).slice(0,256),id:text(model.id).slice(0,256),variant:text(model.variant).slice(0,80)},rows,older:page.older,needsTerminal:pending.some(f=>(f.fields||[]).some(field=>field.when||field.hidden||!['string','boolean','number','integer','multiselect'].includes(field.type)||(field.type==='multiselect'&&field.custom)))||(permissions.data||[]).some(p=>!['shell','edit','read','list','glob','grep','webfetch','websearch'].includes(p.action)),directShell:this.shells.size>0,busy:this.shells.size>0||!!active.data?.[this.session]||(inbox.data||[]).some(item=>item.type!=='synthetic'),connected:this.connected,forms:pending.map(f=>({id:f.id,title:text(f.title),fields:f.fields,nonce:this.forms.get(f.id).nonce}))};
+  const rows=this.rows(page.messages);if(!q.cursor)for(const pending of inbox.data||[])if(pending.type==='user'&&id(pending.id)&&!rows.some(r=>r.message===pending.id)){const projected=this.attachments.project(pending.payload?.text,this.session);if(projected.text)rows.push({key:pending.id+':user',message:pending.id,part:'user',kind:'user',body:text(projected.text).slice(0,12000),queued:true});rows.push(...attachmentRows(pending.id,projected.files).map(r=>({...r,queued:true})));}let budget=60000;for(const r of rows){const max=Math.max(100,Math.floor(budget/Math.max(1,rows.length)));if(r.body.length>max){r.body=r.body.slice(0,max);r.more=true;}}
+  return {nativeChat:true,attachmentsSupported:true,session:this.session,model:{providerID:text(model.providerID).slice(0,256),id:text(model.id).slice(0,256),variant:text(model.variant).slice(0,80)},rows,older:page.older,needsTerminal:pending.some(f=>(f.fields||[]).some(field=>field.when||field.hidden||!['string','boolean','number','integer','multiselect'].includes(field.type)||(field.type==='multiselect'&&field.custom)))||(permissions.data||[]).some(p=>!['shell','edit','read','list','glob','grep','webfetch','websearch'].includes(p.action)),directShell:this.shells.size>0,busy:this.shells.size>0||!!active.data?.[this.session]||(inbox.data||[]).some(item=>item.type!=='synthetic'),connected:this.connected,forms:pending.map(f=>({id:f.id,title:text(f.title),fields:f.fields,nonce:this.forms.get(f.id).nonce}))};
  }
  async command(q){
   if(this.closed)throw Error('Closed chat');
@@ -87,10 +88,11 @@ class OpenCodeChat {
    return {body:text(body).slice(offset,offset+24000),next:offset+24000<text(body).length?offset+24000:null};
   }
   if(q.op==='chat-send'){
-   if(!id(q.id)||typeof q.text!=='string'||!q.text.trim()||Buffer.byteLength(q.text)>32000||!['message','shell'].includes(q.kind))throw Error('Invalid message');
-   const previous=this.pending.get(q.id);const raw=JSON.stringify([q.kind,q.text]);
+   if(!id(q.id)||typeof q.text!=='string'||(!q.text.trim()&&!(Array.isArray(q.attachments)&&q.attachments.length))||Buffer.byteLength(q.text)>32000||!['message','shell'].includes(q.kind))throw Error('Invalid message');
+   const previous=this.pending.get(q.id);const raw=JSON.stringify([q.kind,q.text,q.attachments||[]]);
    if(previous){if(previous.raw!==raw)throw Error('Changed message');return previous.promise;}
-   const promise=q.kind==='shell'?this.startShell(q):this.request('POST','/api/session/'+this.session+'/prompt',{id:q.id,text:q.text}).then(()=>({accepted:true,id:q.id}));
+   if(q.attachments?.length&&q.session!==this.session)throw Error('Stale session');const files=this.attachments.prepare(q.attachments,this.session,q.kind);const prompt=this.attachments.prompt(q.text,files);
+   const promise=q.kind==='shell'?this.startShell(q):this.request('POST','/api/session/'+this.session+'/prompt',{id:q.id,text:prompt,...(files.length?{files:this.attachments.openCode(files)}:{})}).then(()=>({accepted:true,id:q.id}));
    this.pending.set(q.id,{raw,promise});while(this.pending.size>200)this.pending.delete(this.pending.keys().next().value);
    // Retain failed/ambiguous admission too: retrying a direct shell must never execute twice.
    return promise;

@@ -1,0 +1,20 @@
+{
+  "ru": [
+    "Вложения в чате Codex: изображения, текстовые файлы/логи и видео через папку рядом с полем Shell. Выбор окружения или памяти телефона; доступ запрашивается при выборе памяти телефона.",
+    "Превью до отправки, карточки в истории, увеличение картинки, воспроизведение видео и сохранение в Download. Видео для анализа передаётся до 12 кадрами с временными метками, без звука."
+  ],
+  "en": [
+    "Codex chat attachments: images, text/log files and video via the folder beside Shell. Choose an environment or phone storage; storage access is requested on phone-storage selection.",
+    "Review before sending, inline history cards, image zoom, video playback and Save to Download. Video analysis uses up to12 sampled timestamped frames without audio."
+  ],
+  "compatibility": {
+    "ru": [
+      "Android8+/ARM64, прежние com.termux/подпись и schema8, code1326. Сброс данных и миграция окружений не требуются.",
+      "После обновления перезапустите сессию Codex с сохранённым чатом, чтобы загрузить новый обработчик вложений. Копии отправленных файлов хранятся отдельно для истории и повторной отправки. Завершите важную работу перед обновлением: Android может остановить процессы."
+    ],
+    "en": [
+      "Android8+/ARM64, unchanged com.termux/signer and schema8, code1326. No data reset or environment migration.",
+      "After updating, restart Codex with its saved chat to load attachment support. Submitted private file copies are retained for history/retry. Finish important work before updating: Android may terminate processes."
+    ]
+  }
+}

@@ -332,15 +332,10 @@ public final class WorkspaceController {
         if (navigation.getParent() != null) ((ViewGroup) navigation.getParent()).removeView(navigation);
         header.removeAllViews(); header.setPadding(dp(8), dp(4), dp(8), dp(4));
         LinearLayout top = row();
-        TextView name = text("Termux Job’s", 17, TEXT); name.setTypeface(null, Typeface.BOLD_ITALIC);
+        TextView name = text("Termux Job’s v2.0", 17, TEXT); name.setTypeface(null, Typeface.BOLD_ITALIC);
         name.setSingleLine(); name.setEllipsize(TextUtils.TruncateAt.END);
         LinearLayout brand = row();
         brand.addView(name, new LinearLayout.LayoutParams(0, -2, 1));
-        TextView version = text("v2.0", 13, MUTED); version.setSingleLine();
-        version.setContentDescription("Termux Job’s v2.0");
-        LinearLayout.LayoutParams versionParams = new LinearLayout.LayoutParams(-2, -2);
-        versionParams.setMarginStart(dp(4)); versionParams.setMarginEnd(dp(6));
-        brand.addView(version, versionParams);
         top.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
         if(screen==Screen.TERMINAL){
             boolean directActive=desktopUi!=null&&desktopUi.hasSurface()?desktopUi.keyboardEnabled():interactiveInput;
@@ -1044,6 +1039,11 @@ public final class WorkspaceController {
         String[] geminiModel={draft.geminiModel},geminiMode={draft.geminiMode},geminiChat={draft.geminiChat},geminiThread={draft.geminiThread};
         String[] geminiAuth={draft.geminiAuth};
         TextView geminiAuthButton=button("",false,()->{});geminiFields.addView(geminiAuthButton);
+        LinearLayout geminiKeyFields=column();geminiKeyFields.setTag("gemini-api-key-fields");geminiFields.addView(geminiKeyFields);
+        String[] geminiStoredKey={draft.geminiEncryptedKey};
+        EditText geminiApiKey=field(draft.geminiEncryptedKey.isEmpty()?tr("Gemini API-ключ (необязательно)","Gemini API key (optional)"):tr("Ключ сохранён · введите новый для замены","Key saved · enter a replacement"),"",false);geminiApiKey.setTag("gemini-api-key");geminiApiKey.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);geminiApiKey.setSaveEnabled(false);geminiApiKey.setImeOptions(android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);geminiKeyFields.addView(geminiApiKey);
+        geminiKeyFields.addView(text(tr("Если ключ не указан и ранее не сохранён, при запуске Gemini предложит ввести его в терминальном окне — откройте его кнопкой робота. Пустое поле сохраняет уже заданный ключ, новый ключ заменяет его. Ключ защищён Android Keystore и применяется при следующем запуске.","If no key is entered or saved, Gemini will offer key entry in the terminal at launch — open it with the robot button. Empty keeps an existing key; a new key replaces it. Android Keystore protects the key; changes apply at the next launch."),12,MUTED));
+        TextView clearGeminiKey=button(tr("Удалить сохранённый ключ","Remove saved key"),false,()->{});geminiKeyFields.addView(clearGeminiKey);clearGeminiKey.setVisibility(geminiStoredKey[0].isEmpty()?View.GONE:View.VISIBLE);clearGeminiKey.setOnClickListener(v->{geminiStoredKey[0]="";geminiApiKey.setText("");geminiApiKey.setHint(tr("Gemini API-ключ (необязательно)","Gemini API key (optional)"));clearGeminiKey.setVisibility(View.GONE);});
         TextView geminiAuthDescription=text("",12,MUTED);geminiFields.addView(geminiAuthDescription);
         LinearLayout geminiCloudFields=column();geminiFields.addView(geminiCloudFields);
         geminiCloudFields.addView(text(tr("Проект Google Cloud — облачный ID, не рабочая папка","Google Cloud project — cloud ID, not a working folder"),12,MUTED));
@@ -1061,7 +1061,7 @@ public final class WorkspaceController {
         TextView geminiAccessDetails=text("",12,MUTED);geminiFields.addView(geminiAccessDetails);unavailableAgentScope(geminiFields);
         Runnable updateGemini=()->{
             resetEnvironmentCheck[0].run();
-            geminiAuthButton.setText(WorkspaceText.tr("Вход Gemini: ")+GeminiAuthUi.label(activity,geminiAuth[0]));geminiAuthDescription.setText(GeminiAuthUi.description(activity,geminiAuth[0]));geminiCloudFields.setVisibility(geminiAuth[0].equals("vertex")?View.VISIBLE:View.GONE);
+            geminiKeyFields.setVisibility(geminiAuth[0].equals("api")?View.VISIBLE:View.GONE);geminiAuthButton.setText(WorkspaceText.tr("Вход Gemini: ")+GeminiAuthUi.label(activity,geminiAuth[0]));geminiAuthDescription.setText(GeminiAuthUi.description(activity,geminiAuth[0]));geminiCloudFields.setVisibility(geminiAuth[0].equals("vertex")?View.VISIBLE:View.GONE);
             if(geminiAuth[0].equals("vertex")&&geminiCloudProject.getText().toString().isEmpty()){WorkspaceStore.Session defaults=new WorkspaceStore.Session();defaults.geminiAgent=true;defaults.geminiAuth="vertex";VertexConnection.applyDefaults(activity,defaults);if(!defaults.geminiCloudProject.isEmpty()){geminiCloudProject.setText(defaults.geminiCloudProject);geminiCloudLocation.setText(defaults.geminiCloudLocation);}}
             geminiModelButton.setText(WorkspaceText.tr("Модель: ")+(geminiModel[0].isEmpty()?WorkspaceText.tr("По умолчанию"):geminiModel[0]));
             geminiModeButton.setText(tr("Режим прав: ","Permission mode: ")+geminiModeNames[java.util.Arrays.asList(geminiModes).indexOf(geminiMode[0])]);
@@ -1189,7 +1189,9 @@ public final class WorkspaceController {
         codexFields.addView(text(WorkspaceText.tr("Авторизация и история берутся из выбранной среды. Если вход не выполнен, Codex предложит авторизоваться. Для карточки управления нужна версия Codex с app-server и --remote. Полный доступ действует в пределах доступных среде файлов. На Android ограничения sandbox зависят от поддержки Codex; при ошибке запуск остановится, права не повышаются автоматически."), 12, MUTED));
         TextView agentUbuntu=button("",false,()->{});
         TextView migrateAgent=button(tr("Миграция среды агента","Agent environment migration"),false,()->{});
+        TextView codexLoginHint=text(tr("После запуска будет предложено войти в Codex, если вход ещё не выполнен.","After launch, you will be prompted to sign in to Codex if you are not already signed in."),12,MUTED);codexLoginHint.setTag("codex-login-hint");form.addView(codexLoginHint,0);
         Runnable updateEnvironment = () -> {
+            codexLoginHint.setVisibility(chosenEnvironment[0].equals("codex")&&chosenAgent[0].equals("codex")?View.VISIBLE:View.GONE);
             resetEnvironmentCheck[0].run();environmentCheck.setVisibility(View.VISIBLE);
             agentUbuntu.setText(tr("Окружение агента: ","Agent environment: ")+AgentEnvironments.label(codexEnvironment[0]));agentUbuntu.setVisibility(chosenEnvironment[0].equals("codex")?View.VISIBLE:View.GONE);migrateAgent.setVisibility(chosenEnvironment[0].equals("codex")?View.VISIBLE:View.GONE);AgentStatusUi.available(migrateAgent,!codexEnvironment[0].equals("ubuntu-ai"));
             localFields.setVisibility(!chosenEnvironment[0].equals("ssh")&&!chosenEnvironment[0].equals("codex")?View.VISIBLE:View.GONE);
@@ -1332,6 +1334,14 @@ public final class WorkspaceController {
                     java.util.Arrays.fill(secret, '\0'); password.setError(WorkspaceText.tr("Keystore недоступен. Отключите запоминание или повторите.")); return;
                 }
             }
+            String nextGeminiKey=geminiStoredKey[0];
+            if(selectedGemini&&geminiAuth[0].equals("api")&&geminiApiKey.length()>0){
+                char[] apiSecret=new char[geminiApiKey.length()];android.text.TextUtils.getChars(geminiApiKey.getText(),0,apiSecret.length,apiSecret,0);
+                try{if(!GeminiApiKeyVault.valid(apiSecret)){geminiApiKey.setError(tr("Ключ до 4096 символов, без пробелов и переносов строки","Key up to 4096 characters, without spaces or line breaks"));return;}nextGeminiKey=GeminiApiKeyVault.encrypt(draft,apiSecret);}
+                catch(java.security.GeneralSecurityException|RuntimeException e){geminiApiKey.setError(tr("Не удалось защитить ключ через Android Keystore. Повторите или используйте вход CLI.","Could not protect the key with Android Keystore. Retry or use CLI authentication."));return;}
+                finally{java.util.Arrays.fill(apiSecret,'\0');java.util.Arrays.fill(secret,'\0');}
+            }
+            draft.geminiEncryptedKey=nextGeminiKey;geminiApiKey.setText("");
             char[] oldSecret = pendingSshPasswords.remove(draft.id); if (oldSecret != null) java.util.Arrays.fill(oldSecret, '\0');
             if (sshPasswordMode && secret.length > 0 && !rememberPassword.isChecked()) pendingSshPasswords.put(draft.id, secret.clone());
             java.util.Arrays.fill(secret, '\0'); password.setText("");
@@ -1366,7 +1376,7 @@ public final class WorkspaceController {
             if (existing == null && launchAfterSave) launchNew(draft,true);
             else if (live != null) activity.showToast(connectionEdited?tr("Команда подключения сохранена. Применится после перезапуска этой сессии. Текущий процесс не изменён.","Connection command saved. Restart this session to apply it. The current process is unchanged."):tr("Имя обновлено. Каталог, команды и права применятся при следующем запуске; текущая сессия не изменена.","Name updated. Directory, commands and permissions apply on next launch; the current session is unchanged."), true);
         }));
-        dialog.setOnDismissListener(d -> {editorOpen[0]=false;password.setText("");}); dialog.show();
+        dialog.setOnDismissListener(d -> {editorOpen[0]=false;password.setText("");geminiApiKey.setText("");}); dialog.show();
     }
     private interface ChatChoice {void chosen(String id,String name,String sourceDirectory);}
     private void chooseCodexChat(String environment,String directory,ChatChoice choice) {
@@ -1835,7 +1845,7 @@ public final class WorkspaceController {
         TerminalSession current = activity.getCurrentSession();
         if (current == null || !current.isRunning() || current.getPid() <= 0) { activity.showToast(WorkspaceText.tr("Нет работающего терминала"), false); return; }
         String command = terminalInput.getText().toString();
-        if (command.trim().isEmpty()) return;
+        if (command.trim().isEmpty() && !(agentChatUi!=null&&agentChatUi.handlesComposer()&&agentChatUi.hasAttachments())) return;
         WorkspaceStore.Session profile=store.findByHandle(current.mHandle);
         if(profile!=null&&(profile.aiAgent.equals("opencode")||profile.geminiAgent||profile.claudeAgent||CodexChatControl.enabled(activity.getFilesDir(),profile))&&agentChatUi.handlesComposer()){
             agentChatUi.send(command,()->{store.recordCommand(command);if(activity.getCurrentSession()==current&&terminalInput.getText().toString().equals(command)){terminalInput.setText("");terminalDrafts.remove(current.mHandle);}});return;
@@ -2189,7 +2199,7 @@ public final class WorkspaceController {
                 } finally { java.util.Arrays.fill(secret, '\0'); }
             }
             if(AgentPreparation.supports(profile))AgentPreparation.prepare(activity);
-            if(profile.geminiAgent){GeminiCli.prepare(activity);profile.geminiSocketId=java.util.UUID.randomUUID().toString();if(profile.geminiChat.equals("new"))profile.geminiThread=java.util.UUID.randomUUID().toString();}
+            if(profile.geminiAgent){GeminiCli.prepare(activity);profile.geminiSocketId=java.util.UUID.randomUUID().toString();if(profile.geminiChat.equals("new"))profile.geminiThread=java.util.UUID.randomUUID().toString();GeminiApiKeyVault.prepare(activity,profile);}
             if(profile.claudeAgent){ClaudeCode.prepare(activity);profile.claudeSocketId=java.util.UUID.randomUUID().toString();if(profile.claudeChat.equals("new"))profile.claudeThread=java.util.UUID.randomUUID().toString();}
             if(profile.aiAgent.equals("opencode")){AiAgents.prepare(activity);AiAgents.prepareLaunch(profile);}
             if (profile.environment.equals("codex")) { profile.codexSocketId = java.util.UUID.randomUUID().toString(); CodexSessionShell.prepareBridge(activity);CodexChatControl.prepare(activity,profile); }
@@ -2218,7 +2228,7 @@ public final class WorkspaceController {
             return session;
         } catch (java.security.GeneralSecurityException e) {
             rollbackUnstarted(profile,registeredNew);
-            if (broker != null) broker.close(); activity.showToast(WorkspaceText.tr("Сохранённый пароль недоступен. Введите его заново в настройках сессии."), true); return null;
+            if (broker != null) broker.close(); activity.showToast(profile.geminiAgent?tr("Сохранённый API-ключ недоступен. Введите его заново в настройках сессии.","The saved API key is unavailable. Enter it again in session settings."):WorkspaceText.tr("Сохранённый пароль недоступен. Введите его заново в настройках сессии."), true); return null;
         } catch (IOException | RuntimeException e) {
             rollbackUnstarted(profile,registeredNew);
             WorkspaceDiagnostics.failure(profile,e);
@@ -2226,6 +2236,7 @@ public final class WorkspaceController {
         }
     }
     private void rollbackUnstarted(WorkspaceStore.Session profile,boolean registeredNew) {
+        if(profile.geminiAgent)GeminiApiKeyVault.discard(activity,profile);
         if(registeredNew&&!profile.saved&&profile.handle.isEmpty()&&store.sessions.remove(profile))store.save();
     }
     public void refresh() {

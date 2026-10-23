@@ -29,21 +29,24 @@ final class ProjectFiles implements AutoCloseable {
         return path.startsWith("~/")?"\"$HOME\"/"+SessionShell.quote(path.substring(2)):SessionShell.quote(path);
     }
     static String listScript(String path) {
-        return "cd -- "+target(path)+" || exit 2; printf '%s\\0' \"$(pwd -P)\"; exec find -L . -mindepth 1 -maxdepth 1 -printf '%y\\0%f\\0%s\\0'";
+        return "cd -- "+target(path)+" || exit 2; printf 'JOBS_FILES_2\\0%s\\0' \"$(pwd -P)\"; exec find -L . -mindepth 1 -maxdepth 1 -printf '%y\\0%f\\0%s\\0%T@\\0'";
     }
     static final class Entry {
-        final String name,path;final boolean directory;final long size;
-        Entry(String parent,String name,boolean directory,long size) {this.name=name;this.path=(parent.equals("/")?"/":parent+"/")+name;this.directory=directory;this.size=size;}
+        final String name,path;final boolean directory;final long size,modified;
+        Entry(String parent,String name,boolean directory,long size) {this(parent,name,directory,size,-1);}
+        Entry(String parent,String name,boolean directory,long size,long modified) {this.modified=modified;this.name=name;this.path=(parent.equals("/")?"/":parent+"/")+name;this.directory=directory;this.size=size;}
     }
     static final class Listing {String path; final List<Entry> entries=new ArrayList<>();}
     static Listing parse(byte[] bytes) throws IOException {
         String[] fields=new String(bytes,StandardCharsets.UTF_8).split("\u0000",-1);
-        if(fields.length<2 || !fields[0].startsWith("/") || (fields.length-2)%3!=0)throw new IOException(WorkspaceText.tr("Некорректный список файлов"));
-        Listing result=new Listing();result.path=fields[0];
-        for(int i=1;i+2<fields.length;i+=3) {
+        boolean version2=fields.length>0&&fields[0].equals("JOBS_FILES_2");int start=version2?2:1,stride=version2?4:3;
+        if(fields.length<start+1 || !fields[start-1].startsWith("/") || (fields.length-start-1)%stride!=0)throw new IOException(WorkspaceText.tr("Некорректный список файлов"));
+        Listing result=new Listing();result.path=fields[start-1];
+        for(int i=start;i+stride-1<fields.length;i+=stride) {
             if(fields[i+1].isEmpty() || fields[i+1].contains("/") || fields[i+1].equals(".") || fields[i+1].equals(".."))throw new IOException(WorkspaceText.tr("Некорректное имя файла"));
             long size;try {size=Long.parseLong(fields[i+2]);}catch(NumberFormatException e){throw new IOException(WorkspaceText.tr("Некорректный размер файла"));}
-            if(fields[i].equals("d") || fields[i].equals("f"))result.entries.add(new Entry(result.path,fields[i+1],fields[i].equals("d"),size));
+            long modified=-1;if(version2){String value=fields[i+3];if(!value.matches("-?[0-9]{1,13}(\\.[0-9]{1,12})?"))throw new IOException("INVALID_FILE_TIME");double seconds=Double.parseDouble(value);if(!Double.isFinite(seconds)||Math.abs(seconds)>9e12)throw new IOException("INVALID_FILE_TIME");modified=(long)(seconds*1000);}
+            if(fields[i].equals("d") || fields[i].equals("f"))result.entries.add(new Entry(result.path,fields[i+1],fields[i].equals("d"),size,modified));
             if(result.entries.size()>4000)throw new IOException(WorkspaceText.tr("Слишком много файлов; выберите вложенную папку"));
         }
         result.entries.sort(Comparator.comparing((Entry e)->!e.directory).thenComparing(e->e.name.toLowerCase(Locale.ROOT)));return result;
@@ -53,12 +56,13 @@ final class ProjectFiles implements AutoCloseable {
         if(n.endsWith(".apk"))return "application/vnd.android.package-archive";
         if(n.endsWith(".png"))return "image/png";if(n.endsWith(".jpg")||n.endsWith(".jpeg"))return "image/jpeg";
         if(n.endsWith(".webp"))return "image/webp";if(n.endsWith(".gif"))return "image/gif";
+        if(n.endsWith(".mp4")||n.endsWith(".m4v"))return "video/mp4";if(n.endsWith(".webm"))return "video/webm";if(n.endsWith(".mkv"))return "video/x-matroska";if(n.endsWith(".mov"))return "video/quicktime";if(n.endsWith(".3gp"))return "video/3gpp";
         String ext=n.lastIndexOf('.')<0?"":n.substring(n.lastIndexOf('.')+1);
         if(Arrays.asList("md","txt","log","json","xml","yml","yaml","java","kt","kts","gradle","sh","py","js","ts","css","html","rs","toml","properties","c","h","cpp","gitignore").contains(ext)||n.equals("makefile")||n.equals("dockerfile"))return "text/plain";
         return "application/octet-stream";
     }
     static boolean visible(Entry e,String filter) {return e.directory || filter.equals(WorkspaceText.tr("Все")) || filter.equals(WorkspaceText.tr("Текст"))&&mime(e.name).equals("text/plain") || filter.equals(WorkspaceText.tr("Изображения"))&&mime(e.name).startsWith("image/") || filter.equals("APK")&&e.name.toLowerCase(Locale.ROOT).endsWith(".apk");}
-    static String portableListScript(String path){return "cd -- "+target(path)+" || exit 2; printf '%s\\0' \"$(pwd -P)\"; for p in ./* ./.[!.]* ./..?*; do if [ -d \"$p\" ]; then kind=d; size=0; elif [ -f \"$p\" ]; then kind=f; size=$(stat -L -c %s -- \"$p\") || exit 2; else continue; fi; printf '%s\\0%s\\0%s\\0' \"$kind\" \"${p#./}\" \"$size\"; done";}
+    static String portableListScript(String path){return "cd -- "+target(path)+" || exit 2; printf 'JOBS_FILES_2\\0%s\\0' \"$(pwd -P)\"; for p in ./* ./.[!.]* ./..?*; do if [ -d \"$p\" ]; then kind=d; size=0; modified=0; elif [ -f \"$p\" ]; then kind=f; metadata=$(stat -L -c '%s %Y' -- \"$p\") || exit 2; size=${metadata%% *}; modified=${metadata##* }; else continue; fi; printf '%s\\0%s\\0%s\\0%s\\0' \"$kind\" \"${p#./}\" \"$size\" \"$modified\"; done";}
     Listing list(String path) throws Exception {return parse(bytes(environment(profile).startsWith("proot:")?portableListScript(path):listScript(path),MAX_LIST));}
     Listing createDirectory(String parent,String name) throws Exception {
         if(name.trim().isEmpty()||name.equals(".")||name.equals("..")||name.contains("/")||name.contains("\n")||name.contains("\r")||name.indexOf('\0')>=0)throw new IOException(WorkspaceText.tr("Введите имя одной папки без / и переносов"));

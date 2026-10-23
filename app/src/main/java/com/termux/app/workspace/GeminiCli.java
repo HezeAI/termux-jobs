@@ -22,13 +22,13 @@ final class GeminiCli {
             && java.util.Arrays.asList("default","auto_edit","plan").contains(s.geminiMode)
             && java.util.Arrays.asList("default","minimal","low","medium","high").contains(s.geminiThinking)
             && java.util.Arrays.asList("new","choose","id").contains(s.geminiChat)
-            && validThread(s.geminiThread) && validThread(s.geminiSocketId);
+            && validThread(s.id) && validThread(s.geminiThread) && validThread(s.geminiSocketId);
     }
     static void prepare(Context context) throws IOException {
         File dir=directory(context.getFilesDir());
         if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create Gemini controls");
         protect(dir);
-        for(String asset:new String[]{"gemini-bootstrap.sh","gemini-control.js","gemini-live.cjs","gemini-thinking.cjs","gemini-live-loader.mjs","gemini-chat.cjs","agent-receipts.cjs"}) {
+        for(String asset:new String[]{"gemini-bootstrap.sh","gemini-control.js","gemini-live.cjs","gemini-thinking.cjs","gemini-live-loader.mjs","gemini-chat.cjs","agent-receipts.cjs","agent-attachments.cjs"}) {
             File temporary=File.createTempFile("gemini-",".tmp",dir);
             try {
                 try(InputStream in=context.getAssets().open(asset);OutputStream out=new FileOutputStream(temporary)) {
@@ -45,7 +45,10 @@ final class GeminiCli {
     }
     static String command(File files,WorkspaceStore.Session s) {
         if(!valid(s))throw new IllegalArgumentException("Invalid Gemini profile");
-        return "( set -e; export JOBS_GEMINI_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")
+        String keyFile=GUEST+"/keys/"+s.id+".key";
+        return "( set -e; trap "+SessionShell.quote("rm -f -- "+SessionShell.quote(keyFile))+" EXIT; "
+            +(s.geminiAuth.equals("api")&&!s.geminiEncryptedKey.isEmpty()?"export JOBS_GEMINI_KEY_FILE="+SessionShell.quote(keyFile)+"; ":"")
+            +"export JOBS_GEMINI_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")
             +(s.geminiAuth.equals("vertex")&&!s.geminiCloudProject.isEmpty()?"; export JOBS_GEMINI_VERTEX_PROJECT="+SessionShell.quote(s.geminiCloudProject)+"; export JOBS_GEMINI_VERTEX_LOCATION="+SessionShell.quote(s.geminiCloudLocation):"")
             +"; export JOBS_GEMINI_THINKING="+SessionShell.quote(s.geminiThinking)
             +"; export JOBS_GEMINI_DEBUG="+(s.extendedDebug?"1":"0")

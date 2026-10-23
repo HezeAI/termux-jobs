@@ -5,7 +5,7 @@ public class AgentEnvironmentsTest {
  @Test public void newEditorsAlwaysUseAiWhileExistingAndLegacySelectionsStayUnchanged(){assertEquals("ubuntu-ai",AgentEnvironments.editorUbuntu(null));WorkspaceStore.Session p=new WorkspaceStore.Session();p.codexEnvironment="ubuntu";assertEquals("ubuntu",AgentEnvironments.editorUbuntu(p));p.codexEnvironment="termux";assertEquals("termux",AgentEnvironments.editorUbuntu(p));p.codexEnvironment="ubuntu-ai";assertEquals("ubuntu-ai",AgentEnvironments.editorUbuntu(p));}
  @Test public void oldProfilesStayOnUbuntuAndAllAgentsCanSelectTheirOwnUbuntu()throws Exception {
   for(String agent:new String[]{"codex","gemini","claude","opencode"}){
-   WorkspaceStore.Session p=profile(agent);p.id="fixture";p.codexSocketId="fixture";assertEquals("ubuntu",AgentEnvironments.scope(p));p.codexEnvironment="ubuntu-ai";
+   WorkspaceStore.Session p=profile(agent);p.id="11111111-1111-4111-8111-111111111111";p.codexSocketId="fixture";assertEquals("ubuntu",AgentEnvironments.scope(p));p.codexEnvironment="ubuntu-ai";
    assertTrue(AgentPreparation.supports(p));assertEquals("ubuntu-ai",AgentEnvironments.scope(p));assertEquals("proot:ubuntu-ai",ProjectFiles.environment(p));assertEquals("ubuntu-ai",p.copy().codexEnvironment);
    File files=Files.createTempDirectory("agent-ai-shell").toFile();File rc=SessionShell.prepare(files,p);String script=new String(Files.readAllBytes(rc.toPath()),"UTF-8");
    assertTrue(script,script.contains("'ubuntu-ai' --"));assertTrue(script,script.contains("JOBS_AGENT_UBUNTU='ubuntu-ai'"));

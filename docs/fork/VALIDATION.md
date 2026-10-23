@@ -1,4 +1,21 @@
-# Current validation — v2.0.1
+# Current validation — v2.0.2
+
+[Final artifact, checks and limits](VALIDATION-v2.0.2.md). Android8+/ARM64,
+com.termux/signer/schema8 unchanged, code1331 above stable/private predecessors.
+No reset/environment migration. Gemini key duplicate/import requires re-entry;
+restart agents with saved chats after updating. HezeAI confirmed Codex image input
+and OpenCode attachment sending. Scoped/full-fixture evidence and unverified live
+login/provider/device cases are distinguished in the report.
+
+APK45828682bytes, SHA-256 `436a7803f9b4c93ad2c7c0dd25bf0bc22b9565c6f269a0d2e9278016301e1571`. Every assets/native-lib entry equals tested private1330.
+Build/package/version/ZIP/signature/runtime checks passed. Broad897 app test run
+had one stale invalid-ID fixture, corrected and covered by15 green targeted tests;
+154 emulator tests passed. Final four Node suites and earlier native fixtures pass.
+Publication round-trip verification will be added after upload.
+
+Historical validation records follow.
+
+# Historical validation — v2.0.1
 
 [Artifact, tests and limits](VALIDATION-v2.0.1.md). Full Java869 app+154 emulator
 passed; final JSON correction covered by35 backup/store tests. Full Python546

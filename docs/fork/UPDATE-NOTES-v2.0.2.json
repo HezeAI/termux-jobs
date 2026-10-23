@@ -1,0 +1,32 @@
+{
+  "ru": [
+    "Отправляйте различные файлы прямо в чаты Codex, OpenCode, Claude и Gemini, не вводя вручную пути на телефоне. Выбор из памяти телефона или окружения, с текстом или без.",
+    "Проще работать с проектами и сборками: готовые локальные файлы возвращаются карточками в чат для просмотра и сохранения. APK можно открыть для установки.",
+    "Миниатюры фото/видео в файловом менеджере, компактный просмотр, размер и SHA-256 у APK, удаление вложения до отправки.",
+    "Упрощён первый вход в Codex; у Gemini API — необязательное защищённое поле ключа в настройках сессии/пресета.",
+    "Исправлена отправка вложений OpenCode и обработка крупных ответов с изображениями. Улучшены небольшие элементы оформления чата."
+  ],
+  "en": [
+    "Send varied files directly to Codex, OpenCode, Claude and Gemini chats without typing their phone paths. Choose phone storage or an environment, with or without message text.",
+    "Simpler project/build workflows: return local output files as chat cards for preview and saving. APK cards offer explicit Android installation.",
+    "Photo/video thumbnails, compact previews, APK size/SHA-256 and removal before sending.",
+    "Start first Codex sign-in from chat; add an optional protected Gemini API-key field in session/preset settings.",
+    "Fix OpenCode attachment admission and bounded native image replies; refine small chat UI details."
+  ],
+  "compatibility": {
+    "ru": [
+      "Android8+/ARM64, прежние com.termux, подпись и schema8, code1331 — выше тестовых сборок. Сброс данных и миграция окружений не требуются.",
+      "После обновления перезапустите агентов с сохранёнными чатами для загрузки новых помощников.",
+      "Ключ Gemini привязан к устройству и профилю: после копирования/импорта пресета введите его заново. Замена действует со следующего запуска.",
+      "Возможности файлов зависят от модели и прав CLI. Видео — до12 кадров с временными метками, без звука.",
+      "Завершите важные задачи перед обновлением: Android может остановить процессы."
+    ],
+    "en": [
+      "Android8+/ARM64, unchanged com.termux/signer/schema8, code1331 exceeds private builds. No data reset or environment migration.",
+      "Restart agents with saved chats after updating to load new helpers.",
+      "Gemini keys are device/profile-bound: re-enter on preset duplicate/import. Replacement takes effect on the next launch.",
+      "File capabilities depend on the model and CLI permissions. Video supplies up to12 timestamped frames without audio.",
+      "Finish important tasks before updating: Android may stop processes."
+    ]
+  }
+}

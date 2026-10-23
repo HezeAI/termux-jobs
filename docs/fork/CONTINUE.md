@@ -1,3 +1,18 @@
+# v2.0.2 — Agent chat improvements
+
+Developer authorized publication after confirming OpenCode attachment sending.
+Public versionName2.0.2/code1331 supersedes private builds1326–1330 without changing
+package/signer/schema8. The earlier public version is2.0.1. No data reset or automatic
+environment migration. Device/profile-bound Gemini key duplicate/import requires
+re-entry; restart agents with saved chats after updating. HezeAI confirmed Codex
+image input and OpenCode sending; remaining live-provider/login/device limits are
+in VALIDATION-v2.0.2.md. Source/features match the tested private1330 build apart
+from release version metadata. Release description is English with the agreed
+OpenAI Codex assistance credit. Do not publish private filenames as separate releases.
+
+Publication verification will be appended after uploaded assets are compared.
+Earlier entries below are historical.
+
 # v2.0.1 — Fix Wrapper
 
 Published stable/latest v2.0.1 — Fix Wrapper; code1325, unchanged
