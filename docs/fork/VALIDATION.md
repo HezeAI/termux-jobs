@@ -9,7 +9,12 @@ APK45794876bytes, SHA256
 `a0a2e86abfb3da4f91e24d3e3c824ecc6f0ca537d2f71fa04fb8f86361ebb7ca`.
 GPU overlap/performance remains a device check; the report distinguishes native
 fragment tests from Android GUI tests and records lint-toolchain limitations.
-Publication/download verification will be recorded after the release upload.
+Publication verified2026-10-23: [v2.0.1 stable/latest](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.1),
+source tag98445d2a. APK, SHA256SUMS, update.json and validation asset were
+retrieved and byte-compared; APK package/code/signer/ZIP and updater size/hash
+match. Anonymous latest API/update.json and four tagged documentation files
+were checked. The release body matches the prepared short English description.
+The published tag and APK were not moved or rebuilt for this record.
 
 Historical validation records follow.
 

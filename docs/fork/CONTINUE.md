@@ -1,10 +1,14 @@
 # v2.0.1 — Fix Wrapper
 
-Publication authorized by HezeAI; release v2.0.1/code1325, unchanged
+Published stable/latest v2.0.1 — Fix Wrapper; code1325, unchanged
 com.termux/signer/schema8. Updates over recovery1324. Exact verified APK size:45794876 bytes, SHA256
 `a0a2e86abfb3da4f91e24d3e3c824ecc6f0ca537d2f71fa04fb8f86361ebb7ca`.
 See RELEASE-v2.0.1.md and VALIDATION-v2.0.1.md. Source/build checks are complete;
-publication and uploaded-asset verification are being prepared.
+all four uploaded assets were downloaded and compared byte-for-byte.
+Anonymous latest API/update.json and four tagged documentation files passed.
+Release: https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.1
+Source tag98445d2a; do not move the published tag. This publication record
+is documentation-only and does not rebuild or replace the APK.
 
 Fixes: clipped native Present-copy fallback for non-composited GPU desktops;
 independent restored preset/history identities and saved-content checks;
