@@ -4,7 +4,7 @@ Bionic-for-glibc loading in six ordinary glibc desktops, with independent driver
 
 ---
 
-# v2.0.3 — code1352
+# Historical v2.0.3 — code1352
 
 Full-screen landscape X11 reuses each selected target's existing display and
 desktop, with screen-adapted logical sizing and one floating input button. Portrait
@@ -21,7 +21,7 @@ lower and follows the existing keyboard enabled state.
 Fedora Parole gets a private pinned decoder/plugin through Video and audio,
 with runtime-readiness checks and no system-library replacement. The fullscreen
 input window is65% opaque and another24dp lower.
-Public stable remains v2.0.2 until publication.
+Historical pre-publication note: v2.0.2 was current before v2.0.3 was published.
 
 # Historical private source-audit completion — 2.0.16-test/code1345
 

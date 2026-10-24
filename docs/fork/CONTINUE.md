@@ -1,29 +1,43 @@
-# v2.0.4 /1366 prepared for authorized publication
+# Published v2.0.4 /1366 — verified stable/latest
 
-User authorized publication and reference driver mirrors. Branch fork/base.
-Final APK:51859681bytes, SHA25656ef4e034467bc1030a6ccb29c891ce97938baad3b5575a898e7e41abcd18493. Same signer/package/schema8;
-no reset/migration. Runtime assets/Android native payload match private1365.
-1251 JVM tests/187classes and168 scoped Python tests pass; modern lint
-five modules0errors/210reviewed warnings; localization584/runtime definitions,
-archive/package/ABI/signer/secret checks pass. See VALIDATION-v2.0.4.md.
+Release:https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.4
+Tag/source commit:d5040dac37ee0143dcc44af21f25d7123a19fbf7.
+Previous public:v2.0.3/code1352; previous private:1365. Same com.termux/signer/
+schema8/ARM64, min26/target28/compile35, X11 min30; no reset/account/rootfs migration.
+APK bytes:51859681; SHA256:56ef4e034467bc1030a6ccb29c891ce97938baad3b5575a898e7e41abcd18493.
+Signer SHA256:dd37d983cd2496ebe49c7e88ddbc0088f311d38b8a8503e4392c81b48a11a644.
 
-Six ordinary glibc targets support Bionic HAL drivers with libhybris + Jobs ICD /
-WSI + private Mesa26.1.6; separate imports/caches/locks/displays. Turnip device
-reports are successful.891.11 native BGRA import passes private probes but one
-concurrent VSync-transition timeout remains unresolved; real891.11 GUI and new
-8% theme/openSUSE popup still need acceptance. X11 extra keys include move/resize;
-Jobs GPU Test supports all eight targets. Do not claim arbitrary driver support.
+1251JVM/187classes,168scoped Python tests and localization584 pass. Modern lint
+five modules0errors/210reviewed warnings; runtime definitions/package/ABI/signing/
+secret checks pass. All APK runtime assets and Android native libraries match
+private1365. Source diff whitespace findings are limited to unified-patch blank
+context and verbatim upstream license/notice lines; product-source checks pass.
 
-Release assets will include APK,update.json,SHA256SUMS,validation,full bridge
-source/runtime export,small bridge runtime and unmodified891.11/V38 ZIPs with
-exact StevenMXZ origins. The412Banner is an additional driver-download source.
-Sources/patches/licenses are documented; no driver bundled in APK/source export.
-Credit line must remain:AI development assistance: OpenAI Codex.
-Publication verification follows; do not move a published tag.
+Nine public assets:APK,update.json,SHA256SUMS,validation,full bridge source export,
+small bridge runtime,891.11.zip,Turnip_Gen8_V38.zip and driver-source notes.
+GitHub sizes/digests match local files. All nine downloaded anonymously and match
+SHA256; anonymous latest-stable API/latest-download updater resolve to2.0.4.
+Seven tagged docs/README content checks pass; release body and final credit match.
+No tag move or APK rebuild is required for these publication notes.
+
+Six ordinary glibc desktops use per-target Bionic-for-glibc caches/processes. New
+extra keys move/resize and Jobs GPU Test is optional in all eight targets. Theme
+metrics are about8% smaller. Turnip developer reports are successful. QCOM891.11
+passes private native tests, but one concurrent GLX interval-transition timeout
+remains unresolved; retries pass. Full891.11 GUI, other GPUs/firmware/fresh-device
+installations and new theme/popup/panel gesture acceptance remain explicit checks.
+Reference driver ZIPs match StevenMXZ; The412Banner is an additional download
+source. Corresponding native source archives/patches/licenses are in the release.
+Runtime/probes are not arbitrary Xorg/Wayland compatibility guarantees.
+
+Do not modify installed sessions/rootfs, install APKs or move the published tag.
+Future work needs a new task/authorization. GitHub release descriptions remain
+English; RU/EN updater compatibility and the exact credit line are retained:
+AI development assistance: OpenAI Codex.
 
 ---
 
-# Published v2.0.3 /1352 — verified stable/latest
+# Historical v2.0.3 /1352 publication
 
 Release: https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.3
 Source/tag commit:5e71d93072fe609cfcd77d129078f65fd11a44d9.
