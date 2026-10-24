@@ -1,4 +1,4 @@
-import ctypes as C,ctypes.util,hashlib,importlib.util,json,os,stat,tempfile,unittest,zipfile
+import ctypes as C,ctypes.util,hashlib,importlib.util,json,os,stat,subprocess,sys,tempfile,unittest,zipfile
 from pathlib import Path
 from unittest.mock import patch
 import xml.etree.ElementTree as ET
@@ -69,8 +69,32 @@ class StyleTests(unittest.TestCase):
    return original(path,data,before)
   with patch.object(m,'write',side_effect=write),self.assertRaises(OSError):m.apply(self.home,self.prefix,self.control,True)
   m.apply(self.home,self.prefix,self.control,True);m.apply(self.home,self.prefix,self.control,False);self.assertIn('Before',m.snapshot(self.channel('xsettings'),'/Net/ThemeName'))
- def test_guest_sessions_cannot_request_termux_style(self):
-  session=(ROOT/'x11/src/main/assets/x11-session.sh').read_text();self.assertIn('"${JOBS_X11_TARGET:-}" = termux',session);self.assertLess(session.index('x11-style.py'),session.index('x11-wallpaper.py'));self.assertIn('XCURSOR_THEME=TermuxJobsCursor',session)
+ def test_style_scope_and_selected_prefix_never_uses_termux_prefix_for_guests(self):
+  self.assertEqual(self.prefix,m.environment_prefix('termux',str(self.prefix)))
+  for target in ['ubuntu','debian','alpine','fedora','opensuse','void','archlinux']:self.assertEqual(Path('/'),m.environment_prefix(target,str(self.prefix)))
+  for target in ['ubuntu-ai','jobs-ai-ubuntu','jobs-x11-ubuntu','unknown','../../ubuntu',None]:
+   with self.assertRaises(ValueError):m.environment_prefix(target,str(self.prefix))
+  session=(ROOT/'x11/src/main/assets/x11-session.sh').read_text();self.assertLess(session.index('x11-style.py'),session.index('x11-wallpaper.py'));self.assertIn('XCURSOR_THEME=TermuxJobsCursor',session)
+ def test_every_guest_cli_changes_only_its_home_and_can_restore_without_host_prefix(self):
+  self.put('xsettings','/Net/ThemeName','string','TermuxPersonal');host_before=(self.channels/'xsettings.xml').read_bytes()
+  seed=self.prefix/'etc/xdg/xfce4/panel/default.xml';seed.parent.mkdir(parents=True);seed.write_text('host-only-invalid-xml');observed={}
+  for target in ['ubuntu','debian','alpine','fedora','opensuse','void','archlinux']:
+   with self.subTest(target=target):
+    guest=self.root/(target+'-home');guest.mkdir();guest_config=guest/'.config';channels=guest_config/'xfce4/xfconf/xfce-perchannel-xml';channels.mkdir(parents=True)
+    personal=('<channel name="xsettings" version="1.0"><property name="Net" type="empty"><property name="ThemeName" type="string" value="'+target+'Personal"/></property></channel>').encode();(channels/'xsettings.xml').write_bytes(personal)
+    env=dict(os.environ,HOME=str(guest),XDG_CONFIG_HOME=str(guest_config),PREFIX=str(self.prefix),JOBS_X11_TARGET=target,JOBS_X11_CONTROL=str(self.control))
+    for flag,expected in [('1','on'),('1','on'),('0','restored')]:
+     result=subprocess.run([sys.executable,'-B',str(ROOT/'x11/src/main/assets/x11-style.py'),flag],env=env,capture_output=True,text=True,timeout=10)
+     self.assertEqual(0,result.returncode,result.stdout+result.stderr);self.assertIn('JOBS_X11_STYLE='+expected,result.stdout)
+     root=m.tree((channels/'xsettings.xml').read_bytes(),'xsettings');self.assertIn(target+'Personal' if flag=='0' else 'TermuxJobsStyle',m.snapshot(root,'/Net/ThemeName'))
+     self.assertEqual(host_before,(self.channels/'xsettings.xml').read_bytes());self.assertEqual('host-only-invalid-xml',seed.read_text())
+     for other,data in observed.items():self.assertEqual(data,other.read_bytes())
+    self.assertTrue((guest/'.themes/TermuxJobsStyle/gtk-3.0/gtk.css').is_file());self.assertFalse((self.home/'.themes').exists());observed[channels/'xsettings.xml']=(channels/'xsettings.xml').read_bytes()
+ def test_enabled_style_rejects_missing_helper_and_unsupported_guests_before_launch(self):
+  for target,error in [(t,'STYLE_MISSING') for t in ['termux','ubuntu','debian','alpine','fedora','opensuse','void','archlinux']]+[('jobs-x11-ubuntu','STYLE_TARGET'),('jobs-ai-ubuntu','STYLE_TARGET')]:
+   env=dict(os.environ,JOBS_X11_FOCUS_TOKEN='12345678-1234-1234-1234-123456789abc',JOBS_X11_STYLE='1',JOBS_X11_TARGET=target,JOBS_X11_CONTROL=str(self.root/'missing'))
+   result=subprocess.run(['/bin/sh',str(ROOT/'x11/src/main/assets/x11-session.sh')],env=env,capture_output=True,text=True,timeout=3)
+   self.assertNotEqual(0,result.returncode);self.assertIn('ERROR:'+error,result.stdout);self.assertNotIn('JOBS_X11_STARTUP',result.stdout)
 
  def test_bottom_panel_is_large_visible_full_width_and_menu_title_restores(self):
   for key,typ,value in [('position','string','p=10;x=0;y=0'),('size','uint',48),('icon-size','uint',24),('length','uint',1),('autohide-behavior','uint',1)]:self.put('xfce4-panel','/panels/panel-2/'+key,typ,value)
@@ -151,3 +175,32 @@ class StyleTests(unittest.TestCase):
    self.assertIn(b'gtk-contained-dark.css',z.read('theme/gtk-3.0/gtk.css'));self.assertIn(b'#141c26',z.read('theme/gtk-3.0/gtk.css'));self.assertNotIn(b'#ece9d8',z.read('theme/gtk-3.0/gtk.css'));self.assertIn(b'Kali-inspired',z.read('icons/index.theme'))
    self.assertNotEqual(z.read('icons/96x96/places/folder-documents.png'),z.read('icons/96x96/places/folder-download.png'))
   m.apply(self.home,self.prefix,self.control,False);self.assertIn('O|SHMC',m.snapshot(self.channel('xfwm4'),'/general/button_layout'));self.assertIn('center',m.snapshot(self.channel('xfwm4'),'/general/title_alignment'));self.assertIn('Personal Font 11',m.snapshot(self.channel('xsettings'),'/Gtk/FontName'))
+
+ def test_nonstandard_panel_and_whisker_menu_keep_their_plugins_and_restore(self):
+  self.channels.mkdir(parents=True)
+  xml=b'<channel name="xfce4-panel" version="1.0"><property name="panels" type="array"><value type="int" value="37"/><property name="panel-37" type="empty"><property name="position" type="string" value="p=10;x=0;y=0"/><property name="size" type="uint" value="32"/><property name="plugin-ids" type="array"><value type="int" value="83"/><value type="int" value="91"/></property></property></property><property name="plugins" type="empty"><property name="plugin-83" type="string" value="whiskermenu"><property name="title" type="string" value="Distribution menu"/></property><property name="plugin-91" type="string" value="clock"/></property></channel>'
+  (self.channels/'xfce4-panel.xml').write_bytes(xml);original=self.channel('xfce4-panel');menu=m.snapshot(original,'/plugins/plugin-83');ids=m.snapshot(original,'/panels/panel-37/plugin-ids')
+  for enabled in [True,True,False]:
+   m.apply(self.home,self.prefix,self.control,enabled);panel=self.channel('xfce4-panel')
+   self.assertEqual(menu,m.snapshot(panel,'/plugins/plugin-83'));self.assertEqual(ids,m.snapshot(panel,'/panels/panel-37/plugin-ids'));self.assertIn('clock',m.snapshot(panel,'/plugins/plugin-91'))
+   self.assertEqual('88' if enabled else '32',m.node(panel,'/panels/panel-37/size')[1].get('value'))
+
+ def test_system_channel_defaults_seed_a_clean_desktop_before_classic_fallback(self):
+  seed=self.prefix/'etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml';seed.parent.mkdir(parents=True)
+  seed.write_text('<channel name="xfce4-panel" version="1.0"><property name="panels" type="array"><value type="int" value="1"/><property name="panel-1" type="empty"><property name="position" type="string" value="p=10;x=0;y=0"/><property name="size" type="uint" value="24"/></property></property><property name="plugins" type="empty"><property name="plugin-8" type="string" value="whiskermenu"/></property></channel>')
+  fallback=self.prefix/'etc/xdg/xfce4/panel/default.xml';fallback.parent.mkdir(parents=True);fallback.write_text('not XML; must not override the system channel')
+  m.apply(self.home,self.prefix,self.control,True);root=self.channel('xfce4-panel');self.assertEqual('88',m.node(root,'/panels/panel-1/size')[1].get('value'));self.assertIn('whiskermenu',m.snapshot(root,'/plugins/plugin-8'))
+  m.apply(self.home,self.prefix,self.control,False);self.assertEqual('24',m.node(self.channel('xfce4-panel'),'/panels/panel-1/size')[1].get('value'))
+ def test_inherited_empty_local_properties_use_system_layout_without_copying_over_user_menu(self):
+  seed=self.prefix/'etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml';seed.parent.mkdir(parents=True)
+  seed.write_text('<channel name="xfce4-panel" version="1.0"><property name="panels" type="array"><value type="int" value="1"/><property name="panel-1" type="empty"><property name="position" type="string" value="p=10;x=0;y=0"/><property name="size" type="uint" value="24"/></property></property><property name="plugins" type="empty"><property name="plugin-1" type="string" value="whiskermenu"/></property></channel>')
+  self.channels.mkdir(parents=True);(self.channels/'xfce4-panel.xml').write_text('<channel name="xfce4-panel" version="1.0"><property name="panels" type="empty"><property name="panel-1" type="empty"><property name="position" type="empty"/><property name="size" type="empty"/></property></property><property name="plugins" type="empty"><property name="plugin-1" type="empty"><property name="favorites" type="array"><value type="string" value="personal.desktop"/></property></property></property></channel>')
+  before=self.channel('xfce4-panel');menu=m.snapshot(before,'/plugins');position=m.snapshot(before,'/panels/panel-1/position')
+  for enabled in [True,True,False]:
+   m.apply(self.home,self.prefix,self.control,enabled);root=self.channel('xfce4-panel');self.assertEqual(menu,m.snapshot(root,'/plugins'));self.assertEqual(position,m.snapshot(root,'/panels/panel-1/position'))
+   size=m.node(root,'/panels/panel-1/size')[1];self.assertEqual('uint' if enabled else 'empty',size.get('type'))
+   if enabled:self.assertEqual('88',size.get('value'))
+ def test_explicit_user_layout_wins_over_inherited_bottom_panel(self):
+  defaults=m.tree(b'<channel name="xfce4-panel"><property name="panels" type="array"><value type="int" value="1"/><property name="panel-1" type="empty"><property name="position" type="string" value="p=10;x=0;y=0"/><property name="plugin-ids" type="array"><value type="int" value="1"/></property></property></property></channel>','xfce4-panel')
+  local=m.tree(b'<channel name="xfce4-panel"><property name="panels" type="empty"><property name="panel-1" type="empty"><property name="position" type="string" value="p=6;x=0;y=0"/><property name="plugin-ids" type="array"><value type="int" value="99"/></property></property></property></channel>','xfce4-panel')
+  merged=m.inherited(defaults,local);self.assertEqual('p=6;x=0;y=0',m.node(merged,'/panels/panel-1/position')[1].get('value'));self.assertEqual(['99'],[n.get('value') for n in m.node(merged,'/panels/panel-1/plugin-ids')[1].findall('value')]);self.assertEqual('p=10;x=0;y=0',m.node(defaults,'/panels/panel-1/position')[1].get('value'))

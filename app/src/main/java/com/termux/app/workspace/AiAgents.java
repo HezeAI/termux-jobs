@@ -16,10 +16,13 @@ public final class AiAgents {
     static boolean validThread(String id) {return id!=null && id.matches("ses[A-Za-z0-9_-]{1,124}");}
     static boolean validModel(String model) {return model!=null && model.length()<=256 && (model.isEmpty() || model.matches("[A-Za-z0-9_-]+/[A-Za-z0-9_.:/-]+"));}
     static void prepareLaunch(WorkspaceStore.Session s) {
+        s.aiSocketId=java.util.UUID.randomUUID().toString();
         if(!s.aiSavedThread.isEmpty()){s.aiThread=s.aiSavedThread;s.aiChat="resume";}
     }
     static File directory(File files) {return new File(files,".ai-control");}
-    static File socket(File files,WorkspaceStore.Session s) {return new File(directory(files),s.id+".sock");}
+    static File socket(File files,WorkspaceStore.Session s) {String run=s.aiSocketId.isEmpty()?s.id:s.aiSocketId;java.util.UUID.fromString(run);return new File(directory(files),run+".sock");}
+    /** Capture before scheduling so a later launch cannot retarget an old action. */
+    static WorkspaceStore.Session snapshot(WorkspaceStore.Session p){WorkspaceStore.Session s=p.copy();s.id=p.id;s.handle=p.handle;s.aiSocketId=p.aiSocketId;s.aiThread=p.aiThread;s.aiSavedThread=p.aiSavedThread;return s;}
     private static void protect(File f) throws IOException {
         if(!f.setReadable(false,false)||!f.setWritable(false,false)||!f.setExecutable(false,false)||!f.setReadable(true,true)||!f.setWritable(true,true)||(f.isDirectory()&&!f.setExecutable(true,true)))throw new IOException("Cannot protect AI controls");
     }

@@ -79,5 +79,19 @@ public class WorkspaceUpdatesTest {
         assertEquals("Check when opening the app",((android.widget.TextView)((android.widget.LinearLayout)english.getChildAt(0)).getChildAt(1)).getText().toString());a.finish();
     }
 
+    @Test public void cachedBytesMustStillMatchAfterPermissionRoundTrip()throws Exception{
+        java.io.File file=java.io.File.createTempFile("update-fixture", ".apk",org.robolectric.RuntimeEnvironment.application.getCacheDir());
+        byte[] original="abc".getBytes("UTF-8");String hash=WorkspaceUpdates.hex(MessageDigest.getInstance("SHA-256").digest(original));
+        try{
+            java.nio.file.Files.write(file.toPath(),original);WorkspaceUpdates.verifyContent(file,3,hash);
+            java.nio.file.Files.write(file.toPath(),"abd".getBytes("UTF-8"));
+            try{WorkspaceUpdates.verifyContent(file,3,hash);fail("same-size changed bytes accepted");}catch(java.io.IOException expected){}
+            java.nio.file.Files.write(file.toPath(),"ab".getBytes("UTF-8"));
+            try{WorkspaceUpdates.verifyContent(file,3,hash);fail("truncated bytes accepted");}catch(java.io.IOException expected){}
+            assertTrue(file.delete());
+            try{WorkspaceUpdates.verifyContent(file,3,hash);fail("deleted cache accepted");}catch(java.io.IOException expected){}
+        }finally{file.delete();}
+    }
+
     @Test public void sha256IsLowercaseHex()throws Exception{assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",WorkspaceUpdates.hex(MessageDigest.getInstance("SHA-256").digest("abc".getBytes("UTF-8"))));}
 }

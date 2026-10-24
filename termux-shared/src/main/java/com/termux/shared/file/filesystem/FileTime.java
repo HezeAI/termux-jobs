@@ -147,7 +147,7 @@ public final class FileTime {
         try {
             Calendar calendar = Calendar.getInstance();
             calendar.setTimeInMillis(milliSeconds);
-            return new SimpleDateFormat(format).format(calendar.getTime());
+            return new SimpleDateFormat(format, java.util.Locale.getDefault()).format(calendar.getTime());
         } catch(Exception e) {
             return Long.toString(milliSeconds);
         }

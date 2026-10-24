@@ -1,0 +1,13 @@
+{
+  "url": "https://deb.debian.org/debian/pool/main/g/gst-plugins-bad1.0/gstreamer1.0-plugins-bad_1.26.2-3+deb13u3_arm64.deb",
+  "bytes": 2841904,
+  "sha256": "c5f1fba98072aee17e064348c9586951a506f4e0c2bff1fea3603a86e16e5590",
+  "member": "usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstopenh264.so",
+  "assetSha256": "1f4c3a85e0b23d66f4f657064767900e857855e65659627ad078e69a229f1db4",
+  "assetBytes": 67952,
+  "upstream": "https://gitlab.freedesktop.org/gstreamer/gstreamer/-/tree/1.26.2/subprojects/gst-plugins-bad/ext/openh264",
+  "source": "https://sources.debian.org/src/gst-plugins-bad1.0/1.26.2-3%2Bdeb13u3/",
+  "asset": "x11-gst-openh264.so",
+  "abi": "aarch64-linux-gnu; GStreamer1.26+",
+  "scope": "private Fedora Parole plugin path and registry only; no RPM/system library replacement"
+}

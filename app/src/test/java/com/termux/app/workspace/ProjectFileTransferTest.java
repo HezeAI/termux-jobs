@@ -25,6 +25,16 @@ public class ProjectFileTransferTest {
  @Test public void missingSourceAndDanglingCollisionDoNotRemoveSource()throws Exception{
   Path a=Files.write(source.resolve("a"),new byte[]{1});ProjectFiles.Entry missing=new ProjectFiles.Entry(source.toString(),"missing",false,1);assertEquals(21,run(Arrays.asList(entry(a),missing),target,true,false,false));assertTrue(Files.exists(a));Files.createSymbolicLink(target.resolve("a"),Paths.get("missing"));assertEquals(23,run(Arrays.asList(entry(a)),target,true,false,false));assertTrue(Files.exists(a));
  }
+ @Test public void racedDestinationDuringCopyNeverReplacesExistingDataAndCleansStage()throws Exception{
+  Path a=Files.write(source.resolve("a"),new byte[]{1});String script="mv() { for destination;do :;done; printf keep > \"$destination\"; command mv \"$@\"; };\n"+ProjectFileTransfer.script(Arrays.asList(entry(a)),target.toString(),false,false,false);
+  Process process=new ProcessBuilder("bash","--noprofile","--norc","-c",script).redirectErrorStream(true).start();try(InputStream in=process.getInputStream()){while(in.read()!=-1){}}assertTrue(process.waitFor(10,java.util.concurrent.TimeUnit.SECONDS));assertNotEquals(0,process.exitValue());assertArrayEquals("keep".getBytes(java.nio.charset.StandardCharsets.UTF_8),Files.readAllBytes(target.resolve("a")));assertTrue(Files.exists(a));
+  try(java.util.stream.Stream<Path> paths=Files.list(target)){assertFalse(paths.anyMatch(p->p.getFileName().toString().startsWith(".termux-jobs-copy.")));}
+ }
+ @Test public void copyFailureRemovesOnlyItsTemporaryStage()throws Exception{
+  Path a=Files.write(source.resolve("a"),new byte[]{1}),keep=Files.write(target.resolve("keep"),new byte[]{9});
+  String script="cp() { for destination;do :;done; printf partial > \"$destination\"; return 1; };\n"+ProjectFileTransfer.script(Arrays.asList(entry(a)),target.toString(),false,false,false);
+  Process process=new ProcessBuilder("bash","--noprofile","--norc","-c",script).redirectErrorStream(true).start();try(InputStream in=process.getInputStream()){while(in.read()!=-1){}}assertTrue(process.waitFor(10,java.util.concurrent.TimeUnit.SECONDS));assertEquals(24,process.exitValue());assertTrue(Files.exists(a));assertArrayEquals(new byte[]{9},Files.readAllBytes(keep));try(java.util.stream.Stream<Path> paths=Files.list(target)){assertEquals(1,paths.count());}
+ }
  @Test public void serverDeletionGroupsKeepEachSourceParentAndRejectTraversal()throws Exception{
   org.json.JSONArray entries=new org.json.JSONArray().put(new org.json.JSONObject().put("path","/one/a")).put(new org.json.JSONObject().put("path","/two/b"));assertEquals(2,ServerConnection.deletionGroups(entries).size());for(String p:new String[]{"/a/../b","/a/./b","/a//b","relative","/"}){try{ServerConnection.deletionGroups(new org.json.JSONArray().put(new org.json.JSONObject().put("path",p)));fail(p);}catch(IOException expected){}}
  }

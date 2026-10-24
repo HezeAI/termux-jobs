@@ -200,3 +200,46 @@ printf 'SHA256\\n' >> "$FIXTURE_LOG"
     def test_retry_with_partial_root_is_refused_without_removal_or_native_install(self):
         fs=self.prefix/'var/lib/proot-distro/containers/debian/rootfs';fs.mkdir(parents=True);(fs/'keep').write_text('keep');self.env['JOBS_ENVIRONMENT_RETRY']='1'
         result=self.run_helper('install','debian');self.assertNotEqual(0,result.returncode);self.assertIn('INCOMPLETE_ROOTFS_REQUIRES_REMOVAL',result.stdout);self.assertEqual('keep',(fs/'keep').read_text());self.assertFalse(self.log.exists())
+
+    def test_broken_guest_shell_link_is_missing(self):
+        fs=self.prefix/'var/lib/proot-distro/containers/debian/rootfs';(fs/'bin').mkdir(parents=True)
+        (fs/'bin/sh').symlink_to('missing-shell')
+        result=self.run_helper('check','debian')
+        self.assertIn('MISSING:shell',result.stdout);self.assertNotIn('READY:shell',result.stdout)
+
+    def test_absolute_guest_shell_link_is_not_resolved_against_host(self):
+        fs=self.prefix/'var/lib/proot-distro/containers/debian/rootfs';(fs/'bin').mkdir(parents=True)
+        (fs/'bin/sh').symlink_to('/bin/bash')
+        result=self.run_helper('check','debian')
+        self.assertIn('MISSING:shell',result.stdout);self.assertNotIn('READY:shell',result.stdout)
+
+    def test_absolute_guest_shell_link_to_existing_guest_binary_is_ready(self):
+        fs=self.prefix/'var/lib/proot-distro/containers/debian/rootfs';(fs/'bin').mkdir(parents=True);(fs/'usr/bin').mkdir(parents=True)
+        (fs/'usr/bin/dash').write_text('fixture');(fs/'usr/bin/dash').chmod(0o700);(fs/'bin/sh').symlink_to('/usr/bin/dash')
+        result=self.run_helper('check','debian')
+        self.assertIn('READY:shell',result.stdout);self.assertNotIn('MISSING:shell',result.stdout)
+
+    def test_merged_usr_absolute_directory_links_use_guest_root(self):
+        fs=self.prefix/'var/lib/proot-distro/containers/debian/rootfs';(fs/'usr/bin').mkdir(parents=True)
+        (fs/'usr/bin/sh').write_text('fixture');(fs/'usr/bin/sh').chmod(0o700);(fs/'bin').symlink_to('/usr/bin')
+        result=self.run_helper('check','debian')
+        self.assertIn('READY:shell',result.stdout);self.assertNotIn('MISSING:shell',result.stdout)
+
+    def test_guest_shell_symlink_loop_is_missing(self):
+        fs=self.prefix/'var/lib/proot-distro/containers/debian/rootfs';(fs/'bin').mkdir(parents=True)
+        (fs/'bin/sh').symlink_to('sh')
+        result=self.run_helper('check','debian')
+        self.assertIn('MISSING:shell',result.stdout);self.assertNotIn('READY:shell',result.stdout)
+
+    def test_nonexecutable_guest_shell_is_missing(self):
+        fs=self.prefix/'var/lib/proot-distro/containers/debian/rootfs';(fs/'bin').mkdir(parents=True)
+        (fs/'bin/sh').write_text('fixture');(fs/'bin/sh').chmod(0o600)
+        result=self.run_helper('check','debian')
+        self.assertIn('MISSING:shell',result.stdout);self.assertNotIn('READY:shell',result.stdout)
+
+    def test_parent_segments_in_guest_link_cannot_escape_guest_root(self):
+        fs=self.prefix/'var/lib/proot-distro/containers/debian/rootfs';(fs/'bin').mkdir(parents=True)
+        # A host /bin/bash must not satisfy this missing guest target either.
+        (fs/'bin/sh').symlink_to('../../../../../../../../bin/bash')
+        result=self.run_helper('check','debian')
+        self.assertIn('MISSING:shell',result.stdout);self.assertNotIn('READY:shell',result.stdout)

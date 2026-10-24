@@ -36,12 +36,17 @@ public class ProjectFilesTest {
         WorkspaceStore.Session s=new WorkspaceStore.Session();s.environment="codex";s.codexEnvironment="ubuntu";
         assertTrue(ProjectFiles.command(s,"printf 'hello'").startsWith("proot-distro login ubuntu -- /bin/bash --noprofile --norc -c "));
         s.environment="ssh";s.sshHost="example.org";s.sshUser="root";s.sshPort=2222;s.sshAuth="key";s.sshIdentity="~/key with spaces";
-        String command=ProjectFiles.command(s,"cat -- '/tmp/quote'\"'\"'file'");assertTrue(command.contains("StrictHostKeyChecking=yes"));assertTrue(command.contains("BatchMode=yes"));assertTrue(command.contains(" -p 2222 "));assertTrue(command.contains("-T"));assertTrue(command.contains("IdentitiesOnly=yes"));
+        String command=ProjectFiles.command(s,"cat -- '/tmp/quote'\"'\"'file'");assertTrue(command.contains("StrictHostKeyChecking=yes"));assertTrue(command.contains("BatchMode=yes"));assertTrue(command.contains(" -p 2222 "));assertTrue(command.contains("-T"));assertTrue(command.contains("IdentitiesOnly=yes"));assertTrue(command.contains("ServerAliveInterval=15"));assertTrue(command.contains("ServerAliveCountMax=2"));assertFalse(ProjectFiles.command(new WorkspaceStore.Session(),"true").contains("ServerAlive"));
         try{ProjectFiles.target("/tmp/file\nother");fail();}catch(IllegalArgumentException expected){}
     }
     @Test public void downloadNameDoesNotOverwriteExistingFile() throws Exception {
         File dir=Files.createTempDirectory("project-export-").toFile();File existing=new File(dir,"app.apk");Files.write(existing.toPath(),new byte[]{1});
-        try{assertEquals("app-2.apk",WorkspaceFileBrowser.unique(dir,"app.apk").getName());assertArrayEquals(new byte[]{1},Files.readAllBytes(existing.toPath()));}finally{existing.delete();dir.delete();}
+        try{File saved=ProjectFileExport.save(new ByteArrayInputStream(new byte[]{2}),dir,"app.apk",16,()->false);assertEquals("app-2.apk",saved.getName());saved.delete();assertArrayEquals(new byte[]{1},Files.readAllBytes(existing.toPath()));}finally{existing.delete();dir.delete();}
+    }
+    @Test public void danglingDownloadNameCountsAsOccupied()throws Exception{
+        java.nio.file.Path dir=Files.createTempDirectory("download-link-");java.nio.file.Path link=dir.resolve("app.apk");Files.createSymbolicLink(link,java.nio.file.Paths.get("missing"));
+        try{File saved=ProjectFileExport.save(new ByteArrayInputStream(new byte[]{2}),dir.toFile(),"app.apk",16,()->false);assertEquals("app-2.apk",saved.getName());saved.delete();assertTrue(Files.isSymbolicLink(link));}
+        finally{Files.delete(link);Files.delete(dir);}
     }
     @Test public void versionedListingCarriesModificationTimeAndRejectsMalformedTimes()throws Exception{
         String value="JOBS_FILES_2\0/root\0f\0photo.jpg\0"+"42\0"+"1761234567.1234567890\0";ProjectFiles.Listing list=ProjectFiles.parse(value.getBytes(StandardCharsets.UTF_8));assertEquals(1,list.entries.size());assertEquals(1761234567123L,list.entries.get(0).modified);

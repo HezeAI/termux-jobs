@@ -27,6 +27,7 @@ public final class RemoteDesktopView extends FrameLayout implements SurfaceHolde
     private final X11Viewport viewport=new X11Viewport();
     private int sentWidth,sentHeight,sentVisible;
     public boolean inputReady(){return attached&&!closed&&(startupReady||revealed);}
+    public Boolean imeVisible(){WindowInsets insets=getRootWindowInsets();return insets==null?null:insets.isVisible(WindowInsets.Type.ime());}
     public String keyboardDiagnostic(){WindowInsets insets=getRootWindowInsets();return imeDiagnostic+"\ncurrent windowFocus="+hasWindowFocus()+" editorFocus="+ime.hasFocus()+" editorWindowFocus="+ime.hasWindowFocus()+" keyboardWanted="+keyboardWanted+" IME-visible="+(insets==null?"unknown":insets.isVisible(WindowInsets.Type.ime()))+"\nViewport="+sentWidth+"x"+sentHeight+" visibleHeight="+sentVisible+"\n"+trace.report();}
     @Override public void onWindowFocusChanged(boolean focus){super.onWindowFocusChanged(focus);if(trace!=null)trace.event("window-focus",String.valueOf(focus));}
     public RemoteDesktopView(Context context,Consumer<Bundle> changed){
@@ -63,8 +64,14 @@ public final class RemoteDesktopView extends FrameLayout implements SurfaceHolde
     private X11Viewport.Size geometry(){
         WindowMetrics metrics=((WindowManager)getContext().getSystemService(Context.WINDOW_SERVICE)).getCurrentWindowMetrics();
         android.graphics.Rect bounds=metrics.getBounds();int[] position=new int[2];surface.getLocationOnScreen(position);
-        android.graphics.Insets bars=metrics.getWindowInsets().getInsetsIgnoringVisibility(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());
-        return viewport.update(surface.getWidth(),surface.getHeight(),bounds.width(),bounds.height(),position[1]-bounds.top,bars.bottom);
+        WindowInsets insets=getRootWindowInsets();if(insets==null)insets=metrics.getWindowInsets();
+        android.graphics.Insets bars=insets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());
+        // Transient navigation bars shown with IME must not shrink an immersive
+        // desktop mode. In the embedded app window keep the existing stable inset.
+        boolean edgeToEdge=(getWindowSystemUiVisibility()&View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)!=0;
+        int stableBottom=edgeToEdge?0:bars.bottom;
+        int visible=X11Viewport.visibleHeight(surface.getHeight(),bounds.bottom,position[1],insets.getInsets(WindowInsets.Type.ime()).bottom);
+        return viewport.update(surface.getWidth(),visible,bounds.width(),bounds.height(),position[1]-bounds.top,stableBottom);
     }
     private void putGeometry(Bundle q){X11Viewport.Size size=geometry();q.putInt("width",size.width);q.putInt("height",size.height);q.putInt("visibleHeight",size.visibleHeight);}
     private void resize(){

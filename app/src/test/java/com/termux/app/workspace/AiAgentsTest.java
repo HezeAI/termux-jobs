@@ -75,4 +75,22 @@ public class AiAgentsTest {
         try{store.decode(data.toString());fail("Unsafe bookmark accepted");}catch(JSONException expected){}
         assertEquals("",store.sessions.get(0).aiSavedThread);
     }
+    @Test public void everyOpenCodeLaunchUsesAnIndependentControlSocketWithoutChangingHistory(){
+        WorkspaceStore.Session p=new WorkspaceStore.Session();p.environment="ubuntu";p.aiAgent="opencode";p.aiSavedThread="sesSaved";String connection=p.aiConnection;
+        AiAgents.prepareLaunch(p);File first=AiAgents.socket(context.getFilesDir(),p);AiAgents.prepareLaunch(p);File second=AiAgents.socket(context.getFilesDir(),p);
+        assertNotEquals("a delayed control operation must not address a later run",first,second);assertEquals(connection,p.aiConnection);assertEquals("sesSaved",p.aiThread);assertEquals("resume",p.aiChat);
+    }
+
+    @Test public void capturedOpenCodeTargetCannotFollowAMutableProfileIntoItsNextRun(){
+        WorkspaceStore.Session p=new WorkspaceStore.Session();p.environment="ubuntu";p.aiAgent="opencode";p.handle="first-terminal";AiAgents.prepareLaunch(p);
+        WorkspaceStore.Session target=AiAgents.snapshot(p);File old=AiAgents.socket(context.getFilesDir(),target);String connection=p.aiConnection;
+        AiAgents.prepareLaunch(p);p.handle="second-terminal";p.codexEnvironment="ubuntu-ai";
+        assertEquals(old,AiAgents.socket(context.getFilesDir(),target));assertNotEquals(old,AiAgents.socket(context.getFilesDir(),p));assertEquals("first-terminal",target.handle);assertEquals("ubuntu",target.codexEnvironment);assertEquals(connection,target.aiConnection);assertEquals("",p.copy().aiSocketId);
+    }
+    @Test public void openCodeRunIdentityRoundTripsAndLegacyProfilesKeepTheirOldSocketUntilLaunch()throws Exception{
+        WorkspaceStore.Session p=new WorkspaceStore.Session();p.environment="ubuntu";p.aiAgent="opencode";File legacy=AiAgents.socket(context.getFilesDir(),p);AiAgents.prepareLaunch(p);String run=p.aiSocketId;store.sessions.add(p);store.decode(store.encode().toString());assertEquals(run,store.sessions.get(0).aiSocketId);assertNotEquals(legacy,AiAgents.socket(context.getFilesDir(),store.sessions.get(0)));
+        JSONObject data=store.encode();data.getJSONArray("sessions").getJSONObject(0).remove("aiSocketId");store.decode(data.toString());assertEquals("",store.sessions.get(0).aiSocketId);assertEquals(legacy,AiAgents.socket(context.getFilesDir(),store.sessions.get(0)));
+        for(Object bad:new Object[]{"../foreign",123,JSONObject.NULL}){JSONObject invalid=new JSONObject(data.toString());invalid.getJSONArray("sessions").getJSONObject(0).put("aiSocketId",bad);try{store.decode(invalid.toString());fail("Invalid run accepted");}catch(JSONException expected){}assertEquals("",store.sessions.get(0).aiSocketId);}
+    }
+
 }

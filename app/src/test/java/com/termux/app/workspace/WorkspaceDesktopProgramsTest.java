@@ -158,6 +158,10 @@ public class WorkspaceDesktopProgramsTest {
    }finally{ui.close();}
   }
  }
+ @Test public void ordinaryUbuntuInstalledProgramsExposeExplicitLauncherRepair(){
+  TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);List<String> actions=new ArrayList<>();WorkspaceDesktopPrograms ui=new WorkspaceDesktopPrograms(a,(op,id)->{},()->{},actions::add);WorkspaceStore.Session p=new WorkspaceStore.Session();p.environment="termux";p.prootAlias="ubuntu";
+  try{Bundle b=new Bundle();b.putString("target","ubuntu");b.putString("phase","complete");b.putBoolean("installedReady",true);ui.openInstalled(p,b);AlertDialog d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();android.view.View repair=d.getWindow().getDecorView().findViewWithTag("agent-status-programs-repair-launchers");assertNotNull(repair);assertTrue(repair.isEnabled());repair.performClick();assertEquals(Arrays.asList("repair-launchers"),actions);}finally{ui.close();}
+ }
  @Test public void firefoxControlsAppearForAllConnectedTargetsWithIndependentState()throws Exception{
   TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);
   for(String target:new String[]{"ubuntu","debian","alpine","termux"}){

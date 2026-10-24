@@ -12,7 +12,7 @@ final class LocalDownloadFile implements AutoCloseable {
     private final ProjectFiles files;private final WorkspaceStore.Session location;
     private Process child;private boolean owned,committed;final OutputStream stream;
     static String writeScript(String directory,String name){return "umask 077; cd -- "+ProjectFiles.target(directory)+" || exit 2; set -C; exec 3> "+SessionShell.quote(name)+" || exit 3; printf 'READY\\n'; cat >&3";}
-    static String publishScript(String temporary,String target){return "test -f "+ProjectFiles.target(temporary)+" && ! test -e "+ProjectFiles.target(target)+" && ! test -L "+ProjectFiles.target(target)+" && mv -n -- "+ProjectFiles.target(temporary)+" "+ProjectFiles.target(target)+" && ! test -e "+ProjectFiles.target(temporary);}
+    static String publishScript(String temporary,String target){return "test -f "+ProjectFiles.target(temporary)+" && ! test -e "+ProjectFiles.target(target)+" && ! test -L "+ProjectFiles.target(target)+" && mv -T -n -- "+ProjectFiles.target(temporary)+" "+ProjectFiles.target(target)+" && ! test -e "+ProjectFiles.target(temporary);}
     LocalDownloadFile(TermuxActivity activity,WorkspaceStore.Session source,String directory,String name)throws Exception{
         if(!ServerSftp.validName(name)||!directory.startsWith("/"))throw new IOException("INVALID_DESTINATION");
         location=source.copy();files=new ProjectFiles(activity,location);path=(directory.equals("/")?"/":directory+"/")+name;temporary=(directory.equals("/")?"/":directory+"/")+".termux-jobs-download-"+UUID.randomUUID()+".part";

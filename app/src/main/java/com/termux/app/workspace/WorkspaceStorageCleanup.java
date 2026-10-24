@@ -30,7 +30,7 @@ final class WorkspaceStorageCleanup {
     static boolean idleBaseShell(String stat){
         try{int end=stat.lastIndexOf(')');String[] fields=stat.substring(end+1).trim().split("\\s+");int pgrp=Integer.parseInt(fields[2]),foreground=Integer.parseInt(fields[5]);return end>0&&pgrp>0&&pgrp==foreground;}catch(Exception invalid){return false;}
     }
-    private LinearLayout column(){LinearLayout v=new LinearLayout(activity);v.setOrientation(1);int p=WorkspaceDialogs.dp(activity,16);v.setPadding(p,0,p,p);return v;}
+    private LinearLayout column(){LinearLayout v=new LinearLayout(activity);v.setOrientation(LinearLayout.VERTICAL);int p=WorkspaceDialogs.dp(activity,16);v.setPadding(p,0,p,p);return v;}
     private TextView info(LinearLayout body,String value){TextView v=new TextView(activity);v.setText(value);v.setTextColor(WorkspaceDialogs.TEXT);v.setTextSize(13);body.addView(v);return v;}
     private void action(LinearLayout body,String value,Runnable click){TextView v=WorkspaceDialogs.action(activity,value,0);v.setOnClickListener(w->click.run());body.addView(v);}
     private ScrollView scroll(LinearLayout body){ScrollView s=new ScrollView(activity);s.addView(body);return s;}
@@ -58,11 +58,11 @@ final class WorkspaceStorageCleanup {
         if(!request.optBoolean("nativeRemoval"))builder.setNegativeButton(t("Отмена","Cancel"),(d,w)->engine.cancel());
         AlertDialog dialog=builder.create();dialog.setCancelable(false);dialog.setOnDismissListener(d->progress.close());
         boolean started=engine.start(activity,request,new WorkspaceBackupEngine.Callback(){
-            public void progress(JSONObject event){if(!dialog.isShowing())return;progress.update(t(deleting?"Удаление выбранных файлов":"Анализ хранилища",deleting?"Deleting selected files":"Scanning storage"),event);if(event.optLong("total")==0&&event.optString("unit").equals("files"))progress.amount.setText(event.optLong("processed")+t(" файлов"," files"));}
+            public void progress(JSONObject event){if(!dialog.isShowing()||progress.isStopping())return;progress.update(t(deleting?"Удаление выбранных файлов":"Анализ хранилища",deleting?"Deleting selected files":"Scanning storage"),event);if(event.optLong("total")==0&&event.optString("unit").equals("files"))progress.amount.setText(event.optLong("processed")+t(" файлов"," files"));}
             public void done(JSONObject result){progress.close();dialog.dismiss();done.accept(result);}
             public void error(String code){progress.close();dialog.dismiss();message(deleting&&code.equals("CANCELLED")?t("Очистка остановлена. Часть файлов могла быть уже удалена. Выполните анализ заново.","Cleanup stopped. Some files may already have been deleted. Rescan storage."):WorkspaceStorageCleanup.this.error(code));}
         });
-        if(started){dialog.show();progress.start();}else{progress.close();message(t("Дождитесь завершения другой операции бэкапа или очистки.","Wait for the other backup or cleanup operation to finish."));}
+        if(started){dialog.show();progress.bindCancellation(dialog,engine::cancel);progress.start();}else{progress.close();message(t("Дождитесь завершения другой операции бэкапа или очистки.","Wait for the other backup or cleanup operation to finish."));}
     }
     private void scan(){try{selection(new JSONObject().put("groups",new JSONArray()).put("overview",new JSONArray()),true);}catch(JSONException impossible){throw new IllegalStateException(impossible);}}
     private void chooseFolder(){

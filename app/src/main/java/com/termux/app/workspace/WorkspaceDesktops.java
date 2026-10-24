@@ -35,6 +35,7 @@ final class WorkspaceDesktops {
  boolean showing(){WorkspaceDesktop c=current(false);return c!=null&&c.showing();}
  boolean keyboardEnabled(){WorkspaceDesktop c=current(false);return c!=null&&c.keyboardEnabled();}
  void keyboard(){WorkspaceDesktop c=current(false);if(c!=null)c.keyboard();}
+ boolean fullscreenBack(){WorkspaceDesktop c=current(false);return c!=null&&c.fullscreenBack();}
  String label(){WorkspaceDesktop c=current(true);return c==null?(WorkspaceLanguage.code(activity).equals("ru")?"Терминал":"Terminal"):c.label();}
  void openPrograms(){WorkspaceDesktop c=current(true);if(c!=null)c.openPrograms();else activity.showToast(WorkspaceLanguage.code(activity).equals("ru")?"X11 пока не поддерживается этим окружением.":"X11 is not yet supported in this environment.",true);}
  boolean programsInstalling(){WorkspaceDesktop c=current(false);return c!=null&&c.programsInstalling()&&!c.programsVisible();}

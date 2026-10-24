@@ -1973,7 +1973,7 @@ public final class TerminalEmulator {
                 mBackColor = code - 100 + 8;
             } else {
                 if (LOG_ESCAPE_SEQUENCES)
-                    Logger.logWarn(mClient, LOG_TAG, String.format("SGR unknown code %d", code));
+                    Logger.logWarn(mClient, LOG_TAG, String.format(Locale.ROOT, "SGR unknown code %d", code));
             }
         }
     }

@@ -13,7 +13,7 @@ final class EnvironmentInstallLogUi {
     private static final ExecutorService IO=Executors.newSingleThreadExecutor();
     private static String t(TermuxActivity a,String ru,String en){return WorkspaceLanguage.code(a).equals("ru")?ru:en;}
     static void show(TermuxActivity a,String label,String report){
-        LinearLayout body=new LinearLayout(a);body.setOrientation(1);int gap=WorkspaceDialogs.dp(a,12);body.setPadding(gap,0,gap,gap);
+        LinearLayout body=new LinearLayout(a);body.setOrientation(LinearLayout.VERTICAL);int gap=WorkspaceDialogs.dp(a,12);body.setPadding(gap,0,gap,gap);
         ScrollView scroll=new ScrollView(a);TextView log=new TextView(a);log.setTextColor(WorkspaceDialogs.TEXT);log.setTextSize(12);log.setTypeface(android.graphics.Typeface.MONOSPACE);log.setTextIsSelectable(true);log.setText(report);log.setTag("environment-install-log-text");scroll.addView(log);body.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         TextView info=new TextView(a);info.setTextSize(11);info.setTextColor(WorkspaceDialogs.MUTED);info.setText(t(a,"Журнал последней попытки. Адреса URL и известные секреты скрыты автоматически; проверьте текст перед отправкой.","Last attempt log. URLs and known secrets are automatically redacted; review before sharing."));body.addView(info);
         TextView status=new TextView(a);status.setTextSize(12);status.setTextColor(WorkspaceDialogs.ACCENT);status.setTag("environment-install-log-status");body.addView(status);

@@ -1,7 +1,7 @@
 package com.termux.app.workspace;
 
 import android.graphics.*;
-import android.media.ExifInterface;
+import androidx.exifinterface.media.ExifInterface;
 import android.media.MediaMetadataRetriever;
 import android.media.ThumbnailUtils;
 import android.os.*;
@@ -87,12 +87,17 @@ final class WorkspaceMediaThumbnails implements AutoCloseable {
         }finally{r.release();}}
         else {
             bitmap=ChatAttachments.bitmap(original,384);
-            try{ExifInterface exif=new ExifInterface(original.getPath());int o=exif.getAttributeInt(ExifInterface.TAG_ORIENTATION,ExifInterface.ORIENTATION_NORMAL);Matrix m=new Matrix();
-                if(o==2)m.setScale(-1,1);else if(o==3)m.setRotate(180);else if(o==4)m.setScale(1,-1);else if(o==5){m.setRotate(90);m.postScale(1,-1);}else if(o==6)m.setRotate(90);else if(o==7){m.setRotate(90);m.postScale(-1,1);}else if(o==8)m.setRotate(270);
+            try{Matrix m=imageOrientation(original);
                 if(!m.isIdentity()){Bitmap rotated=Bitmap.createBitmap(bitmap,0,0,bitmap.getWidth(),bitmap.getHeight(),m,true);if(rotated!=bitmap)bitmap.recycle();bitmap=rotated;}
             }catch(IOException ignored){}
         }
         return bitmap==null?null:ThumbnailUtils.extractThumbnail(bitmap,192,192,ThumbnailUtils.OPTIONS_RECYCLE_INPUT);
+    }
+    static Matrix imageOrientation(File original)throws IOException {
+        ExifInterface exif=new ExifInterface(original.getPath());
+        int o=exif.getAttributeInt(ExifInterface.TAG_ORIENTATION,ExifInterface.ORIENTATION_NORMAL);Matrix m=new Matrix();
+        if(o==2)m.setScale(-1,1);else if(o==3)m.setRotate(180);else if(o==4)m.setScale(1,-1);else if(o==5){m.setRotate(90);m.postScale(1,-1);}else if(o==6)m.setRotate(90);else if(o==7){m.setRotate(90);m.postScale(-1,1);}else if(o==8)m.setRotate(270);
+        return m;
     }
     static void prune(File directory,long now){
         File[] files=directory.listFiles();if(files==null)return;Arrays.sort(files,Comparator.comparingLong(File::lastModified));long total=0;

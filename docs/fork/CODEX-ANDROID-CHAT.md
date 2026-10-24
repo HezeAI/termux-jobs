@@ -7,6 +7,11 @@ public releases later than2.0.2. Current file input/output, auth and ownership
 behavior is described in the v2.0.5/v2.0.6 implementation sections below;
 [release validation](VALIDATION-v2.0.2.md) records final evidence and device limits.
 
+The unreleased [agent-chat audit](AUDIT-AGENT-CHATS-2026-10-23.md) covers four
+providers and adds recovery/ownership guards in private2.0.3-test. Codex device
+login stays pending when its terminal is minimized; explicit Return to the Codex
+chat cancels only the owned login attempt. Completion still returns automatically.
+
 Earlier implementation history follows.
 
 # Codex Android chat — private v1.5.32-test

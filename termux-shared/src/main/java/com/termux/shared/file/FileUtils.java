@@ -1,5 +1,7 @@
 package com.termux.shared.file;
 
+import java.util.Locale;
+
 import android.os.Build;
 import android.system.Os;
 
@@ -129,7 +131,7 @@ public class FileUtils {
             fileName = fileName.replaceAll("[\\\\/:*?\"<>|]", "_");
 
         if (toLower)
-            return fileName.toLowerCase();
+            return fileName.toLowerCase(Locale.ROOT);
         else
             return fileName;
     }
@@ -972,7 +974,7 @@ public class FileUtils {
 
                 // If overwriteOnlyIfDestSameFileTypeAsSrc is enabled but destination file does not match source file type
                 if (overwriteOnlyIfDestSameFileTypeAsSrc && destFileType != srcFileType)
-                    return FileUtilsErrno.ERRNO_CANNOT_OVERWRITE_A_DIFFERENT_FILE_TYPE.getError(label + "source file", mode.toLowerCase(), srcFilePath, destFilePath, destFileType.getName(), srcFileType.getName());
+                    return FileUtilsErrno.ERRNO_CANNOT_OVERWRITE_A_DIFFERENT_FILE_TYPE.getError(label + "source file", mode.toLowerCase(Locale.ROOT), srcFilePath, destFilePath, destFileType.getName(), srcFileType.getName());
 
                 // Delete the destination file
                 error = deleteFile(label + "destination file", destFilePath, true);

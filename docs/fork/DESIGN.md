@@ -1,3 +1,26 @@
+# v2.0.3 — landscape desktop presentation
+
+Rotation is the entry action: a visible X11 desktop fills the screen in landscape,
+without the application header, tabs or input row. The existing host is moved,
+not duplicated. The only overlay is the compact top-right existing Interactive input `|` icon,
+offset from a display cutout and slightly below the top edge. Its fill shows the
+existing interactive-input enabled state. No new
+permanent toolbar uses desktop height. Portrait or Android Back restores the same
+host in its original app position. Back does not stop X11 or select Home/Terminal.
+With an open IME, Android may first consume Back to hide the keyboard.
+
+After Back in landscape, embedded mode remains until the next portrait turn.
+Landscape logical resolution follows the physical screen up to 2880 pixels wide,
+retaining proportions; it does not install a replacement theme.
+Outside X11, existing orientation and agent/chat behavior are retained. The app
+brand retains italic v2.0 with the existing dimensions.
+
+The optional Kali-inspired Termux-job's appearance is independently available in
+all eight current X11 environments. A checkbox below Switch to desktop applies on
+next launch and is disabled during desktop/installer work. Distribution menu
+plugins/entries are retained, including Whisker Menu and custom panel IDs. Ubuntu
+AI is excluded; per-target settings never redirect to another rootfs.
+
 # v2.0.2 — Agent file workflow
 
 A folder beside Shell opens the environment/phone-storage picker. Selected files

@@ -20,6 +20,7 @@ dependencies { implementation project(':termux-shared'); implementation 'android
 task verifyX11Inputs {
     doLast {
         ['jniLibs/arm64-v8a/libXlorie.so':'8ad76408710c21b9a61d3db07900e5bb4e3f88efb1670ac0ff3a2166f403567d',
+         'assets/x11-gst-openh264.so':'1f4c3a85e0b23d66f4f657064767900e857855e65659627ad078e69a229f1db4',
          'assets/x11-openh264.so':'79d49f67882c0744973158d7cccc4f0bcf29bfc597b294d77d5f3bbdaba221bf',
          'assets/x11-keyboard.zip':'d88d8879538a5e8370977f20411043598b0e4f784a718e38a87d91b33b99c140'].each { path, expected ->
             def f=rootProject.file('.tools/x11-runtime/'+path)

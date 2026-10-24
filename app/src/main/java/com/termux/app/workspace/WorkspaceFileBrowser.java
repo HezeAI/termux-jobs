@@ -30,10 +30,22 @@ final class WorkspaceFileBrowser {
     private TextView transferButton,clearTransferButton;
     private boolean transfersEnabled(){return choice==null&&fileChoice==null&&fileChoices==null;}
     private void updateTransfer(){if(transferButton==null)return;boolean selected=!transferSelection.isEmpty();transferButton.setEnabled(selected&&!busy&&listing!=null);transferButton.setAlpha(selected?1f:.4f);transferButton.setSelected(selected);transferButton.setBackground(WorkspaceDialogs.background(activity,selected));clearTransferButton.setVisibility(selected?View.VISIBLE:View.GONE);clearTransferButton.setText("× "+transferSelection.size());clearTransferButton.setEnabled(!busy);if(dialog!=null&&transfersEnabled()){Button all=dialog.getButton(AlertDialog.BUTTON_NEUTRAL);if(all!=null){all.setVisibility(selected?View.VISIBLE:View.GONE);all.setEnabled(selected&&!busy&&listing!=null);}}}
-    private void toggleTransfer(ProjectFiles.Entry entry){if(busy)return;if(transferSelection.containsKey(entry.path))transferSelection.remove(entry.path);else if(transferSelection.size()<ProjectFileTransfer.MAX_SELECTED)transferSelection.put(entry.path,entry);else{message.setText(t("Можно выбрать до 50 объектов","Select up to 50 entries"));return;}ScrollView scroll=(ScrollView)rows.getParent();int y=scroll.getScrollY();render();scroll.post(()->scroll.scrollTo(0,y));}
+    private long transferEpoch;
+    private AlertDialog transferChoice;
+    private void invalidateTransferChoice(){
+        transferEpoch++;AlertDialog old=transferChoice;transferChoice=null;if(old!=null)old.dismiss();
+    }
+    private void bindTransferChoice(AlertDialog choice,long epoch){
+        transferChoice=choice;choice.setOnDismissListener(d->{if(transferChoice==choice){transferChoice=null;if(transferEpoch==epoch)transferEpoch++;}});
+    }
+    private boolean acceptTransferChoice(long epoch){
+        if(closed||busy||epoch!=transferEpoch||transferChoice==null)return false;
+        transferChoice=null;return true;
+    }
+    private void toggleTransfer(ProjectFiles.Entry entry){if(busy)return;invalidateTransferChoice();if(transferSelection.containsKey(entry.path))transferSelection.remove(entry.path);else if(transferSelection.size()<ProjectFileTransfer.MAX_SELECTED)transferSelection.put(entry.path,entry);else{message.setText(t("Можно выбрать до 50 объектов","Select up to 50 entries"));return;}ScrollView scroll=(ScrollView)rows.getParent();int y=scroll.getScrollY();render();scroll.post(()->scroll.scrollTo(0,y));}
 
     private boolean visibleEntry(ProjectFiles.Entry e){return !(choice!=null&&!e.directory)&&ProjectFiles.visible(e,filter)&&e.name.toLowerCase(Locale.ROOT).contains(search.getText().toString().toLowerCase(Locale.ROOT));}
-    private void selectAllVisible(){if(busy||listing==null||transferSelection.isEmpty())return;boolean limited=false;for(ProjectFiles.Entry e:listing.entries){if(!visibleEntry(e)||transferSelection.containsKey(e.path))continue;if(transferSelection.size()>=ProjectFileTransfer.MAX_SELECTED){limited=true;break;}transferSelection.put(e.path,e);}ScrollView scroll=(ScrollView)rows.getParent();int y=scroll.getScrollY();render();scroll.post(()->scroll.scrollTo(0,y));if(limited)message.setText(t("Достигнут лимит: 50 выбранных объектов","Selection limit reached: 50 entries"));}
+    private void selectAllVisible(){if(busy||listing==null||transferSelection.isEmpty())return;invalidateTransferChoice();boolean limited=false;for(ProjectFiles.Entry e:listing.entries){if(!visibleEntry(e)||transferSelection.containsKey(e.path))continue;if(transferSelection.size()>=ProjectFileTransfer.MAX_SELECTED){limited=true;break;}transferSelection.put(e.path,e);}ScrollView scroll=(ScrollView)rows.getParent();int y=scroll.getScrollY();render();scroll.post(()->scroll.scrollTo(0,y));if(limited)message.setText(t("Достигнут лимит: 50 выбранных объектов","Selection limit reached: 50 entries"));}
 
     void setFileChoices(java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> value){fileChoices=value;}
     private String t(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
@@ -45,6 +57,12 @@ final class WorkspaceFileBrowser {
     void setFileChoice(FileChoice value){fileChoice=value;}
     private final TermuxActivity activity;
     private final ProjectFiles files;
+    interface TransferBackend {
+        boolean ready(List<ProjectFiles.Entry> entries,String destination,boolean move,boolean rename)throws Exception;
+        void run(List<ProjectFiles.Entry> entries,String destination,boolean move,boolean rename)throws Exception;
+        ProjectFiles.Listing list(String destination)throws Exception;
+    }
+    private final TransferBackend transferBackend;
     private final DirectoryChoice choice;
     private final WorkspaceMediaThumbnails thumbnails;private ScrollView viewport;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
@@ -53,9 +71,14 @@ final class WorkspaceFileBrowser {
     private AlertDialog dialog;
     private final List<WorkspaceTextEditor> editors=new ArrayList<>();
     private LinearLayout rows,filters;private TextView pathLabel,message;private EditText search;
-    private ProjectFiles.Listing listing;private String path,filter=WorkspaceText.tr("Все");private boolean closed,busy,transferring;
+    private ProjectFiles.Listing listing;private String path,filter=WorkspaceText.tr("Все");private volatile boolean closed;private boolean busy,transferring;
     WorkspaceFileBrowser(TermuxActivity activity,WorkspaceStore.Session profile,String path,DirectoryChoice choice) {
-        this.activity=activity;this.files=new ProjectFiles(activity,profile);this.path=path;this.choice=choice;this.thumbnails=new WorkspaceMediaThumbnails(activity,profile);
+        this.activity=activity;this.files=new ProjectFiles(activity,profile);this.path=path;this.choice=choice;
+        this.transferBackend=new TransferBackend(){
+            public boolean ready(List<ProjectFiles.Entry> e,String d,boolean m,boolean r)throws Exception{return files.transferReady(e,d,m,r);}
+            public void run(List<ProjectFiles.Entry> e,String d,boolean m,boolean r)throws Exception{files.transfer(e,d,m,r);}
+            public ProjectFiles.Listing list(String d)throws Exception{return files.list(d);}
+        };this.thumbnails=new WorkspaceMediaThumbnails(activity,profile);
     }
     void setServerKnownHosts(File file){files.setServerKnownHosts(file);}
     private int dp(int n){return WorkspaceDialogs.dp(activity,n);}
@@ -81,7 +104,7 @@ final class WorkspaceFileBrowser {
         pathLabel=text(path,12);pathLabel.setMaxLines(2);pathLabel.setEllipsize(TextUtils.TruncateAt.MIDDLE);navigation.addView(pathLabel,new LinearLayout.LayoutParams(0,-2,1));
         navigation.addView(action("⌂",()->load("~")),new LinearLayout.LayoutParams(dp(48),-2));body.addView(navigation);
         search=new EditText(activity);search.setTextColor(WorkspaceDialogs.TEXT);search.setHintTextColor(WorkspaceDialogs.MUTED);search.setTextSize(14);search.setSingleLine(true);search.setHint(choice==null?WorkspaceText.tr("Найти файл или папку"):WorkspaceText.tr("Найти папку"));LinearLayout searchBar=row();searchBar.addView(search,new LinearLayout.LayoutParams(0,-2,1));
-        if(transfersEnabled()){clearTransferButton=action("",()->{transferSelection.clear();render();});clearTransferButton.setContentDescription(t("Снять всё выделение","Clear selection"));searchBar.addView(clearTransferButton,new LinearLayout.LayoutParams(-2,dp(48)));WorkspaceIconButton down=new WorkspaceIconButton(activity);down.setIcon(activity.getDrawable(R.drawable.workspace_diag_download).mutate(),dp(22));down.setTextColor(WorkspaceDialogs.ACCENT);down.setContentDescription(t("Копировать или переместить сюда","Copy or move here"));down.setOnClickListener(v->transferMenu());transferButton=down;searchBar.addView(down,new LinearLayout.LayoutParams(dp(48),dp(48)));}body.addView(searchBar);
+        if(transfersEnabled()){clearTransferButton=action("",()->{invalidateTransferChoice();transferSelection.clear();render();});clearTransferButton.setContentDescription(t("Снять всё выделение","Clear selection"));searchBar.addView(clearTransferButton,new LinearLayout.LayoutParams(-2,dp(48)));WorkspaceIconButton down=new WorkspaceIconButton(activity);down.setIcon(activity.getDrawable(R.drawable.workspace_diag_download).mutate(),dp(22));down.setTextColor(WorkspaceDialogs.ACCENT);down.setContentDescription(t("Копировать или переместить сюда","Copy or move here"));down.setOnClickListener(v->transferMenu());transferButton=down;searchBar.addView(down,new LinearLayout.LayoutParams(dp(48),dp(48)));}body.addView(searchBar);
         search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int c,int b){}public void onTextChanged(CharSequence s,int a,int b,int c){render();}public void afterTextChanged(Editable e){}});
         if(choice==null){filters=row();HorizontalScrollView scroll=new HorizontalScrollView(activity);scroll.setHorizontalScrollBarEnabled(false);scroll.addView(filters);body.addView(scroll);for(String name:new String[]{WorkspaceText.tr("Все"),WorkspaceText.tr("Текст"),WorkspaceText.tr("Изображения"),"APK"}){TextView item=action(name,()->{filter=name;render();});item.setTextSize(13);item.setMinHeight(dp(42));item.setPadding(dp(12),dp(8),dp(12),dp(8));styleFilter(activity,item,name.equals(filter));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,-2);lp.setMarginEnd(dp(4));filters.addView(item,lp);}}
         message=text(WorkspaceText.tr("Загрузка…"),12);body.addView(message);rows=column();ScrollView scroll=new ScrollView(activity);viewport=scroll;scroll.addView(rows);scroll.setOnScrollChangeListener((v,x,y,ox,oy)->thumbnails.schedule(scroll));scroll.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->thumbnails.schedule(scroll));
@@ -102,7 +125,7 @@ final class WorkspaceFileBrowser {
     private interface Work {void run() throws Exception;}
     private void execute(Work work){if(closed||busy)return;busy=true;updateSelection();updateTransfer();message.setText(transferring?t("Выполняется операция с файлами…","Processing files…"):WorkspaceText.tr("Загрузка…"));if(choice!=null)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
         worker.execute(()->{try{work.run();}catch(Exception e){activity.runOnUiThread(()->{if(!closed)message.setText(e.getMessage()==null?WorkspaceText.tr("Не удалось открыть файлы"):e.getMessage());});}finally{activity.runOnUiThread(()->{busy=false;if(transferring){transferring=false;if(!closed){dialog.setCancelable(true);dialog.setCanceledOnTouchOutside(true);dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(true);}}if(!closed&&choice!=null)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(listing!=null);if(!closed){updateSelection();updateTransfer();}});}});}
-    private void load(String requested){if(rootBoundary!=null){try{String root=new File(rootBoundary).getCanonicalPath();String candidate=new File(requested.equals("~")?rootBoundary:requested).getCanonicalPath();requested=candidate.equals(root)||candidate.startsWith(root+"/")?candidate:rootBoundary;}catch(IOException e){return;}}if(busy)return;thumbnails.reset();listing=null;rows.removeAllViews();final String targetPath=requested;execute(()->{ProjectFiles.Listing result=files.list(targetPath);activity.runOnUiThread(()->{if(closed)return;listing=result;path=result.path;pathLabel.setText(path);render();});});}
+    private void load(String requested){if(closed||busy)return;invalidateTransferChoice();if(rootBoundary!=null){try{String root=new File(rootBoundary).getCanonicalPath();String candidate=new File(requested.equals("~")?rootBoundary:requested).getCanonicalPath();requested=candidate.equals(root)||candidate.startsWith(root+"/")?candidate:rootBoundary;}catch(IOException e){return;}}if(busy)return;thumbnails.reset();listing=null;rows.removeAllViews();final String targetPath=requested;execute(()->{ProjectFiles.Listing result=files.list(targetPath);activity.runOnUiThread(()->{if(closed)return;listing=result;path=result.path;pathLabel.setText(path);render();});});}
     static String parent(String path){int slash=path.lastIndexOf('/');return slash<=0?"/":path.substring(0,slash);}
     private void render(){
         if(filters!=null)for(int i=0;i<filters.getChildCount();i++){TextView t=(TextView)filters.getChildAt(i);styleFilter(activity,t,t.getText().toString().equals(filter));}
@@ -127,25 +150,26 @@ final class WorkspaceFileBrowser {
     }
     private void transferMenu(){
         if(busy||listing==null||transferSelection.isEmpty())return;
+        invalidateTransferChoice();final long epoch=transferEpoch;
         final List<ProjectFiles.Entry> entries=new ArrayList<>(transferSelection.values());final String destination=listing.path;
         AlertDialog menu=WorkspaceDialogs.builder(activity).setTitle(t("В текущую папку","Into current folder"))
             .setMessage(destination+"\n"+t("Выбрано: ","Selected: ")+entries.size())
-            .setPositiveButton(t("Копировать сюда","Copy here"),(d,w)->prepareTransfer(entries,destination,false))
-            .setNeutralButton(t("Переместить сюда","Move here"),(d,w)->prepareTransfer(entries,destination,true))
-            .setNegativeButton(t("Назад","Back"),null).create();menu.setCanceledOnTouchOutside(false);menu.show();
+            .setPositiveButton(t("Копировать сюда","Copy here"),(d,w)->{if(acceptTransferChoice(epoch))prepareTransfer(entries,destination,false,epoch);})
+            .setNeutralButton(t("Переместить сюда","Move here"),(d,w)->{if(acceptTransferChoice(epoch))prepareTransfer(entries,destination,true,epoch);})
+            .setNegativeButton(t("Назад","Back"),null).create();bindTransferChoice(menu,epoch);menu.setCanceledOnTouchOutside(false);menu.show();
     }
-    private void prepareTransfer(List<ProjectFiles.Entry> entries,String destination,boolean move){execute(()->{
-        boolean ready=files.transferReady(entries,destination,move,false);boolean renameReady=ready||files.transferReady(entries,destination,move,true);
-        activity.runOnUiThread(()->{if(closed)return;if(!renameReady){message.setText(t("Операция недоступна. Проверьте доступность путей и права. Нельзя выбирать папку вместе с её содержимым или помещать её внутрь самой себя.","Operation unavailable. Check paths and permissions. A folder cannot be selected together with its contents or placed inside itself."));return;}
+    private void prepareTransfer(List<ProjectFiles.Entry> entries,String destination,boolean move,long epoch){execute(()->{
+        boolean ready=transferBackend.ready(entries,destination,move,false);boolean renameReady=ready||transferBackend.ready(entries,destination,move,true);
+        activity.runOnUiThread(()->{if(closed||epoch!=transferEpoch)return;if(!renameReady){message.setText(t("Операция недоступна. Проверьте доступность путей и права. Нельзя выбирать папку вместе с её содержимым или помещать её внутрь самой себя.","Operation unavailable. Check paths and permissions. A folder cannot be selected together with its contents or placed inside itself."));return;}
             String explanation=destination+"\n\n"+(ready?t("Существующие объекты не заменяются. При прерывании уже завершённые действия сохраняются.","Existing entries are not replaced. Completed actions remain if interrupted."):t("Есть совпадающие имена. Добавить к новым именам (2), (3)…? Существующие объекты останутся без изменений.","Some names already exist. Add (2), (3)… to new names? Existing entries will remain unchanged."));
             AlertDialog confirm=WorkspaceDialogs.builder(activity).setTitle(move?t("Переместить выбранное?","Move selection?"):t("Копировать выбранное?","Copy selection?")).setMessage(explanation)
-                .setPositiveButton(t("Продолжить","Continue"),(d,w)->performTransfer(entries,destination,move,!ready)).setNegativeButton(t("Назад","Back"),null).create();confirm.setCanceledOnTouchOutside(false);confirm.show();
+                .setPositiveButton(t("Продолжить","Continue"),(d,w)->{if(acceptTransferChoice(epoch)){transferEpoch++;performTransfer(entries,destination,move,!ready);}}).setNegativeButton(t("Назад","Back"),null).create();bindTransferChoice(confirm,epoch);confirm.setCanceledOnTouchOutside(false);confirm.show();
         });
     });}
     private void performTransfer(List<ProjectFiles.Entry> entries,String destination,boolean move,boolean rename){if(closed||busy)return;transferring=true;dialog.setCancelable(false);dialog.setCanceledOnTouchOutside(false);dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(false);execute(()->{
-        String outcome;try{files.transfer(entries,destination,move,rename);outcome=move?t("Перемещено: ","Moved: ")+entries.size():t("Скопировано: ","Copied: ")+entries.size();}
-        catch(ProjectFiles.TransferFailure failure){outcome=t("Операция не завершена. Готово объектов: ","Operation incomplete. Completed entries: ")+failure.completed+" / "+entries.size()+t(". Проверьте исходную и конечную папки перед повтором. Существующие объекты не заменялись.",". Check source and destination before retrying. Existing entries were not replaced.");}
-        ProjectFiles.Listing refreshed=null;try{refreshed=files.list(destination);}catch(Exception ignored){}final ProjectFiles.Listing result=refreshed;final String status=outcome;
+        String outcome;try{transferBackend.run(entries,destination,move,rename);outcome=move?t("Перемещено: ","Moved: ")+entries.size():t("Скопировано: ","Copied: ")+entries.size();}
+        catch(ProjectFiles.TransferFailure failure){outcome=t("Завершение операции не подтверждено. Получено подтверждений: ","Operation completion is unconfirmed. Acknowledged entries: ")+failure.acknowledged+" / "+entries.size()+t(". Действий могло завершиться больше; операция может ещё выполняться в окружении или на сервере. Перед повтором проверьте исходную и конечную папки. Автоматического повтора нет.",". More actions may have completed; work may still be running in the environment or on the server. Check both source and destination before retrying. There is no automatic retry.");}
+        ProjectFiles.Listing refreshed=null;try{refreshed=transferBackend.list(destination);}catch(Exception ignored){}final ProjectFiles.Listing result=refreshed;final String status=outcome;
         activity.runOnUiThread(()->{if(closed)return;transferSelection.clear();if(result!=null){listing=result;path=result.path;pathLabel.setText(path);}render();message.setText(status);});
     });}
     private void createFolder(){if(busy||listing==null)return;EditText input=new EditText(activity);input.setSingleLine(true);input.setHint(WorkspaceText.tr("Название новой папки"));
@@ -155,7 +179,7 @@ final class WorkspaceFileBrowser {
         WorkspaceDialogs.builder(activity).setCustomTitle(fileHeading(e)).setItems(actions.toArray(new String[0]),(d,w)->{String a=actions.get(w);if(a.equals(WorkspaceText.tr("Копировать путь"))){((android.content.ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText(WorkspaceText.tr("Путь файла"),e.path));activity.showToast(WorkspaceText.tr("Путь скопирован"),false);}else if(a.equals(WorkspaceText.tr("Просмотреть")))preview(e,mime);else if(a.equals(WorkspaceText.tr("Редактировать")))edit(e);else export(e,a.equals(WorkspaceText.tr("В Download")));}).setNegativeButton(WorkspaceText.tr("Закрыть"),null).show();}
     private View fileHeading(ProjectFiles.Entry e){LinearLayout heading=column();heading.setPadding(dp(20),dp(16),dp(20),dp(8));heading.addView(text(e.name,17));heading.addView(text(android.text.format.Formatter.formatShortFileSize(activity,e.size),12));return heading;}
     String serverProfileId(){return files.profile.id;}
-    void close(){if(closed)return;closed=true;thumbnails.close();if(dialog!=null&&dialog.isShowing())dialog.dismiss();for(WorkspaceTextEditor editor:editors)editor.close();editors.clear();try{files.close();}finally{worker.shutdownNow();listing=null;selectedFiles.clear();transferSelection.clear();Runnable callback=onClosed;onClosed=null;if(callback!=null)callback.run();}}
+    void close(){if(closed)return;closed=true;invalidateTransferChoice();thumbnails.close();if(dialog!=null&&dialog.isShowing())dialog.dismiss();for(WorkspaceTextEditor editor:editors)editor.close();editors.clear();try{files.close();}finally{worker.shutdownNow();listing=null;selectedFiles.clear();transferSelection.clear();Runnable callback=onClosed;onClosed=null;if(callback!=null)callback.run();}}
     private void preview(ProjectFiles.Entry e,String mime){execute(()->{
         if(mime.startsWith("image/")){if(e.size>16L*1024*1024)throw new IOException(WorkspaceText.tr("Изображение больше 16 МБ; используйте экспорт"));File temporary=cache(e.name);files.export(e,temporary,16L*1024*1024);
             BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;BitmapFactory.decodeFile(temporary.getPath(),bounds);BitmapFactory.Options options=new BitmapFactory.Options();options.inSampleSize=1;while(bounds.outWidth/options.inSampleSize>2048||bounds.outHeight/options.inSampleSize>2048)options.inSampleSize*=2;
@@ -167,9 +191,30 @@ final class WorkspaceFileBrowser {
         activity.runOnUiThread(()->{if(closed)return;WorkspaceTextEditor editor=new WorkspaceTextEditor(activity,files,worker,snapshot,()->{if(!closed)load(path);});editors.add(editor);editor.show();});
     });}
     private File cache(String name)throws IOException {File dir=new File(activity.getCacheDir(),"workspace-share/"+UUID.randomUUID());if(!dir.mkdirs())throw new IOException(WorkspaceText.tr("Не удалось создать временный файл"));return new File(dir,name);}
-    private void export(ProjectFiles.Entry e,boolean download){execute(()->{File temporary=cache(e.name);files.export(e,temporary,ProjectFiles.MAX_EXPORT);if(closed){temporary.delete();return;}
-        if(download){File dir=Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException(WorkspaceText.tr("Download недоступен; проверьте разрешение хранения"));File candidate;do{candidate=unique(dir,e.name);}while(!candidate.createNewFile());final File dest=candidate;try(OutputStream out=new FileOutputStream(dest);InputStream in=new FileInputStream(temporary)){byte[] b=new byte[32768];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}catch(Exception ex){dest.delete();throw ex;}finally{temporary.delete();}activity.runOnUiThread(()->{if(!closed){message.setText(WorkspaceText.tr("Сохранено: ")+dest.getName());activity.showToast(WorkspaceText.tr("Файл сохранён в Download"),false);}});
-        }else{Uri uri=FileProvider.getUriForFile(activity,activity.getPackageName()+".workspace.files",temporary);activity.runOnUiThread(()->{if(closed)return;Intent intent=new Intent(Intent.ACTION_SEND).setType(ProjectFiles.mime(e.name)).putExtra(Intent.EXTRA_STREAM,uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);intent.setClipData(ClipData.newRawUri(WorkspaceText.tr("Файл проекта"),uri));try{activity.startActivity(Intent.createChooser(intent,WorkspaceText.tr("Поделиться файлом")));}catch(ActivityNotFoundException ex){message.setText(WorkspaceText.tr("Нет приложения для отправки файла"));}});}
+    private static void releaseCache(File file){file.delete();file.getParentFile().delete();}
+    private void export(ProjectFiles.Entry e,boolean download){execute(()->{
+        File temporary=cache(e.name);boolean sharePending=false;
+        try{
+            files.export(e,temporary,ProjectFiles.MAX_EXPORT);if(closed)return;
+            if(download){
+                final File destination;
+                File directory=Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                try(InputStream input=new FileInputStream(temporary)){
+                    destination=ProjectFileExport.save(input,directory,e.name,ProjectFiles.MAX_EXPORT,()->closed);
+                }
+                activity.runOnUiThread(()->{if(!closed){message.setText(WorkspaceText.tr("Сохранено: ")+destination.getName());activity.showToast(WorkspaceText.tr("Файл сохранён в Download"),false);}});
+            }else{
+                Uri uri=FileProvider.getUriForFile(activity,activity.getPackageName()+".workspace.files",temporary);
+                activity.runOnUiThread(()->{
+                    if(closed){releaseCache(temporary);return;}
+                    Intent intent=new Intent(Intent.ACTION_SEND).setType(ProjectFiles.mime(e.name)).putExtra(Intent.EXTRA_STREAM,uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    intent.setClipData(ClipData.newRawUri(WorkspaceText.tr("Файл проекта"),uri));
+                    try{activity.startActivity(Intent.createChooser(intent,WorkspaceText.tr("Поделиться файлом")));}
+                    catch(ActivityNotFoundException error){releaseCache(temporary);message.setText(WorkspaceText.tr("Нет приложения для отправки файла"));}
+                });
+                // Retain a successful share for the recipient's later URI read.
+                sharePending=true;
+            }
+        }finally{if(!sharePending)releaseCache(temporary);}
     });}
-    static File unique(File dir,String name){File dest=new File(dir,name);int i=2,dot=name.lastIndexOf('.');String base=dot>0?name.substring(0,dot):name,ext=dot>0?name.substring(dot):"";while(dest.exists())dest=new File(dir,base+"-"+(i++)+ext);return dest;}
 }

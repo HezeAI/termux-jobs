@@ -1,4 +1,58 @@
-# Agent files in public v2.0.2
+# X11 landscape in v2.0.3
+
+Open the selected environment's desktop, then rotate the phone horizontally.
+The same desktop fills the screen without app tabs or the terminal input row.
+At the top right, `|` is the existing Interactive input action. Desktop settings
+and automatic keyboard behavior remain in the embedded view's existing menu. Rotate vertically or use Android Back to return the same desktop
+to its embedded app window; open programs keep running. If the keyboard is open,
+Android may consume the first Back to hide it, as with other text fields.
+
+After returning with Back while still horizontal, the app stays embedded until
+the next portrait-to-landscape turn. Landscape sizing follows physical screen dimensions, capped at 2880 pixels wide
+without stretching one axis. The normal app orientation
+policy is restored when leaving the desktop view. This applies to each of the
+eight supported environments and does not change renderer selection or packages.
+Physical rotation/IME/driver validation is recorded in
+[v2.0.3 validation](VALIDATION-v2.0.3.md).
+
+## Optional Termux-job's style
+
+Termux, Ubuntu, Debian, Alpine, Fedora, openSUSE, Void and Arch Linux ARM each
+offer their own **Termux-job's style** checkbox below
+Switch to desktop. Stop that environment's desktop before changing the checkbox;
+the selection applies at its next launch. The Kali-inspired pack includes dark
+windows, blue accents, a dragon wallpaper, larger icons and a black/white cursor.
+It is bundled in the APK. Each environment keeps its own selection and saved XFCE
+properties; turning it off restores tracked properties that were not manually
+changed. Existing custom theme assets are not silently overwritten. Each Linux
+guest uses its own HOME and /etc/xdg defaults, never Termux's PREFIX. The theme
+preserves distribution menu plugins and entries, so menus can differ between
+systems. Ubuntu AI and retired/unknown aliases do not gain this theme option.
+
+In fullscreen the translucent | button sits48dp below the top safe edge and fills when
+interactive input is enabled. The fill follows manual toggles and the existing
+automatic keyboard/Back state; it does not reopen the keyboard on its own.
+
+## Fedora Parole and MP4
+
+Use Programs → Recommended → Video and audio → Install again after updating if
+Parole was already present. The corrected group requests Parole, GStreamer tools,
+libav/base/good/bad-free plugins and the C++ runtimes explicitly, then installs
+bundled, pinned OpenH264 and its GStreamer bridge in that Fedora HOME. It checks
+real decoder creation and openh264dec/avdec_aac/qtdemux before reporting ready.
+Package presence alone is insufficient. A failed check stays missing for retry.
+Normal Fedora package downloads need internet; these two codec assets are in the
+APK and do not depend on Cisco being reachable. GPG/TLS checking remains enabled.
+
+Close any old Parole window and relaunch from the applications menu or the updated
+application association. The private launcher owns the codec/plugin path and a
+separate registry; direct /usr/bin/parole and copied old launchers do not gain this
+environment. System RPM codec files and other environments are not replaced.
+Validated decoding is H.264 video plus AAC audio in a test MP4; MP4 can contain
+other codecs, so this does not promise every MP4/HEVC format or hardware decoding.
+[Focused evidence](AUDIT-FEDORA-MP4-2026-10-24.md).
+
+# Agent files (introduced in v2.0.2)
 
 Tap the folder beside Shell, choose Environments or Phone storage and select a file.
 Phone storage requests Android access when needed. Review the draft, optionally
@@ -1511,8 +1565,9 @@ Gemini may request access to the staged @ file in its native terminal.
 
 For a Codex profile without native auth, tap Sign in to Codex in the chat notice.
 The native terminal shows the official device-login URL/code; follow that flow and
-return automatically after success. Closing cancels this login attempt; existing
-logged-in profiles use their saved authorization.
+return automatically after success. Minimizing the terminal keeps the pending
+login attempt. Return to the Codex chat explicitly cancels that owned attempt;
+existing logged-in profiles use their saved authorization.
 
 For Gemini API authentication, an optional masked key field appears immediately
 below the auth choice. Blank preserves a saved key; if none was set, existing CLI
@@ -1528,3 +1583,199 @@ tap or Android Back. The normal reasoning/full-output viewer retains pagination.
 v2.0.6 fixes OpenCode attachment admission. Restart that session with its saved chat
 after updating; reselect the file and use Send, with optional text. No history reset
 or new provider login is needed for this helper fix.
+
+
+## Unreleased agent-chat recovery (2.0.3-test)
+
+After a failed permission reply, the same pending Yes/No prompt can be answered
+again. Check the agent state before retrying an uncertain action; no permission
+is granted automatically. Gemini permits retry with the same message ID only
+when readiness was lost before calling the native submit/Shell callback. An
+uncertain callback result remains reserved to avoid duplicate execution.
+
+OpenCode rejects messages, details, forms and interrupts from another native
+conversation. Each new launch has its own private control socket; history and
+provider connection choices remain independent of that run identifier. Queued
+close operations capture their owner before scheduling, including the Codex
+stop marker and Gemini/Claude environment. Existing legacy OpenCode runs keep
+their original socket until an explicit next launch. No session is restarted
+automatically. For packaged helpers to change, save the chat and explicitly
+restart the affected agent after updating.
+
+[Audit evidence and phone checks](AUDIT-AGENT-CHATS-2026-10-23.md).
+
+
+## Unreleased X11 installation/repair follow-up (2.0.4-test)
+
+After Cancel, wait for Cancelling to finish before retrying or installing another
+program. Closing the owned pipe initiates group cleanup; new operations remain
+blocked until it exits. Ordinary Ubuntu now also offers Programs → Installed
+programs → Repair launcher permissions. Stop its desktop and confirm the action;
+only checksum-verified launchers are eligible, with original permission backups.
+No repair is performed automatically. See the
+[environment/X11 audit](AUDIT-ENVIRONMENTS-X11-2026-10-23.md) for evidence and limits.
+
+
+## Unreleased backup and cleanup cancellation (2.0.5-test)
+
+For cancellable backup, restore and storage scan/file cleanup operations, Cancel
+shows Cancelling / Stopping operation and keeps the progress window open until
+the worker finishes. Wait for that result before starting another storage job.
+Native environment deletion remains non-cancellable after its confirmation.
+Cancellation is not rollback: files already deleted stay deleted, and partial
+backup/restore destinations must not be treated as complete. A late Cancel does
+not hide a successfully completed operation. No user-data reset, archive migration
+or environment reinstall is required. See the
+[storage audit](AUDIT-STORAGE-2026-10-23.md) for performed checks and phone limits.
+
+
+## Unreleased server transfer follow-up (2.0.6-test)
+
+After dismissing a confirmation, choosing another server/destination or
+disconnecting, make a fresh selection before starting a transfer. An old
+confirmation cannot start a new upload, download or move. Reconnecting does not
+reactivate it. Existing in-progress background controls remain available.
+Downloaded filenames are not merged into a directory which appeared during
+publication; the operation fails and preserves existing destination contents.
+Already completed files remain retained on cancellation/error. Transfers are not
+automatically replayed after a network failure: check the destination if a
+publication result is uncertain. No account, archive or environment migration is
+required. See [audit evidence](AUDIT-TRANSFERS-2026-10-23.md).
+
+
+## Unreleased workspace saving follow-up (2.0.7-test)
+
+Commands, notes, presets and recent-command history retain the same controls.
+Pending saves now stay ordered when a screen is recreated; an old closed screen
+cannot queue another save or receive a completion callback. Queued disk writes
+still finish after close. Write errors are shown to the current open screen when
+one exists. Do not treat an in-memory change as proof of a completed disk commit.
+Valid libraries need no reset or migration. If a library contains duplicate IDs
+inside commands, sessions or notes, loading becomes read-only and preserves the
+original file; no automatic deletion, ID rewrite or reset is performed.
+[Evidence and phone checks](AUDIT-PERSISTENCE-2026-10-23.md).
+
+## Unreleased receive/update follow-up (2.0.8-test)
+
+Shared incoming files require a simple basename. Existing names and links are
+never overwritten: choose a new name. Failed new copies are removed. Update
+Cancel requests disconnection and waits for worker exit before another check can
+start. Install repeats size/hash and current package/version/signer validation
+in the background after any Android permission settings visit. Cleared/changed
+cache requires a fresh download. No workspace/account reset is needed.
+
+## Unreleased installer follow-up (2.0.9-test)
+
+Environment checks resolve shell links within the selected rootfs. A directory
+with a missing/broken/nonexecutable shell is not considered ready. Existing
+working systems and persistent native download caches are not replaced. Each
+check/install stages its own scripts; errors and interrupted waits retain the
+operation slot until its process exits. Cancellation stops only its owned
+installer group. Initial Python package preparation may finish before Stop can
+be observed; this does not promise an immediate prerequisite cancellation.
+See AUDIT-INSTALLERS-2026-10-23.md for device checks and recovery limitations.
+
+## Unreleased file manager follow-up (2.0.10-test)
+
+After canceling/replacing a Copy/Move confirmation or changing its selection,
+open a new confirmation; old buttons cannot replay it. Download preserves
+existing names (including links) and creates a new numbered file exclusively.
+Unfinished Java exports check browser closure/interruption between chunks;
+completed files can remain if closure happens after completion. Successful Share
+keeps its private cache copy for a recipient's later read. Running shell batches
+still retain completed actions on error and do not provide whole-batch rollback.
+See AUDIT-FILE-MANAGER-2026-10-24.md for device/transport limits.
+
+
+## Unreleased file transport follow-up (2.0.11-test)
+
+A file operation reports timeout separately from an unavailable source. Local
+upload input is bounded while it is read, including a source that grows after
+selection. An unfinished stream owns its child until exit/cleanup; closing an
+older stream cannot stop the next one. A new overlapping operation reports busy.
+Closing a file window requests cancellation without waiting on the UI thread;
+input-stream close itself waits for its directly owned child.
+
+After a network failure during Copy/Move, inspect both source and destination
+before retrying. Completed items remain and remote/detached descendants are not
+proven stopped just because the local SSH transport exited. No automatic replay
+of a partially completed transfer is introduced. See
+AUDIT-FILE-TRANSPORT-2026-10-24.md for the scoped tests and remaining phone checks.
+
+
+## Unreleased transfer recovery messages (2.0.12-test)
+
+Copy/Move success now requires the current batch's final completion receipt as
+well as a successful transport exit. After an unconfirmed result, the displayed
+number is received acknowledgements rather than an exact count of files changed.
+More items may already have completed, and the command may still be running in
+the selected environment/server. Check both source and destination and finish or
+stop that work before manually repeating the batch. There is no automatic retry.
+Existing files still are not intentionally replaced; completed items are not
+rolled back. SSH keepalives detect an unresponsive file-operation connection;
+they do not automatically reconnect it or stop remote descendants.
+
+The confirmation, selection, Copy/Move controls and window sizes are unchanged.
+No accounts, environment migration, rootfs replacement or data reset is required.
+See AUDIT-FILE-RECOVERY-2026-10-24.md for isolated test evidence and phone checks.
+
+
+## Unreleased cumulative audit (2.0.13-test)
+
+The application/terminal remains Android8+/API26, ARM64; the embedded graphical
+X11 desktop requires Android11+/API30. This clarifies the existing support split,
+not a new minimum-version increase. Button sizes, layouts, keyboard controls,
+renderers, account data and environment selection do not change in this pass.
+After an explicit upgrade, check an agent chat's input focus and switch an X11
+session between terminal/desktop, including showing/hiding the keyboard. Those
+physical checks remain separate from the automated fixture results in
+AUDIT-REGRESSION-2026-10-24.md. No data reset or environment replacement is needed.
+
+
+## Unreleased settings reopen fix (2.0.14-test)
+
+Reopening settings creates adapters for the current screen while keeping the
+same saved preferences. Keyboard/margin switches and log levels do not need to
+be reconfigured. A new logging-settings screen uses its current language for
+feedback, instead of the first screen's cached Context. A failed package lookup
+is not retained as a global settings adapter; existing lookup/error behavior
+still applies. No addon is installed automatically by this change.
+
+For a phone check, open keyboard settings, change one switch, close and reopen
+settings, then verify that value. Reopen logging settings after changing app
+language and check the log-level feedback. Real addon permission/error dialogs
+and physical memory/GC behavior remain device checks. See
+AUDIT-SETTINGS-2026-10-24.md; no data reset or environment replacement is required.
+
+## Unreleased Android file-sharing hardening (2.0.15-test)
+
+Android's Termux document source exposes HOME. Normal saved document IDs remain
+usable, including internal links and their display names. Links resolving outside
+HOME are no longer listed/opened through this source: choose the destination
+through Android's own storage source instead. This does not remove files or
+change the application's project/environment file browser or shell access.
+The source supports creating a new file/folder and refuses root deletion or
+path-like names; an existing name receives a numeric suffix rather than overwrite.
+
+termux-open keeps its existing allow-external-apps requirement and read-only
+outgoing URI grants. The legacy file provider serves existing regular files from
+Termux files/shared storage; it no longer creates missing paths through openFile.
+Property files cannot be made writable through a hard-link alias. Unicode/#/?/%
+share names are encoded correctly, uppercase extensions are language independent
+and sizes above2 GiB remain 64-bit. No reset/account/rootfs migration is required.
+Android storage permissions and actual external-editor behavior still need phone
+verification. See AUDIT-PROVIDERS-2026-10-24.md for the tested scope and limits.
+
+## Unreleased attachment and notification hardening (2.0.16-test)
+
+Attachment Download preserves existing files and links, and uses a numeric suffix
+before the extension if a name is occupied, consistently with file-manager export.
+Closing its owner cancels an incomplete local copy; completed copies remain.
+Photo miniatures use the updated AndroidX EXIF reader. Zoom/drag and viewer window
+sizes are retained; simple image taps now issue the standard click/accessibility
+event. Check actual pinch/drag behavior on the phone after a chosen update.
+
+Terminal/report notification actions keep their existing targets and labels with
+immutable PendingIntents. Launch/share entry points and existing permissions remain;
+no reset, environment replacement or new sign-in is required. Native driver/UI and
+physical notification behavior remain device checks. See AUDIT-LINT-2026-10-24.md.

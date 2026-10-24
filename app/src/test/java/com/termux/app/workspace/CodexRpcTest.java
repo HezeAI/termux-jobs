@@ -11,6 +11,16 @@ import org.json.JSONObject;
 import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class) @Config(sdk=28, application=Application.class)
 public class CodexRpcTest {
+    @Test public void queuedStopKeepsItsOriginalSocketAfterTheProfileRelaunches() throws Exception {
+        File files=java.nio.file.Files.createTempDirectory("codex-owned-stop").toFile();
+        WorkspaceStore.Session profile=new WorkspaceStore.Session();
+        File old=CodexSessionShell.socket(files,profile);assertTrue(old.getParentFile().mkdirs());
+        File stopped=new File(old.getAbsolutePath()+".stopped");assertTrue(stopped.createNewFile());
+        Runnable pending=CodexRpc.ownedStop(files,profile);
+        profile.codexSocketId=java.util.UUID.randomUUID().toString();File next=CodexSessionShell.socket(files,profile);
+        try{pending.run();assertTrue(new File(old.getAbsolutePath()+".stop").isFile());assertFalse(new File(next.getAbsolutePath()+".stop").exists());}
+        finally{new File(old.getAbsolutePath()+".stop").delete();stopped.delete();old.getParentFile().delete();files.delete();}
+    }
     private static CodexRpc rpc(InputStream in, OutputStream out) throws Exception {
         Constructor<CodexRpc> c = CodexRpc.class.getDeclaredConstructor(boolean.class);c.setAccessible(true);CodexRpc r=c.newInstance(true);
         Field f=CodexRpc.class.getDeclaredField("in");f.setAccessible(true);f.set(r,in);f=CodexRpc.class.getDeclaredField("out");f.setAccessible(true);f.set(r,out);return r;

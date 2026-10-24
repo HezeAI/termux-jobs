@@ -10,5 +10,5 @@
   "soname": "libopenh264.so.8",
   "abi": "aarch64-linux-gnu",
   "license": "BSD-2-clause; see COPYRIGHT for per-file notices",
-  "scope": "private Parole launcher inside openSUSE, no RPM/system library replacement"
+  "scope": "private Parole launcher inside openSUSE/Fedora; no RPM/system library replacement"
 }

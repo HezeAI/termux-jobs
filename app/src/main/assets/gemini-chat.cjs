@@ -74,7 +74,14 @@ class GeminiChat {
   const current=this.binding;if(current?.config!==binding.config||!current.ready||current.native)return {ok:false,error:'NOT_READY'};
   const files=this.attachments.prepare(q.attachments,session,q.kind),prompt=this.attachments.prompt(q.text,files,true);
   // Reserve before invoking native callbacks; ambiguous execution is never blindly retried.
-  const promise=Promise.resolve().then(async()=>{if(this.api.session()!==session||this.binding?.config!==binding.config||!this.binding.ready||this.binding.native)throw Error('Stale UI');if(q.kind==='shell'){if(this.shell?.config!==binding.config||this.api.status().state!=='idle')throw Error('Busy shell');if(!this.shell.send(q.text))throw Error('Shell rejected');}else await this.binding.submit(prompt);return {ok:true,accepted:true,id:q.id};});
+  const promise=Promise.resolve().then(async()=>{
+   // No native callback has run at these guards. Keep same-ID retry possible
+   // after a temporary UI/idle transition; uncertain native calls stay reserved.
+   const notReady=()=>{if(this.sent.get(q.id)?.promise===promise)this.sent.delete(q.id);return {ok:false,error:'NOT_READY'};};
+   if(this.api.session()!==session||this.binding?.config!==binding.config||!this.binding.ready||this.binding.native)return notReady();
+   if(q.kind==='shell'){if(this.shell?.config!==binding.config||this.api.status().state!=='idle')return notReady();if(!this.shell.send(q.text))throw Error('Shell rejected');}else await this.binding.submit(prompt);
+   return {ok:true,accepted:true,id:q.id};
+  });
   this.sent.set(q.id,{raw,promise});while(this.sent.size>200)this.sent.delete(this.sent.keys().next().value);return promise;
  }
 }

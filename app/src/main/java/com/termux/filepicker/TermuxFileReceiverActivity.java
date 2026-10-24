@@ -5,6 +5,9 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.OpenableColumns;
+import android.system.ErrnoException;
+import android.system.Os;
+import android.system.OsConstants;
 import android.util.Patterns;
 
 import com.termux.R;
@@ -40,6 +43,19 @@ public class TermuxFileReceiverActivity extends Activity {
      * when showing the error dialog.
      */
     boolean mFinishOnDismissNameDialog = true;
+    private InputStream mReceivedStream;
+
+    @Override protected void onDestroy() {
+        closeReceivedStream();
+        super.onDestroy();
+    }
+
+    private void closeReceivedStream() {
+        if (mReceivedStream != null) {
+            try { mReceivedStream.close(); } catch (IOException ignored) {}
+            mReceivedStream = null;
+        }
+    }
 
     private static final String API_TAG = TermuxConstants.TERMUX_APP_NAME + "FileReceiver";
 
@@ -146,6 +162,9 @@ public class TermuxFileReceiverActivity extends Activity {
     }
 
     void promptNameAndSave(final InputStream in, final String attachmentFileName) {
+        closeReceivedStream();
+        if (in == null) { showErrorDialogAndQuit("Cannot open shared content."); return; }
+        mReceivedStream = in;
         TextInputDialogUtils.textInput(this, R.string.title_file_received, attachmentFileName, R.string.action_file_received_edit, text -> {
             File outFile = saveStreamWithName(in, text);
             if (outFile == null) return;
@@ -183,33 +202,43 @@ public class TermuxFileReceiverActivity extends Activity {
             });
     }
 
+    File receiveDirectory() { return new File(TERMUX_RECEIVEDIR); }
+
     public File saveStreamWithName(InputStream in, String attachmentFileName) {
-        File receiveDir = new File(TERMUX_RECEIVEDIR);
-
-        if (DataUtils.isNullOrEmpty(attachmentFileName)) {
-            showErrorDialogAndQuit("File name cannot be null or empty");
-            return null;
-        }
-
-        if (!receiveDir.isDirectory() && !receiveDir.mkdirs()) {
-            showErrorDialogAndQuit("Cannot create directory: " + receiveDir.getAbsolutePath());
-            return null;
-        }
-
-        try {
-            final File outFile = new File(receiveDir, attachmentFileName);
-            try (FileOutputStream f = new FileOutputStream(outFile)) {
+        File outFile = null;
+        boolean created = false;
+        try (InputStream source = in) {
+            // The provider's display name and the editable title are untrusted basenames.
+            if (source == null || DataUtils.isNullOrEmpty(attachmentFileName)
+                || attachmentFileName.equals(".") || attachmentFileName.equals("..")
+                || attachmentFileName.indexOf('/') >= 0 || attachmentFileName.indexOf('\\') >= 0
+                || attachmentFileName.indexOf('\0') >= 0) {
+                throw new IOException("Choose a file name without a path.");
+            }
+            File receiveDir = receiveDirectory();
+            if (!receiveDir.isDirectory() && !receiveDir.mkdirs())
+                throw new IOException("Cannot create receive directory.");
+            outFile = new File(receiveDir, attachmentFileName);
+            // Exclusive creation is atomic: neither existing files nor links are truncated.
+            java.io.FileDescriptor descriptor = Os.open(outFile.getPath(),
+                OsConstants.O_WRONLY | OsConstants.O_CREAT | OsConstants.O_EXCL | OsConstants.O_NOFOLLOW, 0600);
+            created = true;
+            try (FileOutputStream output = new FileOutputStream(descriptor)) {
                 byte[] buffer = new byte[4096];
-                int readBytes;
-                while ((readBytes = in.read(buffer)) > 0) {
-                    f.write(buffer, 0, readBytes);
-                }
+                int count;
+                while ((count = source.read(buffer)) != -1) output.write(buffer, 0, count);
+            } finally {
+                // This activity owns the descriptor returned by Os.open. On Android,
+                // a stream constructed from a caller-owned descriptor may leave it open.
+                if (descriptor.valid()) Os.close(descriptor);
             }
             return outFile;
-        } catch (IOException e) {
-            showErrorDialogAndQuit("Error saving file:\n\n" + e);
-            Logger.logStackTraceWithMessage(LOG_TAG, "Error saving file", e);
+        } catch (IOException | ErrnoException | RuntimeException e) {
+            if (created && outFile != null) outFile.delete();
+            showErrorDialogAndQuit("Cannot save shared file. Use a new file name; existing files are never overwritten.");
             return null;
+        } finally {
+            if (mReceivedStream == in) mReceivedStream = null;
         }
     }
 

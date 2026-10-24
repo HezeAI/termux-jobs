@@ -1,6 +1,7 @@
 package com.termux.app.workspace;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.res.ColorStateList;
 import android.os.Handler;
 import android.os.Looper;
@@ -22,7 +23,7 @@ final class WorkspaceBackupProgress {
     private final LongSupplier clock;
     private final long started;
     private final Handler handler=new Handler(Looper.getMainLooper());
-    private boolean closed;
+    private boolean closed,stopping;
     private final Runnable tick=new Runnable(){public void run(){
         if(closed)return;
         if(activity.isFinishing()||activity.isDestroyed()){close();return;}
@@ -30,7 +31,7 @@ final class WorkspaceBackupProgress {
     }};
     WorkspaceBackupProgress(Activity a){this(a,SystemClock::elapsedRealtime);}
     WorkspaceBackupProgress(Activity a,LongSupplier time){
-        activity=a;clock=time;started=time.getAsLong();view=new LinearLayout(a);view.setOrientation(1);
+        activity=a;clock=time;started=time.getAsLong();view=new LinearLayout(a);view.setOrientation(LinearLayout.VERTICAL);
         int pad=WorkspaceDialogs.dp(a,20);view.setPadding(pad,pad,pad,pad);
         stage=line(15,WorkspaceDialogs.TEXT);bar=new ProgressBar(a,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(100);bar.setIndeterminate(true);
         ColorStateList tint=ColorStateList.valueOf(WorkspaceDialogs.ACCENT);bar.setProgressTintList(tint);bar.setIndeterminateTintList(tint);
@@ -42,8 +43,22 @@ final class WorkspaceBackupProgress {
     private TextView line(int size,int color){TextView v=new TextView(activity);v.setTextSize(size);v.setTextColor(color);view.addView(v,new LinearLayout.LayoutParams(-1,-2));return v;}
     void start(){if(!closed){handler.removeCallbacks(tick);tick.run();}}
     void close(){closed=true;handler.removeCallbacks(tick);}
+    boolean isStopping(){return stopping;}
+    /** Bind after show: cancellation requests worker shutdown, it does not dismiss completion UI. */
+    void bindCancellation(AlertDialog dialog,Runnable cancel){
+        android.widget.Button button=dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+        if(button==null)return;
+        button.setOnClickListener(v->{
+            if(stopping||closed)return;
+            stopping=true;button.setEnabled(false);
+            button.setText(WorkspaceBackupUi.text(activity,"Отменяется…","Cancelling…"));
+            stage.setText(WorkspaceBackupUi.text(activity,"Остановка операции…","Stopping operation…"));
+            current.setText(" ");amount.setText(WorkspaceBackupUi.text(activity,"Дождитесь завершения процесса","Waiting for the process to exit"));bar.setIndeterminate(true);
+            cancel.run();
+        });
+    }
     void update(String label,JSONObject event){
-        if(closed)return;stage.setText(label);
+        if(closed||stopping)return;stage.setText(label);
         String filename=event.optString("current","");current.setText(filename.isEmpty()?" ":filename);
         long done=Math.max(0,event.optLong("processed")),total=Math.max(0,event.optLong("total"));
         if(total>0){

@@ -5,8 +5,10 @@ public final class DesktopPrograms {
     private DesktopPrograms(){}
     /** Exact aliases only; never redirect a distribution to another rootfs. */
     public static boolean supportsTarget(String target){return target.equals("ubuntu")||supportsMaintenance(target);}
+    /** Optional appearance is limited to the eight current non-agent desktops. */
+    public static boolean supportsStyle(String target){return "termux".equals(target)||"ubuntu".equals(target)||"debian".equals(target)||"alpine".equals(target)||"fedora".equals(target)||"opensuse".equals(target)||"void".equals(target)||"archlinux".equals(target);}
     public static boolean supportsFirefox(String target){return supportsTarget(target);}
-    public static boolean supportsMaintenance(String target){return target.equals("jobs-x11-ubuntu")||target.equals("debian")||target.equals("alpine")||target.equals("termux")||target.equals("fedora")||target.equals("opensuse")||target.equals("void")||target.equals("archlinux");}
+    public static boolean supportsMaintenance(String target){return target.equals("ubuntu")||target.equals("jobs-x11-ubuntu")||target.equals("debian")||target.equals("alpine")||target.equals("termux")||target.equals("fedora")||target.equals("opensuse")||target.equals("void")||target.equals("archlinux");}
     public static final String[] IDS={"files","terminal","editor","archives","images","fonts","browser","office","pdf","media","gpu-tools"};
     public static final String[] RECOMMENDED={"editor","archives","images","browser","office","pdf","media","gpu-tools"};
     public static boolean removable(String pkg){

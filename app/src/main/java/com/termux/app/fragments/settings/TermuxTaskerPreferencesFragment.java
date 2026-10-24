@@ -20,7 +20,7 @@ public class TermuxTaskerPreferencesFragment extends PreferenceFragmentCompat {
         if (context == null) return;
 
         PreferenceManager preferenceManager = getPreferenceManager();
-        preferenceManager.setPreferenceDataStore(TermuxTaskerPreferencesDataStore.getInstance(context));
+        preferenceManager.setPreferenceDataStore(TermuxTaskerPreferencesDataStore.create(context));
 
         setPreferencesFromResource(R.xml.termux_tasker_preferences, rootKey);
     }
@@ -29,21 +29,16 @@ public class TermuxTaskerPreferencesFragment extends PreferenceFragmentCompat {
 
 class TermuxTaskerPreferencesDataStore extends PreferenceDataStore {
 
-    private final Context mContext;
     private final TermuxTaskerAppSharedPreferences mPreferences;
 
-    private static TermuxTaskerPreferencesDataStore mInstance;
 
     private TermuxTaskerPreferencesDataStore(Context context) {
-        mContext = context;
         mPreferences = TermuxTaskerAppSharedPreferences.build(context, true);
     }
 
-    public static synchronized TermuxTaskerPreferencesDataStore getInstance(Context context) {
-        if (mInstance == null) {
-            mInstance = new TermuxTaskerPreferencesDataStore(context);
-        }
-        return mInstance;
+    // SharedPreferences owns the values; this adapter belongs only to its screen.
+    public static TermuxTaskerPreferencesDataStore create(Context context) {
+        return new TermuxTaskerPreferencesDataStore(context);
     }
 
 }

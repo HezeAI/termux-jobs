@@ -18,7 +18,8 @@ final class DesktopKeyboardState {
         if(serial==tapSerial)return null;tapSerial=serial;if(serial==0||!text||!automatic)return null;
         suppressed=false;enabled=true;automaticHide=false;return true;
     }
-    boolean visibility(boolean visible){
+    boolean visibility(Boolean visible){
+        if(visible==null)return false; // Host reattachment has no window insets yet.
         if(visible){seenVisible=true;return false;}
         if(!seenVisible)return false;
         seenVisible=false;

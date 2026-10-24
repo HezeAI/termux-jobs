@@ -5,7 +5,17 @@ import java.util.*;
 /** Quoted operations in one selected environment, with whole-batch preflight and no overwrite. */
 final class ProjectFileTransfer {
     static final int MAX_SELECTED=50;
+    interface Runner { void run(String script,java.io.OutputStream output,int max) throws Exception; }
+    static void execute(List<ProjectFiles.Entry> entries,String folder,boolean move,boolean rename,Runner runner)throws Exception {
+        ProjectFileReceipt receipt=new ProjectFileReceipt(entries.size());
+        String script=script(entries,folder,move,rename,false,receipt);
+        try {runner.run(script,receipt,ProjectFileReceipt.MAX_OUTPUT);receipt.requireComplete();}
+        catch(Exception error){throw new ProjectFiles.TransferFailure(receipt.acknowledged(),error);}
+    }
     static String script(List<ProjectFiles.Entry> entries,String folder,boolean move,boolean rename,boolean checkOnly){
+        return script(entries,folder,move,rename,checkOnly,null);
+    }
+    static String script(List<ProjectFiles.Entry> entries,String folder,boolean move,boolean rename,boolean checkOnly,ProjectFileReceipt receipt){
         if(entries.isEmpty()||entries.size()>MAX_SELECTED)throw new IllegalArgumentException("INVALID_SELECTION");
         StringBuilder s=new StringBuilder("set -eu\numask 077\nexport LC_ALL=C\nto=$(cd -P -- "+ProjectFiles.target(folder)+" && pwd -P) || exit 21\n");
         Set<String> paths=new HashSet<>();
@@ -27,13 +37,14 @@ final class ProjectFileTransfer {
             s.append("done\ndst").append(i).append("=$dst\n");
         }
         if(checkOnly)return s.append("printf 'READY'\n").toString();
+        if(receipt==null)receipt=new ProjectFileReceipt(entries.size());
         // GNU/Termux mv -T -n never merges into a directory or overwrites a raced-in target.
         for(int i=0;i<entries.size();i++){
             s.append("src=\"$src").append(i).append("\"\ndst=\"$dst").append(i).append("\"\n");
             if(move)s.append("mv -T -n -- \"$src\" \"$dst\" || exit 24\nif [ -e \"$src\" ] || [ -L \"$src\" ]; then exit 23; fi\n");
             else s.append("tmp=$(mktemp -d -- \"${to%/}/.termux-jobs-copy.XXXXXXXX\") || exit 24\ntrap 'rm -rf -- \"$tmp\"' EXIT\ncp -R -P -- \"$src\" \"$tmp/item\" || exit 24\nmv -T -n -- \"$tmp/item\" \"$dst\" || exit 24\nif [ -e \"$tmp/item\" ] || [ -L \"$tmp/item\" ]; then exit 23; fi\nrmdir -- \"$tmp\"\ntrap - EXIT\n");
-            s.append("printf 'DONE\\n'\n");
+            s.append("printf '%s\\n' ").append(SessionShell.quote(receipt.progress(i+1))).append("\n");
         }
-        return s.toString();
+        return s.append("printf '%s\\n' ").append(SessionShell.quote(receipt.completion())).append("\n").toString();
     }
 }

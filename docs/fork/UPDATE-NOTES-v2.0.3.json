@@ -1,0 +1,32 @@
+{
+  "ru": [
+    "Горизонтальный X11 во весь экран без вкладок: поверните телефон. Вертикальный поворот или «Назад» вернёт тот же стол в окно приложения; программы продолжат работу.",
+    "Kali-стиль Termux-job's доступен отдельно во всех восьми X11-окружениях. Сохраняются меню дистрибутива и отдельные настройки темы. Кнопка | подсвечивает включённый ввод.",
+    "Общий аудит: исправления чатов агентов, отмены установок X11/окружений, резервного копирования, очистки и сохранения данных.",
+    "Безопаснее копирование и перенос файлов: защита существующих файлов, проверка завершения и пояснение неопределённого результата после обрыва без автоматического повтора.",
+    "Исправление MP4 H.264/AAC в Parole Fedora: встроенные частные декодер и плагин с проверкой готовности. Кнопка | ниже и полупрозрачная. Также исправления обновлений, изображений, уведомлений и значений, зависевших от языка устройства."
+  ],
+  "en": [
+    "Full-screen landscape X11 without app tabs: rotate your phone. Rotate back or press Back to return the same desktop to the app window; programs keep running.",
+    "Optional Kali-inspired Termux-job's style in all eight X11 environments, with independent settings and preserved distribution menus. The | button highlights enabled input.",
+    "Stability audit: agent chat fixes, X11/environment installer cancellation, backups, cleanup and data persistence.",
+    "Safer Copy/Move and exports: preserve existing files, validate completion and explain uncertain outcomes after disconnection without automatic replay.",
+    "Fix Fedora Parole H.264/AAC MP4 setup with a bundled private decoder/plugin and runtime checks. Lower, translucent | control. Also includes updater, image, notification and locale-dependent protocol fixes."
+  ],
+  "compatibility": {
+    "ru": [
+      "Android 8+/ARM64, X11 — Android 11+. Прежние com.termux, подпись и schema8; code1352 выше сборок аудита. Сброс корректных данных, перенос аккаунтов и переустановка окружений не нужны.",
+      "Завершите важные операции до обновления: Android может остановить процессы. Сохраните чаты и перезапустите агентов после обновления для загрузки исправленных помощников. Fedora: повторно установите «Видео и аудио» для подготовки декодера, затем закройте Parole и запустите из меню программ.",
+      "Android-провайдер документов Termux ограничен HOME: внешние симлинки/старые grants за пределы HOME отклоняются. Используйте память телефона/окружение в файловом менеджере приложения; права shell агентов не урезаются этой настройкой.",
+      "Существующие файлы Download не перезаписываются: вложения получают номер в имени, а входящему файлу через старое меню «Поделиться» нужно другое имя при совпадении. Повреждённые библиотеки с повторяющимися ID открываются только для чтения без автоматического сброса. Перед исправлением сохраните копию.",
+      "После обрыва SSH/proot результат Copy/Move может быть неопределённым. Проверьте обе папки и оставшуюся работу до повтора: остановка локального соединения не гарантирует остановку удалённых процессов."
+    ],
+    "en": [
+      "Android 8+/ARM64; X11 needs Android 11+. Same com.termux/signer/schema8; code1352 exceeds audit builds. No valid-data reset, account migration or environment reinstallation.",
+      "Finish important operations before updating: Android may stop processes. Save chats and restart agents after updating to load corrected helpers. Fedora: install Video and audio again to prepare the decoder, then close Parole and relaunch it from the applications menu.",
+      "Android's Termux documents provider is confined to HOME: outside-HOME links/old grants are refused. Use phone storage/environment sources in the app file manager; this does not restrict agent shell permissions.",
+      "Existing Download files are not overwritten: attachment exports use numbered names; legacy incoming shares need a different name on collision. Malformed libraries with duplicate IDs open read-only without an automatic reset. Back them up before repair.",
+      "After an SSH/proot interruption, Copy/Move may have an uncertain result. Inspect both folders and remaining work before retrying; local transport exit does not guarantee remote process termination."
+    ]
+  }
+}

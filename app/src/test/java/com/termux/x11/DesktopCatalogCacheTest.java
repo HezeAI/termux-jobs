@@ -34,4 +34,13 @@ public class DesktopCatalogCacheTest {
   File dir=temp.newFolder(),file=new File(dir,"ubuntu-recommended.jsonl");org.json.JSONObject old=new org.json.JSONObject();old.put("_schema",2);for(String id:DesktopPrograms.IDS)if(!id.equals("gpu-tools"))old.put(id,true);Files.write(file.toPath(),old.toString().getBytes(StandardCharsets.UTF_8));assertNull(new DesktopCatalogCache(dir).loadItems("ubuntu"));
  }
 
+ @Test public void fedoraCodecRequirementsRejectOldFlagsAndReplaceTheSameCacheFile()throws Exception{
+  File dir=temp.newFolder(),file=new File(dir,"fedora-recommended.jsonl");org.json.JSONObject old=new org.json.JSONObject();old.put("_schema",2);android.os.Bundle items=new android.os.Bundle();
+  for(String id:DesktopPrograms.IDS){old.put(id,true);items.putBoolean(id,!id.equals("media"));}
+  Files.write(file.toPath(),old.toString().getBytes(StandardCharsets.UTF_8));DesktopCatalogCache cache=new DesktopCatalogCache(dir);assertNull(cache.loadItems("fedora"));
+  cache.saveItems("fedora",items);assertFalse(cache.loadItems("fedora").getBoolean("media"));assertTrue(cache.loadItems("fedora").getBoolean("editor"));assertEquals(1,dir.list().length);
+  org.json.JSONObject rewritten=new org.json.JSONObject(new String(Files.readAllBytes(file.toPath()),StandardCharsets.UTF_8));assertEquals(3,rewritten.getInt("_schema"));
+  cache.saveItems("debian",items);File other=new File(dir,"debian-recommended.jsonl");assertEquals(2,new org.json.JSONObject(new String(Files.readAllBytes(other.toPath()),StandardCharsets.UTF_8)).getInt("_schema"));assertNotNull(cache.loadItems("debian"));
+ }
+
 }

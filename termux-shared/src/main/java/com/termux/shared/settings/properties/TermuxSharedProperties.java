@@ -1,5 +1,7 @@
 package com.termux.shared.settings.properties;
 
+import java.util.Locale;
+
 import android.content.Context;
 import android.content.res.Configuration;
 
@@ -416,7 +418,7 @@ public abstract class TermuxSharedProperties {
     public static Integer getCodePointForSessionShortcuts(String key, String value) {
         if (key == null) return null;
         if (value == null) return null;
-        String[] parts = value.toLowerCase().trim().split("\\+");
+        String[] parts = value.toLowerCase(Locale.ROOT).trim().split("\\+");
         String input = parts.length == 2 ? parts[1].trim() : null;
         if (!(parts.length == 2 && parts[0].trim().equals("ctrl")) || input.isEmpty() || input.length() > 2) {
             Logger.logError(LOG_TAG, "Keyboard shortcut '" + key + "' is not Ctrl+<something>");

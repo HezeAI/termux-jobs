@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Opt-in Termux-only XFCE appearance; reversible selected properties before XFCE starts."""
+"""Opt-in per-environment XFCE appearance; reversible selected properties before XFCE starts."""
 import copy,hashlib,io,json,os,stat,sys,tempfile,zipfile
 from pathlib import Path,PurePosixPath
 import xml.etree.ElementTree as ET
@@ -70,6 +70,30 @@ def set_node(root,key,value):
  if value is not None:parent.append(ET.fromstring(value))
 
 def prop(key,typ,value):return canonical(ET.Element('property',name=key.rsplit('/',1)[-1],type=typ,value=str(value).lower() if isinstance(value,bool) else str(value)))
+
+def inherited(base,override):
+ # XFConf's empty local properties inherit system values (notably openSUSE).
+ # Used only to discover panel layout/plugins; snapshots/writes keep local XML.
+ result=copy.deepcopy(base)
+ if override.get('type')!='empty':
+  result.attrib.clear();result.attrib.update(override.attrib)
+  for item in list(result):
+   if item.tag!='property':result.remove(item)
+  for item in override:
+   if item.tag!='property':result.append(copy.deepcopy(item))
+ for item in override.findall('property'):
+  previous=next((n for n in result.findall('property') if n.get('name')==item.get('name')),None)
+  updated=inherited(previous,item) if previous is not None else copy.deepcopy(item)
+  if previous is not None:result.remove(previous)
+  result.append(updated)
+ return result
+
+def panel_defaults(prefix):
+ # A distribution can provide the XFConf channel directly instead of default.xml.
+ for relative in ('etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml','etc/xdg/xfce4/panel/default.xml'):
+  data=read(prefix/relative)
+  if data is not None:return tree(data,'xfce4-panel')
+ return tree(None,'xfce4-panel')
 
 def desired(roots,wallpaper):
  out={}
@@ -145,10 +169,10 @@ def apply(home,prefix,control,enabled):
  if not enabled and not old.get('active'):return 'off'
  config=Path(os.environ.get('XDG_CONFIG_HOME') or home/'.config');directory=config/'xfce4/xfconf/xfce-perchannel-xml';safe(home,directory)
  documents={};roots={}
+ defaults=panel_defaults(prefix) if enabled else None
  for channel in CHANNELS:
   path=directory/(channel+'.xml');safe(home,path);data=read(path);documents[channel]=(path,data)
-  if channel=='xfce4-panel' and data is None:data=read(prefix/'etc/xdg/xfce4/panel/default.xml')
-  roots[channel]=tree(data,channel)
+  roots[channel]=copy.deepcopy(defaults) if channel=='xfce4-panel' and data is None and defaults is not None else tree(data,channel)
  if enabled:
   pack=read(control/'x11-style.zip')
   if pack is None or hashlib.sha256(pack).hexdigest()!=PIN:raise ValueError('style archive integrity')
@@ -169,7 +193,8 @@ def apply(home,prefix,control,enabled):
     safe(home,dest);data=z.read(item);previous=read(dest);known=old.get('files',{}).get(str(dest.relative_to(home)))
     if previous is not None and previous!=data and hashlib.sha256(previous).hexdigest() not in (known,old.get('previous_files',{}).get(str(dest.relative_to(home)))):raise ValueError('edited style asset preserved')
     assets[dest]=(data,previous)
-  changes=desired(roots,home/'.local/share/termux-jobs/style/wallpaper.png')
+  effective=dict(roots);effective['xfce4-panel']=inherited(defaults,roots['xfce4-panel'])
+  changes=desired(effective,home/'.local/share/termux-jobs/style/wallpaper.png')
   # Switching presets must restore properties that belong only to the old one.
   for identity,value in old.get('applied',{}).items():
    if identity not in changes:
@@ -199,9 +224,15 @@ def apply(home,prefix,control,enabled):
   old['active']=False;data=(json.dumps(old,sort_keys=True)+'\n').encode();write(record,data,before)
  return 'on' if enabled else 'restored'
 
+def environment_prefix(target,prefix):
+ if target in ('ubuntu','debian','alpine','fedora','opensuse','void','archlinux'):return Path('/')  # Each guest owns its /etc/xdg; never inherit Termux PREFIX.
+ if target=='termux' and prefix:return Path(prefix)
+ raise ValueError('style requires a supported X11 desktop')
+
 if __name__=='__main__':
  try:
-  if os.environ.get('JOBS_X11_TARGET')!='termux' or sys.argv[1:] not in [['0'],['1']]:raise ValueError('style is Termux-only')
-  print('JOBS_X11_STYLE='+apply(Path.home(),os.environ['PREFIX'],os.environ['JOBS_X11_CONTROL'],sys.argv[1]!='0'),flush=True)
+  if sys.argv[1:] not in [['0'],['1']]:raise ValueError('invalid style selection')
+  prefix=environment_prefix(os.environ.get('JOBS_X11_TARGET'),os.environ.get('PREFIX'))
+  print('JOBS_X11_STYLE='+apply(Path.home(),prefix,os.environ['JOBS_X11_CONTROL'],sys.argv[1]!='0'),flush=True)
  except (OSError,ValueError,KeyError,ET.ParseError,zipfile.BadZipFile):
   print('ERROR:TERMUX_STYLE: original settings and user edits preserved where possible',flush=True);raise SystemExit(1)

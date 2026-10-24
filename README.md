@@ -5,6 +5,54 @@
 Команды по-прежнему выполняются в настоящем Termux или выбранном окружении;
 интерфейс помогает организовать работу и не требует писать свою оболочку скриптов.
 
+## v2.0.3 — X11 landscape and stability fixes
+
+Rotate a running X11 desktop to landscape for a full-screen view without app tabs
+or terminal input. Rotate back or press Android Back to return the same desktop
+to the app window. The Interactive input `|` button remains at the top right. Landscape sizing
+keeps the desktop near physical resolution across all eight X11 targets.
+Corrected localized-window configuration handling keeps rotation geometry current.
+The input button highlights enabled input. Optional Kali-inspired Termux-job's
+style is independently selectable in all eight X11 environments. Fedora Parole media setup now includes a private
+H.264 decoder/plugin with runtime checks; restart Parole after preparing Video
+and audio. The fullscreen input control is lower and translucent.
+
+Includes the cumulative stability-audit fixes for agent chats, installer
+cancellation, backups/cleanup, persistence, transfers, updates, Android file
+providers, settings, images and notifications. Android8+/ARM64; X11 Android11+.
+Same package/signer/schema8, code1352; no valid-data reset or rootfs migration.
+Outside-HOME Android SAF links are intentionally refused; ordinary workspace and
+authorized shell access remain available. Read the compatibility notes before
+updating. [Release notes](docs/fork/RELEASE-v2.0.3.md) ·
+[Validation](docs/fork/VALIDATION-v2.0.3.md) · [Usage](docs/fork/USAGE.md).
+
+Download: [v2.0.3 release](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.3).
+
+## Historical private stability-audit stages
+
+Private `2.0.16-test` / code1345 completes the agreed source-audit sequence with
+compatible five-module lint analysis, explicit X11 API guards, immutable
+notification actions and locale-independent shared values. Thumbnail EXIF uses
+AndroidX1.4.2; attachment saving is exclusive and image taps support accessibility.
+Final full JVM confirmation: 1,209 cases passed. Modern lint: 0 errors/209 cataloged
+warnings, with the compileSDK/tool-version and device limits recorded. Existing
+valid data and prior fixes remain; stable is still v2.0.2.
+[Lint audit](docs/fork/AUDIT-LINT-2026-10-24.md) ·
+[Repeatable analysis](docs/fork/LINT.md) ·
+[Locale and provider audit](docs/fork/AUDIT-PROVIDERS-2026-10-24.md) ·
+[Settings lifecycle audit](docs/fork/AUDIT-SETTINGS-2026-10-24.md) ·
+[Combined regression audit](docs/fork/AUDIT-REGRESSION-2026-10-24.md) ·
+[File transfer recovery](docs/fork/AUDIT-FILE-RECOVERY-2026-10-24.md) ·
+[File transport lifetime](docs/fork/AUDIT-FILE-TRANSPORT-2026-10-24.md) ·
+[File manager confirmations/exports](docs/fork/AUDIT-FILE-MANAGER-2026-10-24.md) ·
+[Environment/package installers](docs/fork/AUDIT-INSTALLERS-2026-10-23.md) ·
+[Updates/external files](docs/fork/AUDIT-UPDATES-ENTRYPOINTS-2026-10-23.md) ·
+[Persistence audit](docs/fork/AUDIT-PERSISTENCE-2026-10-23.md) ·
+[Transfers/attachments](docs/fork/AUDIT-TRANSFERS-2026-10-23.md) ·
+[Storage](docs/fork/AUDIT-STORAGE-2026-10-23.md) ·
+[Environment/X11](docs/fork/AUDIT-ENVIRONMENTS-X11-2026-10-23.md) ·
+[Agent chats](docs/fork/AUDIT-AGENT-CHATS-2026-10-23.md).
+
 ## v2.0.2 — Agent chat improvements
 
 **[Download v2.0.2](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.2)**.
@@ -107,9 +155,11 @@ Desktop packages and optional drivers are downloaded after consent.
 
 ## Установка и обновление
 
-Скачайте **Termux-Jobs-v2.0.1-arm64.apk** из
+Скачайте **Termux-Jobs-v2.0.2-arm64.apk** из
 [GitHub Releases](https://github.com/HezeAI/termux-jobs/releases/latest).
 Требования: **Android8.0+/API26, ARM64**. Пакет **com.termux**.
+Встроенный графический рабочий стол X11 требует **Android11+/API30**;
+минимум Android8 относится к приложению и терминалу, а не к графическому виду.
 Для предыдущих APK Termux Job’s с тем же сертификатом доступно обновление
 поверх, в том числе через **шестерёнку → Проверить обновление**.
 Каждый стабильный выпуск содержит APK, SHA256SUMS и update.json.

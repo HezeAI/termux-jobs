@@ -1,3 +1,193 @@
+## v2.0.3 — X11 landscape and cumulative stability fixes
+
+Add full-screen landscape presentation for all eight X11 environments. Reparent
+the existing display instead of restarting the desktop. Restore its embedded
+window on portrait rotation or Android Back; retain the Interactive input | button
+in a nonfocusable sibling window above the native surface. Restore the application's orientation policy when
+leaving X11. Use physical landscape resolution up to2880px wide, preserving aspect ratio
+and keyboard crop stability. Native cores/drivers unchanged. Lower the input button slightly and show its
+enabled fill without recreating windows. Extend the optional bundled Kali-inspired
+style to all eight supported desktops with independent preferences and HOME-scoped
+restoration. Respect system XFConf panel defaults and inherited empty properties
+(including openSUSE), preserving distribution menu plugins and user overrides.
+Make the input control translucent and lower it for easier access. Fedora media setup
+adds explicit GStreamer/C++ runtimes plus the pinned private OpenH264 decoder
+and GStreamer plugin, scoped to Parole with a dedicated registry. Probe decoder
+creation and H.264/AAC/MP4 factories before marking ready; failed/interrupted
+setup stays missing and can be retried. Filter Cisco only for these DNF commands
+without changing repositories or replacing RPM libraries.
+
+Include the agent, X11/installer, storage/backup, persistence, transfer, updater,
+settings/provider and lint fixes from the private audit stages below. Same
+com.termux/signer/schema8, min26/target28/ARM64 and X11 min30; code1352.
+No valid-data reset or environment migration. Intentional HOME-only SAF access,
+exclusive output naming and malformed-library read-only handling are disclosed
+in RU/EN update metadata and the [release notes](docs/fork/RELEASE-v2.0.3.md).
+HezeAI confirmed the latest candidate works, including Fedora MP4 playback.
+Automated source/build checks and device results are recorded separately.
+
+## Historical private audit — lint alignment and source-audit completion (2.0.16-test)
+
+Add isolated five-module AGP7.4.2/Gradle7.5.1 lint, failure/stale-result guards and
+warning triage. Fix 11 newly visible errors, shared-locale conversions and an
+API26 constant reference. Make existing notification actions immutable and declare
+three existing component exports explicitly. Use AndroidX EXIF1.4.2 for thumbnails,
+exclusive creation for attachment Download, and proper image-preview click events.
+Preserve native launch/stop ownership, assets, window geometry and permissions.
+Private code1345, same package/signer/schema8/SDK/ABI; no valid-data reset/migration.
+Full 1,209-JVM confirmation and eight lint-checker tests pass. Modern lint: 0 errors/
+209 retained warnings; tool-version, SDK and device limits remain explicit.
+Public stable stays v2.0.2. [Evidence](docs/fork/AUDIT-LINT-2026-10-24.md).
+
+## Earlier private audit — locale and provider boundaries (2.0.15-test)
+
+Validate canonical HOME/Termux-files/shared-storage boundaries and opened file
+handles before truncation. Pin parent handles for SAF creation/deletion; reject
+unsafe names, external links, root deletion and special/missing share files.
+Bound search cycles, preserve existing IDs/internal alias names, handle Android
+mount aliases by inode identity and keep property-file aliases read-only.
+Use locale-independent MIME/search/tag normalization, encode share URI paths,
+return long sizes and apply the advertised invalid-action VIEW fallback.
+Private code1344, same package/signer/schema8; no valid-data reset or migration.
+Existing manifest permissions and allow-external-apps policy remain. Outside-HOME
+SAF grants are intentionally no longer usable; Android storage sources remain an
+alternative. Workspace browsing and agent/process/runtime paths are unchanged.
+42 scoped JVM cases pass; built-in lint: 0 errors/118 warnings, with known tooling
+limitations. Stable remains v2.0.2. [Evidence](docs/fork/AUDIT-PROVIDERS-2026-10-24.md).
+
+## Earlier private audit — settings lifecycle audit (2.0.14-test)
+
+Create the12 preference adapters per screen instead of caching the first Activity
+in static singletons. Remove seven unused duplicate Context fields. Preserve the
+existing SharedPreferences namespace, values, package lookup and live-screen
+error/localization paths; reopening can initialize a new adapter after a failed
+lookup. No application-context substitution or weak global cache is introduced.
+Private code1343, same package/signer/schema8; no valid-data reset or migration.
+All earlier audit fixes retained; stable remains v2.0.2. Targeted lifecycle/value/
+language/failure fixtures pass, with the existing lint-toolchain limits recorded.
+[Evidence and remaining checks](docs/fork/AUDIT-SETTINGS-2026-10-24.md).
+
+## Earlier private audit — cumulative regression audit (2.0.13-test)
+
+Run cumulative JVM/module, Python and Node fixture checks. Make Android30 guards
+explicit around X11 diagnostic/keyboard calls, replace numeric orientation values
+with framework constants and reuse the icon-badge Paint. Document the deliberate
+platform icon widget with one scoped lint exception; do not switch its superclass
+or change dimensions/styles. Clarify Android8+ app versus Android11+ embedded X11
+requirements and correct the stable APK filename in installation documentation.
+Private code1342, same package/signer/schema8; all earlier private audit fixes
+retained. No data reset or migration. Public stable remains v2.0.2. Executed lint
+checks have no errors; remaining warnings and incompatible AndroidX custom-check
+loading prevent a complete/clean-lint claim.
+[Evidence, remaining work and phone checks](docs/fork/AUDIT-REGRESSION-2026-10-24.md).
+
+## Earlier private audit — file transfer recovery audit (2.0.12-test)
+
+Require ordered per-invocation Copy/Move progress, a final completion receipt and
+a zero transport exit before reporting success. Bound and validate the response;
+ignore old/foreign progress and reject truncated, repeated or reordered own
+records. Explain uncertain outcomes with an acknowledged lower bound and no
+automatic replay. Add protocol SSH keepalives only to ProjectFiles connections.
+Private code1341, same package/signer/schema8, previous audit fixes retained.
+No reset or migration; stable remains 2.0.2. Existing descendants may survive a
+lost local SSH/proot process; no remote cancellation or rollback claim is added.
+[Evidence and limits](docs/fork/AUDIT-FILE-RECOVERY-2026-10-24.md).
+
+## Earlier private audit — file transport lifetime audit (2.0.11-test)
+
+Keep one directly owned child per ProjectFiles transport until cleanup/exit.
+Close and timeout target that operation, including unread streams; old stream
+close cannot stop a replacement operation. Enforce byte limits during read/skip,
+retain interruption, and reject overlapping operations before launching a child.
+SSH host-key checking, file destinations and terminal sessions remain unchanged.
+Private code1340, same package/signer/schema8; previous audit fixes retained.
+No data reset or migration. Public stable remains v2.0.2. This stage does not
+establish cancellation of remote/proot descendants or rollback of completed work.
+[Evidence and limits](docs/fork/AUDIT-FILE-TRANSPORT-2026-10-24.md).
+
+## Earlier private audit — file manager confirmation/export audit (2.0.10-test)
+
+Bind Copy/Move menus, preflight and confirmations to the current browser choice;
+refuse dismissed, replaced, changed-selection and replayed callbacks. Create
+Download exports exclusively without following destination links; number name
+collisions, enforce byte limits and check cooperative close/interruption. Clean
+private export staging on early/error/download exits while retaining successful
+Share URI files for recipient access. Existing batch transfer script/layout and
+transport shutdown remain unchanged. Private code1339, same package/signer/schema8;
+all previous audit fixes retained. No data reset or migration; stable remains 2.0.2.
+[Evidence and limits](docs/fork/AUDIT-FILE-MANAGER-2026-10-24.md).
+
+## Earlier private audit — environment/package installer audit (2.0.9-test)
+
+Observe installer exit without reaping its leader before final group cleanup;
+remove owned descendants after success, failure, output errors and cancellation.
+Keep the Java operation occupied until the started process exits, including
+read/callback/stdin-close failures and interruption. Stage scripts/cancel markers
+per invocation and preserve retained native download caches. Resolve shell links
+inside the selected guest rootfs and refuse missing/nonexecutable/looping targets.
+Private code1338, same package/signer/schema8; no data reset or automatic rootfs
+replacement. Previous audit fixes remain included. Public stable remains v2.0.2.
+[Evidence and device limits](docs/fork/AUDIT-INSTALLERS-2026-10-23.md).
+
+## Earlier private audit — updater and external-file audit (2.0.8-test)
+
+Require incoming shared files to use a basename; create without overwriting files
+or links, clean failed partial writes and close received streams. Give each update
+request an owned cancellable HTTPS connection with cleanup on redirects/errors.
+Recheck cached size/SHA-256 and current package/version/signer in the background
+before Android installer handoff; use read-only URI grants with ClipData.
+Private code1337, same package/signer/schema8; previous audit fixes retained.
+Public stable remains v2.0.2. No data reset; duplicate incoming names now require
+renaming. [Evidence and limits](docs/fork/AUDIT-UPDATES-ENTRYPOINTS-2026-10-23.md).
+
+## Earlier private audit — workspace persistence audit (2.0.7-test)
+
+Share one FIFO AtomicFile writer and pending snapshot per workspace file across
+screen recreation. Finish queued writes after close while rejecting late saves
+and callbacks to a closed store. Route write failures to remaining live owners.
+Retire the writer when its last owner and queued write are gone. Reject duplicate
+command/session/note IDs on load and encode; leave malformed source libraries
+intact/read-only rather than overwriting them. Valid schema8 data needs no reset
+or migration. Private code1336, same package/signer; public stable remains v2.0.2.
+[Validation and limits](docs/fork/AUDIT-PERSISTENCE-2026-10-23.md).
+
+## Earlier private audit — transfer/attachment audit (2.0.6-test)
+
+Refuse raced-in directories and directory symlinks when publishing downloaded
+files. Bind download/upload/move confirmations to their current selection;
+dismissal, replacement, disconnection and controller close invalidate old choices.
+Freeze connection settings and selected move paths. Preserve pinned SSH trust,
+SFTP wire behavior, account storage, completed files and previous audit fixes.
+Private code1335, same package/signer/schema8. Public stable remains v2.0.2.
+[Evidence and device limits](docs/fork/AUDIT-TRANSFERS-2026-10-23.md).
+
+## Earlier private audit — storage lifecycle audit (2.0.5-test)
+
+Keep backup/restore/cleanup mutually exclusive until the owned Python worker has
+exited, including delayed or interrupted cleanup. Send termination only once;
+publish the terminal result after cleanup and keep cancellation progress visible.
+A late Cancel cannot discard a completed restore result. Preserve user data,
+archive format, schema8, package and signer; private code1334. Public stable
+remains v2.0.2. [Evidence and limits](docs/fork/AUDIT-STORAGE-2026-10-23.md).
+
+## Earlier private audit — X11 lifecycle audit (2.0.4-test)
+
+Keep component cancellation busy until its owned process group exits; do not
+publish retryable failure before cleanup. Wait after desktop output-reader
+errors. Restore explicit launcher repair for ordinary Ubuntu. Preserve existing
+renderers, rootfs, user data and agent-chat fixes. Private code1333, same package/
+signer/schema8. [Audit and device limits](docs/fork/AUDIT-ENVIRONMENTS-X11-2026-10-23.md).
+
+## Earlier private audit — agent chats (2.0.3-test)
+
+Restore permission buttons after failed replies across all four agents. Reject
+stale OpenCode sends/forms/details/interrupts and isolate its control socket per
+launch. Permit Gemini same-ID retry only when readiness fails before native
+dispatch. Capture queued close/interrupt ownership before a session can restart.
+Preserve native history, connection choices and auth storage. Private code1332,
+same package/signer/schema8; public stable remains v2.0.2.
+[Audit, compatibility and validation limits](docs/fork/AUDIT-AGENT-CHATS-2026-10-23.md).
+
 ## v2.0.2 — Agent chat improvements
 
 Send varied files directly to Codex, OpenCode, Claude and Gemini chats, from phone

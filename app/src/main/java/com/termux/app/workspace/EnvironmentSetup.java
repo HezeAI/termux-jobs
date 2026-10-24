@@ -63,12 +63,14 @@ final class EnvironmentSetup implements AutoCloseable {
         if(running){activity.showToast(t("Дождитесь текущей операции","Wait for the current operation"),true);return;}
         File directory=new File(activity.getFilesDir(),".environment-control");
         if(!directory.isDirectory()&&!directory.mkdirs()){activity.showToast(t("Нет доступа к папке установки","Cannot access installation directory"),true);return;}
-        InstallJob job=new InstallJob(choice.alias,new File(directory,"cancel-"+UUID.randomUUID()));job.resuming=resumable(choice.alias);recordAttempt(choice.alias,false);installations.put(choice.alias,job);running=true;refreshCard(choice.alias);
+        File jobDirectory;
+        try{jobDirectory=executionDirectory(directory);}catch(IOException error){activity.showToast(t("Нет доступа к папке установки","Cannot access installation directory"),true);return;}
+        InstallJob job=new InstallJob(choice.alias,new File(jobDirectory,"cancel-"+UUID.randomUUID()));job.resuming=resumable(choice.alias);recordAttempt(choice.alias,false);installations.put(choice.alias,job);running=true;refreshCard(choice.alias);
         worker.execute(()->{
             Result result;
             try{Consumer<String> update=report->main.post(()->{job.report=report;job.progress.update(report,android.os.SystemClock.elapsedRealtime());if(!closed)refreshCard(choice.alias);});result=installationRunner==null?execute(choice.alias,true,update,job):installationRunner.run(choice.alias,update,job.cancel);}
             catch(Exception error){result=new Result("ERROR:SETUP_FAILED",1);}
-            finally{job.cancel.delete();}
+            finally{cleanExecution(job.cancel.getParentFile(),job.cancel);}
             Result answer=result;String log=storeInstallLog(choice.alias,answer);
             main.post(()->{job.active=false;job.cancel.delete();job.success=answer.ready();recordAttempt(choice.alias,job.success);job.report=EnvironmentInstallLog.clean(answer.report);job.log=log;running=false;if(!closed)refreshCard(choice.alias);});
         });
@@ -165,6 +167,9 @@ final class EnvironmentSetup implements AutoCloseable {
     private Result execute(String alias,boolean install,Consumer<String> update,InstallJob job)throws Exception{
         if(!WorkspaceLocalFilePicker.validAlias(alias))throw new IOException("INVALID_ALIAS");
         File directory=new File(activity.getFilesDir(),".environment-control");if(!directory.isDirectory()&&!directory.mkdirs())throw new IOException("SETUP_DIRECTORY");
+        File control=directory;
+        directory=job==null?executionDirectory(control):job.cancel.getParentFile();
+        try{
         File script=new File(directory,"runtime.sh");try(InputStream in=activity.getAssets().open("environment-runtime.sh");OutputStream out=new FileOutputStream(script)){byte[] bytes=new byte[8192];int count;while((count=in.read(bytes))!=-1)out.write(bytes,0,count);}
         if(!script.setReadable(false,false)||!script.setWritable(false,false)||!script.setReadable(true,true)||!script.setWritable(true,true))throw new IOException("SETUP_PERMISSIONS");
         ProcessBuilder builder;
@@ -175,11 +180,44 @@ final class EnvironmentSetup implements AutoCloseable {
             builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c",bootstrap,"environment-install",supervisor.getAbsolutePath(),script.getAbsolutePath(),alias,job.cancel.getAbsolutePath());
         }else builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc",script.getAbsolutePath(),install?"install":"check",alias);
         builder.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));builder.environment().clear();
-        for(String item:TermuxShellUtils.buildEnvironment(activity,false,TermuxConstants.TERMUX_HOME_DIR_PATH)){int eq=item.indexOf('=');if(eq>0)builder.environment().put(item.substring(0,eq),item.substring(eq+1));}builder.environment().put("PREFIX",TermuxConstants.TERMUX_PREFIX_DIR_PATH);builder.environment().put("PD_FORCE_NO_COLORS","1");builder.environment().put("JOBS_ENVIRONMENT_DOWNLOAD_DIR",directory.getCanonicalPath());builder.environment().put("JOBS_ENVIRONMENT_RETRY",job!=null&&job.resuming?"1":"0");builder.redirectErrorStream(true);
-        Process process=builder.start();process.getOutputStream().close();EnvironmentInstallLog.Capture report=new EnvironmentInstallLog.Capture();char[] bytes=new char[1024];long last=0;
-        try(Reader reader=new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8)){int count;while((count=reader.read(bytes))!=-1){report.append(bytes,count);long now=android.os.SystemClock.elapsedRealtime();if(now-last>200){last=now;update.accept(EnvironmentInstallLog.clean(report.recent()));}}}
-        update.accept(EnvironmentInstallLog.clean(report.recent()));
-        return new Result(EnvironmentInstallLog.clean(report.snapshot()),process.waitFor());
+        for(String item:TermuxShellUtils.buildEnvironment(activity,false,TermuxConstants.TERMUX_HOME_DIR_PATH)){int eq=item.indexOf('=');if(eq>0)builder.environment().put(item.substring(0,eq),item.substring(eq+1));}builder.environment().put("PREFIX",TermuxConstants.TERMUX_PREFIX_DIR_PATH);builder.environment().put("PD_FORCE_NO_COLORS","1");builder.environment().put("JOBS_ENVIRONMENT_DOWNLOAD_DIR",control.getCanonicalPath());builder.environment().put("JOBS_ENVIRONMENT_RETRY",job!=null&&job.resuming?"1":"0");builder.redirectErrorStream(true);
+        Process process=builder.start();return collectProcess(process,update,job==null?null:job.cancel);
+        }finally{if(job==null)cleanExecution(directory,null);}
+    }
+    static File executionDirectory(File control)throws IOException{
+        return java.nio.file.Files.createTempDirectory(control.toPath(),"job-").toFile();
+    }
+    static void cleanExecution(File directory,File cancel){
+        // Only fixed files from this invocation; never recurse into downloads/rootfs.
+        if(cancel!=null)cancel.delete();
+        new File(directory,"runtime.sh").delete();new File(directory,"environment-install.py").delete();directory.delete();
+    }
+    static Result collectProcess(Process process,Consumer<String> update,File cancel)throws Exception{
+        boolean exited=false,interrupted=false;
+        try{
+            process.getOutputStream().close();
+            EnvironmentInstallLog.Capture report=new EnvironmentInstallLog.Capture();char[] bytes=new char[1024];long last=0;
+            try(Reader reader=new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8)){
+                int count;while((count=reader.read(bytes))!=-1){report.append(bytes,count);long now=android.os.SystemClock.elapsedRealtime();if(now-last>200){last=now;update.accept(EnvironmentInstallLog.clean(report.recent()));}}
+            }
+            update.accept(EnvironmentInstallLog.clean(report.recent()));
+            int code=process.waitFor();exited=true;
+            return new Result(EnvironmentInstallLog.clean(report.snapshot()),code);
+        }catch(InterruptedException error){interrupted=true;throw error;}
+        finally{
+            if(!exited){
+                // Only this job's private marker requests group cleanup. Never signal
+                // a PID taken from output, another session or a package-manager lock.
+                if(cancel!=null)try{cancel.createNewFile();}catch(IOException ignored){}
+                try{process.getInputStream().close();}catch(Exception ignored){}
+                try{process.getErrorStream().close();}catch(Exception ignored){}
+                try{process.getOutputStream().close();}catch(Exception ignored){}
+                // Retain the operation slot until the supervisor (or prerequisite
+                // preparation) really exits, even if output/callbacks/waits failed.
+                while(true){try{process.waitFor();break;}catch(InterruptedException error){interrupted=true;}}
+            }
+            if(interrupted)Thread.currentThread().interrupt();
+        }
     }
     public void close(){closed=true;cardUpdates.clear();if(progress!=null)progress.dismiss();worker.shutdown();}
 }

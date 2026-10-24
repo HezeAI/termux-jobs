@@ -14,7 +14,7 @@ final class WorkspaceBackupScanHeader {
     boolean running,closed,ready=true;
     private WorkspaceBackupEngine engine;
     WorkspaceBackupScanHeader(Activity activity,String title){
-        view=new LinearLayout(activity);view.setOrientation(1);int d=WorkspaceDialogs.dp(activity,16);view.setPadding(d,d,d,0);
+        view=new LinearLayout(activity);view.setOrientation(LinearLayout.VERTICAL);int d=WorkspaceDialogs.dp(activity,16);view.setPadding(d,d,d,0);
         LinearLayout row=new LinearLayout(activity);row.setGravity(Gravity.CENTER_VERTICAL);
         TextView name=new TextView(activity);name.setText(title);name.setTextSize(18);name.setTextColor(WorkspaceDialogs.TEXT);row.addView(name,new LinearLayout.LayoutParams(0,-2,1));
         FrameLayout control=new FrameLayout(activity);refresh=WorkspaceDialogs.action(activity,WorkspaceBackupUi.text(activity,"Обновить","Refresh"),0);refresh.setGravity(Gravity.CENTER);control.addView(refresh,new FrameLayout.LayoutParams(-1,-1));

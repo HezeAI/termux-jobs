@@ -25,3 +25,30 @@ class CodecTests(unittest.TestCase):
    home,system,source=self.fixture(Path(d));m.install(home,system,source);(home/m.WRAPPER).unlink();self.assertFalse(m.ready(home));m.install(home,system,source);self.assertTrue(m.ready(home));(home/m.WRAPPER).write_text('edited')
    with self.assertRaisesRegex(ValueError,'local changes'):m.install(home,system,source)
    self.assertEqual('edited',(home/m.WRAPPER).read_text())
+
+ def test_fedora_plugin_is_pinned_arm64_and_has_separate_registry(self):
+  data=(ROOT/'.tools/x11-runtime/assets/x11-gst-openh264.so').read_bytes();self.assertEqual(m.PLUGIN_DIGEST,hashlib.sha256(data).hexdigest());self.assertEqual(b'\x7fELF',data[:4]);self.assertEqual(183,int.from_bytes(data[18:20],'little'))
+  with patch.dict(m.os.environ,{'LD_LIBRARY_PATH':'/existing/lib','GST_PLUGIN_PATH_1_0':'/existing/plugins'}):
+   env=m.fedora_environment(Path('/root'));self.assertTrue(env['LD_LIBRARY_PATH'].endswith(':/existing/lib'));self.assertTrue(env['GST_PLUGIN_PATH_1_0'].endswith(':/existing/plugins'));self.assertEqual('/root/'+m.REGISTRY,env['GST_REGISTRY']);self.assertEqual(env['GST_REGISTRY'],env['GST_REGISTRY_1_0'])
+ def test_fedora_upgrade_adds_owned_plugin_without_changing_system_files(self):
+  with tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d,patch.object(m,'DIGEST',hashlib.sha256(b'known decoder').hexdigest()),patch.object(m,'PLUGIN_DIGEST',hashlib.sha256(b'plugin').hexdigest()),patch.object(m,'verify_fedora') as verify:
+   home,system,source=self.fixture(Path(d));plugin=Path(d)/'plugin.so';plugin.write_bytes(b'plugin');original=(system/'usr/share/applications/org.xfce.Parole.desktop').read_bytes()
+   m.install(home,system,source);self.assertTrue(m.ready(home));self.assertFalse(m.ready(home,True));m.install(home,system,source,plugin);m.install(home,system,source,plugin)
+   self.assertTrue(m.ready(home,True));verify.assert_called_with(home,system);wrapper=(home/m.WRAPPER).read_text();self.assertIn('GST_PLUGIN_PATH_1_0',wrapper);self.assertIn('parole-gst-registry.bin',wrapper);self.assertEqual(original,(system/'usr/share/applications/org.xfce.Parole.desktop').read_bytes());self.assertFalse((system/'usr/lib64/libopenh264.so.8').exists());self.assertFalse((system/'usr/lib64/gstreamer-1.0/libgstopenh264.so').exists())
+   (home/m.PLUGIN).write_bytes(b'user edit');self.assertFalse(m.ready(home,True))
+   with self.assertRaisesRegex(ValueError,'local changes'):m.install(home,system,source,plugin)
+   self.assertEqual(b'user edit',(home/m.PLUGIN).read_bytes())
+ def test_fedora_failed_runtime_probe_stays_unready_and_can_resume(self):
+  with tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d,patch.object(m,'DIGEST',hashlib.sha256(b'known decoder').hexdigest()),patch.object(m,'PLUGIN_DIGEST',hashlib.sha256(b'plugin').hexdigest()):
+   home,system,source=self.fixture(Path(d));plugin=Path(d)/'plugin.so';plugin.write_bytes(b'plugin')
+   with patch.object(m,'verify_fedora',side_effect=ValueError('component missing')),self.assertRaisesRegex(ValueError,'component missing'):m.install(home,system,source,plugin)
+   self.assertFalse(m.ready(home,True));self.assertEqual(b'pending',(home/m.PROOF).read_bytes())
+   with patch.object(m,'verify_fedora'):m.install(home,system,source,plugin)
+   self.assertTrue(m.ready(home,True));(home/m.PROOF).write_bytes(b'personal proof')
+   with patch.object(m,'verify_fedora') as verify,self.assertRaisesRegex(ValueError,'local changes'):m.install(home,system,source,plugin)
+   verify.assert_not_called();self.assertEqual(b'personal proof',(home/m.PROOF).read_bytes())
+ def test_fedora_invalid_plugin_does_not_create_home_or_state(self):
+  with tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d,patch.object(m,'DIGEST',hashlib.sha256(b'known decoder').hexdigest()):
+   home,system,source=self.fixture(Path(d));plugin=Path(d)/'plugin.so';plugin.write_bytes(b'corrupt')
+   with self.assertRaisesRegex(ValueError,'integrity'):m.install(home,system,source,plugin)
+   self.assertFalse(home.exists())

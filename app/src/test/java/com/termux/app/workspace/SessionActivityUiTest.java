@@ -40,11 +40,14 @@ public class SessionActivityUiTest {
     @Test public void repeatedBorderDrawingCannotAccumulateFrameCallbacks()throws Exception{
         WorkspaceTransferBorder border=new WorkspaceTransferBorder(1);
         final int[] schedules={0},cancels={0};final Runnable[] pending={null};
-        border.setCallback(new android.graphics.drawable.Drawable.Callback(){
+        // Drawable keeps a weak callback, while a real View owner stays strongly
+        // reachable. Keep the fixture's owner alive across GC in the full suite.
+        android.graphics.drawable.Drawable.Callback owner=new android.graphics.drawable.Drawable.Callback(){
             public void invalidateDrawable(android.graphics.drawable.Drawable d){}
             public void scheduleDrawable(android.graphics.drawable.Drawable d,Runnable r,long when){schedules[0]++;pending[0]=r;}
             public void unscheduleDrawable(android.graphics.drawable.Drawable d,Runnable r){cancels[0]++;pending[0]=null;}
-        });
+        };
+        border.setCallback(owner);
         border.setBounds(0,0,106,48);
         // Robolectric's legacy PathMeasure returns zero; isolate frame scheduling from graphics.
         java.lang.reflect.Field measure=WorkspaceTransferBorder.class.getDeclaredField("measure");measure.setAccessible(true);
@@ -54,5 +57,6 @@ public class SessionActivityUiTest {
         pending[0].run();border.draw(new Canvas());assertEquals(2,schedules[0]);
         border.active(false);assertTrue(cancels[0]>0);assertNull(pending[0]);
         border.draw(new Canvas());assertEquals(2,schedules[0]);
+        assertSame(owner,border.getCallback());
     }
 }

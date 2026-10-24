@@ -98,7 +98,7 @@ final class WorkspaceServers implements AutoCloseable {
     WorkspaceServers(TermuxActivity a,Terminal t){activity=a;terminal=t;store=new ServerProfiles(a);downloads=new WorkspaceServerDownloads(a);uploads=new WorkspaceServerUploads(a,()->{if(!closed&&visible&&selected!=null&&!ServerConnection.disconnected(activity,selected.id)&&tab.equals("files"))loadFiles();});downloads.presentation.listener(this::transferChanged);uploads.presentation.listener(this::transferChanged);}
     private String t(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
     private int dp(int n){return WorkspaceDialogs.dp(activity,n);}
-    private LinearLayout column(){LinearLayout v=new LinearLayout(activity);v.setOrientation(1);return v;}
+    private LinearLayout column(){LinearLayout v=new LinearLayout(activity);v.setOrientation(LinearLayout.VERTICAL);return v;}
     private LinearLayout row(){LinearLayout v=new LinearLayout(activity);v.setGravity(Gravity.CENTER_VERTICAL);return v;}
     private TextView text(String s,int size,int color){TextView v=new TextView(activity);v.setText(s);v.setTextSize(size);v.setTextColor(color);return v;}
     private GradientDrawable shape(int color){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(12));d.setStroke(dp(1),0xff213039);return d;}

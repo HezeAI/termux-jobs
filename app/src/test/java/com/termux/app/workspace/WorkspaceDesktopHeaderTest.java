@@ -19,6 +19,7 @@ public class WorkspaceDesktopHeaderTest {
    Field screen=field(WorkspaceController.class,"screen");screen.set(c,Enum.valueOf((Class)screen.getType(),"TERMINAL"));
    Method render=WorkspaceController.class.getDeclaredMethod("renderHeader");render.setAccessible(true);render.invoke(c);
    LinearLayout header=(LinearLayout)field(WorkspaceController.class,"header").get(c);View top=header.getChildAt(0),title=((LinearLayout)top).getChildAt(0),navigation=header.getChildAt(1);
+   assertEquals("Termux Job’s v2.0",((TextView)((LinearLayout)title).getChildAt(0)).getText().toString());
    TextView button=(TextView)field(WorkspaceController.class,"desktopInputButton").get(c);field(WorkspaceController.class,"interactiveInput").setBoolean(c,true);
    WorkspaceDesktops desktop=(WorkspaceDesktops)field(WorkspaceController.class,"desktopUi").get(c);Runnable changed=(Runnable)field(WorkspaceDesktops.class,"keyboardChanged").get(desktop);changed.run();
    assertSame(top,header.getChildAt(0));assertSame(title,((LinearLayout)top).getChildAt(0));assertSame(navigation,header.getChildAt(1));assertSame(button,field(WorkspaceController.class,"desktopInputButton").get(c));assertTrue(button.isSelected());changed.run();assertSame(title,((LinearLayout)header.getChildAt(0)).getChildAt(0));

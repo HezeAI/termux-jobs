@@ -6,21 +6,22 @@ import com.termux.shared.termux.TermuxConstants;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.*;
 
 /** Bounded, independent file operations. Never types into the user's terminal. */
 final class ProjectFiles implements AutoCloseable {
     static final int MAX_LIST = 2 * 1024 * 1024, MAX_PREVIEW = 256 * 1024;
     static final long MAX_EXPORT = 256L * 1024 * 1024;
     final Activity activity; final WorkspaceStore.Session profile;
-    private volatile Process process; private volatile boolean closed;
+    private final ProjectFileTransport transport=new ProjectFileTransport();
+    private volatile boolean closed;
     private char[] password;
     private File serverKnownHosts;
     void setServerKnownHosts(File file){serverKnownHosts=file;}
     ProjectFiles(Activity activity, WorkspaceStore.Session profile) {this.activity=activity;this.profile=profile.copy();this.profile.id=profile.id;
         this.profile.name=profile.name;this.profile.handle=profile.handle;this.profile.codexSocketId=profile.codexSocketId;
         this.profile.sshEncryptedPassword=profile.sshEncryptedPassword;}
-    void setPassword(char[] value) {if(password!=null)Arrays.fill(password,'\0');password=value.clone();}
+    synchronized void setPassword(char[] value) {if(closed)return;if(password!=null)Arrays.fill(password,'\0');password=value.clone();}
+    private synchronized char[] passwordCopy(){return password==null?null:password.clone();}
     static String environment(WorkspaceStore.Session s) {return !AgentPreparation.agent(s).isEmpty()&&s.codexEnvironment.equals("ubuntu-ai")?"proot:ubuntu-ai":!s.prootAlias.isEmpty()?"proot:"+s.prootAlias:s.environment.equals("codex")?s.codexEnvironment:s.environment.equals("legacy")?"termux":s.environment;}
     static String environmentLabel(WorkspaceStore.Session s) {String e=environment(s);return e.startsWith("proot:")?WorkspaceEnvironments.label(e.substring(6)):e.equals("ubuntu")?"Ubuntu":e.equals("ssh")?"SSH · "+s.sshHost:"Termux";}
     static String target(String path) {
@@ -108,16 +109,14 @@ final class ProjectFiles implements AutoCloseable {
         catch(Exception error){if(closed)throw error;throw new IOException(WorkspaceText.tr("Не удалось прочитать пакеты. Проверьте наличие APT/dpkg и доступность выбранного окружения."));}
     }
     static final class TransferFailure extends IOException {
-        final int completed;TransferFailure(int completed,Throwable cause){super("TRANSFER_FAILED",cause);this.completed=completed;}
+        final int acknowledged;TransferFailure(int acknowledged,Throwable cause){super("TRANSFER_FAILED",cause);this.acknowledged=acknowledged;}
     }
     boolean transferReady(List<Entry> entries,String folder,boolean move,boolean rename)throws Exception {
         try{return new String(bytes(ProjectFileTransfer.script(entries,folder,move,rename,true),1024),StandardCharsets.UTF_8).equals("READY");}
         catch(Exception error){return false;}
     }
     void transfer(List<Entry> entries,String folder,boolean move,boolean rename)throws Exception {
-        ByteArrayOutputStream output=new ByteArrayOutputStream();
-        try{run(ProjectFileTransfer.script(entries,folder,move,rename,false),output,4096,null,6*60*60);}
-        catch(Exception error){int completed=output.toString("UTF-8").split("DONE",-1).length-1;throw new TransferFailure(completed,error);}
+        ProjectFileTransfer.execute(entries,folder,move,rename,(script,output,max)->run(script,output,max,null,6*60*60));
     }
     private byte[] bytes(String script,int max) throws Exception {ByteArrayOutputStream out=new ByteArrayOutputStream();run(script,out,max);return out.toByteArray();}
     static String command(WorkspaceStore.Session s,String script) {
@@ -126,7 +125,7 @@ final class ProjectFiles implements AutoCloseable {
         if(e.equals("ubuntu"))return "proot-distro login ubuntu -- /bin/"+bash;
         if(!e.equals("ssh"))return bash;
         if(!SshSessionShell.validHost(s.sshHost)||!SshSessionShell.validUser(s.sshUser)||!SshSessionShell.validPort(s.sshPort))throw new IllegalArgumentException(WorkspaceText.tr("Укажите корректные параметры SSH"));
-        String options=" -o ConnectTimeout=10 -o StrictHostKeyChecking=yes -o ControlMaster=no -o ControlPath=none";
+        String options=" -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 -o StrictHostKeyChecking=yes -o ControlMaster=no -o ControlPath=none";
         if(s.sshAuth.equals("key")) {
             if(!SshSessionShell.validIdentity(s.sshIdentity))throw new IllegalArgumentException(WorkspaceText.tr("Некорректный путь SSH-ключа"));
             options+=" -o IdentitiesOnly=yes -i "+target(s.sshIdentity);
@@ -137,7 +136,7 @@ final class ProjectFiles implements AutoCloseable {
     }
     private void run(String script,OutputStream out,long max) throws Exception {run(script,out,max,null);}
     private void run(String script,OutputStream out,long max,byte[] input) throws Exception {run(script,out,max,input,90);}
-    private synchronized void run(String script,OutputStream out,long max,byte[] input,int timeoutSeconds) throws Exception {
+    private void run(String script,OutputStream out,long max,byte[] input,int timeoutSeconds) throws Exception {
         if(closed||serverKnownHosts!=null&&ServerConnection.disconnected(activity,profile.id))throw new IOException(WorkspaceText.tr("Окно закрыто"));
         String invocation=command(profile,script);
         if(serverKnownHosts!=null&&environment(profile).equals("ssh"))invocation=invocation.replaceFirst("ssh -T",java.util.regex.Matcher.quoteReplacement("ssh -T -o "+SessionShell.quote("UserKnownHostsFile="+serverKnownHosts.getAbsolutePath())+" -o GlobalKnownHostsFile=/dev/null"));
@@ -145,22 +144,31 @@ final class ProjectFiles implements AutoCloseable {
         builder.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));builder.environment().clear();
         for(String item:TermuxShellUtils.buildEnvironment(activity,false,TermuxConstants.TERMUX_HOME_DIR_PATH)) {int eq=item.indexOf('=');if(eq>0)builder.environment().put(item.substring(0,eq),item.substring(eq+1));}
         SshPasswordBroker broker=null;
-        ScheduledExecutorService timer=Executors.newSingleThreadScheduledExecutor();
         try {
             if(environment(profile).equals("ssh")&&(profile.sshAuth.equals("password")||profile.sshAuth.equals("key")&&!profile.sshEncryptedPassword.isEmpty())) {
-                char[] secret=password==null?profile.sshEncryptedPassword.isEmpty()?null:SshPasswordVault.decrypt(profile):password.clone();
+                char[] secret=passwordCopy();if(secret==null&&!profile.sshEncryptedPassword.isEmpty())secret=SshPasswordVault.decrypt(profile);
                 if(secret==null)throw new IOException(WorkspaceText.tr("Введите пароль для просмотра файлов"));
                 try {broker=new SshPasswordBroker(activity,secret,profile.sshAuth.equals("key")?SshKeyFiles.identity(profile.sshIdentity):null);}finally{Arrays.fill(secret,'\0');}
                 File askpass=SessionShell.prepareAskpass(activity.getFilesDir(),profile,activity.getApplicationInfo().sourceDir);
                 builder.environment().put("SSH_ASKPASS",askpass.getAbsolutePath());builder.environment().put("SSH_ASKPASS_REQUIRE","force");builder.environment().put("DISPLAY",":0");builder.environment().put("TERMUX_JOBS_SSH_SOCKET",broker.address);builder.environment().put("LC_ALL","C");
             }
-            builder.redirectError(new File("/dev/null"));Process owned=builder.start();process=owned;if(closed||serverKnownHosts!=null&&ServerConnection.disconnected(activity,profile.id)){owned.destroy();throw new IOException("CANCELLED");}
-            timer.schedule(owned::destroy,timeoutSeconds,TimeUnit.SECONDS);
-            try(OutputStream stdin=owned.getOutputStream()){if(input!=null)stdin.write(input);}
-            try(InputStream in=owned.getInputStream()) {byte[] buffer=new byte[32768];int n;long total=0;while((n=in.read(buffer))!=-1){if(closed||Thread.currentThread().isInterrupted())throw new IOException(WorkspaceText.tr("Операция отменена"));total+=n;if(total>max)throw new IOException(WorkspaceText.tr("Файл или список слишком большой"));out.write(buffer,0,n);}}
-            if(owned.waitFor()!=0)throw new IOException(environment(profile).equals("ssh")?WorkspaceText.tr("SSH недоступен: проверьте вход, пароль и доверенный ключ сервера в терминале"):WorkspaceText.tr("Каталог или файл недоступен; проверьте путь и выбранную среду"));
-        } finally {if(process!=null)process.destroy();process=null;timer.shutdownNow();if(broker!=null)broker.close();}
+            builder.redirectError(new File("/dev/null"));
+            try(InputStream in=transport.open(builder::start,input,max,timeoutSeconds*1000L)) {
+                if(closed||serverKnownHosts!=null&&ServerConnection.disconnected(activity,profile.id))throw new IOException("CANCELLED");
+                byte[] buffer=new byte[32768];int n;while((n=in.read(buffer))!=-1)out.write(buffer,0,n);
+            }catch(IOException error){throw transportError(error);}
+        } finally {if(broker!=null)broker.close();}
     }
+    private IOException transportError(IOException error){
+        String code=error.getMessage();
+        if("FILE_LIMIT".equals(code))return new IOException(WorkspaceText.tr("Файл или список слишком большой"),error);
+        if("CANCELLED".equals(code))return new IOException(WorkspaceText.tr("Операция отменена"),error);
+        if("FILE_OPERATION_TIMEOUT".equals(code))return new IOException(WorkspaceLanguage.code(activity).equals("ru")?"Время файловой операции истекло. Повторите попытку.":"File operation timed out. Please try again.",error);
+        if("FILE_OPERATION_BUSY".equals(code))return new IOException(WorkspaceLanguage.code(activity).equals("ru")?"Другая файловая операция ещё выполняется.":"Another file operation is still running.",error);
+        if("SOURCE_UNAVAILABLE".equals(code))return new IOException(environment(profile).equals("ssh")?WorkspaceText.tr("SSH недоступен: проверьте вход, пароль и доверенный ключ сервера в терминале"):WorkspaceText.tr("Каталог или файл недоступен; проверьте путь и выбранную среду"),error);
+        return error;
+    }
+
     void localOperation(String script)throws Exception{if(environment(profile).equals("ssh"))throw new IOException("LOCAL_DESTINATION_REQUIRED");bytes(script,1024);}
     InputStream openUpload(Entry entry)throws Exception {return openLocalRead(entry,ServerSftp.MAX_BYTES);}
     InputStream openLocalRead(Entry entry,long maxBytes)throws Exception {
@@ -169,14 +177,11 @@ final class ProjectFiles implements AutoCloseable {
         ProcessBuilder builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c","exec "+command(profile,"test -f "+target(entry.path)+" && exec cat -- "+target(entry.path)));
         builder.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));builder.environment().clear();
         for(String item:TermuxShellUtils.buildEnvironment(activity,false,TermuxConstants.TERMUX_HOME_DIR_PATH)){int eq=item.indexOf('=');if(eq>0)builder.environment().put(item.substring(0,eq),item.substring(eq+1));}
-        builder.redirectError(new File("/dev/null"));Process owned=builder.start();process=owned;owned.getOutputStream().close();
-        if(closed){owned.destroy();throw new IOException("CANCELLED");}
-        return new FilterInputStream(owned.getInputStream()){
-            private int checked(int count)throws IOException{if(count<0)try{if(owned.waitFor()!=0)throw new IOException("SOURCE_UNAVAILABLE");}catch(InterruptedException e){Thread.currentThread().interrupt();throw new IOException("CANCELLED");}return count;}
-            @Override public int read()throws IOException{return checked(in.read());}
-            @Override public int read(byte[] b,int off,int len)throws IOException{return checked(in.read(b,off,len));}
-            @Override public void close()throws IOException{owned.destroy();try{super.close();}finally{ProjectFiles.this.close();}}
-        };
+        builder.redirectError(new File("/dev/null"));
+        return transport.open(builder::start,null,maxBytes,6*60*60*1000L);
     }
-    public void close() {closed=true;Process owned=process;if(owned!=null)owned.destroy();if(password!=null)Arrays.fill(password,'\0');}
+    public void close() {
+        closed=true;transport.close();
+        synchronized(this){if(password!=null){Arrays.fill(password,'\0');password=null;}}
+    }
 }

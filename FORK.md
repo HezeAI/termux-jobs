@@ -1,3 +1,63 @@
+# v2.0.3 — code1352
+
+Full-screen landscape X11 reuses each selected target's existing display and
+desktop, with screen-adapted logical sizing and one floating input button. Portrait
+or Back returns to the embedded host. All cumulative source-audit fixes below
+are included. Android8+/ARM64, X11 Android11+, package/signer/schema8 and
+min26/target28/compile35 are retained. Build instructions and pinned native inputs
+are unchanged; use the separate [modern lint gate](docs/fork/LINT.md).
+No data reset/rootfs migration. See [release notes](docs/fork/RELEASE-v2.0.3.md)
+for intentional file-access restrictions and remaining validation.
+The optional Kali-inspired style supports all eight current X11 environments
+with independent checkbox/state and HOME-scoped restoration. Distribution menu
+plugins and inherited defaults are preserved. The fullscreen | button is
+lower and follows the existing keyboard enabled state.
+Fedora Parole gets a private pinned decoder/plugin through Video and audio,
+with runtime-readiness checks and no system-library replacement. The fullscreen
+input window is65% opaque and another24dp lower.
+Public stable remains v2.0.2 until publication.
+
+# Historical private source-audit completion — 2.0.16-test/code1345
+
+Public stable remains v2.0.2/code1331. Separate compatible lint covers all five
+modules; the APK toolchain, native inputs, signer/package/schema8 and SDK/ABI
+requirements remain. Source fixes address X11 guards, locale handling, immutable
+notification actions, EXIF parsing and exclusive attachment saving. No valid-data
+reset or account/rootfs migration. [Evidence](docs/fork/AUDIT-LINT-2026-10-24.md)
+and [lint setup/limits](docs/fork/LINT.md) separate 1,209 passing JVM cases from
+manual/native/device gaps and retain 209 warnings without a blanket baseline.
+
+# Private locale/provider audit — 2.0.15-test/code1344
+
+Public stable remains v2.0.2/code1331. Canonical roots and descriptor/parent guards
+harden the two legacy Android providers. Search/MIME are locale independent;
+share paths are encoded and metadata sizes remain long. Permissions/policy,
+ordinary IDs, signer/package/schema8 and SDK/ABI requirements stay unchanged.
+Outside-HOME SAF links and missing/special legacy share files are rejected;
+valid data needs no reset or environment/account migration. Device-level provider
+checks remain separate from 42 passing JVM cases and 0/118 executed lint results.
+[Evidence and limitations](docs/fork/AUDIT-PROVIDERS-2026-10-24.md).
+
+# Earlier private settings lifecycle audit — 2.0.14-test/code1343
+
+Public stable remains v2.0.2/code1331. The private build removes static settings-
+adapter ownership of the first screen without changing preference files/keys,
+package/signer/schema8 or SDK/ABI requirements. No data reset or migration.
+[Settings evidence and device limits](docs/fork/AUDIT-SETTINGS-2026-10-24.md).
+Previous cumulative verification remains specific to its recorded artifact.
+
+# Earlier private cumulative audit — 2.0.13-test/code1342
+
+Public stable remains v2.0.2/code1331 below. The private audit keeps the same
+package/signer/schema8, ARM64/Android8+ app minimum and Android11+ embedded-X11
+minimum. No reset or environment migration. SDK28 targeting/package separation
+remain separate architectural work; this audit does not claim to solve them.
+Cumulative automated evidence and remaining tooling/device gaps are in
+[the regression report](docs/fork/AUDIT-REGRESSION-2026-10-24.md). Existing build
+inputs are reused and byte-checked; no shared SDK/system package/installed rootfs
+is changed. New public releases still require increasing versionCode, localized
+compatibility highlights and update.json from their final verified APK.
+
 # v2.0.2 — Agent chat improvements
 
 Current release: versionName2.0.2/code1331, Android8+/ARM64, unchanged

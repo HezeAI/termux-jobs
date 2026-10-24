@@ -17,6 +17,7 @@ final class WorkspaceServerPlayer implements AutoCloseable {
     private final Dialog dialog;private final Runnable stopped;private final PlayerView view;
     private ExoPlayer player;private boolean closed,handedOff;
     static boolean validUrl(String url){try{Uri u=Uri.parse(url);return "http".equals(u.getScheme())&&"127.0.0.1".equals(u.getHost())&&u.getPort()>0&&u.getPort()<=65535&&u.getUserInfo()==null&&u.getQuery()==null&&u.getFragment()==null&&u.getPath()!=null&&u.getPath().matches("/[a-f0-9]{64}");}catch(Exception e){return false;}}
+    @androidx.annotation.OptIn(markerClass=androidx.media3.common.util.UnstableApi.class)
     WorkspaceServerPlayer(TermuxActivity activity,String name,String url,Runnable stopped,Runnable external,Runnable download){
         if(!validUrl(url))throw new IllegalArgumentException("INVALID_MEDIA_URL");this.stopped=stopped;
         boolean ru=WorkspaceLanguage.code(activity).equals("ru");

@@ -22,4 +22,14 @@ public class LocalDownloadFileTest {
         File folder=tmp.newFolder("publish"),part=new File(folder,"download-test.part"),target=new File(folder,"download-test");Files.write(part.toPath(),new byte[]{1});Files.write(target.toPath(),new byte[]{2});assertNotEquals(0,run(LocalDownloadFile.publishScript(part.getAbsolutePath(),target.getAbsolutePath()),new byte[0]));assertArrayEquals(new byte[]{2},Files.readAllBytes(target.toPath()));assertTrue(part.exists());
         Files.delete(target.toPath());Files.createSymbolicLink(target.toPath(),part.toPath());assertNotEquals(0,run(LocalDownloadFile.publishScript(part.getAbsolutePath(),target.getAbsolutePath()),new byte[0]));assertTrue(Files.isSymbolicLink(target.toPath()));assertTrue(part.exists());
     }
+    @Test public void racedInDirectoryCannotReceiveTemporaryFileOrReportSuccess()throws Exception{publicationRace(false);}
+    @Test public void racedInDirectorySymlinkCannotSendFileOutsideDestination()throws Exception{publicationRace(true);}
+    private void publicationRace(boolean symlink)throws Exception{
+        File folder=tmp.newFolder("race"),part=new File(folder,"download.part"),target=new File(folder,"download.bin"),bin=tmp.newFolder("bin"),outside=tmp.newFolder("outside");Files.write(part.toPath(),new byte[]{7});
+        Process lookup=new ProcessBuilder("sh","-c","command -v mv").start();String realMv;try(BufferedReader in=new BufferedReader(new InputStreamReader(lookup.getInputStream()))){realMv=in.readLine();}assertEquals(0,lookup.waitFor());
+        String race=symlink?"ln -s -- "+SessionShell.quote(outside.getPath())+" "+SessionShell.quote(target.getPath()):"mkdir -- "+SessionShell.quote(target.getPath());
+        File wrapper=new File(bin,"mv");Files.write(wrapper.toPath(),("#!/bin/sh\n"+race+"\nexec "+SessionShell.quote(realMv)+" \"$@\"\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));assertTrue(wrapper.setExecutable(true));
+        ProcessBuilder pb=new ProcessBuilder("sh","-c",LocalDownloadFile.publishScript(part.getAbsolutePath(),target.getAbsolutePath()));pb.environment().put("PATH",bin.getAbsolutePath()+File.pathSeparator+System.getenv("PATH"));Process p=pb.start();
+        assertTrue(p.waitFor(5,java.util.concurrent.TimeUnit.SECONDS));assertNotEquals("raced directory must not be treated as completed download",0,p.exitValue());assertTrue(part.isFile());assertTrue(target.isDirectory());assertEquals(0,target.list().length);assertEquals(0,outside.list().length);
+    }
 }

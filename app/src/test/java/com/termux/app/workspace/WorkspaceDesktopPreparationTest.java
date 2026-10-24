@@ -28,6 +28,11 @@ public class WorkspaceDesktopPreparationTest {
   b=state("installing");b.putString("status","Packages");b.putString("detail","old line\nnew package\n");b.putInt("installPercent",42);b.putString("installStage","downloading");b.putLong("downloadBytes",42000000);b.putLong("downloadTotal",100000000);accept(b);
   assertNull(get("progress"));assertSame(view,get("preparation"));assertFalse(bar.isIndeterminate());assertEquals(42,bar.getProgress());assertEquals("new package",((TextView)view.findViewWithTag("x11-preparation-detail")).getText().toString());assertTrue(((TextView)view.findViewWithTag("x11-startup-step")).getText().toString().contains("42% (42.0 MB / 100.0 MB)"));
  }
+ @Test public void cancellationRetainsProgressAndLocksRendererUntilCleanupCompletes()throws Exception{
+  set("remote",new Binder());set("preparationCancelling",true);Bundle b=state("cancelling");b.putString("componentOperation","install");b.putString("status","Stopping installer");b.putInt("installPercent",42);accept(b);
+  assertSame(p,get("preparationProfile"));assertTrue((Boolean)get("preparationCancelling"));assertFalse(((Button)view.findViewWithTag("x11-preparation-cancel")).isEnabled());assertEquals(42,((ProgressBar)view.findViewWithTag("x11-startup-progress")).getProgress());
+  Method busy=WorkspaceDesktop.class.getDeclaredMethod("rendererBackendBusy");busy.setAccessible(true);assertTrue((Boolean)busy.invoke(ui));accept(state("cancelled"));assertFalse((Boolean)get("preparationCancelling"));assertTrue(((Button)view.findViewWithTag("x11-preparation-cancel")).isEnabled());
+ }
  @Test public void missingNeedsAcknowledgementAndNoReturnsToTerminal()throws Exception{
   Bundle b=state("missing");accept(b);assertFalse((Boolean)get("preparationNeedsInstall"));set("launchCheckAcknowledged",true);accept(b);
   AlertDialog prompt=ShadowAlertDialog.getLatestAlertDialog();assertTrue(prompt.isShowing());assertTrue((Boolean)get("preparationNeedsInstall"));prompt.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();Shadows.shadowOf(Looper.getMainLooper()).idle();assertNull(get("preparationProfile"));assertFalse(((Set<?>)get("graphical")).contains(p.id));assertNull(get("launchAfterCheck"));

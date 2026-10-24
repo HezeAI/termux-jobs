@@ -39,10 +39,40 @@ public class WorkspaceDesktopStyleTest {
   }
   set("state",new Bundle());set("remote",null);AlertDialog d=menu();assertFalse(checkbox(d).isEnabled());d.dismiss();
  }
- @Test public void guestEnvironmentsNeverShowNativeStyle(){
+ @Test public void unsupportedGuestsNeverShowStyle(){
   a.getSharedPreferences("workspace-x11",0).edit().putBoolean("termux-style",true).commit();
-  for(String target:new String[]{"ubuntu","debian","alpine","fedora","opensuse","void","archlinux"}){
+  for(String target:new String[]{"ubuntu-ai","jobs-ai-ubuntu","jobs-x11-ubuntu","unknown","../ubuntu"}){
    p.environment="proot:"+target;AlertDialog d=menu();assertNull(target,checkbox(d));assertNull(d.getWindow().getDecorView().findViewWithTag("desktop-touch-workspace"));d.dismiss();
+  }
+ }
+ @Test public void ubuntuStyleHasIndependentOptInAndBusyGuard()throws Exception{
+  a.getSharedPreferences("workspace-x11",0).edit().putBoolean("termux-style",true).commit();
+  p.environment="ubuntu";AlertDialog d=menu();CheckBox c=checkbox(d);assertNotNull(c);assertFalse(c.isChecked());
+  c.performClick();assertTrue(a.getSharedPreferences("workspace-x11",0).getBoolean("termux-style:ubuntu",false));d.dismiss();
+  p.environment="termux";d=menu();assertTrue(checkbox(d).isChecked());checkbox(d).performClick();d.dismiss();
+  p.environment="proot:ubuntu";d=menu();assertTrue(checkbox(d).isChecked());d.dismiss();
+  for(String phase:new String[]{"checking","installing","cancelling","preparing","stopping","running"}){
+   Bundle b=new Bundle();b.putString("phase",phase);b.putBoolean("started",phase.equals("running"));set("state",b);
+   d=menu();c=checkbox(d);assertFalse(phase,c.isEnabled());c.setChecked(false);assertTrue(c.isChecked());d.dismiss();
+   assertTrue(a.getSharedPreferences("workspace-x11",0).getBoolean("termux-style:ubuntu",false));
+   assertFalse(a.getSharedPreferences("workspace-x11",0).getBoolean("termux-style",true));
+  }
+ }
+ @Test public void everyDesktopHasItsOwnStyleSelectionAndBusyGuard()throws Exception{
+  String[] targets={"termux","ubuntu","debian","alpine","fedora","opensuse","void","archlinux"};
+  for(String target:targets){
+   p.environment=target.equals("termux")?"termux":"proot:"+target;set("state",new Bundle());
+   AlertDialog d=menu();CheckBox c=checkbox(d);assertNotNull(target,c);assertFalse(target,c.isChecked());c.performClick();d.dismiss();
+   String key=target.equals("termux")?"termux-style":"termux-style:"+target;
+   assertTrue(target,a.getSharedPreferences("workspace-x11",0).getBoolean(key,false));
+   for(String phase:new String[]{"checking","installing","cancelling","preparing","stopping","running"}){
+    Bundle b=new Bundle();b.putString("phase",phase);b.putBoolean("started",phase.equals("running"));set("state",b);
+    d=menu();c=checkbox(d);assertFalse(target+":"+phase,c.isEnabled());c.setChecked(false);assertTrue(c.isChecked());d.dismiss();
+   }
+  }
+  set("state",new Bundle());p.environment="proot:opensuse";AlertDialog d=menu();checkbox(d).performClick();d.dismiss();
+  for(String target:targets){
+   p.environment=target.equals("termux")?"termux":"proot:"+target;d=menu();assertEquals(target,!target.equals("opensuse"),checkbox(d).isChecked());d.dismiss();
   }
  }
  @Test public void serviceRefreshDisablesAndReenablesExistingCheckbox()throws Exception{

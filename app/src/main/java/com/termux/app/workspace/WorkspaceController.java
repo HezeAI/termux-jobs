@@ -1655,12 +1655,13 @@ public final class WorkspaceController {
     }
     private void finishWorkspaceSession(TerminalSession terminal) {
         WorkspaceStore.Session profile = store.findByHandle(terminal.mHandle);
-        if(profile!=null&&profile.geminiAgent){String runId=profile.geminiSocketId;codexReader.execute(()->{try{GeminiCli.stop(activity,runId,profile.codexEnvironment);}catch(Exception ignored){}activity.runOnUiThread(()->{if(terminal.isRunning())terminal.finishIfRunning();});});return;}
-        if(profile!=null&&profile.claudeAgent){String runId=profile.claudeSocketId;codexReader.execute(()->{try{ClaudeCode.stop(activity,runId,profile.codexEnvironment);}catch(Exception ignored){}activity.runOnUiThread(()->{if(terminal.isRunning())terminal.finishIfRunning();});});return;}
-        if(profile!=null&&profile.aiAgent.equals("opencode")){codexReader.execute(()->{try{AiAgents.call(activity,profile.aiConnection,profile,AiAgentsUi.op("stop"));}catch(Exception ignored){}activity.runOnUiThread(()->{if(terminal.isRunning())terminal.finishIfRunning();});});return;}
+        if(profile!=null&&profile.geminiAgent){String runId=profile.geminiSocketId,environment=profile.codexEnvironment;codexReader.execute(()->{try{GeminiCli.stop(activity,runId,environment);}catch(Exception ignored){}activity.runOnUiThread(()->{if(terminal.isRunning())terminal.finishIfRunning();});});return;}
+        if(profile!=null&&profile.claudeAgent){String runId=profile.claudeSocketId,environment=profile.codexEnvironment;codexReader.execute(()->{try{ClaudeCode.stop(activity,runId,environment);}catch(Exception ignored){}activity.runOnUiThread(()->{if(terminal.isRunning())terminal.finishIfRunning();});});return;}
+        if(profile!=null&&profile.aiAgent.equals("opencode")){final WorkspaceStore.Session target=AiAgents.snapshot(profile);codexReader.execute(()->{try{AiAgents.call(activity,target.aiConnection,target,AiAgentsUi.op("stop"));}catch(Exception ignored){}activity.runOnUiThread(()->{if(terminal.isRunning())terminal.finishIfRunning();});});return;}
         if (profile == null || !profile.environment.equals("codex")) { terminal.finishIfRunning(); return; }
+        final Runnable stop=CodexRpc.ownedStop(activity.getFilesDir(),profile);
         codexReader.execute(() -> {
-            CodexRpc.stopOwnedServer(activity.getFilesDir(), profile);
+            stop.run();
             activity.runOnUiThread(() -> { if (terminal.isRunning()) terminal.finishIfRunning(); });
         });
     }
@@ -2298,6 +2299,7 @@ public final class WorkspaceController {
         return true;
     }
     public boolean onBack() {
+        if(desktopUi!=null&&desktopUi.fullscreenBack())return true;
         if (screen == Screen.SERVERS && servers.back()) return true;
         if (screen == Screen.HOME) return false;
         show(Screen.HOME, true); return true;

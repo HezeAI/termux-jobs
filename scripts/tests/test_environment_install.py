@@ -66,3 +66,22 @@ class EnvironmentInstallTests(unittest.TestCase):
         self.script.write_text('exit 0\n')
         r=subprocess.run([sys.executable,'-B',str(SUPERVISOR),str(self.script),'ubuntu-ai',str(self.root.parent/self.cancel.name)],env=self.env,capture_output=True,timeout=5)
         self.assertNotEqual(0,r.returncode)
+
+    def test_completed_leader_cannot_leave_installer_descendant_running(self):
+        p=self.start('(trap "" INT TERM; sleep 1.5; touch "$PREFIX/escaped") &\nexit 0\n')
+        out=p.communicate(timeout=6)[0];self.assertEqual(0,p.returncode,out)
+        time.sleep(1.7);self.assertFalse((self.root/'escaped').exists(),'descendant kept writing after success')
+
+    def test_failed_leader_cannot_leave_installer_descendant_running(self):
+        p=self.start('(trap "" INT TERM; sleep 1.5; touch "$PREFIX/escaped") &\nexit 17\n')
+        out=p.communicate(timeout=6)[0];self.assertEqual(17,p.returncode,out)
+        time.sleep(1.7);self.assertFalse((self.root/'escaped').exists(),'descendant kept writing after failure')
+
+    def test_supervisor_output_error_cleans_group_before_reaping(self):
+        self.script.write_text('#!/bin/bash\nunset LD_LIBRARY_PATH LD_PRELOAD\n'
+            '(trap "" INT TERM; sleep 1.5; touch "$PREFIX/escaped") &\ntouch "$PREFIX/started"; sleep 20\n')
+        wrapper=self.root/'fault.py'
+        wrapper.write_text("import importlib.util,os,pathlib,sys\ns=importlib.util.spec_from_file_location('installer',sys.argv[1]);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)\noriginal=m.select.select\ndef fail(*args):\n if (pathlib.Path(os.environ['PREFIX'])/'started').exists():raise OSError('synthetic output failure')\n return original(*args)\nm.select.select=fail\ntry:m.supervise(*sys.argv[2:])\nexcept OSError:sys.exit(29)\n")
+        p=subprocess.Popen([sys.executable,'-B',str(wrapper),str(SUPERVISOR),str(self.script),'ubuntu-ai',str(self.cancel)],env=self.env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        self.processes.append(p);out=p.communicate(timeout=7)[0];self.assertEqual(29,p.returncode,out)
+        time.sleep(1.7);self.assertFalse((self.root/'escaped').exists(),'supervisor error abandoned descendant')

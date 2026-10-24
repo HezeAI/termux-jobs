@@ -16,7 +16,7 @@ public final class AiAgentsUi {
     interface Choice {void chosen(String value,String title);}
     interface ModelChoice {void chosen(String provider,String model,String variant);}
     private interface Result {void ready(JSONObject value);}
-    private static LinearLayout column(Activity a){LinearLayout l=new LinearLayout(a);l.setOrientation(1);l.setPadding(24,12,24,12);return l;}
+    private static LinearLayout column(Activity a){LinearLayout l=new LinearLayout(a);l.setOrientation(LinearLayout.VERTICAL);l.setPadding(24,12,24,12);return l;}
     private static TextView text(Activity a,String label){TextView t=new TextView(a);t.setText(label);t.setTextColor(WorkspaceDialogs.TEXT);t.setTextSize(14);t.setPadding(0,12,0,12);return t;}
     private static TextView action(Activity a,String label,Runnable call){TextView v=WorkspaceDialogs.action(a,label,0);v.setOnClickListener(x->call.run());return v;}
     private static ScrollView scroll(Activity a,View child){ScrollView v=new ScrollView(a);v.addView(child);return v;}
@@ -25,8 +25,9 @@ public final class AiAgentsUi {
     static JSONArray connections(Context c){try{return new JSONArray(prefs(c).getString("list","[]"));}catch(JSONException e){return new JSONArray();}}
     static String title(Context c,String id){JSONArray items=connections(c);for(int i=0;i<items.length();i++){JSONObject item=items.optJSONObject(i);if(item!=null&&id.equals(item.optString("id")))return item.optString("name");}return WorkspaceText.tr("Основное подключение");}
     private static void query(Activity a,String id,WorkspaceStore.Session live,JSONObject q,Result result){
+        final WorkspaceStore.Session target=live==null?null:AiAgents.snapshot(live);
         AlertDialog loading=WorkspaceDialogs.builder(a).setTitle("OpenCode").setMessage(WorkspaceText.tr("Проверка окружения и чтение данных…")).setNegativeButton(WorkspaceText.tr("Отмена"),null).create();if(q.optString("op").equals("connect") || q.optString("op").equals("model")){loading.setCancelable(false);loading.setCanceledOnTouchOutside(false);loading.setButton(AlertDialog.BUTTON_NEGATIVE,null,(android.content.DialogInterface.OnClickListener)null);}loading.show();
-        new Thread(()->{JSONObject data=null;try{data=AiAgents.call(a,id,live,q);}catch(Exception ignored){}JSONObject value=data;
+        new Thread(()->{JSONObject data=null;try{data=AiAgents.call(a,id,target,q);}catch(Exception ignored){}JSONObject value=data;
             a.runOnUiThread(()->{if(a.isFinishing()||a.isDestroyed()||!loading.isShowing())return;loading.dismiss();
                 if(value==null){WorkspaceDialogs.builder(a).setTitle("OpenCode").setMessage(WorkspaceText.tr("Нет подключения. Сначала создайте и запустите сессию OpenCode: компоненты установятся в Ubuntu автоматически. Затем повторите выбор модели или настройку подключения. Codex работает независимо.")).setPositiveButton(WorkspaceText.tr("Закрыть"),null).show();return;}result.ready(value);});
         },"ai-agent-read").start();

@@ -12,6 +12,14 @@ import sys
 import time
 
 
+def child_status(process):
+    """Observe exit without reaping: an unreaped leader pins the owned group ID."""
+    result = os.waitid(os.P_PID, process.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
+    if result is None:
+        return None
+    return result.si_status if result.si_code == os.CLD_EXITED else -result.si_status
+
+
 def supervise(script, alias, cancel):
     if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,63}', alias):
         raise ValueError('INVALID_ALIAS')
@@ -28,6 +36,10 @@ def supervise(script, alias, cancel):
         requested = True
     signal.signal(signal.SIGTERM, request)
     signal.signal(signal.SIGINT, request)
+    # No other waiter may release the leader before owned-group cleanup.
+    if not hasattr(os, 'WNOWAIT') or not hasattr(os, 'waitid'):
+        raise RuntimeError('NONREAPING_WAIT_REQUIRED')
+    signal.signal(signal.SIGCHLD, signal.SIG_DFL)
     master, slave = pty.openpty()
     process = None
     group_pinned = False
@@ -44,7 +56,7 @@ def supervise(script, alias, cancel):
         while True:
             # Do not reap the group leader during cancellation: its reserved PID
             # keeps the group identity pinned until every escalation is sent.
-            status = None if group_pinned else process.poll()
+            status = None if group_pinned else child_status(process)
             if status is None and (requested or cancel.exists()):
                 # A live, unreaped child pins its PID. start_new_session owns this group.
                 if not stopped:
@@ -68,7 +80,7 @@ def supervise(script, alias, cancel):
                     if stop_stage == 2:
                         # KILL was sent while the leader was still unreaped.
                         group_pinned = False
-                        status = process.poll()
+                        status = child_status(process)
                     stop_stage = 2
             if stream_open and select.select([master], [], [], .1)[0]:
                 try:
@@ -92,34 +104,32 @@ def supervise(script, alias, cancel):
         if stopped:
             print('\nERROR:INSTALL_CANCELLED', flush=True)
             return 130
-        return process.wait()
+        return status
     finally:
-        if slave >= 0:
-            os.close(slave)
-        os.close(master)
-        # Unexpected errors during the grace must also clear the owned group,
-        # before any wait/poll can release its leader's identity.
-        if process is not None and group_pinned:
-            try:
-                os.killpg(process.pid, signal.SIGTERM)
-                os.killpg(process.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-            process.wait()
-        # Unexpected supervisor errors must not abandon an installer.
-        if process is not None and process.poll() is None:
-            try:
-                os.killpg(process.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-            try:
-                process.wait(timeout=3)
-            except subprocess.TimeoutExpired:
+        try:
+            if process is not None:
+                # This is the first and only reaping path, even on normal exit or
+                # output errors. A leader that has exited can still have live
+                # descendants; never poll/wait before the last group signal.
+                try:
+                    os.killpg(process.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+                deadline = time.monotonic()+3
+                while child_status(process) is None and time.monotonic() < deadline:
+                    time.sleep(.05)
                 try:
                     os.killpg(process.pid, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
                 process.wait()
+        finally:
+            for descriptor in (slave, master):
+                if descriptor >= 0:
+                    try:
+                        os.close(descriptor)
+                    except OSError:
+                        pass
 
 
 if __name__ == '__main__':

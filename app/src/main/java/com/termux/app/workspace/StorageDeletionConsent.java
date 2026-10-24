@@ -8,7 +8,7 @@ import android.widget.*;
 final class StorageDeletionConsent {
     private static String t(Activity a,String ru,String en){return WorkspaceLanguage.code(a).equals("ru")?ru:en;}
     static AlertDialog show(Activity activity,String title,String summary,Runnable confirmed){
-        LinearLayout body=new LinearLayout(activity);body.setOrientation(1);int pad=WorkspaceDialogs.dp(activity,16);body.setPadding(pad,0,pad,pad);
+        LinearLayout body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);int pad=WorkspaceDialogs.dp(activity,16);body.setPadding(pad,0,pad,pad);
         TextView text=new TextView(activity);text.setText(summary);text.setTextColor(WorkspaceDialogs.TEXT);text.setTextSize(14);body.addView(text);
         CheckBox consent=new CheckBox(activity);consent.setText(t(activity,"Данные могут быть потеряны навсегда","Data may be permanently lost"));consent.setTextColor(WorkspaceDialogs.DANGER);body.addView(consent);
         ScrollView scroll=new ScrollView(activity);scroll.addView(body);

@@ -17,5 +17,10 @@ final class X11Viewport {
         return new Size(width,fullHeight,Math.min(visibleHeight,fullHeight));
     }
     static int checkedVisible(int value,int height){if(value<1||value>height)throw new IllegalArgumentException("Invalid visible X11 viewport");return value;}
+    static int visibleHeight(int surfaceHeight,int windowBottom,int surfaceTop,int keyboardBottom){
+        if(keyboardBottom<=0)return bound(surfaceHeight);
+        long available=(long)windowBottom-keyboardBottom-surfaceTop;
+        return bound((int)Math.max(1,Math.min(surfaceHeight,available)));
+    }
     private static int bound(int value){return Math.max(1,Math.min(8192,value));}
 }

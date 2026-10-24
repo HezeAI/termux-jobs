@@ -47,6 +47,19 @@ def openh264(assets):
     licenses=assets/'licenses';licenses.mkdir(exist_ok=True)
     (licenses/'OpenH264-copyright.txt').write_bytes(copyright)
 
+def gst_openh264(assets):
+    # Private Fedora Parole bridge. Never install a Debian package into a guest.
+    record=dict(url='https://deb.debian.org/debian/pool/main/g/gst-plugins-bad1.0/gstreamer1.0-plugins-bad_1.26.2-3+deb13u3_arm64.deb',size=2841904,sha256='c5f1fba98072aee17e064348c9586951a506f4e0c2bff1fea3603a86e16e5590')
+    deb=verified_file('gstreamer1.0-plugins-bad_1.26.2-3+deb13u3_arm64.deb',record)
+    part=next(p for p in subprocess.check_output(['ar','t',str(deb)],text=True).splitlines() if p.startswith('data.tar.'))
+    with tarfile.open(fileobj=io.BytesIO(subprocess.check_output(['ar','p',str(deb),part]))) as archive:
+        entries={m.name.removeprefix('./'):m for m in archive if m.isfile()}
+        plugin=archive.extractfile(entries['usr/lib/aarch64-linux-gnu/gstreamer-1.0/libgstopenh264.so']).read()
+        copyright=archive.extractfile(entries['usr/share/doc/gstreamer1.0-plugins-bad/copyright']).read()
+    if plugin[:4]!=b'\x7fELF' or int.from_bytes(plugin[18:20],'little')!=183 or hashlib.sha256(plugin).hexdigest()!='1f4c3a85e0b23d66f4f657064767900e857855e65659627ad078e69a229f1db4':raise ValueError('GStreamer OpenH264 ARM64 integrity')
+    (assets/'x11-gst-openh264.so').write_bytes(plugin)
+    licenses=assets/'licenses';licenses.mkdir(exist_ok=True);(licenses/'GStreamer-OpenH264-copyright.txt').write_bytes(copyright)
+
 def main():
     pins=json.loads((ROOT/'third-party/termux-x11/provenance.json').read_text())
     apk=verified_file('termux-x11-universal-debug.apk',pins['apk']);deb=verified_file('xkeyboard-config.deb',pins['xkb'])
@@ -90,6 +103,7 @@ def main():
     (assets/'x11-virgl-alpine-LICENSE.txt').write_bytes((ROOT/'third-party/virgl-client/LICENSE.txt').read_bytes())
     alpine_compat(assets)
     openh264(assets)
+    gst_openh264(assets)
     # A separate glibc module: never load Alpine's musl shim in Fedora.
     subprocess.run(['cc','-fPIC','-shared','-nostdlib','-O2','-Wall','-Wextra','-Werror',
         '-Wl,-z,now,-z,relro,-z,noexecstack','-Wl,-soname,x11-fedora-glycin.so',

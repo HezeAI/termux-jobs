@@ -44,10 +44,11 @@ class DesktopTests(unittest.TestCase):
    fake=bin/'proot-distro';fake.write_text('#!/bin/bash\n[[ "$*" == *cleanup-shortcuts* ]] && exit 0\nexec bash "$FAKE_DESKTOP"\n');fake.chmod(0o755)
    dbus=bin/'dbus-run-session';dbus.write_text('#!/bin/sh\nshift\nexec "$@"\n');dbus.chmod(0o755)
    (control/'x11-session.sh').write_text(stub.read_text())
+   (bin/'python3').symlink_to('/usr/bin/python3')
    env={**os.environ,'PREFIX':str(prefix),'PATH':str(bin)+':'+os.environ['PATH'],'FAKE_DESKTOP':str(stub),'JOBS_X11_FOCUS_TOKEN':'a11a11a1-1111-4111-8111-111111111111'}
    sentinel=subprocess.Popen(['sleep','30'])
    try:
-    for target in ['ubuntu','jobs-x11-ubuntu','debian','alpine','fedora','opensuse','termux']:
+    for target in ['ubuntu','jobs-x11-ubuntu','debian','alpine','fedora','opensuse','termux','void','archlinux']:
      (prefix/f'var/lib/proot-distro/containers/{target}/rootfs').mkdir(parents=True)
      pidfile=base/('pids-'+target);env['PIDFILE']=str(pidfile)
      proc=subprocess.Popen(['setsid','bash',str(GUARD),'bash',str(SCRIPT),'run',target,str(control)],env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
@@ -58,7 +59,8 @@ class DesktopTests(unittest.TestCase):
        except FileNotFoundError:pass
        if len(pids)==2:break
        time.sleep(.02)
-      self.assertEqual(2,len(pids),target)
+      if len(pids)!=2:
+       proc.stdin.close();proc.wait(timeout=5);self.fail((target,proc.stdout.read().decode(errors="replace")))
       for pid in pids:self.assertEqual(proc.pid,os.getpgid(pid),target)
       proc.stdin.close();proc.wait(timeout=5)
       for pid in pids:
@@ -69,6 +71,15 @@ class DesktopTests(unittest.TestCase):
       if proc.poll() is None:proc.stdin.close();proc.wait(timeout=5)
       proc.stdout.close()
    finally:sentinel.terminate();sentinel.wait()
+ def test_ordinary_ubuntu_launcher_repair_uses_only_its_existing_rootfs(self):
+  with tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d:
+   base=Path(d)/'files';prefix=base/'usr';bin=prefix/'bin';bin.mkdir(parents=True);control=base/'workspace-x11-ubuntu';control.mkdir()
+   root=prefix/'var/lib/proot-distro/containers/ubuntu/rootfs';root.mkdir(parents=True);sentinel=root/'keep';sentinel.write_text('project')
+   capture=base/'calls';tool=bin/'proot-distro';tool.write_text('#!/bin/sh\nprintf "%s\\n" "$@" >> "$CAPTURE"\n');tool.chmod(0o700)
+   env=dict(os.environ,PREFIX=str(prefix),PATH=str(bin)+':/usr/bin:/bin',CAPTURE=str(capture))
+   r=subprocess.run(['/bin/bash',str(SCRIPT),'repair-launchers','ubuntu',str(control)],env=env,capture_output=True,text=True,timeout=5)
+   self.assertEqual(0,r.returncode,r.stdout+r.stderr);self.assertIn('READY:desktop',r.stdout)
+   calls=capture.read_text();self.assertIn('ubuntu\n',calls);self.assertIn('x11-launchers.py --repair',calls);self.assertNotIn('jobs-x11-ubuntu',calls);self.assertNotIn('install\n',calls);self.assertEqual('project',sentinel.read_text())
  def test_guardian_refuses_nonprivate_group(self):
   p=subprocess.run(['bash',str(GUARD),'true'],capture_output=True,timeout=5)
   self.assertEqual(2,p.returncode);self.assertIn(b'PRIVATE_PROCESS_GROUP_REQUIRED',p.stdout)
@@ -133,11 +144,15 @@ class DesktopTests(unittest.TestCase):
    modules=prefix/'lib/pulseaudio/modules';modules.mkdir(parents=True);(modules/'module-sles-sink.so').touch();(modules/'module-native-protocol-unix.so').touch()
    fake=bin/'proot-distro';fake.write_text('#!/bin/bash\nprintf "%s\\n" "$@" > "$CAPTURE"\n');fake.chmod(0o755)
    capture=base/'calls';env={**os.environ,'PREFIX':str(prefix),'PATH':str(bin)+':'+os.environ['PATH'],'CAPTURE':str(capture),'JOBS_X11_FOCUS_TOKEN':'a11a11a1-1111-4111-8111-111111111111'}
-   for target in ['ubuntu','jobs-x11-ubuntu','alpine']:
+   (prefix/'var/lib/proot-distro/containers/archlinux/rootfs').mkdir(parents=True);(bin/'python3').symlink_to('/usr/bin/python3')
+   displays={'ubuntu':98,'jobs-x11-ubuntu':99,'debian':100,'alpine':101,'fedora':102,'opensuse':103,'void':104,'archlinux':105}
+   for target in displays:
+    env['JOBS_X11_STYLE']='0' if target=='jobs-x11-ubuntu' else '1'
     result=subprocess.run(['bash',str(SCRIPT),'run',target,str(control)],env=env,capture_output=True,timeout=5)
-    self.assertEqual(0,result.returncode,result.stderr);args=capture.read_text();self.assertNotIn('JOBS_X11_GTK_OBSERVE',args);self.assertIn('dbus-run-session',args);self.assertIn('export DISPLAY=:$JOBS_X11_DISPLAY',args);self.assertIn('export JOBS_X11_DISPLAY='+str({'ubuntu':98,'jobs-x11-ubuntu':99,'alpine':101}[target]),args)
-    guest_command=next(line for line in args.splitlines() if 'export JOBS_X11_DISPLAY=' in line);prefix_command=guest_command.split('; mkdir ',1)[0];probe=subprocess.run(['bash','-c',prefix_command+'; printf \"%s\\n\" \"$DISPLAY\"'],env={},capture_output=True,text=True,timeout=5);self.assertEqual(':'+str({'ubuntu':98,'jobs-x11-ubuntu':99,'alpine':101}[target]),probe.stdout.strip());self.assertEqual(0,probe.returncode,probe.stderr)
-   self.assertFalse((prefix/'var').exists())
+    self.assertEqual(0,result.returncode,result.stderr);args=capture.read_text();self.assertNotIn('JOBS_X11_GTK_OBSERVE',args);self.assertIn('dbus-run-session',args);self.assertIn('export DISPLAY=:$JOBS_X11_DISPLAY',args);self.assertIn('export JOBS_X11_DISPLAY='+str(displays[target]),args)
+    self.assertIn('JOBS_X11_STYLE='+env['JOBS_X11_STYLE']+';',args)
+    guest_command=next(line for line in args.splitlines() if 'export JOBS_X11_DISPLAY=' in line);prefix_command=guest_command.split('; mkdir ',1)[0];probe=subprocess.run(['bash','-c',prefix_command+'; printf \"%s\\n\" \"$DISPLAY\"'],env={},capture_output=True,text=True,timeout=5);self.assertEqual(':'+str(displays[target]),probe.stdout.strip());self.assertEqual(0,probe.returncode,probe.stderr)
+   self.assertEqual(['archlinux'],sorted(p.name for p in (prefix/'var/lib/proot-distro/containers').iterdir()))
  def test_lxqt_is_rejected_outside_test_and_cannot_inject_a_command(self):
   for target,desktop in [('ubuntu','lxqt'),('debian','lxqt'),('jobs-x11-ubuntu','lxqt;true')]:
    p=subprocess.run(['bash',str(SCRIPT),'install',target,'/unused',desktop],capture_output=True,timeout=5)

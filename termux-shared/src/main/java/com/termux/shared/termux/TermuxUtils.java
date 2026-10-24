@@ -1,5 +1,7 @@
 package com.termux.shared.termux;
 
+import java.util.Locale;
+
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -518,7 +520,7 @@ public class TermuxUtils {
     public static String getAPKRelease(String signingCertificateSHA256Digest) {
         if (signingCertificateSHA256Digest == null) return "null";
 
-        switch (signingCertificateSHA256Digest.toUpperCase()) {
+        switch (signingCertificateSHA256Digest.toUpperCase(Locale.ROOT)) {
             case TermuxConstants.APK_RELEASE_FDROID_SIGNING_CERTIFICATE_SHA256_DIGEST:
                 return TermuxConstants.APK_RELEASE_FDROID;
             case TermuxConstants.APK_RELEASE_GITHUB_SIGNING_CERTIFICATE_SHA256_DIGEST:

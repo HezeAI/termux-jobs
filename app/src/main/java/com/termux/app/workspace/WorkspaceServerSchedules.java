@@ -17,7 +17,7 @@ final class WorkspaceServerSchedules implements AutoCloseable {
     WorkspaceServerSchedules(TermuxActivity a,ServerConnection c,ExecutorService w){activity=a;connection=c;worker=w;}
     private String t(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
     private void show(AlertDialog d){dialogs.add(d);d.setCanceledOnTouchOutside(false);d.setOnDismissListener(x->dialogs.remove(d));d.show();}
-    private LinearLayout body(){LinearLayout b=new LinearLayout(activity);b.setOrientation(1);int p=WorkspaceDialogs.dp(activity,16);b.setPadding(p,0,p,p);return b;}
+    private LinearLayout body(){LinearLayout b=new LinearLayout(activity);b.setOrientation(LinearLayout.VERTICAL);int p=WorkspaceDialogs.dp(activity,16);b.setPadding(p,0,p,p);return b;}
     private TextView label(LinearLayout b,String text){TextView v=new TextView(activity);v.setText(text);v.setTextColor(WorkspaceDialogs.TEXT);v.setTextSize(14);v.setPadding(0,8,0,8);b.addView(v);return v;}
     private EditText field(LinearLayout b,String name,String value){label(b,name);EditText v=new EditText(activity);v.setTextColor(WorkspaceDialogs.TEXT);v.setText(value);v.setSingleLine(true);b.addView(v);return v;}
     private void request(JSONObject data,Consumer<JSONObject> done){

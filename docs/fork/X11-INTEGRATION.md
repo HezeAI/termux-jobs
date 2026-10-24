@@ -1,10 +1,19 @@
-# v2.0 — current X11 integration
+# v2.0.3 — current X11 integration
 
 Current supported desktops: **Termux, Ubuntu, Debian, Alpine, Fedora, openSUSE,
 Void Linux and Arch Linux ARM**. Each target has its own private service,
 display and runtime paths; only one desktop per target. The standalone Termux:X11
 app is not required. The native core is unmodified upstream code, not a new Linux
 kernel. Explicit source/provenance/license credits: [THIRD-PARTY.md](THIRD-PARTY.md).
+
+Landscape rotation moves the selected desktop into a full-screen window. Rotate
+back or use Android Back to restore the same desktop inside the app. The top-right
+Interactive input | control remains available. All eight target services share
+this presentation and logical-size adapter. The optional bundled style is now
+independently supported in all eight current desktops, with per-target preferences
+and HOME-scoped restoration. The style retains distribution menu plugins/defaults. Renderers, packages and process
+ownership are unchanged. See [usage](USAGE.md) and the separate
+[v2.0.3 validation](VALIDATION-v2.0.3.md) for the new rotation/IME checks.
 
 All desktop installers target a clean bootstrap/rootfs and explicitly request
 the complete required runtime set. Missing required binaries must fail readiness.

@@ -33,7 +33,7 @@ final class WorkspaceChatHistories {
     void ui(Runnable r){activity.runOnUiThread(()->{if(!activity.isFinishing()&&dialog!=null&&dialog.isShowing())r.run();});}
     int dp(int v){return WorkspaceDialogs.dp(activity,v);}
     TextView text(String s,int size){TextView v=new TextView(activity);v.setText(s);v.setTextColor(WorkspaceDialogs.TEXT);v.setTextSize(size);v.setPadding(dp(12),dp(10),dp(12),dp(10));return v;}
-    LinearLayout column(){LinearLayout v=new LinearLayout(activity);v.setOrientation(1);return v;}
+    LinearLayout column(){LinearLayout v=new LinearLayout(activity);v.setOrientation(LinearLayout.VERTICAL);return v;}
     void show(){
         LinearLayout body=column();search=new EditText(activity);search.setTextColor(WorkspaceDialogs.TEXT);search.setHintTextColor(WorkspaceDialogs.MUTED);search.setHint(t("Найти чат или проект","Find chat or project"));body.addView(search);
         TextView filters=WorkspaceDialogs.action(activity,t("Фильтр: Все","Filter: All"),0);filters.setOnClickListener(v->builder().setTitle(t("Истории чатов","Chat histories")).setItems(new String[]{t("Все","All"),"Codex · Termux","Codex · Ubuntu","Codex · Ubuntu AI"},(d,w)->{filter=new String[]{"all","termux","ubuntu","ubuntu-ai"}[w];filters.setText(new String[]{t("Все","All"),"Codex · Termux","Codex · Ubuntu","Codex · Ubuntu AI"}[w]);render();}).setNegativeButton(t("Отмена","Cancel"),null).show());body.addView(filters);

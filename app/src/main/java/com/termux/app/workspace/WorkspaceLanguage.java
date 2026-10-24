@@ -21,14 +21,16 @@ public final class WorkspaceLanguage {
         return resolve(choice(context),Resources.getSystem().getConfiguration().getLocales().get(0));
     }
     public static Context wrap(Context context) {
-        Configuration config=new Configuration(context.getResources().getConfiguration());
+        // Override only language. Copying the whole configuration pins portrait
+        // orientation/window bounds/density in this context after phone rotation.
+        Configuration config=new Configuration();
         config.setLocale(new Locale(code(context)));
         return context.createConfigurationContext(config);
     }
     @SuppressWarnings("deprecation")
     public static void initialize(Context context) {
         WorkspaceText.resources=wrap(context).getResources();
-        Configuration english=new Configuration(context.getResources().getConfiguration());english.setLocale(Locale.ENGLISH);
+        Configuration english=new Configuration();english.setLocale(Locale.ENGLISH);
         WorkspaceText.englishResources=context.createConfigurationContext(english).getResources();
         Context app=context.getApplicationContext();
         if(app!=null){Configuration config=new Configuration(app.getResources().getConfiguration());config.setLocale(new Locale(code(context)));app.getResources().updateConfiguration(config,app.getResources().getDisplayMetrics());}
@@ -39,6 +41,13 @@ public final class WorkspaceLanguage {
         Configuration config=new Configuration(activity.getResources().getConfiguration());
         config.setLocale(new Locale(code(activity)));
         activity.getResources().updateConfiguration(config,activity.getResources().getDisplayMetrics());
+    }
+    /** Preserve the selected UI language, but take window geometry from the system event. */
+    @SuppressWarnings("deprecation")
+    public static void configurationChanged(Activity activity,Configuration current){
+        Configuration localized=new Configuration(current);
+        localized.setLocale(new Locale(code(activity)));
+        activity.getResources().updateConfiguration(localized,activity.getResources().getDisplayMetrics());
     }
     static void select(Context context,String value) {
         if(!value.equals("system")&&!value.equals("ru")&&!value.equals("en"))throw new IllegalArgumentException("Invalid app language");

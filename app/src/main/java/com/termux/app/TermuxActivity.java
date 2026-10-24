@@ -193,6 +193,14 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
     }
 
     @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // Locale wrapping must not leave orientation/window bounds at launch values.
+        // Keep the Activity and its existing sessions; no workspace/composer rebuild.
+        com.termux.app.workspace.WorkspaceLanguage.configurationChanged(this,newConfig);
+    }
+
+    @Override
     public void onCreate(Bundle savedInstanceState) {
 
         Logger.logDebug(LOG_TAG, "onCreate");

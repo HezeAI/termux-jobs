@@ -8,15 +8,12 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /** Small versioned workspace, separate from Termux settings and shell processes. */
 public final class WorkspaceStore {
@@ -54,6 +51,8 @@ public final class WorkspaceStore {
         public Boolean codexConfirmActions; // null preserves legacy approval mapping
         public boolean aiProjectOnly;
         public String aiAgent = "", aiConnection = "00000000-0000-4000-8000-000000000002", aiModel = "", aiVariant = "", aiMode = "build", aiAccess = "ask", aiChat = "new", aiThread = "ses" + UUID.randomUUID().toString().replace("-", "");
+        /** Empty preserves the pre-audit socket path until the next explicit launch. */
+        public String aiSocketId="";
         /** Explicit user bookmark; current runtime thread is otherwise temporary. */
         public String aiSavedThread = "";
         // Optional v8 fields: older readers retain a plain Ubuntu profile.
@@ -103,33 +102,34 @@ public final class WorkspaceStore {
     public final List<Note> notes = new ArrayList<>();
     public final List<Session> sessions = new ArrayList<>();
     public final List<RecentCommand> recentCommands = new ArrayList<>();
-    private final AtomicFile file;
-    private final ExecutorService writer = Executors.newSingleThreadExecutor();
+    private final WorkspacePersistence persistence;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ErrorListener errors;
     private boolean writable = true;
+    private volatile boolean closed;
 
     public WorkspaceStore(Context context, ErrorListener errors) {
-        file = new AtomicFile(new File(context.getFilesDir(), "workspace-v1.json"));
+        this(context,errors,new AtomicFile(new File(context.getFilesDir(), "workspace-v1.json")));
+    }
+    WorkspaceStore(Context context, ErrorListener errors,AtomicFile storage) {
         this.errors = errors;
-        if (file.getBaseFile().exists() || new File(file.getBaseFile().getPath() + ".bak").exists()) {
-            try { decode(new String(file.readFully(), StandardCharsets.UTF_8)); }
-            catch (IOException | JSONException e) {
-                // Keep the original file; never overwrite an unreadable user's library.
-                writable = false;
-                main.post(() -> errors.onError(WorkspaceText.tr("Не удалось прочитать библиотеку. Исходный файл сохранён.")));
-            }
+        persistence = new WorkspacePersistence(storage,()->main.post(()->{if(!closed)errors.onError(WorkspaceText.tr("Ошибка записи библиотеки. Проверьте свободное место."));}));
+        try { byte[] data=persistence.read();if(data!=null)decode(new String(data, StandardCharsets.UTF_8)); }
+        catch (IOException | JSONException e) {
+            // Keep the original file; never overwrite an unreadable user's library.
+            writable = false;
+            main.post(() -> {if(!closed)errors.onError(WorkspaceText.tr("Не удалось прочитать библиотеку. Исходный файл сохранён."));});
         }
     }
-    public boolean isWritable() { return writable; }
+    public boolean isWritable() { return writable&&!closed; }
     public void recordCommand(String command) {
-        if (!writable || command.trim().isEmpty()) return;
+        if (!isWritable() || command.trim().isEmpty()) return;
         recentCommands.add(0, new RecentCommand(command, System.currentTimeMillis()));
         while (recentCommands.size() > MAX_RECENT_COMMANDS) recentCommands.remove(recentCommands.size() - 1);
         save();
     }
     public void clearRecentCommands() {
-        if (!writable) return;
+        if (!isWritable()) return;
         recentCommands.clear(); save();
     }
     public Session findByHandle(String handle) {
@@ -137,33 +137,26 @@ public final class WorkspaceStore {
         return null;
     }
     boolean applyGeminiMode(Session profile,String run,String before,String mode){
-        if(!writable||!sessions.contains(profile)||!profile.geminiAgent||!profile.geminiSocketId.equals(run)||!profile.geminiMode.equals(before)||!java.util.Arrays.asList("default","auto_edit","plan").contains(mode))return false;
+        if(!isWritable()||!sessions.contains(profile)||!profile.geminiAgent||!profile.geminiSocketId.equals(run)||!profile.geminiMode.equals(before)||!java.util.Arrays.asList("default","auto_edit","plan").contains(mode))return false;
         profile.geminiMode=mode;profile.updated=System.currentTimeMillis();save();return true;
     }
     public void save() { save(null); }
     void save(Runnable completed) {
+        if(closed)return;
         if (!writable) { errors.onError(WorkspaceText.tr("Библиотека недоступна для записи; исходные данные сохранены.")); return; }
         final byte[] snapshot;
         try { snapshot = encode().toString().getBytes(StandardCharsets.UTF_8); }
         catch (JSONException e) { errors.onError(WorkspaceText.tr("Не удалось сохранить библиотеку.")); return; }
-        writer.execute(() -> {
-            FileOutputStream out = null;
-            try {
-                out = file.startWrite(); out.write(snapshot); file.finishWrite(out); if(completed!=null)main.post(completed);
-            } catch (IOException e) {
-                if (out != null) file.failWrite(out);
-                main.post(() -> errors.onError(WorkspaceText.tr("Ошибка записи библиотеки. Проверьте свободное место.")));
-            }
-        });
+        persistence.write(snapshot,()->{if(completed!=null)main.post(()->{if(!closed)completed.run();});});
     }
-    void awaitWrites() throws Exception { writer.submit(() -> {}).get(10, java.util.concurrent.TimeUnit.SECONDS); }
-    public void close() { writer.shutdown(); } // Queued atomic writes finish after Activity destruction.
+    void awaitWrites() throws Exception { persistence.awaitWrites(); }
+    public void close() { closed=true;persistence.close(); } // Queued atomic writes finish after Activity destruction.
     static JSONObject sessionJson(Session s) throws JSONException {
         return new JSONObject().put("id", s.id).put("name", s.name)
             .put("directory", s.directory).put("prootAlias",s.prootAlias).put("prootIsolated",s.prootIsolated).put("prootStartup",s.prootAlias.isEmpty()?JSONObject.NULL:new JSONArray(Arrays.asList(s.startup,s.startup2,s.startup3))).put("startup", s.prootAlias.isEmpty()?s.startup:WorkspaceEnvironments.OLD_READER_GUARD).put("startup2", s.prootAlias.isEmpty()?s.startup2:"").put("startup3", s.prootAlias.isEmpty()?s.startup3:"").put("sshAuth", s.sshAuth).put("sshIdentity", s.sshIdentity).put("sshEncryptedPassword", s.sshEncryptedPassword).put("sshHost", s.sshHost).put("sshUser", s.sshUser).put("sshPort", s.sshPort).put("sshKeepOpen", s.sshKeepOpen).put("environment", s.environment).put("handle", s.handle)
             .put("codexConfirmActions",s.codexConfirmActions==null?JSONObject.NULL:s.codexConfirmActions).put("aiProjectOnly",s.aiProjectOnly)
             .put("codexEnvironment", s.codexEnvironment).put("codexAccess", s.codexAccess).put("codexChat", s.codexChat).put("codexThread", s.codexThread).put("codexThreadName", s.codexThreadName).put("codexSocketId", s.codexSocketId).put("codexSourceDirectory",s.codexSourceDirectory).put("codexBindingBlockedRun",s.codexBindingBlockedRun)
-            .put("aiAgent",s.aiAgent).put("aiConnection",s.aiConnection).put("aiModel",s.aiModel).put("aiVariant",s.aiVariant).put("aiMode",s.aiMode).put("aiAccess",s.aiAccess).put("aiChat",s.aiChat).put("aiThread",s.aiThread).put("aiSavedThread",s.aiSavedThread)
+            .put("aiAgent",s.aiAgent).put("aiConnection",s.aiConnection).put("aiSocketId",s.aiSocketId).put("aiModel",s.aiModel).put("aiVariant",s.aiVariant).put("aiMode",s.aiMode).put("aiAccess",s.aiAccess).put("aiChat",s.aiChat).put("aiThread",s.aiThread).put("aiSavedThread",s.aiSavedThread)
             .put("claudeEffort",s.claudeEffort).put("claudeAgent",s.claudeAgent).put("claudeModel",s.claudeModel).put("claudeMode",s.claudeMode).put("claudeChat",s.claudeChat).put("claudeThread",s.claudeThread).put("claudeSocketId",s.claudeSocketId)
             .put("keepHistory",s.keepHistory)
             .put("geminiEncryptedKey",s.geminiEncryptedKey).put("geminiCloudProject",s.geminiCloudProject).put("geminiCloudLocation",s.geminiCloudLocation).put("geminiThinking",s.geminiThinking).put("geminiAuth",s.geminiAuth).put("geminiAgent",s.geminiAgent).put("geminiModel",s.geminiModel).put("geminiMode",s.geminiMode).put("geminiChat",s.geminiChat).put("geminiThread",s.geminiThread).put("geminiSocketId",s.geminiSocketId)
@@ -172,12 +165,13 @@ public final class WorkspaceStore {
     JSONObject encode() throws JSONException {
         JSONObject root = new JSONObject().put("version", 8);
         JSONArray cs = new JSONArray(), ss = new JSONArray();
-        for (Command c : commands) cs.put(new JSONObject().put("id", c.id).put("name", c.name)
-            .put("command", c.command).put("category", c.category).put("directory", c.directory).put("favorite", c.favorite));
-        for (Session s : sessions) ss.put(sessionJson(s));
+        java.util.Set<String> commandIds=new java.util.HashSet<>(),sessionIds=new java.util.HashSet<>(),noteIds=new java.util.HashSet<>();
+        for (Command c : commands) {uniqueId(c.id,commandIds);cs.put(new JSONObject().put("id", c.id).put("name", c.name)
+            .put("command", c.command).put("category", c.category).put("directory", c.directory).put("favorite", c.favorite));}
+        for (Session s : sessions) {uniqueId(s.id,sessionIds);ss.put(sessionJson(s));}
         JSONArray ns = new JSONArray();
-        for (Note n : notes) ns.put(new JSONObject().put("id", n.id).put("name", n.name)
-            .put("text", n.text).put("category", n.category).put("favorite", n.favorite));
+        for (Note n : notes) {uniqueId(n.id,noteIds);ns.put(new JSONObject().put("id", n.id).put("name", n.name)
+            .put("text", n.text).put("category", n.category).put("favorite", n.favorite));}
         JSONArray recent = new JSONArray();
         for (int i = 0; i < Math.min(recentCommands.size(), MAX_RECENT_COMMANDS); i++) {
             RecentCommand entry = recentCommands.get(i);
@@ -190,10 +184,11 @@ public final class WorkspaceStore {
         int version = root.getInt("version");
         if (version != 1 && version != 2 && version != 3 && version != 4 && version != 5 && version != 6 && version != 7 && version != 8) throw new JSONException("Unsupported workspace version");
         List<Command> cs = new ArrayList<>(); List<Session> ss = new ArrayList<>();
+        java.util.Set<String> commandIds=new java.util.HashSet<>(),sessionIds=new java.util.HashSet<>(),noteIds=new java.util.HashSet<>();
         JSONArray ca = root.getJSONArray("commands"), sa = root.getJSONArray("sessions");
         for (int i = 0; i < ca.length(); i++) {
             JSONObject o = ca.getJSONObject(i); Command c = new Command();
-            c.id = validId(o.getString("id")); c.name = o.getString("name"); c.command = o.getString("command");
+            c.id = uniqueId(o.getString("id"),commandIds); c.name = o.getString("name"); c.command = o.getString("command");
             c.category = o.optString("category", WorkspaceText.tr("Общее")); c.directory = o.optString("directory"); c.favorite = o.optBoolean("favorite");
             cs.add(c);
         }
@@ -204,7 +199,7 @@ public final class WorkspaceStore {
             Session s = new Session();
             if(o.has("agentConnectionCommand")&&!(o.get("agentConnectionCommand") instanceof String))throw new JSONException("Invalid agent connection command type");
             s.agentConnectionCommand=o.optString("agentConnectionCommand","");if(!AgentConnection.valid(s.agentConnectionCommand))throw new JSONException("Invalid agent connection executable");
-            s.id = validId(o.getString("id")); s.name = o.getString("name"); s.directory = o.optString("directory");
+            s.id = uniqueId(o.getString("id"),sessionIds); s.name = o.getString("name"); s.directory = o.optString("directory");
             s.startup = o.optString("startup"); s.startup2 = o.optString("startup2"); s.startup3 = o.optString("startup3"); s.environment = o.optString("environment", "legacy");
             if (!s.environment.equals("legacy") && !s.environment.equals("termux") && !s.environment.equals("ubuntu") && !s.environment.equals("ssh") && !s.environment.equals("codex")) throw new JSONException("Unknown environment"); s.handle = o.optString("handle");
             if(o.has("prootAlias")&&!(o.get("prootAlias") instanceof String))throw new JSONException("Invalid environment alias");
@@ -241,6 +236,8 @@ public final class WorkspaceStore {
             if(o.has("keepHistory")&&!(o.get("keepHistory") instanceof Boolean))throw new JSONException("Invalid history flag");
             s.keepHistory=o.optBoolean("keepHistory",false);
             s.aiAgent=o.optString("aiAgent",""); s.aiConnection=validId(o.optString("aiConnection",s.aiConnection)); s.aiModel=o.optString("aiModel",""); s.aiVariant=o.optString("aiVariant",""); s.aiMode=o.optString("aiMode","build"); s.aiAccess=o.optString("aiAccess","ask"); s.aiChat=o.optString("aiChat","new"); s.aiThread=o.optString("aiThread",s.aiThread);
+            if(o.has("aiSocketId")&&!(o.get("aiSocketId") instanceof String))throw new JSONException("Invalid AI run");
+            s.aiSocketId=o.optString("aiSocketId","");if(!s.aiSocketId.isEmpty())s.aiSocketId=validId(s.aiSocketId);
             s.aiSavedThread=o.optString("aiSavedThread","");
             if(!s.aiSavedThread.isEmpty()&&!AiAgents.validThread(s.aiSavedThread))throw new JSONException("Invalid saved AI thread");
             if(!s.aiAgent.isEmpty() && (!s.aiAgent.equals("opencode") || !s.environment.equals("ubuntu") || !AgentEnvironments.ubuntu(s.codexEnvironment) || !AiAgents.validThread(s.aiThread) || !AiAgents.validModel(s.aiModel) || !s.aiVariant.matches("[A-Za-z0-9_.-]{0,80}") || !(s.aiAccess.equals("full") || s.aiAccess.equals("ask") || s.aiAccess.equals("read")) || !(s.aiMode.equals("build") || s.aiMode.equals("plan")) || !(s.aiChat.equals("new") || s.aiChat.equals("resume"))))throw new JSONException("Invalid AI profile");
@@ -259,7 +256,7 @@ public final class WorkspaceStore {
         if (version >= 5 && na == null) throw new JSONException("Missing notes");
         if (na != null) for (int i = 0; i < na.length(); i++) {
             JSONObject o = na.getJSONObject(i); Note n = new Note();
-            n.id = validId(o.getString("id")); n.name = o.getString("name"); n.text = o.getString("text");
+            n.id = uniqueId(o.getString("id"),noteIds); n.name = o.getString("name"); n.text = o.getString("text");
             n.category = o.optString("category", WorkspaceText.tr("Общее")); n.favorite = o.optBoolean("favorite"); ns.add(n);
         }
         List<RecentCommand> recent = new ArrayList<>();
@@ -278,6 +275,9 @@ public final class WorkspaceStore {
     private static String validId(String id) throws JSONException {
         try { return UUID.fromString(id).toString(); }
         catch (IllegalArgumentException e) { throw new JSONException("Invalid id"); }
+    }
+    private static String uniqueId(String id,java.util.Set<String> ids)throws JSONException{
+        String normalized=validId(id);if(!ids.add(normalized))throw new JSONException("Duplicate workspace id");return normalized;
     }
     public static String tail(String text, int max) {
         if (text.length() <= max) return text;

@@ -27,6 +27,36 @@ find_root() {
     done
     return 1
 }
+# Resolve links using the guest's /, never the host's /bin or /usr/bin.
+# All path components (including a merged-usr /bin link) must stay in this rootfs.
+guest_executable() {
+    local fs=$1 component candidate link part hops=0
+    local -a pending resolved=() pieces
+    IFS=/ read -r -a pending <<< "$2"
+    while (( ${#pending[@]} ));do
+        component=${pending[0]};pending=("${pending[@]:1}")
+        case $component in
+            ''|.) continue;;
+            ..) if (( ${#resolved[@]} ));then unset "resolved[$((${#resolved[@]}-1))]";fi;continue;;
+        esac
+        candidate=$fs
+        for part in "${resolved[@]}";do candidate+="/$part";done
+        candidate+="/$component"
+        if [[ -L $candidate ]];then
+            hops=$((hops+1));(( hops<=40 )) || return 1
+            link=$(readlink -- "$candidate") || return 1
+            [[ -n $link ]] || return 1
+            if [[ $link == /* ]];then resolved=();fi
+            IFS=/ read -r -a pieces <<< "$link"
+            pending=("${pieces[@]}" "${pending[@]}")
+        else
+            resolved+=("$component")
+            if (( ${#pending[@]} ));then [[ -d $candidate ]] || return 1
+            else [[ -f $candidate && -x $candidate ]] || return 1;fi
+        fi
+    done
+    [[ -n ${candidate:-} && -f $candidate && -x $candidate && ! -L $candidate ]]
+}
 check() {
     if [[ $alias == termux ]]; then
         [[ -x $PREFIX/bin/bash ]] && printf 'READY:shell\n' || printf 'MISSING:shell\n'
@@ -36,7 +66,7 @@ check() {
     local fs
     if fs=$(find_root); then
         printf 'READY:environment\n'
-        if [[ -x $fs/bin/bash || -x $fs/usr/bin/bash || -x $fs/bin/sh || -L $fs/bin/sh ]]; then printf 'READY:shell\n';else printf 'MISSING:shell\n';fi
+        if guest_executable "$fs" /bin/bash || guest_executable "$fs" /usr/bin/bash || guest_executable "$fs" /bin/sh;then printf 'READY:shell\n';else printf 'MISSING:shell\n';fi
     else printf 'MISSING:environment\n';fi
     printf 'CHECK:done\n'
 }

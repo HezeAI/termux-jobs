@@ -66,9 +66,20 @@ to its upstream authors.
 **OpenH264:** [Cisco source v2.6.0](https://github.com/cisco/openh264/tree/v2.6.0),
 [Debian source/package2.6.0+dfsg-2](https://sources.debian.org/src/openh264/2.6.0%2Bdfsg-2/).
 The embedded glibc library is extracted from the pinned Debian package for the
-private openSUSE Parole launcher. BSD-2-Clause and per-file notices are retained:
+private openSUSE/Fedora Parole launcher. BSD-2-Clause and per-file notices are retained:
 [provenance and copyright](../../third-party/openh264/). It does not replace an
-openSUSE RPM or turn every codec into a supported format.
+RPM-managed library or turn every codec into a supported format.
+
+**GStreamer OpenH264 bridge (Fedora Parole):** unmodified ARM64 plugin from
+[Debian gst-plugins-bad1.0 1.26.2-3+deb13u3](https://sources.debian.org/src/gst-plugins-bad1.0/1.26.2-3%2Bdeb13u3/),
+[upstream component](https://gitlab.freedesktop.org/gstreamer/gstreamer/-/tree/1.26.2/subprojects/gst-plugins-bad/ext/openh264).
+Pinned download/member/hash and full per-file license notices are retained in
+[third-party/gstreamer-openh264](../../third-party/gstreamer-openh264/), and notices
+are included in the APK. It is extracted as a private plugin for Fedora Parole
+with GStreamer1.26+, not installed as a Debian package or Android JNI library.
+Fedora's [OpenH264 documentation](https://fedoraproject.org/wiki/OpenH264) explains
+the decoder/plugin split and its Cisco repository; this integration uses its own
+pinned assets and does not disable TLS/GPG checking.
 
 Firefox, LibreOffice, Evince, Atril, Parole, Ristretto, Tumbler, Mousepad,
 File Roller/Engrampa and GPU utilities remain upstream projects installed through

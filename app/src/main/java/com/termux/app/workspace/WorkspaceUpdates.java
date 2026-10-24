@@ -14,7 +14,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.*;
 import java.net.HttpURLConnection;
-import java.net.URL;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -50,7 +49,7 @@ final class WorkspaceUpdates {
         android.widget.LinearLayout row=new android.widget.LinearLayout(a);row.setGravity(android.view.Gravity.CENTER_VERTICAL);
         row.setBackground(WorkspaceDialogs.background(a,false));
         android.widget.TextView title=WorkspaceDialogs.action(a,menuLabel(a),0);title.setBackground(null);
-        android.widget.LinearLayout labels=new android.widget.LinearLayout(a);labels.setOrientation(1);
+        android.widget.LinearLayout labels=new android.widget.LinearLayout(a);labels.setOrientation(android.widget.LinearLayout.VERTICAL);
         labels.addView(title);
         android.widget.TextView hint=new android.widget.TextView(a);hint.setText(text(a,"Проверять при открытии приложения","Check when opening the app"));hint.setTextColor(WorkspaceDialogs.MUTED);hint.setTextSize(12);
         int pad=WorkspaceDialogs.dp(a,16);hint.setPadding(pad,0,0,WorkspaceDialogs.dp(a,12));labels.addView(hint);
@@ -66,9 +65,9 @@ final class WorkspaceUpdates {
     private static void remember(Activity a,Release r){prefs(a).edit().putLong("availableCode",r.code).putString("availableName",r.name).apply();}
     static void automatic(Activity a,Runnable changed){
         if(!OPENING.enter(autoEnabled(a))||!BUSY.compareAndSet(false,true))return;
-        new Thread(()->{try{Release release=latest(a,new AtomicBoolean());if(release!=null)remember(a,release);}catch(Exception ignored){}finally{BUSY.set(false);a.runOnUiThread(()->{if(alive(a))changed.run();});}},"jobs-update-auto").start();
+        new Thread(()->{try{Release release=latest(a,new UpdateConnection());if(release!=null)remember(a,release);}catch(Exception ignored){}finally{BUSY.set(false);a.runOnUiThread(()->{if(alive(a))changed.run();});}},"jobs-update-auto").start();
     }
-    private static Release latest(Activity a,AtomicBoolean cancelled)throws Exception{
+    private static Release latest(Activity a,UpdateConnection cancelled)throws Exception{
         JSONObject latest=new JSONObject(new String(fetch(API,1024*1024,cancelled),"UTF-8"));
         if(latest.optBoolean("draft")||latest.optBoolean("prerelease"))throw new IOException("Not a stable release");
         String tag=latest.getString("tag_name");JSONArray assets=latest.getJSONArray("assets");
@@ -91,36 +90,26 @@ final class WorkspaceUpdates {
         }
     }
     static boolean validAsset(String url,String tag,String name){return tag.matches("v[0-9]+\\.[0-9]+\\.[0-9]+")&&url.equals(DOWNLOAD+tag+"/"+name);}
-    private static HttpURLConnection connect(String address)throws Exception{
-        URL url=new URL(address);
-        // GitHub assets redirect to release-assets.githubusercontent.com; never permit HTTP.
-        for(int n=0;n<6;n++){
-            String host=url.getHost();if(!url.getProtocol().equals("https")||url.getUserInfo()!=null||url.getPort()!=-1||!(host.equals("api.github.com")||host.equals("github.com")||host.equals("release-assets.githubusercontent.com")||host.equals("objects.githubusercontent.com")))throw new IOException("Untrusted download host");
-            HttpURLConnection c=(HttpURLConnection)url.openConnection();c.setInstanceFollowRedirects(false);c.setConnectTimeout(15000);c.setReadTimeout(20000);c.setRequestProperty("User-Agent","Termux-Jobs-Updater");c.setRequestProperty("Accept",host.equals("api.github.com")?"application/vnd.github+json":"application/octet-stream");
-            int status=c.getResponseCode();if(status>=300&&status<400){String location=c.getHeaderField("Location");c.disconnect();if(location==null)throw new IOException("Missing redirect");url=new URL(url,location);continue;}
-            if(status!=200){c.disconnect();throw new IOException("GitHub HTTP "+status);}return c;
-        }throw new IOException("Too many redirects");
-    }
-    private static byte[] fetch(String url,long limit,AtomicBoolean cancelled)throws Exception{
-        HttpURLConnection c=connect(url);try(InputStream in=c.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){
-            byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1){if(cancelled.get())throw new InterruptedIOException();if(out.size()+n>limit)throw new IOException("Response too large");out.write(b,0,n);}return out.toByteArray();
-        }finally{c.disconnect();}
+    private static byte[] fetch(String url,long limit,UpdateConnection cancelled)throws Exception{
+        HttpURLConnection c=cancelled.connect(url);try(InputStream in=c.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()){
+            byte[] b=new byte[8192];int n;cancelled.check();while((n=in.read(b))!=-1){if(cancelled.isCancelled())throw new InterruptedIOException();if(out.size()+n>limit)throw new IOException("Response too large");out.write(b,0,n);}cancelled.check();return out.toByteArray();
+        }finally{cancelled.release(c);}
     }
     static void check(Activity a){
         if(!BUSY.compareAndSet(false,true)){message(a,text(a,"Проверка или скачивание уже выполняется.","A check or download is already running."));return;}
-        AtomicBoolean cancelled=new AtomicBoolean();UpdateProgress indicator=new UpdateProgress(a);AlertDialog wait=WorkspaceDialogs.builder(a).setTitle(label(a)).setView(indicator.view).setNegativeButton(WorkspaceText.tr("Отмена"),(d,w)->cancelled.set(true)).create();wait.setOnCancelListener(d->cancelled.set(true));wait.show();
+        UpdateConnection cancelled=new UpdateConnection();UpdateProgress indicator=new UpdateProgress(a);AlertDialog wait=WorkspaceDialogs.builder(a).setTitle(label(a)).setView(indicator.view).setNegativeButton(WorkspaceText.tr("Отмена"),(d,w)->cancelled.cancel()).create();wait.setOnCancelListener(d->cancelled.cancel());wait.show();
         new Thread(()->{Runnable[] result={null};try{
             Release r=latest(a,cancelled);
             if(r==null){result[0]=()->message(a,text(a,"Последний релиз пока не содержит данных для встроенного обновления. Установлено: ","The latest release does not yet support in-app updates. Installed: ")+com.termux.BuildConfig.VERSION_NAME);return;}
             remember(a,r);
             PackageInfo installed=a.getPackageManager().getPackageInfo(a.getPackageName(),0);
-            result[0]=()->{if(cancelled.get()||!alive(a))return;
+            result[0]=()->{if(cancelled.isCancelled()||!alive(a))return;
                 if(r.code<=version(installed)){message(a,text(a,"Установлена актуальная версия: ","You are up to date: ")+installed.versionName);return;}
                 if(Build.VERSION.SDK_INT<r.minSdk||!Arrays.asList(Build.SUPPORTED_ABIS).contains("arm64-v8a")){message(a,text(a,"Обновление несовместимо с этим устройством.","This update is not compatible with this device."));return;}
                 WorkspaceDialogs.builder(a).setTitle(text(a,"Обновление ","Update ")+r.name).setMessage(r.notes+"\n"+text(a,"Данные сохраняются при обновлении поверх. Не удаляйте приложение. Завершите важные задачи: Android может остановить процессы приложения при установке.","An in-place update keeps your data. Do not uninstall the app. Finish important tasks: Android may stop app processes during installation."))
                     .setPositiveButton(text(a,"Скачать обновление","Download update"),(d,w)->download(a,r)).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();};
-        }catch(Exception e){if(!cancelled.get())result[0]=()->message(a,text(a,"Не удалось проверить обновления. Проверьте интернет и повторите позже.\n","Could not check for updates. Check your connection and try later.\n")+safeError(e));}
-        finally{BUSY.set(false);a.runOnUiThread(()->{if(alive(a)){wait.dismiss();if(!cancelled.get()&&result[0]!=null)result[0].run();}});}},"jobs-update-check").start();
+        }catch(Exception e){if(!cancelled.isCancelled())result[0]=()->message(a,text(a,"Не удалось проверить обновления. Проверьте интернет и повторите позже.\n","Could not check for updates. Check your connection and try later.\n")+safeError(e));}
+        finally{BUSY.set(false);a.runOnUiThread(()->{if(alive(a)){wait.dismiss();if(!cancelled.isCancelled()&&result[0]!=null)result[0].run();}});}},"jobs-update-check").start();
     }
     private static String safeError(Exception e){return e instanceof IOException&&e.getMessage()!=null&&e.getMessage().matches("GitHub HTTP [0-9]{3}")?e.getMessage():e.getClass().getSimpleName();}
     /** UI state only. Download authenticity and cancellation remain in their existing worker. */
@@ -130,7 +119,7 @@ final class WorkspaceUpdates {
         final android.widget.TextView status;
         private final Activity activity;
         UpdateProgress(Activity a){
-            activity=a;view=new android.widget.LinearLayout(a);view.setOrientation(1);
+            activity=a;view=new android.widget.LinearLayout(a);view.setOrientation(android.widget.LinearLayout.VERTICAL);
             int pad=WorkspaceDialogs.dp(a,20);view.setPadding(pad,pad,pad,pad);
             status=new android.widget.TextView(a);status.setTextColor(WorkspaceDialogs.TEXT);status.setTextSize(14);view.addView(status);
             bar=new android.widget.ProgressBar(a,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(100);
@@ -150,22 +139,59 @@ final class WorkspaceUpdates {
     }
     private static void download(Activity a,Release r){
         if(!BUSY.compareAndSet(false,true))return;
-        AtomicBoolean cancelled=new AtomicBoolean();UpdateProgress indicator=new UpdateProgress(a);indicator.downloaded(0,r.size);AlertDialog wait=WorkspaceDialogs.builder(a).setTitle(text(a,"Скачивание обновления","Downloading update")).setView(indicator.view)
-            .setNegativeButton(WorkspaceText.tr("Отмена"),(d,w)->cancelled.set(true)).create();wait.setOnCancelListener(d->cancelled.set(true));wait.show();
+        UpdateConnection cancelled=new UpdateConnection();UpdateProgress indicator=new UpdateProgress(a);indicator.downloaded(0,r.size);AlertDialog wait=WorkspaceDialogs.builder(a).setTitle(text(a,"Скачивание обновления","Downloading update")).setView(indicator.view)
+            .setNegativeButton(WorkspaceText.tr("Отмена"),(d,w)->cancelled.cancel()).create();wait.setOnCancelListener(d->cancelled.cancel());wait.show();
         new Thread(()->{File output=null;boolean ready=false;try{
             File dir=new File(a.getCacheDir(),"workspace-updates");if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cache unavailable");
             // Only updater-owned files; never touch user storage or shell environments.
             File[] old=dir.listFiles();if(old!=null)for(File f:old)if(f.getName().startsWith("update-")&&f.isFile())f.delete();
             output=File.createTempFile("update-",".apk",dir);MessageDigest hash=MessageDigest.getInstance("SHA-256");long count=0;int shown=-1;
-            HttpURLConnection c=connect(r.url);try(InputStream in=c.getInputStream();OutputStream out=new FileOutputStream(output)){
-                byte[] b=new byte[65536];int n;while((n=in.read(b))!=-1){if(cancelled.get())throw new InterruptedIOException();count+=n;if(count>r.size)throw new IOException("APK size mismatch");out.write(b,0,n);hash.update(b,0,n);int percent=(int)(count*100/r.size);if(percent!=shown){shown=percent;final long downloaded=count;a.runOnUiThread(()->{if(alive(a)&&wait.isShowing())indicator.downloaded(downloaded,r.size);});}}
-            }finally{c.disconnect();}
+            HttpURLConnection c=cancelled.connect(r.url);try(InputStream in=c.getInputStream();OutputStream out=new FileOutputStream(output)){
+                byte[] b=new byte[65536];int n;cancelled.check();while((n=in.read(b))!=-1){if(cancelled.isCancelled())throw new InterruptedIOException();count+=n;if(count>r.size)throw new IOException("APK size mismatch");out.write(b,0,n);hash.update(b,0,n);int percent=(int)(count*100/r.size);if(percent!=shown){shown=percent;final long downloaded=count;a.runOnUiThread(()->{if(alive(a)&&wait.isShowing())indicator.downloaded(downloaded,r.size);});}}
+            }finally{cancelled.release(c);}
             if(count!=r.size||!hex(hash.digest()).equals(r.hash))throw new IOException("APK checksum mismatch");
             a.runOnUiThread(()->{if(alive(a)&&wait.isShowing())indicator.verifying();});
-            verify(a,output,r);if(cancelled.get())throw new InterruptedIOException();ready=true;File apk=output;
-            a.runOnUiThread(()->{if(alive(a)&&!cancelled.get())offerInstall(a,apk,r);});
-        }catch(Exception e){if(!cancelled.get())a.runOnUiThread(()->message(a,text(a,"Обновление не прошло проверку или не скачалось. Установка заблокирована; данные не изменены.\n","Download or verification failed. Installation blocked; your data was not changed.\n")+safeError(e)));}
+            verify(a,output,r);if(cancelled.isCancelled())throw new InterruptedIOException();ready=true;File apk=output;
+            a.runOnUiThread(()->{if(alive(a)&&!cancelled.isCancelled())offerInstall(a,apk,r);});
+        }catch(Exception e){if(!cancelled.isCancelled())a.runOnUiThread(()->message(a,text(a,"Обновление не прошло проверку или не скачалось. Установка заблокирована; данные не изменены.\n","Download or verification failed. Installation blocked; your data was not changed.\n")+safeError(e)));}
         finally{if(!ready&&output!=null)output.delete();BUSY.set(false);a.runOnUiThread(()->{if(alive(a))wait.dismiss();});}},"jobs-update-download").start();
+    }
+    /** Recheck the exact cached bytes after any time spent in permission/settings dialogs. */
+    static void verifyContent(File file,long size,String expectedHash)throws Exception{
+        if(!file.isFile()||file.length()!=size)throw new IOException("APK size mismatch");
+        MessageDigest hash=MessageDigest.getInstance("SHA-256");long count=0;
+        try(InputStream input=new FileInputStream(file)){
+            byte[] buffer=new byte[65536];int n;
+            while((n=input.read(buffer))!=-1){count+=n;if(count>size)throw new IOException("APK size mismatch");hash.update(buffer,0,n);}
+        }
+        if(count!=size||!hex(hash.digest()).equals(expectedHash))throw new IOException("APK checksum mismatch");
+    }
+    static void prepareInstall(Activity a,File apk,Release release){
+        if(!BUSY.compareAndSet(false,true)){message(a,text(a,"Дождитесь окончания проверки или загрузки и повторите установку.","Wait for the current check or download, then try Install again."));return;}
+        UpdateConnection cancelled=new UpdateConnection();UpdateProgress indicator=new UpdateProgress(a);indicator.verifying();
+        AlertDialog wait=WorkspaceDialogs.builder(a).setTitle(label(a)).setView(indicator.view)
+            .setNegativeButton(WorkspaceText.tr("Отмена"),(d,w)->cancelled.cancel()).create();
+        wait.setOnCancelListener(d->cancelled.cancel());wait.show();
+        new Thread(()->{
+            Exception failure=null;
+            try{verifyContent(apk,release.size,release.hash);cancelled.check();verify(a,apk,release);cancelled.check();}
+            catch(Exception e){failure=e;}
+            finally{
+                Exception error=failure;
+                a.runOnUiThread(()->{
+                    BUSY.set(false);
+                    if(!alive(a))return;
+                    wait.dismiss();if(cancelled.isCancelled())return;
+                    if(error!=null){message(a,text(a,"Сохранённый APK недоступен или не прошёл повторную проверку. Скачайте обновление заново.","The cached APK is unavailable or failed verification. Download the update again."));return;}
+                    try{
+                        Uri uri=FileProvider.getUriForFile(a,a.getPackageName()+".workspace.files",apk);
+                        Intent intent=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,"application/vnd.android.package-archive")
+                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        intent.setClipData(android.content.ClipData.newRawUri("Update APK",uri));a.startActivity(intent);
+                    }catch(Exception e){message(a,text(a,"Не удалось открыть установщик. Повторите загрузку обновления.","Could not open the installer. Download the update again."));}
+                });
+            }
+        },"jobs-update-install-check").start();
     }
     @SuppressWarnings("deprecation")
     static void verify(Activity a,File file,Release r)throws Exception{
@@ -187,8 +213,7 @@ final class WorkspaceUpdates {
                             .setNeutralButton(text(a,"Настройки Android","Android settings"),(p,q)->{try{a.startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:"+a.getPackageName())));offerInstall(a,apk,r);}catch(Exception e){message(a,text(a,"Не удалось открыть настройки Android.","Could not open Android settings."));}})
                             .setPositiveButton(text(a,"Продолжить","Continue"),(p,q)->offerInstall(a,apk,r)).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();return;
                     }
-                    verify(a,apk,r);Uri uri=FileProvider.getUriForFile(a,a.getPackageName()+".workspace.files",apk);
-                    Intent intent=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,"application/vnd.android.package-archive").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);a.startActivity(intent);
+                    prepareInstall(a,apk,r);
                 }catch(Exception e){message(a,text(a,"Не удалось открыть установщик. Приложение не удалялось.","Could not open the installer. The app was not uninstalled."));}
             }).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
     }

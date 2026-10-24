@@ -134,19 +134,38 @@ final class ChatAttachmentUi implements AutoCloseable {
         LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(size[0],size[1]);params.gravity=Gravity.CENTER_HORIZONTAL;return params;
     }
     private void save(File source,String name,AlertDialog dialog,int saveButton){
-        dialog.getButton(saveButton).setEnabled(false);work.execute(()->{File destination=null;boolean ok=false;try{
-            String safe=name.replaceAll("[\\\\/\\p{Cntrl}]","_");if(safe.equals(".")||safe.equals("..")||safe.isEmpty())safe="attachment";if(safe.length()>150)safe=safe.substring(0,150);
-            File dir=new File("/sdcard/Download");if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException();
-            for(int i=0;i<10000;i++){File f=new File(dir,i==0?safe:i+"-"+safe);if(f.createNewFile()){destination=f;break;}}if(destination==null)throw new IOException();
-            try(InputStream in=new FileInputStream(source);OutputStream out=new FileOutputStream(destination)){byte[] b=new byte[32768];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}ok=true;
-        }catch(Exception e){if(destination!=null)destination.delete();}final boolean saved=ok;main.post(()->{if(closed)return;if(dialog.isShowing())dialog.getButton(saveButton).setEnabled(true);Toast.makeText(activity,saved?t("Сохранено в Download","Saved to Download"):t("Не удалось сохранить файл","Could not save the file"),Toast.LENGTH_LONG).show();});});
+        dialog.getButton(saveButton).setEnabled(false);work.execute(()->{boolean ok=false;try{
+            saveAttachment(source,new File("/sdcard/Download"),name,()->closed);
+            ok=true;
+        }catch(Exception e){}final boolean saved=ok;main.post(()->{if(closed)return;if(dialog.isShowing())dialog.getButton(saveButton).setEnabled(true);Toast.makeText(activity,saved?t("Сохранено в Download","Saved to Download"):t("Не удалось сохранить файл","Could not save the file"),Toast.LENGTH_LONG).show();});});
+    }
+    static File saveAttachment(File source,File directory,String name,BooleanSupplier cancelled)throws IOException {
+        String safe=name.replaceAll("[\\\\/\\p{Cntrl}]","_");
+        if(safe.equals(".")||safe.equals("..")||safe.isEmpty())safe="attachment";
+        if(safe.length()>150)safe=safe.substring(0,150);
+        try(InputStream input=new FileInputStream(source)){
+            return ProjectFileExport.save(input,directory,safe,Long.MAX_VALUE,cancelled);
+        }
     }
     @Override public void close(){closed=true;picker.close();if(viewer!=null)viewer.dismiss();for(List<JSONObject> list:drafts.values())for(JSONObject a:list)discard(a);drafts.clear();work.shutdownNow();}
     /** Fit initially, pinch to zoom and drag without recreating the chat surface. */
-    private static final class ZoomImage extends androidx.appcompat.widget.AppCompatImageView {
-        private final Matrix transform=new Matrix();private float x,y;private final ScaleGestureDetector scale;
+    static final class ZoomImage extends androidx.appcompat.widget.AppCompatImageView {
+        private final Matrix transform=new Matrix();private float x,y,downX,downY;private boolean tap;private final ScaleGestureDetector scale;
         ZoomImage(android.content.Context c){super(c);setScaleType(ScaleType.MATRIX);scale=new ScaleGestureDetector(c,new ScaleGestureDetector.SimpleOnScaleGestureListener(){@Override public boolean onScale(ScaleGestureDetector d){transform.postScale(d.getScaleFactor(),d.getScaleFactor(),d.getFocusX(),d.getFocusY());setImageMatrix(transform);return true;}});}
         @Override protected void onSizeChanged(int w,int h,int ow,int oh){super.onSizeChanged(w,h,ow,oh);if(getDrawable()!=null){float s=Math.min((float)w/getDrawable().getIntrinsicWidth(),(float)h/getDrawable().getIntrinsicHeight());transform.setScale(s,s);transform.postTranslate((w-getDrawable().getIntrinsicWidth()*s)/2,(h-getDrawable().getIntrinsicHeight()*s)/2);setImageMatrix(transform);}}
-        @Override public boolean onTouchEvent(MotionEvent e){scale.onTouchEvent(e);if(e.getActionMasked()==MotionEvent.ACTION_MOVE&&!scale.isInProgress()){transform.postTranslate(e.getX()-x,e.getY()-y);setImageMatrix(transform);}x=e.getX();y=e.getY();return true;}
+        @Override public boolean performClick(){super.performClick();return true;}
+        @Override public boolean onTouchEvent(MotionEvent e){
+            scale.onTouchEvent(e);
+            int action=e.getActionMasked();
+            if(action==MotionEvent.ACTION_DOWN){downX=e.getX();downY=e.getY();tap=true;}
+            if(action==MotionEvent.ACTION_POINTER_DOWN||action==MotionEvent.ACTION_CANCEL||scale.isInProgress())tap=false;
+            if(action==MotionEvent.ACTION_MOVE){
+                int slop=ViewConfiguration.get(getContext()).getScaledTouchSlop();
+                if(Math.abs(e.getX()-downX)>slop||Math.abs(e.getY()-downY)>slop)tap=false;
+                if(!scale.isInProgress()){transform.postTranslate(e.getX()-x,e.getY()-y);setImageMatrix(transform);}
+            }
+            if(action==MotionEvent.ACTION_UP){if(tap)performClick();tap=false;}
+            x=e.getX();y=e.getY();return true;
+        }
     }
 }

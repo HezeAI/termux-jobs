@@ -64,7 +64,9 @@ final class WorkspaceDesktop {
     }
     private TextView rendererRow,wrapperFolder,wrapperDriver;
     private CheckBox styleCheck;
-    private boolean styleEnabled(){return activity.getSharedPreferences("workspace-x11",0).getBoolean("termux-style",false);}
+    private static boolean styleSupported(WorkspaceStore.Session p){return com.termux.x11.DesktopPrograms.supportsStyle(target(p));}
+    private static String styleKey(WorkspaceStore.Session p){return target(p).equals("termux")?"termux-style":"termux-style:"+target(p);}
+    private boolean styleEnabled(WorkspaceStore.Session p){return styleSupported(p)&&activity.getSharedPreferences("workspace-x11",0).getBoolean(styleKey(p),false);}
     private void migrateRetiredStyle(){
         android.content.SharedPreferences prefs=activity.getSharedPreferences("workspace-x11",0);
         if(prefs.contains("touch-workspace")){
@@ -75,16 +77,16 @@ final class WorkspaceDesktop {
     }
     private final WorkspaceDesktopWrapper wrapper;
     private boolean rendererBusy(){return wrapper.busy()||preparationGpu||(!preparationRenderer.isEmpty()&&!rendererPreparationFailed)||rendererBackendBusy();}
-    private boolean rendererBackendBusy(){return remote==null||state.getBoolean("started",false)||Arrays.asList("checking","installing","preparing","stopping").contains(state.getString("phase",""))||programs.busy();}
+    private boolean rendererBackendBusy(){return remote==null||state.getBoolean("started",false)||Arrays.asList("checking","installing","cancelling","preparing","stopping").contains(state.getString("phase",""))||programs.busy();}
     private DesktopInstallUi progress;
     private final WorkspaceDesktopPrograms programs;
     private final DesktopKeyboardState keyboardState=new DesktopKeyboardState();
+    private final DesktopFullscreen fullscreen;
     private Runnable keyboardChanged=()->{};
     private final ViewTreeObserver.OnPreDrawListener imeObserver=this::observeIme;
     private boolean observeIme(){
         if(!closed&&Build.VERSION.SDK_INT>=30&&hasSurface()){
-            WindowInsets insets=activity.getWindow().getDecorView().getRootWindowInsets();
-            if(insets!=null&&keyboardState.visibility(insets.isVisible(WindowInsets.Type.ime()))){display.keyboard(false);keyboardChanged.run();}
+            if(keyboardState.visibility(display.imeVisible())){display.keyboard(false);keyboardChanged.run();}
         }
         return true;
     }
@@ -96,7 +98,7 @@ final class WorkspaceDesktop {
         @Override public void onServiceDisconnected(ComponentName n){if(closed)return;if(bound){activity.unbindService(this);bound=false;}remote=null;launchAfterCheck=null;clearPreparation();state=new Bundle();installed.clear();graphical.clear();shownTargets.clear();dismissProgress();programs.failed();sync();changed.run();activity.showToast(tr("X11 остановлен. Терминальная сессия продолжает работу.","X11 stopped. The terminal session is still running."),true);}
         @Override public void onBindingDied(ComponentName n){onServiceDisconnected(n);if(bound){activity.unbindService(this);bound=false;}}
     };
-    WorkspaceDesktop(TermuxActivity a,Supplier<WorkspaceStore.Session> s,BooleanSupplier v,View input,Runnable changed,Runnable restore){activity=a;selected=s;visible=v;this.input=input;this.changed=changed;this.restore=restore;migrateRetiredStyle();wrapper=new WorkspaceDesktopWrapper(a);programs=new WorkspaceDesktopPrograms(a,(op,id)->ensure(op,programsProfile(),id),()->{},this::maintenance);if(Build.VERSION.SDK_INT>=30)activity.getWindow().getDecorView().getViewTreeObserver().addOnPreDrawListener(imeObserver);}
+    WorkspaceDesktop(TermuxActivity a,Supplier<WorkspaceStore.Session> s,BooleanSupplier v,View input,Runnable changed,Runnable restore){activity=a;selected=s;visible=v;this.input=input;this.changed=changed;this.restore=restore;fullscreen=new DesktopFullscreen(a,this::keyboard,this::keyboardEnabled,this::observeIme);migrateRetiredStyle();wrapper=new WorkspaceDesktopWrapper(a);programs=new WorkspaceDesktopPrograms(a,(op,id)->ensure(op,programsProfile(),id),()->{},this::maintenance);if(Build.VERSION.SDK_INT>=30)activity.getWindow().getDecorView().getViewTreeObserver().addOnPreDrawListener(imeObserver);}
     private WorkspaceStore.Session programsProfile(){return programs.profile();}
     static boolean eligible(WorkspaceStore.Session p){
         if(p==null||p.environment.equals("codex")||!p.aiAgent.isEmpty()||p.claudeAgent||p.geminiAgent)return false;
@@ -124,16 +126,17 @@ final class WorkspaceDesktop {
         for(int i=0;i<items.size();i++){
             final int which=i;
             TextView row=AgentStatusUi.row(body,items.get(i),keys[i],()->{dialog[0].dismiss();menuAction(p,which);});
-            if(i==0&&target(p).equals("termux")){
+            if(i==0&&styleSupported(p)){
                 LinearLayout styleRow=new LinearLayout(activity);styleRow.setGravity(Gravity.CENTER_VERTICAL);
                 TextView label=new TextView(activity);label.setText("Стиль Termux-job's");if(!WorkspaceLanguage.code(activity).equals("ru"))label.setText("Termux-job's style");label.setTextColor(WorkspaceDialogs.TEXT);label.setTextSize(13);styleRow.addView(label,new LinearLayout.LayoutParams(0,-2,1));
-                CheckBox check=new CheckBox(activity);styleCheck=check;check.setTag("desktop-termux-style");check.setContentDescription(label.getText());check.setChecked(styleEnabled());check.setEnabled(!rendererBusy());styleRow.addView(check);body.addView(styleRow);
-                check.setOnCheckedChangeListener((button,value)->{if(rendererBusy()){check.setChecked(styleEnabled());return;}activity.getSharedPreferences("workspace-x11",0).edit().putBoolean("termux-style",value).apply();});label.setOnClickListener(v->{if(check.isEnabled())check.performClick();});
+                CheckBox check=new CheckBox(activity);styleCheck=check;check.setTag("desktop-termux-style");check.setContentDescription(label.getText());check.setChecked(styleEnabled(p));check.setEnabled(!rendererBusy());styleRow.addView(check);body.addView(styleRow);
+                check.setOnCheckedChangeListener((button,value)->{if(rendererBusy()){check.setChecked(styleEnabled(p));return;}activity.getSharedPreferences("workspace-x11",0).edit().putBoolean(styleKey(p),value).apply();});label.setOnClickListener(v->{if(check.isEnabled())check.performClick();});
                 AgentStatusUi.info(body,tr("Kali-стиль: тёмные окна, синие акценты, крупные значки и фон с драконом. Применяется при следующем запуске. Для смены сначала остановите рабочий стол.","Kali-inspired style: dark windows, blue accents, large icons and dragon wallpaper. Applied on next launch. Stop the desktop before changing this setting."));
 
             }
         }
         rendererRow=AgentStatusUi.row(body,tr("Рендеринг: ","Rendering: ")+WorkspaceDesktopGpu.label(activity,target(p)),"desktop-renderer",()->{if(rendererBusy())return;dialog[0].dismiss();WorkspaceDesktopGpu.select(activity,target(p),this::rendererBusy,choice->selectRenderer(p,choice),this::menu);});
+        AgentStatusUi.info(body,tr("Поверните телефон горизонтально: рабочий стол займёт весь экран. Поворот обратно или «Назад» вернёт его в окно приложения. Кнопка интерактивного ввода | доступна справа сверху.","Rotate the phone to landscape for a full-screen desktop. Rotate back or press Back to return it to the app window. The Interactive input | button remains at the top right."));
         wrapperFolder=null;wrapperDriver=null;
         if(target(p).equals("termux")&&WorkspaceDesktopGpu.mode(activity,"termux").equals("wrapper")){
             body.removeView(rendererRow);LinearLayout renderLine=new LinearLayout(activity);renderLine.setGravity(Gravity.CENTER_VERTICAL);
@@ -166,7 +169,7 @@ final class WorkspaceDesktop {
     private void maintenance(String operation){
         WorkspaceStore.Session p=programs.profile();
         if(p==null||!DesktopPrograms.supportsTarget(target(p)))return;
-        if((operation.equals("repair-launchers")&&state.getBoolean("started",false))||programs.busy()||Arrays.asList("checking","installing","preparing","stopping").contains(state.getString("phase",""))){activity.showToast(tr("Сначала остановите рабочий стол и дождитесь окончания операции.","Stop the desktop and finish the current operation first."),true);return;}
+        if((operation.equals("repair-launchers")&&state.getBoolean("started",false))||programs.busy()||Arrays.asList("checking","installing","cancelling","preparing","stopping").contains(state.getString("phase",""))){activity.showToast(tr("Сначала остановите рабочий стол и дождитесь окончания операции.","Stop the desktop and finish the current operation first."),true);return;}
         if(operation.equals("firefox-dns-enable")||operation.equals("firefox-dns-disable")){
             if(!DesktopPrograms.supportsFirefox(target(p)))return;
             boolean enable=operation.endsWith("-enable");
@@ -199,7 +202,7 @@ final class WorkspaceDesktop {
     }
     private String diagnosticText(){
         return "Termux Job’s X11 · "+com.termux.BuildConfig.VERSION_NAME+" / "+com.termux.BuildConfig.VERSION_CODE+"\nTarget="+state.getString("target","")+"\nDesktop="+state.getString("desktop","xfce")+"\nGarconFilter="+state.getBoolean("garconFilter",true)+"\n\n"+tr("Запись X11 запускается и останавливается кнопкой в диагностике, без ограничения тремя минутами. popup-new/destroy — впервые замеченные и уничтоженные всплывающие окна; popup-map/hide — показ и скрытие прежних; focus-change — смена X11-фокуса. Popup также может быть подсказкой. content-update считает обновления содержимого всплывающих окон через XDamage; pointer-position-change — изменения положения указателя между опросами. GTK file-events — уведомления GIO о файлах; changed/done/attribute/created/deleted показывают тип, menu/desktop/directory/other — категорию; garcon-tagged — мониторы с меткой Garcon (не все его мониторы имеют метку). last-file-id — хэш пути без его раскрытия. Эти события не подавляются. GTK draw — рисование меню; add/remove — добавление и удаление пунктов; reload — запрос перезагрузки Garcon; enter/leave/motion — события указателя. Начальное подключение XDamage тоже создаёт событие. Если damage=unavailable, обновления содержимого не измеряются. BACKDROP показывает рабочую область, доступность декодирования фона и применение запасного фона. Текст ввода, заголовки окон и изображения наблюдатель не записывает.","Start and stop X11 recording using the diagnostic button, without a three-minute expiry. popup-new/destroy: first-seen/destroyed popup windows; popup-map/hide: showing/hiding existing ones; focus-change: X11 focus change. Popups can also be tooltips. content-update counts popup content changes through XDamage; pointer-position-change counts position changes between samples. GTK file-events: GIO file notifications, split by event and category. garcon-tagged: monitors carrying Garcon metadata (not all Garcon monitors do). last-file-id: path hash without disclosure. Events are not suppressed. GTK draw: menu drawing; add/remove: menu item insertion/removal; reload: Garcon reload request; enter/leave/motion: pointer events. Initial XDamage attachment also emits a notification. If damage=unavailable, content changes are not measured. BACKDROP shows workspace, image decoder status and fallback application. The observer records no input text, window titles or images.")
-            +"\n\nPointer adapter start: "+state.getString("pointerBaseline", "unavailable")+"\nPointer adapter now: "+state.getString("pointerDiagnostic", "unavailable")+"\nRecording="+state.getBoolean("observationActive",false)+" pending="+state.getBoolean("observationPending",false)+" serial="+state.getInt("observationSerial",0)+" "+state.getString("observationError","")+"\n\nLAST OBSERVED BACKDROP\n"+state.getString("currentBackdrop","")+"\nCAPTURE\n"+state.getString("observationLog","")+"\nSTARTUP SNAPSHOT\n"+state.getString("desktopMetadata","")+"\n"+state.getString("detail","")+"\n\n"+tr("Текстовый контекст Fcitx: ","Fcitx text context: ")+(state.getBoolean("textFocus",false)?tr("обнаружен","detected"):tr("не обнаружен","not detected"))+" · "+state.getLong("focusSerial",0)+"\nXFCE ready="+state.getBoolean("desktopReady",false)+(display==null?"":"\nIME "+display.keyboardDiagnostic());
+            +"\n\nPointer adapter start: "+state.getString("pointerBaseline", "unavailable")+"\nPointer adapter now: "+state.getString("pointerDiagnostic", "unavailable")+"\nRecording="+state.getBoolean("observationActive",false)+" pending="+state.getBoolean("observationPending",false)+" serial="+state.getInt("observationSerial",0)+" "+state.getString("observationError","")+"\n\nLAST OBSERVED BACKDROP\n"+state.getString("currentBackdrop","")+"\nCAPTURE\n"+state.getString("observationLog","")+"\nSTARTUP SNAPSHOT\n"+state.getString("desktopMetadata","")+"\n"+state.getString("detail","")+"\n\n"+tr("Текстовый контекст Fcitx: ","Fcitx text context: ")+(state.getBoolean("textFocus",false)?tr("обнаружен","detected"):tr("не обнаружен","not detected"))+" · "+state.getLong("focusSerial",0)+"\nXFCE ready="+state.getBoolean("desktopReady",false)+(Build.VERSION.SDK_INT<30||display==null?"":"\nIME "+display.keyboardDiagnostic());
     }
     private void diagnostics(){
         DiagnosticsPanel.show(activity,new DiagnosticsPanel.Source(){
@@ -312,7 +315,7 @@ final class WorkspaceDesktop {
         String phase=matches?state.getString("phase",""):"checking";
         if(rendererPreparationFailed&&!preparationGpu){preparation.details(null);preparation.preparation(tr("Подготовка рендера","Renderer preparation"),rendererProgressText,-1,"",tr("В терминал","Return to terminal"),true,this::preparationAction);preparation.preparationIdle();return;}
         if(preparationGpu){preparation.details(null);preparation.preparation(tr("Установка рендера","Installing renderer"),rendererProgressText,rendererProgress,"",preparationCancelling?tr("Отменяется…","Cancelling…"):tr("Отменить установку","Cancel installation"),rendererCancel!=null&&!preparationCancelling,this::preparationAction);return;}
-        boolean installing=phase.equals("installing")||preparationNeedsInstall;
+        boolean installing=phase.equals("installing")||phase.equals("cancelling")&&state.getString("componentOperation","").equals("install")||preparationNeedsInstall;
         boolean finished=phase.equals("error")||phase.equals("cancelled")||phase.equals("stopped")||phase.equals("ended");
         String heading=preparationLaunching?tr("Запуск рабочего стола","Starting desktop"):installing?tr("Установка рабочего стола","Installing desktop"):tr("Проверка рабочего стола","Checking desktop");
         int percent=installing&&!preparationNeedsInstall?state.getInt("installPercent",-1):-1;
@@ -358,7 +361,7 @@ final class WorkspaceDesktop {
     private void send(String op,WorkspaceStore.Session p){send(op,p,"");}
     private void send(String op,WorkspaceStore.Session p,String program){
         IBinder binder=remote;if(binder==null||closed)return;
-        Bundle q=X11Remote.command(op);if(p!=null){q.putString("target",target(p));q.putString("desktop",desktop(p));q.putBoolean("garconFilter",false);q.putBoolean("termuxStyle",target(p).equals("termux")&&styleEnabled());q.putString("renderer",WorkspaceDesktopGpu.mode(activity,target(p)));if(op.equals("launch")||op.equals("session-close"))q.putString("owner",owner(p));}if(!program.isEmpty())q.putString("program",program);
+        Bundle q=X11Remote.command(op);if(p!=null){q.putString("target",target(p));q.putString("desktop",desktop(p));q.putBoolean("garconFilter",false);q.putBoolean("termuxStyle",styleEnabled(p));q.putString("renderer",WorkspaceDesktopGpu.mode(activity,target(p)));if(op.equals("launch")||op.equals("session-close"))q.putString("owner",owner(p));}if(!program.isEmpty())q.putString("program",program);
         calls.execute(()->{try{Bundle result=X11Remote.call(binder,q);main.post(()->{if(!closed&&remote==binder){if((op.equals("check")||op.equals("install"))&&p!=null&&launchAfterCheck!=null&&p.id.equals(launchAfterCheck.id)&&p.handle.equals(launchAfterCheck.handle))launchCheckAcknowledged=true;accept(result);poll();sync();changed.run();}});}catch(Exception e){main.post(()->{if(!closed&&remote==binder){if(op.equals("session-close")){activity.showToast(tr("Не удалось подтвердить остановку X11. Проверьте рабочий стол и остановите его вручную.","Could not confirm X11 stop. Check the desktop and stop it manually."),true);return;}if(op.startsWith("observe-")){activity.showToast(tr("Не удалось изменить наблюдение X11. Повторите.","Could not change X11 observation. Try again."),true);poll();return;}if(op.startsWith("programs-")){programs.failed();activity.showToast(tr("Не удалось выполнить действие с программами. Дождитесь завершения другой установки и повторите проверку.","Program action failed. Wait for another installation to finish and check again."),true);return;}launchAfterCheck=null;if(sameSession(p,preparationProfile)){state=new Bundle();state.putString("target",target(p));state.putString("phase","error");state.putString("status",tr("Не удалось выполнить действие X11. Вернитесь в терминал и повторите.","X11 action failed. Return to terminal and retry."));preparationCancelling=false;sync();changed.run();return;}if(op.equals("launch")&&p!=null)graphical.remove(p.id);sync();dismissProgress();WorkspaceStore.Session origin=progressOrigin;progressOrigin=null;WorkspaceStore.Session current=selected.get();if(origin!=null&&current!=null&&current.id.equals(origin.id))menu();activity.showToast(tr("Не удалось выполнить действие X11. Проверьте, не запущен ли стол другого окружения, или остановите X11 и повторите.","X11 action failed. Check whether another environment owns the desktop, or stop X11 and retry."),true);changed.run();}});}});
     }
     private boolean programPolling(){return programs.polling();}
@@ -387,7 +390,7 @@ final class WorkspaceDesktop {
             if(phase.equals("cancelled")||phase.equals("error")||phase.equals("stopped")||phase.equals("ended")){preparationCancelling=false;preparationLaunching=false;}
             preparationUpdate();return;
         }
-        boolean busy=phase.equals("checking")||phase.equals("installing");
+        boolean busy=phase.equals("checking")||phase.equals("installing")||phase.equals("cancelling");
         if(busy){
             if(progress==null)progress=new DesktopInstallUi(activity,"X11 · "+WorkspaceEnvironments.label(t),()->{graphical.clear();send("cancel",progressOrigin!=null?progressOrigin:selected.get());sync();});
             progress.update(b.getString("status",""),b.getString("detail",""),b.getInt("installPercent",-1),b.getLong("installEta",-1),b.getLong("installSampleTime",0),b.getString("installStage","preparing"),b.getLong("downloadBytes",-1),b.getLong("downloadTotal",-1));
@@ -403,7 +406,7 @@ final class WorkspaceDesktop {
             else if(!returnMenu&&(phase.equals("error")||phase.equals("missing")||phase.equals("cancelled")))WorkspaceDialogs.builder(activity).setTitle("X11").setMessage(b.getString("status","")+"\n"+b.getString("detail","")).setPositiveButton("OK",null).show();
         }
         if(phase.equals("stopping")||phase.equals("error")||phase.equals("ended")||phase.equals("cancelled")){boolean wasGraphical=showing();graphical.clear();shownTargets.clear();sync();if(wasGraphical&&!hadProgress&&!phase.equals("stopping"))WorkspaceDialogs.builder(activity).setTitle("X11").setMessage(b.getString("status","")+"\n"+b.getString("detail","")).setPositiveButton("OK",null).show();}
-        if(hasSurface()&&display.inputReady()&&target(selected.get()).equals(t)){
+        if(Build.VERSION.SDK_INT>=30&&hasSurface()&&display.inputReady()&&target(selected.get()).equals(t)){
             keyboardState.automatic=automaticKeyboard(selected.get());
             boolean before=keyboardState.enabled;
             Boolean show=keyboardState.focus(b.getLong("focusSerial",0),b.getBoolean("textFocus",false));
@@ -430,9 +433,11 @@ final class WorkspaceDesktop {
         }
         if(show&&display==null){FrameLayout parent=activity.findViewById(R.id.workspace_terminal_surface);String desktopTarget=target(p);display=new RemoteDesktopView(activity,b->{if(display!=null&&display.inputReady())shownTargets.add(desktopTarget);});displayed=wanted;parent.addView(display,new FrameLayout.LayoutParams(-1,-1));display.connect(remote);poll();}
         if(show){display.startup(desktopReady(target(p)),state.getBoolean("desktopStartupTimedOut",false),state.getInt("startupStep",0));activity.getTerminalView().setWorkspaceTerminalVisible(false);activity.getTerminalView().setVisibility(View.INVISIBLE);input.setVisibility(View.GONE);activity.getTerminalToolbarViewPager().setVisibility(View.GONE);}
+        fullscreen.sync(inline?preparation:show?display:null);
     }
+    boolean fullscreenBack(){return fullscreen.back();}
     void keyboard(){if(Build.VERSION.SDK_INT>=30&&display!=null){display.keyboard(keyboardState.toggle());keyboardChanged.run();}}
     private void dismissProgress(){if(progress!=null){progress.close();progress=null;}}
-    void close(){if(closed)return;graphical.clear();shownTargets.clear();sync();closed=true;clearPreparation();rendererRow=null;wrapperFolder=null;wrapperDriver=null;styleCheck=null;wrapper.close();dismissProgress();programs.close();if(Build.VERSION.SDK_INT>=30){ViewTreeObserver observer=activity.getWindow().getDecorView().getViewTreeObserver();if(observer.isAlive())observer.removeOnPreDrawListener(imeObserver);}main.removeCallbacksAndMessages(null);if(bound){activity.unbindService(connection);bound=false;}remote=null;calls.shutdown();}
+    void close(){if(closed)return;graphical.clear();shownTargets.clear();sync();fullscreen.close();closed=true;clearPreparation();rendererRow=null;wrapperFolder=null;wrapperDriver=null;styleCheck=null;wrapper.close();dismissProgress();programs.close();if(Build.VERSION.SDK_INT>=30){ViewTreeObserver observer=activity.getWindow().getDecorView().getViewTreeObserver();if(observer.isAlive())observer.removeOnPreDrawListener(imeObserver);}main.removeCallbacksAndMessages(null);if(bound){activity.unbindService(connection);bound=false;}remote=null;calls.shutdown();}
     private String tr(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
 }

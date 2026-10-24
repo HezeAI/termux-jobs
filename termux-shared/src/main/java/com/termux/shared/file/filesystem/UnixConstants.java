@@ -56,7 +56,8 @@ public class UnixConstants {
 
     static final int O_SYNC = OsConstants.O_SYNC;
 
-    static final int O_DSYNC = OsConstants.O_DSYNC;
+    // Linux O_DSYNC; public OsConstants field requires API27, app baseline is API26.
+    static final int O_DSYNC = 0x1000;
 
     static final int O_NOFOLLOW = OsConstants.O_NOFOLLOW;
 

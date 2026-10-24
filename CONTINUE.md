@@ -1,3 +1,28 @@
+# v2.0.3 /1352 — final release checks passed
+
+HezeAI confirmed code1351 works, including Fedora MP4, and authorized the final
+audit and GitHub publication as v2.0.3. Release code1352 retains all494 production
+files, runtime assets and JNI libraries from that tested candidate. Same package/
+signer/schema8, no valid-data reset or account/rootfs migration. Current payload:
+`.verification/release-v2.0.3/Termux-Jobs-v2.0.3-arm64.apk`,45882874bytes,
+SHA256 `5c2deb38156453cf76f3d6bf87f2eb913b2dc5eb8fcde7034b93ba6e2debfaa0`.
+
+Fresh1229JVM/184classes, Python579run/578pass/1intentional retired-overlay skip,
+31Node fixtures, five-module lint0errors/210 reviewed warnings; localization,
+681source/test/resource stage matches, runtime/package/ZIP/signer/ABI/privacy
+checks and final updater metadata passed. No working environment/session or
+installed app was changed. Source/build/fixture checks and developer phone
+results are distinguished in VALIDATION-v2.0.3.md and AUDIT-RELEASE-v2.0.3.md.
+Known remaining limits: fresh-device/other-driver combinations, accessibility,
+target-SDK/package-ID architecture, force-kill durability and uncertain remote
+Copy/Move. RU/EN compatibility warns before updates. Final assets include APK,
+update.json, SHA256SUMS and public validation/audit reports. Next: commit/tag,
+upload draft, verify downloaded asset bytes, publish stable, verify latest and
+tagged documentation, then record remote results. Do not reinstall or stop user
+sessions to publish.
+
+# Historical continuation notes
+
 ## Published v1.6.5 fix /1198
 
 Stable/latest: https://github.com/HezeAI/termux-jobs/releases/tag/v1.6.5

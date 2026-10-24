@@ -26,24 +26,27 @@ final class WorkspaceServerDownloads implements AutoCloseable {
     void quick(ServerProfiles.Profile profile,JSONObject entry){choose(profile,Collections.singletonList(entry),true);}
     void selected(ServerProfiles.Profile profile,List<JSONObject> entries){choose(profile,entries,false);}
     void disconnect(String id){if(ownerProfile.equals(id)){choiceEpoch++;picker.cancelSelection();if(result!=null)result.dismiss();cancel();}}
+    private int beginChoice(String id){ownerProfile=id;int epoch=++choiceEpoch;picker.cancelSelection();if(result!=null)result.dismiss();return epoch;}
+    private void trackChoice(AlertDialog dialog,int epoch){dialog.setOnDismissListener(d->{if(choiceEpoch==epoch)choiceEpoch++;});}
     private void choose(ServerProfiles.Profile profile,List<JSONObject> entries,boolean quick){
-        if(closed||entries.isEmpty())return;if(running){presentation.foreground();return;}
-        ownerProfile=profile.id;final int epoch=++choiceEpoch;
-        ServerProfiles.Profile snapshot=new ServerProfiles.Profile();snapshot.id=profile.id;snapshot.name=profile.name;snapshot.host=profile.host;snapshot.port=profile.port;snapshot.user=profile.user;snapshot.auth=profile.auth;snapshot.identity=profile.identity;snapshot.encrypted=profile.encrypted;snapshot.diagnosticsPaused=profile.diagnosticsPaused;
+        if(closed||entries.isEmpty()||ServerConnection.disconnected(activity,profile.id))return;if(running){presentation.foreground();return;}
+        final int epoch=beginChoice(profile.id);
+        ServerProfiles.Profile snapshot=ServerProfiles.connectionSnapshot(profile);
         List<String> paths=new ArrayList<>();for(JSONObject e:entries){if(!e.optBoolean("directory")&&e.optLong("size",0)>ServerSftp.MAX_DOWNLOAD_BYTES){result=WorkspaceDialogs.builder(activity).setMessage(t("Лимит скачивания — 10 ГБ на файл.","Download limit: 10 GB per file.")).setPositiveButton("OK",null).show();return;}paths.add(e.optString("path"));}
         String root="download-"+UUID.randomUUID();
-        if(quick)activity.requestWorkspaceStorageAccess(()->{if(closed||epoch!=choiceEpoch)return;if(closed)return;WorkspaceStore.Session local=new WorkspaceStore.Session();local.environment="termux";local.name=t("Память устройства","Device storage");confirm(snapshot,paths,local,"/sdcard/Download",root);});
-        else picker.chooseDirectory(t("Куда скачать?","Choose download destination"),(location,path)->confirm(snapshot,paths,location,path,root));
+        if(quick)activity.requestWorkspaceStorageAccess(()->{if(closed||epoch!=choiceEpoch)return;WorkspaceStore.Session local=new WorkspaceStore.Session();local.environment="termux";local.name=t("Память устройства","Device storage");confirm(snapshot,paths,local,"/sdcard/Download",root,epoch);});
+        else picker.chooseDirectory(t("Куда скачать?","Choose download destination"),(location,path)->confirm(snapshot,paths,location,path,root,epoch));
     }
-    private void confirm(ServerProfiles.Profile profile,List<String> paths,WorkspaceStore.Session location,String folder,String root){
-        if(closed||ServerConnection.disconnected(activity,profile.id))return;
+    private void confirm(ServerProfiles.Profile profile,List<String> paths,WorkspaceStore.Session location,String folder,String root,int epoch){
+        if(closed||epoch!=choiceEpoch||ServerConnection.disconnected(activity,profile.id))return;
         result=WorkspaceDialogs.builder(activity).setTitle(t("Скачать выбранное?","Download selection?"))
             .setMessage(location.name+"\n"+folder+"/"+root+"\n\n"+t("Выбрано: ","Selected: ")+paths.size()+t("\nВ отдельную папку, с исходными именами и вложенностью. Существующие файлы не заменяются. Ссылки и специальные файлы пропускаются. До 10 ГБ на файл, 20 000 записей и 256 ГБ суммарно; соединение до 6 часов. Не закрывайте приложение.","\nInto a separate folder with original names and hierarchy. Existing files are not replaced. Links and special files are skipped. Up to 10 GB per file, 20,000 entries and 256 GB total; connection up to 6 hours. Keep the app open."))
-            .setPositiveButton(t("Скачать","Download"),(d,w)->transfer(profile,paths,location,folder,root)).setNegativeButton(t("Отмена","Cancel"),null).show();
+            .setPositiveButton(t("Скачать","Download"),(d,w)->transfer(profile,paths,location,folder,root,epoch)).setNegativeButton(t("Отмена","Cancel"),null).show();
+        trackChoice(result,epoch);
     }
-    private void transfer(ServerProfiles.Profile profile,List<String> paths,WorkspaceStore.Session location,String folder,String root){
-        if(closed||running)return;running=true;cancelled=false;started=SystemClock.uptimeMillis();lastUpdate=0;
-        LinearLayout body=new LinearLayout(activity);body.setOrientation(1);int pad=WorkspaceDialogs.dp(activity,16);body.setPadding(pad,pad,pad,pad);
+    private void transfer(ServerProfiles.Profile profile,List<String> paths,WorkspaceStore.Session location,String folder,String root,int epoch){
+        if(closed||running||epoch!=choiceEpoch||ServerConnection.disconnected(activity,profile.id))return;choiceEpoch++;ownerProfile=profile.id;running=true;cancelled=false;started=SystemClock.uptimeMillis();lastUpdate=0;
+        LinearLayout body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);int pad=WorkspaceDialogs.dp(activity,16);body.setPadding(pad,pad,pad,pad);
         TextView status=new TextView(activity);status.setTextColor(WorkspaceDialogs.TEXT);status.setText(t("Проверка выбранных файлов…","Checking selected files…"));body.addView(status);
         ProgressBar bar=new ProgressBar(activity,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(1000);bar.setIndeterminate(true);body.addView(bar);
         progress=WorkspaceDialogs.builder(activity).setTitle(t("Скачивание","Download")).setView(body).setNeutralButton(t("В фон","Background"),null).setNegativeButton(t("Остановить","Stop"),null).create();progress.setCancelable(false);progress.setCanceledOnTouchOutside(false);progress.show();presentation.begin(profile.id,progress,t("Проверка выбранных файлов…","Checking selected files…"));progress.getButton(-3).setOnClickListener(v->presentation.background());progress.getButton(-2).setOnClickListener(v->{status.setText(t("Остановка…","Stopping…"));progress.getButton(-2).setEnabled(false);cancel();});
@@ -69,18 +72,22 @@ final class WorkspaceServerDownloads implements AutoCloseable {
                 if(!done&&error!=null)message+="\n"+error.substring(0,Math.min(180,error.length()));result=WorkspaceDialogs.builder(activity).setTitle(t("Скачивание","Download")).setMessage(message).setPositiveButton("OK",null).create();result.setCanceledOnTouchOutside(false);if(hidden&&done)activity.showToast(t("Скачивание завершено","Download complete"),false);else result.show();});
         });
     }
-    void move(ServerProfiles.Profile profile,List<JSONObject> entries,String folder,Runnable finished){
-        if(closed||running||entries.isEmpty())return;
+    void move(ServerProfiles.Profile selectedProfile,List<JSONObject> entries,String folder,Runnable finished){
+        if(closed||running||entries.isEmpty()||ServerConnection.disconnected(activity,selectedProfile.id))return;
+        final ServerProfiles.Profile profile=ServerProfiles.connectionSnapshot(selectedProfile);final int epoch=beginChoice(profile.id);
+        final List<String> paths=new ArrayList<>();for(JSONObject entry:entries)paths.add(entry.optString("path"));
         result=WorkspaceDialogs.builder(activity).setTitle(t("Переместить сюда?","Move here?"))
-            .setMessage(t("Выбрано: ","Selected: ")+entries.size()+"\n"+folder+t("\nТолько внутри этого сервера, без перезаписи. Между дисками операция может быть недоступна. При ошибке уже перемещённые объекты остаются в папке назначения.","\nWithin this server only, without overwriting. Moving between filesystems may be unavailable. If interrupted, already moved entries remain at the destination."))
+            .setMessage(t("Выбрано: ","Selected: ")+paths.size()+"\n"+folder+t("\nТолько внутри этого сервера, без перезаписи. Между дисками операция может быть недоступна. При ошибке уже перемещённые объекты остаются в папке назначения.","\nWithin this server only, without overwriting. Moving between filesystems may be unavailable. If interrupted, already moved entries remain at the destination."))
             .setNegativeButton(t("Отмена","Cancel"),null).setPositiveButton(t("Переместить","Move"),(dialog,which)->{
-                ownerProfile=profile.id;running=true;cancelled=false;TextView state=new TextView(activity);state.setText(t("Перемещение…","Moving…"));state.setPadding(24,24,24,24);
+                if(closed||running||epoch!=choiceEpoch||ServerConnection.disconnected(activity,profile.id))return;
+                choiceEpoch++;ownerProfile=profile.id;running=true;cancelled=false;TextView state=new TextView(activity);state.setText(t("Перемещение…","Moving…"));state.setPadding(24,24,24,24);
                 progress=WorkspaceDialogs.builder(activity).setTitle(t("Перемещение","Move")).setView(state).setNegativeButton(t("Остановить","Stop"),(d,w)->cancel()).create();progress.setCancelable(false);progress.setCanceledOnTouchOutside(false);progress.show();
                 worker.execute(()->{int moved=0;Exception failure=null;ServerDiagnostics.Trace trace=ServerDiagnostics.begin(profile,ServerDiagnostics.Op.FILE_MOVE);
-                    try{check();ServerConnection owned=new ServerConnection(activity,profile);connection=owned;check();try(ServerSftp sftp=owned.sftp()){channel=sftp;String target=sftp.canonical(folder);for(JSONObject entry:entries){check();String path=entry.getString("path");ServerSftp.Info info=sftp.stat(path);sftp.move(path,target,info);moved++;}}}catch(Exception e){failure=e;}finally{channel=null;ServerConnection owned=connection;connection=null;if(owned!=null)owned.close();trace.finish(trace.elapsed(),0,0,failure);}
-                    final int count=moved;final String error=failure==null?"":failure.getMessage();main.post(()->{running=false;if(progress!=null)progress.dismiss();progress=null;if(closed)return;result=WorkspaceDialogs.builder(activity).setTitle(t("Перемещение","Move")).setMessage(t("Перемещено: ","Moved: ")+count+" / "+entries.size()+"\n"+folder+(error==null||error.isEmpty()?"":"\n"+error)).setPositiveButton("OK",null).show();finished.run();});
+                    try{check();ServerConnection owned=new ServerConnection(activity,profile);connection=owned;check();try(ServerSftp sftp=owned.sftp()){channel=sftp;String target=sftp.canonical(folder);for(String path:paths){check();ServerSftp.Info info=sftp.stat(path);sftp.move(path,target,info);moved++;}}}catch(Exception e){failure=e;}finally{channel=null;ServerConnection owned=connection;connection=null;if(owned!=null)owned.close();trace.finish(trace.elapsed(),0,0,failure);}
+                    final int count=moved;final String error=failure==null?"":failure.getMessage();main.post(()->{running=false;if(progress!=null)progress.dismiss();progress=null;if(closed)return;result=WorkspaceDialogs.builder(activity).setTitle(t("Перемещение","Move")).setMessage(t("Перемещено: ","Moved: ")+count+" / "+paths.size()+"\n"+folder+(error==null||error.isEmpty()?"":"\n"+error)).setPositiveButton("OK",null).show();finished.run();});
                 });
             }).show();
+        trackChoice(result,epoch);
     }
     private void check(){if(cancelled||closed)throw new CancellationException();}
     private void update(TextView status,ProgressBar bar,String text,long bytes,long total){long now=SystemClock.uptimeMillis();if(now-lastUpdate<150&&bytes!=total)return;lastUpdate=now;main.post(()->{if(closed||cancelled)return;status.setText(text);presentation.update(text,bytes,total);bar.setIndeterminate(total<0);if(total>=0)bar.setProgress(total==0?1000:(int)Math.min(1000,bytes*1000.0/total));});}

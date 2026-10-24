@@ -20,6 +20,7 @@ final class DesktopCatalogCache {
         for(String suffix:new String[]{"",".new",".bak"})if(Files.isSymbolicLink(new File(file.getPath()+suffix).toPath()))throw new IOException("Cache file is a link");
         return file;
     }
+    private static int itemsSchema(String target){return target.equals("fedora")?3:2;}
     /** Only complete fixed program statuses, never package commands or credentials. */
     synchronized android.os.Bundle loadItems(String target){
         try(FileInputStream in=new AtomicFile(file(target,target.equals("opensuse")?"-recommended-media2":"-recommended")).openRead()){
@@ -28,7 +29,7 @@ final class DesktopCatalogCache {
             while(n<bytes.length&&(count=in.read(bytes,n,bytes.length-n))!=-1)n+=count;
             if(n>4096)return null;
             JSONObject data=new JSONObject(new String(bytes,0,n,StandardCharsets.UTF_8));
-            if(data.length()!=DesktopPrograms.IDS.length+1||data.optInt("_schema",-1)!=2)return null;
+            if(data.length()!=DesktopPrograms.IDS.length+1||data.optInt("_schema",-1)!=itemsSchema(target))return null;
             android.os.Bundle items=new android.os.Bundle();
             for(String id:DesktopPrograms.IDS){Object value=data.get(id);if(!(value instanceof Boolean))return null;items.putBoolean(id,(Boolean)value);}
             return items;
@@ -41,7 +42,7 @@ final class DesktopCatalogCache {
             if(items!=null){
                 if(items.size()!=DesktopPrograms.IDS.length)return;
                 for(String id:DesktopPrograms.IDS){Object value=items.get(id);if(!(value instanceof Boolean))return;data.put(id,value);}
-                data.put("_schema",2);
+                data.put("_schema",itemsSchema(target));
             }
             atomic=new AtomicFile(file(target,target.equals("opensuse")?"-recommended-media2":"-recommended"));stream=atomic.startWrite();
             stream.write(data.toString().getBytes(StandardCharsets.UTF_8));atomic.finishWrite(stream);stream=null;

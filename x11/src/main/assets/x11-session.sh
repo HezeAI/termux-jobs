@@ -4,10 +4,16 @@ set -u
 case ${JOBS_X11_FOCUS_TOKEN:-} in ''|*[!a-f0-9-]*) echo 'ERROR:FOCUS_TOKEN';exit 2;;esac
 case ${JOBS_X11_DESKTOP:-xfce} in xfce) ;; *) echo ERROR:DESKTOP_CHOICE;exit 2;;esac
 jobs_control=${JOBS_X11_CONTROL:-/tmp/termux-jobs-x11}
-if [ "${JOBS_X11_TARGET:-}" = termux ] && [ -r "$jobs_control/x11-style.py" ];then
-    python3 -B "$jobs_control/x11-style.py" "${JOBS_X11_STYLE:-0}" || exit 1
+export JOBS_X11_CONTROL="$jobs_control"
+case ${JOBS_X11_TARGET:-} in
+ termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux)
+    if [ -r "$jobs_control/x11-style.py" ];then
+        python3 -B "$jobs_control/x11-style.py" "${JOBS_X11_STYLE:-0}" || exit 1
+    elif [ "${JOBS_X11_STYLE:-0}" != 0 ];then echo ERROR:STYLE_MISSING;exit 1;fi
     if [ "${JOBS_X11_STYLE:-0}" = 1 ];then export GTK_THEME=TermuxJobsStyle XCURSOR_THEME=TermuxJobsCursor XCURSOR_SIZE=32;fi
-fi
+ ;;
+ *) [ "${JOBS_X11_STYLE:-0}" = 0 ] || { echo ERROR:STYLE_TARGET;exit 1; };;
+esac
 # Applied only to Alpine's owned desktop tree. No host/system library replacement.
 if [ "${JOBS_X11_ALPINE_COMPAT:-0}" = 1 ];then
     if [ ! -f "$jobs_control/x11-alpine-compat.so" ];then echo ERROR:ALPINE_COMPAT_MISSING;exit 1;fi

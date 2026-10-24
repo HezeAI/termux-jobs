@@ -1,5 +1,7 @@
 package com.termux.shared.shell;
 
+import java.util.Locale;
+
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.os.Build;
@@ -215,7 +217,7 @@ public class TermuxShellUtils {
                 if (termuxAPKReleaseOld == null) {
                     String signingCertificateSHA256Digest = PackageUtils.getSigningCertificateSHA256DigestForPackage(termuxPackageContext);
                     if (signingCertificateSHA256Digest != null)
-                        TERMUX_APK_RELEASE = TermuxUtils.getAPKRelease(signingCertificateSHA256Digest).replaceAll("[^a-zA-Z]", "_").toUpperCase();
+                        TERMUX_APK_RELEASE = TermuxUtils.getAPKRelease(signingCertificateSHA256Digest).replaceAll("[^a-zA-Z]", "_").toUpperCase(Locale.ROOT);
                 } else {
                     TERMUX_APK_RELEASE = termuxAPKReleaseOld;
                 }

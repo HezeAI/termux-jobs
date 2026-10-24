@@ -13,6 +13,15 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class) @Config(sdk=28)
 public class WorkspaceBackupProgressTest {
+ @Test public void cancelKeepsProgressVisibleUntilWorkerCompletionAndIgnoresLateEvents()throws Exception {
+  Activity a=Robolectric.buildActivity(Activity.class).setup().get();WorkspaceBackupProgress p=new WorkspaceBackupProgress(a,()->0L);
+  java.util.concurrent.atomic.AtomicInteger calls=new java.util.concurrent.atomic.AtomicInteger();
+  AlertDialog d=WorkspaceBackupUi.backupBuilder(a).setView(p.view).setNegativeButton("Cancel",(x,w)->fail("default dismiss must be replaced")).create();d.setCancelable(false);d.show();p.bindCancellation(d,calls::incrementAndGet);p.start();
+  d.getButton(-2).performClick();assertTrue(d.isShowing());assertTrue(p.isStopping());assertFalse(d.getButton(-2).isEnabled());assertEquals(1,calls.get());assertTrue(p.bar.isIndeterminate());
+  String label=p.stage.getText().toString();p.update("Late event",new JSONObject().put("processed",100).put("total",100));assertEquals(label,p.stage.getText().toString());assertTrue(p.bar.isIndeterminate());
+  d.getButton(-2).performClick();assertEquals(1,calls.get());
+  MotionEvent outside=MotionEvent.obtain(0,0,MotionEvent.ACTION_OUTSIDE,-1000,-1000,0);d.onTouchEvent(outside);outside.recycle();assertTrue(d.isShowing());p.close();d.dismiss();assertFalse(d.isShowing());a.finish();
+ }
  @Test public void fileNamesReplaceInOneLineAndKnownTotalFillsBar() throws Exception {
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AtomicLong clock=new AtomicLong();WorkspaceBackupProgress p=new WorkspaceBackupProgress(a,clock::get);
   p.update("Archive",new JSONObject().put("current","first").put("processed",25).put("total",100));

@@ -11,7 +11,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
-import android.webkit.MimeTypeMap;
+import com.termux.filepicker.ProviderFiles;
 
 import com.termux.app.utils.PluginUtils;
 import com.termux.shared.data.IntentUtils;
@@ -41,7 +41,7 @@ public class TermuxOpenReceiver extends BroadcastReceiver {
         final String filePath = data.getPath();
         final String contentTypeExtra = intent.getStringExtra("content-type");
         final boolean useChooser = intent.getBooleanExtra("chooser", false);
-        final String intentAction = intent.getAction() == null ? Intent.ACTION_VIEW : intent.getAction();
+        String intentAction = intent.getAction() == null ? Intent.ACTION_VIEW : intent.getAction();
         switch (intentAction) {
             case Intent.ACTION_SEND:
             case Intent.ACTION_VIEW:
@@ -49,6 +49,7 @@ public class TermuxOpenReceiver extends BroadcastReceiver {
                 break;
             default:
                 Logger.logError(LOG_TAG, "Invalid action '" + intentAction + "', using 'view'");
+                intentAction = Intent.ACTION_VIEW;
                 break;
         }
 
@@ -70,6 +71,7 @@ public class TermuxOpenReceiver extends BroadcastReceiver {
             return;
         }
 
+        if (filePath == null) return;
         final File fileToShare = new File(filePath);
         if (!(fileToShare.isFile() && fileToShare.canRead())) {
             Logger.logError(LOG_TAG, "termux-open: Not a readable file: '" + fileToShare.getAbsolutePath() + "'");
@@ -82,18 +84,14 @@ public class TermuxOpenReceiver extends BroadcastReceiver {
 
         String contentTypeToUse;
         if (contentTypeExtra == null) {
-            String fileName = fileToShare.getName();
-            int lastDotIndex = fileName.lastIndexOf('.');
-            String fileExtension = fileName.substring(lastDotIndex + 1);
-            MimeTypeMap mimeTypes = MimeTypeMap.getSingleton();
-            // Lower casing makes it work with e.g. "JPG":
-            contentTypeToUse = mimeTypes.getMimeTypeFromExtension(fileExtension.toLowerCase());
+            contentTypeToUse = ProviderFiles.mimeType(fileToShare);
             if (contentTypeToUse == null) contentTypeToUse = "application/octet-stream";
         } else {
             contentTypeToUse = contentTypeExtra;
         }
 
-        Uri uriToShare = Uri.parse("content://" + TermuxConstants.TERMUX_FILE_SHARE_URI_AUTHORITY + fileToShare.getAbsolutePath());
+        Uri uriToShare = new Uri.Builder().scheme("content").authority(TermuxConstants.TERMUX_FILE_SHARE_URI_AUTHORITY)
+            .path(fileToShare.getAbsolutePath()).build();
 
         if (Intent.ACTION_SEND.equals(intentAction)) {
             sendIntent.putExtra(Intent.EXTRA_STREAM, uriToShare);
@@ -124,7 +122,7 @@ public class TermuxOpenReceiver extends BroadcastReceiver {
 
         @Override
         public Cursor query(@NonNull Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
-            File file = new File(uri.getPath());
+            File file = fileForUri(uri);
 
             if (projection == null) {
                 projection = new String[]{
@@ -140,10 +138,10 @@ public class TermuxOpenReceiver extends BroadcastReceiver {
                 Object value;
                 switch (column) {
                     case MediaStore.MediaColumns.DISPLAY_NAME:
-                        value = file.getName();
+                        value = new File(uri.getPath()).getName();
                         break;
                     case MediaStore.MediaColumns.SIZE:
-                        value = (int) file.length();
+                        value = file.length();
                         break;
                     case MediaStore.MediaColumns._ID:
                         value = 1;
@@ -161,14 +159,8 @@ public class TermuxOpenReceiver extends BroadcastReceiver {
 
         @Override
         public String getType(@NonNull Uri uri) {
-            String path = uri.getLastPathSegment();
-            int extIndex = path.lastIndexOf('.') + 1;
-            if (extIndex > 0) {
-                MimeTypeMap mimeMap = MimeTypeMap.getSingleton();
-                String ext = path.substring(extIndex).toLowerCase();
-                return mimeMap.getMimeTypeFromExtension(ext);
-            }
-            return null;
+            fileForUri(uri);
+            return ProviderFiles.mimeType(new File(uri.getPath()));
         }
 
         @Override
@@ -188,36 +180,39 @@ public class TermuxOpenReceiver extends BroadcastReceiver {
 
         @Override
         public ParcelFileDescriptor openFile(@NonNull Uri uri, @NonNull String mode) throws FileNotFoundException {
-            File file = new File(uri.getPath());
+            File file = fileForUri(uri);
+            String errmsg = externalAppsPolicyError();
+            if (errmsg != null) throw new IllegalArgumentException(errmsg);
+            return ProviderFiles.open(file.getPath(), mode, null, allowedRoots(), readOnlyFiles());
+        }
+
+        File[] allowedRoots() {
+            return new File[]{TermuxConstants.TERMUX_FILES_DIR, Environment.getExternalStorageDirectory()};
+        }
+
+        File[] readOnlyFiles() {
+            return new File[]{TermuxConstants.TERMUX_PROPERTIES_PRIMARY_FILE,
+                TermuxConstants.TERMUX_PROPERTIES_SECONDARY_FILE,
+                TermuxConstants.TERMUX_FLOAT_PROPERTIES_PRIMARY_FILE,
+                TermuxConstants.TERMUX_FLOAT_PROPERTIES_SECONDARY_FILE};
+        }
+
+        String externalAppsPolicyError() {
+            return PluginUtils.checkIfAllowExternalAppsPolicyIsViolated(getContext(), LOG_TAG);
+        }
+
+        private File fileForUri(Uri uri) {
             try {
-                String path = file.getCanonicalPath();
-                Logger.logDebug(LOG_TAG, "Open file request received for \"" + path + "\" with mode \"" + mode + "\"");
-                String storagePath = Environment.getExternalStorageDirectory().getCanonicalPath();
-                // See https://support.google.com/faqs/answer/7496913:
-                if (!(path.startsWith(TermuxConstants.TERMUX_FILES_DIR_PATH) || path.startsWith(storagePath))) {
-                    throw new IllegalArgumentException("Invalid path: " + path);
-                }
-
-                // If "allow-external-apps" property to not set to "true", then throw exception
-                String errmsg = PluginUtils.checkIfAllowExternalAppsPolicyIsViolated(getContext(), LOG_TAG);
-                if (errmsg != null) {
-                    throw new IllegalArgumentException(errmsg);
-                }
-
-                // Do not allow apps with RUN_COMMAND permission to modify termux apps properties files,
-                // including allow-external-apps
-                if (TermuxConstants.TERMUX_PROPERTIES_PRIMARY_FILE_PATH.equals(path) ||
-                    TermuxConstants.TERMUX_PROPERTIES_SECONDARY_FILE_PATH.equals(path) ||
-                    TermuxConstants.TERMUX_FLOAT_PROPERTIES_PRIMARY_FILE_PATH.equals(path) ||
-                    TermuxConstants.TERMUX_FLOAT_PROPERTIES_SECONDARY_FILE_PATH.equals(path)) {
-                    mode = "r";
-                }
-
+                if (!"content".equals(uri.getScheme()) ||
+                    !TermuxConstants.TERMUX_FILE_SHARE_URI_AUTHORITY.equals(uri.getAuthority()) ||
+                    uri.getQuery() != null || uri.getFragment() != null)
+                    throw new FileNotFoundException("Invalid provider URI");
+                File file = ProviderFiles.resolve(uri.getPath(), allowedRoots());
+                if (!file.isFile()) throw new FileNotFoundException("Not a regular file");
+                return file;
             } catch (IOException e) {
-                throw new IllegalArgumentException(e);
+                throw new IllegalArgumentException("Invalid provider file", e);
             }
-
-            return ParcelFileDescriptor.open(file, ParcelFileDescriptor.parseMode(mode));
         }
     }
 

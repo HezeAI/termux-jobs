@@ -6,6 +6,10 @@ case $desktop in xfce) ;; *) echo ERROR:DESKTOP_CHOICE;exit 2;;esac
 [[ $op == check || $op == install || $op == repair-launchers || $op == firefox-compat-on || $op == firefox-compat-off || $op == run ]] || exit 2
 case $target in termux|ubuntu|jobs-x11-ubuntu|debian|alpine|fedora|opensuse|void|archlinux) ;; *) echo 'ERROR:UNSUPPORTED_DESKTOP';exit 2;;esac
 : "${PREFIX:?}"
+case ${JOBS_X11_STYLE:-0} in 0|1) ;;*) echo ERROR:STYLE_VALUE;exit 2;;esac
+if [[ ${JOBS_X11_STYLE:-0} == 1 ]];then
+ case $target in termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux) ;;*) echo ERROR:STYLE_TARGET;exit 2;;esac
+fi
 if [[ ${JOBS_X11_RENDERER:-cpu} == wrapper && $target != termux ]];then echo ERROR:WRAPPER_TERMUX_ONLY;exit 2;fi
 # Android bind mounts can expose the same directory under different paths.
 # Compare filesystem identity, not pwd/realpath text. Never accept a different directory.
@@ -87,7 +91,7 @@ if [[ $op == firefox-compat-on || $op == firefox-compat-off ]];then
     echo READY:desktop;exit
 fi
 if [[ $op == repair-launchers ]];then
-    [[ $target == jobs-x11-ubuntu || $target == debian ]] || { echo 'ERROR:REPAIR_TEST_ONLY';exit 2; }
+    [[ $target == ubuntu || $target == jobs-x11-ubuntu || $target == debian ]] || { echo 'ERROR:REPAIR_TARGET';exit 2; }
     installed || { echo 'MISSING:environment';exit 1; }
     guest 'JOBS_X11_LAUNCHERS_REPAIR=1 python3 /tmp/termux-jobs-x11/x11-launchers.py --repair'
     guest "$components"
@@ -206,4 +210,4 @@ else
     jobs_audio_start
     alpine_compat=0;if [[ $target == alpine ]];then alpine_compat=1;fi
     jobs_virgl_name=none;if [[ $gpu_mode == virgl ]];then jobs_virgl_name=${jobs_virgl_dir##*/};fi
-    jobs_desktop_run guest "export JOBS_X11_DISPLAY=$desktop_display JOBS_X11_VIRGL_NAME=$jobs_virgl_name JOBS_X11_VIRGL_CLIENT=${jobs_virgl_client:-none} JOBS_X11_ALPINE_COMPAT=$alpine_compat JOBS_X11_RENDERER=$gpu_mode JOBS_X11_TARGET=$target; export PULSE_SERVER=unix:$jobs_audio_guest/native PULSE_COOKIE=$jobs_audio_guest/cookie; export JOBS_X11_FOCUS_TOKEN=$token JOBS_X11_DESKTOP=$desktop; "'unset SESSION_MANAGER DBUS_SESSION_BUS_ADDRESS; export DISPLAY=:$JOBS_X11_DISPLAY XAUTHORITY=/tmp/termux-jobs-x11/authority; if [ "$JOBS_X11_RENDERER" = turnip ];then . /tmp/termux-jobs-x11/x11-gpu-env.sh; jobs_gpu_environment "$JOBS_X11_TARGET" /tmp/termux-jobs-x11-gpu || exit;elif [ "$JOBS_X11_RENDERER" = virgl ];then . /tmp/termux-jobs-x11/x11-virgl-env.sh;jobs_virgl_environment "$JOBS_X11_TARGET" "/tmp/termux-jobs-x11/$JOBS_X11_VIRGL_NAME/sock" "$JOBS_X11_VIRGL_CLIENT" || exit;else export LIBGL_ALWAYS_SOFTWARE=1;fi; export XDG_RUNTIME_DIR=/tmp/jobs-x11-runtime-$JOBS_X11_DISPLAY; mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"; if [ "$JOBS_X11_ALPINE_COMPAT" = 1 ];then test -f /tmp/termux-jobs-x11/x11-alpine-compat.so || { echo ERROR:ALPINE_COMPAT_MISSING;exit 1; }; export LD_PRELOAD="/tmp/termux-jobs-x11/x11-alpine-compat.so${LD_PRELOAD:+:$LD_PRELOAD}";fi; if [ "$JOBS_X11_TARGET" = fedora ] || [ "$JOBS_X11_TARGET" = archlinux ];then test -f /tmp/termux-jobs-x11/x11-fedora-glycin.so || { echo ERROR:FEDORA_GLYCIN_MISSING;exit 1; }; export LD_PRELOAD="/tmp/termux-jobs-x11/x11-fedora-glycin.so${LD_PRELOAD:+:$LD_PRELOAD}";fi; exec dbus-run-session -- /bin/sh /tmp/termux-jobs-x11/x11-session.sh';fi
+    jobs_desktop_run guest "export JOBS_X11_DISPLAY=$desktop_display JOBS_X11_VIRGL_NAME=$jobs_virgl_name JOBS_X11_VIRGL_CLIENT=${jobs_virgl_client:-none} JOBS_X11_ALPINE_COMPAT=$alpine_compat JOBS_X11_RENDERER=$gpu_mode JOBS_X11_TARGET=$target JOBS_X11_STYLE=${JOBS_X11_STYLE:-0}; export PULSE_SERVER=unix:$jobs_audio_guest/native PULSE_COOKIE=$jobs_audio_guest/cookie; export JOBS_X11_FOCUS_TOKEN=$token JOBS_X11_DESKTOP=$desktop; "'unset SESSION_MANAGER DBUS_SESSION_BUS_ADDRESS; export DISPLAY=:$JOBS_X11_DISPLAY XAUTHORITY=/tmp/termux-jobs-x11/authority; if [ "$JOBS_X11_RENDERER" = turnip ];then . /tmp/termux-jobs-x11/x11-gpu-env.sh; jobs_gpu_environment "$JOBS_X11_TARGET" /tmp/termux-jobs-x11-gpu || exit;elif [ "$JOBS_X11_RENDERER" = virgl ];then . /tmp/termux-jobs-x11/x11-virgl-env.sh;jobs_virgl_environment "$JOBS_X11_TARGET" "/tmp/termux-jobs-x11/$JOBS_X11_VIRGL_NAME/sock" "$JOBS_X11_VIRGL_CLIENT" || exit;else export LIBGL_ALWAYS_SOFTWARE=1;fi; export XDG_RUNTIME_DIR=/tmp/jobs-x11-runtime-$JOBS_X11_DISPLAY; mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"; if [ "$JOBS_X11_ALPINE_COMPAT" = 1 ];then test -f /tmp/termux-jobs-x11/x11-alpine-compat.so || { echo ERROR:ALPINE_COMPAT_MISSING;exit 1; }; export LD_PRELOAD="/tmp/termux-jobs-x11/x11-alpine-compat.so${LD_PRELOAD:+:$LD_PRELOAD}";fi; if [ "$JOBS_X11_TARGET" = fedora ] || [ "$JOBS_X11_TARGET" = archlinux ];then test -f /tmp/termux-jobs-x11/x11-fedora-glycin.so || { echo ERROR:FEDORA_GLYCIN_MISSING;exit 1; }; export LD_PRELOAD="/tmp/termux-jobs-x11/x11-fedora-glycin.so${LD_PRELOAD:+:$LD_PRELOAD}";fi; exec dbus-run-session -- /bin/sh /tmp/termux-jobs-x11/x11-session.sh';fi

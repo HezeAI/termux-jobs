@@ -36,7 +36,7 @@ GROUPS={
   'archives':['xarchiver','unzip','zip','7zip'],'images':['ristretto','tumbler'],
   'fonts':['dejavu-sans-fonts','liberation-sans-fonts','adwaita-icon-theme'],'browser':['firefox'],
   'office':['libreoffice-writer','libreoffice-calc','libreoffice-impress'], 'pdf':['evince'],
-  'media':['parole','gstreamer1-plugin-libav','gstreamer1-plugins-good','gstreamer1-plugins-bad-free','gstreamer1-plugins-base']},
+  'media':['parole','gstreamer1','libstdc++','libgcc','gstreamer1-plugin-libav','gstreamer1-plugins-good','gstreamer1-plugins-bad-free','gstreamer1-plugins-base']},
  'termux':{
   'files':['thunar'],'terminal':['xfce4-terminal'],'editor':['mousepad'],
   'archives':['xarchiver','unzip','zip','7zip'],'images':['ristretto','tumbler','poppler'],
@@ -361,7 +361,7 @@ def main():
   elif target=='alpine':
    if not resume:run(['apk','update','--no-progress','--progress-fd','3'])
   elif target=='fedora':
-   if not resume:run(['dnf','-y','--setopt=retries=3','--setopt=timeout=30','makecache','--refresh'])
+   if not resume:run(['dnf','-y','--disable-repo=fedora-cisco-openh264','--setopt=retries=3','--setopt=timeout=30','makecache','--refresh'])
   elif target=='opensuse':zypper_install(pkgs,resume)
   elif not resume:run(['apt-get','-o','Acquire::Retries=3','-o','Acquire::http::Timeout=30','-o','Acquire::https::Timeout=30','-o','Debug::acquire::progress=true','-o','APT::Status-Fd=3','-o','Dpkg::Use-Pty=0','update'])
   if target!='opensuse':print('JOBS_PROGRAM_INDEX_READY',flush=True)
@@ -372,7 +372,7 @@ def main():
    elif target=='alpine':
     run(['mkdir','-p','--','/var/cache/apk'])
     run(['apk','--cache-dir','/var/cache/apk','add','--no-progress','--progress-fd','3',*pkgs])
-   elif target=='fedora':run(['dnf','-y','--setopt=retries=3','--setopt=timeout=30','--setopt=keepcache=True','--setopt=install_weak_deps=False',*(['--setopt=metadata_expire=-1','--setopt=check_config_file_age=False'] if resume else []),'install',*pkgs])
+   elif target=='fedora':run(['dnf','-y','--disable-repo=fedora-cisco-openh264','--setopt=retries=3','--setopt=timeout=30','--setopt=keepcache=True','--setopt=install_weak_deps=False',*(['--setopt=metadata_expire=-1','--setopt=check_config_file_age=False'] if resume else []),'install',*pkgs])
    elif target=='opensuse':pass # Already installed in the same filtered repository view.
    else:run(['apt-get','-o','APT::Keep-Downloaded-Packages=true','-o','Acquire::Retries=3','-o','Acquire::http::Timeout=30','-o','Acquire::https::Timeout=30','-o','Debug::acquire::progress=true','-o','APT::Status-Fd=3','-o','Dpkg::Use-Pty=0','install','-y','--no-remove',*pkgs])
    if not set(pkgs)<=installed(target):raise ValueError('program not fully installed')
@@ -380,8 +380,10 @@ def main():
     helper=load('x11-gpu-tools')
     if not helper.ready(target):raise ValueError('GPU tools binary missing')
     helper.prepare(Path.home(),target)
-   if target=='opensuse' and id in ('media','pkg:parole'):
-    load('x11-openh264').install(Path.home(),Path('/'),Path(__file__).with_name('x11-openh264.so'))
+   if target in ('opensuse','fedora') and id in ('media','pkg:parole'):
+    codec=load('x11-openh264');args=[Path.home(),Path('/'),Path(__file__).with_name('x11-openh264.so')]
+    if target=='fedora':args.append(Path(__file__).with_name('x11-gst-openh264.so'))
+    codec.install(*args)
  elif op=='remove':
   if not id.startswith('pkg:'):raise ValueError('invalid removal')
   remove(target,id[4:])
@@ -392,7 +394,8 @@ def main():
  for name,pkgs in GROUPS[target].items():
   complete=set(pkgs)<=have
   if name=='gpu-tools' and complete:complete=load('x11-gpu-tools').ready(target)
-  if target=='opensuse' and name=='media' and complete:complete=load('x11-openh264').ready(Path.home())
+  if target in ('opensuse','fedora') and name=='media' and complete:
+   codec=load('x11-openh264');complete=codec.ready(Path.home(),True) if target=='fedora' else codec.ready(Path.home())
   print('PROGRAM:'+name+':'+('installed' if complete else 'missing'))
  print('READY:programs',flush=True)
 if __name__=='__main__':

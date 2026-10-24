@@ -243,4 +243,35 @@ public class AgentChatUiTest {
   }finally{ui.close();marker.delete();}
  }
 
+ private android.view.View findText(android.view.View v,String ru,String en){if(v instanceof android.widget.TextView){String text=((android.widget.TextView)v).getText().toString();if(text.equals(ru)||text.equals(en))return v;}if(v instanceof android.view.ViewGroup){android.view.ViewGroup g=(android.view.ViewGroup)v;for(int i=0;i<g.getChildCount();i++){android.view.View hit=findText(g.getChildAt(i),ru,en);if(hit!=null)return hit;}}return null;}
+ @Test public void interruptConfirmationCannotFollowTheProfileIntoANewRunOfTheSameChat()throws Exception{
+  TermuxActivity a=activity();WorkspaceStore.Session selected=profile();selected.aiSocketId=java.util.UUID.randomUUID().toString();AtomicInteger interrupts=new AtomicInteger();
+  AgentChatUi ui=new AgentChatUi(a,()->selected,()->true,(p,q)->{if(q.optString("op").equals("chat-interrupt")){assertEquals("ses_same",q.optString("session"));interrupts.incrementAndGet();}return result().put("session","ses_same").put("connected",true).put("directShell",true);});
+  try{for(int i=0;i<30&&!ui.showing();i++)drain();assertTrue(ui.showing());java.lang.reflect.Method interrupt=AgentChatUi.class.getDeclaredMethod("interrupt");interrupt.setAccessible(true);interrupt.invoke(ui);android.app.AlertDialog stale=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(stale);
+   selected.aiSocketId=java.util.UUID.randomUUID().toString();ui.sync();Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));for(int i=0;i<30&&!ui.showing();i++)drain();assertTrue(ui.showing());stale.getButton(-1).performClick();for(int i=0;i<8;i++)drain();assertEquals("old confirmation must not interrupt the replacement run",0,interrupts.get());
+   interrupt.invoke(ui);org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog().getButton(-1).performClick();for(int i=0;i<30&&interrupts.get()==0;i++)drain();assertEquals(1,interrupts.get());
+  }finally{ui.close();}
+ }
+ @Test public void failedPermissionReplyCanBeRetriedForEachAgentWithoutLosingThePrompt()throws Exception{
+  for(String agent:new String[]{"opencode","gemini","claude","codex"}){
+   TermuxActivity a=activity();WorkspaceStore.Session p=profile();p.aiAgent=agent.equals("opencode")?"opencode":"";p.geminiAgent=agent.equals("gemini");p.claudeAgent=agent.equals("claude");p.environment=agent.equals("codex")?"codex":"ubuntu";p.codexEnvironment="ubuntu-ai";
+   java.io.File marker=agent.equals("codex")?CodexChatControl.marker(a.getFilesDir(),p):null;if(marker!=null){marker.getParentFile().mkdirs();marker.createNewFile();}
+   AtomicInteger attempts=new AtomicInteger();AtomicBoolean pending=new AtomicBoolean(true);
+   JSONObject permission=new JSONObject().put("id","per_fixture").put("nonce","owned-nonce").put("title","Read").put("body","synthetic file");
+   AgentChatUi ui=new AgentChatUi(a,()->p,()->true,(profile,q)->{if(q.optString("op").equals("answer")){assertEquals("per_fixture",q.optString("id"));assertEquals("proceed_once",q.optString("outcome"));if(attempts.incrementAndGet()==1)throw new java.io.IOException("synthetic dropped reply");pending.set(false);return new JSONObject().put("ok",true);}return result().put("session","native-"+agent).put("connected",true).put("permission",pending.get()?permission:JSONObject.NULL);});
+   try{for(int i=0;i<40&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);
+    android.view.View yes=findText(chat.requests,"Да, разово","Yes, once"),no=findText(chat.requests,"Нет","No");assertNotNull(agent,yes);yes.performClick();for(int i=0;i<40&&attempts.get()==0;i++)drain();for(int i=0;i<4;i++)drain();
+    assertEquals(agent,1,attempts.get());assertTrue(agent+": approval must be retryable after transport failure",yes.isEnabled());assertTrue(agent,no.isEnabled());assertTrue(pending.get());
+    yes.performClick();for(int i=0;i<40&&pending.get();i++)drain();assertEquals(agent,2,attempts.get());assertFalse(agent,pending.get());
+   }finally{ui.close();if(marker!=null)marker.delete();}
+  }
+ }
+
+ @Test public void openCodeFormReplyUsesResolvedConversationAndKeepsAnswerOnFailure()throws Exception{
+  TermuxActivity a=activity();WorkspaceStore.Session p=profile();AtomicInteger attempts=new AtomicInteger();AtomicBoolean pending=new AtomicBoolean(true);
+  JSONObject form=new JSONObject().put("id","frm_fixture").put("nonce","form-nonce").put("title","Choose fixture option").put("fields",new JSONArray().put(new JSONObject().put("key","approve").put("type","boolean").put("default",true)));
+  AgentChatUi ui=new AgentChatUi(a,()->p,()->true,(profile,q)->{if(q.optString("op").equals("chat-form")){assertEquals("ses_resolved",q.optString("session"));assertEquals("form-nonce",q.optString("nonce"));assertTrue(q.getJSONObject("answer").getBoolean("approve"));if(attempts.incrementAndGet()==1)return new JSONObject().put("ok",false);pending.set(false);return new JSONObject().put("ok",true);}return result().put("session","ses_resolved").put("connected",true).put("forms",pending.get()?new JSONArray().put(form):new JSONArray());});
+  try{for(int i=0;i<40&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);android.view.View button=findText(chat.requests,"Choose fixture option ▾","Choose fixture option ▾");assertNotNull(button);button.performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(dialog.isShowing());dialog.getButton(-1).performClick();for(int i=0;i<40&&attempts.get()==0;i++)drain();for(int i=0;i<4;i++)drain();assertEquals(1,attempts.get());assertTrue(dialog.isShowing());dialog.getButton(-1).performClick();for(int i=0;i<40&&dialog.isShowing();i++)drain();assertEquals(2,attempts.get());assertFalse(dialog.isShowing());assertFalse(pending.get());}finally{ui.close();}
+ }
+
 }

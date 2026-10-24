@@ -10,10 +10,10 @@ import static org.junit.Assert.*;
 
 @RunWith(RobolectricTestRunner.class) @Config(manifest=Config.NONE,sdk=28)
 public class X11IntegrationTest {
-    @Test public void styleCannotReachGuestsOrChangeDuringAnOwnedDesktopOperation()throws Exception{
+    @Test public void styleCannotReachUnsupportedGuestsOrChangeDuringAnOwnedDesktopOperation()throws Exception{
         X11Service s=org.robolectric.Robolectric.buildService(X11Service.class).get();
         try{
-            for(String target:new String[]{"ubuntu","debian","alpine","fedora","opensuse","void","archlinux"}){
+            for(String target:new String[]{"jobs-x11-ubuntu","ubuntu-ai","jobs-ai-ubuntu","unknown","../debian"}){
                 android.os.Bundle q=X11Remote.command("check");q.putString("target",target);q.putBoolean("termuxStyle",true);
                 try{command(s,q);fail(target);}catch(IllegalArgumentException expected){}
                 assertFalse(s.snapshot().getBoolean("termuxStyle"));
@@ -26,6 +26,24 @@ public class X11IntegrationTest {
                 assertFalse(s.snapshot().getBoolean("termuxStyle"));assertEquals("one:h1",s.snapshot().getString("desktopOwner"));
             }
         }finally{java.lang.reflect.Field worker=X11Service.class.getDeclaredField("worker");worker.setAccessible(true);((java.util.concurrent.ExecutorService)worker.get(s)).shutdown();}
+    }
+
+    @Test public void everyStyleUsesItsOwnPreparingServiceWithoutSpawningAnotherDesktop()throws Exception{
+        String[] targets={"termux","ubuntu","debian","alpine","fedora","opensuse","void","archlinux"};
+        Class<?>[] types={X11Service.class,X11Service.Ubuntu.class,X11Service.Debian.class,X11Service.Alpine.class,X11Service.Fedora.class,X11Service.OpenSuse.class,X11Service.VoidLinux.class,X11Service.ArchLinux.class};
+        for(String target:new String[]{null,"","ubuntu-ai","jobs-ai-ubuntu","jobs-x11-ubuntu","unknown","../../ubuntu"})assertFalse(DesktopProcess.supportsStyle(target));
+        for(int i=0;i<targets.length;i++){
+            String target=targets[i];assertTrue(target,DesktopProcess.supportsStyle(target));
+            X11Service s=(X11Service)org.robolectric.Robolectric.buildService((Class)types[i]).get();
+            try{
+                field(s,"ownProcess",true);field(s,"target",target);field(s,"phase","preparing");field(s,"termuxStyle",true);
+                android.os.Bundle q=X11Remote.command("launch");q.putString("target",target);q.putBoolean("termuxStyle",true);q.putString("owner",target+"-owner");
+                android.os.Bundle result=command(s,q);assertEquals(target,result.getString("target"));assertTrue(result.getBoolean("termuxStyle"));assertTrue(result.getStringArrayList("desktopOwners").contains(target+"-owner"));
+                q.putBoolean("termuxStyle",false);try{command(s,q);fail("busy style changed: "+target);}catch(IllegalStateException expected){}
+                assertTrue(s.snapshot().getBoolean("termuxStyle"));
+                q.putString("target",target.equals("termux")?"ubuntu":"termux");q.putBoolean("termuxStyle",true);try{command(s,q);fail("wrong rootfs accepted: "+target);}catch(IllegalArgumentException expected){}
+            }finally{java.lang.reflect.Field worker=X11Service.class.getDeclaredField("worker");worker.setAccessible(true);((java.util.concurrent.ExecutorService)worker.get(s)).shutdown();}
+        }
     }
 
     @Test public void retiredStyleRequestsAreRejectedBeforeStateMutation()throws Exception{
@@ -111,6 +129,25 @@ public class X11IntegrationTest {
             q.putString("owner","one:h1");assertEquals(phase,command(s,q).getString("phase"));assertEquals("two:h2",s.snapshot().getString("desktopOwner"));
             q.putString("target","debian");assertEquals(phase,command(s,q).getString("phase"));q.putString("target","alpine");q.putString("owner","two:h2");assertEquals("stopping",command(s,q).getString("phase"));
         }
+    }
+    @Test public void componentCancellationKeepsEveryTargetLockedUntilItsWorkerFinishes()throws Exception{
+        for(String target:new String[]{"termux","ubuntu","debian","alpine","fedora","opensuse","void","archlinux"}){
+            X11Service service=org.robolectric.Robolectric.buildService(X11Environment.forTarget(target).service).get();
+            try{
+                field(service,"ownProcess",true);field(service,"target",target);field(service,"phase","installing");field(service,"generation",10);
+                android.os.Bundle cancel=X11Remote.command("cancel");cancel.putString("target",target);
+                assertEquals(target,"cancelling",command(service,cancel).getString("phase"));assertEquals("cancelling",command(service,cancel).getString("phase"));
+                for(String op:new String[]{"check","install","launch","programs-check","programs-install","programs-catalog"}){
+                    android.os.Bundle q=X11Remote.command(op);q.putString("target",target);q.putString("program","editor");
+                    try{command(service,q);fail("new work admitted before cleanup: "+target+":"+op);}catch(IllegalStateException expected){}
+                }
+                java.lang.reflect.Method finish=X11Service.class.getDeclaredMethod("finishComponentCancellation",int.class);finish.setAccessible(true);
+                finish.invoke(service,9);assertEquals("cancelling",service.snapshot().getString("phase"));finish.invoke(service,10);assertEquals("cancelled",service.snapshot().getString("phase"));assertEquals("cancelled",service.snapshot().getString("componentResult"));
+            }finally{java.lang.reflect.Field f=X11Service.class.getDeclaredField("worker");f.setAccessible(true);((java.util.concurrent.ExecutorService)f.get(service)).shutdownNow();}
+        }
+    }
+    @Test public void ordinaryUbuntuOffersTheSameLauncherMaintenanceAsOtherDesktops(){
+        assertTrue(DesktopPrograms.supportsMaintenance("ubuntu"));assertFalse(DesktopPrograms.supportsMaintenance("ubuntu-ai"));
     }
     @Test public void terminationGuardAcceptsOnlyTheDedicatedProcess(){
         assertTrue(X11Runtime.expectedProcess("com.termux:jobs_x11","com.termux"));

@@ -3,10 +3,16 @@
 from pathlib import Path
 import shutil
 import re
-import sys
+import argparse
 
 root = Path(__file__).resolve().parent.parent
-stage = root / ('.verification/arm64' if '--arm64' in sys.argv else '.verification/source')
+parser = argparse.ArgumentParser(description=__doc__)
+group = parser.add_mutually_exclusive_group()
+group.add_argument('--arm64', action='store_true', help='stage the isolated ARM64 APK build')
+group.add_argument('--modern-lint', action='store_true', help='stage AGP7.4.2 lint without changing the APK build toolchain')
+args = parser.parse_args()
+stage = root / ('.verification/arm64' if args.arm64 else
+                '.verification/modern-lint' if args.modern_lint else '.verification/source')
 stage.mkdir(parents=True, exist_ok=True)
 (stage / '.tools/test-home').mkdir(parents=True, exist_ok=True)
 x11_cache=stage/'.tools/x11-runtime'
@@ -40,4 +46,13 @@ for name in ['app', 'terminal-emulator', 'terminal-view', 'termux-shared', 'x11'
     p.write_text(text)
 p = stage / 'gradle.properties'
 # Match the production compile SDK; keep target/min SDK unchanged.
+if args.modern_lint:
+    p = stage / 'build.gradle'
+    text = p.read_text()
+    old = "classpath 'com.android.tools.build:gradle:4.2.2'"
+    if text.count(old) != 1:
+        raise RuntimeError('Review modern-lint staging after changing the APK AGP version')
+    p.write_text(text.replace(old, "classpath 'com.android.tools.build:gradle:7.4.2'"))
+    p = stage / 'app/build.gradle'
+    p.write_text(p.read_text() + '\nandroid.lintOptions.checkDependencies = true\n')
 print(stage)

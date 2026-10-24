@@ -32,6 +32,29 @@ public class WorkspaceLanguageTest {
         assertEquals("ru",WorkspaceLanguage.resolve("ru",Locale.ENGLISH));
         assertEquals("en",WorkspaceLanguage.resolve("en",new Locale("ru")));
     }
+    @Test public void localizedActivityReceivesRotationSizeDensityAndThemeWithoutLosingChosenLanguage(){
+        Context base=RuntimeEnvironment.application;
+        for(String language:new String[]{"ru","en"}){
+            RuntimeEnvironment.setQualifiers("en-w400dp-h800dp-port-notnight-mdpi");
+            WorkspaceLanguage.select(base,language);TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();
+            assertEquals(android.content.res.Configuration.ORIENTATION_PORTRAIT,activity.getResources().getConfiguration().orientation);
+            RuntimeEnvironment.setQualifiers("en-w800dp-h400dp-land-night-xhdpi");
+            android.content.res.Configuration event=new android.content.res.Configuration(android.content.res.Resources.getSystem().getConfiguration());
+            activity.onConfigurationChanged(event);
+            android.content.res.Configuration live=activity.getResources().getConfiguration();
+            assertEquals(android.content.res.Configuration.ORIENTATION_LANDSCAPE,live.orientation);
+            assertEquals(800,live.screenWidthDp);assertEquals(400,live.screenHeightDp);
+            assertEquals(320,live.densityDpi);assertEquals(android.content.res.Configuration.UI_MODE_NIGHT_YES,live.uiMode&android.content.res.Configuration.UI_MODE_NIGHT_MASK);
+            assertEquals(language,live.getLocales().get(0).getLanguage());
+            assertEquals("en",event.getLocales().get(0).getLanguage());
+            String next=language.equals("ru")?"en":"ru";WorkspaceLanguage.select(activity,next);
+            RuntimeEnvironment.setQualifiers("en-w400dp-h800dp-port-notnight-mdpi");
+            activity.onConfigurationChanged(new android.content.res.Configuration(android.content.res.Resources.getSystem().getConfiguration()));
+            assertEquals(android.content.res.Configuration.ORIENTATION_PORTRAIT,activity.getResources().getConfiguration().orientation);
+            assertEquals(next,activity.getResources().getConfiguration().getLocales().get(0).getLanguage());
+            assertEquals(next.equals("ru")?"Настройки":"Settings",activity.getString(R.string.action_open_settings));
+        }
+    }
     @Test public void allResourcesRoundTripAndChoicePersists() throws Exception {
         Context c=RuntimeEnvironment.application;
         WorkspaceLanguage.select(c,"ru");WorkspaceLanguage.initialize(c);

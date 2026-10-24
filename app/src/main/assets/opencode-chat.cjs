@@ -78,6 +78,7 @@ class OpenCodeChat {
  }
  async command(q){
   if(this.closed)throw Error('Closed chat');
+  if(['chat-send','chat-detail','chat-interrupt','chat-form'].includes(q.op)&&q.session!==this.session)throw Error('Stale session');
   if(q.op==='chat-snapshot')return this.snapshot(q);
   if(q.op==='chat-detail'){
    if(!id(q.message))throw Error('Invalid message');
@@ -91,7 +92,7 @@ class OpenCodeChat {
    if(!id(q.id)||typeof q.text!=='string'||(!q.text.trim()&&!(Array.isArray(q.attachments)&&q.attachments.length))||Buffer.byteLength(q.text)>32000||!['message','shell'].includes(q.kind))throw Error('Invalid message');
    const previous=this.pending.get(q.id);const raw=JSON.stringify([q.kind,q.text,q.attachments||[]]);
    if(previous){if(previous.raw!==raw)throw Error('Changed message');return previous.promise;}
-   if(q.attachments?.length&&q.session!==this.session)throw Error('Stale session');const files=this.attachments.prepare(q.attachments,this.session,q.kind);const prompt=this.attachments.prompt(q.text,files);
+   const files=this.attachments.prepare(q.attachments,this.session,q.kind);const prompt=this.attachments.prompt(q.text,files);
    const promise=q.kind==='shell'?this.startShell(q):this.request('POST','/api/session/'+this.session+'/prompt',{id:q.id,text:prompt,...(files.length?{files:this.attachments.openCode(files)}:{})}).then(()=>({accepted:true,id:q.id}));
    this.pending.set(q.id,{raw,promise});while(this.pending.size>200)this.pending.delete(this.pending.keys().next().value);
    // Retain failed/ambiguous admission too: retrying a direct shell must never execute twice.

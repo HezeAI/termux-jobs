@@ -1,5 +1,7 @@
 package com.termux.shared.settings.properties;
 
+import java.util.Locale;
+
 import android.content.Context;
 import android.widget.Toast;
 
@@ -571,7 +573,7 @@ public class SharedProperties {
      * @return Returns the lowercased value.
      */
     public static String toLowerCase(String value) {
-        if (value == null) return null; else return value.toLowerCase();
+        if (value == null) return null; else return value.toLowerCase(Locale.ROOT);
     }
 
 }

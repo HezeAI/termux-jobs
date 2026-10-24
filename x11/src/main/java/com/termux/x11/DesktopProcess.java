@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 /** A pipe-owned, separate process group. Never adopts an existing shell or PID. */
 final class DesktopProcess implements Closeable {
     private final Process process;
+    static boolean supportsStyle(String target){return DesktopPrograms.supportsStyle(target);}
     static boolean supported(String target){return DesktopPrograms.supportsTarget(target);}
     private DesktopProcess(Process process){this.process=process;}
     static DesktopProcess start(Context context,File base,String operation,String target,String focusToken)throws Exception{
@@ -25,7 +26,7 @@ final class DesktopProcess implements Closeable {
         return start(context,base,operation,target,focusToken,desktop,garconFilter,renderer,false);
     }
     static DesktopProcess start(Context context,File base,String operation,String target,String focusToken,String desktop,boolean garconFilter,String renderer,boolean termuxStyle)throws Exception{
-        if(termuxStyle&&!target.equals("termux"))throw new IllegalArgumentException("Style is Termux-only");
+        if(termuxStyle&&!supportsStyle(target))throw new IllegalArgumentException("Style requires a supported X11 desktop");
         if(!renderer.equals("cpu")&&!renderer.equals("turnip")&&!renderer.equals("virgl")&&!renderer.equals("wrapper"))throw new IllegalArgumentException("Invalid renderer");
         if(renderer.equals("turnip")&&!target.equals("ubuntu")&&!target.equals("termux")&&!target.equals("debian")&&!target.equals("alpine")&&!target.equals("fedora")&&!target.equals("opensuse")&&!target.equals("void")&&!target.equals("archlinux"))throw new IllegalArgumentException("Unsupported GPU target");
         if(renderer.equals("wrapper")&&!target.equals("termux"))throw new IllegalArgumentException("Wrapper is Termux-only");
@@ -38,15 +39,15 @@ final class DesktopProcess implements Closeable {
         if(target.equals("alpine")&&operation.equals("run")&&renderer.equals("virgl")){asset(context,base,"x11-virgl-client.py");asset(context,base,"x11-virgl-alpine.zip");}
         asset(context,base,"x11-virgl.sh");asset(context,base,"x11-virgl-env.sh");asset(context,base,"x11-virgl-setup.sh");asset(context,base,"x11-gpu.py");asset(context,base,"x11-gpu-env.sh");asset(context,base,"x11-session.sh");asset(context,base,"x11-ready.py");if(target.equals("alpine"))asset(context,base,"x11-alpine-compat.so");if(target.equals("fedora")||target.equals("archlinux"))asset(context,base,"x11-fedora-glycin.so");asset(context,base,"x11-audio.sh");asset(context,base,"x11-native-desktop.sh");asset(context,base,"x11-native-programs.py");asset(context,base,"x11-firefox-dns.py");
         asset(context,base,"x11-gpu-tools.py");asset(context,base,"x11-bookmarks.py");asset(context,base,"x11-wallpaper.py");asset(context,base,"x11-default-wallpaper.png");asset(context,base,"x11-launchers.py");asset(context,base,"x11-maintenance.py");
-        if(target.equals("opensuse")){asset(context,base,"x11-openh264.py");asset(context,base,"x11-openh264.so");}
+        if(target.equals("opensuse")||target.equals("fedora")){asset(context,base,"x11-openh264.py");asset(context,base,"x11-openh264.so");if(target.equals("fedora"))asset(context,base,"x11-gst-openh264.so");}
         if(target.equals("termux")&&operation.equals("run")){
             // Own old control copies only; never follow a link or scan user home.
             for(String retired:new String[]{"x11-touch-style.zip","x11-touch-workspace"}){
                 File file=new File(base,retired);
                 if(Files.isRegularFile(file.toPath(),java.nio.file.LinkOption.NOFOLLOW_LINKS))Files.delete(file.toPath());
             }
-            asset(context,base,"x11-style.py");asset(context,base,"x11-style.zip");
         }
+        if(supportsStyle(target)&&operation.equals("run")){asset(context,base,"x11-style.py");asset(context,base,"x11-style.zip");}
         String bin=TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH;
         if(!new File(bin,"setsid").canExecute())throw new IOException("setsid is required (Termux util-linux)");
         ProcessBuilder builder=new ProcessBuilder(bin+"/setsid",bin+"/bash","--noprofile","--norc",guardian.getPath(),bin+"/bash","--noprofile","--norc",script.getPath(),operation,target,base.getPath(),desktop);
@@ -59,7 +60,7 @@ final class DesktopProcess implements Closeable {
     static DesktopProcess programs(Context context,File base,String operation,String target,String program)throws Exception{
         if(!supported(target)||!(operation.equals("check")||operation.equals("install")||operation.equals("resume")||operation.equals("catalog")||operation.equals("catalog-install")||operation.equals("installed")||operation.equals("remove")||operation.equals("firefox-compat-on")||operation.equals("firefox-compat-off")||operation.equals("firefox-dns-on")||operation.equals("firefox-dns-off"))||(!program.isEmpty()&&!DesktopPrograms.requestId(program))||((operation.equals("install")||operation.equals("resume"))&&program.isEmpty()))throw new IllegalArgumentException("Unsupported desktop program");
         File script=asset(context,base,"x11-programs.sh"),guardian=asset(context,base,"x11-guardian.sh");asset(context,base,"x11-gpu-tools.py");asset(context,base,"x11-catalog.py");asset(context,base,"x11-firefox.py");asset(context,base,"mozilla-repo.asc");asset(context,base,"x11-maintenance.py");asset(context,base,"x11-native-programs.py");asset(context,base,"x11-firefox-dns.py");asset(context,base,"x11-launchers.py");
-        if(target.equals("opensuse")){asset(context,base,"x11-openh264.py");asset(context,base,"x11-openh264.so");}
+        if(target.equals("opensuse")||target.equals("fedora")){asset(context,base,"x11-openh264.py");asset(context,base,"x11-openh264.so");if(target.equals("fedora"))asset(context,base,"x11-gst-openh264.so");}
         String bin=TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH;
         if(!new File(bin,"setsid").canExecute())throw new IOException("setsid is required (Termux util-linux)");
         ProcessBuilder builder=new ProcessBuilder(bin+"/setsid",bin+"/bash","--noprofile","--norc",guardian.getPath(),bin+"/bash","--noprofile","--norc",script.getPath(),operation,target,base.getPath(),program,X11Text.tr(context,"ru","en"));
@@ -85,6 +86,12 @@ final class DesktopProcess implements Closeable {
     }
     int waitFor()throws InterruptedException{return process.waitFor();}
     @Override public void close(){try{process.getOutputStream().close();}catch(IOException ignored){} }
+    /** EOF cancels only our guardian group; do not release the worker until it has exited. */
+    void closeAndWait(){
+        close();boolean interrupted=false;
+        while(true){try{waitFor();break;}catch(InterruptedException error){interrupted=true;}}
+        if(interrupted)Thread.currentThread().interrupt();
+    }
     private static File asset(Context context,File base,String name)throws Exception{
         File file=new File(base,name);if(Files.isSymbolicLink(file.toPath()))throw new IOException("Desktop script is a link");
         try(InputStream in=context.getAssets().open(name);OutputStream out=new FileOutputStream(file)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}

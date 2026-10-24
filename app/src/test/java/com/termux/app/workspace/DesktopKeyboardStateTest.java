@@ -2,6 +2,7 @@ package com.termux.app.workspace;
 import org.junit.Test;
 import static org.junit.Assert.*;
 public class DesktopKeyboardStateTest {
+ @Test public void unknownInsetsDuringWindowMoveDoNotDisarmVisibleKeyboard(){DesktopKeyboardState k=new DesktopKeyboardState();k.toggle();k.visibility(true);assertFalse(k.visibility(null));assertTrue(k.enabled);assertTrue(k.visibility(false));assertFalse(k.enabled);}
  @Test public void unknownInitialFocusDoesNotCloseManuallyOpenedKeyboard(){DesktopKeyboardState k=new DesktopKeyboardState();k.toggle();assertNull(k.focus(0,false));assertTrue(k.enabled);}
  @Test public void realTextFieldFocusOpensTheSharedInputWithoutManualEnable(){DesktopKeyboardState k=new DesktopKeyboardState();assertNull(k.focus(0,false));assertEquals(Boolean.TRUE,k.focus(1,true));assertTrue(k.enabled);}
  @Test public void backDismissalDisarmsAndFocusCannotReopen(){DesktopKeyboardState k=new DesktopKeyboardState();k.toggle();k.visibility(true);assertTrue(k.visibility(false));assertFalse(k.enabled);assertNull(k.focus(2,true));assertNull(k.focus(3,true));}

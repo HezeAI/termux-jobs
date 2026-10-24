@@ -1,3 +1,125 @@
+# v2.0.3 — landscape presentation
+
+The locale context overrides language/layout direction only. It must not pin a
+copy of startup orientation, bounds, density or night mode. TermuxActivity forwards
+each system onConfigurationChanged event to the locale helper, which applies its
+current geometry and selected language to the existing Activity resources. No
+workspace, composer or session is recreated. Fullscreen detection and the X11
+viewport's WindowMetrics consequently use the current window configuration.
+Tests deliver configuration events through the actual TermuxActivity callback;
+manually setting orientation on a plain Activity is insufficient coverage.
+
+Each WorkspaceDesktop channel owns a DesktopFullscreen presenter. Only a visible
+X11/preparation host temporarily requests FULL_SENSOR; leaving restores the
+Activity's captured orientation policy. A layout transition to landscape moves
+the existing host into a full-window Dialog, not a second X11 connection/process.
+Portrait/Back restores the original parent, index and LayoutParams. Back suppresses
+re-entry until the next portrait turn. Cancel/dismiss callbacks must match their
+originating Dialog, so queued callbacks cannot close a replacement host. Tab,
+session, background and close paths release only this presentation.
+
+A small sibling application Dialog carries the input button above the desktop
+window and its Z-on-top native surface. It is nonfocusable, does not dim and passes
+outside touches to the desktop; it needs no overlay permission. Both windows are
+dismissed together. The desktop Dialog registers the existing keyboard-visibility
+observer on its own window; visibility is read from the actual RemoteDesktopView. IME
+insets also bound the visible crop for fullscreen windows that do not resize.
+No per-frame polling or competing native hierarchy is introduced.
+
+X11DisplayMode maps physical landscape dimensions to a logical screen capped
+at2880px wide, using the existing native expected-size/viewport API. This doubles
+the first candidate's logical dimensions on dense phones to halve enlargement.
+Pointer mapping follows the reported source geometry; keyboard crop does not
+change the logical desktop mode. Portrait uses the prior mode sizes. JNI/core
+and renderer selection remain unchanged. Window/geometry tests use surrogate
+views, not hardware SurfaceControl/IME validation.
+
+# Optional style in every current X11 environment (v2.0.3)
+
+DesktopPrograms defines the exact eight supported style targets; the UI, private
+service and process launcher share that policy. The shell/Python guards accept
+the same bounded set. Ubuntu AI, retired test roots and unknown aliases are excluded.
+The old termux-style preference stays Termux-only; every guest uses its own
+termux-style:<target> key. Running/busy desktops cannot switch styles. The launcher
+copies the pinned style helper/pack into that target's control directory on run,
+including disabled runs so previously applied properties can be restored.
+The shell validates the 0/1 flag before placing it in the fixed guest command;
+the guest session exports its own control directory. The helper uses Termux PREFIX
+only for Termux and root / for each guest's system defaults, while writes and rollback
+records stay inside the selected HOME. It retains the existing property-level
+restoration, archive pin/path checks and preservation of user edits. There are no
+new package dependencies, downloads, renderer flags or agent changes.
+
+Panel defaults can come from /etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
+(openSUSE) or the classic /etc/xdg/xfce4/panel/default.xml. A fresh HOME is seeded
+from the selected system template. Existing local type=empty properties inherit
+system values for layout/plugin discovery only; explicit local values and array
+orders win. This effective tree is not written wholesale into existing user XML.
+Snapshots/restoration use the actual local tree, preserving inherited placeholders,
+favorites and other plugin properties. The style never replaces a Whisker Menu
+with Applications Menu. Window/icon/cursor/theme assets remain the same pinned pack.
+
+The fullscreen input control is offset48dp from the top plus cutout safety,8dp
+from the right, with window alpha0.65. It reads the existing per-channel keyboard state and changes its
+selected/fill state only when that value changes. The existing pre-draw observer
+provides automatic-input/Back updates; stable frames do not allocate new button
+backgrounds or recreate the windows.
+
+# Fedora Parole codec setup (v2.0.3)
+
+Media/pkg:parole requests fixed Fedora dependencies and command-local Cisco
+repo exclusion, matching the base installer's no-stub-download policy. DNF still
+checks signatures/TLS and never receives allowerasing/nogpgcheck. The shared
+OpenH264 helper retains the unchanged three-file openSUSE mode; Fedora adds a
+pinned unmodified GStreamer1.26+ ARM64 bridge from Debian's package to its private
+HOME, never installs the Debian package or replaces an RPM library/plugin.
+
+The private launcher prepends only its codec and GST_PLUGIN_PATH_1_0, retaining
+inherited paths and renderer/audio settings. A dedicated GST registry prevents
+its private plugin registration from entering other applications' normal cache.
+The helper validates every destination against owned hashes, writes a pending
+proof, commits tracked files, creates a real decoder and checks GStreamer H.264,
+AAC and MP4 demux factories. Only then is a versioned digest-bound proof committed.
+Readiness requires that proof and exact file hashes; failed/interrupted setup
+cannot become ready merely because files exist. Retry repairs missing owned
+files; user edits/symlinks are preserved. A previous three-file managed setup can
+upgrade to Fedora's four-file setup after ownership validation. Check paths do
+not install codecs implicitly. Existing Parole processes must be relaunched.
+[Sources](THIRD-PARTY.md) and [focused verification](AUDIT-FEDORA-MP4-2026-10-24.md).
+
+# X11 component cleanup barrier (included in v2.0.3)
+
+`X11Service` retains `cancelling` until its component worker closes and reaps the
+pipe-owned guardian. State/detach/scoped close/Stop remain available; new package,
+renderer and desktop operations are rejected. A matching epoch alone may publish
+`cancelled`. Normal/error completions are also delivered after cleanup. Worker-only
+`DesktopProcess.closeAndWait` preserves interruptions without abandoning an owned
+group; native process identity/kill protocols are unchanged. The UI treats this
+phase as busy. Ordinary Ubuntu joins the launcher-maintenance allowlist without
+admitting Ubuntu AI or rewriting saved presets.
+[Audit evidence](AUDIT-ENVIRONMENTS-X11-2026-10-23.md).
+
+# Agent-chat recovery and run ownership (included in v2.0.3)
+
+OpenCode adds optional schema8 string `Session.aiSocketId`. Missing/empty retains
+the legacy profile-ID socket until the next explicit launch; each prepareLaunch
+allocates a new UUID. Decode rejects invalid/non-string IDs atomically. Copies and
+backup imports do not inherit a live socket; connection IDs and native history
+bookmarks are independent. Older app versions ignore this optional field, so
+downgrading requires restarting OpenCode rather than attaching to a newer run.
+No user data is reset and no stored auth content is migrated.
+
+Android snapshots the run before chat/status/queued control operations. OpenCode
+request validation checks the resolved native session before dedup/admission.
+Codex queued stop captures its socket file before scheduling; Gemini/Claude
+queued stop captures both run ID and environment. Existing owned-process/marker
+shutdown protocols remain in use; there is no process-name or foreign-PID kill.
+
+Permission failure restores only the still-mounted request buttons in the same
+UI generation. Gemini evicts an ID reservation only at guards before invoking
+native callbacks; ambiguous execution keeps dedup protection.
+[Scope and evidence](AUDIT-AGENT-CHATS-2026-10-23.md).
+
 # v2.0.2 — Agent attachment and authentication boundaries
 
 ChatAttachmentUi owns per-run drafts; ChatAttachments stages originals in separate
@@ -982,3 +1104,244 @@ An older app can read the library, but its resave drops new preset metadata.
 Restore metadata maps source aliases to fresh jobs-* instances for ordinary
 presets only; restored sessions retain --isolated and mandatory settings review.
 See [environments](ENVIRONMENTS.md) for setup and rollback constraints.
+
+
+## Unreleased storage worker lifecycle (2.0.5-test)
+
+WorkspaceBackupEngine owns one private Python process per operation. The shared
+backup/restore/cleanup lock stays held until that process has actually exited and
+its private request/script directory is cleaned up. Cleanup waits through Java
+thread interruption and restores the interrupted flag afterward. Cancellation
+sends at most one termination request to that owned Process; it adds no PID search,
+foreign-process signal or timer-based unlock. Python retains responsibility for
+its native/archive children. An unresponsive owned process keeps the operation
+blocked rather than allowing overlapping storage mutations.
+
+One terminal UI callback is queued after cleanup/unlock. It captures the completed
+result/error: Cancel arriving after completion cannot silently suppress a restore
+result and its preset registration. Progress stops changing while cancellation is
+pending; the explicit Cancel control disables and the window stays visible until
+the terminal callback. Native environment removal still has no cancellation
+control after confirmation. Scanning forms can close independently, but their
+cancelled worker retains the same lock until exit. Archive format, extraction
+boundaries, storage consent, schema and installed environments are unchanged.
+
+
+## Unreleased transfer ownership and publication (2.0.6-test)
+
+Upload/download/move choices carry a controller-local generation. A newer choice,
+disconnection, confirmation dismissal or accepted start invalidates the old
+generation; closed/running/disconnected checks are repeated before queueing.
+Dismissing an old dialog cannot invalidate a newer generation. Per-operation
+connection snapshots copy only SSH identity/settings and diagnostics preference;
+move paths are copied before confirmation. No automatic replay, global transport
+restart or cross-profile authentication fallback is added.
+
+Downloaded files still stream to exclusive UUID temporary names under a separate
+batch root. Publication uses mv -T -n, so a directory or directory symlink appearing
+between the no-overwrite check and rename cannot absorb the temporary file.
+Success also requires the original temporary path to disappear. Existing regular
+files are retained. SFTP packet/window/host-key behavior and local writer lifecycle
+are unchanged. See the transfer audit for fixture coverage and live-network limits.
+
+
+## Unreleased workspace file coordination (2.0.7-test)
+
+WorkspacePersistence coordinates WorkspaceStore leases by canonical file path in
+the app process. A shared single writer orders snapshots across Activity lifetimes.
+Pending immutable bytes are registered before any disk write, so a new store can
+read the newest queued state without opening AtomicFile during an active write.
+AtomicFile read/recovery is used when no snapshot is pending. The registry lock
+covers ownership/pending-state transitions; background disk writes and callbacks
+run outside it. Queued writes survive lease close. A writer is shut down and its
+registry entry retired only when no owner or pending snapshot remains.
+
+Closing WorkspaceStore refuses later saves, recent-command/mode changes and UI
+completion delivery. A failed write attempts AtomicFile rollback and
+notifies current live leases, including a new screen replacing the original
+writer's owner. This is in-process coordination, not a multi-process database,
+a durable queue or a merge of independently edited store snapshots. SIGKILL or
+power loss can still discard writes not yet committed. No X11 process instantiates
+WorkspaceStore; its processes/renderers remain independent.
+
+Command, session and note IDs must each be unique within their own collection on
+encode/decode. Validation finishes before loaded lists replace current lists.
+Malformed duplicate-ID libraries are retained read-only; an invalid outgoing
+snapshot cannot replace committed data. Schema8 and existing credential/profile
+serialization remain unchanged. See the persistence audit for coverage and limits.
+
+## Unreleased updater/receive boundaries (2.0.8-test)
+
+UpdateConnection owns one operation's transport across allowlisted HTTPS redirects.
+Cancellation and connection publication share a lock; network work/disconnect run
+outside it, and response/redirect/error paths release ownership. Pre-install byte
+revalidation runs in a worker with the updater busy gate, then returns to the
+main thread for a read-only FileProvider URI handoff. TermuxFileReceiverActivity
+accepts only basenames and uses atomic exclusive/no-follow create with0600 mode.
+Existing names/links survive; failed new output and owned streams are cleaned up.
+See AUDIT-UPDATES-ENTRYPOINTS-2026-10-23.md for the trust model and remaining
+synchronous incoming-copy and cache/lifecycle limits.
+
+## Unreleased installer ownership (2.0.9-test)
+
+EnvironmentSetup stages scripts and cancel markers in separate private job-*
+directories, retaining the existing control root for download metadata/cache.
+Its output collector waits for process exit on stdin/read/callback/wait errors
+before publishing a terminal result, and restores interruption after draining.
+The Python supervisor uses waitid/WNOWAIT to keep the session leader unreaped
+until final group signals on success/failure/cancel/output error. Only then is
+wait() allowed to release the leader identity. No borrowed PID signaling is used.
+Guest shell readiness resolves symlinks component by component inside the guest
+root, with a finite link limit and a regular executable final target.
+See AUDIT-INSTALLERS-2026-10-23.md for trust boundaries, process/Activity death,
+prerequisite preparation and detached-session limitations.
+
+## Unreleased file choices and exports (2.0.10-test)
+
+WorkspaceFileBrowser owns one generation-bound transfer choice across mode
+selection, preflight and confirmation. Acceptance consumes ownership; dismissal,
+replacement, selection/navigation changes and close invalidate it. Identity checks
+prevent delayed onDismiss from clearing a newer dialog. The TransferBackend seam
+delegates to ProjectFiles and permits no-I/O queued-work tests. ProjectFileExport
+uses CREATE_NEW/WRITE/NOFOLLOW_LINKS for a single destination open, retries finite
+name collisions, enforces a stream byte bound and checks close/interruption.
+Download/failed export staging is released; successful Share cache is retained
+for read-only URI access. Existing ProjectFiles process termination is unchanged;
+whole-tree shutdown and batch rollback are not established by this patch.
+
+
+## Unreleased file transport ownership (2.0.11-test)
+
+ProjectFiles delegates admission and child lifetime to ProjectFileTransport.
+Reservation precedes ProcessBuilder.start; a launch/close race retains ownership
+until the returned child exits. One operation owns its Process, pipes, deadline,
+forced-stop fallback and completion latch. No numeric PID or process-group signal
+is used. A canceled or expired operation is cleaned on a daemon worker even if
+its consumer never reads/closes the stream; owner close only requests cancellation.
+An operation releases admission after direct-child wait and stream cleanup.
+Repeated close of a completed stream cannot close the ProjectFiles instance or
+signal a newer child. Concurrent commands fail BUSY instead of sharing a slot.
+
+Reads/skip enforce an actual byte bound, accept zero bytes/unsigned single-byte
+values, and require zero child status at EOF. Reset is unavailable. Deadlines stay
+90 seconds for queries/exports and six hours for copy batches/local upload input.
+A direct child first receives Process.destroy; after one second a still-running
+child receives Process.destroyForcibly. Cleanup retains the wait barrier and the
+calling thread's interrupt flag. File-manager, editor and package workers remain
+separate from PTYs and installed terminal sessions. Existing SSH host-key pinning,
+askpass secrets and environment routing are preserved.
+
+This is direct-child ownership, not a process-group/remote-job supervisor. A remote
+shell or detached descendant can survive its local transport; no whole-batch
+rollback or remote-idempotency guarantee is added. See
+AUDIT-FILE-TRANSPORT-2026-10-24.md for evidence and remaining device/network checks.
+
+
+## Unreleased file transfer recovery (2.0.12-test)
+
+ProjectFileTransfer.execute creates a fresh ProjectFileReceipt for each accepted
+batch. The generated shell prints numbered per-item progress after its existing
+copy/move and owned-stage cleanup, then one final completion line after the loop.
+The ID is a validated32-character lowercase hex nonce. Receipts use fixed ASCII
+records and LF boundaries; no path or file content is inserted into the protocol.
+Readiness still uses the unchanged READY query and performs no mutation.
+
+The8KiB response collector accepts only ordered progress for its own ID and the
+matching final count; incomplete records, repeated/reordered own records and a
+missing completion line cannot confirm success. Unrelated bounded diagnostic
+lines/foreign IDs do not count. The runner must also return successfully after
+ProjectFileTransport's zero-exit check. On failure the collector supplies only the
+received acknowledged prefix. WorkspaceFileBrowser explains that actual work may
+have progressed further or still be running and that no automatic replay occurs.
+A subsequent read-only directory refresh is not a retry of the batch.
+
+ProjectFiles SSH adds ServerAliveInterval=15 / ServerAliveCountMax=2 alongside its
+existing connect timeout, strict known-hosts policy and credential handling. This
+bounds detection of an unresponsive SSH peer after connection establishment;
+it does not reconnect, terminate a live remote command, alter agent/tunnel SSH
+settings or change overall command/batch deadlines. No PID signaling or process-
+shutdown mechanism changes in this stage. Receipts are notifications, not fsync,
+a durable journal, cryptographic attestation or a remote cancellation protocol.
+See AUDIT-FILE-RECOVERY-2026-10-24.md for fixture and device boundaries.
+
+
+## Unreleased cumulative regression pass (2.0.13-test)
+
+The app retains minSDK26; embedded RemoteDesktopView requires API30. The controller
+now checks API30 explicitly before X11 IME diagnostics and focus-driven keyboard
+calls, alongside the existing guarded construction/sync/service paths. It does
+not create a second desktop, stop process groups, change routing or change input
+behavior on the supported graphical path. Orientation values use framework named
+constants with the same integer values. WorkspaceIconButton deliberately retains
+platform TextView and custom icon tint/drawing; a narrow AppCompatCustomView lint
+exception documents this. Badge Paint is retained per widget instead of allocated
+during every badge draw. Layout sizes, padding and icon placement are unchanged.
+
+See AUDIT-REGRESSION-2026-10-24.md for cumulative evidence and the limits of older
+lint/Kotlin tooling. Passing Java/widget fixtures does not establish Android IME,
+real frame timing, renderer compatibility or every fresh-device rootfs path.
+
+
+## Unreleased settings lifecycle (2.0.14-test)
+
+All12 preference adapters in app/fragments/settings are created for their screen
+rather than retained by static mInstance fields. Fragments bind the adapter once
+through PreferenceManager; SharedPreferences remains responsible for values and
+its ordinary file/value cache. Seven unused duplicate Context fields are removed.
+Five logging adapters intentionally use their owning screen's Context for current
+locale/toasts, and all package preference factories still receive that live UI
+Context for existing error dialogs. There is no application-context substitution,
+weak singleton or custom retention registry. Closing/recreating a screen obtains
+a fresh adapter while retaining the same backend class, package, files and keys.
+
+The tests establish screen-adapter identity, absence of static adapter/Context
+roots, real preference-widget value persistence and current-context error/language
+routing in a controlled Android model. They are not a phone heap/GC measurement
+or a guarantee about every Android/framework/native retention path. See
+AUDIT-SETTINGS-2026-10-24.md for before/after and error-path evidence.
+
+## Unreleased legacy provider guards (2.0.15-test)
+
+ProviderFiles centralizes canonical component boundaries, Locale.ROOT extension
+lookup and descriptor ownership for TermuxDocumentsProvider and the legacy
+TermuxOpenReceiver.ContentProvider. Open without create/truncate or final-link
+following; validate the descriptor's kernel path/regular type, then truncate if
+requested. Mount aliases require positive directory device/inode identity.
+NONBLOCK avoids opening a substituted FIFO as a blocking stream. The Linux
+CLOEXEC value preserves API26 support without a Java API27 field reference.
+
+SAF HOME creation/deletion pins a parent descriptor and uses only a basename
+under /proc/self/fd. Exclusive creation preserves existing/dangling-link names;
+root deletion is forbidden. Internal link deletion unlinks its original name.
+Search uses visited directory targets and candidate/result limits, retaining
+ordinary document IDs and alias names. Canonical errors reject access.
+Legacy sharing keeps its files/shared-storage roots, manifest RUN_COMMAND gate,
+URI grants and allow-external-apps policy. Protected property inodes are read-only,
+including hard links. Metadata/type requests use the same boundary checks;
+sharing encodes URI paths and keeps64-bit sizes. SAF and generic workspace
+browsing are separate mechanisms. There is no filesystem snapshot or isolation
+from an already-trusted shell moving directories after validation.
+
+See AUDIT-PROVIDERS-2026-10-24.md for exact fixtures, Robolectric syscall-model
+limits, Android storage/manual checks and intentional access restrictions.
+
+## Unreleased analysis and remaining source fixes (2.0.16-test)
+
+The APK keeps its AGP4.2.2/Gradle7.2/native pipeline. Independent modern-lint staging
+uses AGP7.4.2/Gradle7.5.1/JDK11 with dependency analysis and identical production
+Java/resources/manifests. A stage lock, stale-output removal, Gradle-exit/XML/
+engine/module/infrastructure checks prevent incomplete zero-error reports.
+The compileSDK35-versus-AGP33-tested warning remains; see LINT.md and the audit.
+
+X11 diagnostic/renderer calls have explicit API30 guards; native process ownership
+and stop/cancel paths are unchanged. Media3's wrapped factory API has scoped OptIn.
+Shared protocol values use Locale.ROOT while human date formatting keeps default
+locale. Fixed-target notification/report intents are immutable; externally supplied
+plugin result PendingIntents retain their own contract. Existing intent-filter
+exports are explicit, without broadening component permissions.
+
+Thumbnail EXIF uses AndroidX1.4.2 rather than the platform parser, preserving matrix
+logic/cache/original files. Attachment Download delegates to ProjectFileExport's
+exclusive creation, numeric collision suffix and cancellation/partial cleanup.
+ZoomImage distinguishes tap from drag/pinch/cancel for performClick; sizing and
+render transforms are retained. No persistent data format or account migration.

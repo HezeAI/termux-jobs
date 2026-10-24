@@ -82,7 +82,14 @@ final class CodexRpc implements AutoCloseable {
         } catch (Exception e) { ControlFailure failure = rpc.failed(e); rpc.close(); throw failure; }
     }
     static void stopOwnedServer(File files, WorkspaceStore.Session profile) {
-        File socket = CodexSessionShell.socket(files, profile);
+        ownedStop(files, profile).run();
+    }
+    /** Resolve the owner before enqueueing: a mutable profile may already have relaunched. */
+    static Runnable ownedStop(File files, WorkspaceStore.Session profile) {
+        final File socket = CodexSessionShell.socket(files, profile);
+        return () -> stopOwnedSocket(socket);
+    }
+    private static void stopOwnedSocket(File socket) {
         File marker = new File(socket.getAbsolutePath() + ".stop"); File stopped = new File(socket.getAbsolutePath() + ".stopped");
         try {
             try (FileOutputStream out = new FileOutputStream(marker)) { out.write(1); }

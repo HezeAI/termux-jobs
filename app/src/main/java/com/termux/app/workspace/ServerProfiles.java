@@ -18,6 +18,8 @@ final class ServerProfiles {
     static final class Action {final String name,path,command;Action(String n,String p,String c){name=n;path=p;command=c;}}
     static final class Project {final String name,path;Project(String n,String p){name=n;path=p;}}
     final List<Profile> profiles=new ArrayList<>();
+    /** Freeze connection settings for one explicit operation; do not copy editable UI collections. */
+    static Profile connectionSnapshot(Profile source){Profile p=new Profile();p.id=source.id;p.name=source.name;p.host=source.host;p.port=source.port;p.user=source.user;p.auth=source.auth;p.identity=source.identity;p.encrypted=source.encrypted;p.diagnosticsPaused=source.diagnosticsPaused;return p;}
     private final AtomicFile file;
     boolean writable=true;
     ServerProfiles(Context c){file=new AtomicFile(new File(c.getFilesDir(),"workspace-servers-v1.json"));load();}

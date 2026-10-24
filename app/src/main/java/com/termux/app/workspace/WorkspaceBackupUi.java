@@ -24,7 +24,7 @@ final class WorkspaceBackupUi {
     static WorkspaceDialogs.Builder backupBuilder(Activity a){return WorkspaceDialogs.builder(a).blockOutsideDismiss();}
     private void backupCreated(JSONObject result){message(t("Бэкап создан и проверен","Backup created and verified")+"\n"+result.optString("path"));}
     private void message(String text){if(!activity.isDestroyed())backupBuilder(activity).setTitle(label(activity)).setMessage(text).setPositiveButton("OK",null).show();}
-    private LinearLayout column(){LinearLayout v=new LinearLayout(activity);v.setOrientation(1);int d=WorkspaceDialogs.dp(activity,16);v.setPadding(d,d,d,d);return v;}
+    private LinearLayout column(){LinearLayout v=new LinearLayout(activity);v.setOrientation(LinearLayout.VERTICAL);int d=WorkspaceDialogs.dp(activity,16);v.setPadding(d,d,d,d);return v;}
     private void info(LinearLayout form,String value){TextView v=new TextView(activity);v.setText(value);v.setTextColor(WorkspaceDialogs.TEXT);v.setTextSize(14);v.setPadding(0,8,0,12);form.addView(v);}
     private CheckBox check(LinearLayout form,String value,boolean selected){CheckBox b=new CheckBox(activity);b.setText(value);b.setTextColor(WorkspaceDialogs.TEXT);b.setChecked(selected);form.addView(b);return b;}
     private EditText field(LinearLayout form,String value,String hint){EditText e=new EditText(activity);e.setSingleLine();e.setText(value);e.setHint(hint);e.setTextColor(WorkspaceDialogs.TEXT);e.setSelectAllOnFocus(true);form.addView(e);return e;}
@@ -103,13 +103,13 @@ final class WorkspaceBackupUi {
         boolean removal="remove-restored".equals(request.optString("operation"));
         AlertDialog.Builder builder=backupBuilder(activity).setTitle(label(activity)).setView(progress.view);
         if(!removal)builder.setNegativeButton(WorkspaceText.tr("Отмена"),(d,w)->engine.cancel());
-        AlertDialog dialog=builder.create();dialog.setCancelable(!removal);
-        if(!removal)dialog.setOnCancelListener(d->engine.cancel());dialog.setOnDismissListener(d->progress.close());
+        AlertDialog dialog=builder.create();dialog.setCancelable(false);
+        dialog.setOnDismissListener(d->progress.close());
         boolean started=engine.start(activity,request,new WorkspaceBackupEngine.Callback(){
             public void progress(JSONObject event){if(dialog.isShowing())progress.update(stageName(event.optString("stage")),event);}
             public void done(JSONObject result){progress.close();dialog.dismiss();try{if("restore".equals(request.optString("operation"))||removal)BackupInventoryCache.SHARED.clear();success.accept(result);}catch(Exception e){message(t("Операция не применена полностью. Проверьте результат и сохранённые исходные данные.","Operation was not fully applied. Inspect the result; original files were retained."));}}
             public void error(String code){progress.close();dialog.dismiss();message(errorText(code));}
-        });if(started){dialog.show();progress.start();}else{progress.close();message(t("Другая операция резервного копирования ещё выполняется.","Another backup operation is still running."));}
+        });if(started){dialog.show();progress.bindCancellation(dialog,engine::cancel);progress.start();}else{progress.close();message(t("Другая операция резервного копирования ещё выполняется.","Another backup operation is still running."));}
     }
 
     private String stageName(String stage){switch(stage){case "INSTALL_PIGZ":return t("Установка pigz","Installing pigz");case "DATABASE":return t("Копирование базы данных","Backing up database");case "CHECKSUM":return t("Проверка SHA-256","Checking SHA-256");case "SCAN":return t("Проверка структуры архива","Checking archive structure");case "VERIFY_COMPRESSION":return t("Проверка целостности сжатия","Verifying compressed stream");case "ARCHIVE":return t("Создание архива","Creating archive");case "PROOT_DISTRO":return t("Работа proot-distro","Running proot-distro");case "RESTORE_FILES":return t("Извлечение в новую папку","Extracting to a new folder");case "PREPARE_UBUNTU":return t("Подготовка отдельной Ubuntu","Preparing separate Ubuntu");default:return t("Подготовка и оценка размера","Preparing and estimating size");}}
@@ -185,7 +185,7 @@ final class WorkspaceBackupUi {
             JSONObject scope=scopes.getJSONObject(i);String sid=scope.getString("id");
             LinearLayout section=column();section.setBackground(WorkspaceDialogs.background(activity,false));
             LinearLayout.LayoutParams sectionParams=new LinearLayout.LayoutParams(-1,-2);sectionParams.bottomMargin=WorkspaceDialogs.dp(activity,10);form.addView(section,sectionParams);
-            LinearLayout body=new LinearLayout(activity);body.setOrientation(1);
+            LinearLayout body=new LinearLayout(activity);body.setOrientation(LinearLayout.VERTICAL);
             String title=sid.equals("termux")?"Termux":"Ubuntu · "+sid.substring(7);
             TextView heading=WorkspaceDialogs.action(activity,title+" ▾",0);section.addView(heading);section.addView(body);
             heading.setOnClickListener(v->{boolean open=body.getVisibility()==View.VISIBLE;body.setVisibility(open?View.GONE:View.VISIBLE);heading.setText(title+(open?" ▸":" ▾"));});

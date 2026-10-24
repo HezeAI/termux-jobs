@@ -56,7 +56,8 @@ import java.nio.charset.StandardCharsets;
     @Override public void surfaceDestroyed(SurfaceHolder holder) { suspendSurface(); }
     private void resize(int w,int h) {
         if(pointer==0||w<1||h<1)return;
-        screenWidth=Math.max(64,Math.min(4096,w-w%8));screenHeight=Math.max(64,Math.min(4096,h));
+        X11DisplayMode mode=X11DisplayMode.fit(w,h);
+        screenWidth=mode.width;screenHeight=mode.height;
         setViewport(pointer,0,0,w,h,screenWidth,screenHeight,Math.max(0,Math.min(h-1,obscuredBottom)));
         if(lastModeWidth!=screenWidth||lastModeHeight!=screenHeight){sendWindowChange(pointer,screenWidth,screenHeight,60,"screen");lastModeWidth=screenWidth;lastModeHeight=screenHeight;}
     }
