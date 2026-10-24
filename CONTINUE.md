@@ -1,25 +1,36 @@
-# v2.0.3 /1352 — final release checks passed
+# Published v2.0.3 /1352 — verified stable/latest
 
-HezeAI confirmed code1351 works, including Fedora MP4, and authorized the final
-audit and GitHub publication as v2.0.3. Release code1352 retains all494 production
-files, runtime assets and JNI libraries from that tested candidate. Same package/
-signer/schema8, no valid-data reset or account/rootfs migration. Current payload:
-`.verification/release-v2.0.3/Termux-Jobs-v2.0.3-arm64.apk`,45882874bytes,
+Release: https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.3
+Source/tag commit:5e71d93072fe609cfcd77d129078f65fd11a44d9.
+Previous public:v2.0.2/code1331. Same com.termux/signer/schema8, Android8+/ARM64,
+X11 Android11+; no valid-data reset, account/rootfs migration or reinstall needed.
+APK Termux-Jobs-v2.0.3-arm64.apk,45,882,874bytes,
 SHA256 `5c2deb38156453cf76f3d6bf87f2eb913b2dc5eb8fcde7034b93ba6e2debfaa0`.
+Signer SHA256 `dd37d983cd2496ebe49c7e88ddbc0088f311d38b8a8503e4392c81b48a11a644`.
 
-Fresh1229JVM/184classes, Python579run/578pass/1intentional retired-overlay skip,
-31Node fixtures, five-module lint0errors/210 reviewed warnings; localization,
-681source/test/resource stage matches, runtime/package/ZIP/signer/ABI/privacy
-checks and final updater metadata passed. No working environment/session or
-installed app was changed. Source/build/fixture checks and developer phone
-results are distinguished in VALIDATION-v2.0.3.md and AUDIT-RELEASE-v2.0.3.md.
-Known remaining limits: fresh-device/other-driver combinations, accessibility,
-target-SDK/package-ID architecture, force-kill durability and uncertain remote
-Copy/Move. RU/EN compatibility warns before updates. Final assets include APK,
-update.json, SHA256SUMS and public validation/audit reports. Next: commit/tag,
-upload draft, verify downloaded asset bytes, publish stable, verify latest and
-tagged documentation, then record remote results. Do not reinstall or stop user
-sessions to publish.
+HezeAI confirmed the final candidate works, including Fedora MP4, then authorized
+this publication. Source/resources/runtime assets/native libraries match that
+candidate; release version fields changed. Fresh1229JVM/184classes, Python579run/
+578pass/1intentional retired-overlay skip,31Node fixture programs passed.
+Five-module modern lint:0errors/210 reviewed warnings. Localization,681 staged
+source/test/resource matches, APK/ZIP/runtime/ABI/signer/secret checks passed.
+No installed app, working environment or user terminal/server session was changed.
+
+Five public assets:APK,update.json,SHA256SUMS,VALIDATION-v2.0.3.md,AUDIT-v2.0.3.md.
+GitHub sizes/digests match; all five downloaded anonymously and match local bytes.
+Anonymous latest stable API and latest/download/update.json resolve to this release.
+Release body/credit and every linked tagged document are publicly verified. RU/EN
+updater compatibility warns before install: HOME-only SAF, exclusive outputs,
+read-only malformed duplicate-ID libraries and uncertain remote Copy/Move after
+interruption. Existing account stores and schema8 remain. Do not move this tag.
+Evidence:.verification/release-v2.0.3/. Future APK code must exceed1352.
+
+Remaining work:target-SDK/package-ID/sharedUserId architecture,accessibility,
+fresh-phone/other-driver combinations,live-provider recovery,force-kill durability
+and remote descendant ownership. Device/GUI evidence and automated fixture results
+remain separate in the public audit/validation. No current task requires more tests,
+an APK installation or another publication. Release descriptions remain English,
+RU/EN updater notes retained; credit line:AI development assistance: OpenAI Codex.
 
 # Historical continuation notes
 
