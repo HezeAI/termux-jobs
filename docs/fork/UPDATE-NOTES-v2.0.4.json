@@ -1,0 +1,30 @@
+{
+  "ru": [
+    "Новый рендер Bionic for glibc (libhybris + Jobs bridge) для Ubuntu, Debian, Fedora, Arch Linux, openSUSE и Void: импорт Bionic Turnip и совместимых проприетарных Qualcomm ZIP.",
+    "Отдельная библиотека загруженных драйверов, кеш и X11-процесс у каждого glibc-окружения. Термукс сохраняет свой AdrenoTools Wrapper; Alpine/musl не использует glibc-мост.",
+    "Дополнительные клавиши X11, включая Esc/Enter/стрелки и модификаторы; панель можно перемещать справа и менять размер слева, кнопки перестраиваются.",
+    "Jobs GPU Test в рекомендуемых программах восьми X11-систем: сцены, сведения о GPU, VSync, отчёты и ярлык на столе.",
+    "Исправления синхронизации/Present и кеша геометрии моста. Kali-стиль уменьшен примерно на8%; добавлен отступ меню Whisker. Исходники/патчи/сборка моста и источники драйверов — в релизе."
+  ],
+  "en": [
+    "New Bionic for glibc (libhybris + Jobs bridge) renderer for Ubuntu, Debian, Fedora, Arch Linux, openSUSE and Void: import Bionic Turnip and compatible proprietary Qualcomm ZIPs.",
+    "Independent imported-driver libraries, runtime caches and X11 processes per glibc environment. Termux retains AdrenoTools Wrapper; Alpine/musl is outside this glibc bridge.",
+    "Extra X11 keys including Esc/Enter/arrows/modifiers: move the panel with its right tab or resize with its left tab; keys reflow.",
+    "Jobs GPU Test in Recommended for eight X11 systems: scenes, GPU details, VSync comparisons, reports and a desktop shortcut.",
+    "Bridge GPU/Present synchronization and geometry-cache fixes. Optional Kali style approximately8% smaller; Whisker bottom padding. Bridge source/patches/build notes and driver sources are in the release."
+  ],
+  "compatibility": {
+    "ru": [
+      "Прежние com.termux, подпись, schema8 и ARM64; code1366 выше тестовых сборок. Android8+ приложение, X11 — Android11+. Сброс корректных данных, перенос аккаунтов или переустановка окружений не нужны.",
+      "Мост требует AArch64/glibc≥2.38 и GLIBCXX_3.4.32. Драйвер должен подходить GPU/API/прошивке; 891.11 требует API36/A8xx. QCOM пока экспериментальный: был единичный таймаут при стресс-переключении VSync, повторные тесты прошли; полный GUI891.11 не подтверждён.",
+      "Завершите важную работу перед обновлением: Android может остановить процессы. Перезапустите выбранный стол для новых частных библиотек и темы. Драйверы сохраняются, системные/гостевые библиотеки и окружения агентов не заменяются.",
+      "Ограничения доступа/копирования из2.0.3 сохраняются. Для новых сценариев и других устройств нужна проверка; результаты native-проб без Android Surface не равны тестированию полного рабочего стола."
+    ],
+    "en": [
+      "Same com.termux/signer/schema8/ARM64; code1366 exceeds private candidates. Android8+ app, Android11+ X11. No valid-data reset, account migration or environment reinstallation.",
+      "Bridge needs AArch64/glibc≥2.38 and GLIBCXX_3.4.32. Drivers must match GPU/API/firmware; 891.11 needs API36/A8xx. QCOM remains experimental: one VSync transition stress timeout occurred, retries passed; full891.11 GUI acceptance is unconfirmed.",
+      "Finish important work before updating: Android may stop processes. Restart the selected desktop for refreshed private libraries/theme. Imports are retained; system/guest libraries and agent environments are not replaced.",
+      "Existing2.0.3 access/copy restrictions remain. New combinations/devices need testing; no-Surface native probes do not establish complete desktop behavior."
+    ]
+  }
+}

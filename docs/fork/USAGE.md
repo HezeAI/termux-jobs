@@ -1,3 +1,11 @@
+# Bionic drivers and X11 tools — v2.0.4
+
+Stop the selected ordinary glibc desktop, open Terminal / Desktop → Rendering, select Bionic for glibc and use the folder to import a trusted matching Bionic driver ZIP. The row below selects saved imports. Start normally; each target prepares its own native dependencies/cache. CPU/Turnip+Zink/VirGL remain selectable while stopped. See [bridge requirements and limits](BIONIC_GLIBC.md), [driver downloads](DRIVER-SOURCES-v2.0.4.md) and [release](RELEASE-v2.0.4.md).
+
+The keyboard icon toggles X11 extra keys independently of Interactive input. In fullscreen it is beside the | action. Right tab moves the panel, left tab resizes it; held modifiers release on closing/switching. Programs → Recommended → Jobs GPU Test installs the optional diagnostic, dependencies and shortcut in the selected target. Saved reports identify the scene, renderer, size and interval. The optional theme has rounded metrics about8% smaller on the next desktop launch; theme-off restoration remains.
+
+---
+
 # X11 landscape in v2.0.3
 
 Open the selected environment's desktop, then rotate the phone horizontally.

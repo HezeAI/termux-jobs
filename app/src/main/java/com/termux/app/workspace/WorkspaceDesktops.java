@@ -34,6 +34,8 @@ final class WorkspaceDesktops {
  boolean hasSurface(){WorkspaceDesktop c=current(false);return c!=null&&c.hasSurface();}
  boolean showing(){WorkspaceDesktop c=current(false);return c!=null&&c.showing();}
  boolean keyboardEnabled(){WorkspaceDesktop c=current(false);return c!=null&&c.keyboardEnabled();}
+ boolean extraKeysVisible(){WorkspaceDesktop c=current(false);return c!=null&&c.extraKeysVisible();}
+ void extraKeys(){WorkspaceDesktop c=current(false);if(c!=null)c.extraKeys();}
  void keyboard(){WorkspaceDesktop c=current(false);if(c!=null)c.keyboard();}
  boolean fullscreenBack(){WorkspaceDesktop c=current(false);return c!=null&&c.fullscreenBack();}
  String label(){WorkspaceDesktop c=current(true);return c==null?(WorkspaceLanguage.code(activity).equals("ru")?"Терминал":"Terminal"):c.label();}

@@ -48,6 +48,9 @@ GPU_PACKAGES={'archlinux':['glmark2','mesa-utils'],'void':['glmark2','glxinfo'],
  'opensuse':['glmark2','Mesa-demo-x'],'alpine':['mesa-utils'],
  'fedora':['glmark2','glx-utils'],'termux':['glmark2','mesa-demos']}
 for _target,_packages in GPU_PACKAGES.items():GROUPS[_target]['gpu-tools']=_packages
+for _target,_packages in GPU_PACKAGES.items():GROUPS[_target]['gpu-test']=[*list(_packages),'python' if _target in ('termux','archlinux') else 'python3']
+# The local GLX diagnostic does not execute glmark2 or mesa-demos.
+GROUPS['termux']['gpu-test']=['python','libx11','mesa']
 def clean(value,limit):return ' '.join(str(value or '').split())[:limit]
 def manager_environment(args):
  env=dict(os.environ,LC_ALL='C')
@@ -181,6 +184,14 @@ def packages(target,id):
   else:return [name]
  if id not in GROUPS[target]:raise ValueError('unknown program')
  return GROUPS[target][id]
+
+def local_gpu_test(target,pkgs):
+ # Existing configured runtime dependencies suffice to copy our own payload.
+ # Missing dependencies still go through the authenticated native transaction.
+ if not set(pkgs)<=installed(target):return False
+ load('x11-gpu-test-setup').prepare(Path.home(),target)
+ print('JOBS_APT_PHASE:install',flush=True)
+ return True
 
 def available(target):
  result={}
@@ -350,6 +361,8 @@ def main():
   # Bootstrap may contain an older C++ runtime with no versioned dependency edge.
   # Request the current runtime with this native program transaction, not at every launch.
   if target=='termux' and pkgs and 'libc++' not in pkgs:pkgs.append('libc++')
+  if id=='gpu-test' and local_gpu_test(target,pkgs):
+   return main_check(target)
   resume=op=='install' and os.environ.get('JOBS_X11_PROGRAM_RESUME')=='1'
   print('JOBS_APT_PHASE:update',flush=True)
   if target=='archlinux':
@@ -376,6 +389,7 @@ def main():
    elif target=='opensuse':pass # Already installed in the same filtered repository view.
    else:run(['apt-get','-o','APT::Keep-Downloaded-Packages=true','-o','Acquire::Retries=3','-o','Acquire::http::Timeout=30','-o','Acquire::https::Timeout=30','-o','Debug::acquire::progress=true','-o','APT::Status-Fd=3','-o','Dpkg::Use-Pty=0','install','-y','--no-remove',*pkgs])
    if not set(pkgs)<=installed(target):raise ValueError('program not fully installed')
+   if id=='gpu-test':load('x11-gpu-test-setup').prepare(Path.home(),target)
    if id=='gpu-tools':
     helper=load('x11-gpu-tools')
     if not helper.ready(target):raise ValueError('GPU tools binary missing')
@@ -386,13 +400,18 @@ def main():
     codec.install(*args)
  elif op=='remove':
   if not id.startswith('pkg:'):raise ValueError('invalid removal')
-  remove(target,id[4:])
+  if id=='pkg:termux-jobs-gpu-test':load('x11-gpu-test-setup').remove(Path.home())
+  else:remove(target,id[4:])
  elif op not in ('check','catalog','installed'):raise ValueError('invalid operation')
  if op in ('catalog','catalog-install','installed'):catalog(target,op=='installed',prefix);return
+ main_check(target)
+
+def main_check(target):
  print('FIREFOX_DNS:'+load('x11-firefox-dns').state(Path.home()),flush=True)
  have=installed(target)
  for name,pkgs in GROUPS[target].items():
   complete=set(pkgs)<=have
+  if name=='gpu-test' and complete:complete=load('x11-gpu-test-setup').ready(Path.home())
   if name=='gpu-tools' and complete:complete=load('x11-gpu-tools').ready(target)
   if target in ('opensuse','fedora') and name=='media' and complete:
    codec=load('x11-openh264');complete=codec.ready(Path.home(),True) if target=='fedora' else codec.ready(Path.home())

@@ -1,3 +1,11 @@
+# v2.0.4 — per-environment bridge and desktop controls
+
+The Bionic-for-glibc choice appears only for six supported ordinary glibc targets. A folder imports trusted ZIPs; the row below shows the selected saved driver. Running/busy desktops disable replacement. These controls reuse the existing renderer/installation flows and do not redirect sessions to a different rootfs. Termux keeps its existing Wrapper; agents and Alpine/musl are excluded.
+
+X11 extra keys have one per-host panel, also reparented into fullscreen. Move/resize tabs stay within the visible host; resize reflows existing keys and preserves current modifiers, while hide/detach releases held keys. Existing Android keyboard state remains separate. The optional theme uses approximately8% smaller rounded metrics and scoped Whisker bottom padding; actual popup acceptance remains a device check.
+
+---
+
 # v2.0.3 — landscape desktop presentation
 
 Rotation is the entry action: a visible X11 desktop fills the screen in landscape,

@@ -65,7 +65,7 @@ fi
 # makes XFCE's duplicate exit and can leave its failsafe registration counter pending.
 # Keep renderer-specific compositing through a private executable shim, not xfconf.
 jobs_compositor=on
-case "${JOBS_X11_TARGET:-}:${JOBS_X11_RENDERER:-cpu}" in termux:wrapper|*:virgl|ubuntu:turnip|debian:turnip|alpine:turnip|fedora:turnip|opensuse:turnip|void:turnip|archlinux:turnip) jobs_compositor=off;;esac
+case "${JOBS_X11_TARGET:-}:${JOBS_X11_RENDERER:-cpu}" in ubuntu:bionic-glibc|debian:bionic-glibc|fedora:bionic-glibc|archlinux:bionic-glibc|opensuse:bionic-glibc|void:bionic-glibc|termux:wrapper|*:virgl|ubuntu:turnip|debian:turnip|alpine:turnip|fedora:turnip|opensuse:turnip|void:turnip|archlinux:turnip) jobs_compositor=off;;esac
 export JOBS_X11_COMPOSITOR="$jobs_compositor"
 JOBS_X11_WM_BINARY=$(command -v xfwm4) || { echo ERROR:WINDOW_MANAGER_MISSING;exit 1; }
 export JOBS_X11_WM_BINARY

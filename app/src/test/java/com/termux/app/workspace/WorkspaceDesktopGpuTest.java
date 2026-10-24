@@ -35,7 +35,7 @@ public class WorkspaceDesktopGpuTest {
  @Test public void virglChoiceIsEnabledForAllEightDesktopsAndDoesNotStartAnyProcess(){
   TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.getSharedPreferences("workspace-x11",0).edit().clear().commit();
   for(String target:new String[]{"termux","ubuntu","debian","alpine","fedora","opensuse","void","archlinux"}){
-   String[] selected={""};WorkspaceDesktopGpu.select(a,target,()->false,v->selected[0]=v,()->{});AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();assertEquals(target.equals("termux")?4:3,d.getListView().getAdapter().getCount());assertTrue(target,d.getListView().getAdapter().isEnabled(2));
+   String[] selected={""};WorkspaceDesktopGpu.select(a,target,()->false,v->selected[0]=v,()->{});AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();assertEquals((target.equals("termux")||target.equals("ubuntu")||target.equals("debian")||target.equals("fedora")||target.equals("archlinux")||target.equals("opensuse")||target.equals("void"))?4:3,d.getListView().getAdapter().getCount());assertTrue(target,d.getListView().getAdapter().isEnabled(2));
    if(d.getListView().getAdapter().isEnabled(2)){d.getListView().performItemClick(d.getListView().getAdapter().getView(2,null,d.getListView()),2,2);org.robolectric.Shadows.shadowOf(Looper.getMainLooper()).idle();assertEquals("virgl",selected[0]);assertEquals("cpu",WorkspaceDesktopGpu.mode(a,target));}d.dismiss();
   }
  }

@@ -1,3 +1,11 @@
+# v2.0.4 — private Bionic/glibc rendering
+
+Six ordinary glibc targets share one reviewed bundled runtime but each owns its imported-driver/cache/lock/display/service state. The original Ubuntu cache path is retained. Private Mesa26.1.6 Zink loads our ICD through the guest Vulkan loader; libhybris loads the explicit Bionic HAL and Android buffer APIs. Process-only environment/binds leave installed guest libraries, Termux Wrapper and agent sessions untouched. See [native sources, patches, safety and limitations](BIONIC_GLIBC.md) and [Present audit](X11_PRESENTATION_AUDIT.md).
+
+X11ExtraKeys routes events to the owned host; DesktopExtraKeys handles bounded floating geometry. Hiding/switching/detaching releases modifiers. Fullscreen moves the existing host and coordinates sibling controls, not another desktop/server. Jobs GPU Test is an optional per-target program and keeps reports in that environment. Driver imports are validated executable code, not sandboxed plugins.
+
+---
+
 # v2.0.3 — landscape presentation
 
 The locale context overrides language/layout direction only. It must not pin a

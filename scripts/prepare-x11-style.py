@@ -160,22 +160,23 @@ def main():
 @define-color theme_selected_fg_color #ffffff;
 window, .background { background-color: #141c26; color: #dce5ef; }
 entry, textview, textview text, treeview.view, iconview.view { background-color: #0d141e; color: #dce5ef; }
-button { min-height: 30px; padding: 5px 10px; border: 1px solid #344353; border-radius: 6px; color: #dce5ef; background-image: linear-gradient(to bottom, #273340, #1c2631); box-shadow: none; }
+button { min-height: 28px; padding: 5px 9px; border: 1px solid #344353; border-radius: 6px; color: #dce5ef; background-image: linear-gradient(to bottom, #273340, #1c2631); box-shadow: none; }
 button:hover { border-color: #168bff; background-image: linear-gradient(to bottom, #314358, #24374b); }
 button:active, button:checked { background-image: linear-gradient(to bottom, #165cba, #124b96); border-color: #168bff; color: #ffffff; }
-entry { min-height: 32px; border-radius: 5px; border: 1px solid #344353; }
+entry { min-height: 30px; border-radius: 5px; border: 1px solid #344353; }
 entry:focus { border-color: #168bff; }
 menu, .menu, popover { background-color: #111a25; color: #dce5ef; border-color: #344353; }
 menuitem:hover, menuitem:selected, selection, *:selected { background-color: #125cbd; color: #ffffff; }
-scrollbar slider { min-width: 12px; min-height: 12px; background-color: #3c5068; border: 1px solid #48607a; border-radius: 5px; }
+scrollbar slider { min-width: 11px; min-height: 11px; background-color: #3c5068; border: 1px solid #48607a; border-radius: 5px; }
 .sidebar { background-color: #141f2c; color: #c9d5e3; }
 .xfce4-panel { background-image: linear-gradient(to bottom, #18222d, #101820); color: #dce5ef; border-top: 1px solid #324254; }
 .xfce4-panel button { color: #dce5ef; background-image: none; background-color: transparent; border-color: transparent; box-shadow: none; border-radius: 6px; padding: 4px 7px; }
 .xfce4-panel button:hover { background-color: #24374b; border-color: #168bff; }
 .xfce4-panel .tasklist button, .xfce4-panel .tasklist .toggle { background-color: #1c2a3a; border: 1px solid transparent; }
 .xfce4-panel .tasklist button:checked { background-color: #17365a; border-bottom: 3px solid #168bff; }
-#applicationmenu-button, #whiskermenu-button { background-image: linear-gradient(to bottom, #263240, #19232e); border: 1px solid #3f5369; border-radius: 10px; font-weight: normal; font-style: normal; padding: 6px 12px; }
+#applicationmenu-button, #whiskermenu-button { background-image: linear-gradient(to bottom, #263240, #19232e); border: 1px solid #3f5369; border-radius: 10px; font-weight: normal; font-style: normal; padding: 5px 11px; }
 #applicationmenu-button:hover, #whiskermenu-button:hover { border-color: #168bff; background-color: #24374b; }
+#whiskermenu-window { padding-bottom: 12px; }
 .xfce4-panel label { color: #dce5ef; text-shadow: none; }
 .xfdesktop-icon-view { color: #ffffff; text-shadow: 1px 2px #030b15; }
 '''
@@ -192,7 +193,7 @@ scrollbar slider { min-width: 12px; min-height: 12px; background-color: #3c5068;
  text[SELECTED]="#ffffff"
  xthickness=2
  ythickness=2
- font_name="DejaVu Sans 13"
+ font_name="DejaVu Sans 12"
 }
 class "GtkWidget" style "jobs-kali"
 '''

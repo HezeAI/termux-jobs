@@ -1,3 +1,28 @@
+# v2.0.4 /1366 prepared for authorized publication
+
+User authorized publication and reference driver mirrors. Branch fork/base.
+Final APK:51859681bytes, SHA25656ef4e034467bc1030a6ccb29c891ce97938baad3b5575a898e7e41abcd18493. Same signer/package/schema8;
+no reset/migration. Runtime assets/Android native payload match private1365.
+1251 JVM tests/187classes and168 scoped Python tests pass; modern lint
+five modules0errors/210reviewed warnings; localization584/runtime definitions,
+archive/package/ABI/signer/secret checks pass. See VALIDATION-v2.0.4.md.
+
+Six ordinary glibc targets support Bionic HAL drivers with libhybris + Jobs ICD /
+WSI + private Mesa26.1.6; separate imports/caches/locks/displays. Turnip device
+reports are successful.891.11 native BGRA import passes private probes but one
+concurrent VSync-transition timeout remains unresolved; real891.11 GUI and new
+8% theme/openSUSE popup still need acceptance. X11 extra keys include move/resize;
+Jobs GPU Test supports all eight targets. Do not claim arbitrary driver support.
+
+Release assets will include APK,update.json,SHA256SUMS,validation,full bridge
+source/runtime export,small bridge runtime and unmodified891.11/V38 ZIPs with
+exact StevenMXZ origins. The412Banner is an additional driver-download source.
+Sources/patches/licenses are documented; no driver bundled in APK/source export.
+Credit line must remain:AI development assistance: OpenAI Codex.
+Publication verification follows; do not move a published tag.
+
+---
+
 # Published v2.0.3 /1352 — verified stable/latest
 
 Release: https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.3

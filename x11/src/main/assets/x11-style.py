@@ -3,7 +3,7 @@
 import copy,hashlib,io,json,os,stat,sys,tempfile,zipfile
 from pathlib import Path,PurePosixPath
 import xml.etree.ElementTree as ET
-PIN='f0bf8dcb61ab5f4ee8ad77009eb6446fe3c1c08cabd3ff9b00a21dea67ebc834'
+PIN='6bc19721d09cb5d16b5ee5df6f2758da9653a88e0211dd81ef5fcb408386aec0'
 LIMIT=8*1024*1024
 
 def read(path):
@@ -98,9 +98,9 @@ def panel_defaults(prefix):
 def desired(roots,wallpaper):
  out={}
  def add(channel,key,typ,value):out[channel+'|'+key]=prop(key,typ,value)
- for key,typ,value in [('Net/ThemeName','string','TermuxJobsStyle'),('Net/IconThemeName','string','TermuxJobsIcons'),('Gtk/FontName','string','DejaVu Sans 13'),('Gtk/CursorThemeName','string','TermuxJobsCursor'),('Gtk/CursorThemeSize','int',32)]:add('xsettings','/'+key,typ,value)
- for key,value in [('theme','TermuxJobsStyle'),('title_font','DejaVu Sans Bold 13'),('title_alignment','left'),('button_layout','O|HMC')]:add('xfwm4','/general/'+key,'string',value)
- for key,typ,value in [('icon-size','uint',80),('font-size','double',12),('use-custom-font-size','bool',True)]:add('xfce4-desktop','/desktop-icons/'+key,typ,value)
+ for key,typ,value in [('Net/ThemeName','string','TermuxJobsStyle'),('Net/IconThemeName','string','TermuxJobsIcons'),('Gtk/FontName','string','DejaVu Sans 12'),('Gtk/CursorThemeName','string','TermuxJobsCursor'),('Gtk/CursorThemeSize','int',30)]:add('xsettings','/'+key,typ,value)
+ for key,value in [('theme','TermuxJobsStyle'),('title_font','DejaVu Sans Bold 12'),('title_alignment','left'),('button_layout','O|HMC')]:add('xfwm4','/general/'+key,'string',value)
+ for key,typ,value in [('icon-size','uint',74),('font-size','double',11),('use-custom-font-size','bool',True)]:add('xfce4-desktop','/desktop-icons/'+key,typ,value)
  background=roots['xfce4-desktop'];backdrops=set('/backdrop/screen0/monitorscreen/workspace%d'%n for n in range(4))
  for screen in background.findall("./property[@name='backdrop']/property"):
   for monitor in screen.findall('property'):
@@ -115,7 +115,7 @@ def desired(roots,wallpaper):
    name=item.get('name','')
    if not name.startswith('panel-') or not name[6:].isdigit():continue
    pos=item.find("property[@name='position']");bottom=pos is not None and 'p=10;' in pos.get('value','')
-   for key,typ,value in [('size','uint',88 if bottom else 48),('icon-size','uint',56 if bottom else 32),('background-style','uint',0)]:add('xfce4-panel','/panels/'+name+'/'+key,typ,value)
+   for key,typ,value in [('size','uint',81 if bottom else 44),('icon-size','uint',52 if bottom else 30),('background-style','uint',0)]:add('xfce4-panel','/panels/'+name+'/'+key,typ,value)
    if bottom:
     add('xfce4-panel','/panels/'+name+'/autohide-behavior','uint',0)
     add('xfce4-panel','/panels/'+name+'/length','uint',100)

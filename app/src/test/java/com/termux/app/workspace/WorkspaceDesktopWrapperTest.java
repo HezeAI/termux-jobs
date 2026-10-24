@@ -15,7 +15,7 @@ public class WorkspaceDesktopWrapperTest {
   TermuxActivity a=activity();
   for(String target:new String[]{"termux","ubuntu","debian","alpine","fedora","opensuse","void","archlinux"}){
    String[] selection={""};WorkspaceDesktopGpu.select(a,target,()->false,v->selection[0]=v,()->{});AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();
-   assertEquals(target.equals("termux")?4:3,d.getListView().getAdapter().getCount());
+   assertEquals((target.equals("termux")||target.equals("ubuntu")||target.equals("debian")||target.equals("fedora")||target.equals("archlinux")||target.equals("opensuse")||target.equals("void"))?4:3,d.getListView().getAdapter().getCount());
    if(target.equals("termux")){d.getListView().performItemClick(d.getListView().getAdapter().getView(3,null,d.getListView()),3,3);assertEquals("wrapper",selection[0]);}
    else d.dismiss();
   }
@@ -57,6 +57,13 @@ public class WorkspaceDesktopWrapperTest {
  private JSONObject saved(TermuxActivity a)throws Exception{
   String id=new String(new char[64]).replace('\0','a');File base=WorkspaceDesktopWrapper.base(a),root=new File(base,"drivers/"+id);assertTrue(root.mkdirs());Files.write(new File(root,"libvulkan_freedreno.so").toPath(),new byte[]{1});
   JSONObject value=new JSONObject().put("id",id).put("name","Turnip Gen8 V38").put("library","libvulkan_freedreno.so");Files.write(new File(base,"current.json").toPath(),value.toString().getBytes(StandardCharsets.UTF_8));return value;
+ }
+ @Test public void adrenotoolsLabelAndQualcommMainLibraryAreRestoredWithoutLibPrefix()throws Exception{
+  TermuxActivity a=activity();JSONObject value=saved(a);File base=WorkspaceDesktopWrapper.base(a),root=new File(base,"drivers/"+value.getString("id"));
+  Files.move(new File(root,"libvulkan_freedreno.so").toPath(),new File(root,"vulkan.adr891.so").toPath());value.put("library","vulkan.adr891.so").put("name","891.11");Files.write(new File(base,"current.json").toPath(),value.toString().getBytes(StandardCharsets.UTF_8));
+  assertEquals("vulkan.adr891.so",WorkspaceDesktopWrapper.metadata(a).getString("library"));assertEquals("891.11",WorkspaceDesktopWrapper.driverLabel(a));
+  a.getSharedPreferences("workspace-x11",0).edit().putString("renderer:termux","wrapper").putString("renderer:ubuntu","bionic-glibc").commit();
+  assertEquals("Wrapper · Bionic (AdrenoTools)",WorkspaceDesktopGpu.label(a,"termux"));assertFalse(WorkspaceDesktopGpu.label(a,"ubuntu").contains("AdrenoTools"));
  }
  @Test public void savedNameCardIsRestoredAfterOtherModesAndSelectingCurrentDoesNotReimport()throws Exception{
   TermuxActivity a=activity();JSONObject value=saved(a);a.getSharedPreferences("workspace-x11",0).edit().putString("renderer:termux","wrapper").commit();WorkspaceStore.Session p=new WorkspaceStore.Session();p.environment="termux";

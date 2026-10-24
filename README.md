@@ -5,6 +5,26 @@
 Команды по-прежнему выполняются в настоящем Termux или выбранном окружении;
 интерфейс помогает организовать работу и не требует писать свою оболочку скриптов.
 
+## v2.0.4 — Bionic drivers for glibc desktops
+
+Optional **Bionic for glibc (libhybris + Jobs bridge)** in Ubuntu, Debian, Fedora,
+Arch Linux, openSUSE and Void. Import matching Bionic Turnip or supported Qualcomm
+proprietary ZIPs, retain multiple saved drivers, and run desktops with separate
+caches/displays. Termux retains its AdrenoTools Wrapper; Alpine/musl is excluded.
+Private Mesa26.1.6 Zink + pinned libhybris/WSI and our ICD avoid replacing installed
+system/guest libraries. QCOM support is experimental; see the known891.11 stress
+timeout and API36/A8xx requirement before testing it.
+
+Includes movable/resizable X11 extra keys, optional Jobs GPU Test with reports
+and shortcuts in eight systems, and an approximately8% smaller optional theme.
+Same package/signer/schema8, code1366; no valid-data reset or rootfs migration.
+
+[Download v2.0.4](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.4) ·
+[Release notes](docs/fork/RELEASE-v2.0.4.md) ·
+[Validation](docs/fork/VALIDATION-v2.0.4.md) ·
+[Bridge source/build](docs/fork/BIONIC_GLIBC.md) ·
+[Driver sources](docs/fork/DRIVER-SOURCES-v2.0.4.md).
+
 ## v2.0.3 — X11 landscape and stability fixes
 
 Rotate a running X11 desktop to landscape for a full-screen view without app tabs
@@ -213,3 +233,7 @@ AI Agents, серверные операции и бэкапы в одном And
 Форк основан на **Termux v0.118.3**, лицензия [GPLv3](LICENSE.md).
 [Авторы и компоненты](docs/fork/ATTRIBUTION.md).
 Это независимый проект, не официальный продукт Termux, OpenAI, Anthropic или Google.
+
+Implementation notes: [experimental glibc desktop bridge (Ubuntu, Debian, Fedora, Arch, openSUSE and Void) and X11 extra keys](docs/fork/BIONIC_GLIBC.md), including the current-frame GPU synchronization and Present event-reader initialization correction, Qualcomm Android-buffer import investigation, and a roughly 8% smaller optional Kali-inspired desktop theme. See the v2.0.4 release limitations.
+
+Desktop feature: [Jobs GPU Test](docs/fork/JOBS_GPU_TEST.md), an optional renderer diagnostic with desktop shortcuts for the eight X11 environments. Device evidence and remaining limits are recorded in v2.0.4 validation.

@@ -1,0 +1,766 @@
+diff --git a/util/custom_allocator.hpp b/util/custom_allocator.hpp
+index a34164a..9f4a4f4 100644
+--- a/util/custom_allocator.hpp
++++ b/util/custom_allocator.hpp
+@@ -25,6 +25,7 @@
+ #include <cstdint>
+ #include <new>
+ #include <vector>
++#include <stdexcept>
+ #include <string>
+ #include <cassert>
+ #include <memory>
+diff --git a/wsi/x11/surface.cpp b/wsi/x11/surface.cpp
+index 8474504..8471ec7 100644
+--- a/wsi/x11/surface.cpp
++++ b/wsi/x11/surface.cpp
+@@ -56,6 +56,7 @@ surface::surface(const init_parameters &params)
+ 
+ surface::~surface()
+ {
++   if (m_geometry_connection) xcb_disconnect(m_geometry_connection);
+ }
+ 
+ bool surface::init()
+@@ -76,21 +77,68 @@ bool surface::init()
+       return false;
+    }
+ 
++   // Listen on an owned connection. Never consume the application's Xlib
++   // events or alter its event mask. No extra thread or periodic timer is used.
++   m_geometry_connection = xcb_connect(nullptr, nullptr);
++   if (!m_geometry_connection || xcb_connection_has_error(m_geometry_connection)) return false;
++   uint32_t mask = XCB_EVENT_MASK_STRUCTURE_NOTIFY;
++   auto selected = xcb_change_window_attributes_checked(m_geometry_connection, m_window, XCB_CW_EVENT_MASK, &mask);
++   auto geometry = xcb_get_geometry(m_geometry_connection, m_window);
++   auto *reply = xcb_get_geometry_reply(m_geometry_connection, geometry, nullptr);
++   auto *error = xcb_request_check(m_geometry_connection, selected);
++   if (!reply || error)
++   {
++      free(reply);
++      free(error);
++      return false;
++   }
++   m_width = reply->width;
++   m_height = reply->height;
++   m_depth = reply->depth;
++   m_geometry_sequence = geometry.sequence;
++   m_geometry_valid = true;
++   free(reply);
+    return true;
+ }
+ 
+ bool surface::get_size_and_depth(uint32_t *width, uint32_t *height, int *depth)
+ {
+-   auto cookie = xcb_get_geometry(m_connection, m_window);
+-   if (auto *geom = xcb_get_geometry_reply(m_connection, cookie, nullptr))
++   const std::lock_guard<std::mutex> lock(m_geometry_mutex);
++   if (!m_geometry_valid) return false;
++   while (auto *event = xcb_poll_for_event(m_geometry_connection))
+    {
+-      *width = static_cast<uint32_t>(geom->width);
+-      *height = static_cast<uint32_t>(geom->height);
+-      *depth = static_cast<int>(geom->depth);
+-      free(geom);
+-      return true;
++      // Events preceding the initial geometry reply must not overwrite its
++      // newer snapshot. Later resizes keep this connection's last sequence.
++      if (event->full_sequence >= m_geometry_sequence)
++      {
++         const uint8_t type = event->response_type & 0x7f;
++         if (type == XCB_CONFIGURE_NOTIFY)
++         {
++            auto *config = reinterpret_cast<xcb_configure_notify_event_t *>(event);
++            if (config->window == m_window)
++            {
++               m_width = config->width;
++               m_height = config->height;
++            }
++         }
++         else if (type == XCB_DESTROY_NOTIFY)
++         {
++            auto *destroy = reinterpret_cast<xcb_destroy_notify_event_t *>(event);
++            if (destroy->window == m_window) m_geometry_valid = false;
++         }
++         else if (type == 0)
++         {
++            m_geometry_valid = false;
++         }
++      }
++      free(event);
+    }
+-   return false;
++   if (xcb_connection_has_error(m_geometry_connection)) m_geometry_valid = false;
++   if (!m_geometry_valid) return false;
++   *width = m_width;
++   *height = m_height;
++   *depth = m_depth;
++   return true;
+ }
+ 
+ wsi::surface_properties &surface::get_properties()
+diff --git a/wsi/x11/surface.hpp b/wsi/x11/surface.hpp
+index e57f37f..cfde064 100644
+--- a/wsi/x11/surface.hpp
++++ b/wsi/x11/surface.hpp
+@@ -29,6 +29,7 @@
+ #pragma once
+ #include <vulkan/vk_icd.h>
+ #include <xcb/xcb.h>
++#include <mutex>
+ #include <xcb/xproto.h>
+ #include "wsi/surface.hpp"
+ #include "surface_properties.hpp"
+@@ -75,6 +76,11 @@ public:
+ private:
+    xcb_connection_t *m_connection;
+    xcb_window_t m_window;
++   xcb_connection_t *m_geometry_connection{};
++   std::mutex m_geometry_mutex;
++   uint32_t m_width{}, m_height{}, m_geometry_sequence{};
++   int m_depth{};
++   bool m_geometry_valid{};
+    /** Surface properties specific to the X11 surface. */
+    surface_properties properties;
+ };
+diff --git a/wsi/x11/surface_properties.cpp b/wsi/x11/surface_properties.cpp
+index b27ea1d..87a4662 100644
+--- a/wsi/x11/surface_properties.cpp
++++ b/wsi/x11/surface_properties.cpp
+@@ -53,16 +53,17 @@ namespace x11
+ 
+ void surface_properties::populate_present_mode_compatibilities()
+ {
+-   std::array<present_mode_compatibility, 2> compatible_present_modes_list = {
++   std::array<present_mode_compatibility, 3> compatible_present_modes_list = {
++      present_mode_compatibility{ VK_PRESENT_MODE_IMMEDIATE_KHR, 1, { VK_PRESENT_MODE_IMMEDIATE_KHR } },
+       present_mode_compatibility{ VK_PRESENT_MODE_FIFO_KHR, 1, { VK_PRESENT_MODE_FIFO_KHR } },
+       present_mode_compatibility{ VK_PRESENT_MODE_MAILBOX_KHR, 1, { VK_PRESENT_MODE_MAILBOX_KHR } }
+    };
+-   m_compatible_present_modes = compatible_present_modes<2>(compatible_present_modes_list);
++   m_compatible_present_modes = compatible_present_modes<3>(compatible_present_modes_list);
+ }
+ 
+ surface_properties::surface_properties(surface *wsi_surface, const util::allocator &allocator)
+    : specific_surface(wsi_surface)
+-   , m_supported_modes({ VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_MAILBOX_KHR })
++   , m_supported_modes({ VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_MAILBOX_KHR })
+ {
+    populate_present_mode_compatibilities();
+ }
+@@ -86,8 +87,10 @@ VkResult surface_properties::get_surface_capabilities(VkPhysicalDevice physical_
+    surface_capabilities->minImageCount = 4;
+ 
+    int depth;
+-   specific_surface->get_size_and_depth(&surface_capabilities->currentExtent.width,
+-                                        &surface_capabilities->currentExtent.height, &depth);
++   if (!specific_surface ||
++       !specific_surface->get_size_and_depth(&surface_capabilities->currentExtent.width,
++                                            &surface_capabilities->currentExtent.height, &depth))
++      return VK_ERROR_SURFACE_LOST_KHR;
+ 
+    /* Composite alpha */
+    surface_capabilities->supportedCompositeAlpha = static_cast<VkCompositeAlphaFlagBitsKHR>(
+@@ -104,7 +107,7 @@ VkResult surface_properties::get_surface_capabilities(VkPhysicalDevice physical_
+    TRY(check_surface_present_mode_query_is_supported(pSurfaceInfo, m_supported_modes));
+ 
+    /* Image count limits */
+-   get_surface_capabilities(physical_device, &pSurfaceCapabilities->surfaceCapabilities);
++   TRY(get_surface_capabilities(physical_device, &pSurfaceCapabilities->surfaceCapabilities));
+ 
+    m_compatible_present_modes.get_surface_present_mode_compatibility_common(pSurfaceInfo, pSurfaceCapabilities);
+ 
+@@ -120,6 +123,21 @@ VkResult surface_properties::get_surface_capabilities(VkPhysicalDevice physical_
+    return VK_SUCCESS;
+ }
+ 
++// Qualcomm's proprietary Android driver may advertise BGRA AHB export and
++// then fail allocation. Native Android allocation + Vulkan import works, but
++// requires the exact UNORM format reported for the hardware buffer.
++bool requires_native_buffer_import(VkPhysicalDevice physical_device)
++{
++   auto &disp = layer::instance_private_data::get(physical_device).disp;
++   VkPhysicalDeviceProperties properties{};
++   disp.GetPhysicalDeviceProperties(physical_device, &properties);
++   if (properties.apiVersion < VK_API_VERSION_1_2) return false;
++   VkPhysicalDeviceDriverProperties driver{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES };
++   VkPhysicalDeviceProperties2 properties2{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, &driver };
++   disp.GetPhysicalDeviceProperties2KHR(physical_device, &properties2);
++   return driver.driverID == VK_DRIVER_ID_QUALCOMM_PROPRIETARY;
++}
++
+ std::vector<VkFormat> support_formats{ VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM };
+ 
+ VkResult surface_properties::get_surface_formats(VkPhysicalDevice physical_device, uint32_t *surface_format_count,
+@@ -127,7 +145,9 @@ VkResult surface_properties::get_surface_formats(VkPhysicalDevice physical_devic
+                                                  VkSurfaceFormat2KHR *extended_surface_formats)
+ {
+    std::vector<surface_format_properties> formats;
+-   for (auto &format : support_formats)
++   const std::vector<VkFormat> native_formats{ VK_FORMAT_B8G8R8A8_UNORM };
++   const auto &supported = requires_native_buffer_import(physical_device) ? native_formats : support_formats;
++   for (auto &format : supported)
+    {
+       if (format != VK_FORMAT_UNDEFINED)
+       {
+@@ -284,8 +304,8 @@ CreateXlibSurfaceKHR(VkInstance instance, const VkXlibSurfaceCreateInfoKHR *pCre
+ {
+    const VkXcbSurfaceCreateInfoKHR CreateInfo = {
+       .sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,
+-      .flags = 0,
+       .pNext = NULL,
++      .flags = 0,
+       .connection = XGetXCBConnection(pCreateInfo->dpy),
+       .window = static_cast<xcb_window_t>(pCreateInfo->window),
+    };
+diff --git a/wsi/x11/surface_properties.hpp b/wsi/x11/surface_properties.hpp
+index 9720a34..0131630 100644
+--- a/wsi/x11/surface_properties.hpp
++++ b/wsi/x11/surface_properties.hpp
+@@ -33,6 +33,7 @@ namespace x11
+ {
+ 
+ class surface;
++bool requires_native_buffer_import(VkPhysicalDevice physical_device);
+ 
+ class surface_properties : public wsi::surface_properties
+ {
+@@ -74,10 +75,10 @@ private:
+    surface *specific_surface;
+ 
+    /* List of supported presentation modes */
+-   std::array<VkPresentModeKHR, 2> m_supported_modes;
++   std::array<VkPresentModeKHR, 3> m_supported_modes;
+ 
+    /* Stores compatible presentation modes */
+-   compatible_present_modes<2> m_compatible_present_modes;
++   compatible_present_modes<3> m_compatible_present_modes;
+ 
+    void populate_present_mode_compatibilities() override;
+ 
+diff --git a/wsi/x11/swapchain.cpp b/wsi/x11/swapchain.cpp
+index 89a6c2f..3ccc349 100644
+--- a/wsi/x11/swapchain.cpp
++++ b/wsi/x11/swapchain.cpp
+@@ -29,6 +29,10 @@
+  */
+ 
+ #include <cassert>
++#include <system_error>
++#ifndef __INTRODUCED_IN
++#define __INTRODUCED_IN(api)
++#endif
+ #include <chrono>
+ #include <condition_variable>
+ #include <cstdint>
+@@ -38,6 +42,7 @@
+ 
+ #include <dlfcn.h>
+ #include <fcntl.h>
++#include <poll.h>
+ #include <sys/socket.h>
+ #include <unistd.h>
+ #include <util/timed_semaphore.hpp>
+@@ -51,6 +56,7 @@
+ #include <xcb/xproto.h>
+ 
+ #include "swapchain.hpp"
++#include "surface_properties.hpp"
+ #include "util/log.hpp"
+ #include "wsi/swapchain_base.hpp"
+ 
+@@ -69,12 +75,12 @@ struct x11_image_data
+ {
+    /* Device memory backing the image. */
+    VkDeviceMemory memory{};
+-   VkSubresourceLayout layout;
++   VkSubresourceLayout layout{};
+ 
+    fence_sync present_fence;
+ 
+-   xcb_pixmap_t pixmap;
+-   AHardwareBuffer *ahb;
++   xcb_pixmap_t pixmap{};
++   AHardwareBuffer *ahb{};
+    std::vector<pending_completion> pending_completions;
+ };
+ 
+@@ -97,21 +103,25 @@ swapchain::~swapchain()
+ {
+    auto thread_status_lock = std::unique_lock<std::mutex>(m_thread_status_lock);
+ 
+-   if (m_present_event_thread_run)
++   m_present_event_thread_run = false;
++   m_thread_status_cond.notify_all();
++   thread_status_lock.unlock();
++   // This connection belongs only to our event reader, never to the client.
++   // Shutdown wakes a blocked read even if the X11 server stopped responding.
++   if (m_event_connection && xcb_get_file_descriptor(m_event_connection) >= 0)
++      shutdown(xcb_get_file_descriptor(m_event_connection), SHUT_RDWR);
++   if (m_present_event_thread.joinable())
+    {
+-      m_present_event_thread_run = false;
+-      m_thread_status_cond.notify_all();
+-      thread_status_lock.unlock();
+-
+-      if (m_present_event_thread.joinable())
+-      {
+-         m_present_event_thread.join();
+-      }
+-
+-      thread_status_lock.lock();
++      m_present_event_thread.join();
+    }
++   thread_status_lock.lock();
+ 
+-   xcb_unregister_for_special_event(m_connection, m_special_event);
++   if (m_event_connection)
++   {
++      if (m_special_event) xcb_unregister_for_special_event(m_event_connection, m_special_event);
++      xcb_disconnect(m_event_connection);
++      m_event_connection = nullptr;
++   }
+ 
+    thread_status_lock.unlock();
+ 
+@@ -122,8 +132,8 @@ swapchain::~swapchain()
+ static uint32_t get_memory_type(VkPhysicalDeviceMemoryProperties2 memory_props, uint32_t req,
+                                 VkMemoryPropertyFlagBits req_prop)
+ {
+-   size_t mem_type_idx = 0;
+-   for (; mem_type_idx < 8 * sizeof(req); ++mem_type_idx)
++   uint32_t mem_type_idx = 0;
++   for (; mem_type_idx < memory_props.memoryProperties.memoryTypeCount; ++mem_type_idx)
+    {
+       if (req & (1u << mem_type_idx) && req_prop & (1u << mem_type_idx))
+       {
+@@ -154,9 +164,14 @@ xcb_pixmap_t swapchain::create_pixmap(swapchain_image &image)
+    xcb_flush(m_connection);
+ 
+    uint8_t buf = 0;
+-   read(fds[0], &buf, 1);
+-
+-   HardwareBuffer_sendHandleToUnixSocket(data->ahb, fds[0]);
++   // An incompatible/disconnected server must not freeze this client forever.
++   struct pollfd ready{fds[0], POLLIN, 0};
++   if (poll(&ready, 1, 5000) != 1 || !(ready.revents & POLLIN) || read(fds[0], &buf, 1) != 1 ||
++       HardwareBuffer_sendHandleToUnixSocket(data->ahb, fds[0]) != 0)
++   {
++      close(fds[0]);
++      return 0;
++   }
+ 
+    close(fds[0]);
+ 
+@@ -179,7 +194,6 @@ VkResult swapchain::allocate_and_bind_swapchain_image(VkImageCreateInfo image_cr
+ 
+    m_image_create_info = image_create;
+    m_image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+-   m_image_create_info.format = VK_FORMAT_R8G8B8A8_UNORM;
+ 
+    VkExternalMemoryImageCreateInfo external_memory_image_create_info = {};
+    external_memory_image_create_info.sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO;
+@@ -194,8 +208,8 @@ VkResult swapchain::allocate_and_bind_swapchain_image(VkImageCreateInfo image_cr
+    }
+ 
+    /* Find a memory type */
+-   size_t mem_type_idx = get_memory_type(m_memory_props, 0xFFFFFFFF, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+-   if (mem_type_idx < 0)
++   uint32_t mem_type_idx = get_memory_type(m_memory_props, 0xFFFFFFFF, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
++   if (mem_type_idx == UINT32_MAX)
+    {
+       WSI_LOG_ERROR("required memory type not found");
+       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+@@ -224,10 +238,16 @@ VkResult swapchain::allocate_and_bind_swapchain_image(VkImageCreateInfo image_cr
+       m_device_data.disp.DestroyImage(m_device, image.image, get_allocation_callbacks());
+       return VK_ERROR_OUT_OF_HOST_MEMORY;
+    }
+-   image.data = reinterpret_cast<void *>(data);
++   {
++      std::lock_guard<std::mutex> event_lock(m_thread_status_lock);
++      image.data = reinterpret_cast<void *>(data);
++   }
+    image.status = wsi::swapchain_image::FREE;
+ 
+-   res = m_device_data.disp.AllocateMemory(m_device, &memory_allocate_info, get_allocation_callbacks(), &data->memory);
++   if (requires_native_buffer_import(m_device_data.physical_device))
++      res = import_native_buffer(image);
++   else
++      res = m_device_data.disp.AllocateMemory(m_device, &memory_allocate_info, get_allocation_callbacks(), &data->memory);
+    if (res != VK_SUCCESS)
+    {
+       WSI_LOG_ERROR("vkAllocateMemory failed:%d", res);
+@@ -255,14 +275,16 @@ VkResult swapchain::allocate_and_bind_swapchain_image(VkImageCreateInfo image_cr
+ 
+    VkImageSubresource subres = {};
+    subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+-   m_device_data.disp.GetImageSubresourceLayout(m_device, image.image, &subres, &data->layout);
++   if (!data->ahb)
++      m_device_data.disp.GetImageSubresourceLayout(m_device, image.image, &subres, &data->layout);
+ 
+    VkMemoryGetAndroidHardwareBufferInfoANDROID get_ahb_info;
+    get_ahb_info.sType = VK_STRUCTURE_TYPE_MEMORY_GET_ANDROID_HARDWARE_BUFFER_INFO_ANDROID;
+    get_ahb_info.pNext = nullptr;
+    get_ahb_info.memory = data->memory;
+ 
+-   res = m_device_data.disp.GetMemoryAndroidHardwareBufferANDROID(m_device, &get_ahb_info, &data->ahb);
++   if (!data->ahb)
++      res = m_device_data.disp.GetMemoryAndroidHardwareBufferANDROID(m_device, &get_ahb_info, &data->ahb);
+    if (res != VK_SUCCESS)
+    {
+       destroy_image(image);
+@@ -278,6 +300,73 @@ VkResult swapchain::allocate_and_bind_swapchain_image(VkImageCreateInfo image_cr
+    return VK_SUCCESS;
+ }
+ 
++VkResult swapchain::import_native_buffer(swapchain_image &image)
++{
++   auto data = reinterpret_cast<x11_image_data *>(image.data);
++   if (m_image_create_info.format != VK_FORMAT_B8G8R8A8_UNORM)
++      return VK_ERROR_FORMAT_NOT_SUPPORTED;
++
++   VkPhysicalDeviceExternalImageFormatInfo external{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO };
++   external.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_ANDROID_HARDWARE_BUFFER_BIT_ANDROID;
++   VkPhysicalDeviceImageFormatInfo2 query{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2, &external };
++   query.format = m_image_create_info.format;
++   query.type = m_image_create_info.imageType;
++   query.tiling = m_image_create_info.tiling;
++   query.usage = m_image_create_info.usage;
++   query.flags = m_image_create_info.flags;
++   VkAndroidHardwareBufferUsageANDROID usage{ VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_USAGE_ANDROID };
++   VkExternalImageFormatProperties external_properties{ VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES, &usage };
++   VkImageFormatProperties2 properties{ VK_STRUCTURE_TYPE_IMAGE_FORMAT_PROPERTIES_2, &external_properties };
++   auto result = m_device_data.instance_data.disp.GetPhysicalDeviceImageFormatProperties2KHR(
++      m_device_data.physical_device, &query, &properties);
++   if (result != VK_SUCCESS) return result;
++   if (!(external_properties.externalMemoryProperties.externalMemoryFeatures & VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT))
++      return VK_ERROR_FORMAT_NOT_SUPPORTED;
++
++   // HAL_PIXEL_FORMAT_BGRA_8888 is Android format 5. Keep X11's BGRA byte
++   // order; switching to RGBA silently swaps red/blue in clipped CPU copies.
++   AHardwareBuffer_Desc desc{};
++   desc.width = m_image_create_info.extent.width;
++   desc.height = m_image_create_info.extent.height;
++   desc.layers = m_image_create_info.arrayLayers;
++   desc.format = 5;
++   desc.usage = usage.androidHardwareBufferUsage | AHARDWAREBUFFER_USAGE_GPU_FRAMEBUFFER |
++      AHARDWAREBUFFER_USAGE_GPU_SAMPLED_IMAGE | AHARDWAREBUFFER_USAGE_CPU_READ_OFTEN |
++      AHARDWAREBUFFER_USAGE_CPU_WRITE_OFTEN;
++   if (AHardwareBuffer_allocate(&desc, &data->ahb) != 0 || !data->ahb)
++      return VK_ERROR_OUT_OF_HOST_MEMORY;
++   AHardwareBuffer_Desc actual{};
++   AHardwareBuffer_describe(data->ahb, &actual);
++   if (actual.width != desc.width || actual.height != desc.height || actual.layers != desc.layers ||
++       actual.format != desc.format || actual.stride < actual.width || actual.stride > UINT32_MAX / 4)
++      return VK_ERROR_FORMAT_NOT_SUPPORTED;
++
++   auto get_properties = reinterpret_cast<PFN_vkGetAndroidHardwareBufferPropertiesANDROID>(
++      m_device_data.disp.GetDeviceProcAddr(m_device, "vkGetAndroidHardwareBufferPropertiesANDROID").value_or(nullptr));
++   if (!get_properties) return VK_ERROR_EXTENSION_NOT_PRESENT;
++   VkAndroidHardwareBufferFormatPropertiesANDROID format{ VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_FORMAT_PROPERTIES_ANDROID };
++   VkAndroidHardwareBufferPropertiesANDROID memory{ VK_STRUCTURE_TYPE_ANDROID_HARDWARE_BUFFER_PROPERTIES_ANDROID, &format };
++   result = get_properties(m_device, data->ahb, &memory);
++   if (result != VK_SUCCESS) return result;
++   if (format.format != m_image_create_info.format || !memory.memoryTypeBits || !memory.allocationSize)
++      return VK_ERROR_FORMAT_NOT_SUPPORTED;
++   uint32_t type = 0;
++   while (type < 32 && !(memory.memoryTypeBits & (1u << type))) ++type;
++   if (type >= m_memory_props.memoryProperties.memoryTypeCount) return VK_ERROR_FORMAT_NOT_SUPPORTED;
++   VkMemoryDedicatedAllocateInfo dedicated{ VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO };
++   dedicated.image = image.image;
++   VkImportAndroidHardwareBufferInfoANDROID import{ VK_STRUCTURE_TYPE_IMPORT_ANDROID_HARDWARE_BUFFER_INFO_ANDROID, &dedicated };
++   import.buffer = data->ahb;
++   VkMemoryAllocateInfo allocation{ VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, &import, memory.allocationSize, type };
++   result = m_device_data.disp.AllocateMemory(m_device, &allocation, get_allocation_callbacks(), &data->memory);
++   if (result == VK_SUCCESS)
++   {
++      data->layout.rowPitch = static_cast<VkDeviceSize>(actual.stride) * 4;
++      data->layout.offset = 0;
++   }
++   return result;
++}
++
+ VkResult swapchain::create_swapchain_image(VkImageCreateInfo image_create_info, swapchain_image &image)
+ {
+    m_image_create_info = image_create_info;
+@@ -287,47 +376,27 @@ VkResult swapchain::create_swapchain_image(VkImageCreateInfo image_create_info,
+ void swapchain::present_event_thread()
+ {
+    auto thread_status_lock = std::unique_lock<std::mutex>(m_thread_status_lock);
+-   m_present_event_thread_run = true;
+-
+    while (m_present_event_thread_run)
+    {
+-      auto assume_forward_progress = false;
+-
+-      for (auto &image : m_swapchain_images)
+-      {
+-         if (image.status == swapchain_image::INVALID)
+-            continue;
+-
+-         auto data = reinterpret_cast<x11_image_data *>(image.data);
+-         if (data->pending_completions.size() != 0)
+-         {
+-            assume_forward_progress = true;
+-            break;
+-         }
+-      }
+-
+-      if (!assume_forward_progress)
+-      {
+-         m_thread_status_cond.wait(thread_status_lock);
+-         continue;
+-      }
+-
+-      if (error_has_occured())
++      // init_platform starts this reader before swapchain_base::init finishes.
++      // VK_NOT_READY is the constructor state, not a failed display connection.
++      // Owned connection loss / stop below terminate this reader explicitly.
++      thread_status_lock.unlock();
++      // A dedicated event connection avoids stealing queued notifications from
++      // Xlib/Zink readers. Always drain IdleNotify after the last CompleteNotify.
++      auto event = xcb_wait_for_special_event(m_event_connection, m_special_event);
++      thread_status_lock.lock();
++      if (!m_present_event_thread_run)
+       {
++         free(event);
+          break;
+       }
+-
+-      thread_status_lock.unlock();
+-
+-      auto event = xcb_wait_for_special_event(m_connection, m_special_event);
+       if (event == nullptr)
+       {
+          set_error_state(VK_ERROR_SURFACE_LOST_KHR);
+          break;
+       }
+ 
+-      thread_status_lock.lock();
+-
+       auto pe = reinterpret_cast<xcb_present_generic_event_t *>(event);
+       switch (pe->evtype)
+       {
+@@ -338,8 +407,8 @@ void swapchain::present_event_thread()
+          {
+             set_error_state(VK_ERROR_SURFACE_LOST_KHR);
+          }
+-         else if (config->width != m_image_create_info.extent.width ||
+-                  config->height != m_image_create_info.extent.height)
++         else if (config->width != m_present_extent.width ||
++                  config->height != m_present_extent.height)
+          {
+             set_error_state(VK_SUBOPTIMAL_KHR);
+          }
+@@ -359,6 +428,7 @@ void swapchain::present_event_thread()
+          {
+             for (auto &image : m_swapchain_images)
+             {
++               if (image.data == nullptr) continue;
+                auto data = reinterpret_cast<x11_image_data *>(image.data);
+                auto iter = std::find_if(data->pending_completions.begin(), data->pending_completions.end(),
+                                         [complete](auto &pending_completion) -> bool {
+@@ -385,7 +455,19 @@ void swapchain::present_event_thread()
+ 
+ void swapchain::present_image(const pending_present_request &pending_present)
+ {
+-   auto image_data = reinterpret_cast<x11_image_data *>(m_swapchain_images[pending_present.image_index].data);
++   auto &image = m_swapchain_images[pending_present.image_index];
++   // No GPU wait fence is passed to X11 Present in this AHardwareBuffer path.
++   // Wait for this submission (not the previous payload) before X11 can copy it.
++   VkResult ready = image_wait_present(image, 5000000000ULL);
++   if (ready != VK_SUCCESS)
++   {
++      const std::lock_guard<std::mutex> event_lock(m_thread_status_lock);
++      set_error_state(ready == VK_TIMEOUT ? VK_ERROR_DEVICE_LOST : ready);
++      // A timed-out GPU may still be writing: never return this image to FREE.
++      m_thread_status_cond.notify_all();
++      return;
++   }
++   auto image_data = reinterpret_cast<x11_image_data *>(image.data);
+    auto thread_status_lock = std::unique_lock<std::mutex>(m_thread_status_lock);
+ 
+    while (image_data->pending_completions.size() == X11_SWAPCHAIN_MAX_PENDING_COMPLETIONS)
+@@ -400,10 +482,13 @@ void swapchain::present_image(const pending_present_request &pending_present)
+ 
+    m_send_sbc++;
+    uint32_t serial = (uint32_t)m_send_sbc;
+-   uint32_t options = XCB_PRESENT_OPTION_NONE;
++   // Honor the application's swap-interval-zero request. FIFO and MAILBOX
++   // retain synchronized/non-tearing presentation; native clipping stays intact.
++   const bool immediate = m_present_mode == VK_PRESENT_MODE_IMMEDIATE_KHR;
++   uint32_t options = immediate ? XCB_PRESENT_OPTION_ASYNC : XCB_PRESENT_OPTION_NONE;
+ 
+    auto cookie = xcb_present_pixmap_checked(m_connection, m_window, image_data->pixmap, serial, 0, 0, 0, 0, 0, 0, 0,
+-                                            options, m_target_msc, 0, 0, 0, nullptr);
++                                            options, immediate ? 0 : m_target_msc, 0, 0, 0, nullptr);
+    xcb_discard_reply(m_connection, cookie.sequence);
+    xcb_flush(m_connection);
+ 
+@@ -433,6 +518,7 @@ bool swapchain::free_image_found()
+       for (int i = 0; i < m_swapchain_images.size(); i++)
+       {
+          auto data = reinterpret_cast<x11_image_data *>(m_swapchain_images[i].data);
++         if (data == nullptr) continue;
+          if (data->pixmap == pixmap.value())
+          {
+             unpresent_image(i);
+@@ -462,6 +548,8 @@ VkResult swapchain::get_free_buffer(uint64_t *timeout)
+    {
+       while (!free_image_found())
+       {
++         if (error_has_occured())
++            return get_error_state();
+          if (!m_present_event_thread_run)
+             return VK_ERROR_OUT_OF_DATE_KHR;
+ 
+@@ -474,6 +562,8 @@ VkResult swapchain::get_free_buffer(uint64_t *timeout)
+ 
+       while (!free_image_found())
+       {
++         if (error_has_occured())
++            return get_error_state();
+          if (!m_present_event_thread_run)
+             return VK_ERROR_OUT_OF_DATE_KHR;
+ 
+@@ -490,6 +580,8 @@ VkResult swapchain::get_free_buffer(uint64_t *timeout)
+ 
+ void swapchain::destroy_image(wsi::swapchain_image &image)
+ {
++   // Serialize late Present events against retirement of this image payload.
++   std::unique_lock<std::mutex> event_lock(m_thread_status_lock);
+    std::unique_lock<std::recursive_mutex> image_status_lock(m_image_status_mutex);
+    if (image.status != wsi::swapchain_image::INVALID)
+    {
+@@ -553,10 +645,8 @@ VkResult swapchain::bind_swapchain_image(VkDevice &device, const VkBindImageMemo
+ VkResult swapchain::init_platform(VkDevice device, const VkSwapchainCreateInfoKHR *swapchain_create_info,
+                                   bool &use_presentation_thread)
+ {
+-   HardwareBuffer_release =
+-      reinterpret_cast<pfnAHardwareBuffer_release>(dlsym(RTLD_DEFAULT, "AHardwareBuffer_release"));
+-   HardwareBuffer_sendHandleToUnixSocket = reinterpret_cast<pfnAHardwareBuffer_sendHandleToUnixSocket>(
+-      dlsym(RTLD_DEFAULT, "AHardwareBuffer_sendHandleToUnixSocket"));
++   HardwareBuffer_release = &AHardwareBuffer_release;
++   HardwareBuffer_sendHandleToUnixSocket = &AHardwareBuffer_sendHandleToUnixSocket;
+    m_device_data.instance_data.disp.GetPhysicalDeviceMemoryProperties2KHR(m_device_data.physical_device,
+                                                                           &m_memory_props);
+    if (m_surface == nullptr || HardwareBuffer_sendHandleToUnixSocket == nullptr || HardwareBuffer_release == nullptr)
+@@ -564,31 +654,50 @@ VkResult swapchain::init_platform(VkDevice device, const VkSwapchainCreateInfoKH
+       return VK_ERROR_INITIALIZATION_FAILED;
+    }
+ 
+-   auto eid = xcb_generate_id(m_connection);
+-   m_special_event = xcb_register_for_special_xge(m_connection, &xcb_present_id, eid, nullptr);
+-   xcb_present_select_input(m_connection, eid, m_window,
++   // Immutable before subscribing: base image metadata is populated later.
++   m_present_extent = swapchain_create_info->imageExtent;
++
++   // Each selected desktop process already has its own DISPLAY/XAUTHORITY.
++   // Keep the Present event reader private so stop can interrupt it without
++   // shutting down the application's Xlib connection or another swapchain.
++   m_event_connection = xcb_connect(nullptr, nullptr);
++   if (!m_event_connection || xcb_connection_has_error(m_event_connection))
++      return VK_ERROR_SURFACE_LOST_KHR;
++   auto eid = xcb_generate_id(m_event_connection);
++   m_special_event = xcb_register_for_special_xge(m_event_connection, &xcb_present_id, eid, nullptr);
++   if (!m_special_event) return VK_ERROR_OUT_OF_HOST_MEMORY;
++   auto selected = xcb_present_select_input_checked(m_event_connection, eid, m_window,
+                             XCB_PRESENT_EVENT_MASK_IDLE_NOTIFY | XCB_PRESENT_EVENT_MASK_COMPLETE_NOTIFY |
+                                XCB_PRESENT_EVENT_MASK_CONFIGURE_NOTIFY);
++   auto selection_error = xcb_request_check(m_event_connection, selected);
++   if (selection_error)
++   {
++      free(selection_error);
++      return VK_ERROR_SURFACE_LOST_KHR;
++   }
+ 
+    try
+    {
++      m_present_event_thread_run = true;
+       m_present_event_thread = std::thread(&swapchain::present_event_thread, this);
+    }
+    catch (const std::system_error &)
+    {
++      m_present_event_thread_run = false;
+       return VK_ERROR_INITIALIZATION_FAILED;
+    }
+    catch (const std::bad_alloc &)
+    {
++      m_present_event_thread_run = false;
+       return VK_ERROR_INITIALIZATION_FAILED;
+    }
+ 
+-   /*
+-    * When VK_PRESENT_MODE_MAILBOX_KHR has been chosen by the application we don't
+-    * initialize the page flip thread so the present_image function can be called
+-    * during vkQueuePresent.
++   /* Present from the caller; the separate X11 event reader owns completion
++    * and idle notifications. present_image still waits for the current GPU
++    * payload in every mode. FIFO retains synchronous options and target-MSC
++    * pacing; IMMEDIATE requests asynchronous copies.
+     */
+-   use_presentation_thread = (m_present_mode != VK_PRESENT_MODE_MAILBOX_KHR);
++   use_presentation_thread = false;
+ 
+    return VK_SUCCESS;
+ }
+diff --git a/wsi/x11/swapchain.hpp b/wsi/x11/swapchain.hpp
+index 3bed48d..1443d3b 100644
+--- a/wsi/x11/swapchain.hpp
++++ b/wsi/x11/swapchain.hpp
+@@ -31,6 +31,9 @@
+ #pragma once
+ 
+ #include "surface.hpp"
++#ifndef __INTRODUCED_IN
++#define __INTRODUCED_IN(api)
++#endif
+ #include <android/hardware_buffer.h>
+ #include <condition_variable>
+ #include <cstdint>
+@@ -48,7 +51,7 @@ namespace x11
+ {
+ 
+ using pfnAHardwareBuffer_release = void (*)(AHardwareBuffer *);
+-using pfnAHardwareBuffer_sendHandleToUnixSocket = int (*)(AHardwareBuffer *, int);
++using pfnAHardwareBuffer_sendHandleToUnixSocket = int (*)(const AHardwareBuffer *, int);
+ 
+ /**
+  * @brief x11 swapchain class.
+@@ -90,6 +93,8 @@ protected:
+     * will return VK_ERROR_OUT_OF_DEVICE_MEMORY or VK_ERROR_INITIALIZATION_FAILED
+     * depending on the error that occurred.
+     */
++   VkResult import_native_buffer(swapchain_image &image);
++
+    VkResult create_swapchain_image(VkImageCreateInfo image_create_info, swapchain_image &image) override;
+ 
+    /**
+@@ -163,20 +168,22 @@ private:
+    uint64_t m_target_msc;
+    uint64_t m_last_present_msc;
+ 
+-   xcb_special_event_t *m_special_event;
+-   VkPhysicalDeviceMemoryProperties2 m_memory_props;
++   xcb_special_event_t *m_special_event{};
++   xcb_connection_t *m_event_connection{};
++   VkPhysicalDeviceMemoryProperties2 m_memory_props{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2, nullptr, {}};
+ 
+    xcb_pixmap_t create_pixmap(swapchain_image &image);
+ 
+    void present_event_thread();
+-   bool m_present_event_thread_run;
++   VkExtent2D m_present_extent{};
++   bool m_present_event_thread_run{false};
+    std::thread m_present_event_thread;
+    std::mutex m_thread_status_lock;
+    std::condition_variable m_thread_status_cond;
+    util::ring_buffer<xcb_pixmap_t, 6> m_free_buffer_pool;
+ 
+-   pfnAHardwareBuffer_release HardwareBuffer_release;
+-   pfnAHardwareBuffer_sendHandleToUnixSocket HardwareBuffer_sendHandleToUnixSocket;
++   pfnAHardwareBuffer_release HardwareBuffer_release{};
++   pfnAHardwareBuffer_sendHandleToUnixSocket HardwareBuffer_sendHandleToUnixSocket{};
+ };
+ 
+ } /* namespace x11 */

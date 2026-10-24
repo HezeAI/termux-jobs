@@ -57,7 +57,7 @@ printf 'mc\\t1.2\\t4\\t:1.5\\torg.fcitx.Fcitx5\\t/input/2\\torg.fcitx.Fcitx.Inpu
   with tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d:
    base=Path(d)/'files';prefix=base/'usr';bin=prefix/'bin';bin.mkdir(parents=True);control=base/'workspace-x11';control.mkdir()
    (prefix/'var/lib/proot-distro/containers/jobs-x11-ubuntu/rootfs').mkdir(parents=True)
-   scripts={'proot-distro': 'for last;do :;done\nexport JOBS_FIXTURE_PATH="$PATH"\nlast=$(printf \'%s\' "$last" | /usr/bin/sed \'s#export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin;#export PATH="$JOBS_FIXTURE_PATH";#\')\nexec /bin/sh -c "$last"',
+   scripts={'proot-distro': 'for last;do :;done\nexport JOBS_FIXTURE_PATH="$PATH"\nlast=$(printf \'%s\' "$last" | /usr/bin/sed \'s#export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/games:/usr/games;#export PATH="$JOBS_FIXTURE_PATH";#\')\nexec /bin/sh -c "$last"',
     'dpkg-query': '''[ "$3" = '-f=${Status}' ] || { printf 'bad format: %s' "$3" >&2;exit 9; }
 printf '%s' "${FIXTURE_PACKAGE_STATUS:-install ok installed}"'''}
    for name in ['thunar','xfce4-terminal','xwininfo','xfwm4','xfdesktop','xfce4-panel','xfsettingsd','xfconf-query','xprop','xfce4-session','dbus-run-session','xauth','fcitx5','dbus-monitor']:scripts[name]='exit 0'

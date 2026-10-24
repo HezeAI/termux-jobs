@@ -6,7 +6,7 @@ if [[ $op == resume ]];then op=install;resume=1;fi
 target=${2:-}; control=${3:-}; program=${4:-}; language=${5:-en}
 [[ $op == check || $op == install || $op == catalog || $op == catalog-install || $op == installed || $op == remove || $op == firefox-compat-on || $op == firefox-compat-off || $op == firefox-dns-on || $op == firefox-dns-off ]] || exit 2
 case $target in ubuntu|jobs-x11-ubuntu|debian|alpine|termux|fedora|opensuse|void|archlinux) ;; *) echo 'ERROR:UNSUPPORTED_DESKTOP';exit 2;;esac
-case $program in ''|files|terminal|editor|archives|images|fonts|browser|office|pdf|media|gpu-tools|catalog-tools) ;; pkg:*) [[ ${program#pkg:} =~ ^[A-Za-z0-9][A-Za-z0-9+_.-]{0,127}$ ]] || exit 2;; *) echo 'ERROR:UNKNOWN_PROGRAM';exit 2;;esac
+case $program in ''|files|terminal|editor|archives|images|fonts|browser|office|pdf|media|gpu-tools|gpu-test|catalog-tools) ;; pkg:*) [[ ${program#pkg:} =~ ^[A-Za-z0-9][A-Za-z0-9+_.-]{0,127}$ ]] || exit 2;; *) echo 'ERROR:UNKNOWN_PROGRAM';exit 2;;esac
 [[ $op != install || -n $program ]] || exit 2
 [[ $op != remove || $program == pkg:* ]] || exit 2
 case $language in ru|en) ;; *) exit 2;;esac
@@ -47,6 +47,7 @@ packages() {
  archives) echo 'xarchiver unzip zip 7zip';;images) echo 'ristretto tumbler';;
  fonts) echo 'fonts-dejavu-core fonts-liberation adwaita-icon-theme';;
  gpu-tools) echo 'glmark2-x11 mesa-utils';;
+ gpu-test) echo 'python3 libx11-6 libgl1 libglx-mesa0';;
  browser) echo firefox;;office) echo 'libreoffice-writer libreoffice-calc libreoffice-impress libreoffice-gtk3';;
  media|pkg:parole) echo 'parole gstreamer1.0-libav gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-pulseaudio gstreamer1.0-x';;
  pdf) echo evince;;catalog-tools) echo 'appstream python3-gi gir1.2-appstream-1.0 python3-apt';;pkg:ristretto) echo 'ristretto tumbler';;pkg:*) printf '%s\n' "${1#pkg:}";;*) exit 2;;esac
@@ -61,6 +62,7 @@ ready() {
   if [ "$pkg" = 7zip ];then configured 7zip || configured p7zip-full || return 1
   else configured "$pkg" || return 1;fi
  done
+ if [ "$1" = gpu-test ];then python3 -B /tmp/termux-jobs-x11/x11-gpu-test-setup.py check "$target" || return 1;fi
  if [ "$1" = gpu-tools ];then command -v glxinfo >/dev/null && command -v glmark2 >/dev/null || return 1;fi
 }
 if [ "$op" = firefox-compat-on ] || [ "$op" = firefox-compat-off ];then
@@ -77,6 +79,10 @@ if [ "$op" = installed ];then
  command -v python3 >/dev/null || { echo ERROR:PYTHON3_REQUIRED;exit 3; }
  exec python3 /tmp/termux-jobs-x11/x11-catalog.py "$language" installed
 fi
+if [ "$op" = remove ] && [ "$program" = pkg:termux-jobs-gpu-test ];then
+ python3 -B /tmp/termux-jobs-x11/x11-gpu-test-setup.py remove "$target"
+ op=check
+fi
 if [ "$op" = remove ];then
  pkg=${program#pkg:}
  case $pkg in xfce4|xfce4-*|xfdesktop4|xfdesktop4-*|xfwm4|xfwm4-*|thunar|thunar-*|xfconf|libxfconf-*|fcitx5|fcitx5-*|dbus|dbus-*|libpulse0|gstreamer1.0-pulseaudio|xauth|x11-*|fonts-*|adwaita-icon-theme|hicolor-icon-theme|python3|python3-*|appstream|gir1.2-appstream-*) echo ERROR:PROTECTED_DESKTOP_COMPONENT;exit 2;;esac
@@ -89,7 +95,14 @@ needs_install=1
 if [ "$op" = catalog-install ] && ready catalog-tools;then needs_install=0;fi
 if [ "$op" = install ] || { [ "$op" = catalog-install ] && [ "$needs_install" = 1 ]; };then
  export DEBIAN_FRONTEND=noninteractive
- if [ "$program" = browser ];then
+ gpu_test_local=0
+ if [ "$program" = gpu-test ];then
+  gpu_test_local=1
+  for p in $(packages gpu-test);do configured "$p" || gpu_test_local=0;done
+ fi
+ if [ "$gpu_test_local" = 1 ];then
+  echo JOBS_APT_PHASE:install
+ elif [ "$program" = browser ];then
   python3 /tmp/termux-jobs-x11/x11-firefox.py --install 3>&1
  else
  if [ "$JOBS_X11_PROGRAM_RESUME" != 1 ];then
@@ -102,6 +115,7 @@ if [ "$op" = install ] || { [ "$op" = catalog-install ] && [ "$needs_install" = 
  # No removals, host upgrade or sandbox-disabling flags.
  apt-get -o APT::Keep-Downloaded-Packages=true -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Debug::acquire::progress=true -o APT::Status-Fd=3 -o Dpkg::Use-Pty=0 install -y --no-remove --no-install-recommends $(packages "$program") 3>&1
  fi
+ if [ "$program" = gpu-test ];then python3 -B /tmp/termux-jobs-x11/x11-gpu-test-setup.py prepare "$target";fi
  ready "$program" || { echo 'ERROR:PROGRAM_NOT_CONFIGURED';exit 1; }
  if [ "$program" = gpu-tools ];then python3 -B /tmp/termux-jobs-x11/x11-gpu-tools.py prepare "$target";fi
 fi
@@ -114,7 +128,7 @@ if [ "$op" = catalog ] || [ "$op" = catalog-install ];then
  ready catalog-tools || { echo ERROR:CATALOG_TOOLS_REQUIRED;exit 3; }
  exec /usr/bin/python3 /tmp/termux-jobs-x11/x11-catalog.py "$language"
 fi
-for id in files terminal editor archives images fonts browser office pdf media gpu-tools;do
+for id in files terminal editor archives images fonts browser office pdf media gpu-tools gpu-test;do
  if ready "$id";then echo "PROGRAM:$id:installed";else echo "PROGRAM:$id:missing";fi
 done
 echo READY:programs

@@ -48,6 +48,29 @@ class WrapperTests(unittest.TestCase):
   for data in cases:
    with self.assertRaises((ValueError,zipfile.BadZipFile)):w.import_driver(self.cache,self.source(data),35)
    self.assertEqual(first,w.driver(self.cache)[0])
+ def test_adrenotools_qualcomm_library_names_are_imported_retained_and_selected(self):
+  first=self.imported()
+  names=['vulkan.adr891.so','vkbgsl.so','vkbCB.so','vkb891.qti.hardware.hexlp-V2-ndk.so']
+  raw=io.BytesIO()
+  with zipfile.ZipFile(raw,'w') as z:
+   z.writestr('meta.json',json.dumps(dict(name='891.11 fixture',libraryName=names[0],minApi=36)))
+   for n in names:z.writestr(n,self.elf(n.encode()))
+  value=w.import_driver(self.cache,self.source(raw.getvalue()),36)
+  self.assertEqual(names[0],value['library']);self.assertEqual(set(names),set(value['files']))
+  self.assertEqual(value,w.driver(self.cache)[0]);self.assertEqual(2,len(w.catalog(self.cache)))
+  w.select_driver(self.cache,first['id'],36);w.select_driver(self.cache,value['id'],36)
+  self.assertEqual(value,w.driver(self.cache)[0])
+  (self.cache/'drivers'/value['id']/names[1]).write_bytes(b'tampered')
+  with self.assertRaisesRegex(ValueError,'CHANGED'):w.driver(self.cache)
+ def test_non_lib_main_and_dependencies_keep_path_elf_and_api_checks(self):
+  first=self.imported()
+  for main,extra,api in [('vulkan.adr891.so',[('vulkan.adr891.so',self.elf())],35),('../vulkan.adr891.so',[],36),('vulkan.adr891.so',[('vulkan.adr891.so',self.elf()),('vkbgsl.so',b'not ELF')],36),('vulkan.adr891.so',[('vulkan.adr891.so',self.elf()),('../vkbgsl.so',self.elf())],36)]:
+   raw=io.BytesIO()
+   with zipfile.ZipFile(raw,'w') as z:
+    z.writestr('meta.json',json.dumps(dict(libraryName=main,minApi=36)))
+    for n,data in extra:z.writestr(n,data)
+   with self.assertRaises(ValueError):w.import_driver(self.cache,self.source(raw.getvalue()),api)
+   self.assertEqual(first,w.driver(self.cache)[0]);self.assertFalse((self.root/'vkbgsl.so').exists())
  def test_no_archive_traversal_links_duplicate_or_scripts_are_executed(self):
   first=self.imported()
   link=zipfile.ZipInfo('link');link.create_system=3;link.external_attr=(stat.S_IFLNK|0o777)<<16

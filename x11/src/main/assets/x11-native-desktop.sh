@@ -25,6 +25,19 @@ case $target in alpine)
   pkgs="$pkgs mesa libandroid-shmem libc++ libdrm libx11 libxcb libxshmfence libwayland zlib zstd util-linux"
  fi
  ;;*)echo ERROR:UNSUPPORTED_DESKTOP;exit 2;;esac
+# Private bridge dependencies belong to this selected RPM rootfs only.
+if [ "$target" = fedora ] && [ "${JOBS_X11_RENDERER:-cpu}" = bionic-glibc ];then
+ pkgs="$pkgs libglvnd-glx libstdc++ libgcc libxcb libX11-xcb libXext libXxf86vm libdrm libxshmfence zlib-ng-compat"
+fi
+if [ "$target" = archlinux ] && [ "${JOBS_X11_RENDERER:-cpu}" = bionic-glibc ];then
+ pkgs="$pkgs gcc-libs libx11 libxcb libxext libxxf86vm libdrm libxshmfence zlib"
+fi
+if [ "$target" = opensuse ] && [ "${JOBS_X11_RENDERER:-cpu}" = bionic-glibc ];then
+ pkgs="$pkgs libstdc++6 libgcc_s1 libX11-xcb1 libXext6 libXxf86vm1 libxcb1 libxcb-present0 libxcb-dri3-0 libxcb-randr0 libxcb-xfixes0 libxcb-sync1 libxcb-shm0 libxcb-glx0 libdrm2 libxshmfence1 libz1"
+fi
+if [ "$target" = void ] && [ "${JOBS_X11_RENDERER:-cpu}" = bionic-glibc ];then
+ pkgs="$pkgs libstdc++ libgcc libX11 libXext libXxf86vm libxcb libxshmfence libdrm zlib"
+fi
 # Request-local workaround for libfetch choosing an unreachable IPv6 route.
 # Do not change the system network, repository configuration or desktop environment.
 xbps_command() { ( unset FORCE_IPV6; FORCE_IPV4=1 "$@"; ); }

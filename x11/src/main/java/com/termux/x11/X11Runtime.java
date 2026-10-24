@@ -65,7 +65,7 @@ public final class X11Runtime {
         java.util.List<String> args=new java.util.ArrayList<>(java.util.Arrays.asList(":"+environment.display,"-tag","jobs-internal-"+environment.target,"-nolisten","tcp","-auth",authority.getPath(),"-noreset","-retro"));
         // Pinned native GPU Present copies bypass the window clip when no compositor
         // redirects windows. Retain GPU rendering, but use X's correctly clipped copy.
-        if(renderer.equals("wrapper")||renderer.equals("virgl")||renderer.equals("turnip")&&!environment.target.equals("termux"))args.add("-disable-gpu-present");
+        if(renderer.equals("bionic-glibc")||renderer.equals("wrapper")||renderer.equals("virgl")||renderer.equals("turnip")&&!environment.target.equals("termux"))args.add("-disable-gpu-present");
         return args.toArray(new String[0]);
     }
 }

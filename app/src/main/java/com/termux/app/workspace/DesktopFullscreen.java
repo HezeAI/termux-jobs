@@ -16,7 +16,9 @@ final class DesktopFullscreen {
     private final Activity activity;
     private final Runnable keyboard;
     private final BooleanSupplier keyboardEnabled;
-    private WorkspaceIconButton inputButton;
+    private WorkspaceIconButton inputButton,keysButton;
+    private final Runnable extraKeys;
+    private final BooleanSupplier extraKeysEnabled;
     private LinearLayout controlsRow;
     private final View decor;
     private final ViewTreeObserver.OnPreDrawListener imeObserver;
@@ -31,7 +33,10 @@ final class DesktopFullscreen {
     private Dialog controls;
 
     DesktopFullscreen(Activity activity,Runnable keyboard,BooleanSupplier keyboardEnabled,Runnable observeIme){
-        this.activity=activity;this.keyboard=keyboard;this.keyboardEnabled=keyboardEnabled;
+        this(activity,keyboard,keyboardEnabled,observeIme,()->{},()->false);
+    }
+    DesktopFullscreen(Activity activity,Runnable keyboard,BooleanSupplier keyboardEnabled,Runnable observeIme,Runnable extraKeys,BooleanSupplier extraKeysEnabled){
+        this.activity=activity;this.keyboard=keyboard;this.keyboardEnabled=keyboardEnabled;this.extraKeys=extraKeys;this.extraKeysEnabled=extraKeysEnabled;
         imeObserver=()->{observeIme.run();refreshKeyboard();return true;};
         decor=activity.getWindow().getDecorView();
     }
@@ -83,6 +88,7 @@ final class DesktopFullscreen {
         LinearLayout row=new LinearLayout(activity);controlsRow=row;row.setPadding(dp(2),dp(2),dp(2),dp(2));
         row.setBackground(WorkspaceDialogs.background(activity,false));
         inputButton=addControl(row,R.drawable.workspace_interactive_input,tr("Интерактивный ввод","Interactive input"),()->{keyboard.run();refreshKeyboard();});
+        keysButton=addControl(row,R.drawable.workspace_extra_keys,tr("Дополнительные клавиши","Additional keys"),()->{extraKeys.run();refreshKeyboard();});
         refreshKeyboard();
         // A sibling application window is above the embedded Z-on-top SurfaceView.
         // A non-focusable PopupWindow subwindow can remain below that surface.
@@ -99,7 +105,7 @@ final class DesktopFullscreen {
         attributes.gravity=Gravity.TOP|Gravity.RIGHT;attributes.alpha=.65f;
         int[] offset=controlOffset(anchor.getRootWindowInsets());attributes.x=offset[0];attributes.y=offset[1];
         if(android.os.Build.VERSION.SDK_INT>=28)attributes.layoutInDisplayCutoutMode=WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
-        window.setAttributes(attributes);controls.show();window.setLayout(dp(44),dp(44));
+        window.setAttributes(attributes);controls.show();window.setLayout(dp(84),dp(44));
     }
     private int[] controlOffset(WindowInsets insets){
         int right=0,top=0;
@@ -115,8 +121,11 @@ final class DesktopFullscreen {
     private void refreshKeyboard(){
         if(inputButton==null)return;
         boolean enabled=keyboardEnabled.getAsBoolean();
-        if(inputButton.isSelected()==enabled)return;
-        inputButton.setSelected(enabled);controlsRow.setBackground(WorkspaceDialogs.background(activity,enabled));
+        boolean keys=extraKeysEnabled.getAsBoolean();
+        if(inputButton.isSelected()==enabled&&keysButton!=null&&keysButton.isSelected()==keys)return;
+        inputButton.setSelected(enabled);inputButton.setBackground(WorkspaceDialogs.background(activity,enabled));
+        if(keysButton!=null){keysButton.setSelected(keys);keysButton.setBackground(WorkspaceDialogs.background(activity,keys));}
+        controlsRow.setBackground(WorkspaceDialogs.background(activity,enabled||keys));
     }
     private WorkspaceIconButton addControl(LinearLayout row,int icon,String description,Runnable action){
         WorkspaceIconButton button=new WorkspaceIconButton(activity);button.setTextColor(WorkspaceDialogs.ACCENT);
@@ -128,7 +137,7 @@ final class DesktopFullscreen {
     private void leave(){
         if(dialog==null)return;moving=true;
         Dialog old=dialog;dialog=null;
-        if(controls!=null){controls.dismiss();controls=null;}inputButton=null;controlsRow=null;
+        if(controls!=null){controls.dismiss();controls=null;}inputButton=null;keysButton=null;controlsRow=null;
         // Do not resurrect a host that its owner has already removed/closed.
         if(content!=null&&content.getParent()==canvas){
             canvas.removeView(content);

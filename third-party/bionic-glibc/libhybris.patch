@@ -1,0 +1,64 @@
+diff --git a/hybris/common/hooks.c b/hybris/common/hooks.c
+index a73973b..eea70bb 100644
+--- a/hybris/common/hooks.c
++++ b/hybris/common/hooks.c
+@@ -2517,7 +2517,7 @@ __THROW int _hybris_hook___snprintf_chk (char *__restrict __s, size_t __n, int _
+  * frees us from the IE-surplus cap entirely, at the cost of growing
+  * the thunk from 16 to 20 bytes and matching count_tls/THUNK_SIZE.
+  */
+-#define BIONIC_STATIC_TLS_SIZE   1024
++#define BIONIC_STATIC_TLS_SIZE   16384
+ #define BIONIC_TPIDR_OFFSET      8    /* matches StaticTlsLayout::offset_thread_pointer() with MIN_TLS_SLOT=-1 (bionic Q) */
+ #define BIONIC_TLS_PTR_OFFSET    0    /* slot -1 (TLS_SLOT_BIONIC_TLS) at TP-8 = 0 */
+ #define BIONIC_TLS_COMPAT_SIZE   16384
+@@ -3295,7 +3295,41 @@ static struct _hook hooks_properties[] = {
+     HOOK_INDIRECT(__system_property_find_nth),
+ };
+ 
++/* Termux Jobs prototype: Bionic barriers have a different layout.
++ * Keep the glibc object on the heap; only a pointer occupies the Bionic storage.
++ * Process-shared/explicit attributes are deliberately unsupported here. */
++static int _hybris_hook_pthread_barrier_init(void *storage, const void *attr, unsigned count)
++{
++    if (!storage || !count) return EINVAL;
++    if (attr) return ENOTSUP;
++    pthread_barrier_t *barrier = malloc(sizeof(*barrier));
++    if (!barrier) return ENOMEM;
++    int result = pthread_barrier_init(barrier, NULL, count);
++    if (result) { free(barrier); return result; }
++    memcpy(storage, &barrier, sizeof(barrier));
++    return 0;
++}
++static int _hybris_hook_pthread_barrier_wait(void *storage)
++{
++    pthread_barrier_t *barrier = NULL;
++    if (!storage) return EINVAL;
++    memcpy(&barrier, storage, sizeof(barrier));
++    return barrier ? pthread_barrier_wait(barrier) : EINVAL;
++}
++static int _hybris_hook_pthread_barrier_destroy(void *storage)
++{
++    pthread_barrier_t *barrier = NULL;
++    if (!storage) return EINVAL;
++    memcpy(&barrier, storage, sizeof(barrier));
++    if (!barrier) return EINVAL;
++    int result = pthread_barrier_destroy(barrier);
++    if (!result) { free(barrier); barrier = NULL; memcpy(storage, &barrier, sizeof(barrier)); }
++    return result;
++}
+ static struct _hook hooks_common[] = {
++    HOOK_INDIRECT(pthread_barrier_init),
++    HOOK_INDIRECT(pthread_barrier_wait),
++    HOOK_INDIRECT(pthread_barrier_destroy),
+ 
+     HOOK_DIRECT(getenv),
+     HOOK_DIRECT_NO_DEBUG(printf),
+@@ -3914,7 +3948,7 @@ static void* __hybris_get_hooked_symbol(const char *sym, const char *requester)
+         // If you're experiencing a crash later on check the address of the
+         // function pointer being call. If it matches the printed counter
+         // value here then you can easily find out which symbol is missing.
+-        LOGD("Missing hook for pthread symbol %s (counter %" PRIiPTR ")\n", sym, counter);
++        fprintf(stderr,"Missing hook for pthread symbol %s (counter %" PRIiPTR ")\n", sym, counter);
+         return (void *) counter;
+     }
+ 

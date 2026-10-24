@@ -111,6 +111,12 @@ def main():
     data=(assets/'x11-fedora-glycin.so').read_bytes()
     if data[:4]!=b'\x7fELF' or int.from_bytes(data[18:20],'little')!=183:raise ValueError('Fedora compatibility is not ARM64')
 
+    # Optional Ubuntu bridge is an APK asset, never an Android JNI library.
+    bridge=ROOT/'third-party/bionic-glibc/ubuntu-arm64-runtime.zip'
+    bridge_data=bridge.read_bytes()
+    bridge_pin=re.search(r"^PIN = '([a-f0-9]{64})'$",(ROOT/'x11/src/main/assets/x11-bionic-glibc.py').read_text(),re.M)
+    if not bridge_pin or hashlib.sha256(bridge_data).hexdigest()!=bridge_pin[1]:raise ValueError('Bionic glibc bridge pin mismatch')
+    (assets/'x11-bionic-glibc.zip').write_bytes(bridge_data)
     # Finished diagnostics/failed trial: never ship or compile the guest modules.
     for name in ['x11-gtk-observe.so','x11-garcon-source.zip']:(assets/name).unlink(missing_ok=True)
     report=dict(commit=pins['commit'],nativeSha256=hashlib.sha256(native).hexdigest(),keyboardSha256=hashlib.sha256((assets/'x11-keyboard.zip').read_bytes()).hexdigest(),keyboardFiles=len(entries))

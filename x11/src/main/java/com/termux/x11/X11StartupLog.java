@@ -35,7 +35,7 @@ public final class X11StartupLog {
   Matcher query=QUERY.matcher(text);if(query.matches()){trace("query:"+query.group(1),text);return;}
   if(SESSION.matcher(text).matches()){trace("session",text);return;}
   if(BUS.matcher(text).matches()){trace("bus",text);return;}
-  Matcher marker=MARKER.matcher(text);if(marker.matches()){if(text.startsWith("ERROR:")&&!text.matches("ERROR:(?:GPU_[A-Z0-9_]+|VIRGL_[A-Z0-9_]+|WRAPPER_[A-Z0-9_]+|ARCH_ROOTFS_OWNER_ACCESS|COMPONENT_OPERATION_EXCEPTION|ARM64_REQUIRED|UBUNTU_26_04_LIBVULKAN1_LIBEGL1_REQUIRED|CHECKSUM_MISMATCH|CACHE_INCOMPLETE|CACHE_PATH|CACHE_IS_A_LINK|CONTROL_PATH|UNSUPPORTED_DESKTOP|INVALID_RENDERER|FOCUS_TOKEN|ARM64_REQUIRED|DOWNLOAD_LIMIT|INSECURE_REDIRECT|INSECURE_RESPONSE)")){add("UNRECOGNIZED_STARTUP_ERROR");return;}add(text);if(text.equals("JOBS_X11_STARTUP=desktop-ready")||text.equals("JOBS_X11_STARTUP=ended"))finished=elapsedMs();return;}
+  Matcher marker=MARKER.matcher(text);if(marker.matches()){if(text.startsWith("ERROR:")&&!text.matches("ERROR:(?:GPU_[A-Z0-9_]+|VIRGL_[A-Z0-9_]+|WRAPPER_[A-Z0-9_]+|BIONIC_[A-Z0-9_]+|ARCH_ROOTFS_OWNER_ACCESS|COMPONENT_OPERATION_EXCEPTION|ARM64_REQUIRED|UBUNTU_26_04_LIBVULKAN1_LIBEGL1_REQUIRED|CHECKSUM_MISMATCH|CACHE_INCOMPLETE|CACHE_PATH|CACHE_IS_A_LINK|CONTROL_PATH|UNSUPPORTED_DESKTOP|INVALID_RENDERER|FOCUS_TOKEN|ARM64_REQUIRED|DOWNLOAD_LIMIT|INSECURE_REDIRECT|INSECURE_RESPONSE)")){add("UNRECOGNIZED_STARTUP_ERROR");return;}add(text);if(text.equals("JOBS_X11_STARTUP=desktop-ready")||text.equals("JOBS_X11_STARTUP=ended"))finished=elapsedMs();return;}
   Matcher gl=GL.matcher(text);while(gl.find())add("GRAPHICS_ERROR="+gl.group());
   String s=text.toLowerCase(Locale.ROOT);
   if(s.contains("protocol version too low"))add("VIRGL_PROTOCOL_TOO_OLD");

@@ -1,3 +1,25 @@
+## v2.0.4 — Bionic for glibc bridge and X11 tools
+
+Add optional private Bionic Vulkan HAL loading for Ubuntu, Debian, Fedora, Arch,
+openSUSE and Void using pinned libhybris/Arm-xMeM WSI, a private Mesa26.1.6 frontend
+and our ICD/cache/environment integration. Separate target caches, locks and
+service displays; imported Turnip and compatible QCOM drivers never replace
+installed libraries. Correct Present reader initialization, GPU wait and geometry
+lifetime; preserve FIFO pacing and explicit uncapped requests. QCOM native BGRA
+import supports the tested891.11 path; its concurrent interval-transition timeout
+remains an experimental-driver limitation. Export source/runtime/patches/licenses
+and document upstream authors plus driver sources StevenMXZ and The412Banner.
+
+Add X11 extra keys with movable/resizable panels in embedded/fullscreen views.
+Add optional Jobs GPU Test with scenes, renderer/VSync comparison, reports and
+per-target dependencies/desktop shortcuts in eight systems. Reduce optional Kali
+style metrics about8%, preserving restoration and distribution menu plugins;
+Whisker bottom clearance is pending a visual acceptance check. Improve validated
+Bionic ZIP library-name handling for vendor drivers. Existing other renderer,
+Termux Wrapper, agent/account/rootfs paths remain. Same com.termux/signer/schema8,
+min26/target28/compile35/ARM64, X11 min30; code1366. No reset/migration.
+[Release](docs/fork/RELEASE-v2.0.4.md) · [Validation](docs/fork/VALIDATION-v2.0.4.md).
+
 ## v2.0.3 — X11 landscape and cumulative stability fixes
 
 Add full-screen landscape presentation for all eight X11 environments. Reparent

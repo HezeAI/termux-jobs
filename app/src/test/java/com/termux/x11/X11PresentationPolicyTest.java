@@ -22,6 +22,9 @@ public class X11PresentationPolicyTest {
         }
         assertTrue(Arrays.asList(runtime("termux").arguments("wrapper")).contains("-disable-gpu-present"));
     }
+    @Test public void ubuntuBionicBridgeUsesClippedCopyWithoutChangingCpu()throws Exception{
+        X11Runtime r=runtime("ubuntu");assertTrue(Arrays.asList(r.arguments("bionic-glibc")).contains("-disable-gpu-present"));assertFalse(Arrays.asList(r.arguments("cpu")).contains("-disable-gpu-present"));
+    }
     @Test public void argumentSelectionDoesNotMutateAnotherLaunch()throws Exception{
         X11Runtime r=runtime("termux");String[] before=r.arguments();r.arguments("wrapper");assertArrayEquals(before,r.arguments("cpu"));
     }

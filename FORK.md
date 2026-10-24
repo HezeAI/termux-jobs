@@ -1,3 +1,9 @@
+# v2.0.4 — code1366
+
+Bionic-for-glibc loading in six ordinary glibc desktops, with independent driver caches. X11 extra keys and Jobs GPU Test; no valid-data reset/migration or installed-library replacement. Android/SDK/package/signing/schema requirements remain those of2.0.3. Native core unchanged; bridge binaries are isolated assets with corresponding sources, patches and licenses. See [release](docs/fork/RELEASE-v2.0.4.md), [bridge](docs/fork/BIONIC_GLIBC.md) and [validation](docs/fork/VALIDATION-v2.0.4.md).
+
+---
+
 # v2.0.3 — code1352
 
 Full-screen landscape X11 reuses each selected target's existing display and

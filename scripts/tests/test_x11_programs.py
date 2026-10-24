@@ -44,6 +44,18 @@ class ProgramTests(unittest.TestCase):
   with tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d:
    control,env=self.fixture(d);p=self.run_program(env,control);self.assertEqual(0,p.returncode,p.stderr);self.assertIn('PROGRAM:files:installed',p.stdout);self.assertIn('PROGRAM:editor:missing',p.stdout);self.assertIn('READY:programs',p.stdout)
    self.assertFalse(Path(env['APT_CALLS']).exists());self.assertIn('jobs-x11-ubuntu',Path(env['ROUTE']).read_text().splitlines());self.assertNotIn('ubuntu',Path(env['ROUTE']).read_text().splitlines())
+ def test_gpu_test_payload_install_skips_apt_only_when_complete_runtime_is_configured(self):
+  for missing in (False,True):
+   with tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d:
+    control,env=self.fixture(d);base=Path(d);bin=Path(env['PREFIX'])/'bin'
+    Path(env['INSTALLED']).write_text('python3\nlibx11-6\nlibgl1\n'+('' if missing else 'libglx-mesa0\n'))
+    python=bin/'python3';python.write_text('#!/bin/bash\n[[ $1 == -B ]] && shift\ncase "$1" in /tmp/termux-jobs-x11/x11-gpu-test-setup.py) [[ $2 != prepare ]] || printf "%s\\n" "$3" > "$SETUP_CALL";exit 0;; /tmp/termux-jobs-x11/x11-firefox.py) exit 1;; *) exec /usr/bin/python3 "$@";;esac\n')
+    env.update(SETUP_CALL=str(base/'setup'),FAIL_APT='1')
+    result=self.run_program(env,control,'install','gpu-test')
+    if missing:
+     self.assertNotEqual(0,result.returncode);self.assertTrue(Path(env['APT_CALLS']).exists());self.assertFalse((base/'setup').exists())
+    else:
+     self.assertEqual(0,result.returncode,result.stderr);self.assertFalse(Path(env['APT_CALLS']).exists());self.assertEqual('jobs-x11-ubuntu\n',(base/'setup').read_text());self.assertIn('PROGRAM:gpu-test:installed',result.stdout)
  def test_gpu_group_installs_apt_names_in_selected_guest_then_creates_shortcuts(self):
   for target in ['ubuntu','debian','jobs-x11-ubuntu']:
    with tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d:

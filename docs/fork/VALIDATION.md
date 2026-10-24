@@ -1,3 +1,14 @@
+# v2.0.4 release validation
+
+Bionic-for-glibc support in six ordinary glibc desktops; separate caches/processes,
+X11 extra keys and optional Jobs GPU Test. Same com.termux/signer/schema8,
+code1366, no data reset/rootfs migration. The [current validation](VALIDATION-v2.0.4.md)
+records final APK identity, automated/native checks and driver/device limits.
+QCOM891.11 remains experimental, including one unresolved concurrent stress
+timeout. Historical reports below retain their original scope.
+
+---
+
 # v2.0.3 release validation
 
 Final APK: code1352, ARM64/com.termux, same signing identity/schema8; no valid-data

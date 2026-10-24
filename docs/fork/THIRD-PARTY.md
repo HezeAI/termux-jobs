@@ -104,3 +104,13 @@ references to those experiments are not current feature or validation claims.
 Our integration source, session/installer code, tests and compatibility changes
 are published in [HezeAI/termux-jobs](https://github.com/HezeAI/termux-jobs).
 Third-party licenses are retained; the fork's license does not replace them.
+
+
+## v2.0.4 Bionic-for-glibc bridge
+
+- libhybris + taowen/TAWC Android TLS work: pinned source07dfa88569d60f00e34a9f127ccae2fcc0730618; LGPL-2.1 and component licenses retained.
+- Arm/xMeM Vulkan WSI layer: d5624d42d8b2debbd910ad25662a05c751eb38b7; MIT. Our patch covers memory initialization, GPU/Present synchronization, event/geometry lifetime and buffer handling.
+- Mesa26.1.6 upstream Zink/GLX/EGL frontend: private build, unmodified upstream source, small build-time libm symbol forwarder; upstream component licenses retained.
+- Halium Android headers:2c6ac3dcc4f8db593dd69906b0ec22822abfed91. TAWC GPU notes and kde-yyds/android-vulkan-bridge informed integration; no system-libc patch, Vortek or Venus is included.
+- Jobs native ICD, private import/cache/environment integration and compatibility patches are supplied in this fork. Existing Termux:X11 core is unchanged. [Full pins/build/licenses](../../third-party/bionic-glibc/README.md) and [implementation](BIONIC_GLIBC.md).
+- Driver downloads: [StevenMXZ](https://github.com/StevenMXZ/Adreno-Tools-Drivers/releases) and [The412Banner](https://github.com/The412Banner/Banners-Turnip/releases). The two separate reference release ZIPs are unmodified StevenMXZ assets; [exact origins/credits/hashes](DRIVER-SOURCES-v2.0.4.md). No vendor driver is embedded in the APK or bridge export.

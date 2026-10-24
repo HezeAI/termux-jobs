@@ -11,6 +11,7 @@ release/
 .cxx
 *.zip
 !third-party/virgl-client/alpine-mesa-26.1.6-virgl.zip
+!third-party/bionic-glibc/ubuntu-arm64-runtime.zip
 
 # Crashlytics configuations
 com_crashlytics_export_strings.xml

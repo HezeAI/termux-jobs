@@ -82,6 +82,7 @@ final class WorkspaceDesktop {
     private final WorkspaceDesktopPrograms programs;
     private final DesktopKeyboardState keyboardState=new DesktopKeyboardState();
     private final DesktopFullscreen fullscreen;
+    private final DesktopExtraKeys extraKeys;
     private Runnable keyboardChanged=()->{};
     private final ViewTreeObserver.OnPreDrawListener imeObserver=this::observeIme;
     private boolean observeIme(){
@@ -98,7 +99,7 @@ final class WorkspaceDesktop {
         @Override public void onServiceDisconnected(ComponentName n){if(closed)return;if(bound){activity.unbindService(this);bound=false;}remote=null;launchAfterCheck=null;clearPreparation();state=new Bundle();installed.clear();graphical.clear();shownTargets.clear();dismissProgress();programs.failed();sync();changed.run();activity.showToast(tr("X11 остановлен. Терминальная сессия продолжает работу.","X11 stopped. The terminal session is still running."),true);}
         @Override public void onBindingDied(ComponentName n){onServiceDisconnected(n);if(bound){activity.unbindService(this);bound=false;}}
     };
-    WorkspaceDesktop(TermuxActivity a,Supplier<WorkspaceStore.Session> s,BooleanSupplier v,View input,Runnable changed,Runnable restore){activity=a;selected=s;visible=v;this.input=input;this.changed=changed;this.restore=restore;fullscreen=new DesktopFullscreen(a,this::keyboard,this::keyboardEnabled,this::observeIme);migrateRetiredStyle();wrapper=new WorkspaceDesktopWrapper(a);programs=new WorkspaceDesktopPrograms(a,(op,id)->ensure(op,programsProfile(),id),()->{},this::maintenance);if(Build.VERSION.SDK_INT>=30)activity.getWindow().getDecorView().getViewTreeObserver().addOnPreDrawListener(imeObserver);}
+    WorkspaceDesktop(TermuxActivity a,Supplier<WorkspaceStore.Session> s,BooleanSupplier v,View input,Runnable changed,Runnable restore){activity=a;selected=s;visible=v;this.input=input;this.changed=changed;this.restore=restore;extraKeys=new DesktopExtraKeys(a,()->keyboardChanged.run());fullscreen=new DesktopFullscreen(a,this::keyboard,this::keyboardEnabled,this::observeIme,this::extraKeys,this::extraKeysVisible);migrateRetiredStyle();wrapper=new WorkspaceDesktopWrapper(a,WorkspaceDesktopWrapper.bridgeSupported(target(s.get()))?target(s.get()):"termux");programs=new WorkspaceDesktopPrograms(a,(op,id)->ensure(op,programsProfile(),id),()->{},this::maintenance);if(Build.VERSION.SDK_INT>=30)activity.getWindow().getDecorView().getViewTreeObserver().addOnPreDrawListener(imeObserver);}
     private WorkspaceStore.Session programsProfile(){return programs.profile();}
     static boolean eligible(WorkspaceStore.Session p){
         if(p==null||p.environment.equals("codex")||!p.aiAgent.isEmpty()||p.claudeAgent||p.geminiAgent)return false;
@@ -136,17 +137,19 @@ final class WorkspaceDesktop {
             }
         }
         rendererRow=AgentStatusUi.row(body,tr("Рендеринг: ","Rendering: ")+WorkspaceDesktopGpu.label(activity,target(p)),"desktop-renderer",()->{if(rendererBusy())return;dialog[0].dismiss();WorkspaceDesktopGpu.select(activity,target(p),this::rendererBusy,choice->selectRenderer(p,choice),this::menu);});
+        if(WorkspaceDesktopGpu.mode(activity,target(p)).equals("turnip"))AgentStatusUi.info(body,target(p).equals("termux")?"Termux package build. Turnip: Mesa 26.2.5; Zink uses the installed Termux Mesa.":"Lfdevs build with Android adaptations.");
         AgentStatusUi.info(body,tr("Поверните телефон горизонтально: рабочий стол займёт весь экран. Поворот обратно или «Назад» вернёт его в окно приложения. Кнопка интерактивного ввода | доступна справа сверху.","Rotate the phone to landscape for a full-screen desktop. Rotate back or press Back to return it to the app window. The Interactive input | button remains at the top right."));
         wrapperFolder=null;wrapperDriver=null;
-        if(target(p).equals("termux")&&WorkspaceDesktopGpu.mode(activity,"termux").equals("wrapper")){
+        if(target(p).equals("termux")&&WorkspaceDesktopGpu.mode(activity,"termux").equals("wrapper")||WorkspaceDesktopWrapper.bridgeSupported(target(p))&&WorkspaceDesktopGpu.mode(activity,target(p)).equals("bionic-glibc")){
             body.removeView(rendererRow);LinearLayout renderLine=new LinearLayout(activity);renderLine.setGravity(Gravity.CENTER_VERTICAL);
             renderLine.addView(rendererRow,new LinearLayout.LayoutParams(0,-2,1));
             wrapperFolder=WorkspaceDialogs.action(activity,"",0);wrapperFolder.setTag("desktop-wrapper-folder");wrapperFolder.setCompoundDrawablesWithIntrinsicBounds(R.drawable.workspace_folder,0,0,0);
-            wrapperFolder.setGravity(Gravity.CENTER);wrapperFolder.setMinHeight(WorkspaceDialogs.dp(activity,48));wrapperFolder.setContentDescription(tr("Выбрать ZIP драйвера Turnip Bionic","Choose Turnip Bionic driver ZIP"));
+            wrapperFolder.setGravity(Gravity.CENTER);wrapperFolder.setMinHeight(WorkspaceDialogs.dp(activity,48));wrapperFolder.setContentDescription(tr("Выбрать ZIP драйвера Bionic","Choose Bionic driver ZIP"));
             LinearLayout.LayoutParams folderParams=new LinearLayout.LayoutParams(WorkspaceDialogs.dp(activity,52),WorkspaceDialogs.dp(activity,48));folderParams.leftMargin=WorkspaceDialogs.dp(activity,6);renderLine.addView(wrapperFolder,folderParams);body.addView(renderLine);
             wrapperFolder.setOnClickListener(v->{if(rendererBusy())return;dialog[0].dismiss();wrapper.choose(()->closed||rendererBusy()||!sameSession(p,selected.get()),()->{if(!closed&&sameSession(p,selected.get())&&visible.getAsBoolean())menu();});});
             AgentStatusUi.available(wrapperFolder,!rendererBusy());
-            String driver=WorkspaceDesktopWrapper.driverLabel(activity);
+            AgentStatusUi.info(body,"Bionic Turnip or Qualcomm drivers (AdrenoTools ZIP format).");
+            String driver=WorkspaceDesktopWrapper.driverLabel(activity,target(p));
             wrapperDriver=AgentStatusUi.row(body,driver.isEmpty()?tr("Выбрать драйвер Bionic","Choose Bionic driver"):driver,"desktop-wrapper-driver",()->{
                 if(rendererBusy())return;dialog[0].dismiss();wrapper.showDrivers(()->closed||rendererBusy()||!sameSession(p,selected.get()),()->{if(!closed&&sameSession(p,selected.get())&&visible.getAsBoolean())menu();});
             });AgentStatusUi.available(wrapperDriver,!rendererBusy());
@@ -269,7 +272,7 @@ final class WorkspaceDesktop {
     }
     private void selectRenderer(WorkspaceStore.Session p,String choice){
         if(rendererBusy()||closed)return;
-        if(!choice.equals("cpu")&&!(choice.equals("turnip")&&WorkspaceDesktopGpu.supported(target(p)))&&!(choice.equals("virgl")&&com.termux.x11.VirglInstaller.supported(target(p)))&&!(choice.equals("wrapper")&&WorkspaceDesktopWrapper.supported(target(p))))return;
+        if(!choice.equals("cpu")&&!(choice.equals("turnip")&&WorkspaceDesktopGpu.supported(target(p)))&&!(choice.equals("virgl")&&com.termux.x11.VirglInstaller.supported(target(p)))&&!(choice.equals("wrapper")&&WorkspaceDesktopWrapper.supported(target(p)))&&!(choice.equals("bionic-glibc")&&WorkspaceDesktopWrapper.bridgeSupported(target(p))))return;
         activity.getSharedPreferences("workspace-x11",0).edit().putString("renderer:"+target(p),choice).apply();
         if(sameSession(p,selected.get())&&visible.getAsBoolean())menu();
     }
@@ -295,7 +298,7 @@ final class WorkspaceDesktop {
             public void progress(int percent,String text){if(closed||epoch!=rendererEpoch)return;rendererProgress=percent;rendererProgressText=text;preparationUpdate();}
             public void finished(boolean success,String report){if(closed||epoch!=rendererEpoch)return;rendererPreparationFailed=!success;rendererProgressText=success?tr("Рендер готов","Renderer ready"):report.contains("GPU_CANCELLED")?tr("Установка рендера отменена","Renderer installation cancelled"):tr("Не удалось подготовить рендер. ","Could not prepare renderer. ")+report;}
         };
-        if(choice.equals("wrapper"))wrapper.prepare(rendererUnavailable,rendererUpdated,inline);
+        if(choice.equals("wrapper")||choice.equals("bionic-glibc"))wrapper.prepare(rendererUnavailable,rendererUpdated,inline);
         else WorkspaceDesktopGpu.prepare(activity,target(p),choice,rendererUnavailable,rendererUpdated,inline,state.getBoolean("rendererComponents",false)&&choice.equals(state.getString("renderer",""))&&target(p).equals(state.getString("target","")));
     }
     private void preparationAction(){
@@ -423,7 +426,7 @@ final class WorkspaceDesktop {
         if(programStatusPolling())poll();
         WorkspaceStore.Session p=selected.get();boolean inline=preparationProfile!=null&&sameSession(p,preparationProfile)&&showing();boolean show=!inline&&showing()&&remote!=null&&(state.getBoolean("ready",false)||state.getString("phase","").equals("preparing"))&&target(p).equals(state.getString("target",""));
         String wanted=show?p.id:"";
-        if(display!=null&&!displayed.equals(wanted)){display.close();if(display.getParent() instanceof ViewGroup)((ViewGroup)display.getParent()).removeView(display);display=null;displayed="";boolean enabled=keyboardState.enabled;keyboardState.reset();restore.run();if(enabled)keyboardChanged.run();}
+        if(display!=null&&!displayed.equals(wanted)){extraKeys.close();display.close();if(display.getParent() instanceof ViewGroup)((ViewGroup)display.getParent()).removeView(display);display=null;displayed="";boolean enabled=keyboardState.enabled;keyboardState.reset();restore.run();if(enabled)keyboardChanged.run();}
         if(!inline&&preparation!=null){if(preparation.getParent() instanceof ViewGroup)((ViewGroup)preparation.getParent()).removeView(preparation);preparation=null;if(!show)restore.run();}
         if(!inline&&preparationPrompt!=null){preparationPrompt.dismiss();preparationPrompt=null;}
         if(inline){
@@ -431,13 +434,20 @@ final class WorkspaceDesktop {
             preparationUpdate();activity.getTerminalView().setWorkspaceTerminalVisible(false);activity.getTerminalView().setVisibility(View.INVISIBLE);input.setVisibility(View.GONE);activity.getTerminalToolbarViewPager().setVisibility(View.GONE);
             if(preparationNeedsInstall)confirmInstall(preparationProfile);if(rendererReadyForPreparation)prepareSelectedRenderer(preparationProfile);poll();
         }
-        if(show&&display==null){FrameLayout parent=activity.findViewById(R.id.workspace_terminal_surface);String desktopTarget=target(p);display=new RemoteDesktopView(activity,b->{if(display!=null&&display.inputReady())shownTargets.add(desktopTarget);});displayed=wanted;parent.addView(display,new FrameLayout.LayoutParams(-1,-1));display.connect(remote);poll();}
+        if(show&&display==null){FrameLayout parent=activity.findViewById(R.id.workspace_terminal_surface);String desktopTarget=target(p);display=new RemoteDesktopView(activity,b->{if(display!=null&&display.inputReady())shownTargets.add(desktopTarget);});display.onExtraKeysReset(extraKeys::close);displayed=wanted;parent.addView(display,new FrameLayout.LayoutParams(-1,-1));display.connect(remote);poll();}
         if(show){display.startup(desktopReady(target(p)),state.getBoolean("desktopStartupTimedOut",false),state.getInt("startupStep",0));activity.getTerminalView().setWorkspaceTerminalVisible(false);activity.getTerminalView().setVisibility(View.INVISIBLE);input.setVisibility(View.GONE);activity.getTerminalToolbarViewPager().setVisibility(View.GONE);}
         fullscreen.sync(inline?preparation:show?display:null);
     }
-    boolean fullscreenBack(){return fullscreen.back();}
+    boolean fullscreenBack(){if(extraKeys.showing()){extraKeys.close();return true;}return fullscreen.back();}
+    boolean extraKeysVisible(){return extraKeys.showing();}
+    void extraKeys(){
+        if(extraKeys.showing()){extraKeys.close();return;}
+        if(Build.VERSION.SDK_INT<30||display==null||!display.inputReady())return;
+        RemoteDesktopView target=display;
+        extraKeys.show(target,target::extraKey,target::releaseExtraKeys);
+    }
     void keyboard(){if(Build.VERSION.SDK_INT>=30&&display!=null){display.keyboard(keyboardState.toggle());keyboardChanged.run();}}
     private void dismissProgress(){if(progress!=null){progress.close();progress=null;}}
-    void close(){if(closed)return;graphical.clear();shownTargets.clear();sync();fullscreen.close();closed=true;clearPreparation();rendererRow=null;wrapperFolder=null;wrapperDriver=null;styleCheck=null;wrapper.close();dismissProgress();programs.close();if(Build.VERSION.SDK_INT>=30){ViewTreeObserver observer=activity.getWindow().getDecorView().getViewTreeObserver();if(observer.isAlive())observer.removeOnPreDrawListener(imeObserver);}main.removeCallbacksAndMessages(null);if(bound){activity.unbindService(connection);bound=false;}remote=null;calls.shutdown();}
+    void close(){if(closed)return;graphical.clear();shownTargets.clear();sync();extraKeys.close();fullscreen.close();closed=true;clearPreparation();rendererRow=null;wrapperFolder=null;wrapperDriver=null;styleCheck=null;wrapper.close();dismissProgress();programs.close();if(Build.VERSION.SDK_INT>=30){ViewTreeObserver observer=activity.getWindow().getDecorView().getViewTreeObserver();if(observer.isAlive())observer.removeOnPreDrawListener(imeObserver);}main.removeCallbacksAndMessages(null);if(bound){activity.unbindService(connection);bound=false;}remote=null;calls.shutdown();}
     private String tr(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
 }

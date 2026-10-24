@@ -26,6 +26,13 @@ public final class RemoteDesktopView extends FrameLayout implements SurfaceHolde
     private final X11ViewTrace trace=new X11ViewTrace();
     private final X11Viewport viewport=new X11Viewport();
     private int sentWidth,sentHeight,sentVisible;
+    private final X11ExtraKeys extraKeys=new X11ExtraKeys((code,down)->{
+        Bundle q=X11Remote.command("input");q.putBoolean("extra",true);q.putInt("key",code);q.putBoolean("down",down);q.putString("attachment",attachment);send(q);
+    });
+    public void extraKey(int code,boolean down){if(!closed&&attached&&(!down||inputReady()))extraKeys.key(code,down);}
+    public void releaseExtraKeys(){extraKeys.release();}
+    private Runnable extraKeysReset=()->{};
+    public void onExtraKeysReset(Runnable callback){extraKeysReset=callback;}
     public boolean inputReady(){return attached&&!closed&&(startupReady||revealed);}
     public Boolean imeVisible(){WindowInsets insets=getRootWindowInsets();return insets==null?null:insets.isVisible(WindowInsets.Type.ime());}
     public String keyboardDiagnostic(){WindowInsets insets=getRootWindowInsets();return imeDiagnostic+"\ncurrent windowFocus="+hasWindowFocus()+" editorFocus="+ime.hasFocus()+" editorWindowFocus="+ime.hasWindowFocus()+" keyboardWanted="+keyboardWanted+" IME-visible="+(insets==null?"unknown":insets.isVisible(WindowInsets.Type.ime()))+"\nViewport="+sentWidth+"x"+sentHeight+" visibleHeight="+sentVisible+"\n"+trace.report();}
@@ -111,6 +118,6 @@ public final class RemoteDesktopView extends FrameLayout implements SurfaceHolde
         });
     }
     private void send(Bundle q){IBinder binder=remote;if(closed||binder==null)return;calls.execute(()->{try{X11Remote.call(binder,q);}catch(Exception ignored){}});}
-    private void detach(){trace.event("detach","");keyboardConfigured=false;sentWidth=sentHeight=sentVisible=0;String old=attachment;attachment=UUID.randomUUID().toString();generation++;attaching=false;Bundle q=X11Remote.command("detach");q.putString("attachment",old);send(q);attached=false;}
+    private void detach(){extraKeys.release();trace.event("detach","");keyboardConfigured=false;sentWidth=sentHeight=sentVisible=0;String old=attachment;attachment=UUID.randomUUID().toString();generation++;attaching=false;Bundle q=X11Remote.command("detach");q.putString("attachment",old);send(q);attached=false;extraKeysReset.run();}
     public void close(){if(closed)return;if(keyboardWanted)keyboard(false);ime.active(false);detach();closed=true;surface.getHolder().removeCallback(this);calls.shutdown();}
 }

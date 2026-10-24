@@ -135,7 +135,8 @@ public class X11Service extends Service {
             if(style&&!DesktopProcess.supportsStyle(wanted))throw new IllegalArgumentException("Style requires a supported X11 desktop");
             if((style!=termuxStyle)&&(started||stopping||phase.equals("checking")||phase.equals("installing")||phase.equals("preparing")))throw new IllegalStateException("Stop the desktop before changing style");
             String renderChoice=q.getString("renderer","cpu");
-            if(!renderChoice.equals("cpu")&&!renderChoice.equals("turnip")&&!renderChoice.equals("virgl")&&!renderChoice.equals("wrapper"))throw new IllegalArgumentException("Invalid renderer");
+            if(!renderChoice.equals("cpu")&&!renderChoice.equals("turnip")&&!renderChoice.equals("virgl")&&!renderChoice.equals("wrapper")&&!renderChoice.equals("bionic-glibc"))throw new IllegalArgumentException("Invalid renderer");
+            if(renderChoice.equals("bionic-glibc")&&!wanted.equals("ubuntu")&&!wanted.equals("debian")&&!wanted.equals("fedora")&&!wanted.equals("archlinux")&&!wanted.equals("opensuse")&&!wanted.equals("void"))throw new IllegalArgumentException("Bionic for glibc requires a supported glibc desktop");
             if(renderChoice.equals("wrapper")&&!wanted.equals("termux"))throw new IllegalArgumentException("Wrapper is Termux-only");
             if(renderChoice.equals("virgl")&&!VirglInstaller.supported(wanted))throw new IllegalArgumentException("VirGL target unsupported");
             if(renderChoice.equals("turnip")&&!wanted.equals("ubuntu")&&!wanted.equals("termux")&&!wanted.equals("debian")&&!wanted.equals("alpine")&&!wanted.equals("fedora")&&!wanted.equals("opensuse")&&!wanted.equals("void")&&!wanted.equals("archlinux"))throw new IllegalArgumentException("GPU target unsupported");

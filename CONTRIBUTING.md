@@ -123,3 +123,6 @@ do not want public. Tested phones are RedMagic10Pro and SamsungS26Ultra; report
 other devices explicitly. See [sources/credits](docs/fork/THIRD-PARTY.md) before
 reusing third-party components. Public release descriptions default to English;
 in-app update/compatibility notes remain RU/EN.
+
+
+For Bionic-for-glibc reports, include the target/glibc version, GPU/Android API, renderer, exact driver ZIP name/SHA-256/source, Jobs GPU Test scene/size/VSync and whether the desktop or only a private probe was tested. Do not attach account files or private logs; see [known bridge limits](docs/fork/BIONIC_GLIBC.md).

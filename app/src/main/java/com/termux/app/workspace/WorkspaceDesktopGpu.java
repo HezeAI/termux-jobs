@@ -17,24 +17,26 @@ import java.util.function.*;
 final class WorkspaceDesktopGpu {
     static String directory(String target){return target.equals("ubuntu")?"ubuntu-26.04-mesa26.3":target.equals("termux")?"termux-mesa26.2.5":target.equals("debian")?"debian-13-mesa26.3":target.equals("alpine")?"alpine-3.24-mesa26.3":target.equals("fedora")?"fedora-44-mesa26.3":target.equals("opensuse")?"opensuse-16-mesa26.3":target.equals("void")?"void-mesa26.3":target.equals("archlinux")?"archlinux-mesa26.3":"";}
     static boolean supported(String target){return !directory(target).isEmpty();}
-    static String mode(android.content.Context c,String target){String value=c.getSharedPreferences("workspace-x11",0).getString("renderer:"+target,"cpu");return value.equals("wrapper")&&WorkspaceDesktopWrapper.supported(target)?"wrapper":value.equals("turnip")?"turnip":value.equals("virgl")&&com.termux.x11.VirglInstaller.supported(target)?"virgl":"cpu";}
+    static String mode(android.content.Context c,String target){String value=c.getSharedPreferences("workspace-x11",0).getString("renderer:"+target,"cpu");return value.equals("bionic-glibc")&&WorkspaceDesktopWrapper.bridgeSupported(target)?"bionic-glibc":value.equals("wrapper")&&WorkspaceDesktopWrapper.supported(target)?"wrapper":value.equals("turnip")?"turnip":value.equals("virgl")&&com.termux.x11.VirglInstaller.supported(target)?"virgl":"cpu";}
     private static String t(TermuxActivity a,String ru,String en){return WorkspaceLanguage.code(a).equals("ru")?ru:en;}
     static boolean installed(TermuxActivity a,String target){return supported(target)&&new File(new File(new File(a.getFilesDir(),"workspace-x11-gpu"),directory(target)),"ready.json").isFile();}
-    static boolean installed(TermuxActivity a,String target,String choice){return choice.equals("wrapper")&&WorkspaceDesktopWrapper.supported(target)&&WorkspaceDesktopWrapper.installed(a)||choice.equals("cpu")||choice.equals("virgl")&&com.termux.x11.VirglInstaller.installed(a,target)||choice.equals("turnip")&&installed(a,target);}
-    static String label(TermuxActivity a,String target){String mode=mode(a,target);return mode.equals("wrapper")?"Wrapper · Bionic (GPU)":mode.equals("virgl")?"VirGL (GPU)":mode.equals("turnip")?"Turnip + Zink (GPU)":t(a,"Программный (CPU)","Software (CPU)");}
+    static boolean installed(TermuxActivity a,String target,String choice){return choice.equals("bionic-glibc")&&WorkspaceDesktopWrapper.bridgeSupported(target)&&WorkspaceDesktopWrapper.installed(a,target)||choice.equals("wrapper")&&WorkspaceDesktopWrapper.supported(target)&&WorkspaceDesktopWrapper.installed(a)||choice.equals("cpu")||choice.equals("virgl")&&com.termux.x11.VirglInstaller.installed(a,target)||choice.equals("turnip")&&installed(a,target);}
+    static String turnipLabel(String target){return "Turnip + Zink (Mesa "+(target.equals("termux")?"26.2.5":target.equals("archlinux")?"26.3.0":"26.3.0-devel")+")";}
+    static String label(TermuxActivity a,String target){String mode=mode(a,target);return mode.equals("bionic-glibc")?"Bionic for glibc (libhybris + Jobs bridge)":mode.equals("wrapper")?"Wrapper · Bionic (AdrenoTools)":mode.equals("virgl")?"VirGL (GPU)":mode.equals("turnip")?turnipLabel(target):t(a,"Программный (CPU)","Software (CPU)");}
     interface Inline {
         void started(Runnable cancel);
         void progress(int percent,String text);
         void finished(boolean success,String report);
     }
     static void choose(TermuxActivity a,String target,BooleanSupplier busy,Runnable updated){
-        select(a,target,busy,choice->{if(choice.equals("wrapper")){a.getSharedPreferences("workspace-x11",0).edit().putString("renderer:"+target,choice).apply();updated.run();}else prepare(a,target,choice,busy,updated,null);},updated);
+        select(a,target,busy,choice->{if(choice.equals("wrapper")||choice.equals("bionic-glibc")){a.getSharedPreferences("workspace-x11",0).edit().putString("renderer:"+target,choice).apply();updated.run();}else prepare(a,target,choice,busy,updated,null);},updated);
     }
     static void select(TermuxActivity a,String target,BooleanSupplier busy,Consumer<String> selected,Runnable back){
         if(busy.getAsBoolean())return;
-        String[] labels=WorkspaceDesktopWrapper.supported(target)?new String[]{t(a,"Программный (CPU)","Software (CPU)"),"Turnip + Zink (GPU)","VirGL (GPU)",t(a,"Wrapper · Bionic (тест)","Wrapper · Bionic (test)")}:new String[]{t(a,"Программный (CPU)","Software (CPU)"),"Turnip + Zink (GPU)","VirGL (GPU)"};
+        boolean bionic=WorkspaceDesktopWrapper.supported(target)||WorkspaceDesktopWrapper.bridgeSupported(target);
+        String[] labels=bionic?new String[]{t(a,"Программный (CPU)","Software (CPU)"),turnipLabel(target),"VirGL (GPU)",(WorkspaceDesktopWrapper.bridgeSupported(target)?"Bionic for glibc (libhybris + Jobs bridge)":"Wrapper · Bionic (AdrenoTools)")}:new String[]{t(a,"Программный (CPU)","Software (CPU)"),turnipLabel(target),"VirGL (GPU)"};
         WorkspaceDialogs.builder(a).setTitle(t(a,"Рендеринг · ","Rendering · ")+WorkspaceEnvironments.label(target))
-            .setAdapter(WorkspaceDialogs.choiceAdapter(a,labels,mode(a,target).equals("wrapper")?3:mode(a,target).equals("turnip")?1:mode(a,target).equals("virgl")?2:0,i->i==0||(i==1?supported(target):i==2?com.termux.x11.VirglInstaller.supported(target):WorkspaceDesktopWrapper.supported(target))),(d,index)->{if(!busy.getAsBoolean()&&(index==0||(index==1?supported(target):index==2?com.termux.x11.VirglInstaller.supported(target):WorkspaceDesktopWrapper.supported(target))))selected.accept(index==0?"cpu":index==1?"turnip":index==2?"virgl":"wrapper");})
+            .setAdapter(WorkspaceDialogs.choiceAdapter(a,labels,(mode(a,target).equals("wrapper")||mode(a,target).equals("bionic-glibc"))?3:mode(a,target).equals("turnip")?1:mode(a,target).equals("virgl")?2:0,i->i==0||(i==1?supported(target):i==2?com.termux.x11.VirglInstaller.supported(target):bionic)),(d,index)->{if(!busy.getAsBoolean()&&(index==0||(index==1?supported(target):index==2?com.termux.x11.VirglInstaller.supported(target):bionic)))selected.accept(index==0?"cpu":index==1?"turnip":index==2?"virgl":WorkspaceDesktopWrapper.bridgeSupported(target)?"bionic-glibc":"wrapper");})
             .setNegativeButton(t(a,"Назад","Back"),(d,w)->back.run()).show();
     }
     static void prepare(TermuxActivity a,String target,String choice,BooleanSupplier busy,Runnable updated,Inline inline){

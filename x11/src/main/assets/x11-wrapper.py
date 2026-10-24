@@ -120,7 +120,7 @@ def read_json(path):
 def validate_driver(base, value, verify=True):
     identity = value.get('id', '')
     name = value.get('library', '')
-    if not re.fullmatch('[a-f0-9]{64}', identity) or not re.fullmatch(r'lib[A-Za-z0-9_.+-]{1,100}\.so', name):
+    if not re.fullmatch('[a-f0-9]{64}', identity) or not re.fullmatch(r'[A-Za-z0-9_][A-Za-z0-9_.+-]{0,127}\.so', name):
         raise ValueError('WRAPPER_DRIVER_METADATA')
     root = base / 'drivers' / identity
     if (base / 'drivers').is_symlink() or root.is_symlink() or not root.is_dir():
@@ -129,7 +129,7 @@ def validate_driver(base, value, verify=True):
     if not hashes or len(hashes) > 16 or name not in hashes:
         raise ValueError('WRAPPER_DRIVER_METADATA')
     for filename, expected in hashes.items():
-        if not re.fullmatch(r'lib[A-Za-z0-9_.+-]{1,100}\.so', filename):
+        if not re.fullmatch(r'[A-Za-z0-9_][A-Za-z0-9_.+-]{0,127}\.so', filename):
             raise ValueError('WRAPPER_DRIVER_METADATA')
         regular(root / filename, MAX_EXPANDED)
         if verify and digest(root / filename) != expected:
@@ -219,9 +219,9 @@ def import_driver(base, source, api):
                 if not isinstance(minimum, int) or minimum < 0 or minimum > api:
                     raise ValueError('WRAPPER_ANDROID_VERSION')
                 library = metadata.get('libraryName', '')
-                if not re.fullmatch(r'lib[A-Za-z0-9_.+-]{1,100}\.so', library):
+                if not re.fullmatch(r'[A-Za-z0-9_][A-Za-z0-9_.+-]{0,127}\.so', library):
                     raise ValueError('WRAPPER_DRIVER_METADATA')
-                libraries = [m for m in members if re.fullmatch(r'lib[A-Za-z0-9_.+-]{1,100}\.so', m.filename)]
+                libraries = [m for m in members if re.fullmatch(r'[A-Za-z0-9_][A-Za-z0-9_.+-]{0,127}\.so', m.filename)]
                 if not 1 <= len(libraries) <= 16 or library not in {m.filename for m in libraries}:
                     raise ValueError('WRAPPER_DRIVER_MISSING')
                 hashes = {}

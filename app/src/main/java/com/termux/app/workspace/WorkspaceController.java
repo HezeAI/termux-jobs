@@ -131,7 +131,7 @@ public final class WorkspaceController {
     private int baseRestartFailures;
     private int toolbarVisibility = View.GONE;
     private boolean interactiveInput;
-    private TextView desktopInputButton;
+    private TextView desktopInputButton,desktopKeysButton;
     private float swipeStart;
     private final Set<String> pendingCloses = new java.util.HashSet<>();
     private final Set<String> unstartedOnLoad = new java.util.HashSet<>();
@@ -322,12 +322,16 @@ public final class WorkspaceController {
     private void updateDesktopInputButton() {
         if(screen!=Screen.TERMINAL||desktopInputButton==null)return;
         boolean active=desktopUi!=null&&desktopUi.hasSurface()?desktopUi.keyboardEnabled():interactiveInput;
+        if(desktopKeysButton!=null&&desktopUi!=null&&desktopUi.showing()){
+            boolean keys=desktopUi.extraKeysVisible();
+            if(desktopKeysButton.isSelected()!=keys){desktopKeysButton.setSelected(keys);desktopKeysButton.setTextColor(keys?Color.BLACK:TEXT);desktopKeysButton.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),shape(keys?ACCENT:PANEL,keys?ACCENT:BORDER,12),null));}
+        }
         if(desktopInputButton.isSelected()==active)return;
         desktopInputButton.setSelected(active);desktopInputButton.setTextColor(active?Color.BLACK:TEXT);
         desktopInputButton.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),shape(active?ACCENT:PANEL,active?ACCENT:BORDER,12),null));
     }
     private void renderHeader() {
-        desktopInputButton=null;
+        desktopInputButton=null;desktopKeysButton=null;
         // Keep the navigation container stable while rebuilding its surrounding header.
         if (navigation.getParent() != null) ((ViewGroup) navigation.getParent()).removeView(navigation);
         header.removeAllViews(); header.setPadding(dp(8), dp(4), dp(8), dp(4));
@@ -342,10 +346,11 @@ public final class WorkspaceController {
             TextView direct=button("⌖",directActive,()->{if(desktopUi!=null&&desktopUi.showing()){desktopUi.keyboard();return;}setInteractiveInput(!interactiveInput);renderHeader();});
             direct.setContentDescription(WorkspaceText.tr("Интерактивный ввод"));direct.setSelected(directActive);desktopInputButton=direct;
             LinearLayout.LayoutParams directParams=new LinearLayout.LayoutParams(dp(48),dp(48));directParams.setMarginEnd(dp(8));top.addView(direct,directParams);
-            boolean keysBlocked=(desktopUi!=null&&desktopUi.showing())||(agentChatUi!=null&&agentChatUi.handlesComposer());
-            boolean keysVisible=!keysBlocked&&toolbarVisibility==View.VISIBLE;
-            TextView keys=button("⌨",keysVisible,()->{if(desktopUi!=null&&desktopUi.showing())return;if(agentChatUi!=null&&agentChatUi.handlesComposer())return;activity.toggleTerminalToolbar();toolbarVisibility=activity.getTerminalToolbarViewPager().getVisibility();renderHeader();});
-            keys.setContentDescription(WorkspaceText.tr("Дополнительные клавиши"));keys.setSelected(keysVisible);if(keysBlocked){keys.setEnabled(false);keys.setAlpha(.4f);keys.setSelected(false);}
+            boolean desktop=desktopUi!=null&&desktopUi.showing();
+            boolean keysBlocked=!desktop&&agentChatUi!=null&&agentChatUi.handlesComposer();
+            boolean keysVisible=desktop?desktopUi.extraKeysVisible():!keysBlocked&&toolbarVisibility==View.VISIBLE;
+            TextView keys=button("⌨",keysVisible,()->{if(desktopUi!=null&&desktopUi.showing()){desktopUi.extraKeys();return;}if(agentChatUi!=null&&agentChatUi.handlesComposer())return;activity.toggleTerminalToolbar();toolbarVisibility=activity.getTerminalToolbarViewPager().getVisibility();renderHeader();});
+            desktopKeysButton=keys;keys.setContentDescription(WorkspaceText.tr("Дополнительные клавиши"));keys.setSelected(keysVisible);if(keysBlocked){keys.setEnabled(false);keys.setAlpha(.4f);keys.setSelected(false);}
             LinearLayout.LayoutParams keyParams=new LinearLayout.LayoutParams(dp(48),dp(48));keyParams.setMarginEnd(dp(8));top.addView(keys,keyParams);
         }
         TextView settings=button("⚙",false,this::globalSettings);settings.setContentDescription(WorkspaceText.tr("Настройки приложения"));

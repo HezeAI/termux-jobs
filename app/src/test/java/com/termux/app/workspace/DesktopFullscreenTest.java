@@ -57,7 +57,7 @@ public class DesktopFullscreenTest {
     }
     @Test public void topRightInputIsASeparateNonFocusableWindowWithoutGearAndPassesOutsideTouches()throws Exception{
         fullscreen.sync(host);rotate(Configuration.ORIENTATION_LANDSCAPE);LinearLayout row=(LinearLayout)((ViewGroup)controls().findViewById(android.R.id.content)).getChildAt(0);
-        assertEquals(1,row.getChildCount());assertTrue(controls().isShowing());
+        assertEquals(2,row.getChildCount());assertTrue(controls().isShowing());
         WindowManager.LayoutParams attributes=controls().getWindow().getAttributes();
         assertEquals(WindowManager.LayoutParams.TYPE_APPLICATION,attributes.type);
         assertTrue((attributes.flags&WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)!=0);
@@ -70,6 +70,14 @@ public class DesktopFullscreenTest {
         assertEquals(1,actions[0]);assertTrue(fullscreen.isFullscreen());
         assertTrue((dialog().getWindow().getAttributes().flags&WindowManager.LayoutParams.FLAG_FULLSCREEN)!=0);
         assertEquals(WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES,dialog().getWindow().getAttributes().layoutInDisplayCutoutMode);
+    }
+    @Test public void extraKeysButtonUsesItsOwnActionAndSelectedState()throws Exception{
+        fullscreen.close();boolean[] keys={false};
+        fullscreen=new DesktopFullscreen(activity,()->actions[0]++,()->false,()->{},()->keys[0]=!keys[0],()->keys[0]);
+        fullscreen.sync(host);rotate(Configuration.ORIENTATION_LANDSCAPE);
+        LinearLayout row=(LinearLayout)((ViewGroup)controls().findViewById(android.R.id.content)).getChildAt(0);
+        View button=row.getChildAt(1);button.performClick();assertTrue(keys[0]);assertTrue(button.isSelected());assertEquals(0,actions[0]);
+        button.performClick();assertFalse(keys[0]);assertFalse(button.isSelected());assertSame(host,((ViewGroup)host.getParent()).getChildAt(0));
     }
     @Test public void inputFillTracksManualAutomaticAndBackStateWithoutReplacingWindows()throws Exception{
         fullscreen.sync(host);rotate(Configuration.ORIENTATION_LANDSCAPE);Dialog desktop=dialog(),overlay=controls();
