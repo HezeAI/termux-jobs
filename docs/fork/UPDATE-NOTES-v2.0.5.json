@@ -1,0 +1,30 @@
+{
+  "ru": [
+    "Настройка экрана каждого X11: разрешение, масштаб интерфейса 50–150% и отступы от краёв. Ручное разрешение поворачивается вместе с телефоном и заполняет область стола.",
+    "Автонастройка возвращает автоматическое разрешение, 100% и нулевые отступы. При её отключении подставляются 1600×720, 75% и 5 dp; сохранённые ручные настройки сохраняются.",
+    "Масштаб применяется через «Применить» и к работающему XFCE: панели, шрифты, значки, новые окна и содержимое Thunar. Некоторые уже открытые программы нужно открыть заново.",
+    "Исправлены ложные вызовы автоматической клавиатуры от скрытых/свёрнутых окон и рабочего стола. Ручной интерактивный ввод | остаётся доступным.",
+    "Экранные дополнительные клавиши компактнее: начальный размер 400×104 dp, уменьшены кнопки и ручки перемещения/размера. Esc, Enter, стрелки и модификаторы сохранены.",
+    "Wayland/KDE Plasma и связанные драйверы временно серые и недоступны, пока продолжаются тесты. В Arch доступен X11/XFCE; настройки и импорты тестового режима не удаляются."
+  ],
+  "en": [
+    "Per-environment X11 resolution, 50–150% interface scaling and safe margins. Manual resolution follows phone orientation and fills the desktop area.",
+    "Auto setup restores automatic resolution, 100% scale and zero margins. Disabling it prefills 1600×720, 75% and 5 dp; existing saved manual settings are preserved.",
+    "Apply updates running XFCE fonts, panels, icons and new Thunar windows/folder views. Some already open applications need to be reopened.",
+    "Automatic keyboard requests now reject hidden/minimized, desktop and dock windows. Manual Interactive input | remains available.",
+    "More compact extra keys: initial 400×104 dp panel, smaller keys and move/resize handles. Esc, Enter, arrows and modifiers remain.",
+    "Wayland/KDE Plasma and its driver controls are gray and disabled while testing continues. Arch retains X11/XFCE; preview settings/imports are not deleted."
+  ],
+  "compatibility": {
+    "ru": [
+      "Те же com.termux, подпись, ARM64, schema8; Android8+ приложение, Android11+ графический стол. Сброс корректных данных, перенос аккаунтов и переустановка окружений не требуются.",
+      "Code1376 выше публичной 2.0.4/code1366 и совпадает с частной test.10: эта тестовая сборка не получит публичную как более новое обновление.",
+      "Завершите важную работу до обновления. Изменения масштаба обратимы через 100%/Автонастройку; ограничения драйверов и файлового доступа 2.0.4 сохраняются. Откат APK не откатывает уже обновлённые пакеты Linux."
+    ],
+    "en": [
+      "Same com.termux/signer/ARM64/schema8; Android8+ app, Android11+ embedded desktop. No valid-data reset, account migration or environment reinstallation required.",
+      "Code1376 exceeds public2.0.4/code1366 and equals private test.10: that private build will not see this public build as a newer in-app update.",
+      "Finish important work before updating. Scale is reversible through 100%/Auto setup. Existing2.0.4 driver/file-access limits remain; APK rollback does not undo Linux package upgrades."
+    ]
+  }
+}

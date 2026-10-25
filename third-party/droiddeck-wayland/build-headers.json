@@ -1,0 +1,151 @@
+{
+  "source": "https://archive.mesa3d.org/mesa-26.1.6.tar.xz",
+  "archiveSHA256": "5296b88a0f1e012e2cb9ada150a2bbadf728ca81e5a4fb2ab43c83a4d2158606",
+  "license": "Apache-2.0 (Khronos Vulkan headers; per-file notices retained)",
+  "files": [
+    {
+      "path": "vk_video/vulkan_video_codec_av1std.h",
+      "sha256": "9b4ebcef0d6844b226803fa91b4c4c8bf9eb941aa31b19cea48ded0886a8f9e2"
+    },
+    {
+      "path": "vk_video/vulkan_video_codec_av1std_decode.h",
+      "sha256": "f03abf49fcaf2bd179d48d768164f9494264b58401b98899e8860ba297a1e7aa"
+    },
+    {
+      "path": "vk_video/vulkan_video_codec_av1std_encode.h",
+      "sha256": "40f84c98d0341246ead3e864e1378df47d861505c5c139da5ed85c352d5e2300"
+    },
+    {
+      "path": "vk_video/vulkan_video_codec_h264std.h",
+      "sha256": "f6691f82e4637adda20e56d56951c673cc1ecdf2fa77e09cc8eba4b1f45118c1"
+    },
+    {
+      "path": "vk_video/vulkan_video_codec_h264std_decode.h",
+      "sha256": "8c4682860954d6bfc603e200d9e12586bc57265bd37b73a12b1ecf0c1ad42721"
+    },
+    {
+      "path": "vk_video/vulkan_video_codec_h264std_encode.h",
+      "sha256": "75cc54e489b1ec7e3c635680cabaf7c9c2ddd4071a485440e5368e76ede30a85"
+    },
+    {
+      "path": "vk_video/vulkan_video_codec_h265std.h",
+      "sha256": "01b5f3d0fd9d273a68ed90f898ba94c05c0305280a753bf95fab60d60727c22e"
+    },
+    {
+      "path": "vk_video/vulkan_video_codec_h265std_decode.h",
+      "sha256": "926a24d94afed2b1ab030e81c3b9e2e6730cca530f7a5a5bd821e7b896b93a41"
+    },
+    {
+      "path": "vk_video/vulkan_video_codec_h265std_encode.h",
+      "sha256": "8a56e0c78496affa84eca39ec0f5636df681c04623dd0291aeeadd012df324be"
+    },
+    {
+      "path": "vk_video/vulkan_video_codec_vp9std.h",
+      "sha256": "e18e20b197945929d5871836bfde923e38b350b09e1cbe430f1bd802d9eda34e"
+    },
+    {
+      "path": "vk_video/vulkan_video_codec_vp9std_decode.h",
+      "sha256": "c3929bbdd0ab79128c7f9bfb9641c9a017b3983529315b771caaafc74fdbb89a"
+    },
+    {
+      "path": "vk_video/vulkan_video_codecs_common.h",
+      "sha256": "be6d2495d19e96aca6aa5c11e5c418d1cd72beac23fe19eb9169c06e2843f0af"
+    },
+    {
+      "path": "vulkan/.editorconfig",
+      "sha256": "f96a2354e5f2b90367d643e6d9e980ce76278d4d47afd8b2713b595753aa8b4b"
+    },
+    {
+      "path": "vulkan/vk_android_native_buffer.h",
+      "sha256": "cf47964326ac4f0685cceadbbc97aff185138255b07facdf7e26bc0ce3147224"
+    },
+    {
+      "path": "vulkan/vk_icd.h",
+      "sha256": "15d092840ca6d45fca3ccdc50cf021943e6c88aefe2a730c391f26d60bba9018"
+    },
+    {
+      "path": "vulkan/vk_layer.h",
+      "sha256": "bfe6804d3f527138fcfebb0845c1c0077c5718725bf338be09b0f9be3e8dede5"
+    },
+    {
+      "path": "vulkan/vk_platform.h",
+      "sha256": "949d517bb83e1d88fd4f1cef02bd3cb9ab50d44e8354cc68227cf2dccfdd3307"
+    },
+    {
+      "path": "vulkan/vulkan.h",
+      "sha256": "72b952cc6de70ee12d118d3095e80346b42ff01cfc6f2bbb37ec01800eab1da6"
+    },
+    {
+      "path": "vulkan/vulkan_android.h",
+      "sha256": "49cd5e53156cb9e36fa03d81a5f1b8c1e93428e3499698309398d66dc3872948"
+    },
+    {
+      "path": "vulkan/vulkan_beta.h",
+      "sha256": "0c8306cc75db2a51fe5c29654afde8587f44fc84c2d123eaadf538e86dd0541c"
+    },
+    {
+      "path": "vulkan/vulkan_core.h",
+      "sha256": "55c06a17793bb1a9d752aa0906116fff9d1fb74f5dd3896777b92f124c9637aa"
+    },
+    {
+      "path": "vulkan/vulkan_directfb.h",
+      "sha256": "4c6be34ee27f2fce4870c4046304b0c53f1fe62b13a4c21da8d537ec4cf8b965"
+    },
+    {
+      "path": "vulkan/vulkan_fuchsia.h",
+      "sha256": "8a7a0c52e8c1ab41ede66bdabc32057255a7b385441d67dd4023121de5801194"
+    },
+    {
+      "path": "vulkan/vulkan_ggp.h",
+      "sha256": "97cb1776742a4d8aae9f258ce908da76d0466da8864a5036aaca834af5f62e8d"
+    },
+    {
+      "path": "vulkan/vulkan_ios.h",
+      "sha256": "8bb052cc162b4086c0f1cd29a5ed11ccf921b8ee83551194394b86efd249c572"
+    },
+    {
+      "path": "vulkan/vulkan_macos.h",
+      "sha256": "00f532e9b7229488ac9932c2b391d74e9e8566ed91d0dbbad10e15dc356c9293"
+    },
+    {
+      "path": "vulkan/vulkan_metal.h",
+      "sha256": "8f84536896b8d3c6c49883ce34242f8922840617d0b184b338c0f83da5bfaaaa"
+    },
+    {
+      "path": "vulkan/vulkan_ohos.h",
+      "sha256": "9da9b4f1a23adc0b705450ce4b5c934dff2fd1eb8cdf4ac3273465420fc9475a"
+    },
+    {
+      "path": "vulkan/vulkan_screen.h",
+      "sha256": "ffe2e63fbea5f0a9a7948a998eb7e1085e1f7cd5fd55b3d9a0146fe1aa8307bd"
+    },
+    {
+      "path": "vulkan/vulkan_ubm.h",
+      "sha256": "b55c8f25fb02ac5d4f686d7f554219c03e6b65f3184adba159e8e21849772948"
+    },
+    {
+      "path": "vulkan/vulkan_vi.h",
+      "sha256": "8caacbb6eccae5946fb367145ba5222b85d4747a3f8b30632fdfca0503f0c339"
+    },
+    {
+      "path": "vulkan/vulkan_wayland.h",
+      "sha256": "d43ca1c45cd4b2e1119c168b780e2864205ad8119e5f42d9d99aa29d2654a3f2"
+    },
+    {
+      "path": "vulkan/vulkan_win32.h",
+      "sha256": "0b11442e7efa0d5b6732b9964edf6dbdf3f6cf1dd58afe7572cc9b7f6de24317"
+    },
+    {
+      "path": "vulkan/vulkan_xcb.h",
+      "sha256": "1e1525fc64826ab3ea9e8a6ee6a618ef14db3e27397fcf8fb070bb1ddaf00c0b"
+    },
+    {
+      "path": "vulkan/vulkan_xlib.h",
+      "sha256": "82346aaa80a5c984b6a26f55c7c363c65be43029da539ba0fbdfea9840051cca"
+    },
+    {
+      "path": "vulkan/vulkan_xlib_xrandr.h",
+      "sha256": "da5d5311bcffa49c614e9f397784e44668466890aeaf4e54c2e0064c20259089"
+    }
+  ]
+}

@@ -1,3 +1,21 @@
+## v2.0.5 — X11 screen controls and input fixes
+
+Add per-environment logical resolution, safe margins, automatic reset and
+reversible 50–150% XFCE/Thunar scaling with bounded live Apply. Preserve orientation
+and fill embedded/full-screen views. Unchecking Auto setup prefills
+1600×720/75%/5dp while reopening saved manual values preserves them. Gate automatic
+keyboard requests on active normal window/Fcitx metadata; manual | remains.
+Compact the floating extra-key panel to 400×104dp with reflow and held-key cleanup.
+Keep experimental Arch Wayland/KDE and all its driver controls visibly gray and
+unavailable in public builds; guard backend launch/install/runtime preparation,
+ignore retained preview selection without deleting it. Private preview builds can
+opt in explicitly. Native X11 core and existing driver payloads unchanged.
+Same com.termux/signer/ARM64/schema8/min26/target28/compile35; code1376, intentionally
+matching retained test.10 while exceeding public1366. No reset/migration.
+[Release](docs/fork/RELEASE-v2.0.5.md) · [Validation](docs/fork/VALIDATION-v2.0.5.md).
+
+---
+
 ## v2.0.4 — Bionic for glibc bridge and X11 tools
 
 Add optional private Bionic Vulkan HAL loading for Ubuntu, Debian, Fedora, Arch,

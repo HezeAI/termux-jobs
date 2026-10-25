@@ -148,9 +148,10 @@ class DesktopTests(unittest.TestCase):
    displays={'ubuntu':98,'jobs-x11-ubuntu':99,'debian':100,'alpine':101,'fedora':102,'opensuse':103,'void':104,'archlinux':105}
    for target in displays:
     env['JOBS_X11_STYLE']='0' if target=='jobs-x11-ubuntu' else '1'
+    env['JOBS_X11_SCALE']='100' if target=='jobs-x11-ubuntu' else '75'
     result=subprocess.run(['bash',str(SCRIPT),'run',target,str(control)],env=env,capture_output=True,timeout=5)
     self.assertEqual(0,result.returncode,result.stderr);args=capture.read_text();self.assertNotIn('JOBS_X11_GTK_OBSERVE',args);self.assertIn('dbus-run-session',args);self.assertIn('export DISPLAY=:$JOBS_X11_DISPLAY',args);self.assertIn('export JOBS_X11_DISPLAY='+str(displays[target]),args)
-    self.assertIn('JOBS_X11_STYLE='+env['JOBS_X11_STYLE']+';',args)
+    self.assertIn('JOBS_X11_STYLE='+env['JOBS_X11_STYLE']+' ',args);self.assertIn('JOBS_X11_SCALE='+env['JOBS_X11_SCALE']+';',args)
     guest_command=next(line for line in args.splitlines() if 'export JOBS_X11_DISPLAY=' in line);prefix_command=guest_command.split('; mkdir ',1)[0];probe=subprocess.run(['bash','-c',prefix_command+'; printf \"%s\\n\" \"$DISPLAY\"'],env={},capture_output=True,text=True,timeout=5);self.assertEqual(':'+str(displays[target]),probe.stdout.strip());self.assertEqual(0,probe.returncode,probe.stderr)
    self.assertEqual(['archlinux'],sorted(p.name for p in (prefix/'var/lib/proot-distro/containers').iterdir()))
  def test_lxqt_is_rejected_outside_test_and_cannot_inject_a_command(self):

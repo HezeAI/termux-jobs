@@ -1,3 +1,16 @@
+# X11 screen and keyboard controls — v2.0.5
+
+Open Terminal / Desktop → X11 screen. Set resolution, scale and margins, then
+Apply; Cancel does not save. Auto setup resets all three together. Unchecking it
+prefills 1600×720/75%/5dp; reopening a saved manual mode keeps its own settings.
+See [screen controls](X11-SCREEN.md) for alignment, rotation and live scaling.
+The compact extra-key panel retains independent manual input, move/resize and
+modifier release. Automatic keyboard requests require a supported active normal
+application input context; use | otherwise. Arch Wayland and related driver
+controls are disabled in this public release pending further tests.
+
+---
+
 # Bionic drivers and X11 tools — v2.0.4
 
 Stop the selected ordinary glibc desktop, open Terminal / Desktop → Rendering, select Bionic for glibc and use the folder to import a trusted matching Bionic driver ZIP. The row below selects saved imports. Start normally; each target prepares its own native dependencies/cache. CPU/Turnip+Zink/VirGL remain selectable while stopped. See [bridge requirements and limits](BIONIC_GLIBC.md), [driver downloads](DRIVER-SOURCES-v2.0.4.md) and [release](RELEASE-v2.0.4.md).

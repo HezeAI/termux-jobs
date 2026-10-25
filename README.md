@@ -5,6 +5,21 @@
 Команды по-прежнему выполняются в настоящем Termux или выбранном окружении;
 интерфейс помогает организовать работу и не требует писать свою оболочку скриптов.
 
+## v2.0.5 — X11 screen controls and input fixes
+
+Per-environment X11 resolution, interface scale and safe margins, with live Apply
+and one-click Auto setup. Disabling Auto setup prefills 1600×720, 75% and 5 dp.
+Compact movable/resizable extra keys and stricter automatic-keyboard focus checks.
+Wayland/KDE and its driver controls are gray and disabled while testing continues;
+the source retains the private preview behind a build-time switch.
+Same package/signer/schema8/ARM64; no valid-data reset or environment migration.
+Public code1376 intentionally equals the developer's retained private test.10.
+
+[Download v2.0.5](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.5) ·
+[Release notes](docs/fork/RELEASE-v2.0.5.md) ·
+[Validation](docs/fork/VALIDATION-v2.0.5.md) ·
+[Screen settings](docs/fork/X11-SCREEN.md).
+
 ## v2.0.4 — Bionic drivers for glibc desktops
 
 Optional **Bionic for glibc (libhybris + Jobs bridge)** in Ubuntu, Debian, Fedora,

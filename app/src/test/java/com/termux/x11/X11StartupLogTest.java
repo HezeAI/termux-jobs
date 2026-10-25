@@ -50,4 +50,12 @@ public class X11StartupLogTest {
   for(String text:new String[]{"JOBS_GPU_BACKEND=vulkan","VIRGL_PROTOCOL_TOO_OLD","VIRGL_CLIENT_CONNECTION_LOST","VIRGL_GUEST_DRIVER_MISSING","EGL_BAD_ACCESS"})assertTrue(text,out.contains(text));
   assertFalse(out.contains("private"));assertFalse(out.contains("secret"));assertFalse(out.contains("token="));
  }
+ @Test public void waylandStagesAndManagedConfigFailureKeepFixedRedactedCategories(){
+  X11StartupLog log=new X11StartupLog();log.feed("JOBS_X11_STARTUP=plasma-session\nERROR:WAYLAND_PARENT_DISPLAY\nERROR:PLASMA_MANAGED_CONFIG_CHANGED\nERROR:WAYLAND_PRIVATE token=secret /private/home\n");String out=log.snapshot();
+  for(String text:new String[]{"plasma-session","WAYLAND_PARENT_DISPLAY","PLASMA_MANAGED_CONFIG_CHANGED"})assertTrue(out.contains(text));
+  for(String text:new String[]{"token=", "secret", "/private/home", "WAYLAND_PRIVATE"})assertFalse(out.contains(text));
+ }
+ @Test public void plasmaBootAndWrapperFailureAreFixedCategories(){
+  X11StartupLog log=new X11StartupLog();log.feed("org.kde.startup: Using classic boot\norg.kde.plasma.session: error starting process kwin_wayland_wrapper /private/secret\n(EE) could not connect to wayland server\nqt.qpa.wayland: failed at /private\n");String out=log.snapshot();for(String expected:new String[]{"PLASMA_BOOT=classic","KWIN_WRAPPER_START_FAILED","WAYLAND_CONNECTION_FAILED","QT_WAYLAND_PLATFORM_FAILED"})assertTrue(out,out.contains(expected));assertFalse(out.contains("private"));assertFalse(out.contains("secret"));
+ }
 }

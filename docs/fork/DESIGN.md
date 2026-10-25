@@ -1,3 +1,15 @@
+# v2.0.5 — desktop screen controls
+
+Per-environment X11 screen form groups resolution, scale and margins under one
+Apply. Auto setup dims manual fields and returns canonical defaults; unchecking
+prefills the requested 1600×720/75%/5dp form, without saving until Apply. Saved
+manual values are not overwritten by reopening. Extra keys start at 400×104dp.
+Wayland/KDE and all of its Bionic/Linux driver controls remain visible but gray
+and disabled, with a testing explanation. X11 rendering and imports remain
+available. The app header keeps its existing v2.0 branding.
+
+---
+
 # v2.0.4 — per-environment bridge and desktop controls
 
 The Bionic-for-glibc choice appears only for six supported ordinary glibc targets. A folder imports trusted ZIPs; the row below shows the selected saved driver. Running/busy desktops disable replacement. These controls reuse the existing renderer/installation flows and do not redirect sessions to a different rootfs. Termux keeps its existing Wrapper; agents and Alpine/musl are excluded.

@@ -7,13 +7,18 @@ jobs_control=${JOBS_X11_CONTROL:-/tmp/termux-jobs-x11}
 export JOBS_X11_CONTROL="$jobs_control"
 case ${JOBS_X11_TARGET:-} in
  termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux)
+    case ${JOBS_X11_SCALE:-100} in [5-9][0-9]|1[0-4][0-9]|150) ;; *) echo ERROR:X11_SCALE;exit 2;;esac
+    if [ -r "$jobs_control/x11-scale.py" ];then python3 -B "$jobs_control/x11-scale.py" restore || exit 1;elif [ "${JOBS_X11_SCALE:-100}" != 100 ];then echo ERROR:X11_SCALE_MISSING;exit 1;fi
     if [ -r "$jobs_control/x11-style.py" ];then
         python3 -B "$jobs_control/x11-style.py" "${JOBS_X11_STYLE:-0}" || exit 1
     elif [ "${JOBS_X11_STYLE:-0}" != 0 ];then echo ERROR:STYLE_MISSING;exit 1;fi
-    if [ "${JOBS_X11_STYLE:-0}" = 1 ];then export GTK_THEME=TermuxJobsStyle XCURSOR_THEME=TermuxJobsCursor XCURSOR_SIZE=32;fi
+    if [ -r "$jobs_control/x11-scale.py" ];then python3 -B "$jobs_control/x11-scale.py" apply "${JOBS_X11_SCALE:-100}" || exit 1;fi
+    if [ "${JOBS_X11_STYLE:-0}" = 1 ];then export GTK_THEME=TermuxJobsStyle XCURSOR_THEME=TermuxJobsCursor XCURSOR_SIZE=$(((32*${JOBS_X11_SCALE:-100}+50)/100));fi
  ;;
  *) [ "${JOBS_X11_STYLE:-0}" = 0 ] || { echo ERROR:STYLE_TARGET;exit 1; };;
 esac
+# Save only this new bus endpoint for one-shot live settings; never export auth contents.
+if [ -r "$jobs_control/x11-scale-live.py" ];then python3 -B "$jobs_control/x11-scale-live.py" register || echo JOBS_X11_SCALE_LIVE=unavailable;fi
 # Applied only to Alpine's owned desktop tree. No host/system library replacement.
 if [ "${JOBS_X11_ALPINE_COMPAT:-0}" = 1 ];then
     if [ ! -f "$jobs_control/x11-alpine-compat.so" ];then echo ERROR:ALPINE_COMPAT_MISSING;exit 1;fi
@@ -41,18 +46,11 @@ if [ -r "$jobs_control/x11-gpu-tools.py" ];then
     python3 -B "$jobs_control/x11-gpu-tools.py" prepare "${JOBS_X11_TARGET:-termux}" || echo JOBS_X11_GPU_SHORTCUTS=preserved-unavailable
 fi
 export GTK_IM_MODULE=fcitx QT_IM_MODULE=fcitx XMODIFIERS=@im=fcitx
-# --profile prints headers only. Match just focus calls: no key/preedit/text payloads.
-(
-    dbus-monitor --session --profile \
-      "type='method_call',interface='org.fcitx.Fcitx.InputContext1',member='FocusIn'" \
-      "type='method_call',interface='org.fcitx.Fcitx.InputContext1',member='FocusOut'" \
-      "type='method_call',interface='org.fcitx.Fcitx.InputContext1',member='DestroyIC'" |
-    while read -r kind time serial sender destination path interface member rest;do
-        [ "$kind" = mc ] && [ "$interface" = org.fcitx.Fcitx.InputContext1 ] || continue
-        case $member in FocusIn|FocusOut|DestroyIC)
-          printf '\nJOBS_X11_FOCUS_V1 %s %s %s %s\n' "$JOBS_X11_FOCUS_TOKEN" "$member" "$sender" "$path";;esac
-    done
-) &
+# This session's bounded metadata gate rejects desktop/dock/hidden windows and
+# disabled input contexts. Manual Android keyboard input remains independent.
+if [ -r "$jobs_control/x11-focus.py" ];then
+    python3 -B -u "$jobs_control/x11-focus.py" &
+fi
 # The guardian owns this whole desktop process group, including these helpers.
 fcitx5 &
 # Trial overlay disabled after developer device freezes. System Garcon only.

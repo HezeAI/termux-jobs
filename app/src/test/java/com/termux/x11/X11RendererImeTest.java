@@ -18,8 +18,11 @@ public class X11RendererImeTest {
  @Implements(LorieView.class) public static class NativeRenderer extends org.robolectric.shadows.ShadowSurfaceView {
   @Implementation public boolean post(Runnable action){new android.os.Handler(Looper.getMainLooper()).post(action);return true;}
   static int disconnects,destroys,suspends;
+  static int[] viewport;static float[] position;
+  @Implementation protected void setViewport(long ptr,int x,int y,int w,int h,int ew,int eh,int hidden){viewport=new int[]{x,y,w,h,ew,eh,hidden};}
+  @Implementation protected void sendWindowChange(long ptr,int width,int height,int rate,String name){}
   static final java.util.List<String> mouse=new java.util.ArrayList<>();
-  @Implementation protected void sendMouseEvent(long ptr,float x,float y,int button,boolean down,boolean relative){if(button>0)mouse.add(button+":"+down);}
+  @Implementation protected void sendMouseEvent(long ptr,float x,float y,int button,boolean down,boolean relative){if(button>0)mouse.add(button+":"+down);else if(!relative)position=new float[]{x,y};}
   @Implementation protected long nativeInit(){return 1;}
   @Implementation protected static void connect(long pointer,int fd){if(fd==-1)disconnects++;}
   @Implementation protected void nativeDestroy(long pointer){destroys++;}
@@ -31,7 +34,7 @@ public class X11RendererImeTest {
   static int restarts;
   @Implementation protected void restartInput(View view){restarts++;}
  }
- @Before public void reset(){Ime.restarts=0;NativeRenderer.disconnects=NativeRenderer.destroys=NativeRenderer.suspends=0;NativeRenderer.mouse.clear();}
+ @Before public void reset(){Ime.restarts=0;NativeRenderer.disconnects=NativeRenderer.destroys=NativeRenderer.suspends=0;NativeRenderer.mouse.clear();NativeRenderer.viewport=null;NativeRenderer.position=null;}
  @Test public void embeddedRendererCannotAdvertiseOrCreateAnImeOrRestartItOnMouseCallbacks(){
   LorieView renderer=new LorieView(RuntimeEnvironment.application);
   assertFalse(renderer.onCheckIsTextEditor());EditorInfo info=new EditorInfo();info.inputType=123;
@@ -58,4 +61,18 @@ public class X11RendererImeTest {
   assertTrue(renderer.onCheckIsTextEditor());assertNotNull(renderer.onCreateInputConnection(new EditorInfo()));
   assertEquals(1L,(long)org.robolectric.util.ReflectionHelpers.getField(renderer,"pointer"));renderer.resetIme();Shadows.shadowOf(Looper.getMainLooper()).idle();assertEquals(1,Ime.restarts);
  }
+ @Test public void stretchedViewportKeepsCornerPointerCoordinatesInLogicalDesktopSpace()throws Exception{
+  LorieView renderer=new LorieView(RuntimeEnvironment.application);
+  java.lang.reflect.Method resize=LorieView.class.getDeclaredMethod("resize",int.class,int.class);resize.setAccessible(true);
+  java.lang.reflect.Method callback=LorieView.class.getDeclaredMethod("setRendererViewport",int.class,int.class,int.class,int.class,float.class,float.class,float.class,float.class);callback.setAccessible(true);
+  for(int[] v:new int[][]{{926,1460,0,600,1300},{2448,1080,1,1296,600}}){
+   renderer.screenSettings(new X11ScreenSettings(1300,600,0,0,75),v[2]==1);resize.invoke(renderer,v[0],v[1]);
+   assertArrayEquals(new int[]{0,0,v[0],v[1],v[3],v[4],0},NativeRenderer.viewport);
+   callback.invoke(renderer,0,0,v[0],v[1],0f,0f,(float)v[3],(float)v[4]);Shadows.shadowOf(Looper.getMainLooper()).idle();
+   android.view.MotionEvent event=android.view.MotionEvent.obtain(0,0,android.view.MotionEvent.ACTION_HOVER_MOVE,v[0]-1,v[1]-1,0);renderer.onGenericMotionEvent(event);event.recycle();
+   assertArrayEquals(new float[]{v[3]-1,v[4]-1},NativeRenderer.position,.01f);
+  }
+  renderer.release();
+ }
+
 }

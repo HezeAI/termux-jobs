@@ -114,3 +114,18 @@ Third-party licenses are retained; the fork's license does not replace them.
 - Halium Android headers:2c6ac3dcc4f8db593dd69906b0ec22822abfed91. TAWC GPU notes and kde-yyds/android-vulkan-bridge informed integration; no system-libc patch, Vortek or Venus is included.
 - Jobs native ICD, private import/cache/environment integration and compatibility patches are supplied in this fork. Existing Termux:X11 core is unchanged. [Full pins/build/licenses](../../third-party/bionic-glibc/README.md) and [implementation](BIONIC_GLIBC.md).
 - Driver downloads: [StevenMXZ](https://github.com/StevenMXZ/Adreno-Tools-Drivers/releases) and [The412Banner](https://github.com/The412Banner/Banners-Turnip/releases). The two separate reference release ZIPs are unmodified StevenMXZ assets; [exact origins/credits/hashes](DRIVER-SOURCES-v2.0.4.md). No vendor driver is embedded in the APK or bridge export.
+
+
+## Disabled Wayland preview sources — v2.0.5
+
+The public APK includes pinned experimental code/runtime inputs but disables
+Wayland/KDE UI and backend operations. This is not a claim of a working public
+KDE feature. The native parent derives from
+[DroidDeck 0.6.0 / The412Banner and contributors](https://github.com/Droid-Deck/DroidDeck)
+(pinned source commit `22eac0831d10671f6bc2ad914a93a0da5046c7df`).
+Original component notices/licenses, AdrenoTools/linkernsbypass, Wayland/libffi,
+LLVM libc++ and Vulkan headers are retained in the repository/runtime assets.
+Jobs-specific build/input/ownership changes and the scoped KWin timer workaround
+are documented in [experimental architecture](ARCH-WAYLAND.md) and the pinned
+`third-party/droiddeck-wayland/` manifests. KDE/Qt source references identify their
+upstream authors; they are not Jobs-owned desktop implementations.

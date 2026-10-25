@@ -13,6 +13,7 @@ import com.termux.x11.X11ExtraKeys;
 
 /** A small, non-focusable sibling window above the embedded X11 surface. */
 final class DesktopExtraKeys {
+    private static final int KEY_WIDTH=36,KEY_HEIGHT=30,HANDLE_WIDTH=20,PADDING=3;
     private final Activity activity;
     private final Runnable changed;
     private Dialog dialog;
@@ -30,7 +31,7 @@ final class DesktopExtraKeys {
     void show(View target,X11ExtraKeys.Sink sink,Runnable releaseKeys){
         close();if(activity.isFinishing()||activity.isDestroyed())return;
         anchor=target;release=releaseKeys;placed=false;
-        LinearLayout body=new LinearLayout(activity);body.setPadding(dp(4),dp(4),dp(4),dp(4));body.setBackground(WorkspaceDialogs.background(activity,false));
+        LinearLayout body=new LinearLayout(activity);body.setPadding(dp(PADDING),dp(PADDING),dp(PADDING),dp(PADDING));body.setBackground(WorkspaceDialogs.background(activity,false));
         addHandle(body,true);
         KeyGrid first=new KeyGrid();body.addView(first,new LinearLayout.LayoutParams(0,-1,1));
         key(first,"Esc",KeyEvent.KEYCODE_ESCAPE,false,sink);key(first,"Tab",KeyEvent.KEYCODE_TAB,false,sink);
@@ -50,7 +51,7 @@ final class DesktopExtraKeys {
         dialog.show();anchor.addOnAttachStateChangeListener(attachment);anchor.getViewTreeObserver().addOnPreDrawListener(layout);position();changed.run();
     }
     private TextView button(KeyGrid row,String label){
-        TextView button=new KeyButton(activity);button.setText(label);button.setTextSize(13);button.setTextColor(WorkspaceDialogs.TEXT);button.setGravity(Gravity.CENTER);button.setFocusable(false);button.setContentDescription(label);
+        TextView button=new KeyButton(activity);button.setText(label);button.setTextSize(12);button.setSingleLine(true);button.setIncludeFontPadding(false);button.setTextColor(WorkspaceDialogs.TEXT);button.setGravity(Gravity.CENTER);button.setFocusable(false);button.setContentDescription(label);
         button.setBackground(WorkspaceDialogs.background(activity,false));row.addView(button);return button;
     }
     private void key(KeyGrid row,String label,int code,boolean modifier,X11ExtraKeys.Sink sink){
@@ -58,7 +59,7 @@ final class DesktopExtraKeys {
         if(modifier){button.setOnClickListener(v->{boolean down=!button.isSelected();sink.key(code,down);button.setSelected(down);button.setBackground(WorkspaceDialogs.background(activity,down));});return;}
         ((KeyButton)button).physical(code,sink);
     }
-    private void addHandle(LinearLayout body,boolean resize){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(dp(24),dp(40));p.gravity=Gravity.CENTER_VERTICAL;body.addView(new Handle(resize),p);}
+    private void addHandle(LinearLayout body,boolean resize){LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(dp(HANDLE_WIDTH),dp(32));p.gravity=Gravity.CENTER_VERTICAL;body.addView(new Handle(resize),p);}
     /** Reflow existing key views without replacing them or losing held modifiers. */
     private final class KeyGrid extends ViewGroup {
         private int columns=6;
@@ -69,8 +70,8 @@ final class DesktopExtraKeys {
             for(int c=1;c<=count;c++){
                 int rows=(count+c-1)/c;double w=(double)width/c,h=(double)height/rows;
                 double cost=Math.abs(Math.log(Math.max(.01,w)/Math.max(.01,h)/1.8))+.15*(c*rows-count)/count;
-                if(w<dp(44))cost+=10*(dp(44)-w)/dp(44);
-                if(h<dp(36))cost+=10*(dp(36)-h)/dp(36);
+                if(w<dp(KEY_WIDTH))cost+=10*(dp(KEY_WIDTH)-w)/dp(KEY_WIDTH);
+                if(h<dp(KEY_HEIGHT))cost+=10*(dp(KEY_HEIGHT)-h)/dp(KEY_HEIGHT);
                 if(cost<best){best=cost;columns=c;}
             }
             int rows=(count+columns-1)/columns,gap=dp(1);
@@ -122,7 +123,7 @@ final class DesktopExtraKeys {
                     if(resize){
                         Rect bounds=new Rect();if(anchor==null||!anchor.getGlobalVisibleRect(bounds))return true;
                         int right=startX+startWidth,bottom=startY+startHeight;
-                        panelWidth=Math.min(right-bounds.left,Math.max(dp(196),startWidth-dx));
+                        panelWidth=Math.min(right-bounds.left,Math.max(dp(184),startWidth-dx));
                         panelHeight=Math.min(bottom-bounds.top,Math.max(minHeight(panelWidth),startHeight-dy));
                         panelX=right-panelWidth;panelY=bottom-panelHeight;
                     }else{panelX=startX+dx;panelY=startY+dy;}
@@ -136,7 +137,7 @@ final class DesktopExtraKeys {
             }
         }
     }
-    private int minHeight(int width){int columns=Math.max(1,(width-dp(56))/dp(44));return dp(8)+((16+columns-1)/columns)*dp(36);}
+    private int minHeight(int width){int columns=Math.max(1,(width-dp(2*HANDLE_WIDTH+2*PADDING))/dp(KEY_WIDTH));return dp(2*PADDING)+((16+columns-1)/columns)*dp(KEY_HEIGHT);}
     private static final class KeyButton extends androidx.appcompat.widget.AppCompatTextView {
         private X11ExtraKeys.Sink sink;private int code;private boolean held,physicalClick;
         public KeyButton(android.content.Context context){super(context);}
@@ -160,7 +161,7 @@ final class DesktopExtraKeys {
     private void position(){
         if(dialog==null||anchor==null)return;
         Rect bounds=new Rect();if(!anchor.getGlobalVisibleRect(bounds)||bounds.width()<1||bounds.height()<1){close();return;}
-        if(!placed){panelWidth=dp(478);panelHeight=dp(128);panelX=bounds.left+(bounds.width()-Math.min(panelWidth,bounds.width()))/2;panelY=bounds.bottom-Math.min(panelHeight,bounds.height())-dp(4);placed=true;}
+        if(!placed){panelWidth=dp(400);panelHeight=dp(104);panelX=bounds.left+(bounds.width()-Math.min(panelWidth,bounds.width()))/2;panelY=bounds.bottom-Math.min(panelHeight,bounds.height())-dp(4);placed=true;}
         int width=Math.min(panelWidth,bounds.width()),height=Math.min(Math.max(panelHeight,minHeight(width)),bounds.height());
         int x=Math.max(bounds.left,Math.min(panelX,bounds.right-width)),y=Math.max(bounds.top,Math.min(panelY,bounds.bottom-height));
         panelWidth=width;panelHeight=height;panelX=x;panelY=y;

@@ -1,3 +1,17 @@
+# v2.0.5 — code1376
+
+X11 screen geometry/scaling, automatic keyboard focus filtering and compact extra
+keys. Same package, signer, schema8, min26/target28/compile35/ARM64; no reset or
+rootfs migration. Public builds disable experimental Wayland in UI/backend by
+default. Only private development builds explicitly pass
+`-PtermuxWaylandPreview=true`; this is not a user-facing runtime toggle. Build
+native inputs with the existing X11 preparation plus `scripts/prepare-wayland.py`
+inside the repository. Pinned source, license and runtime checks remain required.
+See [release](docs/fork/RELEASE-v2.0.5.md) and
+[validation](docs/fork/VALIDATION-v2.0.5.md).
+
+---
+
 # v2.0.4 — code1366
 
 Bionic-for-glibc loading in six ordinary glibc desktops, with independent driver caches. X11 extra keys and Jobs GPU Test; no valid-data reset/migration or installed-library replacement. Android/SDK/package/signing/schema requirements remain those of2.0.3. Native core unchanged; bridge binaries are isolated assets with corresponding sources, patches and licenses. See [release](docs/fork/RELEASE-v2.0.4.md), [bridge](docs/fork/BIONIC_GLIBC.md) and [validation](docs/fork/VALIDATION-v2.0.4.md).

@@ -278,6 +278,7 @@ def catalog(target,only_installed=False,prefix=None):
 def remove(target,name):
  if not NAME.fullmatch(name) or CORE.fullmatch(name):raise ValueError('protected desktop component')
  if target=='archlinux':
+  if name in {'kwin','plasma-workspace','plasma-desktop','plasma-integration','kscreen','breeze','breeze-icons','qt6-wayland','wayland-utils','xorg-xwayland','xkeyboard-config','libglvnd','vulkan-icd-loader','libdrm','llvm22-libs','spirv-tools','libdisplay-info','xcb-util-keysyms'}:raise ValueError('protected Wayland desktop component')
   run(['pacman','-R','--noconfirm','--',name])
   if name in installed(target):raise ValueError('program still installed')
   return

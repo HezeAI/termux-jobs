@@ -42,7 +42,7 @@ final class WorkspaceDesktop {
     private long diagnosticAt;
     String sessionDiagnostic(WorkspaceStore.Session p){
         Bundle b=diagnosticState.isEmpty()?state:diagnosticState;
-        StringBuilder text=new StringBuilder("X11\nTarget: ").append(target(p)).append("\nSelected renderer: ").append(WorkspaceDesktopGpu.mode(activity,target(p)));
+        StringBuilder text=new StringBuilder((desktop(p).equals("plasma")?"Wayland":"X11")+" transport\nTarget: ").append(target(p)).append("\nDesktop profile: ").append(desktop(p)).append("\nSelected renderer: ").append(renderer(p));
         if(b.isEmpty())return text.append("\nSnapshot: unavailable").toString();
         text.append("\nRuntime renderer: ").append(b.getString("renderer","unknown")).append("\nPhase: ").append(b.getString("phase","unknown"));
         for(String k:new String[]{"started","ready","desktopReady","desktopStartupTimedOut","rendererConnected","hostAttached"})text.append('\n').append(k).append(": ").append(b.getBoolean(k,false));
@@ -54,6 +54,7 @@ final class WorkspaceDesktop {
         text.append("\nStartup elapsed ms: ").append(b.getLong("startupElapsedMs",0));
         text.append("\nStartup step: ").append(b.getInt("startupStep",0)).append("\nSnapshot age ms: ").append(Math.max(0,SystemClock.elapsedRealtime()-diagnosticAt));
         text.append("\nStartup categories (raw output omitted):\n").append(b.getString("startupDiagnostic","unavailable"));
+        String waylandFailures=b.getString("waylandStartupErrors","");if(!waylandFailures.isEmpty())text.append("\nRedacted Wayland startup errors (review before sharing):\n").append(waylandFailures);
         String failures=b.getString("componentErrors","");if(!failures.isEmpty())text.append("\nRedacted installer transfer errors (review before sharing):\n").append(failures);
         String previous=b.getString("previousStartupDiagnostic","");if(!previous.isEmpty())text.append("\nPrevious startup categories:\n").append(previous);
         return text.toString();
@@ -62,11 +63,11 @@ final class WorkspaceDesktop {
         IBinder binder=remote;if(closed||binder==null){done.run();return;}
         calls.execute(()->{Bundle answer=null;try{answer=X11Remote.call(binder,X11Remote.command("state"));}catch(Exception ignored){}Bundle result=answer;main.post(()->{if(!closed&&remote==binder&&result!=null){diagnosticState=result;diagnosticAt=SystemClock.elapsedRealtime();}done.run();});});
     }
-    private TextView rendererRow,wrapperFolder,wrapperDriver;
+    private TextView rendererRow,wrapperFolder,wrapperDriver,waylandDriverRow,waylandDriverFolder,waylandSelectedDriver;
     private CheckBox styleCheck;
     private static boolean styleSupported(WorkspaceStore.Session p){return com.termux.x11.DesktopPrograms.supportsStyle(target(p));}
     private static String styleKey(WorkspaceStore.Session p){return target(p).equals("termux")?"termux-style":"termux-style:"+target(p);}
-    private boolean styleEnabled(WorkspaceStore.Session p){return styleSupported(p)&&activity.getSharedPreferences("workspace-x11",0).getBoolean(styleKey(p),false);}
+    private boolean styleEnabled(WorkspaceStore.Session p){return !desktop(p).equals("plasma")&&styleSupported(p)&&activity.getSharedPreferences("workspace-x11",0).getBoolean(styleKey(p),false);}
     private void migrateRetiredStyle(){
         android.content.SharedPreferences prefs=activity.getSharedPreferences("workspace-x11",0);
         if(prefs.contains("touch-workspace")){
@@ -75,9 +76,12 @@ final class WorkspaceDesktop {
             update.remove("touch-workspace").apply();
         }
     }
-    private final WorkspaceDesktopWrapper wrapper;
-    private boolean rendererBusy(){return wrapper.busy()||preparationGpu||(!preparationRenderer.isEmpty()&&!rendererPreparationFailed)||rendererBackendBusy();}
-    private boolean rendererBackendBusy(){return remote==null||state.getBoolean("started",false)||Arrays.asList("checking","installing","cancelling","preparing","stopping").contains(state.getString("phase",""))||programs.busy();}
+    private final WorkspaceDesktopWrapper wrapper,waylandWrapper;
+    private boolean rendererBusy(){return wrapper.busy()||waylandWrapper.busy()||preparationGpu||(!preparationRenderer.isEmpty()&&!rendererPreparationFailed)||rendererSettingsBusy();}
+    private boolean waylandDriverBusy(){return !DesktopProfiles.waylandEnabled()||closed||profileBusy()||preparationGpu||(!preparationRenderer.isEmpty()&&!rendererPreparationFailed);}
+    private boolean rendererSettingsBusy(){return state.getBoolean("started",false)||Arrays.asList("checking","installing","cancelling","preparing","stopping").contains(state.getString("phase",""))||programs.busy();}
+    private boolean rendererBackendBusy(){return remote==null||rendererSettingsBusy();}
+    private boolean styleBusy(){return remote==null||rendererBusy();}
     private DesktopInstallUi progress;
     private final WorkspaceDesktopPrograms programs;
     private final DesktopKeyboardState keyboardState=new DesktopKeyboardState();
@@ -96,10 +100,10 @@ final class WorkspaceDesktop {
 
     private final ServiceConnection connection=new ServiceConnection(){
         @Override public void onServiceConnected(ComponentName n,IBinder binder){if(closed)return;remote=binder;String op=pending;pending="";if(!op.isEmpty())send(op,pendingProfile,pendingProgram);pendingProfile=null;pendingProgram="";poll();sync();}
-        @Override public void onServiceDisconnected(ComponentName n){if(closed)return;if(bound){activity.unbindService(this);bound=false;}remote=null;launchAfterCheck=null;clearPreparation();state=new Bundle();installed.clear();graphical.clear();shownTargets.clear();dismissProgress();programs.failed();sync();changed.run();activity.showToast(tr("X11 остановлен. Терминальная сессия продолжает работу.","X11 stopped. The terminal session is still running."),true);}
+        @Override public void onServiceDisconnected(ComponentName n){if(closed)return;if(bound){activity.unbindService(this);bound=false;}boolean wayland=state.getString("backend","").equals("wayland");remote=null;launchAfterCheck=null;clearPreparation();state=new Bundle();installed.clear();graphical.clear();shownTargets.clear();dismissProgress();programs.failed();sync();changed.run();activity.showToast(wayland?tr("Wayland остановлен. Терминальная сессия продолжает работу.","Wayland stopped. The terminal session is still running."):tr("X11 остановлен. Терминальная сессия продолжает работу.","X11 stopped. The terminal session is still running."),true);}
         @Override public void onBindingDied(ComponentName n){onServiceDisconnected(n);if(bound){activity.unbindService(this);bound=false;}}
     };
-    WorkspaceDesktop(TermuxActivity a,Supplier<WorkspaceStore.Session> s,BooleanSupplier v,View input,Runnable changed,Runnable restore){activity=a;selected=s;visible=v;this.input=input;this.changed=changed;this.restore=restore;extraKeys=new DesktopExtraKeys(a,()->keyboardChanged.run());fullscreen=new DesktopFullscreen(a,this::keyboard,this::keyboardEnabled,this::observeIme,this::extraKeys,this::extraKeysVisible);migrateRetiredStyle();wrapper=new WorkspaceDesktopWrapper(a,WorkspaceDesktopWrapper.bridgeSupported(target(s.get()))?target(s.get()):"termux");programs=new WorkspaceDesktopPrograms(a,(op,id)->ensure(op,programsProfile(),id),()->{},this::maintenance);if(Build.VERSION.SDK_INT>=30)activity.getWindow().getDecorView().getViewTreeObserver().addOnPreDrawListener(imeObserver);}
+    WorkspaceDesktop(TermuxActivity a,Supplier<WorkspaceStore.Session> s,BooleanSupplier v,View input,Runnable changed,Runnable restore){activity=a;selected=s;visible=v;this.input=input;this.changed=changed;this.restore=restore;extraKeys=new DesktopExtraKeys(a,()->keyboardChanged.run());fullscreen=new DesktopFullscreen(a,this::keyboard,this::keyboardEnabled,this::observeIme,this::extraKeys,this::extraKeysVisible);migrateRetiredStyle();wrapper=new WorkspaceDesktopWrapper(a,WorkspaceDesktopWrapper.bridgeSupported(target(s.get()))?target(s.get()):"termux");waylandWrapper=new WorkspaceDesktopWrapper(a,"wayland-archlinux");programs=new WorkspaceDesktopPrograms(a,(op,id)->ensure(op,programsProfile(),id),()->{},this::maintenance);if(Build.VERSION.SDK_INT>=30)activity.getWindow().getDecorView().getViewTreeObserver().addOnPreDrawListener(imeObserver);}
     private WorkspaceStore.Session programsProfile(){return programs.profile();}
     static boolean eligible(WorkspaceStore.Session p){
         if(p==null||p.environment.equals("codex")||!p.aiAgent.isEmpty()||p.claudeAgent||p.geminiAgent)return false;
@@ -107,7 +111,22 @@ final class WorkspaceDesktop {
     }
     static String target(WorkspaceStore.Session p){if(!eligible(p))return "";if(!p.prootAlias.isEmpty())return p.prootAlias;return p.environment.startsWith("proot:")?p.environment.substring(6):p.environment.equals("ubuntu")?"ubuntu":"termux";}
     private boolean supported(WorkspaceStore.Session p){return DesktopPrograms.supportsTarget(target(p));}
-    private String desktop(WorkspaceStore.Session p){return "xfce";}
+    private String desktop(WorkspaceStore.Session p){
+        if(!DesktopProfiles.waylandEnabled()||!target(p).equals("archlinux"))return "xfce";
+        String value=activity.getSharedPreferences("workspace-x11",0).getString("desktop-profile:archlinux","xfce");
+        if(target(p).equals(state.getString("target",""))&&(state.getBoolean("started",false)||Arrays.asList("checking","installing","cancelling","preparing","stopping").contains(state.getString("phase",""))))value=state.getString("desktop","xfce");
+        return value.equals("plasma")?"plasma":"xfce";
+    }
+    private String renderer(WorkspaceStore.Session p){return desktop(p).equals("plasma")?"turnip":WorkspaceDesktopGpu.mode(activity,target(p));}
+    private boolean profileBusy(){return state.getBoolean("started",false)||preparationProfile!=null||wrapper.busy()||waylandWrapper.busy()||programs.busy()||Arrays.asList("checking","installing","cancelling","preparing","stopping").contains(state.getString("phase",""));}
+    private void chooseProfile(WorkspaceStore.Session p,String profile){
+        if(!target(p).equals("archlinux")||!DesktopProfiles.available(target(p),profile))return;
+        if(!desktop(p).equals(profile)&&profileBusy()){activity.showToast(tr("Сначала остановите активный рабочий стол и дождитесь завершения операции.","Stop the active desktop and wait for the current operation to finish first."),true);return;}
+        activity.getSharedPreferences("workspace-x11",0).edit().putString("desktop-profile:archlinux",profile).apply();
+
+        if(graphical.contains(p.id)){sync();changed.run();return;}
+        menuAction(p,0);
+    }
     String label(){return showing()?tr("Рабочий стол","Desktop"):tr("Терминал","Terminal");}
     boolean hasSurface(){return display!=null&&showing();}
     boolean showing(){WorkspaceStore.Session p=selected.get();return visible.getAsBoolean()&&p!=null&&graphical.contains(p.id)&&eligible(p);}
@@ -115,31 +134,101 @@ final class WorkspaceDesktop {
         WorkspaceStore.Session p=selected.get();if(!eligible(p))return;
         if(!supported(p)){WorkspaceDialogs.builder(activity).setTitle("X11 · "+WorkspaceEnvironments.label(target(p))).setMessage(tr("Рабочий стол доступен для Termux, Ubuntu, Debian, Alpine, Fedora, openSUSE, Void Linux и Arch Linux. Другие системы будут подключаться к своим рабочим столам, без перенаправления в Ubuntu.","The desktop is available for Termux, Ubuntu, Debian, Alpine, Fedora, openSUSE, Void Linux and Arch Linux. Other systems will use their own desktops, without redirecting to Ubuntu.")).setPositiveButton("OK",null).show();return;}
         if(remote==null)ensure("state",p);
-        List<String> items=new ArrayList<>();items.add(showing()?tr("Вернуться в терминал","Return to terminal"):tr("Переключиться на рабочий стол","Switch to desktop"));if(target(p).equals(state.getString("target",""))&&state.getBoolean("started",false))items.add(tr("Остановить графический рабочий стол","Stop graphical desktop"));
+        List<String> items=new ArrayList<>();List<Integer> actions=new ArrayList<>();List<String> rowKeys=new ArrayList<>();
+        boolean arch=target(p).equals("archlinux");
+        if(!arch||showing()){items.add(showing()?tr("Вернуться в терминал","Return to terminal"):tr("Переключиться на рабочий стол","Switch to desktop"));actions.add(0);rowKeys.add("desktop-switch");}
+        if(arch){items.add(tr("Рабочий стол X11 · XFCE","X11 desktop · XFCE"));actions.add(4);rowKeys.add("desktop-xfce");items.add(tr("Рабочий стол Wayland · KDE Plasma","Wayland desktop · KDE Plasma"));actions.add(5);rowKeys.add("desktop-plasma");}
+        if(target(p).equals(state.getString("target",""))&&state.getBoolean("started",false)){items.add(tr("Остановить графический рабочий стол","Stop graphical desktop"));actions.add(1);rowKeys.add("desktop-stop");}
         LinearLayout body=AgentStatusUi.body(activity);
         String phase=state.getString("phase","");
         if(target(p).equals(state.getString("target",""))){
             if(phase.equals("missing")||phase.equals("error")||phase.equals("cancelled"))AgentStatusUi.info(body,state.getString("status",""));
         }
         AlertDialog[] dialog=new AlertDialog[1];
-        String[] keys={"desktop-switch","desktop-stop"};
-        styleCheck=null;
+
+        styleCheck=null;rendererRow=null;wrapperFolder=null;wrapperDriver=null;waylandDriverRow=waylandDriverFolder=waylandSelectedDriver=null;
         for(int i=0;i<items.size();i++){
-            final int which=i;
-            TextView row=AgentStatusUi.row(body,items.get(i),keys[i],()->{dialog[0].dismiss();menuAction(p,which);});
-            if(i==0&&styleSupported(p)){
+            final int which=actions.get(i);
+            TextView row=AgentStatusUi.row(body,items.get(i),rowKeys.get(i),()->{dialog[0].dismiss();if(which==4||which==5)chooseProfile(p,which==5?"plasma":"xfce");else menuAction(p,which);});
+            if(which==4||which==5)AgentStatusUi.available(row,(which!=5||DesktopProfiles.waylandEnabled())&&(!profileBusy()||desktop(p).equals(which==5?"plasma":"xfce")));
+            if((!arch&&i==0||arch&&which==4)&&styleSupported(p)&&!desktop(p).equals("plasma")){
                 LinearLayout styleRow=new LinearLayout(activity);styleRow.setGravity(Gravity.CENTER_VERTICAL);
                 TextView label=new TextView(activity);label.setText("Стиль Termux-job's");if(!WorkspaceLanguage.code(activity).equals("ru"))label.setText("Termux-job's style");label.setTextColor(WorkspaceDialogs.TEXT);label.setTextSize(13);styleRow.addView(label,new LinearLayout.LayoutParams(0,-2,1));
-                CheckBox check=new CheckBox(activity);styleCheck=check;check.setTag("desktop-termux-style");check.setContentDescription(label.getText());check.setChecked(styleEnabled(p));check.setEnabled(!rendererBusy());styleRow.addView(check);body.addView(styleRow);
-                check.setOnCheckedChangeListener((button,value)->{if(rendererBusy()){check.setChecked(styleEnabled(p));return;}activity.getSharedPreferences("workspace-x11",0).edit().putBoolean(styleKey(p),value).apply();});label.setOnClickListener(v->{if(check.isEnabled())check.performClick();});
+                CheckBox check=new CheckBox(activity);styleCheck=check;check.setTag("desktop-termux-style");check.setContentDescription(label.getText());check.setChecked(styleEnabled(p));check.setEnabled(!styleBusy());styleRow.addView(check);body.addView(styleRow);
+                check.setOnCheckedChangeListener((button,value)->{if(styleBusy()){check.setChecked(styleEnabled(p));return;}activity.getSharedPreferences("workspace-x11",0).edit().putBoolean(styleKey(p),value).apply();});label.setOnClickListener(v->{if(check.isEnabled())check.performClick();});
                 AgentStatusUi.info(body,tr("Kali-стиль: тёмные окна, синие акценты, крупные значки и фон с драконом. Применяется при следующем запуске. Для смены сначала остановите рабочий стол.","Kali-inspired style: dark windows, blue accents, large icons and dragon wallpaper. Applied on next launch. Stop the desktop before changing this setting."));
 
             }
+            if(arch&&which==4){
+                AgentStatusUi.info(body,tr("Рендеринг для X11 · XFCE","Rendering for X11 · XFCE")).setTag("desktop-renderer-label-xfce");
+                addX11Renderer(body,p,dialog);
+                addX11Screen(body,p,dialog);
+            }
+            if(arch&&which==5){
+                TextView waylandHeading=AgentStatusUi.info(body,tr("Рендеринг для Wayland · KDE Plasma","Rendering for Wayland · KDE Plasma"));waylandHeading.setTag("desktop-renderer-label-plasma");if(!DesktopProfiles.waylandEnabled())waylandHeading.setAlpha(.4f);
+                LinearLayout driverLine=new LinearLayout(activity);driverLine.setGravity(Gravity.CENTER_VERTICAL);
+                TextView bionic=WorkspaceDialogs.action(activity,"Bionic Driver · AdrenoTools",0);driverLine.addView(bionic,new LinearLayout.LayoutParams(0,-2,1));
+                waylandDriverRow=bionic;bionic.setTag("desktop-wayland-bionic");bionic.setOnClickListener(v->{if(waylandDriverBusy())return;dialog[0].dismiss();waylandWrapper.showDrivers(()->waylandDriverBusy()||!sameSession(p,selected.get()),this::menu);});AgentStatusUi.available(bionic,!waylandDriverBusy());
+                TextView folder=WorkspaceDialogs.action(activity,"",0);folder.setCompoundDrawablesWithIntrinsicBounds(R.drawable.workspace_folder,0,0,0);folder.setGravity(Gravity.CENTER);folder.setContentDescription(tr("Добавить Bionic-драйвер для Wayland","Import a Bionic driver for Wayland"));folder.setTag("desktop-wayland-driver-folder");driverLine.addView(folder,new LinearLayout.LayoutParams(WorkspaceDialogs.dp(activity,52),WorkspaceDialogs.dp(activity,48)));body.addView(driverLine);
+                waylandDriverFolder=folder;folder.setOnClickListener(v->{if(waylandDriverBusy())return;dialog[0].dismiss();waylandWrapper.choose(()->waylandDriverBusy()||!sameSession(p,selected.get()),this::menu);});AgentStatusUi.available(folder,!waylandDriverBusy());
+                String name=WorkspaceDesktopWrapper.driverLabel(activity,"wayland-archlinux");
+                TextView selectedDriver=AgentStatusUi.row(body,name.isEmpty()?tr("Выбрать Bionic Turnip ZIP","Choose a Bionic Turnip ZIP"):name,"desktop-wayland-selected-driver",()->{if(waylandDriverBusy())return;dialog[0].dismiss();waylandWrapper.showDrivers(()->waylandDriverBusy()||!sameSession(p,selected.get()),this::menu);});waylandSelectedDriver=selectedDriver;AgentStatusUi.available(selectedDriver,!waylandDriverBusy());
+                TextView linux=AgentStatusUi.row(body,"Linux Driver · Lfdevs Turnip + Zink · Mesa 26.3.0-devel","desktop-wayland-linux-driver",()->{});AgentStatusUi.available(linux,false);
+                TextView waylandInfo=AgentStatusUi.info(body,DesktopProfiles.waylandEnabled()?tr("Bionic-драйвер выводит изображение на Android; Linux-драйвер обслуживает KDE и программы Arch. Выбор Bionic-драйвера отдельный от XFCE. Для изменения остановите стол.","The Bionic driver presents on Android; the Linux driver renders KDE and Arch applications. Bionic selection is separate from XFCE. Stop the desktop before changing it."):tr("Wayland и его драйверы пока недоступны: продолжается тестирование. Используйте X11 · XFCE.","Wayland and its drivers are unavailable while testing continues. Use X11 · XFCE."));if(!DesktopProfiles.waylandEnabled())waylandInfo.setAlpha(.4f);
+            }
         }
+        if(arch)AgentStatusUi.info(body,tr("Один Arch: общие файлы, пакеты и терминал; отдельные настройки столов. Одновременно запускается один профиль. Wayland использует Android-композитор и KWin/KDE. Установка KDE обновляет пакеты Arch и требует дополнительного места. Откат APK не отменяет обновление пакетов.","One Arch: shared files, packages and terminal; separate desktop settings. One active profile at a time. Wayland uses an Android compositor and KWin/KDE. Installing KDE upgrades Arch packages and needs additional space. APK rollback does not undo package upgrades."));
+        if(!arch){addX11Renderer(body,p,dialog);addX11Screen(body,p,dialog);}
+        AgentStatusUi.info(body,tr("Поверните телефон горизонтально: рабочий стол займёт весь экран. Поворот обратно или «Назад» вернёт его в окно приложения. Кнопка интерактивного ввода | доступна справа сверху.","Rotate the phone to landscape for a full-screen desktop. Rotate back or press Back to return it to the app window. The Interactive input | button remains at the top right."));
+        LinearLayout keyboardRow=new LinearLayout(activity);keyboardRow.setGravity(Gravity.CENTER_VERTICAL);
+        TextView keyboardLabel=new TextView(activity);keyboardLabel.setText(tr("Автоматическая клавиатура","Automatic keyboard"));keyboardLabel.setTextColor(WorkspaceDialogs.TEXT);keyboardLabel.setTextSize(13);
+        keyboardRow.addView(keyboardLabel,new LinearLayout.LayoutParams(0,-2,1));
+        CheckBox automatic=new CheckBox(activity);automatic.setTag("desktop-automatic-keyboard");automatic.setContentDescription(keyboardLabel.getText());automatic.setChecked(automaticKeyboard(p));keyboardRow.addView(automatic);body.addView(keyboardRow);
+        automatic.setOnCheckedChangeListener((button,checked)->{activity.getSharedPreferences("workspace-x11",0).edit().putBoolean("automatic-keyboard:"+target(p),checked).apply();keyboardState.automatic=checked;});
+        keyboardLabel.setOnClickListener(v->automatic.performClick());
+        TextView keyboardHelp=AgentStatusUi.info(body,tr("Показывать клавиатуру автоматически при выборе поля ввода, где это поддерживается. Если выключено — только вручную через «Интерактивный ввод» | в верхней панели. Ручной вызов доступен всегда.","Show the keyboard automatically when a supported text field is selected. When disabled, open it manually using Interactive input | in the top toolbar. Manual input is always available."));
+        keyboardHelp.setTag("desktop-automatic-keyboard-help");
+        android.text.SpannableString help=new android.text.SpannableString(keyboardHelp.getText());int inputIcon=help.toString().indexOf('|');
+        android.graphics.drawable.Drawable inputGlyph=activity.getDrawable(R.drawable.workspace_interactive_input).mutate();inputGlyph.setTint(WorkspaceDialogs.MUTED);int glyphSize=WorkspaceDialogs.dp(activity,16);inputGlyph.setBounds(0,0,glyphSize,glyphSize);
+        if(inputIcon>=0)help.setSpan(new android.text.style.ImageSpan(inputGlyph,android.text.style.ImageSpan.ALIGN_BASELINE),inputIcon,inputIcon+1,android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);keyboardHelp.setText(help);
+        dialog[0]=WorkspaceDialogs.builder(activity).setTitle((arch?tr("Рабочие столы · ","Desktops · "):"X11 · ")+WorkspaceEnvironments.label(target(p))).setView(AgentStatusUi.scroll(body)).setNegativeButton(tr("Назад","Back"),null).create();
+        dialog[0].show();
+    }
+    private void addX11Screen(LinearLayout body,WorkspaceStore.Session p,AlertDialog[] dialog){
+        AgentStatusUi.row(body,WorkspaceDesktopScreen.label(activity,target(p)),"desktop-screen",()->{
+            dialog[0].dismiss();WorkspaceDesktopScreen.show(activity,target(p),()->{sync();if(!closed&&sameSession(p,selected.get()))menu();},()->{if(!closed&&sameSession(p,selected.get()))menu();},(settings,done)->applyScreen(p,settings,done));
+        });
+    }
+    private void applyScreen(WorkspaceStore.Session p,X11ScreenSettings settings,Consumer<String> done){
+        IBinder binder=remote;
+        if(binder==null){done.accept(null);return;}
+        String request=UUID.randomUUID().toString();long deadline=SystemClock.elapsedRealtime()+60000;
+        screenApply(binder,p,settings,request,deadline,true,done);
+    }
+    private void screenApply(IBinder binder,WorkspaceStore.Session p,X11ScreenSettings settings,String request,long deadline,boolean first,Consumer<String> done){
+        if(closed||binder!=remote){done.accept(tr("Служба X11 отключилась. Повторите применение.","X11 disconnected. Apply again."));return;}
+        calls.execute(()->{
+            Bundle answer=null;boolean failed=false;
+            try{
+                Bundle current=X11Remote.call(binder,X11Remote.command("state"));
+                if(first&&(!current.getBoolean("started",false)||settings.scalePercent==current.getInt("interfaceScale",100))){Bundle result=new Bundle();result.putBoolean("noScaleNeeded",true);answer=result;}
+                else if(first){Bundle q=X11Remote.command("screen-scale");q.putString("target",target(p));q.putInt("interfaceScale",settings.scalePercent);q.putString("request",request);answer=X11Remote.call(binder,q);}
+                else answer=current;
+            }catch(Exception ignored){failed=true;}
+            Bundle result=answer;boolean error=failed;main.post(()->{
+                if(closed||binder!=remote||error||result==null){done.accept(tr("Не удалось применить масштаб. Дождитесь запуска X11 и повторите.","Could not apply scale. Wait for X11 startup and retry."));return;}
+                if(result.getBoolean("noScaleNeeded",false)){done.accept(null);return;}
+                Bundle scale=result.getBundle("screenScale");
+                if(scale==null||!request.equals(scale.getString("request",""))){done.accept(tr("Запрос масштаба не подтверждён. Повторите.","Scale request was not acknowledged. Retry."));return;}
+                if(!scale.getBoolean("pending",false)){done.accept(scale.getBoolean("success",false)?null:tr("Масштаб не применён. Текущие настройки сохранены; повторите после запуска стола.","Scale was not applied. Current settings are preserved; retry after desktop startup."));return;}
+                if(SystemClock.elapsedRealtime()>=deadline){done.accept(tr("Применение заняло слишком много времени. Проверьте состояние X11 и повторите.","Applying took too long. Check X11 and retry."));return;}
+                main.postDelayed(()->screenApply(binder,p,settings,request,deadline,false,done),250);
+            });
+        });
+    }
+    private void addX11Renderer(LinearLayout body,WorkspaceStore.Session p,AlertDialog[] dialog){
         rendererRow=AgentStatusUi.row(body,tr("Рендеринг: ","Rendering: ")+WorkspaceDesktopGpu.label(activity,target(p)),"desktop-renderer",()->{if(rendererBusy())return;dialog[0].dismiss();WorkspaceDesktopGpu.select(activity,target(p),this::rendererBusy,choice->selectRenderer(p,choice),this::menu);});
         if(WorkspaceDesktopGpu.mode(activity,target(p)).equals("turnip"))AgentStatusUi.info(body,target(p).equals("termux")?"Termux package build. Turnip: Mesa 26.2.5; Zink uses the installed Termux Mesa.":"Lfdevs build with Android adaptations.");
-        AgentStatusUi.info(body,tr("Поверните телефон горизонтально: рабочий стол займёт весь экран. Поворот обратно или «Назад» вернёт его в окно приложения. Кнопка интерактивного ввода | доступна справа сверху.","Rotate the phone to landscape for a full-screen desktop. Rotate back or press Back to return it to the app window. The Interactive input | button remains at the top right."));
-        wrapperFolder=null;wrapperDriver=null;
         if(target(p).equals("termux")&&WorkspaceDesktopGpu.mode(activity,"termux").equals("wrapper")||WorkspaceDesktopWrapper.bridgeSupported(target(p))&&WorkspaceDesktopGpu.mode(activity,target(p)).equals("bionic-glibc")){
             body.removeView(rendererRow);LinearLayout renderLine=new LinearLayout(activity);renderLine.setGravity(Gravity.CENTER_VERTICAL);
             renderLine.addView(rendererRow,new LinearLayout.LayoutParams(0,-2,1));
@@ -155,19 +244,6 @@ final class WorkspaceDesktop {
             });AgentStatusUi.available(wrapperDriver,!rendererBusy());
         }
         AgentStatusUi.available(rendererRow,!rendererBusy());
-        LinearLayout keyboardRow=new LinearLayout(activity);keyboardRow.setGravity(Gravity.CENTER_VERTICAL);
-        TextView keyboardLabel=new TextView(activity);keyboardLabel.setText(tr("Автоматическая клавиатура","Automatic keyboard"));keyboardLabel.setTextColor(WorkspaceDialogs.TEXT);keyboardLabel.setTextSize(13);
-        keyboardRow.addView(keyboardLabel,new LinearLayout.LayoutParams(0,-2,1));
-        CheckBox automatic=new CheckBox(activity);automatic.setTag("desktop-automatic-keyboard");automatic.setContentDescription(keyboardLabel.getText());automatic.setChecked(automaticKeyboard(p));keyboardRow.addView(automatic);body.addView(keyboardRow);
-        automatic.setOnCheckedChangeListener((button,checked)->{activity.getSharedPreferences("workspace-x11",0).edit().putBoolean("automatic-keyboard:"+target(p),checked).apply();keyboardState.automatic=checked;});
-        keyboardLabel.setOnClickListener(v->automatic.performClick());
-        TextView keyboardHelp=AgentStatusUi.info(body,tr("Показывать клавиатуру автоматически при выборе поля ввода, где это поддерживается. Если выключено — только вручную через «Интерактивный ввод» | в верхней панели. Ручной вызов доступен всегда.","Show the keyboard automatically when a supported text field is selected. When disabled, open it manually using Interactive input | in the top toolbar. Manual input is always available."));
-        keyboardHelp.setTag("desktop-automatic-keyboard-help");
-        android.text.SpannableString help=new android.text.SpannableString(keyboardHelp.getText());int inputIcon=help.toString().indexOf('|');
-        android.graphics.drawable.Drawable inputGlyph=activity.getDrawable(R.drawable.workspace_interactive_input).mutate();inputGlyph.setTint(WorkspaceDialogs.MUTED);int glyphSize=WorkspaceDialogs.dp(activity,16);inputGlyph.setBounds(0,0,glyphSize,glyphSize);
-        if(inputIcon>=0)help.setSpan(new android.text.style.ImageSpan(inputGlyph,android.text.style.ImageSpan.ALIGN_BASELINE),inputIcon,inputIcon+1,android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);keyboardHelp.setText(help);
-        dialog[0]=WorkspaceDialogs.builder(activity).setTitle("X11 · "+WorkspaceEnvironments.label(target(p))).setView(AgentStatusUi.scroll(body)).setNegativeButton(tr("Назад","Back"),null).create();
-        dialog[0].show();
     }
     private void maintenance(String operation){
         WorkspaceStore.Session p=programs.profile();
@@ -243,7 +319,7 @@ final class WorkspaceDesktop {
             if(graphical.remove(p.id)){sync();changed.run();}
             else if(sameSession(p,preparationProfile)){graphical.add(p.id);sync();changed.run();}
             else if(target(p).equals(state.getString("target",""))&&state.getBoolean("started",false)){graphical.add(p.id);ensure("launch",p);}
-            else{preparationRenderer=WorkspaceDesktopGpu.mode(activity,target(p));rendererLaunchAfterInstall=true;rendererPreparationFailed=false;rendererReadyForPreparation=false;launchCheckAcknowledged=false;launchAfterCheck=p;preparationProfile=p;preparationNeedsInstall=false;preparationCancelling=false;graphical.add(p.id);sync();changed.run();ensure("check",p);}
+            else{preparationRenderer=renderer(p);rendererLaunchAfterInstall=true;rendererPreparationFailed=false;rendererReadyForPreparation=false;launchCheckAcknowledged=false;launchAfterCheck=p;preparationProfile=p;preparationNeedsInstall=false;preparationCancelling=false;graphical.add(p.id);sync();changed.run();ensure("check",p);}
         }
         if(which==1)WorkspaceDialogs.builder(activity).setMessage(tr("Остановить только графический рабочий стол? Терминальные сессии продолжат работу.","Stop only the graphical desktop? Terminal sessions will keep running.")).setNegativeButton(tr("Назад","Back"),null).setPositiveButton(tr("Остановить","Stop"),(x,y)->{launchAfterCheck=null;if(remote!=null)send("stop",p);}).show();
     }
@@ -264,8 +340,8 @@ final class WorkspaceDesktop {
     private void confirmInstall(WorkspaceStore.Session p){
         preparationNeedsInstall=true;
         if(preparationPrompt!=null||!sameSession(p,selected.get())||!visible.getAsBoolean())return;
-        preparationPrompt=WorkspaceDialogs.builder(activity).setTitle(tr("Установить рабочий стол X11?","Install X11 desktop?"))
-            .setMessage(tr("В выбранное окружение будут установлены XFCE, файловый менеджер, терминал, шрифты, значки, D-Bus, Fcitx5 и звук PulseAudio. Потребуются интернет и свободное место.","XFCE, file manager, terminal, fonts, icons, D-Bus, Fcitx5 and PulseAudio will be installed in the selected environment. Internet and free space are required.")+"\n"+WorkspaceEnvironments.label(target(p))+(target(p).equals("archlinux")?tr("\nArch Linux: будут проверены права корневой папки окружения; владельцу при необходимости добавятся чтение, запись и вход. Также обновятся пакеты этого окружения (pacman -Syu).","\nArch Linux: the environment root directory will be checked and missing owner read/write/search permissions restored. This environment’s packages will also be upgraded (pacman -Syu)." ):""))
+        preparationPrompt=WorkspaceDialogs.builder(activity).setTitle(desktop(p).equals("plasma")?tr("Установить KDE Plasma Wayland?","Install KDE Plasma Wayland?"):tr("Установить рабочий стол X11?","Install X11 desktop?"))
+            .setMessage((desktop(p).equals("plasma")?tr("В этот Arch будут добавлены KDE Plasma, KWin, Xwayland, Dolphin, Konsole, Qt Wayland, шрифты, Fcitx5 и звук. Файлы и терминал общие с XFCE; настройки KDE хранятся отдельно. Потребуются интернет и дополнительное место.","KDE Plasma, KWin, Xwayland, Dolphin, Konsole, Qt Wayland, fonts, Fcitx5 and audio will be added to this Arch. Files and terminal are shared with XFCE; KDE settings are separate. Internet and additional space are required."):tr("В выбранное окружение будут установлены XFCE, файловый менеджер, терминал, шрифты, значки, D-Bus, Fcitx5 и звук PulseAudio. Потребуются интернет и свободное место.","XFCE, file manager, terminal, fonts, icons, D-Bus, Fcitx5 and PulseAudio will be installed in the selected environment. Internet and free space are required."))+"\n"+WorkspaceEnvironments.label(target(p))+(target(p).equals("archlinux")?tr("\nArch Linux: будут проверены права корневой папки окружения; владельцу при необходимости добавятся чтение, запись и вход. Также обновятся пакеты этого окружения (pacman -Syu).","\nArch Linux: the environment root directory will be checked and missing owner read/write/search permissions restored. This environment’s packages will also be upgraded (pacman -Syu)." ):""))
             .setNegativeButton(tr("Нет","No"),(d,w)->{preparationPrompt=null;graphical.remove(p.id);clearPreparation();sync();changed.run();})
             .setPositiveButton(tr("Да","Yes"),(d,w)->{preparationPrompt=null;preparationNeedsInstall=false;launchCheckAcknowledged=false;launchAfterCheck=p;if(!preparationRenderer.isEmpty())rendererLaunchAfterInstall=true;ensure("install",p);sync();}).create();
         preparationPrompt.setCancelable(false);preparationPrompt.setCanceledOnTouchOutside(false);preparationPrompt.show();
@@ -277,6 +353,11 @@ final class WorkspaceDesktop {
         if(sameSession(p,selected.get())&&visible.getAsBoolean())menu();
     }
     private void prepareSelectedRenderer(WorkspaceStore.Session p){
+        if(desktop(p).equals("plasma")&&WorkspaceDesktopWrapper.metadata(activity,"wayland-archlinux")==null){
+            launchAfterCheck=null;graphical.remove(p.id);clearPreparation();sync();changed.run();
+            if(sameSession(p,selected.get())&&visible.getAsBoolean()){activity.showToast(tr("Компоненты KDE готовы. Выберите Bionic Turnip ZIP для Wayland кнопкой папки.","KDE components are ready. Choose a Bionic Turnip ZIP for Wayland using the folder button."),true);menu();}
+            return;
+        }
         String choice=preparationRenderer;
         if(!choice.equals("cpu")&&!WorkspaceDesktopGpu.installed(activity,target(p),choice)&&(!sameSession(p,selected.get())||!visible.getAsBoolean())){rendererReadyForPreparation=true;return;}
         rendererReadyForPreparation=false;boolean launch=rendererLaunchAfterInstall;int epoch=++rendererEpoch;
@@ -286,7 +367,7 @@ final class WorkspaceDesktop {
             if(closed||epoch!=rendererEpoch||!sameSession(p,preparationProfile))return;
             rendererCancel=null;preparationGpu=false;
             if(rendererPreparationFailed){preparationCancelling=false;preparationLaunching=false;sync();changed.run();return;}
-            if(!WorkspaceDesktopGpu.mode(activity,target(p)).equals(choice)||(!choice.equals("cpu")&&!WorkspaceDesktopGpu.installed(activity,target(p),choice))){
+            if(!renderer(p).equals(choice)||(!choice.equals("cpu")&&!WorkspaceDesktopGpu.installed(activity,target(p),choice))){
                 graphical.remove(p.id);clearPreparation();sync();changed.run();if(sameSession(p,selected.get())&&visible.getAsBoolean())menu();return;
             }
             preparationRenderer="";
@@ -308,7 +389,7 @@ final class WorkspaceDesktop {
         String phase=target(p).equals(state.getString("target",""))?state.getString("phase",""):"";
         if(preparationNeedsInstall||phase.equals("error")||phase.equals("cancelled")||phase.equals("missing")||phase.equals("stopped")||phase.equals("ended")){graphical.remove(p.id);launchAfterCheck=null;clearPreparation();sync();changed.run();return;}
         preparationCancelling=true;launchAfterCheck=null;
-        if(remote!=null)send(preparationLaunching?"stop":"cancel",p);
+        if(remote!=null)send(preparationLaunching||state.getBoolean("started",false)||phase.equals("running")||phase.equals("preparing")?"stop":"cancel",p);
         else {pending="";pendingProfile=null;graphical.remove(p.id);clearPreparation();}
         sync();changed.run();
     }
@@ -364,7 +445,7 @@ final class WorkspaceDesktop {
     private void send(String op,WorkspaceStore.Session p){send(op,p,"");}
     private void send(String op,WorkspaceStore.Session p,String program){
         IBinder binder=remote;if(binder==null||closed)return;
-        Bundle q=X11Remote.command(op);if(p!=null){q.putString("target",target(p));q.putString("desktop",desktop(p));q.putBoolean("garconFilter",false);q.putBoolean("termuxStyle",styleEnabled(p));q.putString("renderer",WorkspaceDesktopGpu.mode(activity,target(p)));if(op.equals("launch")||op.equals("session-close"))q.putString("owner",owner(p));}if(!program.isEmpty())q.putString("program",program);
+        Bundle q=X11Remote.command(op);if(p!=null){q.putString("target",target(p));q.putString("desktop",desktop(p));q.putBoolean("garconFilter",false);q.putBoolean("termuxStyle",styleEnabled(p));q.putInt("interfaceScale",desktop(p).equals("plasma")?100:X11ScreenSettings.load(activity,target(p)).scalePercent);q.putString("renderer",renderer(p));if(op.equals("launch")||op.equals("session-close"))q.putString("owner",owner(p));}if(!program.isEmpty())q.putString("program",program);
         calls.execute(()->{try{Bundle result=X11Remote.call(binder,q);main.post(()->{if(!closed&&remote==binder){if((op.equals("check")||op.equals("install"))&&p!=null&&launchAfterCheck!=null&&p.id.equals(launchAfterCheck.id)&&p.handle.equals(launchAfterCheck.handle))launchCheckAcknowledged=true;accept(result);poll();sync();changed.run();}});}catch(Exception e){main.post(()->{if(!closed&&remote==binder){if(op.equals("session-close")){activity.showToast(tr("Не удалось подтвердить остановку X11. Проверьте рабочий стол и остановите его вручную.","Could not confirm X11 stop. Check the desktop and stop it manually."),true);return;}if(op.startsWith("observe-")){activity.showToast(tr("Не удалось изменить наблюдение X11. Повторите.","Could not change X11 observation. Try again."),true);poll();return;}if(op.startsWith("programs-")){programs.failed();activity.showToast(tr("Не удалось выполнить действие с программами. Дождитесь завершения другой установки и повторите проверку.","Program action failed. Wait for another installation to finish and check again."),true);return;}launchAfterCheck=null;if(sameSession(p,preparationProfile)){state=new Bundle();state.putString("target",target(p));state.putString("phase","error");state.putString("status",tr("Не удалось выполнить действие X11. Вернитесь в терминал и повторите.","X11 action failed. Return to terminal and retry."));preparationCancelling=false;sync();changed.run();return;}if(op.equals("launch")&&p!=null)graphical.remove(p.id);sync();dismissProgress();WorkspaceStore.Session origin=progressOrigin;progressOrigin=null;WorkspaceStore.Session current=selected.get();if(origin!=null&&current!=null&&current.id.equals(origin.id))menu();activity.showToast(tr("Не удалось выполнить действие X11. Проверьте, не запущен ли стол другого окружения, или остановите X11 и повторите.","X11 action failed. Check whether another environment owns the desktop, or stop X11 and retry."),true);changed.run();}});}});
     }
     private boolean programPolling(){return programs.polling();}
@@ -373,10 +454,13 @@ final class WorkspaceDesktop {
     private void accept(Bundle b){
         boolean hadProgress=progress!=null;
         Bundle programState=b.getBundle("programs");if(programState!=null)programs.accept(programState);
-        diagnosticState=b;diagnosticAt=SystemClock.elapsedRealtime();state=b;if(styleCheck!=null){styleCheck.setEnabled(!rendererBusy());styleCheck.setAlpha(rendererBusy()?.4f:1f);}if(rendererRow!=null)AgentStatusUi.available(rendererRow,!rendererBusy());if(wrapperFolder!=null)AgentStatusUi.available(wrapperFolder,!rendererBusy());if(wrapperDriver!=null)AgentStatusUi.available(wrapperDriver,!rendererBusy());String phase=b.getString("phase","");String t=b.getString("target","");
+        diagnosticState=b;diagnosticAt=SystemClock.elapsedRealtime();state=b;if(styleCheck!=null){styleCheck.setEnabled(!styleBusy());styleCheck.setAlpha(styleBusy()?.4f:1f);}if(rendererRow!=null)AgentStatusUi.available(rendererRow,!rendererBusy());if(wrapperFolder!=null)AgentStatusUi.available(wrapperFolder,!rendererBusy());if(wrapperDriver!=null)AgentStatusUi.available(wrapperDriver,!rendererBusy());if(waylandDriverRow!=null)AgentStatusUi.available(waylandDriverRow,!waylandDriverBusy());if(waylandDriverFolder!=null)AgentStatusUi.available(waylandDriverFolder,!waylandDriverBusy());if(waylandSelectedDriver!=null)AgentStatusUi.available(waylandSelectedDriver,!waylandDriverBusy());String phase=b.getString("phase","");String t=b.getString("target","");
         if((phase.equals("installed")||phase.equals("running"))&&b.getString("desktop","xfce").equals(desktop(selected.get())))installed.put(t,true);
         if(phase.equals("missing")||phase.equals("error")||phase.equals("cancelled"))installed.put(t,false);
         WorkspaceStore.Session launch=launchAfterCheck;
+        if(launch!=null&&launchCheckAcknowledged&&target(launch).equals(t)&&b.getBoolean("started",false)&&(phase.equals("running")||phase.equals("preparing"))){
+            launchAfterCheck=null;progressOrigin=null;clearPreparation();graphical.add(launch.id);ensure("launch",launch);sync();changed.run();return;
+        }
         if(launch!=null&&launchCheckAcknowledged&&target(launch).equals(t)&&(phase.equals("installed")||phase.equals("missing")||phase.equals("error")||phase.equals("cancelled"))){
             launchAfterCheck=null;progressOrigin=null;maintenanceReturn=false;dismissProgress();
             if(phase.equals("installed")){if(!preparationRenderer.isEmpty()){prepareSelectedRenderer(launch);return;}if(preparationProfile!=null){preparationLaunching=true;preparationNeedsInstall=false;}else graphical.add(launch.id);ensure("launch",launch);changed.run();return;}
@@ -387,6 +471,7 @@ final class WorkspaceDesktop {
             }
             return;
         }
+        if(preparationCancelling&&preparationProfile!=null&&target(preparationProfile).equals(t)&&b.getBoolean("started",false)&&(phase.equals("running")||phase.equals("preparing"))){send("stop",preparationProfile);preparationUpdate();return;}
         if(preparationLaunching&&preparationProfile!=null&&target(preparationProfile).equals(t)&&(phase.equals("preparing")||phase.equals("running")))clearPreparation();
         if(preparationProfile!=null&&target(preparationProfile).equals(t)){
             // Inline installation belongs to this environment, even while its tab is hidden.
@@ -406,9 +491,9 @@ final class WorkspaceDesktop {
                 if(phase.equals("error")||phase.equals("missing"))WorkspaceDialogs.builder(activity).setTitle(tr("Операция не завершена","Operation incomplete")).setMessage(b.getString("status","")+"\n"+b.getString("detail","")).setPositiveButton(tr("Назад","Back"),(d,w)->{programs.openInstalled(origin,state.getBundle("programs"));poll();}).show();
                 else{activity.showToast(b.getString("status",""),false);programs.openInstalled(origin,state.getBundle("programs"));poll();}
             }else menu();}
-            else if(!returnMenu&&(phase.equals("error")||phase.equals("missing")||phase.equals("cancelled")))WorkspaceDialogs.builder(activity).setTitle("X11").setMessage(b.getString("status","")+"\n"+b.getString("detail","")).setPositiveButton("OK",null).show();
+            else if(!returnMenu&&(phase.equals("error")||phase.equals("missing")||phase.equals("cancelled")))WorkspaceDialogs.builder(activity).setTitle(b.getString("backend","").equals("wayland")?"Wayland":"X11").setMessage(b.getString("status","")+"\n"+b.getString("detail","")).setPositiveButton("OK",null).show();
         }
-        if(phase.equals("stopping")||phase.equals("error")||phase.equals("ended")||phase.equals("cancelled")){boolean wasGraphical=showing();graphical.clear();shownTargets.clear();sync();if(wasGraphical&&!hadProgress&&!phase.equals("stopping"))WorkspaceDialogs.builder(activity).setTitle("X11").setMessage(b.getString("status","")+"\n"+b.getString("detail","")).setPositiveButton("OK",null).show();}
+        if(phase.equals("stopping")||phase.equals("error")||phase.equals("ended")||phase.equals("cancelled")){boolean wasGraphical=showing();graphical.clear();shownTargets.clear();sync();if(wasGraphical&&!hadProgress&&!phase.equals("stopping"))WorkspaceDialogs.builder(activity).setTitle(b.getString("backend","").equals("wayland")?"Wayland":"X11").setMessage(b.getString("status","")+"\n"+b.getString("detail","")).setPositiveButton("OK",null).show();}
         if(Build.VERSION.SDK_INT>=30&&hasSurface()&&display.inputReady()&&target(selected.get()).equals(t)){
             keyboardState.automatic=automaticKeyboard(selected.get());
             boolean before=keyboardState.enabled;
@@ -430,12 +515,12 @@ final class WorkspaceDesktop {
         if(!inline&&preparation!=null){if(preparation.getParent() instanceof ViewGroup)((ViewGroup)preparation.getParent()).removeView(preparation);preparation=null;if(!show)restore.run();}
         if(!inline&&preparationPrompt!=null){preparationPrompt.dismiss();preparationPrompt=null;}
         if(inline){
-            if(preparation==null){FrameLayout parent=activity.findViewById(R.id.workspace_terminal_surface);preparation=new X11StartupView(activity,()->{});parent.addView(preparation,new FrameLayout.LayoutParams(-1,-1));}
+            if(preparation==null){FrameLayout parent=activity.findViewById(R.id.workspace_terminal_surface);preparation=new X11StartupView(activity,()->{});preparation.transport(desktop(p).equals("plasma")?"wayland":"x11");parent.addView(preparation,new FrameLayout.LayoutParams(-1,-1));}
             preparationUpdate();activity.getTerminalView().setWorkspaceTerminalVisible(false);activity.getTerminalView().setVisibility(View.INVISIBLE);input.setVisibility(View.GONE);activity.getTerminalToolbarViewPager().setVisibility(View.GONE);
             if(preparationNeedsInstall)confirmInstall(preparationProfile);if(rendererReadyForPreparation)prepareSelectedRenderer(preparationProfile);poll();
         }
-        if(show&&display==null){FrameLayout parent=activity.findViewById(R.id.workspace_terminal_surface);String desktopTarget=target(p);display=new RemoteDesktopView(activity,b->{if(display!=null&&display.inputReady())shownTargets.add(desktopTarget);});display.onExtraKeysReset(extraKeys::close);displayed=wanted;parent.addView(display,new FrameLayout.LayoutParams(-1,-1));display.connect(remote);poll();}
-        if(show){display.startup(desktopReady(target(p)),state.getBoolean("desktopStartupTimedOut",false),state.getInt("startupStep",0));activity.getTerminalView().setWorkspaceTerminalVisible(false);activity.getTerminalView().setVisibility(View.INVISIBLE);input.setVisibility(View.GONE);activity.getTerminalToolbarViewPager().setVisibility(View.GONE);}
+        if(show&&display==null){FrameLayout parent=activity.findViewById(R.id.workspace_terminal_surface);String desktopTarget=target(p);display=new RemoteDesktopView(activity,b->{if(display!=null&&display.inputReady())shownTargets.add(desktopTarget);});display.transport(desktop(p).equals("plasma")?"wayland":"x11");display.screenSettings(desktop(p).equals("plasma")?X11ScreenSettings.defaults():X11ScreenSettings.load(activity,target(p)));display.onExtraKeysReset(extraKeys::close);displayed=wanted;parent.addView(display,new FrameLayout.LayoutParams(-1,-1));display.connect(remote);poll();}
+        if(show){display.screenSettings(desktop(p).equals("plasma")?X11ScreenSettings.defaults():X11ScreenSettings.load(activity,target(p)));display.startup(desktopReady(target(p)),state.getBoolean("desktopStartupTimedOut",false),state.getInt("startupStep",0));activity.getTerminalView().setWorkspaceTerminalVisible(false);activity.getTerminalView().setVisibility(View.INVISIBLE);input.setVisibility(View.GONE);activity.getTerminalToolbarViewPager().setVisibility(View.GONE);}
         fullscreen.sync(inline?preparation:show?display:null);
     }
     boolean fullscreenBack(){if(extraKeys.showing()){extraKeys.close();return true;}return fullscreen.back();}
@@ -448,6 +533,6 @@ final class WorkspaceDesktop {
     }
     void keyboard(){if(Build.VERSION.SDK_INT>=30&&display!=null){display.keyboard(keyboardState.toggle());keyboardChanged.run();}}
     private void dismissProgress(){if(progress!=null){progress.close();progress=null;}}
-    void close(){if(closed)return;graphical.clear();shownTargets.clear();sync();extraKeys.close();fullscreen.close();closed=true;clearPreparation();rendererRow=null;wrapperFolder=null;wrapperDriver=null;styleCheck=null;wrapper.close();dismissProgress();programs.close();if(Build.VERSION.SDK_INT>=30){ViewTreeObserver observer=activity.getWindow().getDecorView().getViewTreeObserver();if(observer.isAlive())observer.removeOnPreDrawListener(imeObserver);}main.removeCallbacksAndMessages(null);if(bound){activity.unbindService(connection);bound=false;}remote=null;calls.shutdown();}
+    void close(){if(closed)return;graphical.clear();shownTargets.clear();sync();extraKeys.close();fullscreen.close();closed=true;clearPreparation();rendererRow=null;wrapperFolder=null;wrapperDriver=null;styleCheck=null;wrapper.close();waylandWrapper.close();dismissProgress();programs.close();if(Build.VERSION.SDK_INT>=30){ViewTreeObserver observer=activity.getWindow().getDecorView().getViewTreeObserver();if(observer.isAlive())observer.removeOnPreDrawListener(imeObserver);}main.removeCallbacksAndMessages(null);if(bound){activity.unbindService(connection);bound=false;}remote=null;calls.shutdown();}
     private String tr(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
 }

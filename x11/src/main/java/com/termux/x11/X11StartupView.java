@@ -8,6 +8,8 @@ public final class X11StartupView extends LinearLayout {
     private final TextView notice,title,detail,more;
     private final Button cancel;
     private final Button reveal;
+    private boolean wayland;
+    public void transport(String name){wayland="wayland".equals(name);TextView emblem=findViewWithTag("x11-emblem-X11");if(emblem!=null)emblem.setText(wayland?"Wayland":"X11");reveal.setText(X11Text.tr(getContext(),wayland?"Показать экран Wayland":"Показать экран X11",wayland?"Show Wayland screen":"Show X11 screen"));}
     public X11StartupView(Context context,Runnable show){
         super(context);setGravity(Gravity.CENTER);setOrientation(VERTICAL);
         setBackgroundColor(0xff000000);
@@ -42,10 +44,10 @@ public final class X11StartupView extends LinearLayout {
     void update(boolean ready,boolean timedOut,int step){
         int value=ready?4:Math.max(0,Math.min(3,step));
         if(ready||!timedOut){progress.setVisibility(VISIBLE);progress.setProgress(value);reveal.setVisibility(GONE);
-            String[] ru={"Подготовка X11","Запуск графического ядра","Запуск XFCE","Ожидание панели и рабочего стола","Готово"};
-            String[] en={"Preparing X11","Starting graphics core","Starting XFCE","Waiting for the panel and desktop","Ready"};
+            String[] ru={wayland?"Подготовка Wayland":"Подготовка X11","Запуск графического ядра",wayland?"Запуск KDE Plasma":"Запуск XFCE","Ожидание панели и рабочего стола","Готово"};
+            String[] en={wayland?"Preparing Wayland":"Preparing X11","Starting graphics core",wayland?"Starting KDE Plasma":"Starting XFCE","Waiting for the panel and desktop","Ready"};
             String text=X11Text.tr(getContext(),ru[value],en[value]);if(!notice.getText().toString().equals(text))notice.setText(text);
-        }else{progress.setVisibility(GONE);notice.setText(X11Text.tr(getContext(),"Рабочий стол запускается дольше обычного. Можно открыть экран X11.","The desktop is taking longer than usual. You can open the X11 screen."));reveal.setVisibility(VISIBLE);}
+        }else{progress.setVisibility(GONE);notice.setText(X11Text.tr(getContext(),wayland?"KDE запускается дольше обычного. Можно открыть экран Wayland.":"Рабочий стол запускается дольше обычного. Можно открыть экран X11.",wayland?"KDE is taking longer than usual. You can open the Wayland screen.":"The desktop is taking longer than usual. You can open the X11 screen."));reveal.setVisibility(VISIBLE);}
     }
-    void failed(){progress.setVisibility(GONE);reveal.setVisibility(GONE);notice.setText(X11Text.tr(getContext(),"Не удалось подключить экран X11. Вернитесь в терминал и повторите.","Could not attach X11. Return to terminal and retry."));}
+    void failed(){progress.setVisibility(GONE);reveal.setVisibility(GONE);notice.setText(X11Text.tr(getContext(),wayland?"Не удалось подключить Wayland. Вернитесь в терминал и повторите.":"Не удалось подключить экран X11. Вернитесь в терминал и повторите.",wayland?"Could not attach Wayland. Return to terminal and retry.":"Could not attach X11. Return to terminal and retry."));}
 }

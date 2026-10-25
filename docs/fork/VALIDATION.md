@@ -1,3 +1,15 @@
+# v2.0.5 release validation
+
+X11 resolution/scaling/margins, stricter automatic keyboard focus checks and
+compact extra keys. Public Wayland/KDE and driver controls disabled in both UI
+and backend; private test.10 remains separate. Same com.termux/signer/schema8,
+code1376; no data reset/migration. See [current validation](VALIDATION-v2.0.5.md)
+for artifact identity, tests, source/build checks and device limits.
+
+---
+
+# Historical v2.0.4 validation
+
 # v2.0.4 release validation
 
 Bionic-for-glibc support in six ordinary glibc desktops; separate caches/processes,

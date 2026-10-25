@@ -171,7 +171,7 @@ class WrapperTests(unittest.TestCase):
   descriptor.unlink();w.import_driver(self.cache,self.source(self.zip(payload=self.elf(b'next'))),35)
   self.assertEqual(first,w.select_driver(self.cache,first['id'],35))
  def test_repeat_import_reuses_driver_and_invalid_selection_keeps_current(self):
-  first=self.imported();w.import_driver(self.cache,self.source(self.zip()),35);self.assertEqual(1,len(list((self.cache/'drivers').iterdir())))
+  archive=self.source(self.zip());first=w.import_driver(self.cache,archive,35);w.import_driver(self.cache,archive,35);self.assertEqual(1,len(list((self.cache/'drivers').iterdir())))
   for identity in ['../escape','f'*64]:
    with self.assertRaises((ValueError,OSError)):w.select_driver(self.cache,identity,35)
    self.assertEqual(first,w.driver(self.cache)[0])

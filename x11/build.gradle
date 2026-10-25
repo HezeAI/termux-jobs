@@ -1,17 +1,19 @@
 apply plugin: 'com.android.library'
 android {
     compileSdkVersion project.properties.compileSdkVersion.toInteger()
-    defaultConfig { minSdkVersion 26; targetSdkVersion 28 }
+    defaultConfig { minSdkVersion 26; targetSdkVersion 28; consumerProguardFiles 'consumer-rules.pro' }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
     sourceSets.main {
-        jniLibs.srcDirs = [rootProject.file('.tools/x11-runtime/jniLibs')]
-        assets.srcDirs = [file('src/main/assets'),rootProject.file('.tools/x11-runtime/assets')]
+        jniLibs.srcDirs = [rootProject.file('.tools/x11-runtime/jniLibs'), rootProject.file('.tools/wayland-runtime/jniLibs')]
+        assets.srcDirs = [file('src/main/assets'),rootProject.file('.tools/x11-runtime/assets'),rootProject.file('.tools/wayland-runtime/assets')]
         assets.exclude 'x11-observe.py','licenses/Garcon-COPYING.txt','**/__pycache__/**'
     }
     defaultConfig {
+        // Private development builds may opt in; published builds keep it disabled.
+        buildConfigField 'boolean', 'WAYLAND_PREVIEW', (project.findProperty('termuxWaylandPreview') == 'true' ? 'true' : 'false')
         buildConfigField 'String', 'NATIVE_SHA256', '"8ad76408710c21b9a61d3db07900e5bb4e3f88efb1670ac0ff3a2166f403567d"'
         buildConfigField 'String', 'KEYBOARD_SHA256', '"d88d8879538a5e8370977f20411043598b0e4f784a718e38a87d91b33b99c140"'
     }
@@ -30,3 +32,15 @@ task verifyX11Inputs {
     }
 }
 preBuild.dependsOn verifyX11Inputs
+
+task verifyWaylandInputs {
+    doLast {
+        def pins=new groovy.json.JsonSlurper().parse(file('wayland-inputs.json'))
+        pins.each { path, expected ->
+            def f=rootProject.file('.tools/wayland-runtime/'+path)
+            if (!f.isFile() || java.security.MessageDigest.getInstance('SHA-256').digest(f.bytes).encodeHex().toString()!=expected)
+                throw new GradleException('Missing or changed Wayland input. Run python3 scripts/prepare-wayland.py; review output pins after native changes.')
+        }
+    }
+}
+preBuild.dependsOn verifyWaylandInputs

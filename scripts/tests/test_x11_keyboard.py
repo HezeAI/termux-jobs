@@ -5,16 +5,11 @@ ROOT=Path(__file__).resolve().parents[2]
 SESSION=ROOT/'x11/src/main/assets/x11-session.sh'
 DESKTOP=ROOT/'x11/src/main/assets/x11-desktop.sh'
 class KeyboardFixtures(unittest.TestCase):
- def test_session_starts_private_helpers_and_emits_only_focus_headers(self):
+ def test_session_starts_private_focus_gate_and_owned_helpers(self):
   with tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d:
    base=Path(d);bin=base/'bin';bin.mkdir();log=base/'calls'
    scripts={
-    'dbus-monitor':'''printf '%s\\n' "$*" >> "$CALLS"
-printf 'mc\\t1.0\\t2\\t:1.5\\torg.fcitx.Fcitx5\\t/input/2\\torg.fcitx.Fcitx.InputContext1\\tFocusIn\\n'
-printf 'mc\\t1.1\\t3\\t:1.5\\torg.fcitx.Fcitx5\\t/input/2\\torg.fcitx.Fcitx.InputContext1\\tFocusOut\\n'
-printf 'mc\\t1.2\\t4\\t:1.5\\torg.fcitx.Fcitx5\\t/input/2\\torg.fcitx.Fcitx.InputContext1\\tCommitString\\n'
-''',
-    'python3': 'if [ "$1" = -B ] && [ "$2" = "$JOBS_X11_CONTROL/x11-bookmarks.py" ];then exec /usr/bin/python3 "$@";fi; test "$1" = -u && test "$2" = "$JOBS_X11_CONTROL/x11-ready.py" || exit 7; printf "JOBS_X11_DESKTOP_${FIXTURE_STARTUP:-READY} %s\\n" "$JOBS_X11_FOCUS_TOKEN"',
+    'python3': 'if [ "$1" = -B ] && [ "$2" = "$JOBS_X11_CONTROL/x11-bookmarks.py" ];then exec /usr/bin/python3 "$@";fi; if [ "$1" = -B ] && [ "$2" = -u ] && [ "$3" = "$JOBS_X11_CONTROL/x11-focus.py" ];then printf "focus-gate-started\\n" >> "$CALLS";exit 0;fi; test "$1" = -u && test "$2" = "$JOBS_X11_CONTROL/x11-ready.py" || exit 7; printf "JOBS_X11_DESKTOP_${FIXTURE_STARTUP:-READY} %s\\n" "$JOBS_X11_FOCUS_TOKEN"',
     'fcitx5': 'printf "fcitx-started\\n" >> "$CALLS"',
     'xfwm4': 'printf "wm:%s\\n" "$*" >> "$CALLS"',
     'xprop': 'printf "_NET_SUPPORTING_WM_CHECK(WINDOW): window id # 0xa0001\\n"',
@@ -24,22 +19,22 @@ printf 'mc\\t1.2\\t4\\t:1.5\\torg.fcitx.Fcitx5\\t/input/2\\torg.fcitx.Fcitx.Inpu
    for name,body in scripts.items():
     p=bin/name;p.write_text('#!/bin/sh\n'+body+'\n');p.chmod(0o700)
    # The session requires a Fedora overlay asset; this fixture tests shell wiring, not native loading.
+   (base/'x11-focus.py').write_text('# fixture: gate semantics tested separately')
    (base/'x11-fedora-glycin.so').write_bytes(b'fixture')
    (base/'x11-bookmarks.py').write_bytes((ROOT/'x11/src/main/assets/x11-bookmarks.py').read_bytes())
    (base/'home').mkdir()
    token='a11a11a1-1111-4111-8111-111111111111'
    env={**os.environ,'PATH':str(bin)+':/usr/bin:/bin','CALLS':str(log),'JOBS_X11_FOCUS_TOKEN':token,'JOBS_X11_CONTROL':str(base),'XDG_RUNTIME_DIR':str(base),'HOME':str(base/'home'),'XDG_CONFIG_HOME':str(base/'home/.config')}
    p=subprocess.run(['/bin/sh',str(SESSION)],env=env,capture_output=True,text=True,timeout=5)
-   self.assertEqual(0,p.returncode,p.stderr);self.assertIn(f'JOBS_X11_FOCUS_V1 {token} FocusIn :1.5 /input/2',p.stdout)
+   self.assertEqual(0,p.returncode,p.stderr);self.assertIn('focus-gate-started',log.read_text())
    self.assertIn(f'JOBS_X11_DESKTOP_READY {token}',p.stdout);self.assertNotIn('JOBS_X11_DESKTOP_TIMEOUT',p.stdout);self.assertNotIn('CommitString',p.stdout);self.assertIn('wm:--compositor=on',log.read_text());self.assertNotIn('--compositor=off',log.read_text());self.assertIn('session:fcitx:fcitx:@im=fcitx',log.read_text())
-   for method in ['FocusIn','FocusOut','DestroyIC']:self.assertIn('member='+"'"+method+"'",log.read_text())
    # Exercise the real session script with isolated commands for each environment/mode.
    for target,renderer,expected in [('ubuntu','turnip','off'),('ubuntu','cpu','on'),('termux','turnip','on'),('debian','turnip','off'),('alpine','turnip','off'),('fedora','turnip','off'),('fedora','cpu','on'),('debian','cpu','on'),('alpine','cpu','on'),('void','cpu','on'),('void','turnip','off'),('archlinux','cpu','on'),('archlinux','turnip','off'),('archlinux','virgl','off'),('opensuse','cpu','on'),('opensuse','turnip','off')]:
     log.write_text('')
     result=subprocess.run(['/bin/sh',str(SESSION)],env={**env,'JOBS_X11_TARGET':target,'JOBS_X11_RENDERER':renderer},capture_output=True,text=True,timeout=5)
     self.assertEqual(0,result.returncode,result.stderr);self.assertIn('wm:--compositor='+expected,log.read_text());self.assertIn('JOBS_X11_COMPOSITOR='+expected,result.stdout);self.assertEqual(1,log.read_text().count('wm:'));self.assertIn('JOBS_X11_STARTUP=managed-window-manager',result.stdout)
 
-   self.assertIn('--profile',log.read_text());self.assertNotIn('--monitor',log.read_text());self.assertEqual(3,len((base/'home/.config/gtk-3.0/bookmarks').read_text().splitlines()))
+   self.assertIn('focus-gate-started',log.read_text());self.assertEqual(3,len((base/'home/.config/gtk-3.0/bookmarks').read_text().splitlines()))
    # A pre-existing link must never redirect wrapper writes to user files.
    wrapper=base/'termux-jobs-xfce-launch/xfwm4';wrapper.unlink();victim=base/'keep';victim.write_text('preserve');wrapper.symlink_to(victim);log.write_text('')
    bad=subprocess.run(['/bin/sh',str(SESSION)],env=env,capture_output=True,text=True,timeout=5)

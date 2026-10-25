@@ -36,6 +36,11 @@ public final class X11InstallErrors {
     private void line(String raw){
         String text=ANSI.matcher(raw).replaceAll("").replaceAll("[\\p{Cc}\\p{Cf}]", " ").trim();
         if(!relevant(text))return;
+        add(redact(text));
+    }
+    /** Shared redaction for bounded diagnostic failures, never general program output. */
+    static String redact(String text){
+        text=ANSI.matcher(text).replaceAll("").replaceAll("[\\p{Cc}\\p{Cf}]", " ").trim();
         text=URL.matcher(text).replaceAll("[url]");
         text=PRIVATE_VALUE.matcher(text).replaceAll("[credential redacted]");
         text=QUOTED.matcher(text).replaceAll("[value]");
@@ -46,7 +51,7 @@ public final class X11InstallErrors {
         text=OPAQUE.matcher(text).replaceAll("[value]");
         text=text.replaceAll("\\s+"," ").trim();
         if(text.length()>1024)text=text.substring(0,480)+" [middle omitted] "+text.substring(text.length()-480);
-        add(text);
+        return text;
     }
     private void add(String text){if(errors.contains(text))return;if(errors.size()==MAX_ERRORS)errors.removeFirst();errors.addLast(text);}
     public synchronized String snapshot(){return String.join("\n",errors);}

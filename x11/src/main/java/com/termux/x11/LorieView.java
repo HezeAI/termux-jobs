@@ -30,6 +30,9 @@ import java.nio.charset.StandardCharsets;
     private final java.util.Set<Integer> mouseButtons=new java.util.HashSet<>();
     private final X11Touchpad touchpad;
     private Runnable pointerTap=()->{};
+    private X11ScreenSettings screenSettings=X11ScreenSettings.defaults();
+    private boolean screenLandscape;
+    void screenSettings(X11ScreenSettings settings,boolean landscape){if(screenSettings.width==settings.width&&screenSettings.height==settings.height&&screenLandscape==landscape)return;screenSettings=settings;screenLandscape=landscape;resize(getWidth(),getHeight());}
     private int screenWidth=1280,screenHeight=720;
     private int obscuredBottom,lastModeWidth,lastModeHeight;
     private int viewportLeft,viewportTop,viewportWidth=1,viewportHeight=1;
@@ -56,7 +59,7 @@ import java.nio.charset.StandardCharsets;
     @Override public void surfaceDestroyed(SurfaceHolder holder) { suspendSurface(); }
     private void resize(int w,int h) {
         if(pointer==0||w<1||h<1)return;
-        X11DisplayMode mode=X11DisplayMode.fit(w,h);
+        X11DisplayMode mode=X11DisplayMode.resolve(w,h,screenSettings,screenLandscape);
         screenWidth=mode.width;screenHeight=mode.height;
         setViewport(pointer,0,0,w,h,screenWidth,screenHeight,Math.max(0,Math.min(h-1,obscuredBottom)));
         if(lastModeWidth!=screenWidth||lastModeHeight!=screenHeight){sendWindowChange(pointer,screenWidth,screenHeight,60,"screen");lastModeWidth=screenWidth;lastModeHeight=screenHeight;}

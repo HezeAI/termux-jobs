@@ -26,6 +26,18 @@ public final class RemoteDesktopView extends FrameLayout implements SurfaceHolde
     private final X11ViewTrace trace=new X11ViewTrace();
     private final X11Viewport viewport=new X11Viewport();
     private int sentWidth,sentHeight,sentVisible;
+    private boolean sentLandscape;
+    private X11ScreenSettings screenSettings=X11ScreenSettings.defaults();
+    public void screenSettings(X11ScreenSettings settings){
+        if(screenSettings.width==settings.width&&screenSettings.height==settings.height&&screenSettings.horizontalDp==settings.horizontalDp&&screenSettings.verticalDp==settings.verticalDp)return;
+        screenSettings=settings;sentWidth=sentHeight=sentVisible=0;requestLayout();
+    }
+    @Override protected void onMeasure(int widthSpec,int heightSpec){
+        X11ScreenSettings.Frame f=screenSettings.frame(MeasureSpec.getSize(widthSpec),MeasureSpec.getSize(heightSpec),getResources().getDisplayMetrics().density);
+        LayoutParams lp=(LayoutParams)surface.getLayoutParams();lp.width=f.width;lp.height=f.height;lp.leftMargin=f.left;lp.topMargin=f.top;
+        super.onMeasure(widthSpec,heightSpec);
+    }
+    private boolean presentationLandscape(){return getResources().getConfiguration().orientation==android.content.res.Configuration.ORIENTATION_LANDSCAPE;}
     private final X11ExtraKeys extraKeys=new X11ExtraKeys((code,down)->{
         Bundle q=X11Remote.command("input");q.putBoolean("extra",true);q.putInt("key",code);q.putBoolean("down",down);q.putString("attachment",attachment);send(q);
     });
@@ -49,6 +61,7 @@ public final class RemoteDesktopView extends FrameLayout implements SurfaceHolde
             public void key(int code,boolean down){Bundle q=X11Remote.command("input");q.putInt("key",code);q.putBoolean("down",down);input(q);}
         });ime.onWindowFocused(()->{if(keyboardWanted)requestIme(keyboardGeneration);});addView(ime,new LayoutParams(1,1));
     }
+    public void transport(String name){loading.transport(name);}
     public void connect(IBinder binder){remote=binder;if(surface.getHolder().getSurface().isValid())attach();}
     public void startup(boolean ready,boolean timedOut){startup(ready,timedOut,ready?4:0);}
     public void startup(boolean ready,boolean timedOut,int step){
@@ -78,14 +91,16 @@ public final class RemoteDesktopView extends FrameLayout implements SurfaceHolde
         boolean edgeToEdge=(getWindowSystemUiVisibility()&View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)!=0;
         int stableBottom=edgeToEdge?0:bars.bottom;
         int visible=X11Viewport.visibleHeight(surface.getHeight(),bounds.bottom,position[1],insets.getInsets(WindowInsets.Type.ime()).bottom);
-        return viewport.update(surface.getWidth(),visible,bounds.width(),bounds.height(),position[1]-bounds.top,stableBottom);
+        if(!screenSettings.automatic())return new X11Viewport.Size(surface.getWidth(),surface.getHeight(),visible);
+        int bottomGap=Math.max(0,getHeight()-surface.getBottom());
+        return viewport.update(surface.getWidth(),visible,bounds.width(),bounds.height(),position[1]-bounds.top,stableBottom+bottomGap);
     }
-    private void putGeometry(Bundle q){X11Viewport.Size size=geometry();q.putInt("width",size.width);q.putInt("height",size.height);q.putInt("visibleHeight",size.visibleHeight);}
+    private void putGeometry(Bundle q){X11Viewport.Size size=geometry();q.putInt("width",size.width);q.putInt("height",size.height);q.putInt("visibleHeight",size.visibleHeight);screenSettings.putMode(q,presentationLandscape());}
     private void resize(){
         if(!attached||closed||surface.getWidth()<1||surface.getHeight()<1)return;
-        X11Viewport.Size size=geometry();if(sentWidth==size.width&&sentHeight==size.height&&sentVisible==size.visibleHeight)return;
-        trace.event("geometry",size.width+"x"+size.height+" visible="+size.visibleHeight);sentWidth=size.width;sentHeight=size.height;sentVisible=size.visibleHeight;
-        Bundle q=X11Remote.command("resize");q.putString("attachment",attachment);q.putInt("width",size.width);q.putInt("height",size.height);q.putInt("visibleHeight",size.visibleHeight);send(q);
+        X11Viewport.Size size=geometry();if(sentWidth==size.width&&sentHeight==size.height&&sentVisible==size.visibleHeight&&sentLandscape==presentationLandscape())return;
+        trace.event("geometry",size.width+"x"+size.height+" visible="+size.visibleHeight);sentWidth=size.width;sentHeight=size.height;sentVisible=size.visibleHeight;sentLandscape=presentationLandscape();
+        Bundle q=X11Remote.command("resize");q.putString("attachment",attachment);q.putInt("width",size.width);q.putInt("height",size.height);q.putInt("visibleHeight",size.visibleHeight);screenSettings.putMode(q,presentationLandscape());send(q);
     }
     @Override protected void onLayout(boolean changed,int l,int t,int r,int b){super.onLayout(changed,l,t,r,b);resize();}
     @Override public WindowInsets onApplyWindowInsets(WindowInsets insets){post(this::resize);return super.onApplyWindowInsets(insets);}

@@ -33,6 +33,20 @@ public class WorkspaceDesktopPreparationTest {
   assertSame(p,get("preparationProfile"));assertTrue((Boolean)get("preparationCancelling"));assertFalse(((Button)view.findViewWithTag("x11-preparation-cancel")).isEnabled());assertEquals(42,((ProgressBar)view.findViewWithTag("x11-startup-progress")).getProgress());
   Method busy=WorkspaceDesktop.class.getDeclaredMethod("rendererBackendBusy");busy.setAccessible(true);assertTrue((Boolean)busy.invoke(ui));accept(state("cancelled"));assertFalse((Boolean)get("preparationCancelling"));assertTrue(((Button)view.findViewWithTag("x11-preparation-cancel")).isEnabled());
  }
+ @Test public void alreadyRunningDesktopReattachesWithoutWaitingForInstalled()throws Exception{
+  org.robolectric.util.ReflectionHelpers.setStaticField(Build.VERSION.class,"SDK_INT",30);try{
+   java.util.concurrent.CountDownLatch seen=new java.util.concurrent.CountDownLatch(1);java.util.concurrent.atomic.AtomicReference<String> operation=new java.util.concurrent.atomic.AtomicReference<>();
+   Binder binder=new Binder(){@Override protected boolean onTransact(int code,Parcel data,Parcel reply,int flags){data.enforceInterface(com.termux.x11.X11Remote.DESCRIPTOR);operation.set(data.readBundle(getClass().getClassLoader()).getString("op"));reply.writeNoException();reply.writeBundle(state("running"));seen.countDown();return true;}};
+   set("remote",binder);set("launchCheckAcknowledged",true);Bundle b=state("running");b.putBoolean("started",true);accept(b);assertTrue(seen.await(3,java.util.concurrent.TimeUnit.SECONDS));assertEquals("launch",operation.get());assertNull(get("launchAfterCheck"));assertNull(get("preparationProfile"));assertTrue(((Set<?>)get("graphical")).contains(p.id));
+  }finally{org.robolectric.util.ReflectionHelpers.setStaticField(Build.VERSION.class,"SDK_INT",28);}
+ }
+ @Test public void cancelDuringCheckRaceStopsRunningDesktopInsteadOfCancellingAbsentCheck()throws Exception{
+  visible[0]=false;org.robolectric.util.ReflectionHelpers.setStaticField(Build.VERSION.class,"SDK_INT",30);try{
+   java.util.concurrent.CountDownLatch seen=new java.util.concurrent.CountDownLatch(1);java.util.concurrent.atomic.AtomicReference<String> operation=new java.util.concurrent.atomic.AtomicReference<>();
+   Binder binder=new Binder(){@Override protected boolean onTransact(int code,Parcel data,Parcel reply,int flags){data.enforceInterface(com.termux.x11.X11Remote.DESCRIPTOR);operation.set(data.readBundle(getClass().getClassLoader()).getString("op"));reply.writeNoException();reply.writeBundle(state("stopping"));seen.countDown();return true;}};
+   set("remote",binder);Bundle b=state("running");b.putBoolean("started",true);set("state",b);invoke("preparationAction");assertTrue(seen.await(3,java.util.concurrent.TimeUnit.SECONDS));assertEquals("stop",operation.get());assertNull(get("launchAfterCheck"));
+  }finally{org.robolectric.util.ReflectionHelpers.setStaticField(Build.VERSION.class,"SDK_INT",28);}
+ }
  @Test public void missingNeedsAcknowledgementAndNoReturnsToTerminal()throws Exception{
   Bundle b=state("missing");accept(b);assertFalse((Boolean)get("preparationNeedsInstall"));set("launchCheckAcknowledged",true);accept(b);
   AlertDialog prompt=ShadowAlertDialog.getLatestAlertDialog();assertTrue(prompt.isShowing());assertTrue((Boolean)get("preparationNeedsInstall"));prompt.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();Shadows.shadowOf(Looper.getMainLooper()).idle();assertNull(get("preparationProfile"));assertFalse(((Set<?>)get("graphical")).contains(p.id));assertNull(get("launchAfterCheck"));

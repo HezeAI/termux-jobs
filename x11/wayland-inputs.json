@@ -1,0 +1,12 @@
+{
+  "jniLibs/arm64-v8a/libadrenotools.so": "c7dcc64978da91199a6005780f2c22783ac7039be26e363994cdd44d32825dee",
+  "jniLibs/arm64-v8a/libc++_shared.so": "05bef9d3901910c3ff8ab450b03bc8b28383d363a2290f2f7b9aed7331ea6ff7",
+  "jniLibs/arm64-v8a/libffi.so": "e118d741361c64015c074c5e1f24e42e44292d0d694ca3ba1e109205c10421f9",
+  "jniLibs/arm64-v8a/libfile_redirect_hook.so": "096e27b3de60aba1979f6b2dbcd72ca124b46402bfd8a0755e44f23aa3c173ff",
+  "jniLibs/arm64-v8a/libgsl_alloc_hook.so": "f37a0af52885bb52efe7adc45dd098fda4414fd08d932cd9632803280f3031f6",
+  "jniLibs/arm64-v8a/libhook_impl.so": "0f3f911ac2b189657f8c2b08b80761bf9129c899e4497ea6166e2291bf13fe79",
+  "jniLibs/arm64-v8a/libjobs-wayland.so": "128d91d96a185534351cf9232cd3b95e0a6206ed5b9d9e95f8d026f6f9a5eea4",
+  "jniLibs/arm64-v8a/libmain_hook.so": "9a73b12b6af01e2722f7877642610dd86aa15aef549d381e662ae0ebb238deb1",
+  "jniLibs/arm64-v8a/libwayland-server.so": "2daff7500b6acee55291567d786653ba75f5aecf5a5e648fce4c10fe6bc7a8ea",
+  "assets/wayland-guest.so": "86e9351f322705e127b225d08cf0bfd1752e4aa1b32b4334654c27a828e8d8fd"
+}

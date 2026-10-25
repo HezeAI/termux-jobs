@@ -1,0 +1,16 @@
+[
+  {
+    "Package": "libc++",
+    "Version": "30",
+    "Filename": "pool/main/libc/libc++/libc++_30_aarch64.deb",
+    "Size": "341604",
+    "SHA256": "53d0b84a7ba7459024257cb94d5b136fe13ef858567f65a8064b35950799f2ca"
+  },
+  {
+    "Package": "libffi",
+    "Version": "3.8.0",
+    "Filename": "pool/main/libf/libffi/libffi_3.8.0_aarch64.deb",
+    "Size": "37592",
+    "SHA256": "4f255badf74cd31f6a2801c17fa1444199c84c834b517b7c843e2fe9ebe91d77"
+  }
+]

@@ -1,3 +1,21 @@
+# v2.0.5 — scoped screen settings and public preview gate
+
+X11ScreenSettings owns validated per-target geometry/scale preferences.
+RemoteDesktopView sends logical dimensions/orientation to the selected host;
+physical viewport/pointer translation remains scoped to that host. A separate
+bounded scale job validates launch identity and uses the running private Xfconf
+service, with recovery/restoration rather than a persistent daemon. Focus checks
+read allowlisted window/input-context metadata; no text/title/key payload is read.
+The public build defaults WAYLAND_PREVIEW to false. UI guards disable selection
+and driver imports; retained Plasma preference resolves to XFCE without deletion.
+DesktopProfiles.validate, WaylandProcess and WaylandRuntime reject disabled
+preview operations before preparation. Private builds explicitly opt in through
+-PtermuxWaylandPreview=true. No runtime public unlock, installed-rootfs edit or
+change to agent environments is introduced. See [screen design](X11-SCREEN.md)
+and [experimental architecture](ARCH-WAYLAND.md).
+
+---
+
 # v2.0.4 — private Bionic/glibc rendering
 
 Six ordinary glibc targets share one reviewed bundled runtime but each owns its imported-driver/cache/lock/display/service state. The original Ubuntu cache path is retained. Private Mesa26.1.6 Zink loads our ICD through the guest Vulkan loader; libhybris loads the explicit Bionic HAL and Android buffer APIs. Process-only environment/binds leave installed guest libraries, Termux Wrapper and agent sessions untouched. See [native sources, patches, safety and limitations](BIONIC_GLIBC.md) and [Present audit](X11_PRESENTATION_AUDIT.md).

@@ -35,9 +35,14 @@ public final class X11StartupLog {
   Matcher query=QUERY.matcher(text);if(query.matches()){trace("query:"+query.group(1),text);return;}
   if(SESSION.matcher(text).matches()){trace("session",text);return;}
   if(BUS.matcher(text).matches()){trace("bus",text);return;}
-  Matcher marker=MARKER.matcher(text);if(marker.matches()){if(text.startsWith("ERROR:")&&!text.matches("ERROR:(?:GPU_[A-Z0-9_]+|VIRGL_[A-Z0-9_]+|WRAPPER_[A-Z0-9_]+|BIONIC_[A-Z0-9_]+|ARCH_ROOTFS_OWNER_ACCESS|COMPONENT_OPERATION_EXCEPTION|ARM64_REQUIRED|UBUNTU_26_04_LIBVULKAN1_LIBEGL1_REQUIRED|CHECKSUM_MISMATCH|CACHE_INCOMPLETE|CACHE_PATH|CACHE_IS_A_LINK|CONTROL_PATH|UNSUPPORTED_DESKTOP|INVALID_RENDERER|FOCUS_TOKEN|ARM64_REQUIRED|DOWNLOAD_LIMIT|INSECURE_REDIRECT|INSECURE_RESPONSE)")){add("UNRECOGNIZED_STARTUP_ERROR");return;}add(text);if(text.equals("JOBS_X11_STARTUP=desktop-ready")||text.equals("JOBS_X11_STARTUP=ended"))finished=elapsedMs();return;}
+  Matcher marker=MARKER.matcher(text);if(marker.matches()){if(text.startsWith("ERROR:")&&!text.matches("ERROR:(?:X11_SCALE(?:_MISSING)?|WAYLAND_[A-Z0-9_]+|PLASMA_MANAGED_CONFIG_CHANGED|GPU_[A-Z0-9_]+|VIRGL_[A-Z0-9_]+|WRAPPER_[A-Z0-9_]+|BIONIC_[A-Z0-9_]+|ARCH_ROOTFS_OWNER_ACCESS|COMPONENT_OPERATION_EXCEPTION|ARM64_REQUIRED|UBUNTU_26_04_LIBVULKAN1_LIBEGL1_REQUIRED|CHECKSUM_MISMATCH|CACHE_INCOMPLETE|CACHE_PATH|CACHE_IS_A_LINK|CONTROL_PATH|UNSUPPORTED_DESKTOP|INVALID_RENDERER|FOCUS_TOKEN|ARM64_REQUIRED|DOWNLOAD_LIMIT|INSECURE_REDIRECT|INSECURE_RESPONSE)")){add("UNRECOGNIZED_STARTUP_ERROR");return;}add(text);if(text.equals("JOBS_X11_STARTUP=desktop-ready")||text.equals("JOBS_X11_STARTUP=ended"))finished=elapsedMs();return;}
   Matcher gl=GL.matcher(text);while(gl.find())add("GRAPHICS_ERROR="+gl.group());
   String s=text.toLowerCase(Locale.ROOT);
+  if(s.contains("using classic boot"))add("PLASMA_BOOT=classic");
+  if(s.contains("using systemd boot"))add("PLASMA_BOOT=systemd");
+  if(s.contains("error starting process")&&s.contains("kwin_wayland_wrapper"))add("KWIN_WRAPPER_START_FAILED");
+  if(s.contains("could not connect to wayland server"))add("WAYLAND_CONNECTION_FAILED");
+  if(s.contains("qt.qpa")&&s.contains("failed")&&s.contains("wayland"))add("QT_WAYLAND_PLATFORM_FAILED");
   if(s.contains("protocol version too low"))add("VIRGL_PROTOCOL_TOO_OLD");
   if(s.contains("lost connection to rendering server"))add("VIRGL_CLIENT_CONNECTION_LOST");
   if(s.contains("failed to load driver")||s.contains("failed to open")&&s.contains(".so"))add("DRIVER_LIBRARY_LOAD_FAILED");

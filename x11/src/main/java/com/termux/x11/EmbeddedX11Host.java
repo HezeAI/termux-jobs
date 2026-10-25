@@ -22,6 +22,7 @@ final class EmbeddedX11Host {
     Bundle attach(Bundle request){
         String id=request.getString("attachment","");IBinder wanted=request.getBinder("token");
         int w=bounded(request.getInt("width")),h=bounded(request.getInt("height")),shown=visible(request,h);
+        X11ScreenSettings mode=X11ScreenSettings.mode(request);
         if(id.isEmpty()||id.length()>80||wanted==null)throw new IllegalArgumentException("Invalid X11 host");
         if(host==null||!wanted.equals(token)||!id.equals(attachment)){
             releaseHost();int displayId=request.getInt("display",0);
@@ -30,17 +31,18 @@ final class EmbeddedX11Host {
             Context context=service.createDisplayContext(display);
             if(view!=null&&rendererDisplay!=displayId){view.release();view=null;}
             if(view==null){view=new LorieView(context);view.retainRendererByService();view.onPointerTap(service::pointerTapped);view.setZOrderOnTop(true);rendererDisplay=displayId;}
+            view.screenSettings(mode,request.getBoolean("logicalLandscape",w>h));
             host=new SurfaceControlViewHost(context,display,wanted);
             // Host SurfaceView stays nonfocusable; the Activity owns the IME endpoint.
             host.setView(view,w,h);width=w;height=h;token=wanted;attachment=id;
             death=()->main.post(()->{if(token==wanted&&attachment.equals(id))releaseHost();});
             try{wanted.linkToDeath(death,0);}catch(RemoteException error){releaseHost();throw new IllegalStateException("X11 host disappeared",error);}
             view.requestFocus();
-        }else layout(w,h);
+        }else {view.screenSettings(mode,request.getBoolean("logicalLandscape",w>h));layout(w,h);}
         view.obscuredBottom(h-shown);
         connect();Bundle result=service.snapshot();result.putParcelable("surface",host.getSurfacePackage());return result;
     }
-    void resize(Bundle request){if(host!=null&&attachment.equals(request.getString("attachment"))){int w=bounded(request.getInt("width")),h=bounded(request.getInt("height"));int visible=visible(request,h);layout(w,h);view.obscuredBottom(h-visible);}}
+    void resize(Bundle request){if(host!=null&&attachment.equals(request.getString("attachment"))){int w=bounded(request.getInt("width")),h=bounded(request.getInt("height"));int visible=visible(request,h);X11ScreenSettings mode=X11ScreenSettings.mode(request);view.screenSettings(mode,request.getBoolean("logicalLandscape",w>h));layout(w,h);view.obscuredBottom(h-visible);}}
     private void layout(int w,int h){if(width==w&&height==h)return;width=w;height=h;host.relayout(w,h);}
     private static int visible(Bundle q,int h){return X11Viewport.checkedVisible(q.getInt("visibleHeight",h),h);}
     void connect(){if(view!=null&&!view.isConnected()){ParcelFileDescriptor fd=service.displayConnection();if(fd!=null)view.connectFileDescriptor(fd.detachFd());}}

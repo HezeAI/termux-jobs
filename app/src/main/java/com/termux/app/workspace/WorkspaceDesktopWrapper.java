@@ -27,12 +27,13 @@ final class WorkspaceDesktopWrapper implements AutoCloseable {
     private Runnable cancel;
     private AlertDialog window;
     WorkspaceDesktopWrapper(TermuxActivity activity){this(activity,"termux");}
-    WorkspaceDesktopWrapper(TermuxActivity activity,String target){if(!supported(target)&&!bridgeSupported(target))throw new IllegalArgumentException("Bionic target");this.activity=activity;this.target=target;picker=new WorkspaceLocalFilePicker(activity);}
+    WorkspaceDesktopWrapper(TermuxActivity activity,String target){if(!supported(target)&&!bridgeSupported(target)&&!wayland(target))throw new IllegalArgumentException("Bionic target");this.activity=activity;this.target=target;picker=new WorkspaceLocalFilePicker(activity);}
     static boolean bridgeSupported(String target){return "ubuntu".equals(target)||"debian".equals(target)||"fedora".equals(target)||"archlinux".equals(target)||"opensuse".equals(target)||"void".equals(target);}
+    private static boolean wayland(String target){return "wayland-archlinux".equals(target);}
     private boolean bridge(){return bridgeSupported(target);}
     static boolean supported(String target){return "termux".equals(target);}
     static File base(android.content.Context context){return base(context,"termux");}
-    static File base(android.content.Context context,String target){return new File(context.getFilesDir(),bridgeSupported(target)?("workspace-x11-bionic-glibc"+("ubuntu".equals(target)?"":"-"+target)):"workspace-x11-wrapper");}
+    static File base(android.content.Context context,String target){return new File(context.getFilesDir(),wayland(target)?"workspace-wayland-driver-archlinux":bridgeSupported(target)?("workspace-x11-bionic-glibc"+("ubuntu".equals(target)?"":"-"+target)):"workspace-x11-wrapper");}
     private String tr(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
     boolean busy(){return busy;}
     static JSONObject metadata(android.content.Context context){return metadata(context,"termux");}
@@ -50,7 +51,7 @@ final class WorkspaceDesktopWrapper implements AutoCloseable {
     static boolean installed(android.content.Context context){return installed(context,"termux");}
     static boolean installed(android.content.Context context,String target){
         File runtime=new File(base(context,target),"runtime"),ready=new File(runtime,"ready.json");
-        return metadata(context,target)!=null&&!Files.isSymbolicLink(runtime.toPath())&&!Files.isSymbolicLink(ready.toPath())&&ready.isFile();
+        return metadata(context,target)!=null&&(wayland(target)||!Files.isSymbolicLink(runtime.toPath())&&!Files.isSymbolicLink(ready.toPath())&&ready.isFile());
     }
     static String driverLabel(android.content.Context context){return driverLabel(context,"termux");}
     static String driverLabel(android.content.Context context,String target){JSONObject value=metadata(context,target);return value==null?"":value.optString("name","Turnip Bionic");}
@@ -134,6 +135,7 @@ final class WorkspaceDesktopWrapper implements AutoCloseable {
     void prepare(BooleanSupplier unavailable,Runnable updated,WorkspaceDesktopGpu.Inline inline){
         if(closed||busy||unavailable.getAsBoolean()){finish(inline,false,"ERROR:GPU_BUSY",updated);return;}
         if(metadata(activity,target)==null){finish(inline,false,tr("Выберите ZIP Bionic кнопкой папки рядом с рендером.","Choose a Bionic ZIP using the folder button next to the renderer."),updated);return;}
+        if(wayland(target)){updated.run();return;}
         if(bridge()){install(unavailable,updated,inline);return;}
         if(installed(activity,target)){updated.run();return;}
         window=WorkspaceDialogs.builder(activity).setTitle(tr("Подготовить Wrapper?","Prepare Wrapper?"))
@@ -169,13 +171,13 @@ final class WorkspaceDesktopWrapper implements AutoCloseable {
     }
     private static final class Result{final boolean success;final String report;Result(boolean ok,String text){success=ok;report=text;}}
     private Result run(File job,String operation,String source,File cancel,Consumer<String> output)throws Exception{
-        for(String name:bridge()?new String[]{"x11-wrapper.py","x11-bionic-glibc.py","x11-bionic-glibc.zip"}:new String[]{"x11-wrapper.py","x11-gpu.py"})try(InputStream in=activity.getAssets().open(name);OutputStream out=new FileOutputStream(new File(job,name))){byte[] data=new byte[8192];int count;while((count=in.read(data))!=-1)out.write(data,0,count);}
-        ProcessBuilder builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/python3","-B",new File(job,bridge()?"x11-bionic-glibc.py":"x11-wrapper.py").getPath(),operation,target,base(activity,target).getPath(),source,Integer.toString(Build.VERSION.SDK_INT),cancel.getPath());
+        for(String name:wayland(target)?new String[]{"wayland-driver.py","x11-wrapper.py"}:bridge()?new String[]{"x11-wrapper.py","x11-bionic-glibc.py","x11-bionic-glibc.zip"}:new String[]{"x11-wrapper.py","x11-gpu.py"})try(InputStream in=activity.getAssets().open(name);OutputStream out=new FileOutputStream(new File(job,name))){byte[] data=new byte[8192];int count;while((count=in.read(data))!=-1)out.write(data,0,count);}
+        ProcessBuilder builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/python3","-B",new File(job,wayland(target)?"wayland-driver.py":bridge()?"x11-bionic-glibc.py":"x11-wrapper.py").getPath(),operation,target,base(activity,target).getPath(),source,Integer.toString(Build.VERSION.SDK_INT),cancel.getPath());
         builder.directory(job);builder.environment().clear();for(String value:TermuxShellUtils.buildEnvironment(activity,false,TermuxConstants.TERMUX_HOME_DIR_PATH)){int eq=value.indexOf('=');if(eq>0)builder.environment().put(value.substring(0,eq),value.substring(eq+1));}builder.environment().put("PREFIX",TermuxConstants.TERMUX_PREFIX_DIR_PATH);builder.redirectErrorStream(true);
         java.lang.Process process=builder.start();process.getOutputStream().close();StringBuilder tail=new StringBuilder();
         try(BufferedReader reader=new BufferedReader(new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8))){String line;while((line=reader.readLine())!=null){tail.append(line).append('\n');if(tail.length()>262144)tail.delete(0,tail.length()-262144);output.accept(line);}}
         return new Result(process.waitFor()==0,tail.toString());
     }
-    private static void cleanup(File job){if(job==null)return;for(String name:new String[]{"driver.zip","cancel","x11-wrapper.py","x11-gpu.py","x11-bionic-glibc.py","x11-bionic-glibc.zip"})new File(job,name).delete();job.delete();}
+    private static void cleanup(File job){if(job==null)return;for(String name:new String[]{"driver.zip","cancel","x11-wrapper.py","x11-gpu.py","x11-bionic-glibc.py","x11-bionic-glibc.zip","wayland-driver.py"})new File(job,name).delete();job.delete();}
     @Override public void close(){closed=true;picker.close();if(cancel!=null)cancel.run();if(window!=null)window.dismiss();worker.shutdown();main.removeCallbacksAndMessages(null);}
 }

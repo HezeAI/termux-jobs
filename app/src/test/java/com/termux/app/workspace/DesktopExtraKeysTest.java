@@ -23,6 +23,12 @@ public class DesktopExtraKeysTest {
     private TextView find(View v,String text){if(v instanceof TextView&&text.contentEquals(((TextView)v).getText()))return (TextView)v;if(v instanceof ViewGroup)for(int i=0;i<((ViewGroup)v).getChildCount();i++){TextView found=find(((ViewGroup)v).getChildAt(i),text);if(found!=null)return found;}return null;}
     private void touch(TextView v,int action){MotionEvent e=MotionEvent.obtain(0,0,action,2,2,0);v.dispatchTouchEvent(e);e.recycle();}
     @Test public void overlayDoesNotTakeImeFocusOrBlockOutsideDesktop(){WindowManager.LayoutParams p=dialog().getWindow().getAttributes();assertTrue((p.flags&WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)!=0);assertTrue((p.flags&WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)!=0);assertEquals(0,p.flags&WindowManager.LayoutParams.FLAG_DIM_BEHIND);assertTrue(p.width<=600);assertEquals(0,sent.size());}
+    @Test public void compactDefaultKeepsAllKeysVisibleWithinTheGrid(){
+        WindowManager.LayoutParams p=dialog().getWindow().getAttributes();assertEquals(WorkspaceDialogs.dp(activity,400),p.width);assertEquals(WorkspaceDialogs.dp(activity,104),p.height);layoutPanel();
+        ViewGroup grid=(ViewGroup)button("Esc").getParent();assertEquals(16,grid.getChildCount());
+        for(int i=0;i<grid.getChildCount();i++){View key=grid.getChildAt(i);assertTrue(key.getWidth()>0);assertTrue(key.getHeight()>0);assertTrue(key.getRight()<=grid.getWidth());assertTrue(key.getBottom()<=grid.getHeight());}
+        assertEquals(12f,button("Enter").getTextSize()/activity.getResources().getDisplayMetrics().scaledDensity,.01f);
+    }
     @Test public void escAccessibilityClickSendsOnePhysicalPair(){button("Esc").performClick();assertEquals(Arrays.asList("111:true","111:false"),sent);}
     @Test public void touchSendsOnePairAndCancelReleasesArrow(){touch(button("Esc"),MotionEvent.ACTION_DOWN);touch(button("Esc"),MotionEvent.ACTION_UP);touch(button("↑"),MotionEvent.ACTION_DOWN);touch(button("↑"),MotionEvent.ACTION_CANCEL);assertEquals(Arrays.asList("111:true","111:false","19:true","19:false"),sent);}
     @Test public void closeReleasesLatchedModifierAndHeldArrowExactlyOnce(){button("Ctrl").performClick();assertTrue(button("Ctrl").isSelected());touch(button("←"),MotionEvent.ACTION_DOWN);panel.close();panel.close();assertEquals(Arrays.asList("113:true","21:true","21:false","113:false"),sent);assertFalse(panel.showing());}
@@ -39,11 +45,11 @@ public class DesktopExtraKeysTest {
     }
     @Test public void leftHandleReflowsKeysAndPreservesModifierState(){
         layoutPanel();int oldLeft=button("Shift").getLeft(),oldTop=button("Shift").getTop();
-        button("Ctrl").performClick();WindowManager.LayoutParams p=dialog().getWindow().getAttributes();int right=p.x+p.width;
+        button("Ctrl").performClick();WindowManager.LayoutParams p=dialog().getWindow().getAttributes();int right=p.x+p.width,initialWidth=p.width,initialHeight=p.height;
         // First lift the panel to make room for a taller, narrower shape.
         at(handle(false),MotionEvent.ACTION_DOWN,0,0);at(handle(false),MotionEvent.ACTION_MOVE,0,-500);at(handle(false),MotionEvent.ACTION_UP,0,-500);
         at(handle(true),MotionEvent.ACTION_DOWN,0,0);at(handle(true),MotionEvent.ACTION_MOVE,200,-200);at(handle(true),MotionEvent.ACTION_UP,200,-200);
-        p=dialog().getWindow().getAttributes();assertEquals(right,p.x+p.width);assertTrue(p.width<478);assertTrue(p.height>128);layoutPanel();
+        p=dialog().getWindow().getAttributes();assertEquals(right,p.x+p.width);assertTrue(p.width<initialWidth);assertTrue(p.height>initialHeight);layoutPanel();
         assertTrue(oldLeft!=button("Shift").getLeft()||oldTop!=button("Shift").getTop());assertTrue(button("Ctrl").isSelected());assertEquals(Collections.singletonList("113:true"),sent);
         ViewGroup grid=(ViewGroup)button("Ctrl").getParent();for(int i=0;i<grid.getChildCount();i++){View key=grid.getChildAt(i);assertTrue(key.getWidth()>0);assertTrue(key.getHeight()>0);assertTrue(key.getRight()<=grid.getWidth());assertTrue(key.getBottom()<=grid.getHeight());}
     }

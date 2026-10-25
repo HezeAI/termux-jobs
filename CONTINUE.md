@@ -1,3 +1,17 @@
+# v2.0.5 publication preparation — code1376
+
+Authorized by HezeAI: publish X11 resolution/scaling, keyboard focus fixes and
+compact extra keys; disable Wayland/KDE and all its controls in the public APK.
+Keep private test.10/code1376 unchanged for continuing Wayland tests. Public
+versionCode intentionally also1376 so the retained private APK is not offered it.
+Default build flag is disabled; private continuation uses
+-PtermuxWaylandPreview=true. Do not install the public build or alter live sessions.
+No valid-data reset or rootfs migration. Release evidence and eventual publication
+status: .verification/release-v2.0.5/ and docs/fork/VALIDATION-v2.0.5.md.
+Wayland startup remains experimental; X11 Auto/BGRA/RGBA remains queued after it.
+
+---
+
 # Published v2.0.3 /1352 — verified stable/latest
 
 Release: https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.3

@@ -3,10 +3,11 @@
 set -euo pipefail
 op=${1:-}; target=${2:-}; control=${3:-}; desktop=${4:-xfce}
 case $desktop in xfce) ;; *) echo ERROR:DESKTOP_CHOICE;exit 2;;esac
-[[ $op == check || $op == install || $op == repair-launchers || $op == firefox-compat-on || $op == firefox-compat-off || $op == run ]] || exit 2
+[[ $op == scale || $op == check || $op == install || $op == repair-launchers || $op == firefox-compat-on || $op == firefox-compat-off || $op == run ]] || exit 2
 case $target in termux|ubuntu|jobs-x11-ubuntu|debian|alpine|fedora|opensuse|void|archlinux) ;; *) echo 'ERROR:UNSUPPORTED_DESKTOP';exit 2;;esac
 : "${PREFIX:?}"
 case ${JOBS_X11_STYLE:-0} in 0|1) ;;*) echo ERROR:STYLE_VALUE;exit 2;;esac
+case ${JOBS_X11_SCALE:-100} in [5-9][0-9]|1[0-4][0-9]|150) ;; *) echo ERROR:X11_SCALE;exit 2;;esac
 if [[ ${JOBS_X11_STYLE:-0} == 1 ]];then
  case $target in termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux) ;;*) echo ERROR:STYLE_TARGET;exit 2;;esac
 fi
@@ -79,6 +80,17 @@ if [[ $target == void ]];then proot_entry=(run --work-dir /root);fi
 # as a fallback for missing guest programs or D-Bus services.
 guest_environment='export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/games:/usr/games; export XDG_DATA_DIRS=/usr/local/share:/usr/share XDG_CONFIG_DIRS=/etc/xdg; unset LD_LIBRARY_PATH LD_PRELOAD DBUS_SYSTEM_BUS_ADDRESS; '
 guest() { proot-distro "${proot_entry[@]}" --bind "$PREFIX/tmp:/tmp" --bind "$control:/tmp/termux-jobs-x11" "${gpu_bind[@]}" "$target" -- /bin/sh -c "$guest_environment$1"; }
+if [[ $op == scale ]];then
+    [[ ${JOBS_X11_FOCUS_TOKEN:-} =~ ^[a-f0-9-]{36}$ ]] || { echo ERROR:FOCUS_TOKEN;exit 2; }
+    if [[ $target == termux ]];then
+        export JOBS_X11_TARGET=termux
+        exec "$PREFIX/bin/python3" -B "$control/x11-scale-live.py" apply "${JOBS_X11_SCALE:-100}"
+    else
+        installed || { echo MISSING:environment;exit 1; }
+        guest "export JOBS_X11_TARGET=$target JOBS_X11_FOCUS_TOKEN=$JOBS_X11_FOCUS_TOKEN; exec python3 -B /tmp/termux-jobs-x11/x11-scale-live.py apply ${JOBS_X11_SCALE:-100}"
+    fi
+    exit
+fi
 components='configured() { case "$(dpkg-query -W -f="\${Status}" "$1" 2>/dev/null)" in *" ok installed") return 0;; *) return 1;; esac; }; configured libpulse0 && configured gstreamer1.0-pulseaudio && test -s /etc/ssl/certs/ca-certificates.crt && configured ca-certificates && command -v python3 >/dev/null && command -v thunar >/dev/null && command -v xfce4-terminal >/dev/null && command -v xwininfo >/dev/null && command -v xprop >/dev/null && command -v xfdesktop >/dev/null && command -v xfce4-panel >/dev/null && command -v xfsettingsd >/dev/null && command -v xfconf-query >/dev/null && command -v xfwm4 >/dev/null && command -v xfce4-session >/dev/null && command -v dbus-run-session >/dev/null && command -v xauth >/dev/null && command -v fcitx5 >/dev/null && command -v dbus-monitor >/dev/null && configured fcitx5-frontend-gtk3 && configured fcitx5-frontend-qt5 && configured fonts-dejavu-core && configured fonts-liberation && configured adwaita-icon-theme && configured hicolor-icon-theme && { fcitx5 --version || echo WARNING:X11_INPUT_COMPONENT_UNAVAILABLE; }'
 packages='xfce4 xfdesktop4 xfce4-panel xfce4-session xfce4-settings xfconf thunar xfwm4 xfce4-terminal'
 if [[ ( $target == ubuntu || $target == debian ) && ${JOBS_X11_RENDERER:-cpu} == bionic-glibc ]];then
@@ -233,4 +245,4 @@ else
     jobs_audio_start
     alpine_compat=0;if [[ $target == alpine ]];then alpine_compat=1;fi
     jobs_virgl_name=none;if [[ $gpu_mode == virgl ]];then jobs_virgl_name=${jobs_virgl_dir##*/};fi
-    jobs_desktop_run guest "export JOBS_X11_DISPLAY=$desktop_display JOBS_X11_VIRGL_NAME=$jobs_virgl_name JOBS_X11_VIRGL_CLIENT=${jobs_virgl_client:-none} JOBS_X11_ALPINE_COMPAT=$alpine_compat JOBS_X11_RENDERER=$gpu_mode JOBS_X11_TARGET=$target JOBS_X11_STYLE=${JOBS_X11_STYLE:-0}; export PULSE_SERVER=unix:$jobs_audio_guest/native PULSE_COOKIE=$jobs_audio_guest/cookie; export JOBS_X11_FOCUS_TOKEN=$token JOBS_X11_DESKTOP=$desktop; "'unset SESSION_MANAGER DBUS_SESSION_BUS_ADDRESS; export DISPLAY=:$JOBS_X11_DISPLAY XAUTHORITY=/tmp/termux-jobs-x11/authority; if [ "$JOBS_X11_RENDERER" = turnip ];then . /tmp/termux-jobs-x11/x11-gpu-env.sh; jobs_gpu_environment "$JOBS_X11_TARGET" /tmp/termux-jobs-x11-gpu || exit;elif [ "$JOBS_X11_RENDERER" = bionic-glibc ];then . /tmp/termux-jobs-x11/x11-bionic-glibc-env.sh;jobs_bionic_glibc_environment || exit;elif [ "$JOBS_X11_RENDERER" = virgl ];then . /tmp/termux-jobs-x11/x11-virgl-env.sh;jobs_virgl_environment "$JOBS_X11_TARGET" "/tmp/termux-jobs-x11/$JOBS_X11_VIRGL_NAME/sock" "$JOBS_X11_VIRGL_CLIENT" || exit;else export LIBGL_ALWAYS_SOFTWARE=1;fi; export XDG_RUNTIME_DIR=/tmp/jobs-x11-runtime-$JOBS_X11_DISPLAY; mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"; if [ "$JOBS_X11_ALPINE_COMPAT" = 1 ];then test -f /tmp/termux-jobs-x11/x11-alpine-compat.so || { echo ERROR:ALPINE_COMPAT_MISSING;exit 1; }; export LD_PRELOAD="/tmp/termux-jobs-x11/x11-alpine-compat.so${LD_PRELOAD:+:$LD_PRELOAD}";fi; if [ "$JOBS_X11_TARGET" = fedora ] || [ "$JOBS_X11_TARGET" = archlinux ];then test -f /tmp/termux-jobs-x11/x11-fedora-glycin.so || { echo ERROR:FEDORA_GLYCIN_MISSING;exit 1; }; export LD_PRELOAD="/tmp/termux-jobs-x11/x11-fedora-glycin.so${LD_PRELOAD:+:$LD_PRELOAD}";fi; exec dbus-run-session -- /bin/sh /tmp/termux-jobs-x11/x11-session.sh';fi
+    jobs_desktop_run guest "export JOBS_X11_DISPLAY=$desktop_display JOBS_X11_VIRGL_NAME=$jobs_virgl_name JOBS_X11_VIRGL_CLIENT=${jobs_virgl_client:-none} JOBS_X11_ALPINE_COMPAT=$alpine_compat JOBS_X11_RENDERER=$gpu_mode JOBS_X11_TARGET=$target JOBS_X11_STYLE=${JOBS_X11_STYLE:-0} JOBS_X11_SCALE=${JOBS_X11_SCALE:-100}; export PULSE_SERVER=unix:$jobs_audio_guest/native PULSE_COOKIE=$jobs_audio_guest/cookie; export JOBS_X11_FOCUS_TOKEN=$token JOBS_X11_DESKTOP=$desktop; "'unset SESSION_MANAGER DBUS_SESSION_BUS_ADDRESS; export DISPLAY=:$JOBS_X11_DISPLAY XAUTHORITY=/tmp/termux-jobs-x11/authority; if [ "$JOBS_X11_RENDERER" = turnip ];then . /tmp/termux-jobs-x11/x11-gpu-env.sh; jobs_gpu_environment "$JOBS_X11_TARGET" /tmp/termux-jobs-x11-gpu || exit;elif [ "$JOBS_X11_RENDERER" = bionic-glibc ];then . /tmp/termux-jobs-x11/x11-bionic-glibc-env.sh;jobs_bionic_glibc_environment || exit;elif [ "$JOBS_X11_RENDERER" = virgl ];then . /tmp/termux-jobs-x11/x11-virgl-env.sh;jobs_virgl_environment "$JOBS_X11_TARGET" "/tmp/termux-jobs-x11/$JOBS_X11_VIRGL_NAME/sock" "$JOBS_X11_VIRGL_CLIENT" || exit;else export LIBGL_ALWAYS_SOFTWARE=1;fi; export XDG_RUNTIME_DIR=/tmp/jobs-x11-runtime-$JOBS_X11_DISPLAY; mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"; if [ "$JOBS_X11_ALPINE_COMPAT" = 1 ];then test -f /tmp/termux-jobs-x11/x11-alpine-compat.so || { echo ERROR:ALPINE_COMPAT_MISSING;exit 1; }; export LD_PRELOAD="/tmp/termux-jobs-x11/x11-alpine-compat.so${LD_PRELOAD:+:$LD_PRELOAD}";fi; if [ "$JOBS_X11_TARGET" = fedora ] || [ "$JOBS_X11_TARGET" = archlinux ];then test -f /tmp/termux-jobs-x11/x11-fedora-glycin.so || { echo ERROR:FEDORA_GLYCIN_MISSING;exit 1; }; export LD_PRELOAD="/tmp/termux-jobs-x11/x11-fedora-glycin.so${LD_PRELOAD:+:$LD_PRELOAD}";fi; exec dbus-run-session -- /bin/sh /tmp/termux-jobs-x11/x11-session.sh';fi

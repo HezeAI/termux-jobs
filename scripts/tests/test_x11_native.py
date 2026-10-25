@@ -88,7 +88,9 @@ class NativeTests(unittest.TestCase):
  def test_retired_observers_are_absent_but_keyboard_and_readiness_remain(self):
   text=(ROOT/'x11/src/main/assets/x11-session.sh').read_text()
   self.assertNotIn('x11-observe.py',text);self.assertNotIn('x11-gtk-observe.so',text)
-  self.assertIn('dbus-monitor --session --profile',text);self.assertIn('x11-ready.py',text);self.assertIn('JOBS_X11_DESKTOP_READY',(ROOT/'x11/src/main/assets/x11-ready.py').read_text())
+  self.assertIn('x11-focus.py',text)
+  self.assertIn("'dbus-monitor','--session'",(ROOT/'x11/src/main/assets/x11-focus.py').read_text())
+  self.assertIn('x11-ready.py',text);self.assertIn('JOBS_X11_DESKTOP_READY',(ROOT/'x11/src/main/assets/x11-ready.py').read_text())
 
  def test_termux_evince_requires_math_library_but_alpine_keeps_its_own_dependencies(self):
   self.assertEqual(['evince','libandroid-complex-math'],m.packages('termux','pdf'))

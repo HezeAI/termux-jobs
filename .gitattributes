@@ -12,3 +12,7 @@ patches/*.patch whitespace=-blank-at-eol,-blank-at-eof
 app/src/main/assets/workspace-local-ai-notices.txt whitespace=-blank-at-eol,-blank-at-eof
 docs/fork/third-party/* whitespace=-blank-at-eol,-blank-at-eof
 third-party/x11-diagnostics/Garcon-COPYING.txt whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
+
+# Pinned Wayland source/header/license inputs must retain their recorded bytes.
+third-party/droiddeck-wayland/** -text
+third-party/droiddeck-wayland/upstream/** whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab
