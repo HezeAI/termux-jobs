@@ -1,3 +1,35 @@
+# Published v2.0.5 / code1376 — verified stable/latest
+
+Release: https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.5
+Source/tag commit: 92733c64c0a8c5269d29552c38a26d7eaabe18b2.
+APK: Termux-Jobs-v2.0.5-arm64.apk, 52,721,789 bytes.
+SHA-256: 84d02da0a03bd70a684b86e59342dd424a443d70bdb13a3447faf122f03001ad.
+Same com.termux/signer/schema8/ARM64; no valid-data reset or rootfs migration.
+
+All four public assets downloaded anonymously and SHA-256 matched. Public latest
+stable API, latest/download/update.json, release body/credit and three tagged
+document links verified. APK/update metadata use code1376, intentionally equal
+to the developer's retained private test.10; updater requires a strictly higher
+code. The unchanged private test.10 APK remains available locally with Wayland:
+build/apk/Termux-Jobs-v2.0.5-wayland-test.10-arm64.apk
+SHA-256: c938988fbdc5ad8d211d860702e69833392ead36a2bdffe28e8dba50ea16a47f.
+
+Public Wayland/KDE and associated controls are gray and blocked by UI/backend
+checks. Further private tests must explicitly build -PtermuxWaylandPreview=true;
+use a new private versionCode above1376 for future APKs. Do not install public
+2.0.5 over the developer's private candidate unless requested. No live terminal,
+rootfs or bot session was altered during release preparation/publication.
+
+X11 resolution/scaling/margins, automatic keyboard focus filtering and compact
+extra keys are published. Full private Wayland readiness remains unresolved;
+Auto/BGRA/RGBA for X11 remains queued after startup work. Public release checks and
+remaining device/fresh-install limits are in docs/fork/VALIDATION-v2.0.5.md.
+Evidence: .verification/release-v2.0.5/. Do not move the published tag.
+
+---
+
+# Historical publication preparation
+
 # v2.0.5 publication preparation — code1376
 
 Authorized by HezeAI: publish X11 resolution/scaling, keyboard focus fixes and

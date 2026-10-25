@@ -5,6 +5,9 @@ compact extra keys. Public Wayland/KDE and driver controls disabled in both UI
 and backend; private test.10 remains separate. Same com.termux/signer/schema8,
 code1376; no data reset/migration. See [current validation](VALIDATION-v2.0.5.md)
 for artifact identity, tests, source/build checks and device limits.
+All four public assets were downloaded anonymously and matched local SHA-256.
+Latest stable API/updater, release body/credit and three tagged documents were
+verified after publication. The published tag is immutable.
 
 ---
 
