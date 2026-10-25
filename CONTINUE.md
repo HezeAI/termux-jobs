@@ -1,5 +1,7 @@
 # Published stable: v2.0.6
 
+Developer preference: the separate components repository keeps its detailed English overview, compatibility, sources and licenses in README, updated as components change. Component release posts stay brief (set identifier, README link and standing credit); exact pins remain in components.json. App release documentation/updater requirements are unchanged. Published component tags/assets are immutable.
+
 Developer authorized stable v2.0.6 publication, including Wayland removal, chat/IME fixes, live scaling for seven PRoot targets and isolated graphics downloads from the separate HezeAI/termux-jobs-components repository. Final release code1395; header staysv2.0. No APK installation or unrelated session/process changes are authorized.
 
 Follow docs/fork/RELEASING.md. Final artifact/evidence is in .verification/release-v2.0.6 and build/apk/Termux-Jobs-v2.0.6-arm64.apk. Component source archives/manifests/licenses are prepared separately. Do not replace published immutable component bytes/tags. Verify public download hashes and updater metadata after publishing. Device acceptance still needed for the new component-download path on fresh installs and Adreno740/750 Wrapper setups; do not infer universal GPU compatibility.

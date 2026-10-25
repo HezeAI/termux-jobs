@@ -23,6 +23,14 @@ End every GitHub release description with this exact credit line, as requested
 by HezeAI: `AI development assistance: OpenAI Codex`. Keep HezeAI credited as the fork developer;
 this line identifies AI assistance.
 
+For the separate `HezeAI/termux-jobs-components` repository, keep component details,
+compatibility, source credits and licenses in its English README and exact
+versions/sizes/hashes in `components.json`. Update that overview when components
+are added or revised. Component release descriptions may stay brief: the set
+identifier, a README link and the credit line above. Keep published tags and
+binary assets immutable. This does not shorten application release notes or
+replace the application's localized updater/compatibility requirements.
+
 Обязательно проверить и обновить по фактическому состоянию:
 
 - `README.md`: текущая версия, возможности, установка, ссылки и ограничения.
