@@ -1,4 +1,4 @@
-# Current work: v2.0.6
+# Published stable: v2.0.6
 
 Developer authorized stable v2.0.6 publication, including Wayland removal, chat/IME fixes, live scaling for seven PRoot targets and isolated graphics downloads from the separate HezeAI/termux-jobs-components repository. Final release code1395; header staysv2.0. No APK installation or unrelated session/process changes are authorized.
 
@@ -8,4 +8,6 @@ Temporary developer-authorized live Arch scale test added only the exact marked 
 
 Private Wayland investigation files are retained only under ignored .verification/release-v2.0.6/retired-wayland-docs. Published v2.0.5 history remains available by tag. Never reset user data or uninstall shared Qt/Mesa dependencies to remove the experiment.
 
-Component repository published: https://github.com/HezeAI/termux-jobs-components; immutable graphics-20261025,20assets. Public download/hash checks and real production helper preparations passed; see components-public-verification.json. Final APK45953627bytes, SHAa61d7b8db2c5a690a25572cd9d2c21422ab7a6d9d4a00973e0386d5d24c8a27b, unchanged signer.338JVM/114Python/2Node/584localization checks pass; lint0errors/210warnings. Production-source/build artifact gates pass. Prepare stable main tag/release and verify all app assets/updater after publication.
+Component repository published: https://github.com/HezeAI/termux-jobs-components; immutable graphics-20261025,20assets. Public download/hash checks and real production helper preparations passed; see components-public-verification.json. Final APK45953627bytes, SHAa61d7b8db2c5a690a25572cd9d2c21422ab7a6d9d4a00973e0386d5d24c8a27b, unchanged signer.338JVM/114Python/2Node/584localization checks pass; lint0errors/210warnings. Production-source/build artifact gates pass. Stable main tag/release is published and verified.
+
+Stable v2.0.6 published: https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.6. Source commit5a1fa804, immutable tagv2.0.6. All four app release assets downloaded anonymously and hash/length matched. update.json matches final APK/package/version/ABI/hash with RU/EN compatibility. Anonymous latest API confirms stable v2.0.6. Release body/credit and tagged validation/distribution documents match. Postpublication evidence: .verification/release-v2.0.6/public-verification.json. GitHub’s draft-tag REST lookup returned404 before publishing; draft asset state/size/body were verified through gh release view instead. Publication and public checks then passed. No installed APK or working session was changed.

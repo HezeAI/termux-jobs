@@ -1,6 +1,7 @@
 # Current release validation — v2.0.6
 
 See [VALIDATION-v2.0.6.md](VALIDATION-v2.0.6.md) for final APK identity, relevant automated and isolated native checks, developer-reported device evidence, compatibility and remaining limits. The Wayland/KDE experiment is retired. Historical release evidence below retains its original scope.
+All four public v2.0.6 assets were downloaded anonymously and matched local sizes/SHA-256. The anonymous latest API and updater metadata, release body/credit and tagged documents were verified. The separate components release had all20assets verified, plus real download/preparation checks through production helpers. See the current handoff for publication evidence.
 
 ---
 
