@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Private, Selected glibc experimental Bionic ICD cache. Never installs packages."""
+"""Selected glibc Bionic ICD cache with a pinned optional download."""
 import contextlib
 import importlib.util
+import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -18,6 +20,8 @@ w = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(w)
 VERSION = 'hybris-wsi-ubuntu-2'
 PIN = 'bfa1acd82b0f69283125174f68e248add7c1d851bb2a90b3fc96218c819f4872'
+SIZE = 6053026
+URL = 'https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/x11-bionic-glibc.zip'
 FILES = {'libjobs-bionic.so', 'libhybris-common.so.1', 'linker/q.so',
          'libVkLayer_window_system_integration.so', 'bionic-icd.json',
          'mesa/libGLX_mesa.so.0', 'mesa/libEGL_mesa.so.0', 'mesa/libgallium-26.1.6.so',
@@ -44,7 +48,36 @@ def valid_runtime(base):
     return runtime
 
 
-def install(base):
+def bundle(base, fetch=None):
+    archive = base / 'runtime-bundle.zip'
+    if archive.is_symlink():
+        raise ValueError('BIONIC_BUNDLE_LINK')
+    if archive.exists() and archive.stat().st_size == SIZE and w.digest(archive) == PIN:
+        return archive
+    gpu = w.gpu_module()
+    if fetch is None:
+        fetch = gpu.download
+    def progress(done, total):
+        print(f'GPU_PROGRESS:{done}:{total}', flush=True)
+    data = fetch(URL, PIN, SIZE, progress)
+    if len(data) != SIZE or hashlib.sha256(data).hexdigest() != PIN:
+        raise ValueError('BIONIC_BUNDLE_CHECKSUM')
+    w.cancelled()
+    fd, name = tempfile.mkstemp(prefix='.bundle-', dir=base)
+    temporary = Path(name)
+    try:
+        with os.fdopen(fd, 'wb') as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        w.cancelled()
+        temporary.replace(archive)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return archive
+
+
+def install(base, fetch=None):
     with w.lock(base):
         w.driver(base)
         try:
@@ -52,9 +85,7 @@ def install(base):
             return
         except (OSError, ValueError, TypeError, KeyError, AttributeError):
             pass
-        archive = Path(__file__).with_name('x11-bionic-glibc.zip')
-        if w.digest(archive) != PIN:
-            raise ValueError('BIONIC_BUNDLE_CHECKSUM')
+        archive = bundle(base, fetch)
         stage = Path(tempfile.mkdtemp(prefix='.runtime-', dir=base))
         try:
             hashes = {}

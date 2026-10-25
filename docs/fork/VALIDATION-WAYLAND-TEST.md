@@ -1,3 +1,5 @@
+> Historical v2.0.5 experiment. Wayland/KDE was retired in v2.0.6. These checks do not describe a current desktop mode.
+
 # Historical private candidate validation — test.2
 
 Follow-up: test.3 fixes manual-resolution rotation and adds XFCE interface scaling;

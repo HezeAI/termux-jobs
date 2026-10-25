@@ -21,11 +21,11 @@ import tempfile
 import zipfile
 
 VERSION = 'leegao-0.0.5r5-termux-1'
-URL = 'https://github.com/sabamdarif/termux-desktop/releases/download/bionic-vulkan-wrapper-0.0.5r5/vulkan-wrapper-android-leegaos-fork-aarch64.zip'
+URL = 'https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/vulkan-wrapper-android-leegaos-fork-aarch64.zip'
 SHA = 'c50f3a9f884ca2c54ca76d4eb55709a4012cff77ff279216a0f04920c05bcc55'
 SIZE = 3280408
-LOADER = ('https://packages.termux.dev/apt/termux-main/pool/main/v/vulkan-loader-generic/vulkan-loader-generic_1.4.365_aarch64.deb',
-          '99b22e01c966aa1e3dc4ab827508ccc256bebe3fafb20cf7c4883e965a7c3311', 152808)
+LOADER = ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/vulkan-loader-generic_1.4.366_aarch64.deb',
+          '5b0a17efdd27e064c06dcf5befba4b466eac6025110ecc44be768019b00abdb7', 150484)
 RUNTIME = {'libvulkan_wrapper.so', 'libadrenotools.so', 'libfile_redirect_hook.so',
            'libgsl_alloc_hook.so', 'libhook_impl.so', 'libmain_hook.so'}
 MAX_ZIP = 64 * 1024 * 1024

@@ -76,8 +76,11 @@ final class ProjectFiles implements AutoCloseable {
         for(byte b:data)if(b==0)throw new IOException(WorkspaceText.tr("Бинарный файл; доступен экспорт"));return data;
     }
     void export(Entry e,File destination,long max) throws Exception {
-        if(e.size>max)throw new IOException(WorkspaceText.tr("Файл превышает лимит экспорта 256 МБ"));
-        try(OutputStream out=new FileOutputStream(destination)) {run("test -f "+target(e.path)+" && exec cat -- "+target(e.path),out,max);}
+        if(e.size>max)throw new IOException(WorkspaceLanguage.code(activity).equals("ru")?"Файл превышает лимит выбранной операции":"File exceeds the selected operation's size limit");
+        // Chat artifacts may be several GB. Keep bounded streaming and owned
+        // child cancellation, without the small-query 90-second deadline.
+        int timeout=max>MAX_EXPORT?6*60*60:90;
+        try(OutputStream out=new FileOutputStream(destination)) {run("test -f "+target(e.path)+" && exec cat -- "+target(e.path),out,max,null,timeout);}
         catch(Exception error){destination.delete();throw error;}
     }
     TextFileEdits.Snapshot editRead(Entry entry) throws Exception {

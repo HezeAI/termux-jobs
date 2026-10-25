@@ -38,5 +38,22 @@ function event(item){c.event({method:'item/completed',params:{threadId:c.thread,
  const link=stage('e'.repeat(32));fs.unlinkSync(link.path);fs.symlinkSync(path.join(dir,'outside.png'),link.path);assert(!(await c.send(request([link]))).ok);
  const foreign=stage('f'.repeat(32));fs.writeFileSync(path.join(path.dirname(foreign.path),'attachment.json'),JSON.stringify({...foreign,threadId:'other-thread'}));assert(!(await c.send(request([foreign]))).ok);
  const bin=stage('1'.repeat(32),'file');fs.writeFileSync(bin.path,Buffer.from([65,0,66]));assert(!(await c.send(request([bin]))).ok);
- assert.equal(calls.length,before);await c.close();console.log('PASS attachment adapter: image-only native input, bounded log sample/full path, timestamped video frames, history cards, generated PNG without base64 snapshot, scoped manifests, dedup, traversal/symlink/foreign-thread/binary/shell refusal');
+ assert.equal(calls.length,before);
+ // Sparse originals exercise >32-bit byte counts without reading GB into RAM.
+ const limit=5*1024*1024*1024,large=stage('2'.repeat(32),'binary');
+ const resize=(file,n)=>{const fd=fs.openSync(file,'r+');try{fs.ftruncateSync(fd,n);}finally{fs.closeSync(fd);}};
+ resize(large.path,limit);fs.writeFileSync(path.join(path.dirname(large.path),'attachment.json'),JSON.stringify({...large,bytes:limit}));
+ assert((await c.send(request([large],'Inspect by path'))).ok);assert(calls.at(-1).params.input.some(i=>i.text?.includes('5368709120 bytes')));assert(!calls.at(-1).params.input.some(i=>i.type==='localImage'));
+ resize(large.path,limit+1);assert(!(await c.send(request([large]))).ok);
+ const hugeApk=path.join(dir,'large-artifact.apk'),excessApk=path.join(dir,'oversize-artifact.apk');
+ fs.writeFileSync(hugeApk,'fixture');resize(hugeApk,limit);fs.writeFileSync(excessApk,'fixture');resize(excessApk,limit+1);
+ event({id:'large-apk',type:'agentMessage',text:'[Large APK]('+hugeApk+') [Too big]('+excessApk+')'});
+ snapshot=await c.snapshot();assert.equal(snapshot.rows.find(r=>r.attachment?.path===hugeApk).attachment.bytes,limit);assert(!snapshot.rows.some(r=>r.attachment?.path===excessApk));
+ const largeImage=stage('3'.repeat(32),'image'),modelPath=path.join(path.dirname(largeImage.path),'model.jpg');fs.writeFileSync(modelPath,png);resize(largeImage.path,100*1024*1024);
+ fs.writeFileSync(path.join(path.dirname(largeImage.path),'attachment.json'),JSON.stringify({...largeImage,modelPath,bytes:100*1024*1024}));
+ assert((await c.send(request([largeImage],'Large image'))).ok);const largeInput=calls.at(-1).params.input;assert(largeInput.some(i=>i.type==='localImage'&&i.path===modelPath));assert(!largeInput.some(i=>i.type==='localImage'&&i.path===largeImage.path));
+ event({id:'large-image-history',type:'userMessage',content:largeInput});snapshot=await c.snapshot();assert.equal(snapshot.rows.filter(r=>r.attachment?.path===largeImage.path).length,1);assert(!snapshot.rows.some(r=>r.attachment?.path===modelPath));
+ resize(largeImage.path,100*1024*1024+1);assert(!(await c.send(request([largeImage]))).ok);
+ for(const f of [large.path,hugeApk,excessApk,largeImage.path])fs.unlinkSync(f);
+ await c.close();console.log('PASS attachment adapter: image-only native input, bounded log sample/full path, timestamped video frames, history cards, generated PNG without base64 snapshot, scoped manifests, dedup, traversal/symlink/foreign-thread/binary/shell refusal');
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -1,17 +1,17 @@
 Optional Turnip + Zink graphics components
 
 Mesa / Turnip / Zink are third-party projects, not drivers authored by Termux Job's.
-No graphics driver binary is embedded in this APK. Optional downloads are pinned by
+Optional graphics runtime downloads are pinned by
 SHA-256 and unpacked in private application storage, without replacing system Mesa.
 
-Ubuntu, Debian and Alpine bundles: lfdevs/mesa-for-android-container
+Ubuntu, Debian, Alpine, Fedora, openSUSE, Void and Arch bundles: lfdevs/mesa-for-android-container
 Release mesa-26.3.0-devel-20260824 (experimental development build)
 https://github.com/lfdevs/mesa-for-android-container/tree/mesa-26.3.0-devel-20260824
 Mesa license overview and per-file terms:
 https://github.com/lfdevs/mesa-for-android-container/blob/mesa-26.3.0-devel-20260824/docs/license.rst
 https://github.com/lfdevs/mesa-for-android-container/tree/mesa-26.3.0-devel-20260824/licenses
 
-Termux Mesa/Turnip 26.2.5 and Vulkan Loader 1.4.365 packages:
+Termux Mesa/Turnip 26.2.5 and Vulkan Loader 1.4.366 packages:
 https://github.com/termux/termux-packages/tree/master/packages/mesa
 https://github.com/termux/termux-packages/tree/master/packages/vulkan-loader-generic
 Mesa is primarily MIT licensed; individual components use additional licenses.
@@ -50,3 +50,11 @@ AdrenoTools by Billy Laws and contributors (BSD-2-Clause):
 https://github.com/bylaws/libadrenotools/blob/master/LICENSE
 The app supplies import/UI/launch integration, not authorship of these drivers.
 Native user drivers retain the licenses and provenance of their publishers.
+
+Pinned distribution mirror for this app version:
+https://github.com/HezeAI/termux-jobs-components/releases/tag/graphics-20261025
+The mirror preserves upstream archive bytes, authorship and license terms. Its
+English manifest records original URLs, SHA-256 and sizes. Corresponding bridge
+sources, patches and license notices accompany the component release. Bionic for
+glibc is also an optional verified download; selected target caches stay separate.
+Normal distribution/runtime packages still come from each system's package manager.

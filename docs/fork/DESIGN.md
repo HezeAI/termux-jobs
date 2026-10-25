@@ -1,3 +1,13 @@
+# Current desktop design — v2.0.6
+
+The desktop menu contains the existing X11 switch, renderer/import, screen, theme and keyboard controls. Wayland rows and the separate Arch program chooser are removed. Header branding remains v2.0.
+
+Choose Bionic for glibc and a saved/imported trusted driver before launching. If missing, the bridge downloads through the existing renderer-preparation progress/cancel flow and uses that selection. Valid installed components are reused. Renderer replacement remains locked while that desktop is active. Error messages show a bounded actionable download/integrity error instead of raw progress logs or private paths.
+
+Screen Apply uses the same owned Xfconf service across the PRoot boundary, keeping rollback on failure. Native Termux’s working settings path is unchanged. Earlier sections describe their named historical releases.
+
+---
+
 # v2.0.5 — desktop screen controls
 
 Per-environment X11 screen form groups resolution, scale and margins under one

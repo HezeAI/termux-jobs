@@ -1,4 +1,12 @@
-# v2.0.5 — code1376
+# Current release — v2.0.6 (code1395)
+
+X11-only source: the retired Wayland/KDE experiment and its build flag/runtime inputs are removed. The app retains Android8+/ARM64, X11 Android11+, min26/target28/compile35, com.termux, the existing signing identity and workspace schema8. No data reset or rootfs migration is required.
+
+All seven PRoot desktops receive a private session-bus configuration allowing the actual Android app UID; native Termux retains its existing startup. Graphics archives are pinned downloads from the separate components repository. The unchanged Bionic-for-glibc payload remains in source for review/rebuilding but is excluded from the APK and downloaded on first use when missing. Run `python3 scripts/prepare-x11.py` to prepare/verify repository-local build inputs. See [release](docs/fork/RELEASE-v2.0.6.md) and [validation](docs/fork/VALIDATION-v2.0.6.md).
+
+---
+
+# Historical v2.0.5 — code1376
 
 X11 screen geometry/scaling, automatic keyboard focus filtering and compact extra
 keys. Same package, signer, schema8, min26/target28/compile35/ARM64; no reset or

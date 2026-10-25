@@ -1,3 +1,13 @@
+# Current desktop and file behavior — v2.0.6
+
+All eight ordinary environments use X11/XFCE; no Wayland/KDE entry remains. Open Programs in Arch directly for its X11 applications. Select the renderer and, for Wrapper/Bionic for glibc, import or choose a trusted saved Bionic driver before starting the desktop. Missing pinned graphics components download from the [components repository](https://github.com/HezeAI/termux-jobs-components) through the existing preparation/progress flow. Cancellation or a bad checksum does not activate a partial runtime. Valid installed components need no repeat download; ordinary Linux packages still use each system’s package manager.
+
+Apply interface scale live in all seven PRoot desktops; Termux retains its working path. Manually sized X11 no longer squeezes when the keyboard opens. Chats accept files up to5GiB and original images up to100MiB; a separate bounded image is prepared for model input. Provider/model capabilities still limit what an agent can inspect.
+
+No data reset or environment migration is required. Updating does not automatically delete previously installed experimental KDE packages. See [release notes](RELEASE-v2.0.6.md) and [screen controls](X11-SCREEN.md). Earlier sections are historical.
+
+---
+
 # X11 screen and keyboard controls — v2.0.5
 
 Open Terminal / Desktop → X11 screen. Set resolution, scale and margins, then

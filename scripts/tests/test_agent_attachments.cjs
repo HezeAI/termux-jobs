@@ -45,5 +45,17 @@ function stage(root,id,type='image'){
   const out=path.join(base,'build (test).apk');fs.writeFileSync(out,'artifact-fixture');const outputs=own.output('[APK](<'+out+'>) ![image]('+image.path+') [remote](https://invalid/test.apk)');assert.equal(outputs.length,2);assert.equal(outputs[0].type,'apk');assert.equal(outputs[1].type,'image');assert.deepEqual(own.output('[missing](/missing.apk)'),[]);
  }
  const base=path.join(root,'empty');fs.mkdirSync(base);const a=stage(base,'1');const own=new Attachments(base);assert.equal(own.prepare([{id:a.id}],session,'message').length,1);assert(own.prompt('',[own.load(a.id,session)]).includes(a.path));
+ // Shared Gemini/Claude/OpenCode admission and artifact cards use the same
+ // bounds. Sparse files verify the contract without allocating file contents.
+ const limit=5*1024*1024*1024,big=stage(base,'2','binary');
+ const resize=(file,n)=>{const fd=fs.openSync(file,'r+');try{fs.ftruncateSync(fd,n);}finally{fs.closeSync(fd);}};
+ resize(big.path,limit);const bigLoaded=own.prepare([{id:big.id}],session,'message')[0];assert.equal(bigLoaded.bytes,limit);assert(own.prompt('inspect',[bigLoaded]).includes('5368709120 bytes'));
+ resize(big.path,limit+1);assert.throws(()=>own.prepare([{id:big.id}],session,'message'));
+ const bigApk=path.join(base,'large.apk'),tooBig=path.join(base,'over.apk');fs.writeFileSync(bigApk,'test');fs.writeFileSync(tooBig,'test');resize(bigApk,limit);resize(tooBig,limit+1);
+ const output=own.output('[Large]('+bigApk+') [Over]('+tooBig+')');assert.equal(output.length,1);assert.equal(output[0].bytes,limit);
+ const largeImage=stage(base,'3');resize(largeImage.path,100*1024*1024);
+ const prepared=own.prepare([{id:largeImage.id}],session,'message')[0];assert.equal(prepared.bytes,100*1024*1024);assert.equal(own.images(prepared)[0].path,largeImage.modelPath);assert(own.claude('image',[prepared]).some(p=>p.type==='image'));
+ resize(largeImage.path,100*1024*1024+1);assert.throws(()=>own.prepare([{id:largeImage.id}],session,'message'));
+ for(const f of [big.path,bigApk,tooBig,largeImage.path])fs.unlinkSync(f);
  console.log('PASS all-agent attachments: native Claude image blocks, Gemini @ references, OpenCode file URIs, originals/log samples/video timestamps, four cards, dedup, Shell refusal, scope/symlink/cross-file refusal, output cards; no account API');
 })().catch(e=>{console.error(e);process.exitCode=1;});

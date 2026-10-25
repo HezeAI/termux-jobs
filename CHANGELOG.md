@@ -1,3 +1,14 @@
+## v2.0.6 — X11 scaling, renderer setup and chat files
+
+Fix live interface-scale Apply across all seven PRoot XFCE session buses while preserving native Termux’s working path. Keep custom X11 geometry stable with the keyboard open. Raise streamed chat-file transfers to5GiB and original images to100MiB, retaining bounded model-ready images.
+
+Fix the removed Termux Vulkan Loader download affecting Turnip+Zink and Wrapper. Mirror eleven fixed graphics archives with unchanged payloads (except the loader update1.4.365→1.4.366) to the separate components repository; pin hashes/sizes and retain source/licenses. Download the unchanged Bionic-for-glibc runtime on first use instead of bundling it in the APK; reuse valid existing runtimes offline. Present concise sanitized setup errors.
+
+Discontinue/remove the Wayland/KDE experiment, native compositor and separate Arch program groups. Preserve X11 renderers, imports, themes, extra keys and screen settings. Same com.termux/signer/schema8/ARM64/min26/target28/compile35, code1395; no reset or rootfs migration. Previously installed experimental packages are not automatically removed.
+[Release](docs/fork/RELEASE-v2.0.6.md) · [Validation](docs/fork/VALIDATION-v2.0.6.md).
+
+---
+
 ## v2.0.5 — X11 screen controls and input fixes
 
 Add per-environment logical resolution, safe margins, automatic reset and

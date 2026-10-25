@@ -13,7 +13,7 @@ import java.util.*;
 /** App-private copies of explicitly chosen files. No shell interpolation or remote fetches. */
 final class ChatAttachments {
     static final int MAX_COUNT=4, VIDEO_FRAMES=12;
-    static final long MAX_FILE=256L*1024*1024, MAX_IMAGE=20L*1024*1024;
+    static final long MAX_FILE=5L*1024*1024*1024, MAX_IMAGE=100L*1024*1024;
     static final String GUEST="/tmp/termux-jobs-codex/chat-attachments/";
     static File root(Context c){return new File(CodexSessionShell.socketDirectory(c.getFilesDir()),"chat-attachments");}
     static boolean supported(WorkspaceStore.Session p){return p!=null&&(p.environment.equals("codex")||p.geminiAgent||p.claudeAgent||p.aiAgent.equals("opencode"));}
@@ -26,6 +26,8 @@ final class ChatAttachments {
         if(ProjectFiles.mime(n).equals("text/plain")||n.matches(".*\\.(csv|ini|conf|out|ndjson|jsonl|trace)$"))return "file";
         return n.endsWith(".apk")?"apk":"binary";
     }
+    static long limit(String kind){return kind.equals("image")?MAX_IMAGE:MAX_FILE;}
+    static void requireSize(String kind,long bytes)throws IOException{if(bytes<=0||bytes>limit(kind))throw new IOException("FILE_LIMIT");}
     static File inside(File root,String relative)throws IOException{
         if(relative==null||!relative.matches("[a-f0-9]{32}/[A-Za-z0-9_.-]{1,100}"))throw new IOException("INVALID_ATTACHMENT");
         File canonicalRoot=root.getCanonicalFile();File f=new File(canonicalRoot,relative);if(!f.getCanonicalPath().equals(f.getAbsolutePath())||!f.getCanonicalPath().startsWith(canonicalRoot.getPath()+File.separator))throw new IOException("INVALID_ATTACHMENT");return f;
@@ -34,8 +36,8 @@ final class ChatAttachments {
         String relative=root.getCanonicalFile().toPath().relativize(file.getCanonicalFile().toPath()).toString();inside(root,relative);return GUEST+relative;
     }
     static JSONObject stage(Context c,WorkspaceStore.Session source,ProjectFiles.Entry entry,WorkspaceStore.Session destination)throws Exception{
-        String kind=type(entry.name);long max=kind.equals("image")?MAX_IMAGE:MAX_FILE;
-        if(entry.directory||entry.size<=0||entry.size>max)throw new IOException("FILE_LIMIT");
+        String kind=type(entry.name);long max=limit(kind);
+        if(entry.directory)throw new IOException("FILE_LIMIT");requireSize(kind,entry.size);
         File root=root(c,destination).getCanonicalFile();if(!root.isDirectory()&&!root.mkdirs())throw new IOException("STORAGE_UNAVAILABLE");
         String id=UUID.randomUUID().toString().replace("-","");File dir=new File(root,id);if(!dir.mkdir())throw new IOException("STORAGE_UNAVAILABLE");
         String ext=entry.name.contains(".")?entry.name.substring(entry.name.lastIndexOf('.')).toLowerCase(Locale.ROOT):".txt";
@@ -49,7 +51,7 @@ final class ChatAttachments {
             if(kind.equals("image")){checkImage(file);}
             if(kind.equals("file")){textPreview(file,8192);}
             if(kind.equals("video")){video(root,file,a);JSONArray frames=a.getJSONArray("frames");for(int i=0;i<frames.length();i++){JSONObject frame=frames.getJSONObject(i);frame.put("path",frame.getString("path").replace(GUEST,prefix(destination)));}}
-            if(kind.equals("image")&&!prefix(destination).equals(GUEST)){
+            if(kind.equals("image")&&(!prefix(destination).equals(GUEST)||file.length()>20L*1024*1024)){
                 Bitmap decoded=bitmap(file,1280),model=Bitmap.createBitmap(decoded.getWidth(),decoded.getHeight(),Bitmap.Config.RGB_565);Canvas canvas=new Canvas(model);canvas.drawColor(Color.WHITE);canvas.drawBitmap(decoded,0,0,null);File prepared=new File(dir,"model.jpg");
                 try(OutputStream out=new FileOutputStream(prepared)){if(!model.compress(Bitmap.CompressFormat.JPEG,85,out))throw new IOException("INVALID_IMAGE");}finally{decoded.recycle();model.recycle();}CodexChatControl.protect(prepared);a.put("modelPath",guest(root,prepared).replace(GUEST,prefix(destination)));
             }
@@ -100,7 +102,7 @@ final class ChatAttachments {
     }
     static File materialize(Context c,WorkspaceStore.Session profile,JSONObject a)throws Exception{
         String path=a.getString("path");File root=root(c,profile);String guestPrefix=prefix(profile);boolean apk=a.optString("type").equals("apk");
-        File managed=null;if(path.startsWith(guestPrefix)){managed=inside(root,path.substring(guestPrefix.length()));if(!managed.isFile())throw new IOException("ATTACHMENT_MISSING");if(!apk)return managed;}
+        File managed=null;if(path.startsWith(guestPrefix)){managed=inside(root,path.substring(guestPrefix.length()));if(!managed.isFile())throw new IOException("ATTACHMENT_MISSING");requireSize(a.optString("type","image"),managed.length());if(!apk)return managed;}
         if(!path.startsWith("/")||path.contains("\n")||path.contains("\r")||path.contains("\0"))throw new IOException("INVALID_ATTACHMENT");
         if(apk&&!path.toLowerCase(Locale.ROOT).endsWith(".apk"))throw new IOException("INVALID_ATTACHMENT");
         boolean image=a.optString("type").equals("image")||!a.has("type");

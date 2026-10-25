@@ -1,3 +1,9 @@
+# Current release validation — v2.0.6
+
+See [VALIDATION-v2.0.6.md](VALIDATION-v2.0.6.md) for final APK identity, relevant automated and isolated native checks, developer-reported device evidence, compatibility and remaining limits. The Wayland/KDE experiment is retired. Historical release evidence below retains its original scope.
+
+---
+
 # v2.0.5 release validation
 
 X11 resolution/scaling/margins, stricter automatic keyboard focus checks and

@@ -1,3 +1,5 @@
+> Historical v2.0.5 experiment. Wayland/KDE was retired in v2.0.6. These checks do not describe a current desktop mode.
+
 # Private candidate: Wayland temporary sockets and Qt stderr
 
 Candidate **2.0.5-wayland-test.9 / code 1375**, following test.8/code 1374.

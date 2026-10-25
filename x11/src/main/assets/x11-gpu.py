@@ -16,6 +16,7 @@ import tarfile
 import tempfile
 import time
 import urllib.request
+import urllib.error
 import uuid
 
 CANCEL_FILE = None
@@ -25,23 +26,23 @@ def check_cancel():
 
 SPECS = {
  'ubuntu': {'directory':'ubuntu-26.04-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
-  ('https://github.com/lfdevs/mesa-for-android-container/releases/download/mesa-26.3.0-devel-20260824/mesa-for-android-container_26.3.0-devel-20260824_ubuntu_resolute_arm64.tar.gz', 'ee762f0855c47f9a245df3ce53a46d40b2240ede9b5c9ddf7606e724362fec77', 12069639, 'tar')]},
+  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-for-android-container_26.3.0-devel-20260824_ubuntu_resolute_arm64.tar.gz', 'ee762f0855c47f9a245df3ce53a46d40b2240ede9b5c9ddf7606e724362fec77', 12069639, 'tar')]},
  'debian': {'directory':'debian-13-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
-  ('https://github.com/lfdevs/mesa-for-android-container/releases/download/mesa-26.3.0-devel-20260824/mesa-for-android-container_26.3.0-devel-20260824_debian_trixie_arm64.tar.gz','c014cf66bdbff96417ee30d34f006cf51df64ae04893d599711b0b6b73b52ccf',11648933,'tar')]},
+  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-for-android-container_26.3.0-devel-20260824_debian_trixie_arm64.tar.gz','c014cf66bdbff96417ee30d34f006cf51df64ae04893d599711b0b6b73b52ccf',11648933,'tar')]},
  'alpine': {'directory':'alpine-3.24-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
-  ('https://github.com/lfdevs/mesa-for-android-container/releases/download/mesa-26.3.0-devel-20260824/mesa-for-android-container_26.3.0-devel-20260824_alpine_3.24_arm64.tar.gz','2f3e14dc57fa4ec75297a67af747872e7c460d3f3fcfff9e758e479874578ea3',12099886,'tar')]},
+  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-for-android-container_26.3.0-devel-20260824_alpine_3.24_arm64.tar.gz','2f3e14dc57fa4ec75297a67af747872e7c460d3f3fcfff9e758e479874578ea3',12099886,'tar')]},
  'fedora': {'directory':'fedora-44-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
-  ('https://github.com/lfdevs/mesa-for-android-container/releases/download/mesa-26.3.0-devel-20260824/mesa-for-android-container_26.3.0-devel-20260824_fedora_44_arm64.tar.gz','fc5a7f80bdd99720b083ec0d6bf9d349c493858acb03753e9fd99af5e04bde0b',12449267,'tar')]},
+  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-for-android-container_26.3.0-devel-20260824_fedora_44_arm64.tar.gz','fc5a7f80bdd99720b083ec0d6bf9d349c493858acb03753e9fd99af5e04bde0b',12449267,'tar')]},
  'opensuse': {'directory':'opensuse-16-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
-  ('https://github.com/lfdevs/mesa-for-android-container/releases/download/mesa-26.3.0-devel-20260824/mesa-for-android-container_26.3.0-devel-20260824_debian_trixie_arm64.tar.gz','c014cf66bdbff96417ee30d34f006cf51df64ae04893d599711b0b6b73b52ccf',11648933,'tar'),
-  ('https://deb.debian.org/debian/pool/main/l/lm-sensors/libsensors5_3.6.2-2_arm64.deb','7469f1ccce8afdba33d3b11847d0ecdf2221805a0694dee21ee4d622e8f72145',36444,'deb')]},
+  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-for-android-container_26.3.0-devel-20260824_debian_trixie_arm64.tar.gz','c014cf66bdbff96417ee30d34f006cf51df64ae04893d599711b0b6b73b52ccf',11648933,'tar'),
+  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/libsensors5_3.6.2-2_arm64.deb','7469f1ccce8afdba33d3b11847d0ecdf2221805a0694dee21ee4d622e8f72145',36444,'deb')]},
  'void': {'directory':'void-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
-  ('https://github.com/lfdevs/mesa-for-android-container/releases/download/mesa-26.3.0-devel-20260824/mesa-for-android-container_26.3.0-devel-20260824_void_arm64.tar.gz','9b6051ee45e2891de6c150598305814900f2e48088d5fedc3d75d8d50f644dc7',11533566,'tar')]},
+  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-for-android-container_26.3.0-devel-20260824_void_arm64.tar.gz','9b6051ee45e2891de6c150598305814900f2e48088d5fedc3d75d8d50f644dc7',11533566,'tar')]},
  'archlinux': {'directory':'archlinux-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
-  ('https://github.com/lfdevs/mesa-for-android-container/releases/download/mesa-26.3.0-devel-20260824/mesa-for-android-container_26.3.0-devel-20260824_archlinux_arm64.tar','75b7638829b211c20c26b6110e525ca23ab28980ce58af824ab16c8e7afcfa26',14018560,'arch-bundle')]},
+  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-for-android-container_26.3.0-devel-20260824_archlinux_arm64.tar','75b7638829b211c20c26b6110e525ca23ab28980ce58af824ab16c8e7afcfa26',14018560,'arch-bundle')]},
  'termux': {'directory':'termux-mesa26.2.5', 'version':'26.2.5', 'packages':[
-  ('https://packages.termux.dev/apt/termux-main/pool/main/m/mesa-vulkan-icd-freedreno/mesa-vulkan-icd-freedreno_26.2.5_aarch64.deb','79d4328e41b3b40edea91088c7992f5522469c682e44223efb69ef0861903c37',1599892,'deb'),
-  ('https://packages.termux.dev/apt/termux-main/pool/main/v/vulkan-loader-generic/vulkan-loader-generic_1.4.365_aarch64.deb','99b22e01c966aa1e3dc4ab827508ccc256bebe3fafb20cf7c4883e965a7c3311',152808,'deb')]},
+  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-vulkan-icd-freedreno_26.2.5_aarch64.deb','79d4328e41b3b40edea91088c7992f5522469c682e44223efb69ef0861903c37',1599892,'deb'),
+  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/vulkan-loader-generic_1.4.366_aarch64.deb','5b0a17efdd27e064c06dcf5befba4b466eac6025110ecc44be768019b00abdb7',150484,'deb')]},
 }
 
 class HttpsOnly(urllib.request.HTTPRedirectHandler):
@@ -109,7 +110,10 @@ def ready(base,target):
 def download(url,sha,size,update):
  check_cancel()
  opener=urllib.request.build_opener(HttpsOnly());start=time.monotonic();data=bytearray()
- with opener.open(url,timeout=20) as response:
+ try:response=opener.open(url,timeout=20)
+ except urllib.error.HTTPError as error:raise ValueError('GPU_DOWNLOAD_HTTP_'+str(error.code)) from None
+ except (urllib.error.URLError,TimeoutError):raise ValueError('GPU_DOWNLOAD_NETWORK') from None
+ with response:
   if not response.geturl().startswith('https://'):raise ValueError('INSECURE_RESPONSE')
   while True:
    check_cancel()

@@ -15,6 +15,30 @@ public class ProjectFileTransportTest {
     }
     interface RunnableIO { void run() throws Exception; }
 
+    @Test public void fiveGbStreamCountsBeyondSignedIntAndRejectsOneExtraByte()throws Exception{
+        final long limit=5L*1024*1024*1024;
+        for(boolean excess:new boolean[]{false,true}){
+            InputStream generated=new InputStream(){
+                long remaining=limit+(excess?1:0);
+                public int read(){if(remaining==0)return -1;remaining--;return 0;}
+                public int read(byte[] b,int off,int len){if(remaining==0)return -1;int n=(int)Math.min(remaining,len);remaining-=n;return n;}
+            };
+            Process fixture=new Process(){
+                public InputStream getInputStream(){return generated;}
+                public OutputStream getOutputStream(){return new ByteArrayOutputStream();}
+                public InputStream getErrorStream(){return new ByteArrayInputStream(new byte[0]);}
+                public int waitFor(){return 0;}public int exitValue(){return 0;}
+                public void destroy(){}public Process destroyForcibly(){return this;}
+            };
+            try(ProjectFileTransport transport=new ProjectFileTransport();InputStream in=transport.open(()->fixture,null,limit,10000)){
+                long total=0;byte[] buffer=new byte[65536];
+                try{int count;while((count=in.read(buffer))!=-1)total+=count;assertFalse(excess);}
+                catch(IOException e){assertTrue(excess);assertEquals("FILE_LIMIT",e.getMessage());}
+                assertEquals(limit,total);
+            }
+        }
+    }
+
     @Test public void binarySingleByteReadsHandleZeroAnd255AndEof() throws Exception {
         try(ProjectFileTransport transport=new ProjectFileTransport();InputStream in=transport.open(()->child("printf '\\000\\377a'"),null,3,3000)) {
             assertEquals(0,in.read());assertEquals(255,in.read());assertEquals(97,in.read());assertEquals(-1,in.read());assertEquals(-1,in.read());

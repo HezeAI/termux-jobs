@@ -1,3 +1,5 @@
+> Historical v2.0.5 experiment. Wayland/KDE was retired in v2.0.6. These checks do not describe a current desktop mode.
+
 # Private candidate: Wayland startup diagnosis
 
 Candidate **2.0.5-wayland-test.8 / code 1374**, following test.7/code 1373.

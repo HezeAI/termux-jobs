@@ -13,6 +13,25 @@ import static org.junit.Assert.*;
 public class X11ScreenSettingsTest {
  private final Context c=RuntimeEnvironment.application;
  @Before public void clear(){c.getSharedPreferences("workspace-x11",0).edit().clear().commit();}
+ @Test public void customResolutionKeepsFullHostHeightWhileImeCropsPortrait(){
+  for(int scale:new int[]{75,100,125}){
+   X11ScreenSettings settings=new X11ScreenSettings(1300,600,0,0,scale);X11Viewport viewport=new X11Viewport();
+   for(int visible:new int[]{2040,1800,1000,1800,2040}){
+    X11Viewport.Size size=settings.viewport(viewport,1216,visible,1216,2688,600,48);
+    assertEquals(1216,size.width);assertEquals(2040,size.height);assertEquals(visible,size.visibleHeight);
+    X11DisplayMode logical=X11DisplayMode.resolve(size.width,size.height,settings,false);
+    assertEquals(600,logical.width);assertEquals(1300,logical.height);
+   }
+  }
+ }
+ @Test public void customModeOpenedWithImeVisibleUsesTheSameHostPolicyAsAutoAndRotates(){
+  for(X11ScreenSettings settings:new X11ScreenSettings[]{X11ScreenSettings.defaults(),new X11ScreenSettings(1920,1080,0,0,75)}){
+   X11Viewport viewport=new X11Viewport();X11Viewport.Size size=settings.viewport(viewport,1216,1000,1216,2688,600,48);
+   assertEquals(2040,size.height);assertEquals(1000,size.visibleHeight);
+   size=settings.viewport(viewport,2688,500,2688,1216,0,0);assertEquals(1216,size.height);assertEquals(500,size.visibleHeight);
+   size=settings.viewport(viewport,1216,2040,1216,2688,600,48);assertEquals(2040,size.height);assertEquals(2040,size.visibleHeight);
+  }
+ }
  @Test public void manualModeRotatesWithPhoneButNotWithKeyboard(){
   X11ScreenSettings s=new X11ScreenSettings(1300,600,24,12);
   for(int[] size:new int[][]{{2448,1080,1},{1080,1800,0},{2448,500,1},{1080,500,0}}){

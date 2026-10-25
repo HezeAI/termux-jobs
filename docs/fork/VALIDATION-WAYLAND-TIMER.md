@@ -1,3 +1,5 @@
+> Historical v2.0.5 experiment. Wayland/KDE was retired in v2.0.6. These checks do not describe a current desktop mode.
+
 # Private candidate: KWin GPU timer queries and X11 manual preset
 
 Candidate **2.0.5-wayland-test.10 / code 1376** follows test.9/code 1375.

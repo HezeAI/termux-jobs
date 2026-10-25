@@ -1,3 +1,11 @@
+# Current handoff
+
+See [the repository handoff](../../CONTINUE.md) and [v2.0.6 validation](VALIDATION-v2.0.6.md).
+
+---
+
+# Historical v2.0.4 handoff
+
 # Published v2.0.4 /1366 — verified stable/latest
 
 Release:https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.4

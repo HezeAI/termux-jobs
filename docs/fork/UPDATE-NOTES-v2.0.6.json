@@ -1,0 +1,30 @@
+{
+  "ru": [
+    "Исправлено применение масштаба работающего X11 во всех семи PRoot-окружениях; рабочий путь Termux сохранён.",
+    "Клавиатура больше не сжимает X11 при заданном вручную разрешении.",
+    "Файлы в чатах агентов до 5 ГиБ, оригиналы изображений до 100 МиБ; подготовленное изображение для модели ограничено отдельно.",
+    "Исправлена загрузка Vulkan Loader для Turnip и Wrapper. Графические архивы закреплены в отдельном репозитории компонентов с SHA-256, лицензиями и источниками.",
+    "Bionic for glibc загружается при необходимости во время запуска с заранее выбранным драйвером. Исправные установки работают без повторной загрузки.",
+    "Эксперимент Wayland/KDE отменён и удалён из приложения; Arch снова использует обычное меню программ X11/XFCE."
+  ],
+  "en": [
+    "Fix live X11 interface-scale Apply across all seven PRoot environments; preserve the working Termux path.",
+    "Keep manually sized X11 desktop geometry stable when the keyboard opens.",
+    "Agent chat files up to5GiB and original images up to100MiB; model-ready image input remains separately bounded.",
+    "Fix Vulkan Loader download for Turnip/Wrapper. Pin graphics archives in a separate components repository with SHA-256, licenses and source references.",
+    "Bionic for glibc downloads only when needed during launch with the preselected driver. Valid installed runtimes work offline without repeat downloads.",
+    "Discontinue/remove the Wayland/KDE experiment; Arch returns to the ordinary X11/XFCE program menu."
+  ],
+  "compatibility": {
+    "ru": [
+      "Те же com.termux, подпись, ARM64 и schema8; Android8+ приложение, Android11+ X11. Code1395 выше публичного1376 и частного1394. Сброс данных, перенос аккаунтов и переустановка окружений не требуются.",
+      "Для отсутствующего Bionic for glibc первый запуск требует интернет: около6,1МБ. Существующие исправные установки, пресеты и импорты драйверов сохраняются.",
+      "Старые экспериментальные KDE-пакеты автоматически не удаляются. Завершите важную работу перед обновлением. Откат APK не откатывает пакеты Linux; универсальная совместимость драйверов не гарантируется."
+    ],
+    "en": [
+      "Same com.termux/signer/ARM64/schema8; Android8+ app, Android11+ X11. Code1395 exceeds public1376/private1394. No data reset, account migration or environment reinstallation required.",
+      "A missing Bionic-for-glibc runtime now needs internet for first preparation: about6.1MB. Existing valid runtimes, presets and imported drivers are preserved.",
+      "Old experimental KDE packages are not automatically deleted. Finish important work before updating. APK rollback does not undo Linux package changes; driver compatibility remains device specific."
+    ]
+  }
+}

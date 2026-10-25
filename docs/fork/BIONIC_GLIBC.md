@@ -1,3 +1,11 @@
+# Current distribution — v2.0.6
+
+The established runtime bytes and imported-driver formats are unchanged. The ZIP is no longer embedded in APK assets: when missing, starting the selected supported glibc desktop downloads6,053,026bytes from the pinned [component release](https://github.com/HezeAI/termux-jobs-components/releases/tag/graphics-20261025), verifies its exact SHA-256/size, and prepares that target’s runtime under its existing lock. Select/import the driver before launch. Already valid runtime installations work offline without redownloading. A verified archive can repair that cache; download cancellation/failure or mismatch keeps the previous runtime and selected driver. Different targets retain separate caches and displays.
+
+Corresponding source, patches and licenses accompany the component release. Ordinary guest dependencies still use native package managers. Historical sections below describe the bundles in their named candidates; they are not a claim that every driver/device was verified. See [distribution details](GRAPHICS-COMPONENTS.md).
+
+---
+
 # Bionic for glibc — v2.0.4
 
 The bridge is included in v2.0.4 for six ordinary glibc desktops. See

@@ -17,8 +17,6 @@ stage.mkdir(parents=True, exist_ok=True)
 (stage / '.tools/test-home').mkdir(parents=True, exist_ok=True)
 x11_cache=stage/'.tools/x11-runtime'
 if not x11_cache.exists():x11_cache.symlink_to(root/'.tools/x11-runtime',target_is_directory=True)
-wayland_cache=stage/'.tools/wayland-runtime'
-if not wayland_cache.exists():wayland_cache.symlink_to(root/'.tools/wayland-runtime',target_is_directory=True)
 for name in ['app', 'terminal-emulator', 'terminal-view', 'termux-shared', 'x11', 'gradle']:
     # Stage source trees are disposable. Recreate them so deleted assets, native
     # payloads and resources cannot leak back into a later APK.

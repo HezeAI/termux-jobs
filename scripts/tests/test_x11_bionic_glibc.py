@@ -19,7 +19,7 @@ class BionicBridgeTest(unittest.TestCase):
     def setUp(self):
         parent=ROOT/'.verification/bionic-bridge/fixtures';parent.mkdir(parents=True,exist_ok=True)
         self.tmp=tempfile.TemporaryDirectory(dir=parent);self.root=Path(self.tmp.name);self.cache=self.root/'ubuntu-cache'
-        for name in ['x11-bionic-glibc.py','x11-wrapper.py']:
+        for name in ['x11-bionic-glibc.py','x11-wrapper.py','x11-gpu.py']:
             shutil.copyfile(ASSETS/name,self.root/name)
         shutil.copyfile(ROOT/'third-party/bionic-glibc/ubuntu-arm64-runtime.zip',self.root/'x11-bionic-glibc.zip')
         spec=importlib.util.spec_from_file_location('bridge_fixture',self.root/'x11-bionic-glibc.py');self.b=importlib.util.module_from_spec(spec);spec.loader.exec_module(self.b)
@@ -29,6 +29,9 @@ class BionicBridgeTest(unittest.TestCase):
             z.writestr('meta.json',json.dumps(dict(name='Test driver',libraryName='libvulkan_freedreno.so',minApi=28)))
             z.writestr('libvulkan_freedreno.so',data)
         self.b.w.import_driver(self.cache,self.zip,36)
+        self.seed(self.cache)
+    def seed(self, cache):
+        shutil.copyfile(self.root/'x11-bionic-glibc.zip', cache/'runtime-bundle.zip')
     def tearDown(self):
         self.tmp.cleanup()
     def test_offline_install_check_and_no_layering(self):
@@ -39,6 +42,50 @@ class BionicBridgeTest(unittest.TestCase):
         layer=json.loads((first/'share/vulkan/implicit_layer.d/jobs-bionic.json').read_text())['layer']
         self.assertEqual({'JOBS_BIONIC_ENABLED':'1'},layer['enable_environment'])
         self.assertTrue((first/'share/vulkan/implicit_layer.d'/layer['library_path']).resolve().is_file())
+    def test_first_launch_downloads_once_then_reuses_verified_runtime_offline(self):
+        (self.cache/'runtime-bundle.zip').unlink()
+        selected=(self.cache/'current.json').read_bytes();calls=[]
+        def fetch(url, pin, size, progress):
+            calls.append((url,pin,size))
+            data=(self.root/'x11-bionic-glibc.zip').read_bytes();progress(len(data),size)
+            return data
+        self.b.install(self.cache,fetch)
+        self.b.install(self.cache,lambda *args:self.fail('ready runtime must work offline'))
+        self.assertEqual([(self.b.URL,self.b.PIN,self.b.SIZE)],calls)
+        self.assertEqual(selected,(self.cache/'current.json').read_bytes())
+        self.assertEqual(0o600,(self.cache/'runtime-bundle.zip').stat().st_mode & 0o777)
+        self.assertFalse(list(self.cache.glob('.bundle-*')))
+    def test_failed_download_and_checksum_keep_previous_runtime_and_selection(self):
+        self.b.install(self.cache);old=(self.cache/'runtime/libjobs-bionic.so').read_bytes()
+        selected=(self.cache/'current.json').read_bytes()
+        (self.cache/'runtime/ready.json').write_text('{}')
+        (self.cache/'runtime-bundle.zip').unlink()
+        def unavailable(*args):raise ValueError('GPU_DOWNLOAD_NETWORK')
+        for fetch,error in [(unavailable,'NETWORK'),(lambda *args:b'corrupt','CHECKSUM')]:
+            with self.assertRaisesRegex(ValueError,error):self.b.install(self.cache,fetch)
+            self.assertEqual(old,(self.cache/'runtime/libjobs-bionic.so').read_bytes())
+            self.assertEqual(selected,(self.cache/'current.json').read_bytes())
+            self.assertFalse((self.cache/'runtime-bundle.zip').exists())
+            self.assertFalse(list(self.cache.glob('.bundle-*')))
+    def test_cancelled_download_does_not_activate_or_cache_partial_archive(self):
+        (self.cache/'runtime-bundle.zip').unlink()
+        marker=self.root/'cancel';self.b.w.CANCEL=marker
+        def fetch(*args):
+            marker.touch()
+            return (self.root/'x11-bionic-glibc.zip').read_bytes()
+        with self.assertRaisesRegex(ValueError,'CANCELLED'):self.b.install(self.cache,fetch)
+        self.assertFalse((self.cache/'runtime').exists())
+        self.assertFalse((self.cache/'runtime-bundle.zip').exists())
+    def test_download_cache_symlink_is_rejected_without_touching_destination(self):
+        archive=self.cache/'runtime-bundle.zip';archive.unlink()
+        other=self.root/'keep';other.write_text('keep');archive.symlink_to(other)
+        with self.assertRaisesRegex(ValueError,'BUNDLE_LINK'):self.b.install(self.cache)
+        self.assertEqual('keep',other.read_text())
+    def test_launcher_extracts_download_helper_without_bundled_zip(self):
+        java=(ROOT/'app/src/main/java/com/termux/app/workspace/WorkspaceDesktopWrapper.java').read_text()
+        self.assertIn('bridge()?new String[]{"x11-wrapper.py","x11-bionic-glibc.py","x11-gpu.py"}',java)
+        self.assertIn("'x11-bionic-glibc.zip'",(ROOT/'x11/build.gradle').read_text())
+        self.assertIn("(assets/'x11-bionic-glibc.zip').unlink(missing_ok=True)",(ROOT/'scripts/prepare-x11.py').read_text())
     def test_corrupt_runtime_is_repaired_but_driver_is_preserved(self):
         self.b.install(self.cache);selected=(self.cache/'current.json').read_bytes()
         (self.cache/'runtime/libjobs-bionic.so').write_bytes(b'broken')
@@ -47,16 +94,16 @@ class BionicBridgeTest(unittest.TestCase):
         self.assertEqual(selected,(self.cache/'current.json').read_bytes())
     def test_corrupt_bundle_is_refused_without_replacing_cache(self):
         self.b.install(self.cache);self.b.PIN='0'*64
-        with self.assertRaisesRegex(ValueError,'CHECKSUM'):self.b.install(self.cache)
+        with self.assertRaisesRegex(ValueError,'CHECKSUM'):self.b.install(self.cache,lambda *args:(self.root/'x11-bionic-glibc.zip').read_bytes())
         self.assertTrue((self.cache/'runtime/libjobs-bionic.so').is_file())
         self.assertFalse(list(self.cache.glob('.runtime-*')))
     def test_invalid_versioned_mesa_elf_is_rejected_before_activation(self):
-        archive=self.root/'x11-bionic-glibc.zip'
+        archive=self.cache/'runtime-bundle.zip'
         with zipfile.ZipFile(archive) as z:files={n:z.read(n) for n in z.namelist()}
         files['mesa/libGLX_mesa.so.0']=b'not an ELF'*8
         with zipfile.ZipFile(archive,'w') as z:
             for name,data in files.items():z.writestr(name,data)
-        self.b.PIN=self.b.w.digest(archive)
+        self.b.PIN=self.b.w.digest(archive);self.b.SIZE=archive.stat().st_size
         with self.assertRaisesRegex(ValueError,'BUNDLE_ARM64'):self.b.install(self.cache)
         self.assertFalse((self.cache/'runtime').exists());self.assertFalse(list(self.cache.glob('.runtime-*')))
     def test_previous_runtime_upgrade_preserves_selected_driver(self):
@@ -66,7 +113,7 @@ class BionicBridgeTest(unittest.TestCase):
         self.assertEqual(selected,(self.cache/'current.json').read_bytes());self.assertFalse((self.cache/'.runtime-old').exists())
     def test_debian_cache_can_prepare_while_ubuntu_runtime_is_locked(self):
         self.b.install(self.cache);before=(self.cache/'current.json').read_bytes()
-        debian=self.root/'workspace-x11-bionic-glibc-debian';self.b.w.import_driver(debian,self.zip,36)
+        debian=self.root/'workspace-x11-bionic-glibc-debian';self.b.w.import_driver(debian,self.zip,36);self.seed(debian)
         with self.b.shared(self.cache):
             self.b.install(debian);self.b.valid_runtime(debian)
             with self.assertRaisesRegex(ValueError,'BUSY'):self.b.install(self.cache)
@@ -76,7 +123,7 @@ class BionicBridgeTest(unittest.TestCase):
         self.b.install(self.cache)
         debian=self.root/'workspace-x11-bionic-glibc-debian'
         fedora=self.root/'workspace-x11-bionic-glibc-fedora'
-        for dest in (debian,fedora):self.b.w.import_driver(dest,self.zip,36)
+        for dest in (debian,fedora):self.b.w.import_driver(dest,self.zip,36);self.seed(dest)
         self.b.install(debian)
         with self.b.shared(self.cache),self.b.shared(debian):
             run=subprocess.run(['python3','-B',str(self.root/'x11-bionic-glibc.py'),'install','fedora',str(fedora),'-','36','-'],capture_output=True,text=True)
@@ -95,7 +142,7 @@ class BionicBridgeTest(unittest.TestCase):
             self.assertEqual(1 if mode=='bionic-glibc' else 0,run.returncode,run.stderr)
     def test_arch_cache_is_independent_while_other_runtime_is_locked(self):
         self.b.install(self.cache)
-        arch=self.root/'workspace-x11-bionic-glibc-archlinux';self.b.w.import_driver(arch,self.zip,36)
+        arch=self.root/'workspace-x11-bionic-glibc-archlinux';self.b.w.import_driver(arch,self.zip,36);self.seed(arch)
         with self.b.shared(self.cache):
             run=subprocess.run(['python3','-B',str(self.root/'x11-bionic-glibc.py'),'install','archlinux',str(arch),'-','36','-'],capture_output=True,text=True)
             self.assertEqual(0,run.returncode,run.stdout+run.stderr);self.b.valid_runtime(arch)
@@ -108,7 +155,7 @@ class BionicBridgeTest(unittest.TestCase):
     def test_new_targets_prepare_under_own_locks_without_touching_other_runtime(self):
         self.b.install(self.cache);before=(self.cache/'current.json').read_bytes()
         for target in ('opensuse','void'):
-            cache=self.root/('workspace-x11-bionic-glibc-'+target);self.b.w.import_driver(cache,self.zip,36)
+            cache=self.root/('workspace-x11-bionic-glibc-'+target);self.b.w.import_driver(cache,self.zip,36);self.seed(cache)
             with self.b.shared(self.cache):
                 run=subprocess.run(['python3','-B',str(self.root/'x11-bionic-glibc.py'),'install',target,str(cache),'-','36','-'],capture_output=True,text=True)
                 self.assertEqual(0,run.returncode,run.stdout+run.stderr);self.b.valid_runtime(cache)

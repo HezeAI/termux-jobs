@@ -108,3 +108,20 @@ class GpuTests(unittest.TestCase):
    calls=log.read_text();self.assertIn('check '+target+' ',calls);self.assertIn(str(prefix.parent/'workspace-x11-gpu')+':/tmp/termux-jobs-x11-gpu',calls)
    self.assertIn('JOBS_X11_TARGET='+target,calls);self.assertIn('JOBS_X11_DISPLAY='+str(display),calls)
    self.assertIn('jobs_gpu_environment "$JOBS_X11_TARGET"',calls);self.assertNotIn('jobs_gpu_environment ubuntu',calls)
+
+class DownloadFailures(unittest.TestCase):
+ def test_http_and_network_errors_are_bounded_codes(self):
+  from unittest.mock import patch,Mock
+  import urllib.error
+  opener=Mock()
+  for error,code in [(urllib.error.HTTPError('https://example.invalid',404,'missing',{},None),'GPU_DOWNLOAD_HTTP_404'),(urllib.error.URLError('private connection detail'),'GPU_DOWNLOAD_NETWORK')]:
+   opener.open.side_effect=error
+   with patch.object(gpu.urllib.request,'build_opener',return_value=opener):
+    with self.assertRaisesRegex(ValueError,'^'+code+'$'):gpu.download('https://example.invalid','0'*64,1,lambda *_:None)
+ def test_termux_packages_use_immutable_release_assets_and_wrapper_shares_loader(self):
+  spec=importlib.util.spec_from_file_location('wrapper_pins',ROOT/'x11/src/main/assets/x11-wrapper.py');wrapper=importlib.util.module_from_spec(spec);spec.loader.exec_module(wrapper)
+  for spec in gpu.SPECS.values():
+   for package in spec['packages']:self.assertTrue(package[0].startswith('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/'))
+  self.assertEqual(tuple(gpu.SPECS['termux']['packages'][1][:3]),wrapper.LOADER)
+
+if __name__=='__main__':unittest.main()

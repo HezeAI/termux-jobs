@@ -61,3 +61,7 @@ Binder/permissions/gestures, UI frame timing, fresh rootfs setup or network reco
 Current findings and the remaining warning catalog are recorded in
 [AUDIT-LINT-2026-10-24.md](AUDIT-LINT-2026-10-24.md) and
 [LINT-WARNINGS-2026-10-24.md](LINT-WARNINGS-2026-10-24.md).
+
+## v2.0.6
+
+Modern lint was rerun after the final X11-scale, renderer-download and chat changes across all five modules. Result: zero errors, 210 existing warnings, no infrastructure/rule-loading diagnostics. No broad baseline or suppression was added. The existing compileSdk/AGP support warning and the issue categories above remain. See [release validation](VALIDATION-v2.0.6.md).

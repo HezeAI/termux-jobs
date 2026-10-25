@@ -1,3 +1,7 @@
+# v2.0.6 graphics distribution
+
+Pinned optional archives now use [Termux Job’s Components](https://github.com/HezeAI/termux-jobs-components). Original archive bytes, versions, credits, SHA-256 and sizes are retained; only the unavailable Vulkan Loader package is updated1.4.365→1.4.366. Bionic-for-glibc runtime bytes are unchanged but downloaded on demand rather than embedded in the APK. Source/license archives accompany the component set. This is distribution/integration work by HezeAI with Codex assistance, not authorship of Mesa, libhybris, WSI, AdrenoTools or vendor drivers. See [component manifest and license details](GRAPHICS-COMPONENTS.md). Ordinary package-manager dependencies are outside the mirror.
+
 # Sources, authors and acknowledgements — v2.0
 
 HezeAI is the developer of Termux Job's. Codex is an AI assistant helping with
@@ -31,7 +35,7 @@ needs the documented toolchain and obtainable pinned inputs.
 | --- | --- | --- |
 | Mesa contributors: Turnip, Zink, Gallium/virpipe | [Mesa source](https://gitlab.freedesktop.org/mesa/mesa), [Mesa releases](https://archive.mesa3d.org/) | Most packages downloaded per selected target; original Mesa component licenses apply. |
 | lfdevs | [mesa-for-android-container](https://github.com/lfdevs/mesa-for-android-container/releases/tag/mesa-26.3.0-devel-20260824) | Optional pinned Linux-container Mesa26.3.0-devel-20260824 packages. These are lfdevs package builds, not binaries built by this fork. |
-| Termux package maintainers | [Mesa recipes](https://github.com/termux/termux-packages/tree/master/packages/mesa) | Optional Termux Mesa26.2.5 Turnip and generic Vulkan loader1.4.365; downloaded and hash checked. |
+| Termux package maintainers | [Mesa recipes](https://github.com/termux/termux-packages/tree/master/packages/mesa) | Optional Termux Mesa26.2.5 Turnip and generic Vulkan loader1.4.366; downloaded and hash checked. |
 | virglrenderer contributors | [virglrenderer source](https://gitlab.freedesktop.org/virgl/virglrenderer) | virglrenderer-android from Termux repositories; a private server/socket per desktop. |
 | ANGLE contributors | [ANGLE source](https://chromium.googlesource.com/angle/angle) | angle-android from Termux repositories; selected GL or Vulkan backend. |
 | leegao | [bionic-vulkan-wrapper](https://github.com/leegao/bionic-vulkan-wrapper), [build recipe](https://github.com/leegao/vulkan_wrapper_termux-packages/blob/dev/wrapper/wrapper/build_termux.sh) | Optional Termux Wrapper runtime, v0.0.5r5. |
@@ -116,9 +120,9 @@ Third-party licenses are retained; the fork's license does not replace them.
 - Driver downloads: [StevenMXZ](https://github.com/StevenMXZ/Adreno-Tools-Drivers/releases) and [The412Banner](https://github.com/The412Banner/Banners-Turnip/releases). The two separate reference release ZIPs are unmodified StevenMXZ assets; [exact origins/credits/hashes](DRIVER-SOURCES-v2.0.4.md). No vendor driver is embedded in the APK or bridge export.
 
 
-## Disabled Wayland preview sources — v2.0.5
+## Historical disabled Wayland preview — published v2.0.5
 
-The public APK includes pinned experimental code/runtime inputs but disables
+The published v2.0.5 APK includes pinned experimental code/runtime inputs but disables
 Wayland/KDE UI and backend operations. This is not a claim of a working public
 KDE feature. The native parent derives from
 [DroidDeck 0.6.0 / The412Banner and contributors](https://github.com/Droid-Deck/DroidDeck)
@@ -129,3 +133,10 @@ Jobs-specific build/input/ownership changes and the scoped KWin timer workaround
 are documented in [experimental architecture](ARCH-WAYLAND.md) and the pinned
 `third-party/droiddeck-wayland/` manifests. KDE/Qt source references identify their
 upstream authors; they are not Jobs-owned desktop implementations.
+
+
+v2.0.6 removes these Wayland-derived sources and binary
+inputs. Their original sources/notices remain accessible in the published
+[v2.0.5 tag](https://github.com/HezeAI/termux-jobs/tree/v2.0.5/third-party/droiddeck-wayland).
+The current APK retains the independent X11/AdrenoTools/libhybris component
+licenses; removing the Wayland experiment does not change those integrations.

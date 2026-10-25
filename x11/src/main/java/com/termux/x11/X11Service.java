@@ -49,15 +49,12 @@ public class X11Service extends Service {
     private FileDescriptor discoveryGuard;
     private volatile LocalSocket testSocket;
     private EmbeddedX11Host embedded;
-    private EmbeddedWaylandHost waylandHost;
-    private WaylandRuntime waylandRuntime;
     private String desktop="xfce";
     private boolean garconFilter=false;
     private String componentOperation="";
     private String target="", phase="idle", detail="",desktopMetadata="";
     private int guardianExitCode=-1;
     private volatile X11StartupLog startupLog=new X11StartupLog();
-    private volatile WaylandStartupErrors waylandStartupErrors=new WaylandStartupErrors();
     private volatile X11StartupLog componentLog=new X11StartupLog();
     private volatile X11InstallErrors componentErrors=new X11InstallErrors();
     private int componentGuardianExit=-1;private String componentResult="not-started";
@@ -90,7 +87,7 @@ public class X11Service extends Service {
             return true;
         }
     }
-    Bundle snapshot(){Bundle scaling=scaleJob.snapshot();if(scaling.getBoolean("success",false))interfaceScale=scaling.getInt("percent",interfaceScale);Bundle b=new Bundle();b.putBundle("screenScale",scaling);b.putString("backend",desktop.equals("plasma")?"wayland":"x11");b.putString("status",status);b.putString("target",target);b.putString("desktop",desktop);b.putString("renderer",renderer);b.putBoolean("termuxStyle",termuxStyle);b.putInt("interfaceScale",interfaceScale);b.putString("componentOperation",componentOperation);b.putString("componentResult",componentResult);b.putString("componentErrors",componentErrors.snapshot());b.putString("componentDiagnostic",componentLog.snapshot());b.putInt("componentChildExit",componentLog.childExit());b.putInt("componentGuardianExit",componentGuardianExit);b.putString("startupDiagnostic",startupLog.snapshot());b.putString("waylandStartupErrors",desktop.equals("plasma")?waylandStartupErrors.snapshot():"");b.putInt("desktopChildExit",startupLog.childExit());b.putInt("desktopGuardianExit",guardianExitCode);b.putLong("startupElapsedMs",startupLog.elapsedMs());b.putString("previousStartupDiagnostic",previousStartup);b.putBoolean("garconFilter",garconFilter);b.putString("desktopOwner",desktopOwner);b.putStringArrayList("desktopOwners",new java.util.ArrayList<>(desktopUsers));b.putString("pointerDiagnostic",waylandHost!=null?"Wayland pointer adapter":Build.VERSION.SDK_INT<30||embedded==null?"unavailable":embedded.pointerDiagnostic());b.putString("pointerBaseline",pointerBaseline);b.putString("phase",phase);b.putBoolean("rendererConnected",Build.VERSION.SDK_INT>=30&&(waylandHost!=null?waylandHost.rendererConnected():embedded!=null&&embedded.rendererConnected()));b.putBoolean("hostAttached",Build.VERSION.SDK_INT>=30&&(waylandHost!=null?waylandHost.hostAttached():embedded!=null&&embedded.hostAttached()));b.putString("detail",detail);b.putString("desktopMetadata",desktopMetadata);b.putBoolean("observationReady",!observationToken.isEmpty()&&ready&&!stopping&&phase.equals("running"));b.putBoolean("observationActive",observationActive);b.putBoolean("observationPending",observationPending);b.putString("observationError",observationError);b.putString("observationLog",observationLog);b.putString("currentBackdrop",currentBackdrop);b.putInt("observationSerial",observationSerial);b.putBoolean("components",componentsReady);b.putBoolean("rendererComponents",rendererComponents);b.putBoolean("ready",ready&&!stopping&&!retiring&&!phase.equals("stopping"));b.putBoolean("started",started&&!stopping&&!retiring&&!phase.equals("stopping"));b.putInt("installPercent",installPercent);b.putLong("downloadBytes",installDownloaded);b.putLong("downloadTotal",installTotal);b.putLong("installEta",installEta);b.putLong("installSampleTime",installSampleTime);b.putString("installStage",installStage);b.putString("installItem",installItem);if(programs!=null)b.putBundle("programs",programs.snapshot());b.putInt("startupStep",startupStep);b.putBoolean("desktopReady",desktopReady);b.putBoolean("desktopStartupTimedOut",desktopStartupTimedOut);b.putBoolean("textFocus",textFocus);b.putLong("focusSerial",focusSerial);b.putLong("fieldTapSerial",fieldTapSerial);return b;}
+    Bundle snapshot(){Bundle scaling=scaleJob.snapshot();if(scaling.getBoolean("success",false))interfaceScale=scaling.getInt("percent",interfaceScale);Bundle b=new Bundle();b.putBundle("screenScale",scaling);b.putString("backend","x11");b.putString("status",status);b.putString("target",target);b.putString("desktop",desktop);b.putString("renderer",renderer);b.putBoolean("termuxStyle",termuxStyle);b.putInt("interfaceScale",interfaceScale);b.putString("componentOperation",componentOperation);b.putString("componentResult",componentResult);b.putString("componentErrors",componentErrors.snapshot());b.putString("componentDiagnostic",componentLog.snapshot());b.putInt("componentChildExit",componentLog.childExit());b.putInt("componentGuardianExit",componentGuardianExit);b.putString("startupDiagnostic",startupLog.snapshot());b.putInt("desktopChildExit",startupLog.childExit());b.putInt("desktopGuardianExit",guardianExitCode);b.putLong("startupElapsedMs",startupLog.elapsedMs());b.putString("previousStartupDiagnostic",previousStartup);b.putBoolean("garconFilter",garconFilter);b.putString("desktopOwner",desktopOwner);b.putStringArrayList("desktopOwners",new java.util.ArrayList<>(desktopUsers));b.putString("pointerDiagnostic",Build.VERSION.SDK_INT<30||embedded==null?"unavailable":embedded.pointerDiagnostic());b.putString("pointerBaseline",pointerBaseline);b.putString("phase",phase);b.putBoolean("rendererConnected",Build.VERSION.SDK_INT>=30&&(embedded!=null&&embedded.rendererConnected()));b.putBoolean("hostAttached",Build.VERSION.SDK_INT>=30&&(embedded!=null&&embedded.hostAttached()));b.putString("detail",detail);b.putString("desktopMetadata",desktopMetadata);b.putBoolean("observationReady",!observationToken.isEmpty()&&ready&&!stopping&&phase.equals("running"));b.putBoolean("observationActive",observationActive);b.putBoolean("observationPending",observationPending);b.putString("observationError",observationError);b.putString("observationLog",observationLog);b.putString("currentBackdrop",currentBackdrop);b.putInt("observationSerial",observationSerial);b.putBoolean("components",componentsReady);b.putBoolean("rendererComponents",rendererComponents);b.putBoolean("ready",ready&&!stopping&&!retiring&&!phase.equals("stopping"));b.putBoolean("started",started&&!stopping&&!retiring&&!phase.equals("stopping"));b.putInt("installPercent",installPercent);b.putLong("downloadBytes",installDownloaded);b.putLong("downloadTotal",installTotal);b.putLong("installEta",installEta);b.putLong("installSampleTime",installSampleTime);b.putString("installStage",installStage);b.putString("installItem",installItem);if(programs!=null)b.putBundle("programs",programs.snapshot());b.putInt("startupStep",startupStep);b.putBoolean("desktopReady",desktopReady);b.putBoolean("desktopStartupTimedOut",desktopStartupTimedOut);b.putBoolean("textFocus",textFocus);b.putLong("focusSerial",focusSerial);b.putLong("fieldTapSerial",fieldTapSerial);return b;}
     private String renderer="cpu";
     private boolean termuxStyle;
     private int interfaceScale=100;
@@ -166,7 +163,7 @@ public class X11Service extends Service {
             if(phase.equals("checking")||phase.equals("installing")||phase.equals("preparing"))return snapshot();
             if(op.equals("launch")){
                 if(!componentsReady)throw new IllegalStateException("Check and install desktop components first");
-                String owner=q.getString("owner","");if(owner.length()>160||!owner.matches("[A-Za-z0-9_:.-]*"))throw new IllegalArgumentException("Invalid desktop owner");if(!owner.isEmpty())desktopUsers.add(owner);if(!started){desktopOwner=owner;startupStep=0;previousStartup=startupLog.snapshot();startupLog=new X11StartupLog();waylandStartupErrors=new WaylandStartupErrors();startupLog.feed("JOBS_X11_STARTUP=prepare\n");started=true;phase="preparing";prepare();}
+                String owner=q.getString("owner","");if(owner.length()>160||!owner.matches("[A-Za-z0-9_:.-]*"))throw new IllegalArgumentException("Invalid desktop owner");if(!owner.isEmpty())desktopUsers.add(owner);if(!started){desktopOwner=owner;startupStep=0;previousStartup=startupLog.snapshot();startupLog=new X11StartupLog();startupLog.feed("JOBS_X11_STARTUP=prepare\n");started=true;phase="preparing";prepare();}
             }else if(!started){runComponents(op);}
         }else if(op.equals("cancel")){
             if(phase.equals("preparing")){phase="stopping";main.postDelayed(this::requestStop,150);return snapshot();}
@@ -179,14 +176,7 @@ public class X11Service extends Service {
             if(op.equals("detach")&&!ready)return snapshot();
             if(Build.VERSION.SDK_INT<30)throw new IllegalStateException("Inline desktop requires Android 11");
             if(!ready)throw new IllegalStateException("X11 is still starting");
-            if(desktop.equals("plasma")){
-                if(waylandHost==null)throw new IllegalStateException("Wayland is still preparing");
-                if(op.equals("attach"))return waylandHost.attach(q);
-                if(op.equals("resize"))waylandHost.resize(q);
-                if(op.equals("detach"))waylandHost.detach(q.getString("attachment",""));
-                if(op.equals("input"))waylandHost.input(q);
-                return snapshot();
-            }
+
             if(embedded==null)embedded=new EmbeddedX11Host(this);
             if(op.equals("attach"))return embedded.attach(q);
             if(op.equals("resize"))embedded.resize(q);
@@ -223,7 +213,7 @@ public class X11Service extends Service {
     private void finishComponentCancellation(int epoch){
         if(!stopping&&phase.equals("cancelling")&&generation==epoch+1){componentResult="cancelled";phase="cancelled";setStatus("Операция остановлена. Можно повторить проверку или установку.","Operation stopped. You can check or install again.");}
     }
-    private void prepare(){worker.execute(()->{try{X11Runtime prepared=runtime==null?X11Runtime.prepare(this):runtime;if(desktop.equals("plasma"))waylandRuntime=WaylandRuntime.prepare(this,prepared.base);main.post(()->{if(!stopping&&!retiring&&!phase.equals("stopping"))startServer(prepared);});}catch(Exception e){main.post(()->{if(!stopping){finishDesktop("error","Не удалось подготовить X11: "+safe(e),"X11 preparation failed: "+safe(e));}});}});}
+    private void prepare(){worker.execute(()->{try{X11Runtime prepared=runtime==null?X11Runtime.prepare(this):runtime;main.post(()->{if(!stopping&&!retiring&&!phase.equals("stopping"))startServer(prepared);});}catch(Exception e){main.post(()->{if(!stopping){finishDesktop("error","Не удалось подготовить X11: "+safe(e),"X11 preparation failed: "+safe(e));}});}});}
 
     @Override public void onCreate(){
         super.onCreate();ownProcess=environment().owns(processName(),getPackageName());
@@ -248,20 +238,12 @@ public class X11Service extends Service {
         String channel="workspace-x11";manager.createNotificationChannel(new NotificationChannel(channel,"X11",NotificationManager.IMPORTANCE_LOW));
         PendingIntent open=PendingIntent.getActivity(this,0,getPackageManager().getLaunchIntentForPackage(getPackageName()),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         PendingIntent stop=PendingIntent.getService(this,environment().display,new Intent(this,getClass()).setAction(STOP),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        Notification notification=new Notification.Builder(this,channel).setSmallIcon(android.R.drawable.ic_menu_view).setContentTitle("Termux Job’s · "+(desktop.equals("plasma")?"Wayland":"X11")+" · "+environment().target).setContentText(tr("Проверочная графическая сессия","Graphical test session")).setOngoing(true).setContentIntent(open).addAction(new Notification.Action.Builder(null,tr("Остановить графический рабочий стол","Stop graphical desktop"),stop).build()).build();
+        Notification notification=new Notification.Builder(this,channel).setSmallIcon(android.R.drawable.ic_menu_view).setContentTitle("Termux Job’s · "+"X11"+" · "+environment().target).setContentText(tr("Проверочная графическая сессия","Graphical test session")).setOngoing(true).setContentIntent(open).addAction(new Notification.Action.Builder(null,tr("Остановить графический рабочий стол","Stop graphical desktop"),stop).build()).build();
         startForeground(NOTIFICATION+environment().display,notification);
     }
     private void startServer(X11Runtime prepared){
         runtime=prepared;startupStep=1;foreground();
-        if(desktop.equals("plasma")){
-            if(Build.VERSION.SDK_INT<30||waylandRuntime==null){finishDesktop("error","Wayland требует Android 11 и драйвер Bionic","Wayland requires Android 11 and a Bionic driver");return;}
-            waylandHost=new EmbeddedWaylandHost(this,waylandRuntime,()->{
-                if(stopping||retiring)return;
-                phase="running";startupLog.feed("JOBS_X11_STARTUP=wayland-ready\n");setStatus("Wayland · Arch · KDE Plasma","Wayland · Arch · KDE Plasma");runDesktop();
-            },error->{if(!stopping&&!retiring)finishDesktop("error","Ошибка Wayland: "+error,"Wayland error: "+error);});
-            // The Android host must attach before its Surface can start Vulkan.
-            ready=true;startupStep=2;setStatus("Подключение вывода Wayland…","Attaching Wayland output…");return;
-        }
+
         try{
             // Pinned upstream's discovery listener binds INADDR_ANY despite -nolisten tcp.
             // Reserve its exact tagged port with a NON-LISTENING loopback socket. No
@@ -293,13 +275,13 @@ public class X11Service extends Service {
     private void runDesktop(){
         worker.execute(()->{DesktopProcess owned=null;try{
             if(stopping||retiring||phase.equals("stopping"))return;
-            guardianExitCode=-1;X11StartupLog startupEvents=startupLog;WaylandStartupErrors waylandErrors=waylandStartupErrors;boolean plasma=desktop.equals("plasma");startupEvents.feed("JOBS_X11_STARTUP=desktop-process\n");
+            guardianExitCode=-1;X11StartupLog startupEvents=startupLog;startupEvents.feed("JOBS_X11_STARTUP=desktop-process\n");
             String token=java.util.UUID.randomUUID().toString();desktopToken=token;X11MetadataLog metadata=new X11MetadataLog();
             X11FocusStream focus=new X11FocusStream(token,(context,in)->main.post(()->{if(!stopping&&!retiring)focusEvent(context,in);}),ok->main.post(()->{if(!stopping&&!retiring){desktopReady=ok;if(ok){startupStep=4;startupLog.feed("JOBS_X11_STARTUP=desktop-ready\n");}desktopStartupTimedOut=!ok;}}));
-            owned=desktop.equals("plasma")?WaylandProcess.start(this,runtime.base,"run",token,waylandRuntime):DesktopProcess.start(this,runtime.base,"run",target,token,desktop,garconFilter,renderer,termuxStyle,interfaceScale);child=owned;
+            owned=DesktopProcess.start(this,runtime.base,"run",target,token,desktop,garconFilter,renderer,termuxStyle,interfaceScale);child=owned;
             if(stopping||retiring)owned.close();
-            owned.read(chunk->{startupEvents.feed(chunk);if(plasma)waylandErrors.feed(chunk);focus.feed(chunk);metadata.feed(chunk);String startup=metadata.snapshot();main.post(()->{if(!stopping&&!retiring){desktopMetadata=startup;if(metadata.windowManagerReady()&&startupStep<3)startupStep=3;detail=(detail+chunk);if(detail.length()>8192)detail=detail.substring(detail.length()-8192);}});});
-            int exit=owned.waitFor();if(plasma)waylandErrors.feed("\n");main.post(()->desktopEnded(exit));
+            owned.read(chunk->{startupEvents.feed(chunk);focus.feed(chunk);metadata.feed(chunk);String startup=metadata.snapshot();main.post(()->{if(!stopping&&!retiring){desktopMetadata=startup;if(metadata.windowManagerReady()&&startupStep<3)startupStep=3;detail=(detail+chunk);if(detail.length()>8192)detail=detail.substring(detail.length()-8192);}});});
+            int exit=owned.waitFor();main.post(()->desktopEnded(exit));
         }catch(Exception e){main.post(()->{if(!stopping)finishDesktop("error","Ошибка рабочего стола: "+safe(e),"Desktop error: "+safe(e));});}finally{if(owned!=null)owned.closeAndWait();child=null;}});
     }
     private void desktopEnded(int guardianExit){
@@ -309,11 +291,9 @@ public class X11Service extends Service {
         int actual=startupLog.childExit();
         int exit=actual>=0?actual:guardianExit;
         if(exit==75){finishDesktop("ended","Предыдущий стол Arch ещё останавливается. Повторите запуск через несколько секунд.","The previous Arch desktop is still stopping. Retry in a few seconds.");return;}
-        if(desktop.equals("plasma")&&!desktopReady){
-            startupLog.feed("ERROR:WAYLAND_SESSION_ENDED_BEFORE_READY\n");
-            finishDesktop("error","KDE Plasma завершилась до готовности рабочего стола ("+exit+"). Сохраните отчёт диагностики Wayland.","KDE Plasma ended before desktop readiness ("+exit+"). Save the Wayland diagnostic report.");
-        }else finishDesktop("ended","Рабочий стол завершён ("+exit+"). "+(desktop.equals("plasma")?"Wayland":"X11")+" освобождается автоматически.","Desktop ended ("+exit+"). "+(desktop.equals("plasma")?"Wayland":"X11")+" is being released automatically.");
+ finishDesktop("ended","Рабочий стол завершён ("+exit+"). "+"X11"+" освобождается автоматически.","Desktop ended ("+exit+"). "+"X11"+" is being released automatically.");
     }
+
     private void finishDesktop(String endPhase,String ru,String en){
         if(stopping||retiring)return;
         startupLog.feed("JOBS_X11_STARTUP=ended\n");retiring=true;started=false;ready=false;desktopReady=false;desktopStartupTimedOut=false;
@@ -351,7 +331,7 @@ public class X11Service extends Service {
         super.onDestroy();scaleJob.close();shutdownOwnProcess();
     }
     private void shutdownOwnProcess(){
-        if(stopping)return;stopping=true;scaleJob.close();started=false;ready=false;desktopReady=false;textFocus=false;desktopOwner="";desktopUsers.clear();generation++;if(programs!=null)programs.close();DesktopProcess owned=child;if(owned!=null)owned.close();if(Build.VERSION.SDK_INT>=30&&embedded!=null)embedded.release();if(Build.VERSION.SDK_INT>=30&&waylandHost!=null)waylandHost.release();ready=false;listeners.clear();main.removeCallbacksAndMessages(null);worker.shutdownNow();
+        if(stopping)return;stopping=true;scaleJob.close();started=false;ready=false;desktopReady=false;textFocus=false;desktopOwner="";desktopUsers.clear();generation++;if(programs!=null)programs.close();DesktopProcess owned=child;if(owned!=null)owned.close();if(Build.VERSION.SDK_INT>=30&&embedded!=null)embedded.release();ready=false;listeners.clear();main.removeCallbacksAndMessages(null);worker.shutdownNow();
         LocalSocket socket=testSocket;if(socket!=null)try{socket.close();}catch(IOException ignored){}
         if(discoveryGuard!=null)try{Os.close(discoveryGuard);}catch(Exception ignored){}
         stopForeground(true);

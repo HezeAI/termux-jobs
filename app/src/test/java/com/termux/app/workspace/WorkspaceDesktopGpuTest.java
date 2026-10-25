@@ -57,4 +57,11 @@ public class WorkspaceDesktopGpuTest {
  @Test public void virglWithoutAuthoritativeCheckOffersRepairWithoutLaunchingAProcess(){
   TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();WorkspaceDesktopVirgl.prepare(a,"debian",()->false,()->{},null,false);AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();assertTrue(d.isShowing());assertNotEquals("virgl",WorkspaceDesktopGpu.mode(a,"debian"));d.getButton(-2).performClick();
  }
+ @Test public void failedSetupShowsBoundedActionableErrorWithoutProgressOrPrivateOutput(){
+  TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();
+  String raw="GPU_PROGRESS:100:200\nprivate/path\nERROR:GPU_DOWNLOAD_HTTP_404\n";
+  String out=WorkspaceDesktopGpu.failure(a,raw);assertTrue(out,out.contains("404"));assertFalse(out,out.contains("GPU_PROGRESS"));assertFalse(out,out.contains("private"));
+  assertFalse(WorkspaceDesktopGpu.failure(a,"sensitive arbitrary failure").contains("sensitive"));
+  assertFalse(WorkspaceDesktopGpu.failure(a,"ERROR:GPU_DOWNLOAD_NETWORK\n").contains("GPU_PROGRESS"));
+ }
 }

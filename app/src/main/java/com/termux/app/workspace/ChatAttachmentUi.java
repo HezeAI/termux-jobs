@@ -51,7 +51,7 @@ final class ChatAttachmentUi implements AutoCloseable {
     }
     private String error(Exception e){String code=e.getMessage();
         if("SUPPORTED_TYPES".equals(code))return t("Выберите изображение, текстовый файл/лог или видео MP4, MKV, WebM, MOV, M4V, 3GP.","Choose an image, text/log file, or MP4, MKV, WebM, MOV, M4V, 3GP video.");
-        if("FILE_LIMIT".equals(code))return t("Файл пуст или слишком большой: изображения до 20 МБ, остальные файлы до 256 МБ.","The file is empty or too large: images up to 20 MB, other files up to 256 MB.");
+        if("FILE_LIMIT".equals(code))return t("Файл пуст или слишком большой: изображения до 100 МБ, остальные файлы до 5 ГБ.","The file is empty or too large: images up to 100 MB, other files up to 5 GB.");
         return t("Не удалось подготовить вложение. Проверьте доступ, формат файла и свободное место.","Could not prepare the attachment. Check access, file format and free space.");
     }
     private void render(){

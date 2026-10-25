@@ -48,7 +48,7 @@ with zipfile.ZipFile(packed,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
 sha=hashlib.sha256(packed.read_bytes()).hexdigest()
 helper=ROOT/'x11/src/main/assets/x11-bionic-glibc.py'
 import re
-s=helper.read_text();s=re.sub(r"^PIN = '[^']+'$","PIN = '"+sha+"'",s,flags=re.M);helper.write_text(s)
+s=helper.read_text();s=re.sub(r"^PIN = '[^']+'$","PIN = '"+sha+"'",s,flags=re.M);s=re.sub(r'^SIZE = [0-9]+$', 'SIZE = '+str(packed.stat().st_size), s, flags=re.M);helper.write_text(s)
 provenance={
  'name':'Bionic for glibc (Experimental)', 'scope':'six ordinary glibc desktops (Ubuntu, Debian, Fedora, Arch, openSUSE, Void), separate runtime/driver caches; no vendor drivers bundled',
  'libhybris':{'url':'https://github.com/taowen/libhybris','commit':'07dfa88569d60f00e34a9f127ccae2fcc0730618','patch':'libhybris.patch'},

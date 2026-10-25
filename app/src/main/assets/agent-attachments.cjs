@@ -1,23 +1,23 @@
 'use strict';
 // Explicit picker copies only. Never reads credentials or downloads remote URLs.
 const fs=require('node:fs'),path=require('node:path'),{pathToFileURL}=require('node:url');
-const MAX=256*1024*1024;
+const MAX=5*1024*1024*1024,IMAGE_MAX=100*1024*1024,MODEL_MAX=20*1024*1024;
 const suffix=name=>path.extname(name).toLowerCase();
 const mime=name=>({'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif'})[suffix(name)]||'';
 class Attachments {
  constructor(root){this.root=root;this.links=new Map();}
- file(p){
+ file(p,limit=MAX){
   const base=path.join(this.root,'chat-attachments');
   if(typeof p!=='string'||!p.startsWith(base+'/')||!/^[a-f0-9]{32}\/[A-Za-z0-9_.-]{1,100}$/.test(p.slice(base.length+1))||fs.realpathSync(p)!==p)throw Error('INVALID_ATTACHMENT');
-  const stat=fs.statSync(p);if(!stat.isFile()||stat.size<=0||stat.size>MAX)throw Error('INVALID_ATTACHMENT');return p;
+  const stat=fs.statSync(p);if(!stat.isFile()||stat.size<=0||stat.size>limit)throw Error('INVALID_ATTACHMENT');return p;
  }
  load(id,session,claim=false){
   if(typeof id!=='string'||!/^[a-f0-9]{32}$/.test(id)||typeof session!=='string'||!session||session.length>128)throw Error('INVALID_ATTACHMENT');
   const file=this.file(path.join(this.root,'chat-attachments',id,'attachment.json'));if(fs.statSync(file).size>16384)throw Error('INVALID_ATTACHMENT');
   const a=JSON.parse(fs.readFileSync(file,'utf8'));
   if(a.id!==id||!['image','video','file','binary','apk'].includes(a.type)||typeof a.name!=='string'||!a.name||a.name.length>512||a.threadId&&a.threadId!==session)throw Error('INVALID_ATTACHMENT');
-  if(path.dirname(this.file(a.path))!==path.dirname(file))throw Error('INVALID_ATTACHMENT');if(a.type==='image'&&!mime(a.path))throw Error('INVALID_ATTACHMENT');if(a.modelPath){if(path.dirname(this.file(a.modelPath))!==path.dirname(file))throw Error('INVALID_ATTACHMENT');if(!mime(a.modelPath))throw Error('INVALID_ATTACHMENT');}
-  if(a.type==='video'){if(!Array.isArray(a.frames)||!a.frames.length||a.frames.length>12)throw Error('INVALID_ATTACHMENT');for(const f of a.frames){if(path.dirname(this.file(f.path))!==path.dirname(file))throw Error('INVALID_ATTACHMENT');if(!mime(f.path)||!Number.isSafeInteger(f.timeMs)||f.timeMs<0)throw Error('INVALID_ATTACHMENT');}}
+  if(path.dirname(this.file(a.path,a.type==='image'?IMAGE_MAX:MAX))!==path.dirname(file))throw Error('INVALID_ATTACHMENT');if(a.type==='image'&&!mime(a.path))throw Error('INVALID_ATTACHMENT');if(a.modelPath){if(path.dirname(this.file(a.modelPath,MODEL_MAX))!==path.dirname(file))throw Error('INVALID_ATTACHMENT');if(!mime(a.modelPath))throw Error('INVALID_ATTACHMENT');}
+  if(a.type==='video'){if(!Array.isArray(a.frames)||!a.frames.length||a.frames.length>12)throw Error('INVALID_ATTACHMENT');for(const f of a.frames){if(path.dirname(this.file(f.path,MODEL_MAX))!==path.dirname(file))throw Error('INVALID_ATTACHMENT');if(!mime(f.path)||!Number.isSafeInteger(f.timeMs)||f.timeMs<0)throw Error('INVALID_ATTACHMENT');}}
   const scope=path.join(path.dirname(file),'scope.json');
   if(claim){try{fs.writeFileSync(scope,JSON.stringify({session}),{flag:'wx',mode:0o600});}catch(e){if(e.code!=='EEXIST')throw e;}}
   if(fs.existsSync(scope)){if(fs.lstatSync(scope).isSymbolicLink()||fs.statSync(scope).size>1024||JSON.parse(fs.readFileSync(scope,'utf8')).session!==session)throw Error('INVALID_ATTACHMENT');}

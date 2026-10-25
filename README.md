@@ -5,7 +5,17 @@
 Команды по-прежнему выполняются в настоящем Termux или выбранном окружении;
 интерфейс помогает организовать работу и не требует писать свою оболочку скриптов.
 
-## v2.0.5 — X11 screen controls and input fixes
+## v2.0.6 — X11 scaling, renderer setup and chat files
+
+Live interface-scale Apply now reaches the owned XFCE settings service in all seven PRoot environments; native Termux retains its working path. The keyboard no longer squeezes a manually sized X11 desktop. Agent chats accept files up to **5 GiB** and original images up to **100 MiB**, with bounded prepared images for model input.
+
+Optional graphics archives now use the separate [Termux Job’s Components repository](https://github.com/HezeAI/termux-jobs-components), with fixed versions, SHA-256 and upstream credits. This fixes the missing Termux Vulkan Loader download affecting Turnip and Wrapper setup. Bionic for glibc downloads its unchanged runtime only when needed; valid existing installations continue working offline. Distro packages still come from their native repositories.
+
+The Wayland/KDE experiment is discontinued and removed. All eight ordinary environments retain X11/XFCE; Arch Programs returns to the standard X11 catalogue. Same package/signer/schema8/ARM64, code1395; no user-data reset or rootfs migration. Previously installed experimental packages are not automatically deleted.
+
+[Download v2.0.6](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.6) · [Release notes](docs/fork/RELEASE-v2.0.6.md) · [Validation](docs/fork/VALIDATION-v2.0.6.md) · [Graphics downloads](docs/fork/GRAPHICS-COMPONENTS.md).
+
+## Historical v2.0.5 — X11 screen controls and input fixes
 
 Per-environment X11 resolution, interface scale and safe margins, with live Apply
 and one-click Auto setup. Disabling Auto setup prefills 1600×720, 75% and 5 dp.

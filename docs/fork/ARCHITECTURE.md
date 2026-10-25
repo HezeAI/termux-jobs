@@ -1,3 +1,15 @@
+# Current architecture — v2.0.6
+
+The Wayland/KDE experiment is removed. DesktopProfiles accepts XFCE; old Plasma selection is ignored and unsupported profile requests are rejected before runtime preparation. Arch uses the standard X11 program flow. Shared Wayland/Qt package dependencies remain independent of that retired desktop.
+
+Each PRoot desktop generates a mode0600 private D-Bus configuration including its distro session policy and allowing only the actual Android application UID. The existing launch identity, display and control directory isolate settings operations. EXTERNAL authentication remains enabled; no anonymous/TCP bus or installed system-policy edit is introduced. This allows a settings client in a separate PRoot invocation to reach its owned Xfconf daemon. Native Termux uses its unchanged launch path.
+
+Pinned graphics archives use the separate component repository. Bionic-for-glibc preparation copies only Python helpers into a private job directory, verifies a bounded HTTPS archive, atomically caches it and activates a staged allowlisted runtime under that target’s existing exclusive lock. A valid runtime is reused without network; failed/cancelled preparation preserves the previous runtime and driver selection. Active desktops retain their shared locks. Android JNI and guest runtime payloads are unchanged.
+
+The X11 host preserves geometry when the IME opens. Chat file transport is streamed and size bounded. See [graphics distribution](GRAPHICS-COMPONENTS.md), [screen design](X11-SCREEN.md) and [validation](VALIDATION-v2.0.6.md). Earlier named release sections are historical.
+
+---
+
 # v2.0.5 — scoped screen settings and public preview gate
 
 X11ScreenSettings owns validated per-target geometry/scale preferences.

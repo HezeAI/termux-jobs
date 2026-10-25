@@ -42,8 +42,10 @@ function attachmentManifest(root,id,thread){
  if(typeof id!=='string'||!/^[a-f0-9]{32}$/.test(id))throw Error('INVALID_ATTACHMENT');
  const f=attachmentFile(root,path.join(root,'chat-attachments',id,'attachment.json'));
  if(fs.statSync(f).size>16384)throw Error('INVALID_ATTACHMENT');const a=JSON.parse(fs.readFileSync(f,'utf8'));if(a.id!==id||!['image','video','file','binary','apk'].includes(a.type)||typeof a.name!=='string'||a.name.length>512||a.threadId&&a.threadId!==thread)throw Error('INVALID_ATTACHMENT');
- attachmentFile(root,a.path);if(fs.statSync(a.path).size>256*1024*1024)throw Error('INVALID_ATTACHMENT');
- if(a.type==='video'){if(!Array.isArray(a.frames)||!a.frames.length||a.frames.length>12)throw Error('INVALID_ATTACHMENT');for(const frame of a.frames){attachmentFile(root,frame.path);if(!Number.isSafeInteger(frame.timeMs)||frame.timeMs<0)throw Error('INVALID_ATTACHMENT');}}
+ attachmentFile(root,a.path);const size=fs.statSync(a.path).size;if(size<=0||size>(a.type==='image'?100*1024*1024:5*1024*1024*1024))throw Error('INVALID_ATTACHMENT');
+ if(a.modelPath){attachmentFile(root,a.modelPath);if(path.dirname(a.modelPath)!==path.dirname(f)||fs.statSync(a.modelPath).size>20*1024*1024||!(/\.(png|jpe?g|webp|gif)$/i.test(a.modelPath)))throw Error('INVALID_ATTACHMENT');}
+ if(a.type==='image'&&size>20*1024*1024&&!a.modelPath)throw Error('INVALID_ATTACHMENT');
+ if(a.type==='video'){if(!Array.isArray(a.frames)||!a.frames.length||a.frames.length>12)throw Error('INVALID_ATTACHMENT');for(const frame of a.frames){attachmentFile(root,frame.path);if(fs.statSync(frame.path).size>20*1024*1024||!Number.isSafeInteger(frame.timeMs)||frame.timeMs<0)throw Error('INVALID_ATTACHMENT');}}
  return {file:f,data:a};
 }
 function itemPhase(item,status){if(!status)return item;const value={...item};Object.defineProperty(value,'_jobsStatus',{value:status});return value;}
@@ -139,7 +141,7 @@ class CodexChat {
    if(item.type==='userMessage'){
     const skills=(item.content||[]).filter(input=>input.type==='skill'&&text(input.name));skillContext=skills.length===1?text(skills[0].name).slice(0,120):'';
     const manifestIds=new Set(),paths=new Set();const content=item.content||[];
-    for(const b of content)if(b.type==='text'){const m=/^\[TermuxJobs attachment:([a-f0-9]{32})\]\n/.exec(b.text||'');if(m)try{const a=attachmentManifest(this.root,m[1],this.thread).data;if(a.threadId===this.thread){manifestIds.add(a.id);paths.add(a.path);for(const f of a.frames||[])paths.add(f.path);}}catch{}}
+    for(const b of content)if(b.type==='text'){const m=/^\[TermuxJobs attachment:([a-f0-9]{32})\]\n/.exec(b.text||'');if(m)try{const a=attachmentManifest(this.root,m[1],this.thread).data;if(a.threadId===this.thread){manifestIds.add(a.id);paths.add(a.path);if(a.modelPath)paths.add(a.modelPath);for(const f of a.frames||[])paths.add(f.path);}}catch{}}
     add('text','user',content.filter(b=>b.type==='text'&&(!/^\[TermuxJobs attachment:([a-f0-9]{32})\]\n/.test(b.text||'')||!manifestIds.has(/^\[TermuxJobs attachment:([a-f0-9]{32})\]/.exec(b.text||'')?.[1]))&&(!manifestIds.size||!/^Video frame at \d+ ms$/.test(b.text||''))).map(b=>b.text).join('\n'));
     for(const id of manifestIds){const a=attachmentManifest(this.root,id,this.thread).data;add('attachment:'+id,'attachment',a.name);Object.assign(rows.at(-1),{attachment:a});}
     for(const [i,b]of content.entries())if(b.type==='localImage'&&!paths.has(b.path)){add('image:'+i,'attachment','Image');Object.assign(rows.at(-1),{attachment:{type:'image',name:path.basename(b.path),path:b.path,cacheKey:message+':'+i}});}
@@ -151,7 +153,7 @@ class CodexChat {
     let artifacts=this.mediaCache.get(item);if(!artifacts||artifacts.text!==item.text){
      artifacts={text:item.text,apks:[]};
      for(const match of String(item.text||'').matchAll(/(?<!!)\[[^\]\n]{1,200}\]\((?:<(\/[^<>\r\n]+\.apk)>|(\/[^\r\n)]+\.apk))\)/gi)){
-      const file=match[1]||match[2];try{const stat=fs.lstatSync(file);if(stat.isFile()&&!stat.isSymbolicLink()&&stat.size>0&&stat.size<=256*1024*1024)artifacts.apks.push({type:'apk',name:path.basename(file),path:file,bytes:stat.size,cacheKey:message+':'+stat.size+':'+stat.mtimeMs});}catch{}
+      const file=match[1]||match[2];try{const stat=fs.lstatSync(file);if(stat.isFile()&&!stat.isSymbolicLink()&&stat.size>0&&stat.size<=5*1024*1024*1024)artifacts.apks.push({type:'apk',name:path.basename(file),path:file,bytes:stat.size,cacheKey:message+':'+stat.size+':'+stat.mtimeMs});}catch{}
       if(artifacts.apks.length>=4)break;
      }this.mediaCache.set(item,artifacts);
     }
@@ -237,7 +239,7 @@ class CodexChat {
     if(a.type==='binary'||a.type==='apk')description+='\nBinary original is available at the file path for tools to inspect; it is not decoded as text.';
     if(a.type==='video')description+='\nVideo duration: '+a.durationMs+' ms. '+a.frames.length+' sampled frames follow, labelled by timestamp. Audio is not included; brief events between frames may be missed.';
     input.push({type:'text',text:description,text_elements:[]});
-    if(a.type==='image')input.push({type:'localImage',path:a.path});
+    if(a.type==='image')input.push({type:'localImage',path:a.modelPath||a.path});
     if(a.type==='video')for(const frame of a.frames){input.push({type:'text',text:'Video frame at '+frame.timeMs+' ms',text_elements:[]},{type:'localImage',path:frame.path});}
     if(!a.threadId)fs.writeFileSync(file,JSON.stringify({...a,threadId:this.thread}),{mode:0o600});
    }

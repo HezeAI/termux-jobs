@@ -61,7 +61,6 @@ public final class RemoteDesktopView extends FrameLayout implements SurfaceHolde
             public void key(int code,boolean down){Bundle q=X11Remote.command("input");q.putInt("key",code);q.putBoolean("down",down);input(q);}
         });ime.onWindowFocused(()->{if(keyboardWanted)requestIme(keyboardGeneration);});addView(ime,new LayoutParams(1,1));
     }
-    public void transport(String name){loading.transport(name);}
     public void connect(IBinder binder){remote=binder;if(surface.getHolder().getSurface().isValid())attach();}
     public void startup(boolean ready,boolean timedOut){startup(ready,timedOut,ready?4:0);}
     public void startup(boolean ready,boolean timedOut,int step){
@@ -91,9 +90,10 @@ public final class RemoteDesktopView extends FrameLayout implements SurfaceHolde
         boolean edgeToEdge=(getWindowSystemUiVisibility()&View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)!=0;
         int stableBottom=edgeToEdge?0:bars.bottom;
         int visible=X11Viewport.visibleHeight(surface.getHeight(),bounds.bottom,position[1],insets.getInsets(WindowInsets.Type.ime()).bottom);
-        if(!screenSettings.automatic())return new X11Viewport.Size(surface.getWidth(),surface.getHeight(),visible);
+        // Custom logical resolution still needs the full, unobscured host size.
+        // An IME resize changes the visible crop, never the desktop's transform.
         int bottomGap=Math.max(0,getHeight()-surface.getBottom());
-        return viewport.update(surface.getWidth(),visible,bounds.width(),bounds.height(),position[1]-bounds.top,stableBottom+bottomGap);
+        return screenSettings.viewport(viewport,surface.getWidth(),visible,bounds.width(),bounds.height(),position[1]-bounds.top,stableBottom+bottomGap);
     }
     private void putGeometry(Bundle q){X11Viewport.Size size=geometry();q.putInt("width",size.width);q.putInt("height",size.height);q.putInt("visibleHeight",size.visibleHeight);screenSettings.putMode(q,presentationLandscape());}
     private void resize(){

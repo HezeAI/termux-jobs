@@ -7,6 +7,14 @@ import java.nio.file.Files;
 import static org.junit.Assert.*;
 public class ChatAttachmentsTest {
  @Rule public TemporaryFolder folder=new TemporaryFolder();
+ @Test public void largeFileAdmissionUsesLongBoundsAndKeepsImageLimit()throws Exception{
+  for(String kind:new String[]{"apk","binary","video","file"}){
+   for(long size:new long[]{256L*1024*1024+1,2L*1024*1024*1024+1,5L*1024*1024*1024})ChatAttachments.requireSize(kind,size);
+   for(long size:new long[]{0,-1,5L*1024*1024*1024+1})try{ChatAttachments.requireSize(kind,size);fail(kind+":"+size);}catch(IOException expected){assertEquals("FILE_LIMIT",expected.getMessage());}
+  }
+  ChatAttachments.requireSize("image",100L*1024*1024);
+  try{ChatAttachments.requireSize("image",100L*1024*1024+1);fail();}catch(IOException expected){assertEquals("FILE_LIMIT",expected.getMessage());}
+ }
  @Test public void supportedTypesAndExplicitRefusal()throws Exception{
   assertEquals("image",ChatAttachments.type("shot.PNG"));assertEquals("file",ChatAttachments.type("device.jsonl"));assertEquals("file",ChatAttachments.type("report.LOG"));assertEquals("video",ChatAttachments.type("recording.MP4"));
   assertEquals("apk",ChatAttachments.type("package.apk"));assertEquals("binary",ChatAttachments.type("archive.zip"));

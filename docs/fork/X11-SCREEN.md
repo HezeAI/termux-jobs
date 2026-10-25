@@ -25,6 +25,13 @@ landscape full screen, at every interface scale. Only explicitly chosen margins
 reserve space; a different framebuffer aspect ratio can stretch shapes. This
 replaces test.2/test.3 aspect fitting that left black strips around manual modes.
 
+Keyboard visibility also preserves the full Android host geometry in manual
+mode, as it does in Auto. The keyboard obscures the lower part of the desktop;
+it does not squeeze the entire custom-resolution image into the remaining height.
+This applies to embedded portrait and landscape presentation. HezeAI confirms
+the keyboard correction on the phone. Rotation, margins and alternate-device
+regressions remain part of subsequent device checks.
+
 Horizontal and vertical margins are specified in Android dp **on each side**,
 from 0 to 96. They reserve real space for rounded corners and cutouts, independently
 of the framebuffer resolution. On small windows each margin is capped to a
@@ -44,6 +51,8 @@ Some applications cache their view zoom: already open Thunar folder icons may ne
 re-entering the folder or reopening its window. Folder-specific zoom overrides are
 preserved. Normal open Thunar windows are resized proportionally; maximized, hidden
 and full-screen windows are left to the window manager.
+
+For PRoot desktops, the private session-bus configuration now includes the distro’s session policy and allows the actual Android application UID with ordinary EXTERNAL authentication. The separate settings invocation can therefore reach that environment’s owned Xfconf service. Startup validates the target and launch token; the private config is atomic and mode0600. No installed system policy or other environment is modified. Native Termux keeps its original working path. HezeAI confirmed the live Arch correction; isolated real settings-bus fixtures passed75%/50%/100% in Ubuntu, Debian, Alpine, Fedora, openSUSE, Void and Arch. Full GUI coverage on every device remains separate.
 
 The scale overlay records original properties in the selected environment's HOME.
 A live update uses the selected desktop’s already running private Xfconf service;
@@ -67,8 +76,8 @@ The additional-key panel is independent of XFCE interface scale. Its compact
 default size is 400 × 104 dp, clamped to the visible host; the left tab resizes it
 and the right tab moves it. All keys reflow without losing held modifier state.
 
-These controls currently apply to X11/XFCE only. The experimental Arch Wayland
-profile retains its independent automatic output size. No workspace schema or
+These controls apply to X11/XFCE. The Wayland/KDE experiment has been retired.
+No workspace schema or
 rootfs migration is required; old APKs ignore the new preference keys.
 
 Automated tests cover geometry, native alignment, bounds, default behavior,
@@ -85,9 +94,9 @@ button. There is no polling timer: the helper waits for selected X11 property
 changes and narrowly matched private-bus Fcitx calls; a focus request has one short
 settling deadline. No titles, text, surrounding text, keys or clipboard are read.
 Desktop rename/type-ahead contexts without a normal application window require
-manual input. Native Wayland text-input handling is unchanged.
+manual input.
 
-Driver choice/import in both X11 and Arch Wayland is available before desktop
+X11 driver choice/import is available before desktop
 installation or service binding. The choice itself does not install or launch a
 desktop. Active desktop, setup and driver-library operations keep their locks.
 
@@ -102,7 +111,7 @@ private control directory; a new process in that same environment validates them
 before applying allowlisted properties. It has its own guardian and deadline,
 separate from the desktop child. A small recovery journal restores interrupted
 changes on the next launch and preserves later manual edits. Applying scale does
-not install packages or create a new desktop/bus. Native Wayland is unaffected.
+not install packages or create a new desktop/bus.
 
 The immediate-update mechanism uses the public [Xfconf channel API](https://github.com/xfce-mirror/xfconf/blob/master/xfconf/xfconf-channel.h).
 Thunar's existing [view-zoom binding](https://github.com/xfce-mirror/thunar/blob/master/thunar/thunar-standard-view.c)

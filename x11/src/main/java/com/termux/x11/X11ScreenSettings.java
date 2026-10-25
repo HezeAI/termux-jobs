@@ -18,6 +18,10 @@ public final class X11ScreenSettings {
     }
     public static void validateScale(int scale){if(scale<50||scale>150)throw new IllegalArgumentException("Interface scale: 50–150%");}
     public boolean automatic(){return width==0;}
+    /** Both logical modes keep a stable Android host; IME only crops visibility. */
+    X11Viewport.Size viewport(X11Viewport viewport,int width,int visibleHeight,int windowWidth,int windowHeight,int top,int bottom){
+        return viewport.update(width,visibleHeight,windowWidth,windowHeight,top,bottom);
+    }
     public int effectiveWidth(){return width-width%8;}
     public static X11ScreenSettings defaults(){return new X11ScreenSettings(0,0,0,0);}
     private static String key(String target){X11Environment.forTarget(target);return "screen:"+target+":";}
