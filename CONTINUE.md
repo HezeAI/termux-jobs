@@ -1,3 +1,25 @@
+# Private alias test2 ready
+
+Active source: /root/termux-fork/.verification/chat-file-cards/source,
+branch work/chat-file-cards. Preview2.0.9-test2/code1415. APK:
+build/apk/Termux-Jobs-test2.apk, 39792329bytes,
+SHA256ba4eadb050af1e254fa8ed0555db05d3809f614804898c48c65c4b3f4d0473ec.
+Same package/signer/schema8/ARM64, header v2.0; no reset. All3 JNI/X11 runtime
+payloads unchanged from stable2.0.8.132 JVM cases pass,40 Python backup cases,
+8 shell fixtures; compatible lint0errors/218warnings; artifact/runtime/privacy
+checks pass. See docs/fork/VALIDATION-alias-test2.md and ALIASES.md.
+
+Added explicit import/export cards, selection/full preview, confirmed per-env name
+replacement, General fallback, batch compensation and persisted-record checks.
+Only Termux shows tab-restart guidance in editor/deletion. No automatic discovery
+of aliases in shell files. Ubuntu AI remains excluded. All helper/tests wrote only
+private repository fixtures; no actual rootfs/session/server/tunnel/app changed.
+Deliver in chat for phone verification. Do NOT publish until accepted and asked.
+Next code must exceed1415. Preserve stable app/component releases and root worktree
+rotation experiments. Do not run the quarantined native fixture.
+
+---
+
 # Private environment-alias test1 ready
 
 Active checkout: /root/termux-fork/.verification/chat-file-cards/source,

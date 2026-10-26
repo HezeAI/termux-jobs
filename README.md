@@ -10,6 +10,8 @@
 A pending test build adds environment-bound aliases, separate categories and
 favourites, and **Commands / Alias / Notes** in the star picker. Supported targets
 are the eight standard installed terminal environments; Ubuntu AI is excluded.
+The follow-up preview adds explicit alias import/export with previews, selection
+and confirmed replacements, plus Termux-only tab-restart guidance.
 [Usage and persistence details](docs/fork/ALIASES.md). The stable download below
 remains v2.0.8 until the preview is accepted and a new release is authorized.
 

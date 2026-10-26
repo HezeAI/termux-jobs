@@ -12,6 +12,9 @@ each tab, and a full preview before insertion, editing or confirmed deletion.
 An alias inserts its short name into the composer of a running terminal profile
 for its selected environment. It does not execute it or send it to an agent.
 A running shell opened before the alias was saved needs to be reopened first.
+Only the Termux editor shows **Restart the tab to load the alias** immediately
+below its environment selector. Only Termux deletion asks to restart the tab;
+other environments retain the existing close/reopen-session explanation.
 Profile matching cannot detect a different shell manually entered inside a PTY.
 
 Supported targets are installed Termux, Ubuntu, Debian, Alpine, Arch Linux ARM,
@@ -27,9 +30,40 @@ name, command, environment, category and favourite flag are retained. Legacy
 libraries without the array still load. Invalid definitions or duplicate names
 in the same environment reject decoding before changing the in-memory library.
 Commands and notes are independent. Existing app backup snapshots retain the raw
-workspace JSON and selected HOME/rootfs files. The existing selective library
-import UI has no alias-import selector yet; do not claim alias-selective restore.
-Keep the original full backup when transferring managed shell definitions.
+workspace JSON and selected HOME/rootfs files.
+
+## Explicit import and export
+
+Backup and restore has separate **Import aliases** and **Export aliases** actions.
+Export previews and selects records, then writes a fresh `Termux-Jobs-Alias-*.json`
+file into the selected directory (Download by default). It preserves each selected
+definition's environment, category and favorite marker. Commands, notes, presets,
+shell histories, settings, keys and agent authorization are not included. Alias
+bodies themselves can contain private information; review before sharing.
+
+Import accepts this JSON, a `workspace-v1.json` library or a backup manifest.
+It also has an entry in the existing restore plan. Preview and selection do not
+execute commands or inspect environment startup files. Only explicitly selected
+managed records are imported. Missing environments are disabled; installation
+is not automatic. The same eight-target whitelist still excludes Ubuntu AI and
+custom imported rootfs names. Empty categories become General (Общее in Russian).
+
+The confirmation lists matching name/environment replacements; it does not clear
+unselected aliases. A replaced record retains its local UUID; new definitions
+receive new UUIDs. The backup is inspected again before applying, and a changed
+source or changed destination record requires a new selection/confirmation.
+An owned helper writes definitions into each selected installed environment,
+without executing their bodies or restarting existing shells. Sequential imports
+compensate completed helper changes on a later failure. Metadata is saved after
+successful helpers and checked against the persisted library. An explicit error
+reports failed compensation or unconfirmed persistence rather than success.
+Private pre-import alias metadata is retained in `workspace-import-recovery`.
+Process/device death between helper and metadata commits is not an atomic
+transaction; these recovery records may require manual review.
+
+Aliases defined manually in shell files are not automatically discovered or added
+to the library. The older explicitly chosen aliases/scripts-to-commands backup
+action remains separate and does not create managed aliases.
 
 On save, a separate owned helper process writes a quoted definition into
 `$HOME/.termux-jobs-aliases/<UUID>.sh` in the selected environment. It adds one

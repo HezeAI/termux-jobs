@@ -4,6 +4,8 @@
 - Add creation, environment/category selection, managed-name replacement confirmation, editing and deletion.
 - Separate All commands / All aliases and their category/favourite filters; preserve previous library data.
 - Add Commands / Alias / Notes tabs, independent searches and alias previews in the star picker.
+- Add separate alias import/export with selection, full previews, preserved environment/category bindings and confirmed replacements.
+- Show tab-restart guidance only for Termux alias creation and deletion; keep other environments' session guidance.
 - Keep running shells, agent sessions, X11 and graphics components unchanged.
 - Private preview only; device checks and publication are pending. [Details](docs/fork/ALIASES.md).
 

@@ -152,9 +152,30 @@ def libraries(value):
         raise BackupError('UNSUPPORTED_LIBRARY')
     if not isinstance(value.get('commands'), list) or not isinstance(value.get('sessions'), list):
         raise BackupError('UNSUPPORTED_LIBRARY')
-    if sum(len(value.get(k, [])) for k in ('commands', 'sessions', 'notes')) > 20000:
+    if any(not isinstance(value.get(k, []), list) for k in ('commands', 'sessions', 'notes', 'aliases')):
+        raise BackupError('UNSUPPORTED_LIBRARY')
+    if sum(len(value.get(k, [])) for k in ('commands', 'sessions', 'notes', 'aliases')) > 20000:
         raise BackupError('LIBRARY_TOO_LARGE')
     return value
+
+
+def export_aliases(request):
+    value = libraries(request['workspace'])
+    if not value.get('aliases') or any(value.get(k) for k in ('commands', 'sessions', 'notes', 'recentCommands')):
+        raise BackupError('INVALID_ALIAS_EXPORT')
+    # Export only the explicit alias fields, never unrelated settings or credentials.
+    fields = ('id', 'name', 'command', 'environment', 'category', 'favorite')
+    data = dict(version=8, commands=[], sessions=[], notes=[], recentCommands=[],
+                aliases=[{k: a[k] for k in fields} for a in value['aliases']])
+    encoded = json.dumps(data, ensure_ascii=False).encode()
+    if len(encoded) > MAX_JSON:
+        raise BackupError('LIBRARY_TOO_LARGE')
+    parent = Path(request['destination']).resolve(strict=True)
+    if not parent.is_dir():
+        raise BackupError('INVALID_PATH')
+    path = parent / ('Termux-Jobs-Alias-' + time.strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:8] + '.json')
+    protected_write(path, encoded)
+    return dict(path=str(path), sha256=digest(path), count=len(data['aliases']))
 
 
 def scan_tar(path):
@@ -1458,7 +1479,7 @@ def main():
         spec=importlib.util.spec_from_file_location('workspace_cleanup',Path(__file__).with_name('workspace-cleanup.py'))
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
         event('DONE',result=module.run(request,sys.modules[__name__]));return
-    value = {'compression-status': compression_status, 'install-pigz': install_pigz, 'inventory': environment_info, 'selection-inventory': selection_inventory, 'create': create, 'inspect': inspect, 'restore': restore, 'packages': compare_packages, 'apt-plan': apt_plan, 'restored-inventory': restored_inventory, 'remove-restored': remove_restored}[operation](request)
+    value = {'alias-export': export_aliases, 'compression-status': compression_status, 'install-pigz': install_pigz, 'inventory': environment_info, 'selection-inventory': selection_inventory, 'create': create, 'inspect': inspect, 'restore': restore, 'packages': compare_packages, 'apt-plan': apt_plan, 'restored-inventory': restored_inventory, 'remove-restored': remove_restored}[operation](request)
     event('DONE', result=value)
 
 

@@ -59,7 +59,68 @@ final class WorkspaceBackupUi {
             if(!started){installingPigz=false;control.setEnabled(true);control.setText(compressionName());message(t("Другая операция ещё выполняется. Дождитесь её завершения и повторите установку.","Another operation is running. Wait for it to finish and retry installation."));}
         }).setNegativeButton(t("Не сейчас","Not now"),null).show();
     }
-    private void menu(){backupBuilder(activity).setTitle(label(activity)).setItems(new String[]{t("Создать резервную копию","Create backup"),t("Проверить резервную копию","Verify backup"),t("Восстановить из файла","Restore from file")},(d,w)->{if(w==0)inventory();else chooseFile(w==2);}).setNegativeButton(WorkspaceText.tr("Закрыть"),null).show();}
+    private void menu(){
+        LinearLayout form=column();
+        action(form,t("Создать резервную копию","Create backup"),this::inventory);
+        action(form,t("Проверить резервную копию","Verify backup"),()->chooseFile(false));
+        action(form,t("Восстановить из файла","Restore from file"),()->chooseFile(true));
+        action(form,t("Импорт Alias","Import aliases"),this::aliasSourceFile);
+        action(form,t("Экспорт Alias","Export aliases"),()->{List<WorkspaceStore.Alias> copy=new ArrayList<>();for(WorkspaceStore.Alias a:store.aliases)copy.add(a.copy());aliasPicker(copy,null);});
+        backupBuilder(activity).setTitle(label(activity)).setView(scroll(form)).setNegativeButton(WorkspaceText.tr("Закрыть"),null).show();
+    }
+    private void aliasSourceFile(){
+        LinearLayout form=column();info(form,t("Выберите JSON экспорта Alias, workspace-v1.json или manifest.json резервной копии. Файлы окружений не сканируются, команды не выполняются.","Choose an alias-export JSON, workspace-v1.json or backup manifest.json. Environment files are not scanned and commands are not executed."));
+        EditText path=field(form,Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath(),t("Путь к файлу","File path"));
+        action(form,t("Выбрать файл","Choose file"),()->browse(new File(path.getText().toString()),false,path::setText));
+        backupBuilder(activity).setTitle(t("Импорт Alias","Import aliases")).setView(scroll(form)).setPositiveButton(t("Проверить","Verify"),(d,w)->{try{run(request("inspect").put("path",path.getText().toString().trim()),this::aliasImportReport);}catch(Exception e){message(errorText("INVALID_PATH"));}}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
+    }
+    private void aliasImportReport(JSONObject report){try{aliasPicker(WorkspaceAliasImport.read(activity,report.optJSONObject("workspace")),report);}catch(Exception e){message(t("Не удалось прочитать Alias. Нужен совместимый экспорт или бэкап приложения.","Could not read aliases. Choose a compatible export or app backup."));}}
+    private void aliasPicker(List<WorkspaceStore.Alias> aliases,JSONObject source){
+        boolean importing=source!=null;if(aliases.isEmpty()){message(t("Сохранённых Alias нет.","No saved aliases found."));return;}
+        LinearLayout form=column();info(form,importing?t("Выберите Alias для импорта в их окружения. Отсутствующее окружение сначала установите. Существующие записи с тем же именем и окружением заменяются только после подтверждения. Импортируйте только доверенные команды.","Select aliases to import into their environments. Install missing environments first. Matching names in the same environment require replacement confirmation. Import only trusted commands."):t("Выберите Alias для экспорта. Сохраняются только выбранные определения, окружения, категории и избранное. Команды могут содержать личные данные — проверьте перед передачей файла.","Select aliases to export. Only selected definitions, environments, categories and favorites are saved. Commands may contain private data; review them before sharing."));
+        Set<String> installed=new HashSet<>();if(importing)for(WorkspaceEnvironments.Choice c:WorkspaceAliases.installed(WorkspaceEnvironments.choices()))installed.add(c.alias.isEmpty()?"termux":c.alias);
+        List<CheckBox> checks=new ArrayList<>();for(WorkspaceStore.Alias a:aliases){
+            boolean available=!importing||installed.contains(a.environment);
+            CheckBox box=check(form,a.name+" · "+WorkspaceAliases.label(a.environment)+" · "+(a.category.trim().isEmpty()?WorkspaceText.tr("Общее"):a.category)+(available?"":t(" · окружение не установлено"," · environment not installed")),!importing);box.setEnabled(available);checks.add(box);
+            TextView preview=WorkspaceDialogs.action(activity,t("Предпросмотр: ","Preview: ")+a.name,0);form.addView(preview);preview.setOnClickListener(v->{LinearLayout detail=column();info(detail,WorkspaceAliases.label(a.environment));info(detail,a.command);backupBuilder(activity).setTitle(a.name).setView(scroll(detail)).setPositiveButton(WorkspaceText.tr("Закрыть"),null).show();});
+        }
+        EditText destination=importing?null:field(form,Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath(),t("Каталог экспорта","Export directory"));
+        if(!importing)action(form,t("Выбрать каталог","Choose directory"),()->browse(new File(destination.getText().toString()),true,destination::setText));
+        AlertDialog dialog=backupBuilder(activity).setTitle(importing?t("Импорт Alias","Import aliases"):t("Экспорт Alias","Export aliases")).setView(scroll(form)).setPositiveButton(importing?t("Импортировать","Import"):t("Экспортировать","Export"),null).setNegativeButton(WorkspaceText.tr("Отмена"),null).create();
+        dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{try{
+            List<WorkspaceStore.Alias> selected=new ArrayList<>();Set<String> ids=new HashSet<>();for(int i=0;i<aliases.size();i++)if(checks.get(i).isEnabled()&&checks.get(i).isChecked()){selected.add(aliases.get(i));ids.add(aliases.get(i).id);}if(selected.isEmpty()){message(t("Выберите хотя бы один Alias.","Select at least one alias."));return;}
+            if(!importing){JSONObject req=request("alias-export").put("workspace",WorkspaceAliasImport.export(selected)).put("destination",destination.getText().toString().trim());run(req,r->{dialog.dismiss();message(t("Alias экспортированы: ","Aliases exported: ")+r.optInt("count")+"\n"+r.optString("path"));});return;}
+            WorkspaceAliasImport.Plan plan=WorkspaceAliasImport.plan(aliases,ids,store.aliases,WorkspaceText.tr("Общее"));
+            StringBuilder summary=new StringBuilder(t("Импортировать выбранные Alias: ","Import selected aliases: ")+plan.after.size());
+            if(plan.replacements()>0){summary.append(t("\nБудут заменены:\n","\nWill replace:\n"));for(int i=0;i<plan.before.size();i++)if(plan.before.get(i)!=null){WorkspaceStore.Alias a=plan.before.get(i);summary.append(a.name).append(" · ").append(WorkspaceAliases.label(a.environment)).append('\n');}}
+            summary.append(t("\nКоманды не будут выполнены. ","\nCommands will not be executed. ")).append(aliasReloadHint(plan));
+            backupBuilder(activity).setTitle(t("Подтвердить импорт Alias","Confirm alias import")).setMessage(summary).setPositiveButton(t("Импортировать","Import"),(q,w)->{
+                try{run(request("inspect").put("path",source.getString("path")),fresh->{if(!fresh.optJSONObject("fingerprints").toString().equals(source.optJSONObject("fingerprints").toString())){message(errorText("BACKUP_CHANGED_RECHECK"));return;}applyAliases(plan,dialog);});}catch(Exception e){message(errorText("IMPORT_FAILED"));}
+            }).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
+        }catch(Exception e){message(errorText("IMPORT_FAILED"));}}));dialog.show();
+    }
+    private void applyAliases(WorkspaceAliasImport.Plan plan,AlertDialog picker){
+        if(!store.isWritable()||!WorkspaceAliases.BUSY.compareAndSet(false,true)){message(t("Дождитесь окончания изменений Alias и повторите импорт.","Wait for pending alias changes, then retry import."));return;}
+        try{WorkspaceAliasImport.verify(plan,store.aliases);}catch(Exception e){WorkspaceAliases.BUSY.set(false);message(errorText("ALIAS_LIBRARY_CHANGED"));return;}
+        AlertDialog wait=backupBuilder(activity).setTitle(t("Импорт Alias","Import aliases")).setMessage(t("Сохранение в окружения…","Saving into environments…")).create();wait.setCancelable(false);wait.show();
+        new Thread(()->{
+            try{
+                // Private recovery metadata is written before any managed shell definition changes.
+                File recovery=new File(activity.getFilesDir(),"workspace-import-recovery");if(!recovery.isDirectory()&&!recovery.mkdirs())throw new java.io.IOException("PRIVATE_STORAGE");
+                JSONObject snapshot=WorkspaceAliasImport.export(plan.before.stream().filter(Objects::nonNull).collect(java.util.stream.Collectors.toList()));
+                try(java.io.OutputStream out=new java.io.FileOutputStream(new File(recovery,"aliases-before-"+UUID.randomUUID()+".json"))){out.write(snapshot.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));}
+                WorkspaceAliasImport.install(plan,(a,delete)->WorkspaceAliases.apply(activity,a,delete,""));
+            }catch(Exception e){activity.runOnUiThread(()->{WorkspaceAliases.BUSY.set(false);wait.dismiss();message(t("Импорт Alias не завершён. Код: ","Alias import did not complete. Code: ")+aliasError(e));});return;}
+            activity.runOnUiThread(()->{
+                WorkspaceStore target=store.isWritable()?store:new WorkspaceStore(activity,error->{});boolean separate=target!=store;
+                try{WorkspaceAliasImport.commit(plan,target);if(!activity.isDestroyed()){picker.dismiss();changed.run();}}
+                catch(Exception e){if(separate)target.close();WorkspaceAliases.BUSY.set(false);wait.dismiss();message(t("Определения записаны, но библиотека не обновлена. Сохранён снимок восстановления. Код: ","Definitions were written, but the library was not updated. A recovery snapshot was retained. Code: ")+aliasError(e));return;}
+                new Thread(()->{Exception failure=null;try{target.awaitWrites();JSONObject saved=new JSONObject(new String(readFile(new File(activity.getFilesDir(),"workspace-v1.json")),java.nio.charset.StandardCharsets.UTF_8));if(!WorkspaceAliasImport.persisted(plan,saved))throw new java.io.IOException("LIBRARY_WRITE_FAILED");}catch(Exception e){failure=e;}finally{if(separate)target.close();}final Exception result=failure;activity.runOnUiThread(()->{WorkspaceAliases.BUSY.set(false);wait.dismiss();message(result==null?t("Alias импортированы. ","Aliases imported. ")+aliasReloadHint(plan):t("Не удалось подтвердить сохранение библиотеки. Определения могли быть записаны. Снимок восстановления сохранён. Код: ","Library persistence could not be confirmed. Definitions may have been written. Recovery snapshot retained. Code: ")+aliasError(result));});},"jobs-alias-import-save").start();
+            });
+        },"jobs-alias-import").start();
+    }
+    private static String aliasError(Exception error){String code=error.getMessage();return code!=null&&code.matches("[A-Z_]{1,80}")?code:"ALIAS_IMPORT_FAILED";}
+    private String aliasReloadHint(WorkspaceAliasImport.Plan plan){boolean termux=false,guest=false;for(WorkspaceStore.Alias a:plan.after)if(a.environment.equals("termux"))termux=true;else guest=true;return (termux?t("Для Termux перезапустите вкладку. ","Restart the Termux tab. "):"")+(guest?t("Для остальных выбранных окружений откройте новую терминальную сессию.","Open a new terminal session for the other selected environments."):"");}
     static boolean restoredProfileInUse(WorkspaceStore store,String alias,Set<String> runningHandles){
         for(WorkspaceStore.Session profile:store.sessions)if(runningHandles.contains(profile.handle)&&WorkspaceEnvironments.alias(profile).equals(alias))return true;
         return false;
@@ -146,7 +207,7 @@ final class WorkspaceBackupUi {
         JSONObject inventory=initial?new JSONObject().put("environments",new JSONArray()).put("ubuntuBytes",new JSONObject()):supplied;
         WorkspaceBackupScanHeader scan=new WorkspaceBackupScanHeader(activity,t("Создать резервную копию","Create backup"));scan.ready=!initial;
         LinearLayout form=column();info(form,t("Архивы могут содержать SSH-ключи, токены и авторизацию. Завершите изменяющие файлы задачи перед копированием. Процессы не останавливаются автоматически; копия работающих баз не гарантированно согласована.","Archives may contain SSH keys, tokens and authorization. Finish file-writing tasks first. Processes are not stopped automatically; live database copies may be inconsistent."));
-        CheckBox library=check(form,t("Команды, заметки, пресеты, настройки и файлы истории сессий","Commands, notes, presets, settings and shell history files"),state.optBoolean("library",true));
+        CheckBox library=check(form,t("Команды, Alias, заметки, пресеты, настройки и файлы истории сессий","Commands, aliases, notes, presets, settings and shell history files"),state.optBoolean("library",true));
         if(!store.isWritable()){library.setChecked(false);library.setEnabled(false);info(form,t("Библиотека недоступна для чтения/записи. Её исходный файл нужно сохранить отдельно.","Library is unavailable. Preserve its original file separately."));}
         CheckBox home=check(form,"Termux HOME · "+size(inventory.optLong("homeBytes")),state.optBoolean("home")),prefix=check(form,"Termux PREFIX · "+size(inventory.optLong("prefixBytes")),state.optBoolean("prefix"));
         info(form,t("PREFIX сохраняется без rootfs/cache proot-distro и временных файлов. Linux-окружения выбираются отдельно. Внешние файлы по символьным ссылкам и общая память Android не копируются.","PREFIX excludes proot-distro storage/cache and temporary files. Select Linux environments separately. External symlink targets and Android shared storage are not copied."));
@@ -285,7 +346,7 @@ final class WorkspaceBackupUi {
         LinearLayout form=column();info(form,t("Проверка завершена. SHA-256 не подтверждает подлинность чужого бэкапа. Не восстанавливайте недоверенные данные. Совместимость работающих баз и внешних путей автоматически не гарантируется.","Inspection complete. SHA-256 does not authenticate a foreign backup. Do not restore untrusted data. Live database consistency and external paths are not guaranteed."));
         JSONObject source=report.optJSONObject("source");if(source!=null&&source.length()>0)info(form,t("Источник: ","Source: ")+source.optString("packageId","?")+" · "+source.optString("arch","?")+" · "+source.optString("appVersion","?")+"\n"+t("Пути из бэкапа: ","Backup paths: ")+source.optString("home","?")+" / "+source.optString("prefix","?"));else info(form,t("Исходные версии приложения и package ID неизвестны. Совместимость путей не подтверждена.","Source app version and package ID are unknown. Path compatibility is unconfirmed."));
         JSONArray components=report.getJSONArray("components");for(int i=0;i<components.length();i++){JSONObject c=components.getJSONObject(i);info(form,(i+1)+". "+kindName(c.optString("kind"))+" · "+c.optString("format")+" · "+c.optString("arch")+"\n"+status(c)+" · "+size(c.optLong("unpacked")));requirements(form,c);}
-        JSONObject library=report.optJSONObject("workspace");if(library!=null)info(form,t("Библиотека: команды / заметки / пресеты: ","Library: commands / notes / presets: ")+count(library,"commands")+" / "+count(library,"notes")+" / "+count(library,"sessions"));info(form,t("Свободно: ","Free: ")+size(report.optLong("free")));
+        JSONObject library=report.optJSONObject("workspace");if(library!=null)info(form,t("Библиотека: команды / Alias / заметки / пресеты: ","Library: commands / aliases / notes / presets: ")+count(library,"commands")+" / "+count(library,"aliases")+" / "+count(library,"notes")+" / "+count(library,"sessions"));info(form,t("Свободно: ","Free: ")+size(report.optLong("free")));
         action(form,t("Пакеты · сравнить версии","Packages · compare versions"),()->packages(report));
         action(form,t("Выбрать компоненты восстановления","Choose restore components"),()->restoreForm(report));
         backupBuilder(activity).setTitle(t("Проверка бэкапа","Backup inspection")).setView(scroll(form)).setPositiveButton(WorkspaceText.tr("Закрыть"),null).show();
@@ -298,6 +359,7 @@ final class WorkspaceBackupUi {
         JSONArray components=report.getJSONArray("components");List<CheckBox> selected=new ArrayList<>();for(int i=0;i<components.length();i++){JSONObject c=components.getJSONObject(i);CheckBox b=check(form,kindName(c.optString("kind"))+" · "+status(c),false);b.setEnabled(!c.optString("status").equals("blocked"));selected.add(b);requirements(form,c);}
         WorkspaceBackupImport.Choice choice=new WorkspaceBackupImport.Choice();JSONObject library=report.optJSONObject("workspace");CheckBox commands=check(form,t("Импортировать команды","Import commands"),false),notes=check(form,t("Импортировать заметки","Import notes"),false),presets=check(form,t("Импортировать пресеты запуска","Import launch presets"),false),history=check(form,t("Перенести файлы истории импортируемых пресетов (нужен app-data)","Copy history files for imported presets (requires app-data)"),false),settings=check(form,t("Импортировать настройки приложения","Import app settings"),false),replace=check(form,t("Заменить выбранные библиотеки вместо объединения","Replace selected libraries instead of merging"),false);
         commands.setEnabled(library!=null);notes.setEnabled(library!=null);presets.setEnabled(library!=null);history.setEnabled(library!=null);settings.setEnabled(report.optJSONObject("settings")!=null);
+        action(form,t("Импорт Alias","Import aliases"),()->aliasImportReport(report));
         JSONArray candidates=report.optJSONArray("candidates");Set<Integer> chosen=new HashSet<>();action(form,t("Aliases и скрипты → добавить в команды","Aliases and scripts → add to commands"),()->candidatePicker(candidates,chosen));
         EditText dest=field(form,WorkspaceBackupEngine.home(),t("Родительский каталог внутри HOME","Parent directory inside HOME"));action(form,t("Выбрать каталог","Choose directory"),()->browse(new File(dest.getText().toString()),true,dest::setText));
         CheckBox agree=check(form,t("Я доверяю бэкапу и подтверждаю выбранный план","I trust this backup and confirm the selected plan"),false);

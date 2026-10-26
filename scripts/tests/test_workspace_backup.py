@@ -40,6 +40,21 @@ class BackupTests(unittest.TestCase):
         return p
     def inspect(self,p):return b.inspect(dict(self.req,path=str(p)))
     def library(self):return dict(version=8,commands=[],notes=[],sessions=[],recentCommands=[])
+    def test_alias_export_is_standalone_preserves_bindings_and_excludes_unrelated_data(self):
+        value=self.library();value['aliases']=[dict(id='11111111-1111-1111-1111-111111111111',name='ll',command="ls -lah; printf 'not executed'",environment='debian',category='Files',favorite=True)]
+        value['privateSetting']='not exported'
+        output=self.root/'alias-output';output.mkdir()
+        result=b.export_aliases(dict(destination=str(output),workspace=value))
+        path=Path(result['path']);self.assertEqual(path.suffix,'.json');self.assertEqual(result['count'],1)
+        saved=json.loads(path.read_text());self.assertNotIn('privateSetting',saved);self.assertEqual(saved['aliases'],value['aliases'])
+        report=b.inspect(dict(self.req,path=str(path)));self.assertEqual(report['workspace'],saved);self.assertEqual(report['candidates'],[])
+        second=b.export_aliases(dict(destination=str(output),workspace=value));self.assertNotEqual(second['path'],result['path']);self.assertTrue(path.is_file())
+        value['commands']=[dict(command='private command')]
+        self.assertRaises(b.BackupError,b.export_aliases,dict(destination=str(output),workspace=value))
+    def test_alias_library_inspection_accepts_old_backups_and_bounds_new_array(self):
+        self.assertEqual(b.libraries(self.library())['version'],8)
+        value=self.library();value['aliases']={};self.assertRaises(b.BackupError,b.libraries,value)
+        value['aliases']=[{}]*20001;self.assertRaises(b.BackupError,b.libraries,value)
     def test_home_aliases_and_scripts_no_execution(self):
         p=self.tar([('home/.bashrc',b"alias hello='echo hi'\nalias dynamic=$(touch NEVER)\nsource /tmp/evil\n"),('home/scripts/build.sh',b'#!/bin/bash\ntouch NEVER\n')]);r=self.inspect(p)
         self.assertEqual(r['components'][0]['kind'],'home');self.assertEqual(len(r['candidates']),2);self.assertEqual(r['candidates'][0]['command'],'echo hi');self.assertFalse((self.root/'NEVER').exists())

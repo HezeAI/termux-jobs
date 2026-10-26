@@ -132,7 +132,7 @@ public final class WorkspaceController {
     private boolean noteFavorites, favorites, savedOnly, closed, creating, baseCreating;
     private boolean aliasesSelected,aliasFavorites;
     private String aliasCategory="";
-    private static final java.util.concurrent.atomic.AtomicBoolean ALIAS_BUSY=new java.util.concurrent.atomic.AtomicBoolean();
+    private static final java.util.concurrent.atomic.AtomicBoolean ALIAS_BUSY=WorkspaceAliases.BUSY;
     private long lastBaseRestart, baseStartedAt;
     private int baseRestartFailures;
     private int toolbarVisibility = View.GONE;
@@ -826,7 +826,7 @@ public final class WorkspaceController {
         previewAction(body,WorkspaceText.tr("Вставить в сессию"),R.drawable.workspace_commands,()->{dialog.dismiss();insertAlias(a);});
         previewAction(body,a.favorite?WorkspaceText.tr("Убрать из избранного"):WorkspaceText.tr("В избранное"),R.drawable.workspace_star,()->{if(!store.isWritable()||ALIAS_BUSY.get())return;a.favorite=!a.favorite;store.save();dialog.dismiss();renderContent();});
         previewAction(body,WorkspaceText.tr("Редактировать"),R.drawable.workspace_edit,()->{dialog.dismiss();editAlias(a);});
-        previewAction(body,WorkspaceText.tr("Удалить"),R.drawable.workspace_delete,()->{dialog.dismiss();confirm(tr("Удалить alias «","Delete alias “")+a.name+"»?\n\n"+tr("Alias будет удалён из окружения. Чтобы он перестал работать в уже открытом терминале, закройте эту сессию и откройте её заново.","The alias will be removed from the environment. To stop using the already loaded alias in an open terminal, close that session and open it again."),()->changeAlias(a,null,null,null));});dialog.show();
+        previewAction(body,WorkspaceText.tr("Удалить"),R.drawable.workspace_delete,()->{dialog.dismiss();confirm(tr("Удалить alias «","Delete alias “")+a.name+"»?\n\n"+(a.environment.equals("termux")?tr("Перезапустите вкладку после удаления Alias","Restart the tab after deleting the alias"):tr("Alias будет удалён из окружения. Чтобы он перестал работать в уже открытом терминале, закройте эту сессию и откройте её заново.","The alias will be removed from the environment. To stop using the already loaded alias in an open terminal, close that session and open it again.")),()->changeAlias(a,null,null,null));});dialog.show();
     }
     private void insertAlias(WorkspaceStore.Alias a){
         TerminalSession current=activity.getCurrentSession();WorkspaceStore.Session profile=current==null?null:store.findByHandle(current.mHandle);
@@ -842,8 +842,9 @@ public final class WorkspaceController {
         LinearLayout form=column();EditText name=labeled(form,tr("Имя","Name"),draft.name,false);name.setContentDescription(tr("Имя alias","Alias name"));
         EditText command=labeled(form,WorkspaceText.tr("Команда"),draft.command,true);
         form.addView(text(tr("Окружение","Environment"),12,MUTED));TextView environment=button(WorkspaceAliases.label(draft.environment)+" ▾",false,()->{});form.addView(environment);
+        TextView termuxHint=text(tr("Перезапустите вкладку для добавления Alias","Restart the tab to load the alias"),12,MUTED);form.addView(termuxHint);termuxHint.setVisibility(draft.environment.equals("termux")?View.VISIBLE:View.GONE);
         environment.setOnClickListener(v->{String[] labels=new String[choices.size()];int selected=-1;for(int i=0;i<labels.length;i++){WorkspaceEnvironments.Choice c=choices.get(i);labels[i]=c.label;if((c.alias.isEmpty()?"termux":c.alias).equals(draft.environment))selected=i;}
-            WorkspaceDialogs.builder(activity).setTitle(tr("Окружение","Environment")).setSingleChoiceItems(labels,selected,(d,w)->{WorkspaceEnvironments.Choice c=choices.get(w);draft.environment=c.alias.isEmpty()?"termux":c.alias;environment.setText(c.label+" ▾");d.dismiss();}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();});
+            WorkspaceDialogs.builder(activity).setTitle(tr("Окружение","Environment")).setSingleChoiceItems(labels,selected,(d,w)->{WorkspaceEnvironments.Choice c=choices.get(w);draft.environment=c.alias.isEmpty()?"termux":c.alias;environment.setText(c.label+" ▾");termuxHint.setVisibility(draft.environment.equals("termux")?View.VISIBLE:View.GONE);d.dismiss();}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();});
         EditText category=categoryField(form,draft.category,aliasCategories());
         CheckBox favorite=new CheckBox(activity);favorite.setText(WorkspaceText.tr("Добавить в избранное"));favorite.setTextColor(TEXT);favorite.setChecked(draft.favorite);form.addView(favorite);
         form.addView(text(tr("Будет автоматически доступен в новых терминальных сессиях выбранного окружения.","Automatically available in new terminal sessions of the selected environment."),12,MUTED));
@@ -865,7 +866,7 @@ public final class WorkspaceController {
             if(result!=null){if(!closed)WorkspaceDialogs.builder(activity).setTitle(after==null?tr("Alias не удалён","Alias was not removed"):tr("Alias не сохранён","Alias was not saved")).setMessage(tr("Проверьте наличие окружения, свободное место и права на файлы оболочки. Форма сохранена. Код: ","Check the environment, free storage and shell-file permissions. Your draft is retained. Code: ")+result.getMessage()).setPositiveButton("OK",null).show();return;}
             WorkspaceStore target=closed?new WorkspaceStore(activity,message->{}):store;
             if(before!=null)target.aliases.removeIf(a->a.id.equals(before.id));if(collision!=null)target.aliases.removeIf(a->a.id.equals(collision.id));if(after!=null)target.aliases.add(after);target.save();if(closed)target.close();
-            if(!closed){if(editor!=null)editor.dismiss();aliasesSelected=true;renderContent();activity.showToast(after==null?tr("Alias удалён. Открытую сессию нужно закрыть и открыть заново.","Alias removed. Close and reopen any session that already loaded it."):tr("Сохранено. Изменения доступны в новых сессиях окружения.","Saved. Changes are available in new environment sessions."),true);}
+            if(!closed){if(editor!=null)editor.dismiss();aliasesSelected=true;renderContent();boolean termux=(after==null?before:after).environment.equals("termux");activity.showToast(after==null?termux?tr("Перезапустите вкладку после удаления Alias","Restart the tab after deleting the alias"):tr("Alias удалён. Открытую сессию нужно закрыть и открыть заново.","Alias removed. Close and reopen any session that already loaded it."):termux?tr("Перезапустите вкладку для добавления Alias","Restart the tab to load the alias"):tr("Сохранено. Изменения доступны в новых сессиях окружения.","Saved. Changes are available in new environment sessions."),true);}
         });});
     }
     private void compactFilter(TextView filter) {
