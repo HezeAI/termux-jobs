@@ -72,3 +72,13 @@ Aliases load in new shells. Existing shells retain loaded definitions until
 reopened; the persistent Termux tab explicitly needs a restart after addition or
 deletion. Finish important work before updating. The localized updater records
 compatibility and no-reset requirements before installation.
+
+## Publication verification
+
+Published as the latest stable release at
+https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.9, source tag
+`81e9dad958652b31b7877e205e5c830e026a71fc`. APK, update.json, SHA256SUMS and
+validation.json were downloaded and compared byte-for-byte with local files.
+Updater size/hash/version match the final APK. The public release is neither
+draft nor prerelease; its body matches the prepared English notes and tagged
+documentation links resolve. Older tags and assets were not modified.
