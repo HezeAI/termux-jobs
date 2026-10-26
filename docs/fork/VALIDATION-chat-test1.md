@@ -35,7 +35,8 @@ experiments from the main worktree are excluded.
   picker constants selected behind the Android33 guard with ActivityNotFound
   fallback. Existing compileSDK35/toolchain support limits remain. No blanket
   suppression or new baseline is introduced.
-- Signed isolated ARM64 assembleRelease succeeds. Source whitespace check passes.
+- Signed isolated ARM64 assembleRelease succeeds. Product-source whitespace checks
+  pass; the verbatim upstream license notice retains its final blank line.
   Build tools, caches and outputs remain inside the repository.
 
 The lifecycle test calls the custom view's drawing callback because Robolectric's
