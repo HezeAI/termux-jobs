@@ -1,3 +1,21 @@
+# Private chat-link test1 ready
+
+Active source /root/termux-fork/.verification/chat-file-cards/source,
+branch work/chat-file-cards. APK build/apk/Termux-Jobs-test1.apk,
+2.0.10-test1/code1418, 39800325bytes,
+SHA256134dc9966d8488ef3ba44714feb7ef776a97281bdcc744adade437a44efda5f2.
+Same package/signer/schema8/ARM64; no reset. JNI/X11 assets unchanged.
+Actual short-link tap handling in selectable text, shared across all4 agents.
+Tap shows full-address panel; Copy left, Open right, outside dismiss. Open alone
+launches external browser chooser. Drag/long/multi/cancel/replaced/detached gestures
+are guarded; code and unsafe schemes remain inert. No session/tunnel/rootfs changes.
+236 JVM cases pass; modern lint0errors/220warnings; APK/runtime/privacy checks pass.
+See VALIDATION-chat-links-test1.md for synthetic-layout and device limits.
+Deliver privately for phone verification. Do not publish without user instruction.
+Next code must exceed1418. Public stable remains v2.0.9/code1417.
+
+---
+
 # Published stable v2.0.9
 
 Active source: /root/termux-fork/.verification/chat-file-cards/source.

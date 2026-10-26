@@ -1,3 +1,9 @@
+# Private follow-up — link actions
+
+Agent web links open a compact full-address panel. Copy is the left action; Open
+is the right action and invokes Android's browser chooser. Outside tap dismisses.
+Selection, scrolling and the existing message-detail action retain their roles.
+
 # v2.0.8 — Developer chat style
 
 Assistant replies use mint accents on dark native cards. Fenced code has a

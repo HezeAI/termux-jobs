@@ -1,3 +1,13 @@
+# Unreleased — agent web links
+
+- Fix short taps on links in selectable agent transcript text, Markdown blocks
+  and table cells across Codex, Claude, Gemini and OpenCode.
+- Show the full HTTP(S) address first, with Copy on the left and Open on the right.
+  Open launches the Android browser chooser; outside tap dismisses the panel.
+- Preserve text selection, drag scrolling, streaming and per-session chat scale.
+
+---
+
 # v2.0.9 — Environment aliases & agent chat scale
 
 - Add persistent aliases to eight installed terminal environments, excluding Ubuntu AI.

@@ -1,3 +1,16 @@
+# Private follow-up — selectable chat links
+
+AgentLinkTextView adds short URL-span tap handling to selectable transcript views,
+including normal rows, Markdown blocks and table cells. Android retains the
+selection movement method. Gestures cancel on slop, long press, multiple pointers,
+CANCEL, detach or replaced text. Link actions run before generic row clicks so a
+truncated message does not open its detail dialog at the same time.
+AgentMarkdown's shared resolver presents the full HTTP(S) URL with explicit
+Copy/Open actions; only Open sends an external browser chooser intent. Code
+literals remain inert. Local-file/command schemes, credential-bearing addresses,
+missing hosts and raw control/whitespace are refused. No agent request, shell,
+new permission or authentication state is involved.
+
 # v2.0.9 — aliases and chat presentation
 
 Environment alias writes use the owned helper and explicit destination whitelist;

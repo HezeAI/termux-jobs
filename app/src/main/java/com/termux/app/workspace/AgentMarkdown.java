@@ -26,7 +26,28 @@ final class AgentMarkdown {
         @Override public void configureConfiguration(MarkwonConfiguration.Builder b){b.linkResolver((view,url)->openLink(view,url));}
     }).build();}
     static void openLink(View view,String url){
-        try{Uri uri=Uri.parse(url);if(!"https".equalsIgnoreCase(uri.getScheme())&&!"http".equalsIgnoreCase(uri.getScheme()))return;Intent i=new Intent(Intent.ACTION_VIEW,uri);if(!(view.getContext() instanceof android.app.Activity))i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);view.getContext().startActivity(i);}catch(ActivityNotFoundException|IllegalArgumentException ignored){}
+        Uri uri=webUri(url);if(uri==null)return;Context c=view.getContext();
+        android.app.Activity host=activity(c);if(host==null||host.isFinishing()||host.isDestroyed())return;
+        boolean ru=WorkspaceLanguage.code(c).equals("ru");
+        TextView address=new TextView(c);address.setTag("agent-link-address");address.setText(url);address.setTextColor(WorkspaceDialogs.TEXT);address.setTextSize(14);address.setTextIsSelectable(true);address.setPadding(WorkspaceDialogs.dp(c,20),WorkspaceDialogs.dp(c,12),WorkspaceDialogs.dp(c,20),WorkspaceDialogs.dp(c,12));
+        android.widget.ScrollView scroll=new android.widget.ScrollView(c);scroll.addView(address);
+        android.app.AlertDialog dialog=WorkspaceDialogs.builder(c).setTitle(ru?"Ссылка":"Link").setView(scroll)
+                .setNeutralButton(ru?"Скопировать":"Copy",(d,w)->{android.content.ClipboardManager clipboard=(android.content.ClipboardManager)c.getSystemService(Context.CLIPBOARD_SERVICE);if(clipboard!=null)clipboard.setPrimaryClip(ClipData.newPlainText("url",url));})
+                .setPositiveButton(ru?"Перейти":"Open",(d,w)->{
+                    try{Intent browser=new Intent(Intent.ACTION_VIEW,uri).addCategory(Intent.CATEGORY_BROWSABLE);c.startActivity(Intent.createChooser(browser,ru?"Открыть в браузере":"Open in browser"));}
+                    catch(ActivityNotFoundException|SecurityException unavailable){android.widget.Toast.makeText(c,ru?"Не удалось открыть браузер.":"Could not open a browser.",android.widget.Toast.LENGTH_SHORT).show();}
+                }).create();
+        dialog.setCanceledOnTouchOutside(true);dialog.show();
+        int width=Math.min(WorkspaceDialogs.dp(c,480),Math.round(c.getResources().getDisplayMetrics().widthPixels*.92f));
+        dialog.getWindow().setLayout(width,android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+    }
+    private static android.app.Activity activity(Context c){
+        while(c instanceof ContextWrapper){if(c instanceof android.app.Activity)return (android.app.Activity)c;Context base=((ContextWrapper)c).getBaseContext();if(base==c)break;c=base;}
+        return c instanceof android.app.Activity?(android.app.Activity)c:null;
+    }
+    private static Uri webUri(String url){
+        if(url==null||url.isEmpty())return null;for(int i=0;i<url.length();i++)if(Character.isWhitespace(url.charAt(i))||Character.isISOControl(url.charAt(i)))return null;
+        try{Uri uri=Uri.parse(url);return ("https".equalsIgnoreCase(uri.getScheme())||"http".equalsIgnoreCase(uri.getScheme()))&&uri.getHost()!=null&&!uri.getHost().isEmpty()&&uri.getUserInfo()==null?uri:null;}catch(IllegalArgumentException invalid){return null;}
     }
     static String checkboxes(String source){return source;}
     static boolean rich(String source){return source.contains("```")||source.contains("~~~")||Pattern.compile("(?m)^(?: {4}|\\t|#{1,6}\\s| {0,3}>|.*\\|.*\\n[ |:-]+\\|)").matcher(source).find();}

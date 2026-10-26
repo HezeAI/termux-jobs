@@ -1875,3 +1875,12 @@ This feature excludes Ubuntu AI and does not alter running sessions.
 
 Agent status panels also provide [Chat scale](AGENT-CHAT-SCALE.md),50–150% per
 session, with the original100% default and a reset action.
+
+## Agent web-link preview (private follow-up)
+
+Tap an HTTP(S) link in any of the four agent chats to see its complete address in
+a compact panel. **Copy** is on the left; **Open** is on the right and opens the
+Android browser/app chooser only after confirmation. Tap outside to dismiss.
+Named Markdown links, bare web URLs and table-cell links share this behavior.
+Long-press still selects text; scrolling does not activate links. Code literals
+and local-file/command URI schemes are not web-navigation actions.

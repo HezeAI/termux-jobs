@@ -20,7 +20,7 @@ final class AgentMarkdownView extends LinearLayout {
     AgentMarkdownView(Context c){this(c,AgentMarkdown.create(c));}
     AgentMarkdownView(Context c,Markwon renderer){super(c);setOrientation(VERTICAL);markdown=renderer;author=text(12);author.setTextColor(0xff79dfcd);addView(author);}
     private int dp(int n){return WorkspaceDialogs.dp(getContext(),n);}
-    private TextView text(int size){TextView v=new TextView(getContext());v.setTextColor(0xffd5e4e0);v.setTextSize(size);v.setPadding(dp(10),dp(6),dp(10),dp(6));return v;}
+    private TextView text(int size){TextView v=new AgentLinkTextView(getContext());v.setTextColor(0xffd5e4e0);v.setTextSize(size);v.setPadding(dp(10),dp(6),dp(10),dp(6));return v;}
     private GradientDrawable background(){GradientDrawable b=new GradientDrawable();b.setColor(0xff0b131a);b.setCornerRadius(dp(12));b.setStroke(dp(1),0xff30454e);return b;}
     void update(String name,String source,Runnable more){
         author.setText(name);String value=AgentMarkdown.checkboxes(source);
