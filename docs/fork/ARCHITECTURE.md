@@ -1428,3 +1428,8 @@ render transforms are retained. No persistent data format or account migration.
 See [Environment aliases](ALIASES.md) for the separate library, category and star
 pickers, environment-scoped shell files, write safeguards and restart semantics.
 This pending feature excludes Ubuntu AI and does not alter running sessions.
+
+[Chat scale](AGENT-CHAT-SCALE.md) is optional per-session schema8 presentation
+metadata. It uses baseline Android text/layout snapshots, stable transcript rows,
+an explicit composer container and normal scroll anchors rather than transforms,
+root reconstruction or native agent RPCs.

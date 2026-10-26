@@ -24,6 +24,7 @@ final class AgentChatUi {
     private final AgentChatView view;
     private final ChatAttachmentUi attachments;private boolean attachmentsSupported,codexAuthRequired,codexLoginTerminal;
     boolean hasAttachments(){return attachments.has();}
+    void applyPresentationScale(){WorkspaceStore.Session p=current.get();view.scale(p==null?100:p.chatScale);if(composerArea!=null)AgentChatScale.apply(composerArea,selected()&&terminal==null&&view.getVisibility()==View.VISIBLE&&p!=null?p.chatScale:100);}
     private final LinkedHashMap<String,JSONObject> rows=new LinkedHashMap<>();
     private final AgentChatCache cache=new AgentChatCache();
     private boolean connected,transportFailed;
@@ -51,7 +52,9 @@ final class AgentChatUi {
         if(showing()&&extraVisible&&keys!=null&&mountedKeys==null){mountedKeys=keys;keysHome=(ViewGroup)keys.getParent();keysHomeParams=keys.getLayoutParams();keysHomeIndex=keysHome==null?0:keysHome.indexOfChild(keys);keysHomeVisibility=keys.getVisibility();if(keysHome!=null)keysHome.removeView(keys);keys.setVisibility(View.VISIBLE);int count=activity.getProperties()==null||activity.getProperties().getExtraKeysInfo()==null?2:activity.getProperties().getExtraKeysInfo().getMatrix().length;view.keysHost.addView(keys,new LinearLayout.LayoutParams(-1,view.dp(Math.max(1,count)*40)));view.keysHost.setVisibility(View.VISIBLE);}
     }
     private EditText composer;
-    void composer(EditText input){composer=input;}
+    private View composerArea;
+    void composer(EditText input){composer(input,input);}
+    void composer(EditText input,View area){composer=input;composerArea=area;}
     private com.termux.shared.terminal.io.extrakeys.ExtraKeysView chatKeys;
     private com.termux.shared.terminal.io.extrakeys.ExtraKeysView.IExtraKeysView previousKeys;
     private void syncExtraKeys(){
@@ -99,10 +102,10 @@ final class AgentChatUi {
             if(saved==null)view.connection(next.isEmpty()?"":tr("Подключение…","Connecting…"));else restorePresentation(saved);
             if(terminal!=null)terminal.dismiss();if(details!=null)details.dismiss();if(formDialog!=null)formDialog.dismiss();if(vertexDialog!=null)vertexDialog.dismiss();
         }
-        attachments.sync(owner,current.get()==null?null:snapshot(),attachmentsSupported);
+        applyPresentationScale();attachments.sync(owner,current.get()==null?null:snapshot(),attachmentsSupported);
         boolean cover=showing()||(selected()&&!resolved&&terminal==null);
         boolean changed=(view.getVisibility()==View.VISIBLE)!=cover||presented!=showing();presented=showing();
-        view.setVisibility(cover?View.VISIBLE:View.GONE);
+        view.setVisibility(cover?View.VISIBLE:View.GONE);applyPresentationScale();
         // show(TERMINAL) may restore the shared toolbar even without a chat visibility
         // transition. Enforce the structured-chat boundary on every synchronization.
         if((cover||terminal!=null)&&activity.getTerminalToolbarViewPager()!=null)activity.getTerminalToolbarViewPager().setVisibility(View.GONE);
@@ -220,6 +223,7 @@ final class AgentChatUi {
         }
         if(needsTerminal){view.requests.addView(view.label(tr("Завершите действие в терминале или нажмите «Вернуться в чат ","Finish the action in the terminal or tap Return to ")+name()+tr("»."," chat."),13));view.requests.addView(view.pill(tr("Открыть терминал ›","Open terminal ›"),this::terminal));view.requests.addView(view.pill(returnChatLabel(),this::returnAgentChat));}
         if(forms!=null)for(int i=0;i<forms.length();i++){JSONObject f=forms.optJSONObject(i);if(f!=null)view.requests.addView(view.pill(f.optString("title")+" ▾",()->form(f)));}
+        view.scaleContent();
         if(bottom)view.bottomAfterLayout();
     }
     private void form(JSONObject f){
@@ -275,9 +279,9 @@ final class AgentChatUi {
             TextView returnChat=view.pill(returnChatLabel(),this::returnAgentChat);returnChat.setGravity(android.view.Gravity.CENTER);box.addView(returnChat,new LinearLayout.LayoutParams(-1,-2));
             terminal=WorkspaceDialogs.builder(activity).setTitle(name()+" · "+tr("Терминал","Terminal")).setView(box).setNeutralButton(tr("Свернуть","Minimize"),null).setPositiveButton("Enter",null).create();terminal.setCanceledOnTouchOutside(false);
             terminal.setOnDismissListener(d->{ViewGroup parent=(ViewGroup)tv.getParent();if(parent!=null)parent.removeView(tv);terminalParent.addView(tv,0,terminalParams);if(keys!=null){ViewGroup kp=(ViewGroup)keys.getParent();if(kp!=null)kp.removeView(keys);if(keysParent!=null)keysParent.addView(keys,Math.min(keysIndex,keysParent.getChildCount()),keysParams);keys.setVisibility(keysVisibility);if(createdKeys&&activity.getExtraKeysView()==keys)activity.setExtraKeysView(originalKeys);}activity.getTerminalView().setSoftKeyboardInputEnabled(keyboardBefore);terminal=null;codexLoginTerminal=false;activity.getTerminalView().setWorkspaceTerminalVisible(false);actions.execute(()->{try{transport.request(terminalOwner,op("terminal-close"));}catch(Exception ignored){}});sync();});
-            terminal.show();terminal.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);terminal.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{if(activity.getCurrentSession()==session&&session!=null&&session.isRunning())session.write("\r");});terminal.getWindow().setLayout(Math.round(activity.getResources().getDisplayMetrics().widthPixels*.92f),Math.round(activity.getResources().getDisplayMetrics().heightPixels*.62f));terminal.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);tv.setVisibility(View.VISIBLE);activity.getTerminalView().setWorkspaceTerminalVisible(true);tv.requestFocus();view.setVisibility(View.GONE);syncExtraKeys();visibilityChanged.run();
+            terminal.show();terminal.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);terminal.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{if(activity.getCurrentSession()==session&&session!=null&&session.isRunning())session.write("\r");});terminal.getWindow().setLayout(Math.round(activity.getResources().getDisplayMetrics().widthPixels*.92f),Math.round(activity.getResources().getDisplayMetrics().heightPixels*.62f));terminal.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);tv.setVisibility(View.VISIBLE);activity.getTerminalView().setWorkspaceTerminalVisible(true);tv.requestFocus();view.setVisibility(View.GONE);applyPresentationScale();syncExtraKeys();visibilityChanged.run();
             final AlertDialog opened=terminal;
             actions.execute(()->{if(closed||terminalGeneration!=generation)return;boolean ok=false;String notice="";try{JSONObject response=transport.request(terminalOwner,op("terminal-open"));ok=response.optBoolean("ok")&&response.optBoolean("terminalReady",true);notice=response.optString("terminalNotice");}catch(Exception ignored){}final boolean ready=ok;final String explanation=notice.length()>600?notice.substring(0,600):notice;handler.post(()->{if(closed||terminalGeneration!=generation||terminal!=opened||!opened.isShowing())return;String nativeHint=terminalOwner.environment.equals("codex")?tr("«Свернуть» только скрывает окно. «Вернуться в чат Codex» возвращает управление чату. Выполняющийся запрос продолжится до завершения. Shell-поле выполняет вашу команду напрямую с правами Ubuntu, без обращения к модели.","Minimize only hides this window. Return to Codex chat returns control to the chat. A running request continues until completion. The Shell field executes your command directly with Ubuntu privileges, without model inference."):terminalOwner.claudeAgent?tr("После входа чат подключится автоматически. «Свернуть» только скрывает окно. Чтобы завершить штатный интерфейс, нажмите «Вернуться в чат Claude» после окончания запроса.","After sign-in, chat reconnects automatically. Minimize only hides this window. To exit the native interface, tap Return to Claude chat after the request finishes."):"";terminalNotice.setText(ready?nativeHint:!explanation.isEmpty()?explanation:tr("Канал управления пока недоступен. Ниже — терминал текущей сессии: проверьте запуск агента или вход.","The control channel is not available yet. The current session terminal is shown below: check agent startup or sign-in."));terminalNotice.setVisibility(ready&&nativeHint.isEmpty()?View.GONE:View.VISIBLE);});});
     }
-    void close(){closed=true;attachments.close();cache.clear();restoreChatKeys();syncExtraKeys();generation++;handler.removeCallbacks(poll);if(terminal!=null)terminal.dismiss();if(details!=null)details.dismiss();if(formDialog!=null)formDialog.dismiss();if(vertexDialog!=null)vertexDialog.dismiss();reads.shutdownNow();actions.shutdown();surface.removeView(view);}
+    void close(){closed=true;applyPresentationScale();attachments.close();cache.clear();restoreChatKeys();syncExtraKeys();generation++;handler.removeCallbacks(poll);if(terminal!=null)terminal.dismiss();if(details!=null)details.dismiss();if(formDialog!=null)formDialog.dismiss();if(vertexDialog!=null)vertexDialog.dismiss();reads.shutdownNow();actions.shutdown();surface.removeView(view);}
 }

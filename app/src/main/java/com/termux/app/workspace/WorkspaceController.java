@@ -204,7 +204,8 @@ public final class WorkspaceController {
         });
         toolbarVisibility = activity.getTerminalToolbarViewPager().getVisibility();
         agentChatUi=new AgentChatUi(activity,()->{TerminalSession t=activity.getCurrentSession();return t!=null&&t.isRunning()?store.findByHandle(t.mHandle):null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible());
-        geminiLiveUi.permissionVisibility(()->!agentChatUi.showing());agentChatUi.onShellCommand(store::recordCommand);agentChatUi.composer(terminalInput);
+        geminiLiveUi.chatPresentation(this::previewChatScale,store::save);claudeLiveUi.chatPresentation(this::previewChatScale,store::save);
+        geminiLiveUi.permissionVisibility(()->!agentChatUi.showing());agentChatUi.onShellCommand(store::recordCommand);agentChatUi.composer(terminalInput,inputRow);
         agentChatUi.onVisibilityChanged(()->{agentChatUi.shellMode(interactiveInput);boolean chat=agentChatUi.showing();boolean focus=chat&&!wasAgentChat;wasAgentChat=chat;terminalInput.setHint(chat?tr("Сообщение ","Message ")+agentChatUi.name()+"…":WorkspaceText.tr("Введите команду…"));activity.getTerminalToolbarViewPager().setVisibility(screen==Screen.TERMINAL&&!activityStopped&&!chat?toolbarVisibility:View.GONE);if(focus)leaveAgentInputIdle();renderHeader();renderTabs();});
         desktopUi=new WorkspaceDesktops(activity,()->{TerminalSession t=activity.getCurrentSession();return t!=null&&t.isRunning()?store.findByHandle(t.mHandle):null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL,inputRow,this::renderCodexStatus,()->{
             boolean terminal=screen==Screen.TERMINAL&&!activityStopped;
@@ -1570,7 +1571,7 @@ public final class WorkspaceController {
             codexStatus.setVisibility(screen==Screen.TERMINAL?View.VISIBLE:View.GONE);
             claudeLiveUi.render(codexStatus,ai);return;
         }
-        if(ai!=null&&ai.aiAgent.equals("opencode")&&aiLive.isRunning()){codexStatus.setVisibility(screen==Screen.TERMINAL?View.VISIBLE:View.GONE);TextView chip=AgentStatusUi.chip(activity,"OpenCode · "+agentChatUi.modelLabel(ai)+"\n"+ai.aiMode+" · "+AiAgentsUi.accessLabel(ai.aiAccess)+" ›",tr("Статус и модель OpenCode","OpenCode status and model"),()->AiAgentsUi.active(activity,ai,()->{store.save();agentChatUi.modelChanged(ai);renderCodexStatus();}));AgentStatusUi.attach(codexStatus,chip);return;}
+        if(ai!=null&&ai.aiAgent.equals("opencode")&&aiLive.isRunning()){codexStatus.setVisibility(screen==Screen.TERMINAL?View.VISIBLE:View.GONE);TextView chip=AgentStatusUi.chip(activity,"OpenCode · "+agentChatUi.modelLabel(ai)+"\n"+ai.aiMode+" · "+AiAgentsUi.accessLabel(ai.aiAccess)+" ›",tr("Статус и модель OpenCode","OpenCode status and model"),()->AiAgentsUi.active(activity,ai,()->{store.save();agentChatUi.modelChanged(ai);renderCodexStatus();},this::previewChatScale,store::save));AgentStatusUi.attach(codexStatus,chip);return;}
         if(aiLive!=null&&aiLive.isRunning()&&WorkspaceDesktop.eligible(ai)){
             codexStatus.setVisibility(screen==Screen.TERMINAL?View.VISIBLE:View.GONE);
             desktopSessionBar=new DesktopSessionBar(activity,desktopUi==null?tr("Терминал","Terminal"):desktopUi.label(),()->{if(desktopUi!=null)desktopUi.menu();},()->{if(desktopUi!=null)desktopUi.openPrograms();});
@@ -1622,6 +1623,7 @@ public final class WorkspaceController {
         long reset = limit == null ? 0 : limit.optLong("resetsAt");
         return reset > 0 ? WorkspaceText.tr("Обновится ") + android.text.format.DateFormat.format("dd.MM HH:mm", reset * 1000) : WorkspaceText.tr("Время обновления недоступно");
     }
+    private void previewChatScale(){if(!closed&&agentChatUi!=null)agentChatUi.applyPresentationScale();}
     private void showCodexStatus(WorkspaceStore.Session profile) {
         CodexStatus status = codexStatuses.get(profile.id);
         AlertDialog[] shown = {null};
@@ -1650,6 +1652,7 @@ public final class WorkspaceController {
             form.addView(text(WorkspaceText.tr("Общий лимит аккаунта. Доступ: ") + (profile.codexAccess.equals("full") ? WorkspaceText.tr("полный") : profile.codexAccess.equals("read") ? WorkspaceText.tr("только чтение") : WorkspaceText.tr("в пределах проекта")) +
                 (CodexChatControl.enabled(activity.getFilesDir(),profile)?tr("\nСтатус обновляется раз в 30 секунд. Выбранные модель и рассуждение передаются со следующим сообщением этой сессии. До отправки они помечены как следующий ответ. Поле Shell выполняет вашу команду напрямую с правами Ubuntu, без обращения к модели.","\nStatus refreshes every 30 seconds. Selected model and reasoning are sent with this session’s next message and marked as next response until then. The Shell field runs your command directly with Ubuntu privileges without model inference."):WorkspaceText.tr("\nСтатус обновляется раз в 30 секунд. Выбор модели и рассуждения применяется через штатное меню Codex только к этой сессии. Если Codex отвечает, приложение дождётся завершения. Поле ввода сохраняется.")), 12, MUTED));
         }
+        AgentChatScale.controls(form,profile,()->!closed&&currentCodex()==profile,this::previewChatScale,store::save);
         AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Статус Codex")).setView(formScroll(form))
             .setPositiveButton(WorkspaceText.tr("Обновить"), null).setNegativeButton(WorkspaceText.tr("Закрыть"), null).create();
         shown[0] = dialog;

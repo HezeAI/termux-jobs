@@ -53,4 +53,13 @@ public class WorkspaceBackupFormTest {
         WorkspaceStore.Alias alias=new WorkspaceStore.Alias();alias.name="files";alias.command="ls -lah";
         invoke("aliasPicker",new Class[]{java.util.List.class,JSONObject.class},java.util.Collections.singletonList(alias),null);AlertDialog picker=ShadowAlertDialog.getLatestAlertDialog();View root=picker.getWindow().getDecorView();assertEquals("Export aliases",org.robolectric.Shadows.shadowOf(picker).getTitle());assertNotNull(find(root,"Preview: files"));assertNotNull(find(root,"Choose directory"));assertEquals("Export",picker.getButton(-1).getText().toString());picker.getButton(-2).performClick();assertFalse(WorkspaceAliases.BUSY.get());
     }
+    @Test public void unifiedAliasTransferHasFourExplicitFormatsAndManualImportChoosesEnvironment()throws Exception{
+        invoke("aliasTransferMenu",new Class[]{});AlertDialog menu=ShadowAlertDialog.getLatestAlertDialog();View root=menu.getWindow().getDecorView();for(String title:new String[]{"Import from shell file","Import from JSON/backup","Export to shell file","Export to JSON"})assertNotNull(find(root,title));
+        find(root,"Import from shell file").performClick();AlertDialog manual=ShadowAlertDialog.getLatestAlertDialog();assertNotNull(find(manual.getWindow().getDecorView(),"Termux ▾"));assertNotNull(find(manual.getWindow().getDecorView(),"Import environment"));manual.dismiss();
+        find(root,"Import from JSON/backup").performClick();AlertDialog json=ShadowAlertDialog.getLatestAlertDialog();assertNull(find(json.getWindow().getDecorView(),"Import environment"));json.dismiss();
+    }
+    @Test public void shellExportSelectsOnlyOneEnvironmentBeforeChoosingRecords()throws Exception{
+        Field f=WorkspaceBackupUi.class.getDeclaredField("store");f.setAccessible(true);WorkspaceStore store=(WorkspaceStore)f.get(ui);store.aliases.clear();for(String environment:new String[]{"termux","ubuntu"}){WorkspaceStore.Alias alias=new WorkspaceStore.Alias();alias.name="files";alias.command="ls -lah";alias.environment=environment;store.aliases.add(alias);}
+        invoke("aliasExport",new Class[]{boolean.class},true);AlertDialog environments=ShadowAlertDialog.getLatestAlertDialog();assertEquals(2,environments.getListView().getCount());environments.getListView().performItemClick(null,0,0);org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();AlertDialog picker=ShadowAlertDialog.getLatestAlertDialog();View root=picker.getWindow().getDecorView();assertNotNull(find(root,"files · Termux · "+WorkspaceText.tr("Общее")));assertNull(find(root,"files · Ubuntu · "+WorkspaceText.tr("Общее")));picker.dismiss();store.close();
+    }
 }

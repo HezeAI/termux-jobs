@@ -10,8 +10,10 @@
 A pending test build adds environment-bound aliases, separate categories and
 favourites, and **Commands / Alias / Notes** in the star picker. Supported targets
 are the eight standard installed terminal environments; Ubuntu AI is excluded.
-The follow-up preview adds explicit alias import/export with previews, selection
-and confirmed replacements, plus Termux-only tab-restart guidance.
+The follow-up preview adds a combined alias import/export menu for shell files
+and JSON/backups, previews, selection and confirmed replacements, plus Termux-only
+tab-restart guidance. Agent chats have a per-session **50–150% scale** (100% by
+default) for transcript content, cards, thumbnails and input rows.
 [Usage and persistence details](docs/fork/ALIASES.md). The stable download below
 remains v2.0.8 until the preview is accepted and a new release is authorized.
 

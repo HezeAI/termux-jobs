@@ -64,20 +64,41 @@ final class WorkspaceBackupUi {
         action(form,t("Создать резервную копию","Create backup"),this::inventory);
         action(form,t("Проверить резервную копию","Verify backup"),()->chooseFile(false));
         action(form,t("Восстановить из файла","Restore from file"),()->chooseFile(true));
-        action(form,t("Импорт Alias","Import aliases"),this::aliasSourceFile);
-        action(form,t("Экспорт Alias","Export aliases"),()->{List<WorkspaceStore.Alias> copy=new ArrayList<>();for(WorkspaceStore.Alias a:store.aliases)copy.add(a.copy());aliasPicker(copy,null);});
+        action(form,t("Импорт/Экспорт Alias","Import/export aliases"),this::aliasTransferMenu);
         backupBuilder(activity).setTitle(label(activity)).setView(scroll(form)).setNegativeButton(WorkspaceText.tr("Закрыть"),null).show();
     }
-    private void aliasSourceFile(){
-        LinearLayout form=column();info(form,t("Выберите JSON экспорта Alias, workspace-v1.json или manifest.json резервной копии. Файлы окружений не сканируются, команды не выполняются.","Choose an alias-export JSON, workspace-v1.json or backup manifest.json. Environment files are not scanned and commands are not executed."));
+    private void aliasTransferMenu(){
+        LinearLayout form=column();
+        action(form,t("Импорт из shell-файла","Import from shell file"),()->aliasSourceFile(true));
+        action(form,t("Импорт из JSON/бэкапа","Import from JSON/backup"),()->aliasSourceFile(false));
+        action(form,t("Экспорт в shell-файл","Export to shell file"),()->aliasExport(true));
+        action(form,t("Экспорт в JSON","Export to JSON"),()->aliasExport(false));
+        backupBuilder(activity).setTitle(t("Импорт/Экспорт Alias","Import/export aliases")).setView(scroll(form)).setNegativeButton(WorkspaceText.tr("Назад"),null).show();
+    }
+    private void aliasExport(boolean shell){
+        List<WorkspaceStore.Alias> copy=new ArrayList<>();for(WorkspaceStore.Alias a:store.aliases)copy.add(a.copy());
+        if(!shell){aliasPicker(copy,null,false);return;}
+        List<String> environments=new ArrayList<>();for(String environment:WorkspaceAliases.ENVIRONMENTS)if(copy.stream().anyMatch(a->a.environment.equals(environment)))environments.add(environment);
+        if(environments.isEmpty()){message(t("Сохранённых Alias нет.","No saved aliases found."));return;}
+        String[] labels=new String[environments.size()];for(int i=0;i<labels.length;i++)labels[i]=WorkspaceAliases.label(environments.get(i));
+        backupBuilder(activity).setTitle(t("Окружение для экспорта","Export environment")).setItems(labels,(d,w)->{List<WorkspaceStore.Alias> selected=new ArrayList<>();for(WorkspaceStore.Alias a:copy)if(a.environment.equals(environments.get(w)))selected.add(a);aliasPicker(selected,null,true);}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
+    }
+    private void aliasSourceFile(boolean shell){
+        LinearLayout form=column();info(form,shell?t("Выберите .bashrc, .bash_aliases, .zshrc или другой shell-файл. Будут прочитаны только простые определения alias без выполнения файла. Динамические определения пропускаются. Затем выберите нужные Alias для импорта.","Choose .bashrc, .bash_aliases, .zshrc or another shell file. Only literal alias definitions are read, without executing the file. Dynamic definitions are skipped. Then select aliases to import."):t("Выберите JSON экспорта Alias, workspace-v1.json или manifest.json резервной копии. Файлы окружений не сканируются, команды не выполняются.","Choose an alias-export JSON, workspace-v1.json or backup manifest.json. Environment files are not scanned and commands are not executed."));
         EditText path=field(form,Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath(),t("Путь к файлу","File path"));
         action(form,t("Выбрать файл","Choose file"),()->browse(new File(path.getText().toString()),false,path::setText));
-        backupBuilder(activity).setTitle(t("Импорт Alias","Import aliases")).setView(scroll(form)).setPositiveButton(t("Проверить","Verify"),(d,w)->{try{run(request("inspect").put("path",path.getText().toString().trim()),this::aliasImportReport);}catch(Exception e){message(errorText("INVALID_PATH"));}}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
+        String[] environment={"termux"};if(shell){info(form,t("Окружение для импорта","Import environment"));TextView target=WorkspaceDialogs.action(activity,"Termux ▾",0);form.addView(target);target.setOnClickListener(v->{List<WorkspaceEnvironments.Choice> choices=WorkspaceAliases.installed(WorkspaceEnvironments.choices());String[] labels=new String[choices.size()];int selected=0;for(int i=0;i<labels.length;i++){WorkspaceEnvironments.Choice c=choices.get(i);labels[i]=c.label;if((c.alias.isEmpty()?"termux":c.alias).equals(environment[0]))selected=i;}backupBuilder(activity).setTitle(t("Окружение","Environment")).setSingleChoiceItems(labels,selected,(d,w)->{WorkspaceEnvironments.Choice c=choices.get(w);environment[0]=c.alias.isEmpty()?"termux":c.alias;target.setText(c.label+" ▾");d.dismiss();}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();});}
+        backupBuilder(activity).setTitle(shell?t("Импорт из shell-файла","Import from shell file"):t("Импорт из JSON/бэкапа","Import from JSON/backup")).setView(scroll(form)).setPositiveButton(t("Проверить","Verify"),(d,w)->{try{JSONObject req=request(shell?"alias-inspect-shell":"inspect").put("path",path.getText().toString().trim());if(shell)req.put("environment",environment[0]);run(req,this::aliasImportReport);}catch(Exception e){message(errorText("INVALID_PATH"));}}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
     }
     private void aliasImportReport(JSONObject report){try{aliasPicker(WorkspaceAliasImport.read(activity,report.optJSONObject("workspace")),report);}catch(Exception e){message(t("Не удалось прочитать Alias. Нужен совместимый экспорт или бэкап приложения.","Could not read aliases. Choose a compatible export or app backup."));}}
     private void aliasPicker(List<WorkspaceStore.Alias> aliases,JSONObject source){
-        boolean importing=source!=null;if(aliases.isEmpty()){message(t("Сохранённых Alias нет.","No saved aliases found."));return;}
-        LinearLayout form=column();info(form,importing?t("Выберите Alias для импорта в их окружения. Отсутствующее окружение сначала установите. Существующие записи с тем же именем и окружением заменяются только после подтверждения. Импортируйте только доверенные команды.","Select aliases to import into their environments. Install missing environments first. Matching names in the same environment require replacement confirmation. Import only trusted commands."):t("Выберите Alias для экспорта. Сохраняются только выбранные определения, окружения, категории и избранное. Команды могут содержать личные данные — проверьте перед передачей файла.","Select aliases to export. Only selected definitions, environments, categories and favorites are saved. Commands may contain private data; review them before sharing."));
+        aliasPicker(aliases,source,false);
+    }
+    private void aliasPicker(List<WorkspaceStore.Alias> aliases,JSONObject source,boolean shell){
+        boolean importing=source!=null;if(aliases.isEmpty()){message(importing&&source.optBoolean("aliasShell")?t("Простые определения Alias не найдены. Пропущено неподдерживаемых определений: ","No literal alias definitions found. Unsupported definitions skipped: ")+source.optInt("skipped"):t("Сохранённых Alias нет.","No saved aliases found."));return;}
+        LinearLayout form=column();info(form,importing?t("Выберите Alias для импорта в их окружения. Отсутствующее окружение сначала установите. Существующие записи с тем же именем и окружением заменяются только после подтверждения. Импортируйте только доверенные команды.","Select aliases to import into their environments. Install missing environments first. Matching names in the same environment require replacement confirmation. Import only trusted commands."):shell?t("Выберите Alias для экспорта в shell-файл. Команды могут содержать личные данные — проверьте перед передачей файла.","Select aliases to export to a shell file. Commands may contain private data; review them before sharing."):t("Выберите Alias для экспорта. Сохраняются только выбранные определения, окружения, категории и избранное. Команды могут содержать личные данные — проверьте перед передачей файла.","Select aliases to export. Only selected definitions, environments, categories and favorites are saved. Commands may contain private data; review them before sharing."));
+        if(importing&&source.optBoolean("aliasShell"))info(form,t("Пропущено неподдерживаемых определений: ","Unsupported definitions skipped: ")+source.optInt("skipped"));
+        if(shell)info(form,t("Shell-файл содержит только определения одного окружения. Его можно подключить из .bashrc или .zshrc. Категории и избранное сохраняются только в JSON.","A shell file contains definitions for one environment. It can be sourced from .bashrc or .zshrc. Categories and favorites are retained only in JSON."));
         Set<String> installed=new HashSet<>();if(importing)for(WorkspaceEnvironments.Choice c:WorkspaceAliases.installed(WorkspaceEnvironments.choices()))installed.add(c.alias.isEmpty()?"termux":c.alias);
         List<CheckBox> checks=new ArrayList<>();for(WorkspaceStore.Alias a:aliases){
             boolean available=!importing||installed.contains(a.environment);
@@ -89,13 +110,13 @@ final class WorkspaceBackupUi {
         AlertDialog dialog=backupBuilder(activity).setTitle(importing?t("Импорт Alias","Import aliases"):t("Экспорт Alias","Export aliases")).setView(scroll(form)).setPositiveButton(importing?t("Импортировать","Import"):t("Экспортировать","Export"),null).setNegativeButton(WorkspaceText.tr("Отмена"),null).create();
         dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{try{
             List<WorkspaceStore.Alias> selected=new ArrayList<>();Set<String> ids=new HashSet<>();for(int i=0;i<aliases.size();i++)if(checks.get(i).isEnabled()&&checks.get(i).isChecked()){selected.add(aliases.get(i));ids.add(aliases.get(i).id);}if(selected.isEmpty()){message(t("Выберите хотя бы один Alias.","Select at least one alias."));return;}
-            if(!importing){JSONObject req=request("alias-export").put("workspace",WorkspaceAliasImport.export(selected)).put("destination",destination.getText().toString().trim());run(req,r->{dialog.dismiss();message(t("Alias экспортированы: ","Aliases exported: ")+r.optInt("count")+"\n"+r.optString("path"));});return;}
+            if(!importing){JSONObject req=request("alias-export").put("aliasFormat",shell?"shell":"json").put("workspace",WorkspaceAliasImport.export(selected)).put("destination",destination.getText().toString().trim());run(req,r->{dialog.dismiss();message(t("Alias экспортированы: ","Aliases exported: ")+r.optInt("count")+"\n"+r.optString("path"));});return;}
             WorkspaceAliasImport.Plan plan=WorkspaceAliasImport.plan(aliases,ids,store.aliases,WorkspaceText.tr("Общее"));
             StringBuilder summary=new StringBuilder(t("Импортировать выбранные Alias: ","Import selected aliases: ")+plan.after.size());
             if(plan.replacements()>0){summary.append(t("\nБудут заменены:\n","\nWill replace:\n"));for(int i=0;i<plan.before.size();i++)if(plan.before.get(i)!=null){WorkspaceStore.Alias a=plan.before.get(i);summary.append(a.name).append(" · ").append(WorkspaceAliases.label(a.environment)).append('\n');}}
             summary.append(t("\nКоманды не будут выполнены. ","\nCommands will not be executed. ")).append(aliasReloadHint(plan));
             backupBuilder(activity).setTitle(t("Подтвердить импорт Alias","Confirm alias import")).setMessage(summary).setPositiveButton(t("Импортировать","Import"),(q,w)->{
-                try{run(request("inspect").put("path",source.getString("path")),fresh->{if(!fresh.optJSONObject("fingerprints").toString().equals(source.optJSONObject("fingerprints").toString())){message(errorText("BACKUP_CHANGED_RECHECK"));return;}applyAliases(plan,dialog);});}catch(Exception e){message(errorText("IMPORT_FAILED"));}
+                try{JSONObject req=request(source.optBoolean("aliasShell")?"alias-inspect-shell":"inspect").put("path",source.getString("path"));if(source.optBoolean("aliasShell"))req.put("environment",source.getString("environment"));run(req,fresh->{if(!fresh.optJSONObject("fingerprints").toString().equals(source.optJSONObject("fingerprints").toString())){message(errorText("BACKUP_CHANGED_RECHECK"));return;}applyAliases(plan,dialog);});}catch(Exception e){message(errorText("IMPORT_FAILED"));}
             }).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();
         }catch(Exception e){message(errorText("IMPORT_FAILED"));}}));dialog.show();
     }

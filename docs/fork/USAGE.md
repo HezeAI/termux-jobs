@@ -1872,3 +1872,6 @@ physical notification behavior remain device checks. See AUDIT-LINT-2026-10-24.m
 See [Environment aliases](ALIASES.md) for the separate library, category and star
 pickers, environment-scoped shell files, write safeguards and restart semantics.
 This pending feature excludes Ubuntu AI and does not alter running sessions.
+
+Agent status panels also provide [Chat scale](AGENT-CHAT-SCALE.md),50–150% per
+session, with the original100% default and a reset action.

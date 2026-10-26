@@ -47,6 +47,7 @@ public final class WorkspaceStore {
         public boolean prootIsolated;
         public String sshHost = "", sshUser = "root";
         public int sshPort = 22;
+        public int chatScale=100;
         public boolean restoreReview;
         public boolean sshKeepOpen = true;
         public String sshAuth = "auto", sshIdentity = "", sshEncryptedPassword = "";
@@ -82,7 +83,7 @@ public final class WorkspaceStore {
             return result;
         }
         public Session copy() {
-            Session s = new Session();s.restoreReview=restoreReview;s.keepHistory=keepHistory;
+            Session s = new Session();s.restoreReview=restoreReview;s.keepHistory=keepHistory;s.chatScale=chatScale;
             s.extendedDebug=extendedDebug;s.agentConnectionCommand=agentConnectionCommand; s.name = name + WorkspaceText.tr(" — копия"); s.directory = directory; s.startup = startup; s.startup2 = startup2; s.startup3 = startup3; s.environment = environment;s.prootAlias=prootAlias;s.prootIsolated=prootIsolated;
             s.sshHost = sshHost; s.sshUser = sshUser; s.sshPort = sshPort; s.sshKeepOpen = sshKeepOpen; s.sshAuth = sshAuth; s.sshIdentity = sshIdentity; // Password is bound to the original profile ID.
             s.codexConfirmActions=codexConfirmActions; s.aiProjectOnly=aiProjectOnly; s.codexEnvironment = codexEnvironment; s.codexAccess = codexAccess; s.codexChat = codexChat; s.codexThread = codexThread; s.codexThreadName = codexThreadName; s.codexSourceDirectory=codexSourceDirectory;
@@ -159,7 +160,9 @@ public final class WorkspaceStore {
     void awaitWrites() throws Exception { persistence.awaitWrites(); }
     public void close() { closed=true;persistence.close(); } // Queued atomic writes finish after Activity destruction.
     static JSONObject sessionJson(Session s) throws JSONException {
+        if(s.chatScale<50||s.chatScale>150)throw new JSONException("Invalid chat scale");
         return new JSONObject().put("id", s.id).put("name", s.name)
+            .put("chatScale",s.chatScale)
             .put("directory", s.directory).put("prootAlias",s.prootAlias).put("prootIsolated",s.prootIsolated).put("prootStartup",s.prootAlias.isEmpty()?JSONObject.NULL:new JSONArray(Arrays.asList(s.startup,s.startup2,s.startup3))).put("startup", s.prootAlias.isEmpty()?s.startup:WorkspaceEnvironments.OLD_READER_GUARD).put("startup2", s.prootAlias.isEmpty()?s.startup2:"").put("startup3", s.prootAlias.isEmpty()?s.startup3:"").put("sshAuth", s.sshAuth).put("sshIdentity", s.sshIdentity).put("sshEncryptedPassword", s.sshEncryptedPassword).put("sshHost", s.sshHost).put("sshUser", s.sshUser).put("sshPort", s.sshPort).put("sshKeepOpen", s.sshKeepOpen).put("environment", s.environment).put("handle", s.handle)
             .put("codexConfirmActions",s.codexConfirmActions==null?JSONObject.NULL:s.codexConfirmActions).put("aiProjectOnly",s.aiProjectOnly)
             .put("codexEnvironment", s.codexEnvironment).put("codexAccess", s.codexAccess).put("codexChat", s.codexChat).put("codexThread", s.codexThread).put("codexThreadName", s.codexThreadName).put("codexSocketId", s.codexSocketId).put("codexSourceDirectory",s.codexSourceDirectory).put("codexBindingBlockedRun",s.codexBindingBlockedRun)
@@ -208,6 +211,8 @@ public final class WorkspaceStore {
             // Retired local-AI profiles must never be reinterpreted as shell sessions.
             if (o.optBoolean("localAi", false)) continue;
             Session s = new Session();
+            if(o.has("chatScale")&&(!(o.get("chatScale") instanceof Number)||o.getDouble("chatScale")!=o.getInt("chatScale")||o.getInt("chatScale")<50||o.getInt("chatScale")>150))throw new JSONException("Invalid chat scale");
+            s.chatScale=o.optInt("chatScale",100);
             if(o.has("agentConnectionCommand")&&!(o.get("agentConnectionCommand") instanceof String))throw new JSONException("Invalid agent connection command type");
             s.agentConnectionCommand=o.optString("agentConnectionCommand","");if(!AgentConnection.valid(s.agentConnectionCommand))throw new JSONException("Invalid agent connection executable");
             s.id = uniqueId(o.getString("id"),sessionIds); s.name = o.getString("name"); s.directory = o.optString("directory");

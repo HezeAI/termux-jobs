@@ -167,15 +167,162 @@ def export_aliases(request):
     fields = ('id', 'name', 'command', 'environment', 'category', 'favorite')
     data = dict(version=8, commands=[], sessions=[], notes=[], recentCommands=[],
                 aliases=[{k: a[k] for k in fields} for a in value['aliases']])
-    encoded = json.dumps(data, ensure_ascii=False).encode()
+    shell = request.get('aliasFormat', 'json') == 'shell'
+    if shell:
+        if len({a['environment'] for a in data['aliases']}) != 1:
+            raise BackupError('ALIAS_SINGLE_ENVIRONMENT_REQUIRED')
+        if any(not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_-]{0,63}', a['name']) or not isinstance(a['command'], str) or not a['command'].strip() or '\0' in a['command'] or '\r' in a['command'] for a in data['aliases']):
+            raise BackupError('INVALID_ALIAS_EXPORT')
+        encoded = ('# Termux Jobs aliases — review before sourcing in Bash/Zsh.\n' + ''.join('alias ' + a['name'] + '=' + shlex.quote(a['command']) + '\n' for a in data['aliases'])).encode()
+    else:
+        encoded = json.dumps(data, ensure_ascii=False).encode()
     if len(encoded) > MAX_JSON:
         raise BackupError('LIBRARY_TOO_LARGE')
     parent = Path(request['destination']).resolve(strict=True)
     if not parent.is_dir():
         raise BackupError('INVALID_PATH')
-    path = parent / ('Termux-Jobs-Alias-' + time.strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:8] + '.json')
+    path = parent / ('Termux-Jobs-Alias-' + time.strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:8] + ('.sh' if shell else '.json'))
     protected_write(path, encoded)
     return dict(path=str(path), sha256=digest(path), count=len(data['aliases']))
+
+
+def alias_literal_words(line):
+    words, word = [], []
+    quote = None
+    active = False
+    index = 0
+    while index < len(line):
+        char = line[index]
+        index += 1
+        if quote == "'":
+            if char == "'":
+                quote = None
+            else:
+                word.append(char)
+        elif char == '\\':
+            if index == len(line):
+                return None
+            next_char = line[index]
+            index += 1
+            if quote == '"' and next_char not in '$`\\"\n':
+                word.append('\\')
+            if next_char != '\n':
+                word.append(next_char)
+            active = True
+        elif quote == '"':
+            if char == '"':
+                quote = None
+            elif char in '$`':
+                return None
+            else:
+                word.append(char)
+        elif char in "'\"":
+            quote = char
+            active = True
+        elif char.isspace():
+            if active:
+                words.append(''.join(word))
+                word, active = [], False
+        elif char == ';' and not line[index:].strip():
+            break
+        elif char in '$`;&|<>(){}':
+            return None
+        else:
+            word.append(char)
+            active = True
+    if quote:
+        return None
+    if active:
+        words.append(''.join(word))
+    return words
+
+
+def literal_alias_commands(text):
+    """Read literal alias statements only. No source, eval, substitutions or shell process."""
+    quote = None
+    escaped = False
+    invalid = False
+    statement = []
+    found = {}
+    skipped = 0
+    reserved = {'if', 'then', 'else', 'elif', 'fi', 'do', 'done', 'for', 'while', 'until', 'case', 'esac', 'in', 'function', 'select', 'time', 'coproc'}
+
+    def finish(chars, unsafe):
+        nonlocal skipped
+        line = ''.join(chars).strip()
+        if not re.match(r'(?:alias|\\alias)(?:\s|$)', line):
+            return
+        if unsafe:
+            skipped += 1
+            return
+        words = alias_literal_words(line)
+        if not words or len(words) < 2 or words[0] != 'alias':
+            skipped += 1
+            return
+        definitions = []
+        for word in words[1:]:
+            name, separator, body = word.partition('=')
+            if not separator or not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_-]{0,63}', name) or name in reserved or not body.strip() or len(body) > 16384:
+                skipped += 1
+                return
+            definitions.append((name, body))
+        for name, body in definitions:
+            found[name] = body
+
+    comment = False
+    for char in text + '\n':
+        if comment:
+            if char != '\n':
+                continue
+            comment = False
+        if escaped:
+            statement.append(char)
+            escaped = False
+            continue
+        if char == '\\' and quote != "'":
+            statement.append(char)
+            escaped = True
+            continue
+        if quote:
+            statement.append(char)
+            if char == quote:
+                quote = None
+            elif quote == '"' and char in '$`':
+                invalid = True
+            continue
+        if char in "'\"":
+            quote = char
+            statement.append(char)
+        elif char == '#' and (not statement or statement[-1].isspace()):
+            comment = True
+        elif char == '\n':
+            finish(statement, invalid)
+            statement = []
+            invalid = False
+        else:
+            if char in '$`&|<>(){}':
+                invalid = True
+            statement.append(char)
+    if statement:
+        finish(statement, True)  # Unclosed quote/continuation is never guessed.
+    return found, skipped
+
+
+def inspect_alias_shell(request):
+    path = regular(request['path'])
+    if path.stat().st_size > 1024 * 1024:
+        raise BackupError('ALIAS_FILE_TOO_LARGE')
+    with open(path, 'rb') as stream:
+        raw = stream.read(1024 * 1024 + 1)
+    if len(raw) > 1024 * 1024 or b'\0' in raw:
+        raise BackupError('INVALID_ALIAS_FILE')
+    environment = request['environment']
+    if environment not in ('termux', 'ubuntu', 'debian', 'alpine', 'archlinux', 'fedora', 'opensuse', 'void'):
+        raise BackupError('ALIAS_INVALID_ENVIRONMENT')
+    definitions, skipped = literal_alias_commands(raw.decode('utf-8-sig').replace('\r\n', '\n'))
+    aliases = [dict(id=str(uuid.uuid4()), name=name, command=command, environment=environment, category='', favorite=False) for name, command in definitions.items()]
+    workspace = libraries(dict(version=8, commands=[], sessions=[], notes=[], recentCommands=[], aliases=aliases))
+    return dict(path=str(path), fingerprints={str(path): hashlib.sha256(raw).hexdigest()}, workspace=workspace, aliasShell=True, environment=environment, skipped=skipped)
 
 
 def scan_tar(path):
@@ -1479,7 +1626,7 @@ def main():
         spec=importlib.util.spec_from_file_location('workspace_cleanup',Path(__file__).with_name('workspace-cleanup.py'))
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
         event('DONE',result=module.run(request,sys.modules[__name__]));return
-    value = {'alias-export': export_aliases, 'compression-status': compression_status, 'install-pigz': install_pigz, 'inventory': environment_info, 'selection-inventory': selection_inventory, 'create': create, 'inspect': inspect, 'restore': restore, 'packages': compare_packages, 'apt-plan': apt_plan, 'restored-inventory': restored_inventory, 'remove-restored': remove_restored}[operation](request)
+    value = {'alias-inspect-shell': inspect_alias_shell, 'alias-export': export_aliases, 'compression-status': compression_status, 'install-pigz': install_pigz, 'inventory': environment_info, 'selection-inventory': selection_inventory, 'create': create, 'inspect': inspect, 'restore': restore, 'packages': compare_packages, 'apt-plan': apt_plan, 'restored-inventory': restored_inventory, 'remove-restored': remove_restored}[operation](request)
     event('DONE', result=value)
 
 

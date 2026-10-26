@@ -41,6 +41,8 @@ final class GeminiLiveUi {
     private AlertDialog detailsDialog;
     private TextView detailsModel,detailsMode,detailsThinking,detailsInfo;
     private String detailsRun="";
+    private Runnable chatPreview=()->{},chatSave=()->{};
+    void chatPresentation(Runnable preview,Runnable save){chatPreview=preview;chatSave=save;}
     GeminiLiveUi(TermuxActivity activity,Supplier<WorkspaceStore.Session> current,BooleanSupplier visible){
         this(activity,current,visible,(p,run,before,mode)->true);
     }
@@ -127,6 +129,7 @@ final class GeminiLiveUi {
         detailsThinking=AgentStatusUi.row(body,"","reasoning",()->{if(owns(captured))chooseThinking(profile);});
         detailsInfo=AgentStatusUi.info(body,detailsSummary());detailsInfo.setId(android.R.id.message);
         AgentStatusUi.row(body,tr("Квоты AI Studio","AI Studio quotas"),"quotas",()->openQuotas());
+        AgentChatScale.controls(body,profile,()->owns(captured),chatPreview,chatSave);
         AlertDialog dialog=WorkspaceDialogs.builder(activity).setTitle(tr("Статус Gemini","Gemini status")).setView(AgentStatusUi.scroll(body)).setPositiveButton(tr("Обновить","Refresh"),null).setNegativeButton(tr("Закрыть","Close"),null).create();detailsDialog=dialog;detailsRun=captured;
         dialog.setOnDismissListener(d->{if(detailsDialog==dialog)detailsDialog=null;});dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{if(owns(captured))load(profile);}));dialog.show();update();
     }

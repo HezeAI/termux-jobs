@@ -1,3 +1,30 @@
+# Private alias/chat-scale test3 ready
+
+Active source /root/termux-fork/.verification/chat-file-cards/source,
+branch work/chat-file-cards. APK build/apk/Termux-Jobs-test3.apk,
+2.0.9-test3/code1416, 39798181bytes,
+SHA256f8555cfdc3dff84635039d1840698f4bb06cc0e1e83f7abeebdd4acc7d2efe9d.
+Same com.termux/signer/schema8/ARM64, header v2.0; no reset/rootfs migration.
+All3 JNI and X11 runtime assets unchanged. Final APK signature/runtime/assets/
+privacy checks pass; compatible lint0errors/220warnings. Broad226 cases plus
+final targeted114 pass;228 distinct cases,44 Python backup,8 shell cases.
+
+Combined Import/export Alias menu: manual shell import, JSON/backup import,
+single-environment shell export, JSON export. Literal-only file parser, explicit
+selection/environment/preview/replacement; no automatic startup-file discovery.
+Termux-only tab-restart hints retained. Agent status panels have per-session
+50–150% chat scale/default100/reset, measured layout/text/cards/thumbnails/drafts/
+Shell and message-input scaling; bounded shared composer restores for terminal/
+switch/close. Old profiles default100. See AGENT-CHAT-SCALE.md, ALIASES.md and
+VALIDATION-alias-test3.md. Files/tests only in repository fixtures. No actual
+phone session, rootfs, tunnel, server, APK installation or shared SDK changed.
+
+Deliver this preview in chat for device acceptance. No GitHub publish yet.
+Next versionCode must exceed1416. Preserve stable app/component tags and the
+unrelated root worktree rotation experiments; never run the quarantined fixture.
+
+---
+
 # Private alias test2 ready
 
 Active source: /root/termux-fork/.verification/chat-file-cards/source,

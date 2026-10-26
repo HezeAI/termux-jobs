@@ -34,14 +34,15 @@ workspace JSON and selected HOME/rootfs files.
 
 ## Explicit import and export
 
-Backup and restore has separate **Import aliases** and **Export aliases** actions.
-Export previews and selects records, then writes a fresh `Termux-Jobs-Alias-*.json`
+Backup and restore has one **Import/export aliases** card with four actions:
+**Import from shell file**, **Import from JSON/backup**, **Export to shell file**
+and **Export to JSON**. JSON export previews and selects records, then writes a fresh `Termux-Jobs-Alias-*.json`
 file into the selected directory (Download by default). It preserves each selected
 definition's environment, category and favorite marker. Commands, notes, presets,
 shell histories, settings, keys and agent authorization are not included. Alias
 bodies themselves can contain private information; review before sharing.
 
-Import accepts this JSON, a `workspace-v1.json` library or a backup manifest.
+JSON import accepts this JSON, a `workspace-v1.json` library or a backup manifest.
 It also has an entry in the existing restore plan. Preview and selection do not
 execute commands or inspect environment startup files. Only explicitly selected
 managed records are imported. Missing environments are disabled; installation
@@ -64,6 +65,26 @@ transaction; these recovery records may require manual review.
 Aliases defined manually in shell files are not automatically discovered or added
 to the library. The older explicitly chosen aliases/scripts-to-commands backup
 action remains separate and does not create managed aliases.
+
+### Shell files and ordinary Termux
+
+Manual shell import reads one explicitly chosen UTF-8 file, such as `.bashrc`,
+`.bash_aliases`, `.zshrc` or an exported `.sh`. Choose the installed destination
+environment before inspection; preview/select the definitions before confirming.
+The file is never sourced or executed. Literal single/double-quoted definitions,
+escaped characters, multiline bodies, line continuations, multiple literal
+assignments and an optional trailing semicolon are supported. Dynamic expansion,
+command substitution and command chains are rejected rather than evaluated.
+Unsupported alias statements are counted. The last supported literal definition
+of a name wins in the preview; this is not an emulation of arbitrary startup code.
+Input is bounded to1MiB. Categories default to General; favorite flags start off.
+
+Shell export first chooses one environment, then selects its records. It writes
+a fresh `Termux-Jobs-Alias-*.sh` with safely quoted `alias name='command'` statements,
+usable from Bash/Zsh in ordinary Termux or another compatible shell. It never
+overwrites or automatically edits `.bashrc`, `.bash_aliases` or `.zshrc`.
+Categories, favorites and target bindings are retained by JSON, not the shell file.
+The source fingerprint is rechecked before either kind of import is applied.
 
 On save, a separate owned helper process writes a quoted definition into
 `$HOME/.termux-jobs-aliases/<UUID>.sh` in the selected environment. It adds one

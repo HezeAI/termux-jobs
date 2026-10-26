@@ -91,5 +91,6 @@ public final class AiAgentsUi {
         if(model==null||model.optString("id").isEmpty())return WorkspaceText.tr("По умолчанию");
         String variant=model.optString("variant");return model.optString("providerID")+" / "+model.optString("id")+(variant.isEmpty()?"":" · "+variant);
     }
-    static void active(Activity a,WorkspaceStore.Session s,Runnable changed){new OpenCodeStatusUi(a,s,changed,null).show();}
+    static void active(Activity a,WorkspaceStore.Session s,Runnable changed){active(a,s,changed,()->{},changed);}
+    static void active(Activity a,WorkspaceStore.Session s,Runnable changed,Runnable preview,Runnable save){OpenCodeStatusUi ui=new OpenCodeStatusUi(a,s,changed,null);ui.chatPresentation(preview,save);ui.show();}
 }

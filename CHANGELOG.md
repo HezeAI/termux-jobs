@@ -6,6 +6,8 @@
 - Add Commands / Alias / Notes tabs, independent searches and alias previews in the star picker.
 - Add separate alias import/export with selection, full previews, preserved environment/category bindings and confirmed replacements.
 - Show tab-restart guidance only for Termux alias creation and deletion; keep other environments' session guidance.
+- Combine alias transfer into four shell-file/JSON import and export actions; parse literal definitions without executing startup files and export one environment per shell file.
+- Add per-session 50–150% agent-chat scale, default100%, with live layout scaling, 100% reset and restoration of shared input geometry outside agent chats.
 - Keep running shells, agent sessions, X11 and graphics components unchanged.
 - Private preview only; device checks and publication are pending. [Details](docs/fork/ALIASES.md).
 

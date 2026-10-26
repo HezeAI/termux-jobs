@@ -55,6 +55,36 @@ class BackupTests(unittest.TestCase):
         self.assertEqual(b.libraries(self.library())['version'],8)
         value=self.library();value['aliases']={};self.assertRaises(b.BackupError,b.libraries,value)
         value['aliases']=[{}]*20001;self.assertRaises(b.BackupError,b.libraries,value)
+    def test_manual_alias_import_reads_literals_and_skips_dynamic_statements_without_execution(self):
+        marker=self.root/'must-not-exist'
+        source=self.root/'.bashrc'
+        source.write_text("# header\nalias ll='ls -lah'\nalias echo_path=\"echo \\$HOME\"\nalias complex='printf \\\"quotes\\\"; echo $(later)'\nalias multiline='first\nsecond'\nalias unsafe=$(touch "+str(marker)+")\nalias dynamic=\"$HOME\"\nalias skipped='ls'; touch "+str(marker)+"\necho 'not executed'\nalias ll='ls -la' # final definition\n")
+        with patch.object(b.subprocess,'Popen',side_effect=AssertionError('must not execute a shell')):
+            report=b.inspect_alias_shell(dict(path=str(source),environment='debian'))
+        definitions={a['name']:a['command'] for a in report['workspace']['aliases']}
+        self.assertEqual(definitions['ll'],'ls -la');self.assertEqual(definitions['echo_path'],'echo $HOME');self.assertEqual(definitions['multiline'],'first\nsecond');self.assertEqual(report['skipped'],3)
+        self.assertTrue(all(a['environment']=='debian' and a['category']=='' for a in report['workspace']['aliases']));self.assertFalse(marker.exists())
+        self.assertEqual(report['fingerprints'][str(source)],hashlib.sha256(source.read_bytes()).hexdigest())
+    def test_shell_alias_export_roundtrips_quotes_multiline_and_one_environment_only(self):
+        value=self.library();value['aliases']=[dict(id='11111111-1111-1111-1111-111111111111',name='quotes',command="printf '%s' \"$HOME\"; echo 'apostrophe'\nnext",environment='ubuntu',category='Files',favorite=True),dict(id='22222222-2222-2222-2222-222222222222',name='other',command='echo safe',environment='ubuntu',category='',favorite=False)]
+        output=self.root/'shell-output';output.mkdir();result=b.export_aliases(dict(destination=str(output),workspace=value,aliasFormat='shell'));path=Path(result['path']);self.assertEqual(path.suffix,'.sh')
+        report=b.inspect_alias_shell(dict(path=str(path),environment='alpine'));self.assertEqual({a['name']:a['command'] for a in report['workspace']['aliases']},{a['name']:a['command'] for a in value['aliases']});self.assertEqual(report['skipped'],0)
+        value['aliases'][1]['environment']='debian';self.assertRaises(b.BackupError,b.export_aliases,dict(destination=str(output),workspace=value,aliasFormat='shell'))
+    def test_shell_export_is_readable_by_real_bash_without_executing_alias_bodies(self):
+        import subprocess
+        marker=self.root/'never-run';value=self.library();body="printf '%s' \"$HOME\"; touch "+str(marker)+"\nnext"
+        value['aliases']=[dict(id='11111111-1111-1111-1111-111111111111',name='verify',command=body,environment='termux',category='',favorite=False)]
+        output=self.root/'bash-output';output.mkdir();result=b.export_aliases(dict(destination=str(output),workspace=value,aliasFormat='shell'))
+        printed=subprocess.run(['bash','--noprofile','--norc','-c','. "$1"; alias -p','alias-check',result['path']],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,check=True,text=True).stdout
+        definitions,skipped=b.literal_alias_commands(printed);self.assertEqual(definitions,{'verify':body});self.assertEqual(skipped,0);self.assertFalse(marker.exists())
+        definitions,skipped=b.literal_alias_commands("alias semi='echo yes'; # allowed terminator\nalias chain=echo; touch nope\n")
+        self.assertEqual(definitions,{'semi':'echo yes'});self.assertEqual(skipped,1)
+    def test_manual_alias_import_bounds_input_and_rejects_ai_and_unfinished_quotes(self):
+        path=self.root/'.zshrc';path.write_text("alias valid='echo ok'\nalias broken='unfinished\n")
+        result=b.inspect_alias_shell(dict(path=str(path),environment='termux'));self.assertEqual([a['name'] for a in result['workspace']['aliases']],['valid']);self.assertEqual(result['skipped'],1)
+        self.assertRaises(b.BackupError,b.inspect_alias_shell,dict(path=str(path),environment='ubuntu-ai'))
+        path.write_bytes(b'\0');self.assertRaises(b.BackupError,b.inspect_alias_shell,dict(path=str(path),environment='termux'))
+        path.write_bytes(b'x'*(1024*1024+1));self.assertRaises(b.BackupError,b.inspect_alias_shell,dict(path=str(path),environment='termux'))
     def test_home_aliases_and_scripts_no_execution(self):
         p=self.tar([('home/.bashrc',b"alias hello='echo hi'\nalias dynamic=$(touch NEVER)\nsource /tmp/evil\n"),('home/scripts/build.sh',b'#!/bin/bash\ntouch NEVER\n')]);r=self.inspect(p)
         self.assertEqual(r['components'][0]['kind'],'home');self.assertEqual(len(r['candidates']),2);self.assertEqual(r['candidates'][0]['command'],'echo hi');self.assertFalse((self.root/'NEVER').exists())

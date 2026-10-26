@@ -77,6 +77,7 @@ final class ChatAttachmentUi implements AutoCloseable {
             TextView remove=view.pill("×",()->{List<JSONObject> list=drafts.get(owner);if(list!=null&&list.remove(a)){discard(a);render();}});remove.setTextColor(Color.TRANSPARENT);android.graphics.drawable.LayerDrawable cross=new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{activity.getDrawable(com.termux.R.drawable.workspace_attachment_remove)});cross.setLayerSize(0,view.dp(18),view.dp(18));cross.setLayerGravity(0,Gravity.CENTER);remove.setForeground(cross);remove.setContentDescription(t("Убрать вложение","Remove attachment"));row.addView(remove);view.attachmentDrafts.addView(row);
         }
         view.attachmentDrafts.setVisibility(busy()||has()?View.VISIBLE:View.GONE);
+        view.scaleContent();
     }
     private final java.util.ArrayDeque<java.lang.ref.WeakReference<ImageView>> thumbnails=new java.util.ArrayDeque<>();
     void thumbnail(JSONObject a,ImageView target){
