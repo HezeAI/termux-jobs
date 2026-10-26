@@ -1,3 +1,14 @@
+# Unreleased — environment aliases
+
+- Add persistent aliases to eight installed terminal environments, excluding Ubuntu AI.
+- Add creation, environment/category selection, managed-name replacement confirmation, editing and deletion.
+- Separate All commands / All aliases and their category/favourite filters; preserve previous library data.
+- Add Commands / Alias / Notes tabs, independent searches and alias previews in the star picker.
+- Keep running shells, agent sessions, X11 and graphics components unchanged.
+- Private preview only; device checks and publication are pending. [Details](docs/fork/ALIASES.md).
+
+---
+
 # v2.0.8 — Developer Markdown & agent chat improvements
 
 - Native Developer-style Markdown for Codex, Claude, Gemini and OpenCode, with an outlined Copy action and pressed feedback.

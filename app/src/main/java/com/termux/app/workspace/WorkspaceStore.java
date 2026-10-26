@@ -31,6 +31,12 @@ public final class WorkspaceStore {
             return c;
         }
     }
+    public static final class Alias {
+        public String id = UUID.randomUUID().toString();
+        public String name = "", command = "", environment = "termux", category = "";
+        public boolean favorite;
+        public Alias copy() { Alias a=new Alias();a.id=id;a.name=name;a.command=command;a.environment=environment;a.category=category;a.favorite=favorite;return a; }
+    }
     public static final class Session {
         public String id = UUID.randomUUID().toString();
         public String name = "Bash", directory = "", startup = "", handle = "";
@@ -99,6 +105,7 @@ public final class WorkspaceStore {
         RecentCommand(String command, long sentAt) { this.command = command; this.sentAt = sentAt; }
     }
     public final List<Command> commands = new ArrayList<>();
+    public final List<Alias> aliases = new ArrayList<>();
     public final List<Note> notes = new ArrayList<>();
     public final List<Session> sessions = new ArrayList<>();
     public final List<RecentCommand> recentCommands = new ArrayList<>();
@@ -177,7 +184,11 @@ public final class WorkspaceStore {
             RecentCommand entry = recentCommands.get(i);
             recent.put(new JSONObject().put("command", entry.command).put("sentAt", entry.sentAt));
         }
-        return root.put("commands", cs).put("sessions", ss).put("notes", ns).put("recentCommands", recent);
+        JSONArray als = new JSONArray();
+        java.util.Set<String> aliasIds=new java.util.HashSet<>(),aliasNames=new java.util.HashSet<>();
+        for(Alias a:aliases){uniqueId(a.id,aliasIds);if(!WorkspaceAliases.valid(a)||!aliasNames.add(a.environment+":"+a.name))throw new JSONException("Invalid alias");
+            als.put(new JSONObject().put("id",a.id).put("name",a.name).put("command",a.command).put("environment",a.environment).put("category",a.category).put("favorite",a.favorite));}
+        return root.put("aliases",als).put("commands", cs).put("sessions", ss).put("notes", ns).put("recentCommands", recent);
     }
     void decode(String json) throws JSONException {
         JSONObject root = new JSONObject(json);
@@ -269,6 +280,13 @@ public final class WorkspaceStore {
                 recent.add(new RecentCommand(entry.getString("command"), entry.optLong("sentAt")));
             }
         }
+        List<Alias> als=new ArrayList<>();JSONArray aa=root.optJSONArray("aliases");
+        java.util.Set<String> aliasIds=new java.util.HashSet<>(),aliasNames=new java.util.HashSet<>();
+        if(root.has("aliases")&&aa==null)throw new JSONException("Invalid aliases");
+        if(aa!=null)for(int i=0;i<aa.length();i++){JSONObject o=aa.getJSONObject(i);Alias a=new Alias();a.id=uniqueId(o.getString("id"),aliasIds);
+            a.name=o.getString("name");a.command=o.getString("command");a.environment=o.getString("environment");a.category=o.optString("category");a.favorite=o.optBoolean("favorite");
+            if(!WorkspaceAliases.valid(a)||!aliasNames.add(a.environment+":"+a.name))throw new JSONException("Invalid alias");als.add(a);}
+        aliases.clear();aliases.addAll(als);
         commands.clear(); commands.addAll(cs); sessions.clear(); sessions.addAll(ss);
         notes.clear(); notes.addAll(ns); recentCommands.clear(); recentCommands.addAll(recent);
     }

@@ -5,6 +5,14 @@
 Команды по-прежнему выполняются в настоящем Termux или выбранном окружении;
 интерфейс помогает организовать работу и не требует писать свою оболочку скриптов.
 
+## Private preview — environment aliases
+
+A pending test build adds environment-bound aliases, separate categories and
+favourites, and **Commands / Alias / Notes** in the star picker. Supported targets
+are the eight standard installed terminal environments; Ubuntu AI is excluded.
+[Usage and persistence details](docs/fork/ALIASES.md). The stable download below
+remains v2.0.8 until the preview is accepted and a new release is authorized.
+
 ## v2.0.8 — Developer Markdown & agent chat improvements
 
 Working with AI agents through CLI directly in Termux on your phone is now even more convenient. Read formatted replies, attach project files and receive ready-to-use results in the chat.

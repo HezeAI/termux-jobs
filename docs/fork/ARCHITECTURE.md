@@ -1421,3 +1421,10 @@ logic/cache/original files. Attachment Download delegates to ProjectFileExport's
 exclusive creation, numeric collision suffix and cancellation/partial cleanup.
 ZoomImage distinguishes tap from drag/pinch/cancel for performClick; sizing and
 render transforms are retained. No persistent data format or account migration.
+
+
+## Environment aliases (private preview)
+
+See [Environment aliases](ALIASES.md) for the separate library, category and star
+pickers, environment-scoped shell files, write safeguards and restart semantics.
+This pending feature excludes Ubuntu AI and does not alter running sessions.

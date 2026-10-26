@@ -1865,3 +1865,10 @@ Terminal/report notification actions keep their existing targets and labels with
 immutable PendingIntents. Launch/share entry points and existing permissions remain;
 no reset, environment replacement or new sign-in is required. Native driver/UI and
 physical notification behavior remain device checks. See AUDIT-LINT-2026-10-24.md.
+
+
+## Environment aliases (private preview)
+
+See [Environment aliases](ALIASES.md) for the separate library, category and star
+pickers, environment-scoped shell files, write safeguards and restart semantics.
+This pending feature excludes Ubuntu AI and does not alter running sessions.

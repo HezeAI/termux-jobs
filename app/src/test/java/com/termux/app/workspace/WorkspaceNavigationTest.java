@@ -26,6 +26,7 @@ import static org.robolectric.Shadows.shadowOf;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 28, application = Application.class)
 public class WorkspaceNavigationTest {
+    @org.junit.Before public void useRussianUi(){WorkspaceLanguage.select(org.robolectric.RuntimeEnvironment.application,"ru");WorkspaceText.resources=WorkspaceLanguage.wrap(org.robolectric.RuntimeEnvironment.application).getResources();}
     @Test public void searchUpdatesBothListsWithoutReplacingPanelsFiltersOrInput()throws Exception{
         TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.setContentView(R.layout.activity_termux);Field tv=TermuxActivity.class.getDeclaredField("mTerminalView");tv.setAccessible(true);tv.set(a,a.findViewById(R.id.terminal_view));WorkspaceController c=new WorkspaceController(a);
         try{
@@ -33,12 +34,12 @@ public class WorkspaceNavigationTest {
             for(String name:new String[]{"Alpha","Beta"}){WorkspaceStore.Command cmd=new WorkspaceStore.Command();cmd.name=name+" command";cmd.command="echo "+name;cmd.favorite=name.equals("Alpha");store.commands.add(cmd);WorkspaceStore.Note note=new WorkspaceStore.Note();note.name=name+" note";note.text="text "+name;store.notes.add(note);}
             findDescription(a.findViewById(R.id.workspace_navigation),"Команды/Заметки").performClick();
             ViewGroup content=a.findViewById(R.id.workspace_content);View viewport=content.getChildAt(0),commands=findDescription(content,"Список сохранённых команд"),notes=findDescription(content,"Список сохранённых заметок"),filters=findDescription(content,"Фильтры команд");
-            EditText search=(EditText)findDescription(a.findViewById(R.id.workspace_header),"Поиск команд и заметок");search.requestFocus();
+            EditText search=(EditText)findDescription(a.findViewById(R.id.workspace_header),"Поиск команд/alias и заметок");search.requestFocus();
             for(String query:new String[]{"A","Al","Alpha","no match",""}){
                 search.setText(query);assertSame(viewport,content.getChildAt(0));assertSame(commands,findDescription(content,"Список сохранённых команд"));assertSame(notes,findDescription(content,"Список сохранённых заметок"));assertSame(filters,findDescription(content,"Фильтры команд"));assertTrue(search.hasFocus());assertEquals(query,search.getText().toString());
                 boolean alpha=query.isEmpty()||"Alpha".toLowerCase().contains(query.toLowerCase()),beta=query.isEmpty()||"Beta".toLowerCase().contains(query.toLowerCase());assertEquals(alpha,findText(content,"Alpha command")!=null);assertEquals(alpha,findText(content,"Alpha note")!=null);assertEquals(beta,findText(content,"Beta command")!=null);assertEquals(beta,findText(content,"Beta note")!=null);
             }
-            findText(filters,"Избранное").performClick();View favoriteFilters=findDescription(content,"Фильтры команд");assertTrue(findText(favoriteFilters,"Избранное").isSelected());search.setText("Beta");assertNull(findText(content,"Beta command"));assertNotNull(findText(content,"Beta note"));assertSame(favoriteFilters,findDescription(content,"Фильтры команд"));assertTrue(findText(favoriteFilters,"Избранное").isSelected());
+            findText(filters,"Все Alias").performClick();View favoriteFilters=findDescription(content,"Фильтры команд");assertTrue(findText(favoriteFilters,"Все Alias").isSelected());search.setText("Beta");assertNull(findText(content,"Beta command"));assertNotNull(findText(content,"Beta note"));assertSame(favoriteFilters,findDescription(content,"Фильтры команд"));assertTrue(findText(favoriteFilters,"Все Alias").isSelected());
             assertNull(a.getCurrentSession());
         }finally{c.close();}
     }
@@ -142,7 +143,8 @@ public class WorkspaceNavigationTest {
         assertNull(findText(activity.findViewById(R.id.workspace_content), "Новая сессия"));
         findDescription(nav, "Команды/Заметки").performClick();
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Команд пока нет"));
-        findDescription(activity.findViewById(R.id.workspace_content), "Новая команда").performClick();
+        findDescription(activity.findViewById(R.id.workspace_content), "Новая команда или alias").performClick();
+        findText(ShadowAlertDialog.getLatestAlertDialog().getWindow().getDecorView(),"Новая команда").performClick();
         shadowOf(Looper.getMainLooper()).idle();
         AlertDialog editor = ShadowAlertDialog.getLatestAlertDialog(); assertTrue(editor.isShowing());
         List<EditText> fields = new ArrayList<>(); collectEditors(editor.getWindow().getDecorView(), fields);
@@ -153,14 +155,14 @@ public class WorkspaceNavigationTest {
         shadowOf(Looper.getMainLooper()).idle();
         assertFalse(editor.isShowing()); store.awaitWrites();
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Собрать APK"));
-        EditText commandSearch = (EditText) findDescription(activity.findViewById(R.id.workspace_header), "Поиск команд и заметок");
+        EditText commandSearch = (EditText) findDescription(activity.findViewById(R.id.workspace_header), "Поиск команд/alias и заметок");
         assertNotNull(commandSearch);
         assertNull(findText(activity.findViewById(R.id.workspace_content), "Все"));
         commandSearch.setText("не найдено");
         assertNull(findText(activity.findViewById(R.id.workspace_content), "Собрать APK"));
         commandSearch.setText("APK");
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Собрать APK"));
-        assertSame(commandSearch, findDescription(activity.findViewById(R.id.workspace_header), "Поиск команд и заметок"));
+        assertSame(commandSearch, findDescription(activity.findViewById(R.id.workspace_header), "Поиск команд/alias и заметок"));
         assertEquals("APK", commandSearch.getText().toString());
         commandSearch.setText("gradlew");
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Собрать APK"));
@@ -219,14 +221,14 @@ public class WorkspaceNavigationTest {
         findDescription(activity.findViewById(R.id.workspace_content), "Фильтр категорий команд").performClick();
         shadowOf(Looper.getMainLooper()).idle();
         AlertDialog categories = ShadowAlertDialog.getLatestAlertDialog();
-        assertEquals("Все категории", categories.getListView().getAdapter().getItem(0));
-        categories.getListView().performItemClick(null, 1, 1);
+        assertNotNull(findText(categories.getWindow().getDecorView(),"Все категории"));
+        findText(categories.getWindow().getDecorView(),"Сборка").performClick();
         shadowOf(Looper.getMainLooper()).idle();
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Собрать APK"));
         assertNull(findText(activity.findViewById(R.id.workspace_content), "Привет"));
         findDescription(activity.findViewById(R.id.workspace_content), "Фильтр категорий команд").performClick();
         shadowOf(Looper.getMainLooper()).idle();
-        ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 0, 0);
+        findText(ShadowAlertDialog.getLatestAlertDialog().getWindow().getDecorView(),"Все категории").performClick();
         shadowOf(Looper.getMainLooper()).idle();
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Привет"));
         assertNull(findDescription(activity.findViewById(R.id.workspace_content), "Вставить Собрать APK"));
@@ -246,8 +248,8 @@ public class WorkspaceNavigationTest {
         assertNull(activity.getCurrentSession());
         assertTrue(store.sessions.isEmpty());
         findDescription(nav, "Команды/Заметки").performClick();
-        findText(activity.findViewById(R.id.workspace_content), "Избранное").performClick();
-        assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Команд пока нет"));
+        findText(activity.findViewById(R.id.workspace_content), "Все Alias").performClick();
+        assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Aliases пока нет"));
         findText(activity.findViewById(R.id.workspace_content), "Все команды").performClick();
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Собрать APK"));
         assertTrue(controller.onBack()); assertFalse(controller.onBack());
@@ -356,11 +358,11 @@ public class WorkspaceNavigationTest {
         assertSame(originalHome, content.getChildAt(0));
         assertSame(originalNavigation, findDescription(activity.findViewById(R.id.workspace_navigation), "Команды/Заметки"));
         originalNavigation.performClick();
-        EditText search = (EditText) findDescription(header, "Поиск команд и заметок");
+        EditText search = (EditText) findDescription(header, "Поиск команд/alias и заметок");
         search.setText("codex"); search.requestFocus();
         View originalCommands = content.getChildAt(0);
         for (int i = 0; i < 1000; i++) client.onTitleChanged(null);
-        assertSame(search, findDescription(header, "Поиск команд и заметок"));
+        assertSame(search, findDescription(header, "Поиск команд/alias и заметок"));
         assertEquals("codex", search.getText().toString());
         assertSame(originalCommands, content.getChildAt(0));
         assertTrue(search.hasFocus());
@@ -519,17 +521,18 @@ public class WorkspaceNavigationTest {
         assertTrue(commands.getChildAt(0).getHeight() > commands.getHeight()); assertTrue(notes.getChildAt(0).getHeight() > notes.getHeight());
         commands.scrollTo(0, 100); assertEquals(100, commands.getScrollY()); assertEquals(0, notes.getScrollY());
         notes.scrollTo(0, 100); assertEquals(100, notes.getScrollY());
-        assertEquals(findDescription(content, "Новая команда").getLeft(), findDescription(content, "Новая заметка").getLeft());
-        EditText search = (EditText) findDescription(activity.findViewById(R.id.workspace_header), "Поиск команд и заметок");
-        assertEquals("Поиск команд и/или заметок", search.getHint().toString());
+        assertEquals(findDescription(content, "Новая команда или alias").getLeft(), findDescription(content, "Новая заметка").getLeft());
+        EditText search = (EditText) findDescription(activity.findViewById(R.id.workspace_header), "Поиск команд/alias и заметок");
+        assertEquals("Поиск команд/alias и заметок", search.getHint().toString());
         assertNull(findDescription(activity.findViewById(R.id.workspace_header), "Новая команда"));
         search.setText("shared needle"); assertNotNull(findText(content, "Command 0")); assertNotNull(findText(content, "Note 0"));
         search.setText("needle note"); assertNull(findText(content, "Command 0")); assertNotNull(findText(content, "Note 0"));
         search.setText("");
-        findText(findDescription(content, "Фильтры команд"), "Избранное").performClick();
-        assertNotNull(findText(content, "Command 0")); assertNull(findText(content, "Command 1")); assertNotNull(findText(content, "Note 1"));
+        findText(findDescription(content, "Фильтры команд"), "Все Alias").performClick();
+        assertNull(findText(content, "Command 0")); assertNull(findText(content, "Command 1")); assertNotNull(findText(content, "Note 1"));
         findText(findDescription(content, "Фильтры заметок"), "Избранное").performClick();
-        assertNotNull(findText(content, "Note 0")); assertNull(findText(content, "Note 1")); assertNotNull(findText(content, "Command 0"));
+        assertNotNull(findText(content, "Note 0")); assertNull(findText(content, "Note 1")); assertNull(findText(content, "Command 0"));
+        findText(findDescription(content,"Фильтры команд"),"Все команды").performClick();assertNotNull(findText(content,"Command 0"));
         controller.close();
     }
     @Test @Config(qualifiers = "w320dp-h640dp") public void narrowLibraryKeepsFiltersAndAddButtonsInsideWindow() throws Exception {
@@ -688,10 +691,10 @@ public class WorkspaceNavigationTest {
         search.setText("line two"); assertSame(note, picker.getListView().getAdapter().getItem(0));
         search.setText("Docs"); assertSame(note, picker.getListView().getAdapter().getItem(0));
         search.setText("missing"); assertEquals(0, picker.getListView().getAdapter().getCount());
-        findText(picker.getWindow().getDecorView(), "Сохранённые команды").performClick();
+        findText(picker.getWindow().getDecorView(), "Команды").performClick();
         assertEquals("Custom", search.getText().toString()); assertSame(beta, picker.getListView().getAdapter().getItem(0));
         findText(picker.getWindow().getDecorView(), "Заметки").performClick(); assertEquals("missing", search.getText().toString());
-        findText(picker.getWindow().getDecorView(), "Сохранённые команды").performClick();
+        findText(picker.getWindow().getDecorView(), "Команды").performClick();
         picker.getListView().performItemClick(null, 0, 0); shadowOf(Looper.getMainLooper()).idle();
         assertEquals("draft",composer.getText().toString());AlertDialog preview=ShadowAlertDialog.getLatestAlertDialog();assertNotNull(findText(preview.getWindow().getDecorView(),"first\nsecond"));findText(preview.getWindow().getDecorView(),"Вставить в сессию").performClick();shadowOf(Looper.getMainLooper()).idle();
         assertEquals("first\nsecond", composer.getText().toString()); assertTrue(store.recentCommands.isEmpty()); assertNull(activity.getCurrentSession());

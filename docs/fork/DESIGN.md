@@ -427,3 +427,10 @@ subject to mode/Android permissions. No new isolation. See LOCAL-AI.md.
 ## v1.5.0 selection interaction
 
 Server rows enter checkbox selection on long press. Two equally sized centered vector panels replace the single upload button: left ↑ uploads, right ↓ opens Download / Move. A gap separates their touch areas; the parent-directory vector now points left without changing its action. Its menu offers Download / Move / Select all / Clear; pending same-profile move uses a folder-arrow vector and Move here / Cancel move, preserved across directory navigation. Directory navigation clears ordinary selection. Public session/preset environment chooser retains a disabled Local AI row with reduced opacity; existing local-preset launch is denied with an explanatory dialog, not deletion.
+
+
+## Environment aliases (private preview)
+
+See [Environment aliases](ALIASES.md) for the separate library, category and star
+pickers, environment-scoped shell files, write safeguards and restart semantics.
+This pending feature excludes Ubuntu AI and does not alter running sessions.

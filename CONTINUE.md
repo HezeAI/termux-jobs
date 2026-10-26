@@ -1,3 +1,29 @@
+# Private environment-alias test1 ready
+
+Active checkout: /root/termux-fork/.verification/chat-file-cards/source,
+branch work/chat-file-cards. Preview2.0.9-test1/code1414, same com.termux/signer/
+schema8/ARM64; header v2.0. APK: build/apk/Termux-Jobs-test1.apk,
+39785457bytes, SHA25669019c66dee5f4271f68cdb6b05b6b4af67353ec39a86e12dc5b16c8b47cee82.
+98 JVM cases/7classes,8 isolated shell cases, compatible lint5modules0errors/
+218warnings, APK/runtime/assets/privacy checks pass. No physical alias/startup
+checks yet. See docs/fork/ALIASES.md and VALIDATION-alias-test1.md.
+
+Implemented all requested alias library/star/category/favourite UI, persistence in
+the selected installed environment, replacement/edit/delete and restart warning.
+Targets: Termux,Ubuntu,Debian,Alpine,Arch,Fedora,openSUSE,Void. Ubuntu AI excluded
+in both chooser and backend. Existing commands/notes survive; no running shell,
+rootfs, tunnel, server or graphics payload was modified. Test helper writes went
+only to private fixtures. Standard shell startup is supported; already loaded
+aliases need a new shell after edits/deletion. Raw backup captures retain metadata,
+but the existing selective-import UI does not yet offer alias import.
+
+Deliver this preview in chat for developer checks. Do NOT publish until accepted
+and explicitly requested. Next update code must exceed1414. Keep public v2.0.8
+and all components immutable. Root worktree rotation experiments remain separate;
+do not build, reset or discard them. Do not run the quarantined native fixture.
+
+---
+
 # Stable release: v2.0.8 — published and verified
 
 Release: https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.8

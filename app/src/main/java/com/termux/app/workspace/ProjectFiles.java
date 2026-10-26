@@ -121,6 +121,11 @@ final class ProjectFiles implements AutoCloseable {
     void transfer(List<Entry> entries,String folder,boolean move,boolean rename)throws Exception {
         ProjectFileTransfer.execute(entries,folder,move,rename,(script,output,max)->run(script,output,max,null,6*60*60));
     }
+    String aliasOperation(String script) throws Exception {
+        ByteArrayOutputStream out=new ByteArrayOutputStream();
+        try{run("exec sh -s",out,16384,script.getBytes(StandardCharsets.UTF_8));}catch(Exception error){String code=new String(out.toByteArray(),StandardCharsets.UTF_8).trim();if(code.matches("ALIAS_[A-Z_]+"))throw new IOException(code);throw error;}
+        return new String(out.toByteArray(),StandardCharsets.UTF_8);
+    }
     private byte[] bytes(String script,int max) throws Exception {ByteArrayOutputStream out=new ByteArrayOutputStream();run(script,out,max);return out.toByteArray();}
     static String command(WorkspaceStore.Session s,String script) {
         String e=environment(s);String bash="bash --noprofile --norc -c "+SessionShell.quote(script);

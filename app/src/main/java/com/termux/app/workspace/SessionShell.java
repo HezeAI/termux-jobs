@@ -40,7 +40,7 @@ public final class SessionShell {
             if(!WorkspaceLocalFilePicker.validAlias(alias))throw new IOException("Invalid environment alias");
             File guestRc = new File(dir, "ubuntu-bashrc");
             write(guestRc, ((otherGuest?"export TERMUX_JOBS_ENVIRONMENT_ALIAS="+quote(alias)+"\n":"")+buildReadyRc("$HOME", mount + "/history", mount + "/cancel-startup", startup, true)).getBytes(StandardCharsets.UTF_8));
-            if(otherGuest)write(new File(dir,"proot-shrc"),("export TERMUX_JOBS_ENVIRONMENT_ALIAS="+quote(alias)+"\n"+portableRc(mount+"/history",mount+"/cancel-startup",startup)).getBytes(StandardCharsets.UTF_8));
+            if(otherGuest)write(new File(dir,"proot-shrc"),("export TERMUX_JOBS_ENVIRONMENT_ALIAS="+quote(alias)+"\n"+(WorkspaceAliases.ENVIRONMENTS.contains(alias)?WorkspaceAliases.hook():"")+portableRc(mount+"/history",mount+"/cancel-startup",startup)).getBytes(StandardCharsets.UTF_8));
             String cwd = session.directory.isEmpty() || session.directory.equals("~") ? "/root" : session.directory;
             if (cwd.startsWith("~/")) cwd = "/root/" + cwd.substring(2);
             boolean apiHandoff=session.geminiAgent&&session.geminiAuth.equals("api")&&!session.geminiEncryptedKey.isEmpty();

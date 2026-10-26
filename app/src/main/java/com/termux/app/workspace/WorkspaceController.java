@@ -130,6 +130,9 @@ public final class WorkspaceController {
     private Screen screen = Screen.HOME;
     private String query = "", journalQuery = "", commandCategory = "", noteCategory = "";
     private boolean noteFavorites, favorites, savedOnly, closed, creating, baseCreating;
+    private boolean aliasesSelected,aliasFavorites;
+    private String aliasCategory="";
+    private static final java.util.concurrent.atomic.AtomicBoolean ALIAS_BUSY=new java.util.concurrent.atomic.AtomicBoolean();
     private long lastBaseRestart, baseStartedAt;
     private int baseRestartFailures;
     private int toolbarVisibility = View.GONE;
@@ -370,8 +373,8 @@ public final class WorkspaceController {
                 tools.addView(title, new LinearLayout.LayoutParams(0, -2, 1));
             }
             if (screen == Screen.COMMANDS) {
-                EditText search = field(WorkspaceText.tr("Поиск команд и/или заметок"), query, false);
-                search.setContentDescription(WorkspaceText.tr("Поиск команд и заметок")); search.setTextSize(13);
+                EditText search = field(tr("Поиск команд/alias и заметок","Search commands/aliases and notes"), query, false);
+                search.setContentDescription(tr("Поиск команд/alias и заметок","Search commands/aliases and notes")); search.setTextSize(13);
                 search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
                     | android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI);
                 android.graphics.drawable.Drawable icon = activity.getDrawable(R.drawable.workspace_search).mutate();
@@ -393,7 +396,7 @@ public final class WorkspaceController {
                     return true;
                 });
             }
-            TextView add = button("+", true, () -> { if (screen == Screen.COMMANDS) editCommand(null); else editSession(null); });
+            TextView add = button("+", true, () -> { if (screen == Screen.COMMANDS) newLibraryEntry(); else editSession(null); });
             add.setContentDescription(screen == Screen.COMMANDS ? WorkspaceText.tr("Новая команда") : WorkspaceText.tr("Новая сессия"));
             if (screen == Screen.SESSIONS) tools.addView(add, new LinearLayout.LayoutParams(dp(48), dp(48)));
             header.addView(tools);
@@ -724,6 +727,7 @@ public final class WorkspaceController {
     private void commands(LinearLayout body) {
         if (!commandCategory.isEmpty() && !commandCategories().contains(commandCategory)) commandCategory = "";
         if (!noteCategory.isEmpty() && !noteCategories().contains(noteCategory)) noteCategory = "";
+        if(!aliasCategory.isEmpty()&&!aliasCategories().contains(aliasCategory))aliasCategory="";
         libraryFilters(body, false);
         commandResults = libraryPanel(body, WorkspaceText.tr("Список сохранённых команд"));
         libraryFilters(body, true);
@@ -734,11 +738,16 @@ public final class WorkspaceController {
         if (screen != Screen.COMMANDS || commandResults == null || noteResults == null) return;
         commandResults.removeAllViews(); noteResults.removeAllViews();
         int count = 0;
+        if(aliasesSelected){
+            for(WorkspaceStore.Alias a:store.aliases)if((!aliasFavorites||a.favorite)&&(aliasCategory.isEmpty()||aliasCategory.equals(a.category))&&matches(a.name+" "+a.command+" "+a.category+" "+WorkspaceAliases.label(a.environment))){aliasCard(commandResults,a);count++;}
+            if(count==0)empty(commandResults,tr("Aliases пока нет","No aliases yet"),tr("Нажмите +, чтобы создать alias, или измените фильтры.","Tap + to create an alias, or change the filters."));
+        }else{
         for (WorkspaceStore.Command c : store.commands) {
             if ((!favorites || c.favorite) && (commandCategory.isEmpty() || commandCategory.equals(c.category))
                 && matches(c.name + " " + c.command + " " + c.category)) { commandCard(commandResults, c); count++; }
         }
         if (count == 0) empty(commandResults, WorkspaceText.tr("Команд пока нет"), WorkspaceText.tr("Нажмите +, чтобы сохранить команду, или измените фильтры."));
+        }
         count = 0;
         for (WorkspaceStore.Note n : store.notes) {
             if ((!noteFavorites || n.favorite) && (noteCategory.isEmpty() || noteCategory.equals(n.category))
@@ -747,6 +756,7 @@ public final class WorkspaceController {
         if (count == 0) empty(noteResults, WorkspaceText.tr("Заметок пока нет"), WorkspaceText.tr("Нажмите +, чтобы сохранить заметку, или измените фильтры."));
     }
     private void libraryFilters(LinearLayout body, boolean notes) {
+        if(!notes){aliasLibraryFilters(body);return;}
         LinearLayout line = row(); line.setPadding(0, dp(10), 0, dp(10));
         line.setContentDescription(notes ? WorkspaceText.tr("Фильтры заметок") : WorkspaceText.tr("Фильтры команд"));
         LinearLayout items = row();
@@ -773,6 +783,90 @@ public final class WorkspaceController {
         add.setContentDescription(notes ? WorkspaceText.tr("Новая заметка") : WorkspaceText.tr("Новая команда"));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(48), dp(48)); params.setMarginStart(dp(8));
         line.addView(add, params); body.addView(line);
+    }
+    private void newLibraryEntry(){
+        LinearLayout body=column();body.setPadding(dp(16),dp(8),dp(16),dp(12));LinearLayout choices=row();body.addView(choices);
+        AlertDialog dialog=WorkspaceDialogs.builder(activity).setView(body).create();
+        TextView command=button(WorkspaceText.tr("Новая команда"),false,()->{dialog.dismiss();editCommand(null);});
+        TextView alias=button(tr("Новый alias","New alias"),false,()->{dialog.dismiss();editAlias(null);});
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMarginEnd(dp(8));choices.addView(command,lp);choices.addView(alias,new LinearLayout.LayoutParams(0,-2,1));dialog.show();
+    }
+    private void aliasLibraryFilters(LinearLayout body){
+        LinearLayout line=row();line.setPadding(0,dp(10),0,dp(10));line.setContentDescription(WorkspaceText.tr("Фильтры команд"));LinearLayout items=row();line.addView(items,new LinearLayout.LayoutParams(0,-2,1));
+        String selected=aliasesSelected?aliasCategory:commandCategory;boolean onlyFavorites=aliasesSelected?aliasFavorites:favorites;
+        TextView commands=button(WorkspaceText.tr("Все команды"),!aliasesSelected&&selected.isEmpty()&&!onlyFavorites,()->{aliasesSelected=false;favorites=false;commandCategory="";renderContent();});
+        TextView aliases=button(tr("Все Alias","All aliases"),aliasesSelected&&selected.isEmpty()&&!onlyFavorites,()->{aliasesSelected=true;aliasFavorites=false;aliasCategory="";renderContent();});
+        TextView categories=button((onlyFavorites?WorkspaceText.tr("Избранное"):selected.isEmpty()?WorkspaceText.tr("Категории"):selected)+" ▾",!selected.isEmpty()||onlyFavorites,this::chooseLibraryCategory);categories.setContentDescription(WorkspaceText.tr("Фильтр категорий команд"));
+        for(TextView chip:new TextView[]{commands,aliases,categories}){compactFilter(chip);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMarginEnd(dp(4));items.addView(chip,lp);}
+        commands.setSelected(!aliasesSelected&&selected.isEmpty()&&!onlyFavorites);aliases.setSelected(aliasesSelected&&selected.isEmpty()&&!onlyFavorites);categories.setSelected(!selected.isEmpty()||onlyFavorites);
+        TextView add=button("+",true,this::newLibraryEntry);add.setContentDescription(tr("Новая команда или alias","New command or alias"));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dp(48),dp(48));lp.setMarginStart(dp(4));line.addView(add,lp);body.addView(line);
+    }
+    private List<String> aliasCategories(){Set<String> names=new LinkedHashSet<>();for(WorkspaceStore.Alias a:store.aliases)if(!a.category.isEmpty())names.add(a.category);return new ArrayList<>(names);}
+    private void chooseLibraryCategory(){
+        LinearLayout body=column();body.setPadding(dp(16),dp(8),dp(16),dp(8));LinearLayout choices=row();body.addView(choices);LinearLayout entries=column();
+        ScrollView scroll=new ScrollView(activity);scroll.addView(entries);body.addView(scroll,new LinearLayout.LayoutParams(-1,dp(280)));
+        AlertDialog dialog=WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Категории")).setView(body).setNegativeButton(WorkspaceText.tr("Отмена"),null).create();
+        boolean[] alias={aliasesSelected};TextView commands=button(WorkspaceText.tr("Категории команд"),false,()->{}),aliases=button(tr("Категории Alias","Alias categories"),false,()->{});
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMarginEnd(dp(8));choices.addView(commands,lp);choices.addView(aliases,new LinearLayout.LayoutParams(0,-2,1));
+        Runnable render=()->{entries.removeAllViews();for(TextView tab:new TextView[]{commands,aliases}){boolean active=(tab==aliases)==alias[0];tab.setSelected(active);tab.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),shape(active?0xff102522:PANEL,active?ACCENT:BORDER,12),null));}
+            entries.addView(button(WorkspaceText.tr("Избранное"),alias[0]?aliasFavorites:favorites,()->{aliasesSelected=alias[0];if(alias[0]){aliasFavorites=true;aliasCategory="";}else{favorites=true;commandCategory="";}dialog.dismiss();renderContent();}));
+            List<String> categories=alias[0]?aliasCategories():commandCategories();List<String> labels=new ArrayList<>();labels.add(WorkspaceText.tr("Все категории"));labels.addAll(categories);
+            for(int i=0;i<labels.size();i++){final String value=i==0?"":labels.get(i);entries.addView(button(labels.get(i),value.equals(alias[0]?aliasCategory:commandCategory)&&!(alias[0]?aliasFavorites:favorites),()->{aliasesSelected=alias[0];if(alias[0]){aliasCategory=value;aliasFavorites=false;}else{commandCategory=value;favorites=false;}dialog.dismiss();renderContent();}));}};
+        commands.setOnClickListener(v->{alias[0]=false;render.run();});aliases.setOnClickListener(v->{alias[0]=true;render.run();});render.run();dialog.show();
+    }
+    private void aliasCard(LinearLayout parent,WorkspaceStore.Alias a){
+        LinearLayout card=card(parent);card.setBackground(shape(Color.BLACK,BORDER,12));cardLabels(card,a.name,a.command,WorkspaceAliases.label(a.environment)+" · "+a.category+(a.favorite?"  ★":""),false);
+        ((TextView)card.getChildAt(0)).setText("≋");card.setContentDescription("Alias "+a.name);card.setOnClickListener(v->openAlias(a,null));
+    }
+    private void openAlias(WorkspaceStore.Alias a,Runnable back){
+        hideDialogKeyboard();LinearLayout body=previewBody(a.command,true);previewMetadata(body,WorkspaceAliases.label(a.environment)+" · "+a.category,a.favorite);
+        body.addView(text(tr("Будет автоматически доступен в новых терминальных сессиях выбранного окружения.","Automatically available in new terminal sessions of the selected environment."),12,MUTED));
+        AlertDialog dialog=WorkspaceDialogs.builder(activity).setTitle(a.name).setView(formScroll(body)).setPositiveButton(WorkspaceText.tr(back==null?"Закрыть":"Назад"),(d,w)->{if(back!=null)back.run();}).create();
+        dialog.setOnCancelListener(d->{if(back!=null)back.run();});
+        previewAction(body,WorkspaceText.tr("Вставить в сессию"),R.drawable.workspace_commands,()->{dialog.dismiss();insertAlias(a);});
+        previewAction(body,a.favorite?WorkspaceText.tr("Убрать из избранного"):WorkspaceText.tr("В избранное"),R.drawable.workspace_star,()->{if(!store.isWritable()||ALIAS_BUSY.get())return;a.favorite=!a.favorite;store.save();dialog.dismiss();renderContent();});
+        previewAction(body,WorkspaceText.tr("Редактировать"),R.drawable.workspace_edit,()->{dialog.dismiss();editAlias(a);});
+        previewAction(body,WorkspaceText.tr("Удалить"),R.drawable.workspace_delete,()->{dialog.dismiss();confirm(tr("Удалить alias «","Delete alias “")+a.name+"»?\n\n"+tr("Alias будет удалён из окружения. Чтобы он перестал работать в уже открытом терминале, закройте эту сессию и откройте её заново.","The alias will be removed from the environment. To stop using the already loaded alias in an open terminal, close that session and open it again."),()->changeAlias(a,null,null,null));});dialog.show();
+    }
+    private void insertAlias(WorkspaceStore.Alias a){
+        TerminalSession current=activity.getCurrentSession();WorkspaceStore.Session profile=current==null?null:store.findByHandle(current.mHandle);
+        String env=profile==null?"termux":!WorkspaceEnvironments.alias(profile).isEmpty()?WorkspaceEnvironments.alias(profile):profile.environment.equals("legacy")?"termux":profile.environment;
+        if(profile!=null&&!AgentPreparation.agent(profile).isEmpty()||!a.environment.equals(env)||current==null||!current.isRunning()){
+            activity.showToast(tr("Выберите работающую терминальную сессию окружения ","Select a running terminal session in ")+WorkspaceAliases.label(a.environment),true);return;}
+        WorkspaceStore.Command value=new WorkspaceStore.Command();value.command=a.name;insertIntoCurrent(value);
+    }
+    private void editAlias(WorkspaceStore.Alias existing){
+        if(!store.isWritable()||ALIAS_BUSY.get()){activity.showToast(tr("Сохранение aliases пока недоступно","Alias changes are currently unavailable"),true);return;}
+        WorkspaceStore.Alias draft=existing==null?new WorkspaceStore.Alias():existing.copy();if(existing==null)draft.category=WorkspaceText.tr("Общее");
+        List<WorkspaceEnvironments.Choice> choices=WorkspaceAliases.installed(WorkspaceEnvironments.choices());
+        LinearLayout form=column();EditText name=labeled(form,tr("Имя","Name"),draft.name,false);name.setContentDescription(tr("Имя alias","Alias name"));
+        EditText command=labeled(form,WorkspaceText.tr("Команда"),draft.command,true);
+        form.addView(text(tr("Окружение","Environment"),12,MUTED));TextView environment=button(WorkspaceAliases.label(draft.environment)+" ▾",false,()->{});form.addView(environment);
+        environment.setOnClickListener(v->{String[] labels=new String[choices.size()];int selected=-1;for(int i=0;i<labels.length;i++){WorkspaceEnvironments.Choice c=choices.get(i);labels[i]=c.label;if((c.alias.isEmpty()?"termux":c.alias).equals(draft.environment))selected=i;}
+            WorkspaceDialogs.builder(activity).setTitle(tr("Окружение","Environment")).setSingleChoiceItems(labels,selected,(d,w)->{WorkspaceEnvironments.Choice c=choices.get(w);draft.environment=c.alias.isEmpty()?"termux":c.alias;environment.setText(c.label+" ▾");d.dismiss();}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show();});
+        EditText category=categoryField(form,draft.category,aliasCategories());
+        CheckBox favorite=new CheckBox(activity);favorite.setText(WorkspaceText.tr("Добавить в избранное"));favorite.setTextColor(TEXT);favorite.setChecked(draft.favorite);form.addView(favorite);
+        form.addView(text(tr("Будет автоматически доступен в новых терминальных сессиях выбранного окружения.","Automatically available in new terminal sessions of the selected environment."),12,MUTED));
+        AlertDialog dialog=WorkspaceDialogs.builder(activity).setTitle(existing==null?tr("Новый alias","New alias"):tr("Редактировать alias","Edit alias")).setView(formScroll(form)).setPositiveButton(WorkspaceText.tr("Сохранить"),null).setNegativeButton(WorkspaceText.tr("Отмена"),null).create();
+        dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{draft.favorite=favorite.isChecked();draft.name=name.getText().toString().trim();draft.command=command.getText().toString();draft.category=category.getText().toString().trim();if(draft.category.isEmpty())draft.category=WorkspaceText.tr("Общее");
+            if(!WorkspaceAliases.validName(draft.name)){name.setError(tr("Имя: латинская буква или _, затем буквы, цифры, _ или -. До 64 символов.","Start with a letter or _, then letters, digits, _ or -. Up to 64 characters."));return;}
+            if(!WorkspaceAliases.valid(draft)){command.setError(tr("Введите команду до 16 384 символов без NUL и CR.","Enter a command up to 16,384 characters without NUL or CR."));return;}
+            WorkspaceStore.Alias collision=null;for(WorkspaceStore.Alias a:store.aliases)if(a!=existing&&a.environment.equals(draft.environment)&&a.name.equals(draft.name))collision=a;
+            final WorkspaceStore.Alias replace=collision;Runnable save=()->changeAlias(existing,draft.copy(),replace,dialog);
+            if(replace!=null)confirm(tr("Заменить существующий alias «","Replace existing alias “")+draft.name+"»?",save);else save.run();}));dialog.show();
+    }
+    private void changeAlias(WorkspaceStore.Alias before,WorkspaceStore.Alias after,WorkspaceStore.Alias collision,AlertDialog editor){
+        if(!store.isWritable()||!ALIAS_BUSY.compareAndSet(false,true))return;
+        AlertDialog progress=WorkspaceDialogs.builder(activity).setMessage(after==null?tr("Удаление alias из окружения…","Removing alias from the environment…"):tr("Сохранение alias в окружении…","Saving alias in the environment…")).create();progress.setCancelable(false);progress.setCanceledOnTouchOutside(false);progress.show();
+        reader.execute(()->{Exception failure=null;try{
+            WorkspaceAliases.change(before,after,collision,(value,delete)->WorkspaceAliases.apply(activity,value,delete,""));
+        }catch(Exception error){failure=error;}
+        final Exception result=failure;activity.runOnUiThread(()->{ALIAS_BUSY.set(false);if(progress.isShowing())progress.dismiss();
+            if(result!=null){if(!closed)WorkspaceDialogs.builder(activity).setTitle(after==null?tr("Alias не удалён","Alias was not removed"):tr("Alias не сохранён","Alias was not saved")).setMessage(tr("Проверьте наличие окружения, свободное место и права на файлы оболочки. Форма сохранена. Код: ","Check the environment, free storage and shell-file permissions. Your draft is retained. Code: ")+result.getMessage()).setPositiveButton("OK",null).show();return;}
+            WorkspaceStore target=closed?new WorkspaceStore(activity,message->{}):store;
+            if(before!=null)target.aliases.removeIf(a->a.id.equals(before.id));if(collision!=null)target.aliases.removeIf(a->a.id.equals(collision.id));if(after!=null)target.aliases.add(after);target.save();if(closed)target.close();
+            if(!closed){if(editor!=null)editor.dismiss();aliasesSelected=true;renderContent();activity.showToast(after==null?tr("Alias удалён. Открытую сессию нужно закрыть и открыть заново.","Alias removed. Close and reopen any session that already loaded it."):tr("Сохранено. Изменения доступны в новых сессиях окружения.","Saved. Changes are available in new environment sessions."),true);}
+        });});
     }
     private void compactFilter(TextView filter) {
         filter.setPadding(dp(4), dp(8), dp(4), dp(8));
@@ -1880,6 +1974,7 @@ public final class WorkspaceController {
         else terminalInput.requestFocus();
     }
     private void openInputEntry(Object item, Runnable back) {
+        if(item instanceof WorkspaceStore.Alias){openAlias((WorkspaceStore.Alias)item,back);return;}
         boolean isNote = item instanceof WorkspaceStore.Note;
         WorkspaceStore.Note note = isNote ? (WorkspaceStore.Note) item : null;
         WorkspaceStore.Command command = isNote ? null : (WorkspaceStore.Command) item;
@@ -1914,8 +2009,9 @@ public final class WorkspaceController {
         Collections.sort(commands, (a, b) -> Boolean.compare(b.favorite, a.favorite));
         List<WorkspaceStore.Note> notes = new ArrayList<>(store.notes);
         Collections.sort(notes, (a, b) -> Boolean.compare(b.favorite, a.favorite));
-        boolean[] noteTab = {false};
-        String[] queries = {"", ""};
+        int[] libraryTab = {0};
+        String[] queries = {"", "", ""};
+        List<WorkspaceStore.Alias> aliases = new ArrayList<>(store.aliases);aliases.sort((a,b)->Boolean.compare(b.favorite,a.favorite));
         List<Object> visible = new ArrayList<>(commands);
         android.widget.BaseAdapter adapter = new android.widget.BaseAdapter() {
             public int getCount() { return visible.size(); }
@@ -1929,6 +2025,7 @@ public final class WorkspaceController {
                     WorkspaceStore.Note note = (WorkspaceStore.Note) item;
                     preview = new WorkspaceStore.Command(); preview.name = note.name; preview.command = note.text;
                     preview.category = note.category; preview.favorite = note.favorite;
+                } else if(item instanceof WorkspaceStore.Alias){WorkspaceStore.Alias a=(WorkspaceStore.Alias)item;preview=new WorkspaceStore.Command();preview.name=a.name;preview.command=a.command;preview.category=WorkspaceAliases.label(a.environment)+" · "+a.category;preview.favorite=a.favorite;
                 } else preview = (WorkspaceStore.Command) item;
                 LinearLayout row = WorkspaceDialogs.commandRow(activity, preview); row.setDuplicateParentStateEnabled(true);
                 outer.addView(row, new FrameLayout.LayoutParams(-1, -2)); return outer;
@@ -1937,12 +2034,13 @@ public final class WorkspaceController {
         LinearLayout heading = column(); heading.setPadding(dp(20), dp(18), dp(20), dp(12));
         heading.setFocusableInTouchMode(true);
         LinearLayout tabs = row();
-        TextView commandTab = button(WorkspaceText.tr("Сохранённые команды"), true, () -> {});
+        TextView commandTab = button(tr("Команды","Commands"), true, () -> {});
+        TextView aliasTab=button("Alias",false,()->{});
         TextView notesTab = button(WorkspaceText.tr("Заметки"), false, () -> {});
         commandTab.setMaxLines(2); notesTab.setMaxLines(2);
         commandTab.setPadding(dp(6), dp(8), dp(6), dp(8));
-        LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams(0, -2, 1.5f); tabParams.setMarginEnd(dp(8));
-        tabs.addView(commandTab, tabParams); tabs.addView(notesTab, new LinearLayout.LayoutParams(0, -2, 1)); heading.addView(tabs);
+        LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams(0, -2, 1); tabParams.setMarginEnd(dp(8));
+        tabs.addView(commandTab, tabParams); LinearLayout.LayoutParams aliasParams=new LinearLayout.LayoutParams(0,-2,1);aliasParams.setMarginEnd(dp(8));tabs.addView(aliasTab,aliasParams); tabs.addView(notesTab, new LinearLayout.LayoutParams(0, -2, 1)); heading.addView(tabs);
         TextView hint = text(WorkspaceText.tr("Нажми на карточку, чтобы прочитать полностью"), 12, MUTED); hint.setPadding(0, dp(8), 0, dp(12)); heading.addView(hint);
         EditText search = field(WorkspaceText.tr("Найти команду"), "", false); search.setContentDescription(WorkspaceText.tr("Поиск в меню звёздочки"));
         search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH | android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI);
@@ -1966,30 +2064,32 @@ public final class WorkspaceController {
         if (!input.trim().isEmpty() && store.isWritable()) builder.setNeutralButton(WorkspaceText.tr("Сохранить ввод"), (dialog, which) -> editCommand(null, input));
         Runnable refresh = () -> {
             String key = search.getText().toString().toLowerCase(java.util.Locale.ROOT); visible.clear();
-            if (noteTab[0]) {
+            if(libraryTab[0]==1){for(WorkspaceStore.Alias a:aliases)if((a.name+" "+a.command+" "+a.category+" "+WorkspaceAliases.label(a.environment)).toLowerCase(java.util.Locale.ROOT).contains(key))visible.add(a);
+            }else if (libraryTab[0]==2) {
                 for (WorkspaceStore.Note note : notes) if ((note.name + " " + note.text + " " + note.category)
                     .toLowerCase(java.util.Locale.ROOT).contains(key)) visible.add(note);
             } else {
                 for (WorkspaceStore.Command command : commands) if ((command.name + " " + command.command + " " + command.category)
                     .toLowerCase(java.util.Locale.ROOT).contains(key)) visible.add(command);
             }
-            boolean libraryEmpty = noteTab[0] ? notes.isEmpty() : commands.isEmpty();
-            empty.setText(libraryEmpty ? (noteTab[0] ? WorkspaceText.tr("Сохраните заметку в библиотеке.") : WorkspaceText.tr("Сохраните команду в библиотеке или нажмите «Сохранить ввод».")) : WorkspaceText.tr("Ничего не найдено"));
+            boolean libraryEmpty = libraryTab[0]==1?aliases.isEmpty():libraryTab[0]==2 ? notes.isEmpty() : commands.isEmpty();
+            empty.setText(libraryTab[0]==1?(libraryEmpty?tr("Сохраните alias в библиотеке.","Save an alias in the library."):WorkspaceText.tr("Ничего не найдено")):libraryEmpty ? (libraryTab[0]==2 ? WorkspaceText.tr("Сохраните заметку в библиотеке.") : WorkspaceText.tr("Сохраните команду в библиотеке или нажмите «Сохранить ввод».")) : WorkspaceText.tr("Ничего не найдено"));
             empty.setVisibility(visible.isEmpty() ? View.VISIBLE : View.GONE); adapter.notifyDataSetChanged();
             hint.setText(WorkspaceText.tr("Нажми на карточку, чтобы прочитать полностью"));
-            search.setHint(noteTab[0] ? WorkspaceText.tr("Найти заметку") : WorkspaceText.tr("Найти команду"));
-            for (TextView tab : new TextView[]{commandTab, notesTab}) {
-                boolean selected = (tab == notesTab) == noteTab[0]; tab.setSelected(selected);
+            search.setHint(libraryTab[0]==1?tr("Найти alias","Find alias"):libraryTab[0]==2 ? WorkspaceText.tr("Найти заметку") : WorkspaceText.tr("Найти команду"));
+            for (TextView tab : new TextView[]{commandTab,aliasTab,notesTab}) {
+                boolean selected = (tab==commandTab?0:tab==aliasTab?1:2)==libraryTab[0]; tab.setSelected(selected);
                 tintButton(tab, selected ? ACCENT : TEXT);
                 tab.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd), shape(selected ? 0xff102522 : PANEL, selected ? ACCENT : BORDER, 12), null));
             }
         };
-        commandTab.setOnClickListener(v -> { noteTab[0] = false; search.setText(queries[0]); refresh.run(); });
-        notesTab.setOnClickListener(v -> { noteTab[0] = true; search.setText(queries[1]); refresh.run(); });
+        commandTab.setOnClickListener(v -> { libraryTab[0]=0; search.setText(queries[0]); refresh.run(); });
+        aliasTab.setOnClickListener(v -> { libraryTab[0]=1; search.setText(queries[1]); refresh.run(); });
+        notesTab.setOnClickListener(v -> { libraryTab[0]=2; search.setText(queries[2]); refresh.run(); });
         search.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence value, int start, int count, int after) {}
             public void onTextChanged(CharSequence value, int start, int before, int count) {
-                queries[noteTab[0] ? 1 : 0] = value.toString(); refresh.run();
+                queries[libraryTab[0]] = value.toString(); refresh.run();
             }
             public void afterTextChanged(Editable value) {}
         });
