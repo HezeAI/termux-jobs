@@ -1,3 +1,46 @@
+# Agent chat preview (next update)
+
+The native Developer Markdown layout is shared by Codex, Claude, Gemini and
+OpenCode. Code cards show the language, syntax colours and separate line numbers;
+Copy copies the complete original code without those numbers. Long blocks can be
+expanded. Tables scroll horizontally inside the message. Existing raw history is
+retained. Web links open only after a tap; Markdown does not execute HTML/scripts
+or automatically fetch remote images.
+
+Explicit local file links in assistant answers can produce downloadable cards for
+any regular non-empty file within the existing limits, including ZIP/7Z/RAR/GZ,
+3MF/STL, EXE/BAT and unknown/no-extension files. Tap the card and save to Download.
+APK installation remains its own Android-confirmed action; other files are not
+executed or unpacked. File formats are not a claim that every model can interpret
+their contents. An updated native agent process is needed for new output helpers.
+
+In the attachment picker, an ordinary tap chooses one file. A long press enters
+checkbox multi-selection; confirm the selection to stage it in the draft. Nothing
+is sent until Send is pressed. The four-attachment limit is shared by existing
+and newly selected files. Images remain limited to100MiB, other originals to5GiB.
+
+From device gallery opens the system photo/video selector, with a document-picker
+fallback on older Android. Only explicitly selected content URIs are copied into
+the selected chat's private staging area; no full-storage permission is needed
+for this route. Phone storage retains its existing storage-access request.
+Gallery media processing and codecs still depend on Android support and the
+existing pixel/duration/file bounds.
+
+The sorting icon beside Home is shared by the file browser and its picker modes.
+Name, size and date have ascending/descending choices; folders stay first and
+unknown dates stay last. The selected display order is saved without changing
+files or transfer selections.
+
+The hand button between model/limits and Server + Agent interrupts the current
+agent request. It is red while available, grey and crossed out while idle. The
+activity cue passes around its circle. Completed file changes are not rolled back.
+Sending a chat message hides the keyboard only after acknowledgement, while a
+failed send or a different selected session retains its current input state.
+
+These preview changes require device verification before stable publication.
+
+---
+
 # Current desktop and driver behavior — v2.0.7
 
 Choose the renderer before starting the desktop. Wrapper and Bionic for glibc offer a protected **a6xx-a7xx-a8xx** default when no imported selection exists; selecting it alone does not download. Startup verifies/prepares the selected runtime and default ZIP as needed. Existing imported selections remain available. A trash button removes an imported driver after confirmation while that environment's desktop is stopped; the original phone ZIP and unrelated drivers remain.

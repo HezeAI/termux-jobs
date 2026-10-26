@@ -1,3 +1,26 @@
+# Development preview — Developer chat style
+
+Assistant replies use mint accents on dark native cards. Fenced code has a
+language label, syntax colours, separate line numbers, horizontal scrolling and
+a Copy action for the exact code. Long blocks expand in place; tables scroll
+horizontally. Read-only task markers remain display-only. Streaming reuses stable
+blocks and preserves the composer rather than rebuilding the chat.
+
+The shared file browser adds a vector sort button beside Home, with folders first
+and remembered name/size/date ordering. Long press enters chat multi-selection;
+explicit confirmation stages up to four attachments, including existing drafts.
+The source menu adds the system device gallery for photos/videos. Selection does
+not send a message. Arbitrary regular files retain compact type/name/size cards.
+
+A red filled hand between the agent limits and Server + Agent interrupts current
+work; idle shows a disabled grey crossed hand. While busy, the existing activity
+line travels around the hand and continues along the line using one animation.
+Successful acknowledged message submission hides the keyboard unless the user
+has switched sessions or edited a new draft. Shell commands retain their existing
+input behaviour. Device gallery, IME and animation acceptance remain phone tests.
+
+---
+
 # Current component design — v2.0.7
 
 Wrapper driver libraries show a deferred built-in preset even before installation, and a confirmed trash action for imported rows. The preset is protected. A missing selection resolves to the default on desktop preparation; it never overrides an existing explicit import. The preparation area shows optional-theme download progress through the existing cancellation flow. Valid cache hits skip network access.

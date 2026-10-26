@@ -151,13 +151,20 @@ class CodexChat {
    else if(item.type==='agentMessage'){
     add('text','text',item.text);let i=0;for(const match of String(item.text||'').matchAll(/!\[([^\]\n]{0,200})\]\((\/[^\n)]+\.(?:png|jpe?g|webp|gif))\)/gi)){add('linked-image:'+(i++),'attachment',match[1]||'Image');Object.assign(rows.at(-1),{attachment:{type:'image',name:path.basename(match[2]),path:match[2],cacheKey:message}});if(i>=4)break;}
     let artifacts=this.mediaCache.get(item);if(!artifacts||artifacts.text!==item.text){
-     artifacts={text:item.text,apks:[]};
-     for(const match of String(item.text||'').matchAll(/(?<!!)\[[^\]\n]{1,200}\]\((?:<(\/[^<>\r\n]+\.apk)>|(\/[^\r\n)]+\.apk))\)/gi)){
-      const file=match[1]||match[2];try{const stat=fs.lstatSync(file);if(stat.isFile()&&!stat.isSymbolicLink()&&stat.size>0&&stat.size<=5*1024*1024*1024)artifacts.apks.push({type:'apk',name:path.basename(file),path:file,bytes:stat.size,cacheKey:message+':'+stat.size+':'+stat.mtimeMs});}catch{}
-      if(artifacts.apks.length>=4)break;
+     artifacts={text:item.text,files:[]};const seen=new Set();
+     for(const match of String(item.text||'').matchAll(/(?<!!)\[[^\]\n]{1,200}\]\((?:<(\/[^<>\r\n]+)>|(\/[^\r\n)]+))\)/g)){
+      const file=match[1]||match[2];if(seen.has(file))continue;seen.add(file);
+      // Image links keep their established preview path above. Other regular
+      // files are projected as metadata only; no reads, hashes, unpacking or execution.
+      const ext=path.extname(file).toLowerCase();if(/\.(png|jpe?g|webp|gif)$/.test(ext))continue;
+      try{const stat=fs.lstatSync(file);if(stat.isFile()&&!stat.isSymbolicLink()&&stat.size>0&&stat.size<=5*1024*1024*1024){
+       const type=ext==='.apk'?'apk':/\.(mp4|mkv|webm|mov|m4v|3gp)$/.test(ext)?'video':/\.(txt|log|md|json|xml|ya?ml|csv|ini|sh|py|js)$/.test(ext)?'file':'binary';
+       artifacts.files.push({type,name:path.basename(file),path:file,bytes:stat.size,cacheKey:message+':'+stat.size+':'+stat.mtimeMs});
+      }}catch{}
+      if(artifacts.files.length>=4)break;
      }this.mediaCache.set(item,artifacts);
     }
-    for(const [i,a]of artifacts.apks.entries()){add('linked-apk:'+i,'attachment',a.name);Object.assign(rows.at(-1),{attachment:a});}
+    for(const [i,a]of artifacts.files.entries()){add((a.type==='apk'?'linked-apk:':'linked-file:')+i,'attachment',a.name);Object.assign(rows.at(-1),{attachment:a});}
    }
    else if(item.type==='imageGeneration'){
     let saved=this.mediaCache.get(item);if(saved===undefined){saved=typeof item.savedPath==='string'?item.savedPath:'';

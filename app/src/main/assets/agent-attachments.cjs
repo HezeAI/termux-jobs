@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),{pathToFileURL}=require('node:url');
 const MAX=5*1024*1024*1024,IMAGE_MAX=100*1024*1024,MODEL_MAX=20*1024*1024;
 const suffix=name=>path.extname(name).toLowerCase();
-const mime=name=>({'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif'})[suffix(name)]||'';
+const mime=name=>({'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.gif':'image/gif','.bmp':'image/bmp','.heic':'image/heic','.heif':'image/heif','.avif':'image/avif'})[suffix(name)]||'';
 class Attachments {
  constructor(root){this.root=root;this.links=new Map();}
  file(p,limit=MAX){
@@ -58,8 +58,8 @@ class Attachments {
  }
  output(value){
   const text=String(value||'');if(this.links.has(text))return this.links.get(text);
-  const files=[];for(const m of text.matchAll(/!?\[[^\]\n]{0,200}\]\((?:<(\/[^<>\r\n]+)>|(\/[^\r\n)]+))\)/g)){
-   const p=m[1]||m[2];try{const stat=fs.lstatSync(p);if(!stat.isFile()||stat.isSymbolicLink()||stat.size<=0||stat.size>MAX)continue;
+  const files=[],seen=new Set();for(const m of text.matchAll(/!?\[[^\]\n]{0,200}\]\((?:<(\/[^<>\r\n]+)>|(\/[^\r\n)]+))\)/g)){
+   const p=m[1]||m[2];if(seen.has(p))continue;seen.add(p);try{const stat=fs.lstatSync(p);if(!stat.isFile()||stat.isSymbolicLink()||stat.size<=0||stat.size>MAX)continue;
     const ext=suffix(p),type=mime(p)?'image':/\.(mp4|mkv|webm|mov|m4v|3gp)$/.test(ext)?'video':ext==='.apk'?'apk':/\.(txt|log|md|json|xml|ya?ml|csv|ini|sh|py|js)$/.test(ext)?'file':'binary';
     files.push({type,name:path.basename(p),path:p,bytes:stat.size,cacheKey:stat.size+':'+stat.mtimeMs});
    }catch{}if(files.length>=4)break;

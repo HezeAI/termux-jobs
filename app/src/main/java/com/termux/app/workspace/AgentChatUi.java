@@ -80,6 +80,8 @@ final class AgentChatUi {
     boolean terminalAvailable(){return selected();}
     boolean requiresTerminal(){return showing()&&requiresTerminal;}
     boolean working(){return showing()&&busy;}
+    boolean canInterrupt(){return !closed&&selected()&&nativeChat&&busy;}
+    void stopCurrent(){if(canInterrupt())interrupt();}
     boolean showing(){return selected()&&nativeChat&&terminal==null;}
     private java.util.function.BooleanSupplier externalDisplay=()->false;
     void externalDisplay(java.util.function.BooleanSupplier value){externalDisplay=value;}
@@ -201,13 +203,14 @@ final class AgentChatUi {
             int width=Math.min(Math.round(activity.getResources().getDisplayMetrics().widthPixels*.94f),Math.max(view.dp(240),Math.round(body.getPaint().measureText(row.optString("body")))+view.dp(64)));
             details.getWindow().setLayout(width,android.view.ViewGroup.LayoutParams.WRAP_CONTENT);return;
         }
-        ScrollView scroll=new ScrollView(activity);scroll.addView(body);box.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        final AgentMarkdownView markdownBody=row.optString("kind").equals("text")?new AgentMarkdownView(activity):null;if(markdownBody!=null)markdownBody.update(name(),row.optString("body"),null);
+        ScrollView scroll=new ScrollView(activity);scroll.addView(markdownBody==null?body:markdownBody);box.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         TextView next=view.pill(tr("Загрузить полный текст","Load full text"),()->{});box.addView(next);next.setVisibility(row.optBoolean("more")?View.VISIBLE:View.GONE);
         details=WorkspaceDialogs.builder(activity).setTitle(row.optString("kind").equals("reasoning")?tr("Рассуждение","Thinking"):CodexActionLabels.title(row,WorkspaceLanguage.code(activity).equals("ru"))).setView(box).setPositiveButton(tr("Назад","Back"),null).create();details.show();details.getWindow().setLayout(-1,Math.round(activity.getResources().getDisplayMetrics().heightPixels*.72f));
         if(row.optString("kind").equals("reasoning")){thinkingBody=body;thinkingScroll=scroll;thinkingKey=row.optString("key");}
         final AlertDialog dialog=details;final int[] offset={0};final int g=generation;final WorkspaceStore.Session p=snapshot();
         Runnable[] page=new Runnable[1];page[0]=()->{next.setEnabled(false);JSONObject q=op("chat-detail");try{if(p.geminiAgent||p.claudeAgent||p.environment.equals("codex")||p.aiAgent.equals("opencode"))q.put("session",nativeSession);q.put("message",row.optString("message")).put("part",row.optString("part")).put("offset",offset[0]);}catch(JSONException ignored){}
-            reads.execute(()->{JSONObject r=null;try{r=transport.request(p,q);}catch(Exception ignored){}final JSONObject result=r;handler.post(()->{if(closed||g!=generation||!dialog.isShowing())return;next.setEnabled(true);if(result==null){next.setVisibility(View.VISIBLE);next.setText(tr("Повторить загрузку","Retry loading"));return;}if(offset[0]==0)body.setText((row.optString("kind").equals("receipt")?tr("Разрешение не означает успешного выполнения.\n\n","Permission does not mean successful execution.\n\n"):"")+result.optString("body"));else body.append(result.optString("body"));offset[0]=result.isNull("next")?-1:result.optInt("next",-1);next.setVisibility(offset[0]<0?View.GONE:View.VISIBLE);next.setText(tr("Далее","More"));});});};next.setOnClickListener(v->page[0].run());page[0].run();
+            reads.execute(()->{JSONObject r=null;try{r=transport.request(p,q);}catch(Exception ignored){}final JSONObject result=r;handler.post(()->{if(closed||g!=generation||!dialog.isShowing())return;next.setEnabled(true);if(result==null){next.setVisibility(View.VISIBLE);next.setText(tr("Повторить загрузку","Retry loading"));return;}if(offset[0]==0)body.setText((row.optString("kind").equals("receipt")?tr("Разрешение не означает успешного выполнения.\n\n","Permission does not mean successful execution.\n\n"):"")+result.optString("body"));else body.append(result.optString("body"));if(markdownBody!=null)markdownBody.update(name(),body.getText().toString(),null);offset[0]=result.isNull("next")?-1:result.optInt("next",-1);next.setVisibility(offset[0]<0?View.GONE:View.VISIBLE);next.setText(tr("Далее","More"));});});};next.setOnClickListener(v->page[0].run());page[0].run();
     }
     private void requests(JSONObject permission,JSONArray forms,boolean needsTerminal){
         String stamp=String.valueOf(permission)+String.valueOf(forms)+needsTerminal;if(stamp.equals(requestStamp))return;requestStamp=stamp;

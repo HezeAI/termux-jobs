@@ -88,4 +88,19 @@ public class AgentChatViewTest {
   v.rows(Arrays.asList(apk),false);assertEquals(1,loads.get());assertSame(card,v.timeline.getChildAt(1));
  }
 
+ @Test public void genericFilesHaveCompactBadgesAndNoApkPreparation()throws Exception{
+  Activity a=Robolectric.buildActivity(Activity.class).setup().get();AtomicReference<JSONObject> opened=new AtomicReference<>();AgentChatView v=new AgentChatView(a,opened::set,()->{},()->{},()->{},()->{});a.setContentView(v);v.apkDetails=(meta,label)->fail("Generic files must not start APK preparation");
+  for(String name:new String[]{"archive.zip","model.3mf","part.STL","setup.exe","build.bat","README"}){
+   JSONObject r=row("file-"+name,"attachment",name).put("attachment",new JSONObject().put("type","binary").put("name",name).put("bytes",123).put("path","/tmp/"+name));v.rows(Arrays.asList(r),false);layout(v);
+   android.widget.LinearLayout card=(android.widget.LinearLayout)v.timeline.getChildAt(1),badge=(android.widget.LinearLayout)card.getChildAt(0),info=(android.widget.LinearLayout)card.getChildAt(1);assertEquals(android.widget.LinearLayout.HORIZONTAL,card.getOrientation());assertEquals(ChatAttachments.badge(name),((TextView)badge.getChildAt(1)).getText().toString());assertEquals(name,((TextView)info.getChildAt(0)).getText().toString());assertFalse(((TextView)info.getChildAt(1)).getText().toString().contains("SHA-256"));card.performClick();assertSame(r,opened.get());
+  }
+ }
+
+
+ @Test public void markdownLinksStayClickableAndRichStreamingKeepsComposerFocus()throws Exception{
+  Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);
+  JSONObject answer=row("answer","text","Read [docs](https://example.org/docs)");v.rows(Arrays.asList(answer),false);TextView plain=(TextView)v.timeline.getChildAt(1);
+  assertNotNull(plain.getMovementMethod());assertTrue(plain.getText() instanceof android.text.Spanned);android.text.Spanned rendered=(android.text.Spanned)plain.getText();android.text.style.ClickableSpan[] links=rendered.getSpans(0,rendered.length(),android.text.style.ClickableSpan.class);assertEquals(1,links.length);links[0].onClick(plain);assertEquals("https://example.org/docs",Shadows.shadowOf(a).getNextStartedActivity().getDataString());
+  answer.put("body","## Ready\n\n```python\nprint(1)");v.rows(Arrays.asList(answer),false);View rich=v.timeline.getChildAt(1);assertTrue(rich instanceof AgentMarkdownView);View heading=((android.view.ViewGroup)rich).getChildAt(1);v.shellEnabled(true);v.shellInput.setText("new draft");v.shellInput.requestFocus();answer.put("body","## Ready\n\n```python\nprint(12)\n```");v.rows(Arrays.asList(answer),false);layout(v);assertSame(rich,v.timeline.getChildAt(1));assertSame(heading,((android.view.ViewGroup)rich).getChildAt(1));assertTrue(v.shellInput.hasFocus());assertEquals("new draft",v.shellInput.getText().toString());
+ }
 }

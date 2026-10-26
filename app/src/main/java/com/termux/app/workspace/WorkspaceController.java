@@ -67,6 +67,7 @@ public final class WorkspaceController {
     private final android.os.Handler codexHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final ExecutorService codexReader = Executors.newSingleThreadExecutor();
     private WorkspaceActivityLine activityLine;
+    private AgentStopButton agentStop;
     private WorkspaceTransferBorder transferBorder,agentTerminalBorder;
     private boolean wasAgentChat;
     private boolean activityStopped;
@@ -99,6 +100,8 @@ public final class WorkspaceController {
             CodexStatus status=profile==null?null:codexStatuses.get(profile.id);
             if(status!=null&&status.error.isEmpty()&&System.currentTimeMillis()-status.updated<2500&&status.state.equals("active"))active=true;
         }
+        if(agentStop!=null&&agentStop.getVisibility()==View.VISIBLE&&agentChatUi!=null&&agentChatUi.structured())active=agentChatUi.canInterrupt();
+        if(agentStop!=null){boolean enabled=agentChatUi!=null&&agentChatUi.canInterrupt();if(agentStop.isEnabled()!=enabled)agentStop.setEnabled(enabled);agentStop.setContentDescription(enabled?tr("Остановить текущую работу агента","Stop current agent work"):tr("Агент не выполняет запрос","Agent is idle"));}
         activityLine.working(active);
     }
     private GeminiLiveUi geminiLiveUi;
@@ -499,6 +502,8 @@ public final class WorkspaceController {
         TextView server=AgentStatusUi.chip(activity,serverLabel,serverLabel,()->show(Screen.SERVERS,true));server.setTextColor(TEXT);server.setPadding(dp(4),dp(4),dp(4),dp(4));server.setTag("server-entry");
         if(transferBorder!=null)transferBorder.active(false);transferBorder=new WorkspaceTransferBorder(activity.getResources().getDisplayMetrics().density);server.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{server.getBackground(),transferBorder}));updateTransferBorder();
         FrameLayout.LayoutParams serverParams=new FrameLayout.LayoutParams(dp(106),-2,Gravity.END|Gravity.CENTER_VERTICAL);statusRow.addView(server,serverParams);
+        if(agentStop==null){agentStop=new AgentStopButton(activity);agentStop.setTag("agent-stop");agentStop.setOnClickListener(v->{if(agentChatUi!=null)agentChatUi.stopCurrent();updateActivityLine();});FrameLayout.LayoutParams stopParams=new FrameLayout.LayoutParams(dp(44),dp(44),Gravity.END|Gravity.CENTER_VERTICAL);stopParams.setMarginEnd(dp(112));statusRow.addView(agentStop,stopParams);}
+        agentStop.setVisibility(chat?View.VISIBLE:View.GONE);FrameLayout.LayoutParams statusParams=(FrameLayout.LayoutParams)codexStatus.getLayoutParams();int statusMargin=dp(chat?162:112);if(statusParams.getMarginEnd()!=statusMargin){statusParams.setMarginEnd(statusMargin);codexStatus.setLayoutParams(statusParams);}activityLine.stopTarget(chat?agentStop:null);updateActivityLine();
 
         LinearLayout.LayoutParams toolsParams=new LinearLayout.LayoutParams(dp(106),-2);toolsParams.setMarginStart(dp(6));tabs.addView(serverTools,toolsParams);
     }
@@ -1854,7 +1859,7 @@ public final class WorkspaceController {
         if (command.trim().isEmpty() && !(agentChatUi!=null&&agentChatUi.handlesComposer()&&agentChatUi.hasAttachments())) return;
         WorkspaceStore.Session profile=store.findByHandle(current.mHandle);
         if(profile!=null&&(profile.aiAgent.equals("opencode")||profile.geminiAgent||profile.claudeAgent||CodexChatControl.enabled(activity.getFilesDir(),profile))&&agentChatUi.handlesComposer()){
-            agentChatUi.send(command,()->{store.recordCommand(command);if(activity.getCurrentSession()==current&&terminalInput.getText().toString().equals(command)){terminalInput.setText("");terminalDrafts.remove(current.mHandle);}});return;
+            agentChatUi.send(command,()->{store.recordCommand(command);if(activity.getCurrentSession()==current&&terminalInput.getText().toString().equals(command)){terminalInput.setText("");terminalDrafts.remove(current.mHandle);if(agentChatUi.showing()&&screen==Screen.TERMINAL&&!activityStopped)leaveAgentInputIdle();}});return;
         }
         if(profile!=null&&profile.geminiAgent&&current.getEmulator()!=null){
             final String run=profile.geminiSocketId;final boolean mode=interactiveInput;

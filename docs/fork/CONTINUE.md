@@ -1,6 +1,6 @@
 # Current handoff
 
-See [the repository handoff](../../CONTINUE.md) and [v2.0.6 validation](VALIDATION-v2.0.6.md).
+See [the repository handoff](../../CONTINUE.md) and [private chat test validation](VALIDATION-chat-test1.md).
 
 ---
 

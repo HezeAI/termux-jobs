@@ -348,6 +348,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
         Logger.logDebug(LOG_TAG, "onDestroy");
         if(mWorkspaceStorageAccess!=null)mWorkspaceStorageAccess.close();
+        if(mWorkspaceGalleryPicker!=null)mWorkspaceGalleryPicker.close();
         if (mWorkspace != null) mWorkspace.close();
 
         if (mIsInvalidState) return;
@@ -744,6 +745,11 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
      * For processes to access shared internal storage (/sdcard) we need this permission.
      */
     private com.termux.app.workspace.WorkspaceStorageAccess mWorkspaceStorageAccess;
+    private com.termux.app.workspace.WorkspaceGalleryPicker mWorkspaceGalleryPicker;
+    public void requestWorkspaceGallery(int limit,java.util.function.Consumer<java.util.List<android.net.Uri>> selected){
+        if(mWorkspaceGalleryPicker==null)mWorkspaceGalleryPicker=new com.termux.app.workspace.WorkspaceGalleryPicker(this);
+        mWorkspaceGalleryPicker.pick(limit,selected);
+    }
     public void requestWorkspaceStorageAccess(Runnable ready){requestWorkspaceStorageAccess(ready,null);}
     public void requestWorkspaceStorageAccess(Runnable ready,Runnable cancelled){
         if(mWorkspaceStorageAccess==null)mWorkspaceStorageAccess=new com.termux.app.workspace.WorkspaceStorageAccess(this);
@@ -827,6 +833,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data) {
         super.onActivityResult(requestCode,resultCode,data);
         if(mWorkspaceStorageAccess!=null&&mWorkspaceStorageAccess.activityResult(requestCode))return;
+        if(mWorkspaceGalleryPicker!=null&&mWorkspaceGalleryPicker.result(requestCode,resultCode,data))return;
     }
 
     public void workspaceTerminalScrolled(){if(mWorkspace!=null)mWorkspace.onTerminalRedrawInteraction();}

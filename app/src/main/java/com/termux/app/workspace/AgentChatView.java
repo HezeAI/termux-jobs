@@ -30,6 +30,7 @@ final class AgentChatView extends LinearLayout {
     private final Map<String,String> values=new HashMap<>();
     private final Map<String,JSONObject> data=new HashMap<>();
     private final Consumer<JSONObject> open;
+    private io.noties.markwon.Markwon markdown;
     private boolean touchingTimeline;
     private boolean followNextRows;
     private boolean followLayout;
@@ -108,13 +109,14 @@ final class AgentChatView extends LinearLayout {
             if(r.optString("kind").equals("attachment")){
                 View existing=views.get(key);LinearLayout card=existing instanceof LinearLayout?(LinearLayout)existing:new LinearLayout(getContext());
                 if(!value.equals(values.get(key))){changed=true;values.put(key,value);card.removeAllViews();card.setOrientation(VERTICAL);JSONObject a=r.optJSONObject("attachment");
-                    if(a!=null&&a.optString("type").equals("apk")){
+                    if(a!=null&&(a.optString("type").equals("apk")||a.optString("type").equals("binary")||a.optString("type").equals("file"))){
+                        boolean isApk=a.optString("type").equals("apk");
                         card.setOrientation(HORIZONTAL);card.setGravity(Gravity.CENTER_VERTICAL);
                         LinearLayout badge=new LinearLayout(getContext());badge.setOrientation(VERTICAL);badge.setGravity(Gravity.CENTER);
-                        ImageView icon=new ImageView(getContext());icon.setImageResource(com.termux.R.drawable.workspace_apk);badge.addView(icon,new LayoutParams(dp(36),dp(36)));
-                        TextView apk=label("APK",11);apk.setGravity(Gravity.CENTER);badge.addView(apk);card.addView(badge,new LayoutParams(dp(64),-2));
+                        ImageView icon=new ImageView(getContext());icon.setImageResource(isApk?com.termux.R.drawable.workspace_apk:com.termux.R.drawable.workspace_server_file);badge.addView(icon,new LayoutParams(dp(36),dp(36)));
+                        TextView apk=label(isApk?"APK":ChatAttachments.badge(a.optString("name")),11);apk.setGravity(Gravity.CENTER);badge.addView(apk);card.addView(badge,new LayoutParams(dp(72),-2));
                         LinearLayout info=new LinearLayout(getContext());info.setOrientation(VERTICAL);TextView filename=label(a.optString("name","APK"),13);filename.setMaxLines(2);info.addView(filename);
-                        TextView detail=label(android.text.format.Formatter.formatFileSize(getContext(),a.optLong("bytes"))+" · SHA-256: "+tr("подготовка…","preparing…"),11);info.addView(detail);card.addView(info,new LayoutParams(0,-2,1));apkDetails.accept(a,detail);
+                        TextView detail=label(android.text.format.Formatter.formatFileSize(getContext(),a.optLong("bytes"))+(isApk?" · SHA-256: "+tr("подготовка…","preparing…"):""),11);info.addView(detail);card.addView(info,new LayoutParams(0,-2,1));if(isApk)apkDetails.accept(a,detail);
                     }else if(a!=null){TextView title=label(a.optString("name",tr("Вложение","Attachment")),13);card.addView(title);
                         String type=a.optString("type");if(type.equals("image")||type.equals("video")){ImageView image=new ImageView(getContext());image.setScaleType(ImageView.ScaleType.FIT_CENTER);image.setBackgroundColor(0xff111917);image.setContentDescription(title.getText());card.addView(image,new LayoutParams(-1,dp(160)));thumbnail.accept(a,image);}
                         TextView hint=label(type.equals("video")?tr("Видео · выбранные кадры, без звука · открыть","Video · sampled frames, no audio · open"):tr("Нажмите, чтобы открыть","Tap to open"),11);card.addView(hint);
@@ -123,13 +125,22 @@ final class AgentChatView extends LinearLayout {
                 }
                 views.put(key,card);if(card.getParent()==null){changed=true;timeline.addView(card,index);}else if(timeline.indexOfChild(card)!=index){changed=true;timeline.removeView(card);timeline.addView(card,index);}index++;continue;
             }
+            if(r.optString("kind").equals("text")&&AgentMarkdown.rich(r.optString("body"))){
+                if(markdown==null)markdown=AgentMarkdown.create(getContext());View existing=views.get(key);AgentMarkdownView block=existing instanceof AgentMarkdownView?(AgentMarkdownView)existing:new AgentMarkdownView(getContext(),markdown);
+                if(!value.equals(values.get(key))||existing!=block){changed=true;values.put(key,value);final String k=key;block.update(assistant,r.optString("body"),r.optBoolean("more")?()->{JSONObject row=data.get(k);if(row!=null)open.accept(row);}:null);}
+                if(existing!=null&&existing!=block){timeline.removeView(existing);}views.put(key,block);
+                if(block.getParent()==null){changed=true;timeline.addView(block,index);}else if(timeline.indexOfChild(block)!=index){changed=true;timeline.removeView(block);timeline.addView(block,index);}index++;continue;
+            }
+            View previous=views.get(key);if(previous!=null&&!(previous instanceof TextView)){timeline.removeView(previous);views.remove(key);values.remove(key);}
             TextView t=(TextView)views.get(key);
             if(t==null){t=label("",14);views.put(key,t);}
             if(!value.equals(values.get(key))){changed=true;values.put(key,value);String kind=r.optString("kind");boolean error=kind.equals("error");boolean chip=kind.equals("reasoning")||kind.equals("tool")||kind.equals("receipt");
                 String caption=kind.equals("reasoning")?tr("Рассуждение ▾","Thinking ▾"):kind.equals("receipt")?receiptTitle(r):(codexActions?CodexActionLabels.title(r,WorkspaceLanguage.code(getContext()).equals("ru")):r.optString("title"))+" ▾";
                 String body=r.optString("body");String shown=AgentChatErrors.nativeDiagnosticHint(body)?tr("Подробности доступны по нажатию на сообщение об ошибке.","Tap the error message for details."):body;
                 t.setText(error?tr("Ошибка · ","Error · ")+assistant+"\n"+AgentChatErrors.explain(body,WorkspaceLanguage.code(getContext()).equals("ru"))+tr("\nПодробности ▾","\nDetails ▾"):chip?caption:(kind.equals("user")?tr("Вы: ","You: "):kind.equals("text")?assistant+": ":"")+shown+(r.optBoolean("more")?tr("\nНажмите для полного текста…","\nTap for full text…"):""));
-                t.setTextIsSelectable(!chip&&!error);final String k=key;t.setOnClickListener(error||chip||r.optBoolean("more")?v->{JSONObject row=data.get(k);if(row!=null)open.accept(row);}:null);t.setTextSize(chip?12:14);t.setTypeface(chip?Typeface.DEFAULT:Typeface.DEFAULT);
+                t.setTextIsSelectable(!chip&&!error);
+                if(kind.equals("text")){if(markdown==null)markdown=AgentMarkdown.create(getContext());android.text.SpannableStringBuilder formatted=new android.text.SpannableStringBuilder(assistant+": ");formatted.append(markdown.toMarkdown(AgentMarkdown.checkboxes(shown)));if(r.optBoolean("more"))formatted.append(tr("\nНажмите для полного текста…","\nTap for full text…"));markdown.setParsedMarkdown(t,formatted);}
+                final String k=key;t.setOnClickListener(error||chip||r.optBoolean("more")?v->{JSONObject row=data.get(k);if(row!=null)open.accept(row);}:null);t.setTextSize(chip?12:14);t.setTypeface(chip?Typeface.DEFAULT:Typeface.DEFAULT);
                 GradientDrawable bg=new GradientDrawable();bg.setColor(error?0xff241416:chip?0xff0b1b19:Color.BLACK);bg.setCornerRadius(error?dp(12):chip?dp(22):0);bg.setStroke(dp(1),error?0xff704343:chip?0xff28433d:kind.equals("user")?0xff43776b:Color.BLACK);t.setBackground(bg);
                 LayoutParams lp=new LayoutParams(chip?-2:-1,-2);lp.setMargins(0,dp(6),0,dp(chip?3:10));lp.gravity=Gravity.START;t.setLayoutParams(lp);
             }

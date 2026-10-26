@@ -34,4 +34,9 @@ public class ChatAttachmentsTest {
   File log=folder.newFile("report.log");byte[] content="log entry\n".repeat(4000).getBytes(StandardCharsets.UTF_8);Files.write(log.toPath(),content);assertEquals(8192,ChatAttachments.textPreview(log,8192).length());assertArrayEquals(content,Files.readAllBytes(log.toPath()));
   Files.write(log.toPath(),new byte[]{65,0,66});try{ChatAttachments.textPreview(log,8192);fail();}catch(IOException expected){assertEquals("INVALID_TEXT",expected.getMessage());}
  }
+ @Test public void arbitraryFormatsStayOpaqueAndBadgesRetainCompoundArchives()throws Exception{
+  for(String name:new String[]{"model.3mf","part.stl","tools.exe","script.bat","archive.7z","archive.rar","archive.gzip","archive.tar.gz","custom.xyz123","README"})assertEquals(name,"binary",ChatAttachments.type(name));
+  assertEquals("3MF",ChatAttachments.badge("model.3mf"));assertEquals("STL",ChatAttachments.badge("part.stl"));assertEquals("TAR.GZ",ChatAttachments.badge("project.tar.gz"));assertEquals("FILE",ChatAttachments.badge("README"));assertEquals("FILE",ChatAttachments.badge(".env"));
+ }
+
 }

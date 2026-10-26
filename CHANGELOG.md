@@ -2,6 +2,15 @@
 
 Use Mesa 26.2.5 for seven PRoot Turnip/Zink runtimes and the private bridge frontend. Add pinned optional Kali/Alpine VirGL downloads, a deferred protected a6xx-a7xx-a8xx default, and confirmed imported-driver removal. Correct Android private-directory aliases, used-driver cache cleanup, unset XFCE scale restoration and portrait viewport geometry. Preserve package/signer/schema8/ARM64/min26/target28/compile35; code1410. No data reset, account migration or rootfs reinstall. [Release](docs/fork/RELEASE-v2.0.7.md) · [Validation](docs/fork/VALIDATION-v2.0.7.md).
 
+## Unreleased — chat and file improvements
+
+- Native Developer-style Markdown for Codex, Claude, Gemini and OpenCode.
+- Downloadable generic file cards, including archives, 3D-print formats and executables; explicit user actions only.
+- Saved name/size/date sorting in the shared file browser and pickers.
+- Long-press attachment multi-selection and native gallery photo/video selection into the draft.
+- Current-agent Stop control with coordinated activity animation, plus keyboard dismissal after acknowledged sends.
+- No account, rootfs or raw-history migration. Device validation is pending.
+
 ## v2.0.6 — X11 scaling, renderer setup and chat files
 
 Fix live interface-scale Apply across all seven PRoot XFCE session buses while preserving native Termux’s working path. Keep custom X11 geometry stable with the keyboard open. Raise streamed chat-file transfers to5GiB and original images to100MiB, retaining bounded model-ready images.

@@ -140,3 +140,12 @@ inputs. Their original sources/notices remain accessible in the published
 [v2.0.5 tag](https://github.com/HezeAI/termux-jobs/tree/v2.0.5/third-party/droiddeck-wayland).
 The current APK retains the independent X11/AdrenoTools/libhybris component
 licenses; removing the Wayland experiment does not change those integrations.
+
+## Agent Markdown rendering
+
+The chat preview uses the existing [Markwon4.6.2](https://github.com/noties/Markwon/tree/v4.6.2)
+core/strikethrough/linkify integration (Apache-2.0), the matching
+[CommonMark Java0.13.0](https://github.com/commonmark/commonmark-java/tree/commonmark-parent-0.13.0)
+parser and GFM tables extension (BSD-2-Clause). Native code/table views, copying,
+streamed block reuse and application styling are fork integration. Notices are
+included in `app/src/main/assets/markdown-NOTICE.txt`.

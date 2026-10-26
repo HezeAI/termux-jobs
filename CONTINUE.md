@@ -1,3 +1,19 @@
+# Private agent-chat test1 — pending developer acceptance
+
+Active branch work/chat-file-cards is based on stable v2.0.7/b832b681. It adds
+Developer Markdown, arbitrary output cards, shared sorting, long-press attachment
+multi-selection, native media gallery, scoped Stop with activity route, and
+acknowledged-send keyboard dismissal. X11/native graphics inputs are unchanged.
+
+Built 2.0.8-test1/code1411, Termux-Jobs-test1.apk. See
+[validation](docs/fork/VALIDATION-chat-test1.md) for hash,105 passing JVM cases,
+eight Node suites, modern lint0errors/217warnings and device-check gaps.
+Do not publish until the developer tests and accepts. Stable remains v2.0.7.
+Next stable versionCode must exceed1411; retain com.termux/signature/schema8.
+No installed app, session, rootfs or tunnel changes are part of this work.
+
+---
+
 # Stable release: v2.0.7
 
 HezeAI authorized publication of v2.0.7: Mesa26.2.5 for the seven Linux Turnip+Zink runtimes and Bionic-for-glibc frontend; optional Kali theme, Alpine VirGL client and protected default driver from HezeAI/termux-jobs-components; imported-driver removal, theme preparation, live scale reset and portrait viewport fixes. The header remainsv2.0. No new native rotation/presentation change is included.

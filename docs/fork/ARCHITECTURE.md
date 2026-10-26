@@ -1,3 +1,32 @@
+# Development preview — agent chat workflow
+
+The next test build starts from published v2.0.7. It does not include the later
+rotation experiments. Native X11 inputs and desktop/environment launchers retain
+the stable implementation.
+
+All four agent transcripts share native Markwon/CommonMark rendering. Markdown
+is presentation only: persisted raw messages and provider protocols remain intact.
+Top-level code and tables use reusable block views; unchanged preceding blocks
+are retained during streaming. Link activation permits explicit HTTP(S) navigation,
+without WebView, remote-image fetching or command execution.
+
+Output cards project bounded metadata for explicitly linked local regular files.
+Opening/saving uses the existing per-environment file transport; generic files do
+not trigger APK hashing, installation or archive extraction. Gallery selection
+uses Activity-owned URI callbacks and private bounded copies; original provider
+files remain unchanged. Preparation and drafts retain the owning chat run, while
+late callbacks cannot attach to a newly selected run. Shared file sorting is a
+presentation preference and does not rewrite paths or mutate listing metadata.
+
+The Stop control sends the existing chat-interrupt operation to the selected
+native session. It does not terminate the server or neighbouring agents. Its
+activity animation paints into a temporary parent overlay and retains the old
+one-pixel layout height. Idle, hidden and detached states release that overlay.
+The accepted-send callback clears/hides the composer only when the same terminal
+and unchanged submitted draft are still selected; failed requests keep the draft.
+
+---
+
 # Current graphics architecture — v2.0.7
 
 Optional archives are fixed-version downloads from graphics-20261025, mesa-26.2.5 and x11-extras-20261025. A content-addressed verified archive cache supports reuse; each target retains its own activated runtime, driver selection, operation lock and X11 display. The bridge validates bundle identity and allowlisted file hashes before using the selected target's runtime. Changed bundles activate by staged replacement only under that target's exclusive lock; active desktops retain shared locks. No guest/system library is replaced.

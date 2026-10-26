@@ -17,4 +17,6 @@ public class ChatAttachmentPickerTest {
    picker.chooseChatAttachment((p,e)->fail());choice=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertEquals(0,requests.get());Shadows.shadowOf(choice).clickOnItem(1);assertEquals(1,requests.get());
   }finally{picker.close();}
  }
+
+ @Test public void galleryChoiceDoesNotRequestBroadStorageAndCloseCancelsMenu(){TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);java.util.concurrent.atomic.AtomicInteger storage=new java.util.concurrent.atomic.AtomicInteger(),gallery=new java.util.concurrent.atomic.AtomicInteger();WorkspaceLocalFilePicker picker=new WorkspaceLocalFilePicker(a,ready->storage.incrementAndGet());try{picker.chooseChatAttachments(3,(p,files)->fail("Must not auto-select files"),gallery::incrementAndGet);AlertDialog choice=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertEquals(3,choice.getListView().getCount());Shadows.shadowOf(choice).clickOnItem(2);assertEquals(1,gallery.get());assertEquals(0,storage.get());picker.chooseChatAttachments(3,(p,files)->fail(),gallery::incrementAndGet);choice=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();picker.cancelSelection();assertFalse(choice.isShowing());}finally{picker.close();}}
 }

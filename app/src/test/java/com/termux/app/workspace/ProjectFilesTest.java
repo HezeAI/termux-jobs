@@ -57,4 +57,9 @@ public class ProjectFilesTest {
         try{Process p=new ProcessBuilder("sh","-c",ProjectFiles.portableListScript(dir.getPath())).start();ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] b=new byte[4096];int n;while((n=p.getInputStream().read(b))!=-1)out.write(b,0,n);assertEquals(0,p.waitFor());ProjectFiles.Entry entry=ProjectFiles.parse(out.toByteArray()).entries.get(0);assertEquals(photo.getName(),entry.name);assertEquals(3,entry.size);assertEquals(1700000000000L,entry.modified);}finally{photo.delete();dir.delete();}
     }
 
+    @Test public void portableListingIncludesActualDirectoryDate()throws Exception{
+        File dir=Files.createTempDirectory("portable-sort-").toFile(),child=new File(dir,"folder ' $(no-exec)");assertTrue(child.mkdir());assertTrue(child.setLastModified(1700000012000L));
+        try{Process p=new ProcessBuilder("sh","-c",ProjectFiles.portableListScript(dir.getPath())).start();ByteArrayOutputStream bytes=new ByteArrayOutputStream();byte[] buffer=new byte[1024];int n;while((n=p.getInputStream().read(buffer))!=-1)bytes.write(buffer,0,n);assertEquals(0,p.waitFor());ProjectFiles.Entry e=ProjectFiles.parse(bytes.toByteArray()).entries.get(0);assertTrue(e.directory);assertEquals(child.getName(),e.name);assertEquals(1700000012000L,e.modified);}finally{child.delete();dir.delete();}
+    }
+
 }

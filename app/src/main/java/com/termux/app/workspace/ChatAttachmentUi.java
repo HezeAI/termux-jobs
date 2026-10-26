@@ -39,16 +39,30 @@ final class ChatAttachmentUi implements AutoCloseable {
         if(!supported){Toast.makeText(activity,t("Для вложений перезапустите эту сессию после обновления и дождитесь подключения чата.","For attachments, restart this session after updating and wait for the chat to connect."),Toast.LENGTH_LONG).show();return;}
         if(busy()||drafts.getOrDefault(owner,Collections.emptyList()).size()>=ChatAttachments.MAX_COUNT){Toast.makeText(activity,t("Дождитесь подготовки файла. В одном сообщении — до 4 вложений.","Wait for file preparation. Up to 4 attachments per message."),Toast.LENGTH_LONG).show();return;}
         final String run=owner;final WorkspaceStore.Session destination=profile.copy();
-        picker.chooseChatAttachment((source,entry)->{
-            if(closed||!run.equals(owner))return;preparing.add(run);render();
-            work.execute(()->{JSONObject attachment=null;Exception error=null;try{attachment=ChatAttachments.stage(activity,source,entry,destination);}catch(Exception e){error=e;}
-                final JSONObject ready=attachment;final Exception failure=error;main.post(()->{preparing.remove(run);if(closed){if(ready!=null)ChatAttachments.discard(activity,ready);return;}
-                    if(ready!=null){List<JSONObject> list=drafts.computeIfAbsent(run,k->new ArrayList<>());list.add(ready);while(drafts.size()>32){String oldest=drafts.keySet().iterator().next();for(JSONObject old:drafts.remove(oldest))discard(old);}}
-                    if(run.equals(owner)){render();if(failure!=null)Toast.makeText(activity,error(failure),Toast.LENGTH_LONG).show();}
-                });
+        final int available=ChatAttachments.MAX_COUNT-drafts.getOrDefault(run,Collections.emptyList()).size();
+        picker.chooseChatAttachments(available,(source,entries)->{
+            if(closed||!run.equals(owner))return;List<Staging> jobs=new ArrayList<>();for(ProjectFiles.Entry entry:entries)jobs.add(()->ChatAttachments.stage(activity,source,entry,destination));prepare(run,jobs);
+        },()->activity.requestWorkspaceGallery(available,uris->{
+            if(closed||!run.equals(owner))return;List<Staging> jobs=new ArrayList<>();for(android.net.Uri uri:uris)jobs.add(()->ChatAttachments.stageUri(activity,uri,destination));prepare(run,jobs);
+        }));
+    }
+    private interface Staging {JSONObject stage()throws Exception;}
+    private void prepare(String run,List<Staging> jobs){
+        if(closed||jobs.isEmpty()||preparing.contains(run))return;
+        if(jobs.size()+drafts.getOrDefault(run,Collections.emptyList()).size()>ChatAttachments.MAX_COUNT){Toast.makeText(activity,t("В одном сообщении — до 4 вложений.","Up to 4 attachments per message."),Toast.LENGTH_LONG).show();return;}
+        preparing.add(run);render();
+        work.execute(()->{
+            List<JSONObject> ready=new ArrayList<>();Exception failure=null;
+            for(Staging job:jobs){if(closed||Thread.currentThread().isInterrupted())break;try{ready.add(job.stage());}catch(Exception error){if(failure==null)failure=error;}}
+            final Exception error=failure;main.post(()->{
+                preparing.remove(run);if(closed){for(JSONObject a:ready)discard(a);return;}
+                if(!ready.isEmpty())drafts.computeIfAbsent(run,k->new ArrayList<>()).addAll(ready);
+                while(drafts.size()>32){String oldest=drafts.keySet().iterator().next();for(JSONObject a:drafts.remove(oldest))discard(a);}
+                if(run.equals(owner)){render();if(error!=null)Toast.makeText(activity,error(error),Toast.LENGTH_LONG).show();}
             });
         });
     }
+
     private String error(Exception e){String code=e.getMessage();
         if("SUPPORTED_TYPES".equals(code))return t("Выберите изображение, текстовый файл/лог или видео MP4, MKV, WebM, MOV, M4V, 3GP.","Choose an image, text/log file, or MP4, MKV, WebM, MOV, M4V, 3GP video.");
         if("FILE_LIMIT".equals(code))return t("Файл пуст или слишком большой: изображения до 100 МБ, остальные файлы до 5 ГБ.","The file is empty or too large: images up to 100 MB, other files up to 5 GB.");
@@ -81,10 +95,10 @@ final class ChatAttachmentUi implements AutoCloseable {
     void open(JSONObject a){
         if(closed||profile==null)return;if(viewer!=null)viewer.dismiss();final String run=owner;final WorkspaceStore.Session p=profile;
         LinearLayout box=new LinearLayout(activity);box.setOrientation(LinearLayout.VERTICAL);TextView loading=view.label(t("Загрузка…","Loading…"),13);box.addView(loading);
-        final boolean apk=a.optString("type").equals("apk");
+        final boolean apk=a.optString("type").equals("apk"),binary=a.optString("type").equals("binary");
         AlertDialog.Builder builder=WorkspaceDialogs.builder(activity).setTitle(a.optString("name",t("Вложение","Attachment"))).setView(box);
         if(apk)builder.setNeutralButton(t("В Download","To Download"),null).setPositiveButton(t("Установить","Install"),null);
-        else builder.setNegativeButton(t("Закрыть","Close"),null).setPositiveButton(t("Сохранить в Download","Save to Download"),null);
+        else {builder.setPositiveButton(t("Сохранить в Download","Save to Download"),null);if(!binary)builder.setNegativeButton(t("Закрыть","Close"),null);}
         AlertDialog dialog=builder.create();viewer=dialog;dialog.setCanceledOnTouchOutside(true);dialog.show();dialog.getWindow().setLayout(Math.round(activity.getResources().getDisplayMetrics().widthPixels*.94f),android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
         final int saveButton=apk?AlertDialog.BUTTON_NEUTRAL:AlertDialog.BUTTON_POSITIVE;
         dialog.getButton(saveButton).setEnabled(false);if(apk)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
@@ -93,7 +107,7 @@ final class ChatAttachmentUi implements AutoCloseable {
             if(type.equals("image")){bitmap=ChatAttachments.bitmap(file,2048);mediaWidth=bitmap.getWidth();mediaHeight=bitmap.getHeight();}
             else if(type.equals("video")){android.media.MediaMetadataRetriever metadata=new android.media.MediaMetadataRetriever();try{metadata.setDataSource(file.getPath());mediaWidth=Integer.parseInt(metadata.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH));mediaHeight=Integer.parseInt(metadata.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT));String rotation=metadata.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION);if("90".equals(rotation)||"270".equals(rotation)){int swap=mediaWidth;mediaWidth=mediaHeight;mediaHeight=swap;}}finally{metadata.release();}}
             else if(type.equals("apk"))text=android.text.format.Formatter.formatFileSize(activity,file.length())+"\nSHA-256: "+ChatAttachments.fileSha256(file)+t("\n\nХеш описывает этот файл, но не подтверждает доверие к его автору. Установку подтверждает Android.","\n\nThe hash identifies this file; it does not establish publisher trust. Android confirms installation.");
-            else if(type.equals("binary"))text=android.text.format.Formatter.formatFileSize(activity,file.length())+t("\n\nОригинал файла передан агенту по пути для обработки инструментами.","\n\nThe original file is available to the agent by path for tool-based processing.");
+            else if(type.equals("binary"))text=ChatAttachments.badge(a.optString("name"))+" · "+android.text.format.Formatter.formatFileSize(activity,file.length());
             else if(type.equals("file"))text=ChatAttachments.textPreview(file,65536)+(file.length()>65536?t("\n\nПоказаны первые 64 КБ. Полный файл сохранён во вложении.","\n\nShowing the first 64 KB. The complete file remains attached."):"");
         }catch(Exception e){failure=e;}final File ready=file;final Bitmap image=bitmap;final String content=text;final Exception error=failure;final int originalWidth=mediaWidth,originalHeight=mediaHeight;
             main.post(()->{if(closed||!run.equals(owner)||!dialog.isShowing())return;box.removeAllViews();if(error!=null){box.addView(view.label(t("Вложение недоступно: исходный файл удалён или нет доступа.","Attachment unavailable: the source was removed or access is missing."),14));return;}
@@ -101,6 +115,7 @@ final class ChatAttachmentUi implements AutoCloseable {
                 else if(a.optString("type").equals("video")){VideoView video=new VideoView(activity);MediaController controls=new MediaController(activity);controls.setAnchorView(video);video.setMediaController(controls);video.setVideoPath(ready.getPath());box.addView(video,compactMedia(dialog,originalWidth,originalHeight));box.addView(view.label(t("Агенту передаются выбранные кадры с временными метками, без звука.","The agent receives sampled timestamped frames, without audio."),12));dialog.setOnDismissListener(d->video.stopPlayback());video.start();}
                 else if(apk){TextView details=view.label(content,12);details.setTextIsSelectable(true);box.addView(details);
                     dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->install(ready));}
+                else if(binary){TextView body=view.label(content,13);body.setTextIsSelectable(true);box.addView(body);}
                 else {ScrollView scroll=new ScrollView(activity);TextView body=view.label(content,13);body.setTextIsSelectable(true);scroll.addView(body);box.addView(scroll,new LinearLayout.LayoutParams(-1,Math.min(view.dp(420),Math.round(activity.getResources().getDisplayMetrics().heightPixels*.60f))));}
                 dialog.getButton(saveButton).setEnabled(true);dialog.getButton(saveButton).setOnClickListener(v->activity.requestWorkspaceStorageAccess(()->save(ready,a.optString("name","attachment"),dialog,saveButton)));
             });

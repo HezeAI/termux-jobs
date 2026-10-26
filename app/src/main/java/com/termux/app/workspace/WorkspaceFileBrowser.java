@@ -26,6 +26,8 @@ final class WorkspaceFileBrowser {
     void setRootBoundary(String root){rootBoundary=root;}
     private java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> fileChoices;
     private final LinkedHashMap<String,ProjectFiles.Entry> selectedFiles=new LinkedHashMap<>();
+    private boolean chatChoices,choosingMultiple;private int selectionLimit=50;
+    void setChatFileChoices(java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> value,int limit){fileChoices=value;chatChoices=true;selectionLimit=Math.max(1,Math.min(ChatAttachments.MAX_COUNT,limit));}
     private final LinkedHashMap<String,ProjectFiles.Entry> transferSelection=new LinkedHashMap<>();
     private TextView transferButton,clearTransferButton;
     private boolean transfersEnabled(){return choice==null&&fileChoice==null&&fileChoices==null;}
@@ -49,9 +51,10 @@ final class WorkspaceFileBrowser {
 
     void setFileChoices(java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> value){fileChoices=value;}
     private String t(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
-    private void updateSelection(){if(dialog!=null&&fileChoices!=null){Button select=dialog.getButton(AlertDialog.BUTTON_POSITIVE);select.setText(t("Загрузить выбранные","Upload selected")+" ("+selectedFiles.size()+")");select.setEnabled(!selectedFiles.isEmpty()&&!busy);}}
+    private void updateSelection(){if(dialog!=null&&fileChoices!=null){Button select=dialog.getButton(AlertDialog.BUTTON_POSITIVE);select.setText(t("Загрузить выбранные","Upload selected")+" ("+selectedFiles.size()+")");select.setVisibility(!chatChoices||choosingMultiple?View.VISIBLE:View.GONE);select.setEnabled(!selectedFiles.isEmpty()&&!busy);}}
     private void chooseFile(ProjectFiles.Entry entry){
-        if(fileChoices!=null){if(selectedFiles.containsKey(entry.path))selectedFiles.remove(entry.path);else if(selectedFiles.size()<50)selectedFiles.put(entry.path,entry);else{message.setText(t("Можно выбрать до 50 файлов","Select up to 50 files"));return;}ScrollView viewport=(ScrollView)rows.getParent();int y=viewport.getScrollY();render();viewport.post(()->viewport.scrollTo(0,y));updateSelection();}
+        if(fileChoices!=null&&chatChoices&&!choosingMultiple){fileChoices.accept(files.profile,Collections.singletonList(entry));dialog.dismiss();return;}
+        if(fileChoices!=null){if(selectedFiles.containsKey(entry.path))selectedFiles.remove(entry.path);else if(selectedFiles.size()<selectionLimit)selectedFiles.put(entry.path,entry);else{message.setText(t("Можно выбрать до ","Select up to ")+selectionLimit+t(" файлов"," files"));return;}ScrollView viewport=(ScrollView)rows.getParent();int y=viewport.getScrollY();render();viewport.post(()->viewport.scrollTo(0,y));updateSelection();}
         else if(fileChoice!=null){fileChoice.selected(files.profile,entry);dialog.dismiss();}else openFile(entry);
     }
     void setFileChoice(FileChoice value){fileChoice=value;}
@@ -68,7 +71,7 @@ final class WorkspaceFileBrowser {
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private Runnable onClosed;
     void setOnClosed(Runnable callback){onClosed=callback;}
-    private AlertDialog dialog;
+    private AlertDialog dialog,sortDialog;
     private final List<WorkspaceTextEditor> editors=new ArrayList<>();
     private LinearLayout rows,filters;private TextView pathLabel,message;private EditText search;
     private ProjectFiles.Listing listing;private String path,filter=WorkspaceText.tr("Все");private volatile boolean closed;private boolean busy,transferring;
@@ -102,7 +105,8 @@ final class WorkspaceFileBrowser {
         body.addView(text(ProjectFiles.environmentLabel(files.profile),12));
         LinearLayout navigation=row();navigation.addView(action("↑",()->load(parent(path))),new LinearLayout.LayoutParams(dp(48),-2));
         pathLabel=text(path,12);pathLabel.setMaxLines(2);pathLabel.setEllipsize(TextUtils.TruncateAt.MIDDLE);navigation.addView(pathLabel,new LinearLayout.LayoutParams(0,-2,1));
-        navigation.addView(action("⌂",()->load("~")),new LinearLayout.LayoutParams(dp(48),-2));body.addView(navigation);
+        navigation.addView(action("⌂",()->load("~")),new LinearLayout.LayoutParams(dp(48),-2));
+        WorkspaceIconButton sort=new WorkspaceIconButton(activity);sort.setIcon(activity.getDrawable(R.drawable.workspace_sort).mutate(),dp(22));sort.setTextColor(WorkspaceDialogs.TEXT);sort.setBackground(WorkspaceDialogs.background(activity,false));sort.setTag("workspace-file-sort");sort.setContentDescription(t("Сортировка файлов","Sort files"));sort.setOnClickListener(v->sortMenu());navigation.addView(sort,new LinearLayout.LayoutParams(dp(48),dp(48)));body.addView(navigation);
         search=new EditText(activity);search.setTextColor(WorkspaceDialogs.TEXT);search.setHintTextColor(WorkspaceDialogs.MUTED);search.setTextSize(14);search.setSingleLine(true);search.setHint(choice==null?WorkspaceText.tr("Найти файл или папку"):WorkspaceText.tr("Найти папку"));LinearLayout searchBar=row();searchBar.addView(search,new LinearLayout.LayoutParams(0,-2,1));
         if(transfersEnabled()){clearTransferButton=action("",()->{invalidateTransferChoice();transferSelection.clear();render();});clearTransferButton.setContentDescription(t("Снять всё выделение","Clear selection"));searchBar.addView(clearTransferButton,new LinearLayout.LayoutParams(-2,dp(48)));WorkspaceIconButton down=new WorkspaceIconButton(activity);down.setIcon(activity.getDrawable(R.drawable.workspace_diag_download).mutate(),dp(22));down.setTextColor(WorkspaceDialogs.ACCENT);down.setContentDescription(t("Копировать или переместить сюда","Copy or move here"));down.setOnClickListener(v->transferMenu());transferButton=down;searchBar.addView(down,new LinearLayout.LayoutParams(dp(48),dp(48)));}body.addView(searchBar);
         search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int c,int b){}public void onTextChanged(CharSequence s,int a,int b,int c){render();}public void afterTextChanged(Editable e){}});
@@ -130,11 +134,17 @@ final class WorkspaceFileBrowser {
     private void render(){
         if(filters!=null)for(int i=0;i<filters.getChildCount();i++){TextView t=(TextView)filters.getChildAt(i);styleFilter(activity,t,t.getText().toString().equals(filter));}
         if(rows==null||listing==null)return;thumbnails.reset();rows.removeAllViews();int count=0;
-        for(ProjectFiles.Entry e:listing.entries){if(!visibleEntry(e))continue;
+        for(ProjectFiles.Entry e:FileSort.ordered(listing.entries,FileSort.read(activity))){if(!visibleEntry(e))continue;
             TextView item=action((e.directory?"▸  ":"▤  ")+e.name+(e.directory?"":"\n"+android.text.format.Formatter.formatShortFileSize(activity,e.size)),()->{if(e.directory)load(e.path);else chooseFile(e);});
-            if(!e.directory&&fileChoices!=null){item.setText((selectedFiles.containsKey(e.path)?"☑  ":"☐  ")+e.name+"\n"+android.text.format.Formatter.formatShortFileSize(activity,e.size));item.setSelected(selectedFiles.containsKey(e.path));item.setBackground(WorkspaceDialogs.background(activity,item.isSelected()));}
+            if(!e.directory&&fileChoices!=null&&(!chatChoices||choosingMultiple)){item.setText((selectedFiles.containsKey(e.path)?"☑  ":"☐  ")+e.name+"\n"+android.text.format.Formatter.formatShortFileSize(activity,e.size));item.setSelected(selectedFiles.containsKey(e.path));item.setBackground(WorkspaceDialogs.background(activity,item.isSelected()));}
             item.setContentDescription((e.directory?WorkspaceText.tr("Папка "):WorkspaceText.tr("Файл "))+e.name);
             LinearLayout line=row();line.setOnClickListener(v->{if(e.directory)load(e.path);else chooseFile(e);});
+            if(chatChoices&&choosingMultiple&&!e.directory){
+                item.setText(e.name+"\n"+android.text.format.Formatter.formatShortFileSize(activity,e.size));CheckBox selected=new CheckBox(activity);selected.setChecked(selectedFiles.containsKey(e.path));selected.setContentDescription(t("Выбрать ","Select ")+e.name);selected.setOnClickListener(v->{chooseFile(e);selected.setChecked(selectedFiles.containsKey(e.path));});line.addView(selected,new LinearLayout.LayoutParams(dp(44),dp(48)));
+            }
+            if(chatChoices&&!e.directory){
+                View.OnLongClickListener mark=v->{if(busy)return true;choosingMultiple=true;chooseFile(e);return true;};item.setOnLongClickListener(mark);line.setOnLongClickListener(mark);
+            }
             if(transfersEnabled()){boolean checked=transferSelection.containsKey(e.path);item.setSelected(checked);item.setBackground(WorkspaceDialogs.background(activity,checked));item.setOnLongClickListener(v->{toggleTransfer(e);return true;});line.setOnLongClickListener(v->{toggleTransfer(e);return true;});
                 if(!transferSelection.isEmpty()){CheckBox check=new CheckBox(activity);check.setChecked(checked);check.setContentDescription(t("Выбрать ","Select ")+e.name);check.setOnClickListener(v->toggleTransfer(e));line.addView(check,new LinearLayout.LayoutParams(dp(44),dp(48)));}
             }
@@ -147,6 +157,13 @@ final class WorkspaceFileBrowser {
             line.addView(item,new LinearLayout.LayoutParams(0,-2,1));rows.addView(line);count++;}
         if(viewport!=null)thumbnails.schedule(viewport);
         updateTransfer();message.setText(count==0?WorkspaceText.tr("Нет подходящих файлов или папок"):WorkspaceText.tr("Открыт каталог выбранной среды · ")+count);
+    }
+    private void sortMenu(){
+        if(closed)return;if(sortDialog!=null)sortDialog.dismiss();
+        sortDialog=WorkspaceDialogs.builder(activity).setTitle(t("Сортировка","Sort files"))
+            .setSingleChoiceItems(FileSort.labels(activity),FileSort.read(activity).ordinal(),(d,which)->{
+                if(closed)return;FileSort.save(activity,FileSort.Order.values()[which]);d.dismiss();render();if(viewport!=null)viewport.scrollTo(0,0);
+            }).setNegativeButton(t("Отмена","Cancel"),null).create();sortDialog.show();
     }
     private void transferMenu(){
         if(busy||listing==null||transferSelection.isEmpty())return;
@@ -179,7 +196,7 @@ final class WorkspaceFileBrowser {
         WorkspaceDialogs.builder(activity).setCustomTitle(fileHeading(e)).setItems(actions.toArray(new String[0]),(d,w)->{String a=actions.get(w);if(a.equals(WorkspaceText.tr("Копировать путь"))){((android.content.ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText(WorkspaceText.tr("Путь файла"),e.path));activity.showToast(WorkspaceText.tr("Путь скопирован"),false);}else if(a.equals(WorkspaceText.tr("Просмотреть")))preview(e,mime);else if(a.equals(WorkspaceText.tr("Редактировать")))edit(e);else export(e,a.equals(WorkspaceText.tr("В Download")));}).setNegativeButton(WorkspaceText.tr("Закрыть"),null).show();}
     private View fileHeading(ProjectFiles.Entry e){LinearLayout heading=column();heading.setPadding(dp(20),dp(16),dp(20),dp(8));heading.addView(text(e.name,17));heading.addView(text(android.text.format.Formatter.formatShortFileSize(activity,e.size),12));return heading;}
     String serverProfileId(){return files.profile.id;}
-    void close(){if(closed)return;closed=true;invalidateTransferChoice();thumbnails.close();if(dialog!=null&&dialog.isShowing())dialog.dismiss();for(WorkspaceTextEditor editor:editors)editor.close();editors.clear();try{files.close();}finally{worker.shutdownNow();listing=null;selectedFiles.clear();transferSelection.clear();Runnable callback=onClosed;onClosed=null;if(callback!=null)callback.run();}}
+    void close(){if(closed)return;closed=true;invalidateTransferChoice();if(sortDialog!=null)sortDialog.dismiss();thumbnails.close();if(dialog!=null&&dialog.isShowing())dialog.dismiss();for(WorkspaceTextEditor editor:editors)editor.close();editors.clear();try{files.close();}finally{worker.shutdownNow();listing=null;selectedFiles.clear();transferSelection.clear();Runnable callback=onClosed;onClosed=null;if(callback!=null)callback.run();}}
     private void preview(ProjectFiles.Entry e,String mime){execute(()->{
         if(mime.startsWith("image/")){if(e.size>16L*1024*1024)throw new IOException(WorkspaceText.tr("Изображение больше 16 МБ; используйте экспорт"));File temporary=cache(e.name);files.export(e,temporary,16L*1024*1024);
             BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;BitmapFactory.decodeFile(temporary.getPath(),bounds);BitmapFactory.Options options=new BitmapFactory.Options();options.inSampleSize=1;while(bounds.outWidth/options.inSampleSize>2048||bounds.outHeight/options.inSampleSize>2048)options.inSampleSize*=2;

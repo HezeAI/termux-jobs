@@ -274,4 +274,9 @@ public class AgentChatUiTest {
   try{for(int i=0;i<40&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);android.view.View button=findText(chat.requests,"Choose fixture option ▾","Choose fixture option ▾");assertNotNull(button);button.performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(dialog.isShowing());dialog.getButton(-1).performClick();for(int i=0;i<40&&attempts.get()==0;i++)drain();for(int i=0;i<4;i++)drain();assertEquals(1,attempts.get());assertTrue(dialog.isShowing());dialog.getButton(-1).performClick();for(int i=0;i<40&&dialog.isShowing();i++)drain();assertEquals(2,attempts.get());assertFalse(dialog.isShowing());assertFalse(pending.get());}finally{ui.close();}
  }
 
+ @Test public void stopUsesOnlyCurrentNativeSessionAndDoesNothingWhileIdle()throws Exception{
+  TermuxActivity a=activity();WorkspaceStore.Session selected=profile();AtomicBoolean busy=new AtomicBoolean(true);AtomicInteger stops=new AtomicInteger();AgentChatUi ui=new AgentChatUi(a,()->selected,()->true,(p,q)->{if(q.optString("op").equals("chat-interrupt")){assertEquals(selected.aiSocketId,p.aiSocketId);assertEquals("ses_current",q.optString("session"));stops.incrementAndGet();busy.set(false);}return result().put("connected",true).put("session","ses_current").put("busy",busy.get());});
+  try{for(int i=0;i<30&&!ui.canInterrupt();i++)drain();assertTrue(ui.canInterrupt());ui.stopCurrent();for(int i=0;i<30&&stops.get()==0;i++)drain();assertEquals(1,stops.get());for(int i=0;i<10;i++){Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(500));drain();if(!ui.canInterrupt())break;}assertFalse(ui.canInterrupt());ui.stopCurrent();drain();assertEquals(1,stops.get());}finally{ui.close();}
+ }
+
 }

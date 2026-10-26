@@ -5,6 +5,17 @@
 Команды по-прежнему выполняются в настоящем Termux или выбранном окружении;
 интерфейс помогает организовать работу и не требует писать свою оболочку скриптов.
 
+## Next update preview: agent chats and files
+
+The development build adds native Developer-style Markdown to all four agent
+chats: headings, emphasis, lists, quotes, code cards with syntax colours and copy,
+and horizontally scrollable tables. It also adds downloadable cards for arbitrary
+regular files (including archives, 3MF/STL and EXE/BAT), long-press multi-selection,
+a system photo/video picker, saved file sorting, a scoped Stop button, and IME
+dismissal after an acknowledged send. Raw chat history and account data remain
+unchanged. This is a preview pending developer device validation, not a new stable
+release. Current stable downloads remain v2.0.7.
+
 ## v2.0.7 — Mesa 26.2.5 and on-demand X11 components
 
 Turnip + Zink in the seven Linux environments and the Bionic-for-glibc Mesa frontend now use **Mesa 26.2.5**. The Kali theme, Alpine VirGL client and default **a6xx-a7xx-a8xx** driver are prepared on demand from [Termux Job’s Components](https://github.com/HezeAI/termux-jobs-components#readme), with fixed versions, sizes and SHA-256. Existing valid caches work offline; running desktops adopt new libraries after stop/start. Distribution packages continue using their native repositories.
