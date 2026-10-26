@@ -1,3 +1,20 @@
+# Release v2.0.9 — publication authorized
+
+Active source: /root/termux-fork/.verification/chat-file-cards/source.
+Version2.0.9/code1417; Alias and per-session50–150% scale in all4 agent chats.
+APK .verification/release-v2.0.9/Termux-Jobs-v2.0.9-arm64.apk,
+39798069bytes, SHA25679e98ea329a52158798d420924f41bd14285b92c39841358891b9c5128de69cd.
+Same package/signer/schema8/ARM64; no reset. X11/native assets unchanged.
+228 JVM,44 Python,8 shell tests pass; modern lint0errors/220warnings.
+Release docs and RU/EN updater notes prepared. User explicitly authorized GitHub
+publication, with feature-only notes and no personal anecdotes. See VALIDATION-v2.0.9.md.
+Preserve immutable older app/component releases and root-worktree experiments.
+
+---
+
+Historical preview handoffs below; earlier publication-pending notes describe
+those previews, not the authorized v2.0.9 release.
+
 # Private alias/chat-scale test3 ready
 
 Active source /root/termux-fork/.verification/chat-file-cards/source,

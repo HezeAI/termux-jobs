@@ -1,4 +1,4 @@
-# Unreleased — environment aliases
+# v2.0.9 — Environment aliases & agent chat scale
 
 - Add persistent aliases to eight installed terminal environments, excluding Ubuntu AI.
 - Add creation, environment/category selection, managed-name replacement confirmation, editing and deletion.
@@ -9,7 +9,7 @@
 - Combine alias transfer into four shell-file/JSON import and export actions; parse literal definitions without executing startup files and export one environment per shell file.
 - Add per-session 50–150% agent-chat scale, default100%, with live layout scaling, 100% reset and restoration of shared input geometry outside agent chats.
 - Keep running shells, agent sessions, X11 and graphics components unchanged.
-- Private preview only; device checks and publication are pending. [Details](docs/fork/ALIASES.md).
+- Same package/signer/schema8/ARM64 and Android requirements; code1417. No data reset or environment/account migration. [Release](docs/fork/RELEASE-v2.0.9.md) · [Validation](docs/fork/VALIDATION-v2.0.9.md).
 
 ---
 

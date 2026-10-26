@@ -1,4 +1,18 @@
-# Current release — v2.0.8 (code 1413)
+# Current release — v2.0.9 (code1417)
+
+Persistent aliases in eight standard terminal environments, explicit shell/JSON
+import and export, and per-session50–150% chat scaling for all four agents.
+Ubuntu AI is excluded from alias destinations. Same com.termux/certificate,
+schema8, ARM64, min26/target28/compile35, Android8+ app and Android11+ X11.
+No data reset or account/rootfs migration. Build tools and pinned native inputs
+remain repository-local. X11 assets, drivers and JNI are unchanged from v2.0.8.
+See [release](docs/fork/RELEASE-v2.0.9.md),
+[validation](docs/fork/VALIDATION-v2.0.9.md), [aliases](docs/fork/ALIASES.md)
+and [chat scale](docs/fork/AGENT-CHAT-SCALE.md).
+
+---
+
+# Historical release — v2.0.8 (code 1413)
 
 Developer Markdown, arbitrary file cards, shared file sorting, attachment multi-selection and system media selection are native chat UI changes across four providers. A scoped Stop control and VSync-driven activity line target60FPS; acknowledged message sends dismiss the keyboard. Existing com.termux/signer/schema8, ARM64/Android 8+ app and Android 11+ X11 requirements remain. No data reset, account/rootfs migration or new graphics payload. Build tools and pinned native inputs remain repository-local. See [release](docs/fork/RELEASE-v2.0.8.md), [validation](docs/fork/VALIDATION-v2.0.8.md), [usage](docs/fork/USAGE.md) and [Markdown licenses](docs/fork/THIRD-PARTY.md).
 

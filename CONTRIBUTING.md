@@ -100,12 +100,12 @@ versionCode, release tag, результат проверки/ошибку ус�
 профиль JSON/Keystore. TCP-проверка не доказывает авторизацию, наличие agent.py
 не доказывает работоспособность агента. См. docs/fork/SERVERS.md.
 
-## Current stable build configuration (v2.0.8)
+## Current stable build configuration (v2.0.9)
 
 Local AI and its runtimes/dependencies were removed, not just gated. No
 TERMUX_PUBLIC_RELEASE flag or local-model preparation is required. Use the
 isolated environment, SDK copy and ARM64 overrides from FORK.md and build scripts.
-Stable versionName2.0.8/code1413; same release certificate is required for updates.
+Stable versionName2.0.9/code1417; same release certificate is required for updates.
 Historical protocols, source links and SDK/LoRA experiments are documented in
 [LOCAL-AI-RESEARCH.md](docs/fork/LOCAL-AI-RESEARCH.md). Do not reintroduce model
 weights, vendor SDK binaries, private prompts/chats or credentials in a PR.
@@ -136,3 +136,8 @@ Copy/expand behaviour, file type/size/count and source (environment/phone/galler
 sort order and draft-versus-sent state. For Stop/activity issues include whether
 the agent was working, which session was selected, screen refresh rate and whether
 Server + Agent/robot indicators differ. Do not include private chat contents.
+
+For v2.0.9 alias reports, include the selected environment, shell, operation and
+sanitized error marker; never include alias bodies containing secrets. For chat
+scale reports, include the agent, percentage, system font/display scale, streaming
+state and whether the issue concerns messages, cards or input restoration.

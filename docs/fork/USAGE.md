@@ -1,4 +1,4 @@
-# Agent chats and files — v2.0.8
+# Agent chats, aliases and files — v2.0.9
 
 The native Developer Markdown layout is shared by Codex, Claude, Gemini and
 OpenCode. Code cards show the language, syntax colours and separate line numbers;
@@ -41,7 +41,7 @@ Completed file changes are not rolled back.
 Sending a chat message hides the keyboard only after acknowledgement, while a
 failed send or a different selected session retains its current input state.
 
-Device-specific gallery, IME and animation limits are recorded in [release validation](VALIDATION-v2.0.8.md).
+Device-specific gallery, IME and animation limits are recorded in [release validation](VALIDATION-v2.0.9.md).
 
 ---
 
@@ -1867,11 +1867,11 @@ no reset, environment replacement or new sign-in is required. Native driver/UI a
 physical notification behavior remain device checks. See AUDIT-LINT-2026-10-24.md.
 
 
-## Environment aliases (private preview)
+## Environment aliases (v2.0.9)
 
 See [Environment aliases](ALIASES.md) for the separate library, category and star
 pickers, environment-scoped shell files, write safeguards and restart semantics.
-This pending feature excludes Ubuntu AI and does not alter running sessions.
+This feature excludes Ubuntu AI and does not alter running sessions.
 
 Agent status panels also provide [Chat scale](AGENT-CHAT-SCALE.md),50–150% per
 session, with the original100% default and a reset action.

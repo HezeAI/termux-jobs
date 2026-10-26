@@ -5,19 +5,27 @@
 Команды по-прежнему выполняются в настоящем Termux или выбранном окружении;
 интерфейс помогает организовать работу и не требует писать свою оболочку скриптов.
 
-## Private preview — environment aliases
+## v2.0.9 — Environment aliases & agent chat scale
 
-A pending test build adds environment-bound aliases, separate categories and
-favourites, and **Commands / Alias / Notes** in the star picker. Supported targets
-are the eight standard installed terminal environments; Ubuntu AI is excluded.
-The follow-up preview adds a combined alias import/export menu for shell files
-and JSON/backups, previews, selection and confirmed replacements, plus Termux-only
-tab-restart guidance. Agent chats have a per-session **50–150% scale** (100% by
-default) for transcript content, cards, thumbnails and input rows.
-[Usage and persistence details](docs/fork/ALIASES.md). The stable download below
-remains v2.0.8 until the preview is accepted and a new release is authorized.
+Create persistent **Alias** for Termux, Ubuntu, Debian, Alpine, Arch Linux, Fedora,
+openSUSE and Void. Organize commands and aliases with separate categories,
+favourites and searches; use **Commands / Alias / Notes** in the star picker.
+Import selected literal aliases from shell files or JSON/backups, preview them,
+confirm replacements and export shell files or JSON. Ubuntu AI is excluded from
+managed alias targets. New terminal shells load the definitions; restart the
+persistent Termux tab after adding or removing its aliases.
 
-## v2.0.8 — Developer Markdown & agent chat improvements
+All four agent chats — **Codex, Claude, Gemini and OpenCode** — gain a per-session
+**50–150% chat scale**, default100%, with live changes and a100% reset. Messages,
+Markdown, cards, thumbnails and input rows resize together. Lower values fit more
+content on screen. Same package, signer, schema8 and Android requirements;
+**no data reset or environment reinstallation**.
+
+[Download v2.0.9](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.9) ·
+[Release notes](docs/fork/RELEASE-v2.0.9.md) · [Validation](docs/fork/VALIDATION-v2.0.9.md) ·
+[Alias guide](docs/fork/ALIASES.md) · [Chat scale](docs/fork/AGENT-CHAT-SCALE.md).
+
+## Historical v2.0.8 — Developer Markdown & agent chat improvements
 
 Working with AI agents through CLI directly in Termux on your phone is now even more convenient. Read formatted replies, attach project files and receive ready-to-use results in the chat.
 

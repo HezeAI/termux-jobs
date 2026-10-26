@@ -1,0 +1,26 @@
+{
+  "ru": [
+    "Alias для восьми установленных окружений: создание, редактирование, удаление, категории и избранное. Ubuntu AI исключена.",
+    "Отдельные команды и Alias, поиск, предпросмотр и вкладки Команды / Alias / Заметки.",
+    "Импорт/Экспорт Alias: shell-файлы и JSON/бэкапы, выбор записей, полный предпросмотр и подтверждение замены. Файлы при импорте не выполняются.",
+    "Масштаб чата 50–150% для Codex, Claude, Gemini и OpenCode: сообщения, Markdown, карточки, миниатюры и ввод. Сохранение отдельно для сессии и сброс на 100%."
+  ],
+  "en": [
+    "Persistent aliases for eight installed environments: create, edit, delete, categories and favourites. Ubuntu AI is excluded.",
+    "Separate commands and aliases, search, previews and Commands / Alias / Notes tabs.",
+    "Import/export aliases through shell files or JSON/backups, with record selection, full previews and replacement confirmation. Imported files are never executed.",
+    "50–150% chat scale for Codex, Claude, Gemini and OpenCode: messages, Markdown, cards, thumbnails and input. Saved per session, with a 100% reset."
+  ],
+  "compatibility": {
+    "ru": [
+      "Те же com.termux, подпись, ARM64 и schema8. Android 8+ для приложения, Android 11+ для X11. Код 1417. Сброс данных, перенос аккаунтов и переустановка окружений не требуются.",
+      "Истории, пресеты, проекты, окружения, команды и заметки сохраняются. Старые сессии получают масштаб 100%. Завершите важную работу перед обновлением.",
+      "Alias доступны в новых shell-сессиях. После добавления или удаления Alias в Termux перезапустите его постоянную вкладку. X11, драйверы и нативные библиотеки не изменены."
+    ],
+    "en": [
+      "Same com.termux, signer, ARM64 and schema8. Android 8+ app, Android 11+ X11. Code 1417. No data reset, account migration or environment reinstallation required.",
+      "Histories, presets, projects, environments, commands and notes are retained. Old sessions default to 100% chat scale. Finish important work before updating.",
+      "Aliases load in new shells. Restart the persistent Termux tab after adding or removing its aliases. X11, drivers and native libraries are unchanged."
+    ]
+  }
+}

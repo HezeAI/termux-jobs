@@ -1,4 +1,4 @@
-# Agent chat scale (private preview)
+# Agent chat scale — v2.0.9
 
 Codex, Claude, Gemini and OpenCode status panels contain **Chat scale**, a slider
 from **50% to150%**, and a **100%** reset. The default matches the previous layout.

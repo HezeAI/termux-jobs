@@ -1,4 +1,12 @@
-# Current release validation — v2.0.8
+# Current release validation — v2.0.9
+
+See [VALIDATION-v2.0.9.md](VALIDATION-v2.0.9.md) for the final artifact, tests,
+lint findings, compatibility and device-specific limits. Earlier reports retain
+the scope of their named builds.
+
+---
+
+# Historical release validation — v2.0.8
 
 See [VALIDATION-v2.0.8.md](VALIDATION-v2.0.8.md) for the final APK, relevant tests, lint findings, update compatibility and device limits. Earlier reports retain the scope of their named builds; prior full-suite counts are not presented as new checks for this release.
 

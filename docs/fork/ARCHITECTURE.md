@@ -1,3 +1,11 @@
+# v2.0.9 — aliases and chat presentation
+
+Environment alias writes use the owned helper and explicit destination whitelist;
+transfer parses literal data, previews selected records and confirms replacements.
+Per-session chatScale changes native View geometry without restarting agents or
+changing request snapshots. See [aliases](ALIASES.md) and
+[chat scale](AGENT-CHAT-SCALE.md) for persistence, trust boundaries and limitations.
+
 # v2.0.8 — agent chat workflow
 
 This release builds on v2.0.7. Native X11 inputs, desktop/environment launchers
@@ -1423,11 +1431,11 @@ ZoomImage distinguishes tap from drag/pinch/cancel for performClick; sizing and
 render transforms are retained. No persistent data format or account migration.
 
 
-## Environment aliases (private preview)
+## Environment aliases (v2.0.9)
 
 See [Environment aliases](ALIASES.md) for the separate library, category and star
 pickers, environment-scoped shell files, write safeguards and restart semantics.
-This pending feature excludes Ubuntu AI and does not alter running sessions.
+This feature excludes Ubuntu AI and does not alter running sessions.
 
 [Chat scale](AGENT-CHAT-SCALE.md) is optional per-session schema8 presentation
 metadata. It uses baseline Android text/layout snapshots, stable transcript rows,

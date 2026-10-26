@@ -1,4 +1,4 @@
-# Environment aliases (private preview)
+# Environment aliases (v2.0.9)
 
 The Commands/Notes library has a separate **All aliases** filter. **+** opens two
 outlined choices: **New command** and **New alias**. An alias stores its short
