@@ -1,4 +1,4 @@
-# Agent chat test1 validation — 2026-10-26
+# Historical agent chat test1 validation — 2026-10-26
 
 Private test build, not a stable release or a publication approval. Base: published
 v2.0.7 plus its documentation commit b832b681. The abandoned native rotation

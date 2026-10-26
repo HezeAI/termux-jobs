@@ -1,3 +1,18 @@
+# Claude Android chat — v2.0.8
+
+The shared native chat UI supports Developer Markdown, outlined code Copy,
+downloadable file cards, saved file sorting, long-press attachment multi-selection,
+system gallery photo/video selection, scoped Stop and keyboard dismissal after
+acknowledged message sends. Attachments remain a draft until Send. Native CLI
+account/project/permission/history ownership remains unchanged. Restart an existing
+session with its saved chat when new attachment helpers are needed.
+
+See [current usage](USAGE.md), [release](RELEASE-v2.0.8.md) and
+[validation and device limits](VALIDATION-v2.0.8.md). The implementation records
+below are historical and retain the scope of their named versions.
+
+---
+
 # Claude: Android chat (private v1.5.21-test)
 
 New Claude launches share AgentChatView / AgentChatUi and the bounded presentation

@@ -1,4 +1,4 @@
-# Agent chat test2 validation — 2026-10-26
+# Historical agent chat test2 validation — 2026-10-26
 
 Follow-up to [test1](VALIDATION-chat-test1.md), installed by the developer. Device
 feedback requested an outlined Copy action, the opposite circular activity route,

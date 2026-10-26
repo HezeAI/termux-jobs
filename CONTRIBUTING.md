@@ -100,12 +100,12 @@ versionCode, release tag, результат проверки/ошибку ус�
 профиль JSON/Keystore. TCP-проверка не доказывает авторизацию, наличие agent.py
 не доказывает работоспособность агента. См. docs/fork/SERVERS.md.
 
-## Current stable build configuration (v1.7.5)
+## Current stable build configuration (v2.0.8)
 
 Local AI and its runtimes/dependencies were removed, not just gated. No
 TERMUX_PUBLIC_RELEASE flag or local-model preparation is required. Use the
 isolated environment, SDK copy and ARM64 overrides from FORK.md and build scripts.
-Stable versionName1.7.5/code1220; same release certificate is required for updates.
+Stable versionName2.0.8/code1413; same release certificate is required for updates.
 Historical protocols, source links and SDK/LoRA experiments are documented in
 [LOCAL-AI-RESEARCH.md](docs/fork/LOCAL-AI-RESEARCH.md). Do not reintroduce model
 weights, vendor SDK binaries, private prompts/chats or credentials in a PR.
@@ -130,3 +130,9 @@ in-app update/compatibility notes remain RU/EN.
 
 
 For Bionic-for-glibc reports, include the target/glibc version, GPU/Android API, renderer, exact driver ZIP name/SHA-256/source, Jobs GPU Test scene/size/VSync and whether the desktop or only a private probe was tested. Do not attach account files or private logs; see [known bridge limits](docs/fork/BIONIC_GLIBC.md).
+
+For v2.0.8 chat reports, include agent/CLI, Markdown block type, streaming state,
+Copy/expand behaviour, file type/size/count and source (environment/phone/gallery),
+sort order and draft-versus-sent state. For Stop/activity issues include whether
+the agent was working, which session was selected, screen refresh rate and whether
+Server + Agent/robot indicators differ. Do not include private chat contents.

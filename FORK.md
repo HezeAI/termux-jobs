@@ -1,4 +1,10 @@
-# Current release — v2.0.7 (code1410)
+# Current release — v2.0.8 (code 1413)
+
+Developer Markdown, arbitrary file cards, shared file sorting, attachment multi-selection and system media selection are native chat UI changes across four providers. A scoped Stop control and VSync-driven activity line target60FPS; acknowledged message sends dismiss the keyboard. Existing com.termux/signer/schema8, ARM64/Android 8+ app and Android 11+ X11 requirements remain. No data reset, account/rootfs migration or new graphics payload. Build tools and pinned native inputs remain repository-local. See [release](docs/fork/RELEASE-v2.0.8.md), [validation](docs/fork/VALIDATION-v2.0.8.md), [usage](docs/fork/USAGE.md) and [Markdown licenses](docs/fork/THIRD-PARTY.md).
+
+---
+
+# Historical release — v2.0.7 (code1410)
 
 Mesa 26.2.5 and on-demand components extend the existing graphics repository distribution. The accepted desktop/input behavior, Android8+/ARM64 app, Android11+ X11, com.termux/signer/schema8 and min26/target28/compile35 remain. No data reset, account migration or rootfs reinstallation. Build inputs are repository-local; optional theme/Alpine VirGL ZIPs are prepared separately and excluded from APK assets. See [release](docs/fork/RELEASE-v2.0.7.md), [validation](docs/fork/VALIDATION-v2.0.7.md) and [component sources](docs/fork/GRAPHICS-COMPONENTS.md).
 

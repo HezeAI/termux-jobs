@@ -1,0 +1,32 @@
+{
+  "ru": [
+    "Работать с AI-агентами через CLI в Termux прямо на телефоне стало ещё удобнее: новый Markdown и файлы для работы прямо в чате.",
+    "Новый Markdown Developer в чатах Codex, Claude, Gemini и OpenCode: заголовки, списки, цитаты, таблицы и карточки кода с подсветкой, номерами строк и кнопкой «Копировать».",
+    "Карточки скачивания для архивов, 3MF/STL, EXE/BAT и других файлов: входные и готовые файлы доступны прямо в чате.",
+    "Долгий тап включает выбор нескольких файлов. Добавлен системный выбор фото/видео из галереи; вложения остаются в черновике до отправки.",
+    "Сортировка во встроенном файловом менеджере рядом с домиком: имя, размер и дата в обоих направлениях, папки первыми.",
+    "Кнопка Stop останавливает текущую работу агента. Серый перечёркнутый значок означает ожидание; линия активности огибает кнопку и обновляется через VSync с целью 60 FPS.",
+    "После подтверждённой отправки сообщения клавиатура закрывается. При ошибке или изменении черновика текст сохраняется."
+  ],
+  "en": [
+    "Working with AI agents through CLI directly in Termux on your phone is now even more convenient, with Developer Markdown and files in the chat.",
+    "Developer Markdown in Codex, Claude, Gemini and OpenCode: headings, lists, quotes, tables and code cards with syntax colours, line numbers and Copy.",
+    "Downloadable cards for archives, 3MF/STL, EXE/BAT and other files: work with inputs and generated files directly in the chat.",
+    "Long-press to select multiple files. Add photos/videos from the system gallery; attachments remain in the draft until Send.",
+    "Saved file sorting beside Home: name, size or date in either direction, with folders first.",
+    "Stop current agent work with the hand button. Idle is grey/crossed out; the activity line circles the button with VSync updates targeting 60 FPS.",
+    "Hide the keyboard after acknowledged message sends. Failed sends and changed drafts keep their text."
+  ],
+  "compatibility": {
+    "ru": [
+      "Те же com.termux, подпись, ARM64 и schema8. Приложение Android 8+, X11 Android 11+. Код 1413. Сброс данных, перенос аккаунтов и переустановка окружений не требуются.",
+      "История чатов, пресеты, проекты и окружения сохраняются. Завершите важную работу перед обновлением. Для новых помощников вложений может потребоваться штатный перезапуск сессии с тем же чатом.",
+      "Рендеры X11, драйверы и нативные библиотеки не изменены. До 4 вложений, изображения до 100 МиБ, остальные файлы до 5 ГиБ; понимание содержимого зависит от модели/CLI. Stop не отменяет уже сделанные изменения файлов."
+    ],
+    "en": [
+      "Same com.termux, signer, ARM64 and schema8. Android 8+ app, Android 11+ X11. Code 1413. No data reset, account migration or environment reinstallation required.",
+      "Chat history, presets, projects and environments are retained. Finish important work before updating. A normal session restart with the same chat may be needed for the new attachment helpers.",
+      "X11 renderers, drivers and native libraries are unchanged. Up to 4 attachments, images up to 100 MiB, other files up to 5 GiB; model/CLI support determines content interpretation. Stop does not roll back completed file changes."
+    ]
+  }
+}

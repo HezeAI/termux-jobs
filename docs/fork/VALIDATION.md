@@ -1,4 +1,10 @@
-# Current release validation — v2.0.7
+# Current release validation — v2.0.8
+
+See [VALIDATION-v2.0.8.md](VALIDATION-v2.0.8.md) for the final APK, relevant tests, lint findings, update compatibility and device limits. Earlier reports retain the scope of their named builds; prior full-suite counts are not presented as new checks for this release.
+
+---
+
+# Historical release validation — v2.0.7
 
 See [VALIDATION-v2.0.7.md](VALIDATION-v2.0.7.md) for final APK identity, checks, compatibility and remaining limits. Component URL/size/SHA-256 verification covers every pinned download in this release. Device evidence is attributed to the developer; source checks do not establish universal driver or clean-device GUI compatibility.
 

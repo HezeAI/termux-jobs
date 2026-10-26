@@ -1,8 +1,7 @@
-# Development preview — agent chat workflow
+# v2.0.8 — agent chat workflow
 
-The next test build starts from published v2.0.7. It does not include the later
-rotation experiments. Native X11 inputs and desktop/environment launchers retain
-the stable implementation.
+This release builds on v2.0.7. Native X11 inputs, desktop/environment launchers
+and renderer payloads retain the established implementation.
 
 All four agent transcripts share native Markwon/CommonMark rendering. Markdown
 is presentation only: persisted raw messages and provider protocols remain intact.
@@ -21,7 +20,7 @@ presentation preference and does not rewrite paths or mutate listing metadata.
 The Stop control sends the existing chat-interrupt operation to the selected
 native session. It does not terminate the server or neighbouring agents. Its
 activity animation paints into a temporary parent overlay and retains the old
-one-pixel layout height. A single Choreographer callback drives a60Hz target;
+one-pixel layout height. A single Choreographer callback drives a 60 Hz target;
 geometry is cached without per-frame strings and draw does not schedule another
 redraw itself. Only the scheduled frame invalidates the line/overlay. Idle, hidden and detached states release that overlay.
 The accepted-send callback clears/hides the composer only when the same terminal

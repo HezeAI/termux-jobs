@@ -5,18 +5,17 @@
 Команды по-прежнему выполняются в настоящем Termux или выбранном окружении;
 интерфейс помогает организовать работу и не требует писать свою оболочку скриптов.
 
-## Next update preview: agent chats and files
+## v2.0.8 — Developer Markdown & agent chat improvements
 
-The development build adds native Developer-style Markdown to all four agent
-chats: headings, emphasis, lists, quotes, code cards with syntax colours and copy,
-and horizontally scrollable tables. It also adds downloadable cards for arbitrary
-regular files (including archives, 3MF/STL and EXE/BAT), long-press multi-selection,
-a system photo/video picker, saved file sorting, a scoped Stop button, and IME
-dismissal after an acknowledged send. Raw chat history and account data remain
-unchanged. This is a preview pending developer device validation, not a new stable
-release. Current stable downloads remain v2.0.7.
+Working with AI agents through CLI directly in Termux on your phone is now even more convenient. Read formatted replies, attach project files and receive ready-to-use results in the chat.
 
-## v2.0.7 — Mesa 26.2.5 and on-demand X11 components
+All four agent chats gain native **Developer-style Markdown**: code cards with syntax colours, line numbers and an outlined Copy button, headings, lists, quotes and horizontally scrollable tables. Work with archives, 3MF/STL, EXE/BAT and other regular files through downloadable chat cards. Long-press selects several attachments; the system gallery adds photos/videos into the draft. The shared file browser remembers name/size/date sorting.
+
+A scoped **Stop** hand button interrupts current agent work, with a display-synchronized activity line targeting 60 FPS. The keyboard hides after an acknowledged message send while failed sends and new drafts retain their input. Same com.termux/signer/schema8/ARM64 and Android requirements; **no data reset or environment reinstallation**. X11/native libraries and renderer payloads are unchanged. An existing agent process may need a normal session restart with its saved chat to load new attachment helpers.
+
+[Download v2.0.8](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.8) · [Release notes](docs/fork/RELEASE-v2.0.8.md) · [Validation](docs/fork/VALIDATION-v2.0.8.md) · [Usage](docs/fork/USAGE.md).
+
+## Historical v2.0.7 — Mesa 26.2.5 and on-demand X11 components
 
 Turnip + Zink in the seven Linux environments and the Bionic-for-glibc Mesa frontend now use **Mesa 26.2.5**. The Kali theme, Alpine VirGL client and default **a6xx-a7xx-a8xx** driver are prepared on demand from [Termux Job’s Components](https://github.com/HezeAI/termux-jobs-components#readme), with fixed versions, sizes and SHA-256. Existing valid caches work offline; running desktops adopt new libraries after stop/start. Distribution packages continue using their native repositories.
 
@@ -83,7 +82,7 @@ and audio. The fullscreen input control is lower and translucent.
 
 Includes the cumulative stability-audit fixes for agent chats, installer
 cancellation, backups/cleanup, persistence, transfers, updates, Android file
-providers, settings, images and notifications. Android8+/ARM64; X11 Android11+.
+providers, settings, images and notifications. Android 8+/ARM64; X11 Android 11+.
 Same package/signer/schema8, code1352; no valid-data reset or rootfs migration.
 Outside-HOME Android SAF links are intentionally refused; ordinary workspace and
 authorized shell access remain available. Read the compatibility notes before
@@ -126,7 +125,7 @@ files/builds as cards for preview, saving or explicit APK installation. Adds loc
 photo/video thumbnails, compact previews, Codex first-login assistance and an
 optional protected Gemini API-key field. Fixes OpenCode attachment admission.
 
-Android8+/ARM64, code1331, unchanged com.termux/signer/schema8. No reset or environment
+Android 8+/ARM64, code1331, unchanged com.termux/signer/schema8. No reset or environment
 migration. Restart agents with saved chats after updating. Gemini keys are device/
 profile-bound; duplicate/import requires re-entry. Video uses sampled frames without
 audio; model/CLI permissions still apply. HezeAI confirmed Codex image input and
@@ -138,7 +137,7 @@ OpenCode sending; other device/provider combinations need testing.
 
 **[Download v2.0.1](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.1)**.
 Fixes GPU window overlap, backup preset/history restoration and renderer component
-validation/repair. Android8+/ARM64; same package/signature and schema8, code1325.
+validation/repair. Android 8+/ARM64; same package/signature and schema8, code1325.
 No data reset. Repeated backup imports create separate preset copies.
 [Changes](docs/fork/RELEASE-v2.0.1.md) · [Validation](docs/fork/VALIDATION-v2.0.1.md).
 
@@ -163,7 +162,7 @@ Integrated XFCE desktops, graphics renderers and desktop applications.
 Coverage differs by device; this is not a claim that every renderer and clean
 installation was tested on both. Mali/Dimensity compatibility is not confirmed.
 
-Android8+/ARM64, unchanged `com.termux` package and signer, versionCode1325.
+Android 8+/ARM64, unchanged `com.termux` package and signer, versionCode1325.
 No general reset from v1.7.5; existing agents keep their selected environment
 until explicit migration/change. The old local-AI feature remains removed.
 The Termux:X11 core is integrated; a separate X11 app is not needed.
@@ -222,7 +221,7 @@ Desktop packages and optional drivers are downloaded after consent.
 Скачайте **Termux-Jobs-v2.0.2-arm64.apk** из
 [GitHub Releases](https://github.com/HezeAI/termux-jobs/releases/latest).
 Требования: **Android8.0+/API26, ARM64**. Пакет **com.termux**.
-Встроенный графический рабочий стол X11 требует **Android11+/API30**;
+Встроенный графический рабочий стол X11 требует **Android 11+/API30**;
 минимум Android8 относится к приложению и терминалу, а не к графическому виду.
 Для предыдущих APK Termux Job’s с тем же сертификатом доступно обновление
 поверх, в том числе через **шестерёнку → Проверить обновление**.
@@ -244,7 +243,7 @@ APK из другой сборки Termux с другой подписью не�
 proot-дистрибутивы автоматически не удаляются. Другие данные не очищаются.
 [Совместимость и ограничения](docs/fork/RELEASE-v2.0.0.md).
 
-**English:** Android8+/ARM64, com.termux, unchanged signer, code1320, schema8.
+**English:** Android 8+/ARM64, com.termux, unchanged signer, code1320, schema8.
 No general reset from1.7.5. Agent migration is optional and does not delete the
 original Ubuntu. Existing data/auth/history remain. Save active work before
 updating; Android may terminate running jobs. Upgrades from before1.5.3 retain

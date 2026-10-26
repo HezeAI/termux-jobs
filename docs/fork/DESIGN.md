@@ -1,8 +1,8 @@
-# Development preview — Developer chat style
+# v2.0.8 — Developer chat style
 
 Assistant replies use mint accents on dark native cards. Fenced code has a
 language label, syntax colours, separate line numbers, horizontal scrolling and
-a outlined Copy action with pressed feedback for the exact code. Long blocks expand in place; tables scroll
+an outlined Copy action with pressed feedback for the exact code. Long blocks expand in place; tables scroll
 horizontally. Read-only task markers remain display-only. Streaming reuses stable
 blocks and preserves the composer rather than rebuilding the chat.
 
@@ -15,7 +15,7 @@ not send a message. Arbitrary regular files retain compact type/name/size cards.
 A red filled hand between the agent limits and Server + Agent interrupts current
 work; idle shows a disabled grey crossed hand. While busy, the existing activity
 line travels around the hand through its right half first, then the left, and
-continues along the line using one animation. Android VSync drives a60FPS target,
+continues along the line using one animation. Android VSync drives a 60 FPS target,
 without recreating the chat; physical frame pacing remains a device check.
 Successful acknowledged message submission hides the keyboard unless the user
 has switched sessions or edited a new draft. Shell commands retain their existing

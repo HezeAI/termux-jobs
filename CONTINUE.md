@@ -1,3 +1,30 @@
+# Stable v2.0.8 — release preparation
+
+The developer authorized publication of the cumulative chat changes and requested
+an opening note that working with CLI agents in Termux on a phone is more
+convenient. Release title: v2.0.8 — Developer Markdown & agent chat improvements.
+
+Code1413/version2.0.8, same com.termux/signer/schema8/ARM64. APK:
+Termux-Jobs-v2.0.8-arm64.apk, 39773192 bytes,
+SHA2565dc7d350bf237a5c1eccd4487abd2d6814dc4cfde07c124cc1d64cee3773b952. See [release](docs/fork/RELEASE-v2.0.8.md),
+[validation](docs/fork/VALIDATION-v2.0.8.md) and UPDATE-NOTES-v2.0.8.json.
+109 JVM cases, eight Node suites,45 scoped Python X11 regressions including real
+private XFconf, modern lint5modules0errors/217warnings,
+required runtime/ABI/signature/ZIP/source-assets/secret checks pass. Native and
+asset payloads match test2; X11/driver/runtime code remains on the stable baseline.
+Actual phone frame pacing/gallery/IME and universal clean-install coverage are
+not inferred from mocks. No data reset, rootfs/account migration or installed
+session changes are required. Existing agent helpers may need a normal restart.
+
+Publish APK/update.json/SHA256SUMS/validation.json only after local metadata/source
+checks, then verify anonymous downloads, source tag, release body and latest-stable
+updater response. Do not overwrite older releases or component assets. Default
+branch fork/base should fast-forward from b832b681. Preserve the unrelated root
+worktree rotation experiments; active source is work/chat-file-cards. Header v2.0
+is unchanged. Next versionCode must exceed1413.
+
+---
+
 # Private agent-chat test2 — pending developer acceptance
 
 Test1 was installed; follow-up feedback requested a Copy outline and a smoother,

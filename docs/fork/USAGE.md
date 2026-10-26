@@ -1,4 +1,4 @@
-# Agent chat preview (next update)
+# Agent chats and files — v2.0.8
 
 The native Developer Markdown layout is shared by Codex, Claude, Gemini and
 OpenCode. Code cards show the language, syntax colours and separate line numbers;
@@ -36,12 +36,12 @@ The hand button between model/limits and Server + Agent interrupts the current
 agent request. It is red while available, grey and crossed out while idle. The
 activity cue enters the right half of its circle, crosses the top toward the
 left and continues right along the line. Its redraw is synchronized with Android
-display frames, targeting60FPS; actual smoothness still needs device verification.
+display frames, targeting 60 FPS; actual smoothness still needs device verification.
 Completed file changes are not rolled back.
 Sending a chat message hides the keyboard only after acknowledgement, while a
 failed send or a different selected session retains its current input state.
 
-These preview changes require device verification before stable publication.
+Device-specific gallery, IME and animation limits are recorded in [release validation](VALIDATION-v2.0.8.md).
 
 ---
 
