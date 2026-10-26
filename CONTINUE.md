@@ -1,31 +1,43 @@
-# Stable v2.0.8 — release preparation
+# Stable release: v2.0.8 — published and verified
 
-The developer authorized publication of the cumulative chat changes and requested
-an opening note that working with CLI agents in Termux on a phone is more
-convenient. Release title: v2.0.8 — Developer Markdown & agent chat improvements.
+Release: https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.8
+Immutable tag/source commit: a22aa3bfcb64e9f2e5f19e5181c5186c7d357526.
+Termux-Jobs-v2.0.8-arm64.apk: 39773192 bytes,
+SHA2565dc7d350bf237a5c1eccd4487abd2d6814dc4cfde07c124cc1d64cee3773b952. Code1413/version2.0.8, same com.termux/signer/schema8/ARM64,
+Android8+ app/Android11+ X11. Header v2.0 remains. No data reset/account/rootfs
+migration is required; existing agent helpers may need a normal session restart.
 
-Code1413/version2.0.8, same com.termux/signer/schema8/ARM64. APK:
-Termux-Jobs-v2.0.8-arm64.apk, 39773192 bytes,
-SHA2565dc7d350bf237a5c1eccd4487abd2d6814dc4cfde07c124cc1d64cee3773b952. See [release](docs/fork/RELEASE-v2.0.8.md),
-[validation](docs/fork/VALIDATION-v2.0.8.md) and UPDATE-NOTES-v2.0.8.json.
-109 JVM cases, eight Node suites,45 scoped Python X11 regressions including real
-private XFconf, modern lint5modules0errors/217warnings,
-required runtime/ABI/signature/ZIP/source-assets/secret checks pass. Native and
-asset payloads match test2; X11/driver/runtime code remains on the stable baseline.
-Actual phone frame pacing/gallery/IME and universal clean-install coverage are
-not inferred from mocks. No data reset, rootfs/account migration or installed
-session changes are required. Existing agent helpers may need a normal restart.
+The release adds Developer Markdown, generic downloadable file cards, saved file
+sorting, long-press multi-selection, system gallery, scoped Stop with a reversed
+VSync activity route targeting60FPS, and keyboard dismissal after acknowledged
+message sends. The opening English note emphasizes easier CLI-agent work directly
+in Termux on a phone. HezeAI authorized publication; credit ends every release:
+AI development assistance: OpenAI Codex.
 
-Publish APK/update.json/SHA256SUMS/validation.json only after local metadata/source
-checks, then verify anonymous downloads, source tag, release body and latest-stable
-updater response. Do not overwrite older releases or component assets. Default
-branch fork/base should fast-forward from b832b681. Preserve the unrelated root
-worktree rotation experiments; active source is work/chat-file-cards. Header v2.0
-is unchanged. Next versionCode must exceed1413.
+109 relevant JVM cases/16classes, eight Node suites and45 scoped Python X11
+regressions pass. Modern lint:5modules,0errors/217warnings, no infrastructure
+failure. The signed APK passes package/version/ABI/certificate/ZIP/assets/runtime/
+secret checks. Native and asset payloads match test2; X11/renderer sources and
+component tags are unchanged. Device frame pacing/gallery/IME and every-model
+account workflows are not inferred from tests. See release and validation docs.
+
+All four public assets (APK,update.json,SHA256SUMS,validation.json) were anonymously
+downloaded via verified HTTPS and matched local sizes/hashes and GitHub digests.
+Latest-stable/updater schema1 and RU/EN compatibility match. Tagged documentation,
+release body/credit and component README accessibility were verified. The APK
+verification copy required HTTP Range resumption after an interrupted stream;
+its final complete SHA-256 matched the source and GitHub digest. Preserve
+published tag/assets and older releases. Documentation-only follow-ups do not
+rebuild an unchanged APK or move its tag. Next versionCode must exceed1413.
+
+Active development source remains the isolated work/chat-file-cards checkout at
+/root/termux-fork/.verification/chat-file-cards/source. Do not build or discard the
+unrelated root worktree rotation experiments. Preserve active terminals, rootfs, tunnels, server services and the shared SDK
+when continuing development.
 
 ---
 
-# Private agent-chat test2 — pending developer acceptance
+# Historical private agent-chat test2 — superseded by v2.0.8
 
 Test1 was installed; follow-up feedback requested a Copy outline and a smoother,
 reversed Stop activity route. Those changes are implemented. The line now uses
@@ -42,7 +54,7 @@ must exceedcode1412. Preserve the separate root-worktree rotation experiments.
 
 ---
 
-# Private agent-chat test1 — pending developer acceptance
+# Historical private agent-chat test1 — superseded by v2.0.8
 
 Active branch work/chat-file-cards is based on stable v2.0.7/b832b681. It adds
 Developer Markdown, arbitrary output cards, shared sorting, long-press attachment

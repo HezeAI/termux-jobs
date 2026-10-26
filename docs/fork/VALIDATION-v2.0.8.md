@@ -109,3 +109,15 @@ The schema1 updater metadata includes RU/EN changes and compatibility before
 installation, preserving the format consumed by installed v1.0.19 clients. Public
 verification downloads all four assets and checks their hashes, release status,
 latest-stable metadata, source tag and documentation links.
+
+## Publication verification
+
+[v2.0.8](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.8) is the latest stable release. The immutable source tag
+points to `a22aa3bfcb64e9f2e5f19e5181c5186c7d357526`. All four assets were downloaded anonymously over
+verified HTTPS and matched local lengths, SHA-256 and GitHub digests. The APK
+verification copy resumed via HTTP Range after an interrupted stream; its final
+complete hash matched. Downloaded
+checksums/updater/validation records agree. The legacy-compatible latest-stable
+updater response, RU/EN compatibility, release body/credit, tagged documentation
+and component information link were checked. This documentation record does not
+alter the published tag or APK.
