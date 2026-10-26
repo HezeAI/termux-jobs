@@ -9,7 +9,7 @@ android {
     sourceSets.main {
         jniLibs.srcDirs = [rootProject.file('.tools/x11-runtime/jniLibs')]
         assets.srcDirs = [file('src/main/assets'),rootProject.file('.tools/x11-runtime/assets')]
-        assets.exclude 'x11-observe.py','x11-bionic-glibc.zip','licenses/Garcon-COPYING.txt','**/__pycache__/**'
+        assets.exclude 'x11-style.zip','x11-virgl-alpine.zip','x11-observe.py','x11-bionic-glibc.zip','licenses/Garcon-COPYING.txt','**/__pycache__/**'
     }
     defaultConfig {
         buildConfigField 'String', 'NATIVE_SHA256', '"8ad76408710c21b9a61d3db07900e5bb4e3f88efb1670ac0ff3a2166f403567d"'

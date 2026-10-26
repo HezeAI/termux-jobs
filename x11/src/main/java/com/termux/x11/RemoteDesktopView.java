@@ -89,11 +89,12 @@ public final class RemoteDesktopView extends FrameLayout implements SurfaceHolde
         // desktop mode. In the embedded app window keep the existing stable inset.
         boolean edgeToEdge=(getWindowSystemUiVisibility()&View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)!=0;
         int stableBottom=edgeToEdge?0:bars.bottom;
-        int visible=X11Viewport.visibleHeight(surface.getHeight(),bounds.bottom,position[1],insets.getInsets(WindowInsets.Type.ime()).bottom);
+        int keyboardBottom=insets.getInsets(WindowInsets.Type.ime()).bottom;
+        int visible=X11Viewport.visibleHeight(surface.getHeight(),bounds.bottom,position[1],keyboardBottom);
         // Custom logical resolution still needs the full, unobscured host size.
         // An IME resize changes the visible crop, never the desktop's transform.
         int bottomGap=Math.max(0,getHeight()-surface.getBottom());
-        return screenSettings.viewport(viewport,surface.getWidth(),visible,bounds.width(),bounds.height(),position[1]-bounds.top,stableBottom+bottomGap);
+        return screenSettings.viewport(viewport,surface.getWidth(),visible,bounds.width(),bounds.height(),position[1]-bounds.top,stableBottom+bottomGap,keyboardBottom>0);
     }
     private void putGeometry(Bundle q){X11Viewport.Size size=geometry();q.putInt("width",size.width);q.putInt("height",size.height);q.putInt("visibleHeight",size.visibleHeight);screenSettings.putMode(q,presentationLandscape());}
     private void resize(){

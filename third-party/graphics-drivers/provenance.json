@@ -1,0 +1,18 @@
+{
+  "file": "Turnip-a6xx-a7xx-a8xx.zip",
+  "bytes": 3507242,
+  "sha256": "ce35642c5d93ecdfa08b730f80fd738ad71b473cdd7aa3dc58c37d2e6b1e984f",
+  "driverId": "ce35642c5d93ecdfa08b730f80fd738ad71b473cdd7aa3dc58c37d2e6b1e984f",
+  "name": "a6xx-a7xx-a8xx",
+  "originalSha256": "45b92cecfd9a862dd035b784bec94fe87799ef2869018fdeca62f8f7c8798205",
+  "author": "GameHub",
+  "driverVersion": "26.3.0-devel-b00479181d",
+  "librarySHA256": "90c056d7919a1da8ef0fd3131403729b81b05fe3c7373e772e3ceaa522ad397e",
+  "distributionCredit": "StevenMXZ",
+  "upstreamMetadataAuthor": "GameHub",
+  "changes": [
+    "Only meta.json name changed to a6xx-a7xx-a8xx as requested; library bytes unchanged."
+  ],
+  "compatibility": "User-selectable Bionic Adreno driver; filename is not proof of every GPU/API/device being supported. Isolated Adreno 830 bridge Vulkan/GLX pixel, occlusion and VSync checks passed; fresh-device GUI and Termux-wrapper validation remain separate.",
+  "source": "Developer supplied Download archive; Mesa build identifier retained from upstream metadata."
+}

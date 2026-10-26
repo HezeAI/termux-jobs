@@ -11,6 +11,32 @@ import static org.junit.Assert.*;
 public class WorkspaceDesktopWrapperTest {
  private TermuxActivity activity(){TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.getSharedPreferences("workspace-x11",0).edit().clear().commit();return a;}
  private Field field(Class<?> type,String name)throws Exception{Field f=type.getDeclaredField(name);f.setAccessible(true);return f;}
+ @Test public void freshDefaultLibraryNeedsNeitherPythonNorDownload(){
+  TermuxActivity a=activity();WorkspaceDesktopWrapper wrapper=new WorkspaceDesktopWrapper(a);
+  try{wrapper.showDrivers(()->false,()->{});AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();assertEquals(1,d.getListView().getAdapter().getCount());assertFalse(wrapper.busy());assertEquals("a6xx-a7xx-a8xx",d.getListView().getAdapter().getItem(0));assertNull(WorkspaceDesktopWrapper.metadata(a));d.dismiss();}finally{wrapper.close();}
+ }
+ @Test public void everyWrapperHasImportedTrashButBuiltinHasNoneAndDeletionAsksFirst()throws Exception{
+  TermuxActivity a=activity();Method show=WorkspaceDesktopWrapper.class.getDeclaredMethod("driverChoices",JSONArray.class,BooleanSupplier.class,Runnable.class);show.setAccessible(true);
+  String id=new String(new char[64]).replace('\0','c');JSONObject value=new JSONObject().put("id",id).put("name","Imported driver").put("minApi",99);
+  for(String target:new String[]{"termux","ubuntu","debian","fedora","opensuse","void","archlinux"}){
+   WorkspaceDesktopWrapper wrapper=new WorkspaceDesktopWrapper(a,target);
+   try{
+    show.invoke(wrapper,new JSONArray().put(value),(BooleanSupplier)()->false,(Runnable)()->{});
+    AlertDialog list=ShadowAlertDialog.getLatestAlertDialog();ListAdapter adapter=list.getListView().getAdapter();
+    View builtin=adapter.getView(0,null,list.getListView());assertNull(builtin.findViewWithTag("wrapper-remove-"+WorkspaceDesktopWrapper.DEFAULT_DRIVER_ID));
+    View imported=adapter.getView(1,null,list.getListView());View trash=imported.findViewWithTag("wrapper-remove-"+id);assertNotNull(target,trash);assertTrue(trash.isEnabled());trash.performClick();
+    AlertDialog confirm=ShadowAlertDialog.getLatestAlertDialog();assertNotSame(list,confirm);assertFalse(list.isShowing());assertTrue(confirm.isShowing());assertNotNull(confirm.getButton(AlertDialog.BUTTON_POSITIVE));assertNotNull(confirm.getButton(AlertDialog.BUTTON_NEGATIVE));assertFalse(wrapper.busy());assertNull(WorkspaceDesktopWrapper.metadata(a,target));confirm.dismiss();
+   }finally{wrapper.close();}
+  }
+ }
+ @Test public void builtinChoiceIsDeferredAndScopedAndDoesNotReplaceImportedDriver()throws Exception{
+  TermuxActivity a=activity();
+  assertTrue(WorkspaceDesktopWrapper.builtinSelected(a,"termux"));assertEquals("a6xx-a7xx-a8xx",WorkspaceDesktopWrapper.driverLabel(a));assertNull(WorkspaceDesktopWrapper.metadata(a));assertFalse(WorkspaceDesktopWrapper.installed(a));
+  JSONObject imported=saved(a);assertFalse(WorkspaceDesktopWrapper.builtinSelected(a,"termux"));assertEquals("Turnip Gen8 V38",WorkspaceDesktopWrapper.driverLabel(a));
+  WorkspaceDesktopWrapper.chooseBuiltin(a,"termux");assertEquals("a6xx-a7xx-a8xx",WorkspaceDesktopWrapper.driverLabel(a));assertEquals(imported.getString("id"),WorkspaceDesktopWrapper.metadata(a).getString("id"));assertFalse(WorkspaceDesktopWrapper.installed(a));
+  for(String target:new String[]{"ubuntu","debian","fedora","opensuse","void","archlinux"}){assertTrue(WorkspaceDesktopWrapper.builtinSelected(a,target));WorkspaceDesktopWrapper.chooseImported(a,target);assertTrue(WorkspaceDesktopWrapper.builtinSelected(a,"termux"));}
+  WorkspaceDesktopWrapper.chooseImported(a,"termux");assertEquals("Turnip Gen8 V38",WorkspaceDesktopWrapper.driverLabel(a));
+ }
  @Test public void wrapperIsShownAndSelectedOnlyForTermux(){
   TermuxActivity a=activity();
   for(String target:new String[]{"termux","ubuntu","debian","alpine","fedora","opensuse","void","archlinux"}){
@@ -35,9 +61,10 @@ public class WorkspaceDesktopWrapperTest {
    p.environment="ubuntu";ui.menu();d=ShadowAlertDialog.getLatestAlertDialog();assertNull(d.getWindow().getDecorView().findViewWithTag("desktop-wrapper-folder"));assertNull(d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-wrapper-driver"));d.dismiss();
   }finally{ui.close();}
  }
- @Test public void missingDriverShowsActionableFailureWithoutStartingInstaller(){
-  TermuxActivity a=activity();WorkspaceDesktopWrapper wrapper=new WorkspaceDesktopWrapper(a);boolean[] finished={false},updated={false};
-  try{wrapper.prepare(()->false,()->updated[0]=true,new WorkspaceDesktopGpu.Inline(){public void started(Runnable cancel){fail();}public void progress(int n,String text){fail();}public void finished(boolean success,String report){assertFalse(success);assertTrue(report.contains("ZIP"));finished[0]=true;}});assertTrue(finished[0]);assertTrue(updated[0]);assertFalse(wrapper.busy());}finally{wrapper.close();}
+ @Test public void removedSelectionFallsBackEvenIfUiCallbackWasInterrupted()throws Exception{
+  TermuxActivity a=activity();saved(a);WorkspaceDesktopWrapper.chooseImported(a,"termux");assertFalse(WorkspaceDesktopWrapper.builtinSelected(a,"termux"));
+  Files.delete(new File(WorkspaceDesktopWrapper.base(a),"current.json").toPath());
+  assertTrue(WorkspaceDesktopWrapper.builtinSelected(a,"termux"));assertEquals("a6xx-a7xx-a8xx",WorkspaceDesktopWrapper.driverLabel(a));assertFalse(WorkspaceDesktopWrapper.installed(a));
  }
  @Test public void serviceRejectsWrapperForAllGuestsAndLiveSwitchForTermux()throws Exception{
   com.termux.x11.X11Service service=Robolectric.buildService(com.termux.x11.X11Service.class).get();Class<?> type=com.termux.x11.X11Service.class;
@@ -74,8 +101,8 @@ public class WorkspaceDesktopWrapperTest {
   }finally{ui.close();}
   WorkspaceDesktopWrapper wrapper=new WorkspaceDesktopWrapper(a);try{
    Method show=WorkspaceDesktopWrapper.class.getDeclaredMethod("driverChoices",JSONArray.class,BooleanSupplier.class,Runnable.class);show.setAccessible(true);JSONArray entries=new JSONArray().put(value).put(new JSONObject().put("id",new String(new char[64]).replace('\0','b')).put("name","Future driver").put("minApi",99));boolean[] updated={false};
-   show.invoke(wrapper,entries,(BooleanSupplier)()->false,(Runnable)()->updated[0]=true);AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();assertEquals(2,d.getListView().getAdapter().getCount());assertTrue(d.getListView().getAdapter().isEnabled(0));assertFalse(d.getListView().getAdapter().isEnabled(1));
-   d.getListView().performItemClick(d.getListView().getAdapter().getView(0,null,d.getListView()),0,0);assertTrue(updated[0]);assertFalse(wrapper.busy());assertEquals(value.getString("id"),WorkspaceDesktopWrapper.metadata(a).getString("id"));
+   show.invoke(wrapper,entries,(BooleanSupplier)()->false,(Runnable)()->updated[0]=true);AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();assertEquals(3,d.getListView().getAdapter().getCount());assertTrue(d.getListView().getAdapter().isEnabled(0));assertTrue(d.getListView().getAdapter().isEnabled(1));assertTrue(d.getListView().getAdapter().isEnabled(2));View future=d.getListView().getAdapter().getView(2,null,d.getListView());assertNotNull(future.findViewWithTag("wrapper-remove-"+new String(new char[64]).replace('\0','b')));
+   d.getListView().performItemClick(d.getListView().getAdapter().getView(1,null,d.getListView()),1,1);assertTrue(updated[0]);assertFalse(wrapper.busy());assertEquals(value.getString("id"),WorkspaceDesktopWrapper.metadata(a).getString("id"));
   }finally{wrapper.close();}
  }
 }

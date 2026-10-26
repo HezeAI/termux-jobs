@@ -43,7 +43,7 @@ final class DesktopProcess implements Closeable {
         File script=asset(context,base,"x11-desktop.sh"),guardian=asset(context,base,"x11-guardian.sh");
         if(renderer.equals("bionic-glibc")){asset(context,base,"x11-wrapper.py");asset(context,base,"x11-bionic-glibc.py");asset(context,base,"x11-bionic-glibc-env.sh");}
         if(target.equals("termux")&&renderer.equals("wrapper"))asset(context,base,"x11-wrapper.py");
-        if(target.equals("alpine")&&operation.equals("run")&&renderer.equals("virgl")){asset(context,base,"x11-virgl-client.py");asset(context,base,"x11-virgl-alpine.zip");}
+        if(target.equals("alpine")&&renderer.equals("virgl")){asset(context,base,"x11-virgl-client.py");asset(context,base,"x11-extras.py");}
         asset(context,base,"x11-virgl.sh");asset(context,base,"x11-virgl-env.sh");asset(context,base,"x11-virgl-setup.sh");asset(context,base,"x11-gpu.py");asset(context,base,"x11-gpu-env.sh");asset(context,base,"x11-session.sh");asset(context,base,"x11-session-bus.py");asset(context,base,"x11-ready.py");asset(context,base,"x11-focus.py");if(target.equals("alpine"))asset(context,base,"x11-alpine-compat.so");if(target.equals("fedora")||target.equals("archlinux"))asset(context,base,"x11-fedora-glycin.so");asset(context,base,"x11-audio.sh");asset(context,base,"x11-native-desktop.sh");asset(context,base,"x11-native-programs.py");asset(context,base,"x11-firefox-dns.py");
         asset(context,base,"x11-gpu-tools.py");asset(context,base,"x11-gpu-test.py");asset(context,base,"x11-gpu-test-setup.py");asset(context,base,"x11-bookmarks.py");asset(context,base,"x11-wallpaper.py");asset(context,base,"x11-default-wallpaper.png");asset(context,base,"x11-launchers.py");asset(context,base,"x11-maintenance.py");
         if(target.equals("opensuse")||target.equals("fedora")){asset(context,base,"x11-openh264.py");asset(context,base,"x11-openh264.so");if(target.equals("fedora"))asset(context,base,"x11-gst-openh264.so");}
@@ -54,7 +54,7 @@ final class DesktopProcess implements Closeable {
                 if(Files.isRegularFile(file.toPath(),java.nio.file.LinkOption.NOFOLLOW_LINKS))Files.delete(file.toPath());
             }
         }
-        if(supportsStyle(target)&&operation.equals("run")){asset(context,base,"x11-style.py");asset(context,base,"x11-scale.py");asset(context,base,"x11-scale-live.py");asset(context,base,"x11-style.zip");}
+        if(supportsStyle(target)&&operation.equals("run")){asset(context,base,"x11-style.py");asset(context,base,"x11-scale.py");asset(context,base,"x11-scale-live.py");}
         String bin=TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH;
         if(!new File(bin,"setsid").canExecute())throw new IOException("setsid is required (Termux util-linux)");
         java.util.List<String> command=new java.util.ArrayList<>(java.util.Arrays.asList(bin+"/setsid",bin+"/bash","--noprofile","--norc",guardian.getPath()));
@@ -65,6 +65,15 @@ final class DesktopProcess implements Closeable {
         for(String item:TermuxShellUtils.buildEnvironment(context,false,TermuxConstants.TERMUX_HOME_DIR_PATH)){int eq=item.indexOf('=');if(eq>0)builder.environment().put(item.substring(0,eq),item.substring(eq+1));}
         builder.environment().put("JOBS_X11_STYLE",termuxStyle?"1":"0");builder.environment().put("JOBS_X11_SCALE",Integer.toString(interfaceScale));builder.environment().put("JOBS_X11_RENDERER",renderer);builder.environment().put("JOBS_X11_GARCON_FILTER","0");builder.environment().put("JOBS_X11_DISPLAY",Integer.toString(X11Environment.forTarget(target).display));
         if(focusToken!=null)builder.environment().put("JOBS_X11_FOCUS_TOKEN",focusToken);
+        builder.redirectErrorStream(true);return new DesktopProcess(builder.start());
+    }
+    static DesktopProcess extras(Context context,File base)throws Exception{
+        File script=asset(context,base,"x11-extras.py"),guardian=asset(context,base,"x11-guardian.sh");
+        String bin=TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH;
+        if(!new File(bin,"setsid").canExecute())throw new IOException("setsid is required (Termux util-linux)");
+        ProcessBuilder builder=new ProcessBuilder(bin+"/setsid",bin+"/bash","--noprofile","--norc",guardian.getPath(),bin+"/python3","-B",script.getPath(),"kali-style",base.getPath());
+        builder.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));builder.environment().clear();
+        for(String item:TermuxShellUtils.buildEnvironment(context,false,TermuxConstants.TERMUX_HOME_DIR_PATH)){int eq=item.indexOf('=');if(eq>0)builder.environment().put(item.substring(0,eq),item.substring(eq+1));}
         builder.redirectErrorStream(true);return new DesktopProcess(builder.start());
     }
     static DesktopProcess scale(Context context,File base,String target,String token,int percent)throws Exception{
@@ -89,7 +98,7 @@ final class DesktopProcess implements Closeable {
     static DesktopProcess virgl(Context context,File base,String target)throws Exception{
         if(!VirglInstaller.supported(target))throw new IllegalArgumentException("Unsupported VirGL target");
         File script=asset(context,base,"x11-virgl-setup.sh"),guardian=asset(context,base,"x11-guardian.sh");
-        if(target.equals("alpine")){asset(context,base,"x11-virgl-client.py");asset(context,base,"x11-virgl-alpine.zip");}
+        if(target.equals("alpine")){asset(context,base,"x11-virgl-client.py");asset(context,base,"x11-extras.py");}
         String bin=TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH;
         if(!new File(bin,"setsid").canExecute())throw new IOException("setsid is required (Termux util-linux)");
         ProcessBuilder builder=new ProcessBuilder(bin+"/setsid",bin+"/bash","--noprofile","--norc",guardian.getPath(),bin+"/bash","--noprofile","--norc",script.getPath(),"install",target,base.getPath());

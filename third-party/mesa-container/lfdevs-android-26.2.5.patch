@@ -1,0 +1,2514 @@
+--- a/meson.build
++++ b/meson.build
+@@ -359,6 +359,10 @@
+   with_asahi_vk,
+   with_intel_virtio,
+ ].contains(true)
++
++if freedreno_kmds.contains('kgsl')
++  pre_args += '-DHAVE_FREEDRENO_KGSL'
++endif
+ 
+ with_dri = false
+ if with_gallium and (system_has_kms_drm or (with_gallium_zink and (freedreno_kmds.contains('kgsl') or host_machine.system() == 'darwin')))
+--- a/src/egl/drivers/dri2/egl_dri2.c
++++ b/src/egl/drivers/dri2/egl_dri2.c
+@@ -830,6 +830,9 @@
+    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+    _EGLDevice *dev;
+    int render_fd;
++
++   if (disp->Options.Kgsl || disp->Options.Zink)
++      software = true;
+ 
+    /* If we're not software, we need a DRM node FD */
+    assert(software || dri2_dpy->fd_render_gpu >= 0);
+--- a/src/egl/drivers/dri2/platform_drm.c
++++ b/src/egl/drivers/dri2/platform_drm.c
+@@ -628,6 +628,8 @@
+ 
+          dri2_dpy->fd_display_gpu =
+             loader_open_device(drm->nodes[DRM_NODE_PRIMARY]);
++      } else if (disp->Options.Kgsl) {
++         dri2_dpy->fd_display_gpu = loader_open_device("/dev/kgsl-3d0");
+       } else {
+          _EGLDevice *dev_list = _eglGlobal.DeviceList;
+          drmDevicePtr drm;
+@@ -668,6 +670,8 @@
+    if (!dri2_dpy->gbm_dri->software) {
+       dri2_dpy->fd_render_gpu =
+          get_fd_render_gpu_drm(dri2_dpy->gbm_dri, dri2_dpy->fd_display_gpu);
++      if (dri2_dpy->fd_render_gpu < 0 && disp->Options.Kgsl)
++         dri2_dpy->fd_render_gpu = dri2_dpy->fd_display_gpu;
+       if (dri2_dpy->fd_render_gpu < 0) {
+          err = "DRI2: failed to get compatible render device";
+          goto cleanup;
+--- a/src/egl/drivers/dri2/platform_surfaceless.c
++++ b/src/egl/drivers/dri2/platform_surfaceless.c
+@@ -394,6 +394,36 @@
+       driver_loaded = surfaceless_probe_device_sw(disp);
+    }
+ 
++   if (!driver_loaded && disp->Options.Kgsl) {
++      dri2_dpy->fd_render_gpu = loader_open_device("/dev/kgsl-3d0");
++      if (dri2_dpy->fd_render_gpu >= 0) {
++         dri2_dpy->fd_display_gpu = dri2_dpy->fd_render_gpu;
++         dri2_dpy->driver_name = strdup("kgsl");
++
++         if (dri2_dpy->driver_name) {
++            dri2_detect_swrast_kopper(disp);
++            dri2_dpy->loader_extensions = image_loader_extensions;
++
++            /* KGSL is not enumerated as an EGLDevice, but it still needs a
++             * DRI screen before dri2_setup_screen() reads screen caps.
++             */
++            if (dri2_create_screen(disp)) {
++               driver_loaded = true;
++            } else {
++               _eglLog(_EGL_WARNING, "DRI2: failed to create kgsl screen");
++            }
++         }
++
++         if (!driver_loaded) {
++            free(dri2_dpy->driver_name);
++            dri2_dpy->driver_name = NULL;
++            close(dri2_dpy->fd_render_gpu);
++            dri2_dpy->fd_display_gpu = -1;
++            dri2_dpy->fd_render_gpu = -1;
++         }
++      }
++   }
++
+    if (!driver_loaded) {
+       err = "DRI2: failed to load driver";
+       goto cleanup;
+--- a/src/egl/drivers/dri2/platform_wayland.c
++++ b/src/egl/drivers/dri2/platform_wayland.c
+@@ -2649,6 +2649,9 @@
+       dmabuf_feedback_format_table_fini(&dri2_dpy->format_table);
+    }
+ 
++   if (dri2_dpy->kopper)
++      return true;
++
+ #ifdef HAVE_BIND_WL_DISPLAY
+    /* We couldn't retrieve a render node from the dma-buf feedback (or the
+     * feedback was not advertised at all), so we must fallback to wl_drm. */
+@@ -2675,6 +2678,7 @@
+ dri2_initialize_wayland_drm(_EGLDisplay *disp)
+ {
+    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
++   bool using_kgsl = false;
+ 
+    if (dri2_wl_formats_init(&dri2_dpy->formats) < 0)
+       goto cleanup;
+@@ -2708,34 +2712,59 @@
+    if (roundtrip(dri2_dpy) < 0)
+       goto cleanup;
+ 
+-   if (!dri2_initialize_wayland_drm_extensions(dri2_dpy))
+-      goto cleanup;
+-
+-   loader_get_user_preferred_fd(&dri2_dpy->fd_render_gpu,
+-                                &dri2_dpy->fd_display_gpu);
+-
+-   if (dri2_dpy->fd_render_gpu != dri2_dpy->fd_display_gpu) {
+-      free(dri2_dpy->device_name);
+-      dri2_dpy->device_name =
+-         loader_get_device_name_for_fd(dri2_dpy->fd_render_gpu);
+-      if (!dri2_dpy->device_name) {
+-         _eglError(EGL_BAD_ALLOC, "wayland-egl: failed to get device name "
+-                                  "for requested GPU");
++   if (!dri2_initialize_wayland_drm_extensions(dri2_dpy)) {
++      if (disp->Options.Kgsl) {
++         dri2_dpy->fd_render_gpu = loader_open_device("/dev/kgsl-3d0");
++         using_kgsl = dri2_dpy->fd_render_gpu != -1;
++      } else {
+          goto cleanup;
+       }
+    }
+ 
+-   /* we have to do the check now, because loader_get_user_preferred_fd
+-    * will return a render-node when the requested gpu is different
+-    * to the server, but also if the client asks for the same gpu than
+-    * the server by requesting its pci-id */
+-   dri2_dpy->is_render_node =
+-      drmGetNodeTypeFromFd(dri2_dpy->fd_render_gpu) == DRM_NODE_RENDER;
+-
+-   if (disp->Options.Zink)
+-      dri2_dpy->driver_name = strdup("zink");
+-   else
+-      dri2_dpy->driver_name = loader_get_driver_for_fd(dri2_dpy->fd_render_gpu);
++   /* On the kgsl stack the compositor advertises neither wl_drm nor a v4
++    * dma-buf feedback main device, so the paths above can leave us without a
++    * render GPU fd even though _extensions() "succeeded" (v3 dma-buf only).
++    * Open the kgsl GPU node directly as a last resort so the native freedreno
++    * GL driver still comes up instead of leaving fd = -1 (-> dri2 screen
++    * creation fails, black window). */
++   if (dri2_dpy->fd_render_gpu == -1) {
++      dri2_dpy->fd_render_gpu = loader_open_device("/dev/kgsl-3d0");
++      if (dri2_dpy->fd_render_gpu == -1)
++         goto cleanup;
++      using_kgsl = true;
++   }
++
++   if (using_kgsl) {
++      dri2_dpy->fd_display_gpu = dri2_dpy->fd_render_gpu;
++      dri2_dpy->is_render_node = false;
++      dri2_dpy->driver_name = strdup("kgsl");
++   } else {
++      loader_get_user_preferred_fd(&dri2_dpy->fd_render_gpu,
++                                   &dri2_dpy->fd_display_gpu);
++
++      if (dri2_dpy->fd_render_gpu != dri2_dpy->fd_display_gpu) {
++         free(dri2_dpy->device_name);
++         dri2_dpy->device_name =
++            loader_get_device_name_for_fd(dri2_dpy->fd_render_gpu);
++         if (!dri2_dpy->device_name) {
++            _eglError(EGL_BAD_ALLOC, "wayland-egl: failed to get device name "
++                                     "for requested GPU");
++            goto cleanup;
++         }
++      }
++
++      /* we have to do the check now, because loader_get_user_preferred_fd
++       * will return a render-node when the requested gpu is different
++       * to the server, but also if the client asks for the same gpu than
++       * the server by requesting its pci-id */
++      dri2_dpy->is_render_node =
++         drmGetNodeTypeFromFd(dri2_dpy->fd_render_gpu) == DRM_NODE_RENDER;
++
++      if (disp->Options.Zink)
++         dri2_dpy->driver_name = strdup("zink");
++      else
++         dri2_dpy->driver_name = loader_get_driver_for_fd(dri2_dpy->fd_render_gpu);
++   }
+    if (dri2_dpy->driver_name == NULL) {
+       _eglError(EGL_BAD_ALLOC, "DRI2: failed to get driver name");
+       goto cleanup;
+--- a/src/egl/drivers/dri2/platform_x11_dri3.c
++++ b/src/egl/drivers/dri2/platform_x11_dri3.c
+@@ -537,7 +537,7 @@
+             _eglLog(_EGL_WARNING, "DRI3: Failed to initialize");
+       }
+ 
+-      return false;
++      return true;
+    }
+ 
+    loader_get_user_preferred_fd(&dri2_dpy->fd_render_gpu,
+--- a/src/egl/main/eglapi.c
++++ b/src/egl/main/eglapi.c
+@@ -684,7 +684,8 @@
+                  "Found 'LIBGL_ALWAYS_SOFTWARE' set, will use a CPU renderer");
+ 
+       const char *env = os_get_option("MESA_LOADER_DRIVER_OVERRIDE");
+-      disp->Options.Zink = env && !strcmp(env, "zink");
++      disp->Options.Zink = !env || !strcmp(env, "zink");
++      disp->Options.Kgsl = env && !strcmp(env, "kgsl");
+ 
+       const char *gallium_hud_env = os_get_option("GALLIUM_HUD");
+       disp->Options.GalliumHudWarn =
+--- a/src/egl/main/egldisplay.h
++++ b/src/egl/main/egldisplay.h
+@@ -198,6 +198,7 @@
+ 
+    /* options that affect how the driver initializes the display */
+    struct {
++      EGLBoolean Kgsl;           /**< Use kgsl only */
+       EGLBoolean Zink;           /**< Use kopper only */
+       EGLBoolean ForceSoftware;  /**< Use software path only */
+       EGLBoolean GalliumHudWarn; /**< Using hud, warn when querying buffer age */
+--- a/src/freedreno/common/freedreno_devices.py
++++ b/src/freedreno/common/freedreno_devices.py
+@@ -292,6 +292,8 @@
+ add_gpus([
+         GPUId(605), # TODO: Test it, based only on libwrapfake dumps
+         GPUId(610),
++        GPUId(612), # TODO: Test it, based only on libwrapfake dumps
++        GPUId(613),
+     ], A6xxGPUInfo(
+         CHIP.A6XX,
+         [a6xx_base, a6xx_gen1_low],
+@@ -1038,8 +1040,71 @@
+     ))
+ 
+ add_gpus([
++        GPUId(chip_id=0x07010000, name="FD710"), # KGSL, no speedbin data
++        GPUId(chip_id=0xffff07010000, name="FD710"), # Default no-speedbin fallback
++    ], A6xxGPUInfo(
++        CHIP.A7XX,
++        [a7xx_base, a7xx_gen1],
++        num_ccu = 3,
++        tile_align_w = 64,
++        tile_align_h = 32,
++        tile_max_w = 1024,
++        tile_max_h = 1024,
++        num_vsc_pipes = 32,
++        cs_shared_mem_size = 32 * 1024,
++        wave_granularity = 2,
++        fibers_per_sp = 128 * 2 * 16,
++        highest_bank_bit = 16,
++        magic_regs = a730_magic_regs,
++        raw_magic_regs = a730_raw_magic_regs,
++    ))
++
++add_gpus([
++        GPUId(chip_id=0x43020000, name="FD720"), # KGSL, no speedbin data
++        GPUId(chip_id=0xffff043020000, name="FD720"), # Default no-speedbin fallback
++    ], A6xxGPUInfo(
++        CHIP.A7XX,
++        [a7xx_base, a7xx_gen1],
++        num_ccu = 3,
++        tile_align_w = 64,
++        tile_align_h = 32,
++        tile_max_w = 1024,
++        tile_max_h = 1024,
++        num_vsc_pipes = 32,
++        cs_shared_mem_size = 32 * 1024,
++        wave_granularity = 2,
++        fibers_per_sp = 128 * 2 * 16,
++        highest_bank_bit = 16,
++        magic_regs = a730_magic_regs,
++        raw_magic_regs = a730_raw_magic_regs,
++    ))
++
++add_gpus([
++        GPUId(chip_id=0x43020100, name="FD722"),
++        GPUId(chip_id=0xffff43020100, name="FD722"),
++    ], A6xxGPUInfo(
++        CHIP.A7XX,
++        [a7xx_base, a7xx_gen1],
++        num_ccu = 3,
++        tile_align_w = 64,
++        tile_align_h = 32,
++        tile_max_w = 1024,
++        tile_max_h = 1024,
++        num_vsc_pipes = 32,
++        cs_shared_mem_size = 32 * 1024,
++        wave_granularity = 2,
++        fibers_per_sp = 128 * 2 * 16,
++        highest_bank_bit = 16,
++        magic_regs = a730_magic_regs,
++        raw_magic_regs = a730_raw_magic_regs,
++    ))
++
++add_gpus([
+         GPUId(chip_id=0xffff43030c00, name="Adreno X1-45"),
+-        GPUId(chip_id=0x43030B00, name="FD735")
++        GPUId(chip_id=0x43030B00, name="FD735"),
++        GPUId(chip_id=0xffff43030b00, name="FD735"), # any-speedbin fallback (covers a732 = binned a735 theory)
++        GPUId(chip_id=0x43030a00, name="FD735"),     # speculative a732 own id
++        GPUId(chip_id=0xffff43030a00, name="FD735")  # speculative a732 any-speedbin
+     ], A6xxGPUInfo(
+         CHIP.A7XX,
+         [a7xx_base, a7xx_gen2, GPUProps(enable_tp_ubwc_flag_hint = True)],
+@@ -1363,6 +1428,16 @@
+     ], A6xxGPUInfo(
+         CHIP.A8XX,
+         [a7xx_base, a7xx_gen3, a8xx_base, a8xx_gen1, GPUProps(
++            # The A810's 576 KiB GMEM cannot fit a8xx_gen1's 608 KiB
++            # sysmem cache layout.
++            sysmem_ccu_color_cache_fraction = CCUColorCacheFraction.FULL.value,
++            sysmem_per_ccu_color_cache_size = 64 * 1024,
++            sysmem_ccu_depth_cache_fraction = CCUColorCacheFraction.THREE_QUARTER.value,
++            sysmem_per_ccu_depth_cache_size = 64 * 1024,
++            gmem_ccu_color_cache_fraction = CCUColorCacheFraction.EIGHTH.value,
++            gmem_per_ccu_color_cache_size = 32 * 1024,
++            gmem_ccu_depth_cache_fraction = CCUColorCacheFraction.FULL.value,
++            gmem_per_ccu_depth_cache_size = 48 * 1024,
+             gmem_vpc_attr_buf_size = 16384,
+             gmem_vpc_pos_buf_size = 12288,
+             gmem_vpc_bv_pos_buf_size = 20480,
+@@ -1428,6 +1503,31 @@
+     ))
+ 
+ add_gpus([
++        GPUId(chip_id=0x44030000, name="Adreno (TM) 825"),
++    ], A6xxGPUInfo(
++        CHIP.A8XX,
++        [a7xx_base, a7xx_gen3, a8xx_base, a8xx_gen1, GPUProps(
++            # This is probably not an optimal config for gmem/sysmem, but it was working before and I don't have any a825 device to test (neither I have any trace info)
++            sysmem_ccu_color_cache_fraction = CCUColorCacheFraction.FULL.value,
++            sysmem_per_ccu_color_cache_size = 128 * 1024,
++            sysmem_ccu_depth_cache_fraction = CCUColorCacheFraction.THREE_QUARTER.value,
++            sysmem_per_ccu_depth_cache_size = 96 * 1024,
++        )],
++        num_ccu = 4,
++        num_slices = 2,
++        tile_align_w = 96,
++        tile_align_h = 32,
++        tile_max_w = 16416,
++        tile_max_h = 16384,
++        num_vsc_pipes = 32,
++        cs_shared_mem_size = 32 * 1024,
++        wave_granularity = 2,
++        fibers_per_sp = 128 * 2 * 16,
++        magic_regs = dict(),
++        raw_magic_regs = a8xx_base_raw_magic_regs,
++    ))
++
++add_gpus([
+         GPUId(chip_id=0xffff44050A31, name="Adreno (TM) 840"),
+     ], A6xxGPUInfo(
+         CHIP.A8XX,
+--- a/src/freedreno/drm-shim/freedreno_noop.c
++++ b/src/freedreno/drm-shim/freedreno_noop.c
+@@ -299,6 +299,16 @@
+       .gmem_size = 128 * 1024,
+    },
+    {
++      .gpu_id = 710
++      .chip_id = 0x07010000,
++      .gmem_size = 2 * 1024 * 1024,
++   },
++   {
++      .gpu_id = 720
++      .chip_id = 0x43020000,
++      .gmem_size = 2 * 1024 * 1024,
++   },
++   {
+       .gpu_id = 730,
+       .chip_id = 0x07030001,
+       .gmem_size = 2 * 1024 * 1024,
+--- a/src/freedreno/drm/freedreno_device.c
++++ b/src/freedreno/drm/freedreno_device.c
+@@ -6,6 +6,7 @@
+  *    Rob Clark <robclark@freedesktop.org>
+  */
+ 
++#include <fcntl.h>
+ #include <unistd.h>
+ #include <sys/stat.h>
+ #include <sys/types.h>
+@@ -23,6 +24,9 @@
+ #ifdef HAVE_FREEDRENO_VIRTIO
+ struct fd_device *virtio_device_new(int fd, drmVersionPtr version);
+ #endif
++#ifdef HAVE_FREEDRENO_KGSL
++struct fd_device *kgsl_device_new(int fd);
++#endif
+ 
+ uint64_t os_page_size = 4096;
+ 
+@@ -30,17 +34,52 @@
+ fd_device_new(int fd)
+ {
+    struct fd_device *dev = NULL;
+-   drmVersionPtr version;
++   drmVersionPtr version = NULL;
+    bool use_heap = false;
++   bool support_use_heap = true;
++   /* The fd used for GPU submission. Defaults to the fd we were handed, but on
++    * the kgsl stack it is redirected to the kgsl GPU node while the original fd
++    * is retained as the device control/identity fd (see below). */
++   int gpu_fd = fd;
+ 
+    os_get_page_size(&os_page_size);
+ 
++#if HAVE_FREEDRENO_KGSL
++   /* On the kgsl stack the Adreno GPU is reachable only through the
++    * /dev/kgsl-3d0 char device, never through a DRM render node.  EGL/GBM may
++    * hand us the display controller's DRM node (sde-kms renderD128), which
++    * drmGetVersion reports as "msm" even though it drives no GPU at all -
++    * taking the msm path there yields a half-initialised screen that crashes
++    * on the first capability query.  When kgsl is forced (the whole kgsl stack
++    * exports FD_FORCE_KGSL=1), ignore the fd we were handed and open the kgsl
++    * GPU node directly for rendering.  The fd we were handed is kept as the
++    * device control/identity fd (dev->control_fd, returned by fd_device_fd):
++    * it still identifies the screen for u_pipe_screen_lookup_or_create()'s
++    * fd-keyed cache (which compares file descriptions, so dev->fd MUST stay a
++    * dup of the cache key - a freshly opened kgsl fd is a different file
++    * description and would break cache eviction -> use-after-free) and is the
++    * fd handed to DRI3 clients.  Only GPU submission uses the kgsl fd. */
++   if (debug_get_bool_option("FD_FORCE_KGSL", false)) {
++      int kgsl_fd = open("/dev/kgsl-3d0", O_RDWR | O_CLOEXEC);
++      if (kgsl_fd >= 0) {
++         dev = kgsl_device_new(kgsl_fd);
++         if (dev) {
++            /* Userspace fences are not supported with KGSL */
++            support_use_heap = false;
++            gpu_fd = kgsl_fd;   /* render on kgsl, keep fd as control_fd */
++            goto out;
++         }
++         close(kgsl_fd);
++      }
++   }
++#endif
++
++#ifdef HAVE_LIBDRM
+    /* figure out if we are kgsl or msm drm driver: */
+    version = drmGetVersion(fd);
+-   if (!version) {
+-      ERROR_MSG("cannot get version: %s", strerror(errno));
+-      return NULL;
+-   }
++   if (!version)
++      DEBUG_MSG("cannot get version: %s", strerror(errno));
++#endif
+ 
+ #ifdef HAVE_FREEDRENO_VIRTIO
+    if (debug_get_bool_option("FD_FORCE_VTEST", false)) {
+@@ -48,7 +87,7 @@
+       dev = virtio_device_new(-1, version);
+    } else
+ #endif
+-   if (!strcmp(version->name, "msm")) {
++   if (version && !strcmp(version->name, "msm")) {
+       DEBUG_MSG("msm DRM device");
+       if (version->version_major != 1) {
+          ERROR_MSG("unsupported version: %u.%u.%u", version->version_major,
+@@ -58,7 +97,7 @@
+ 
+       dev = msm_device_new(fd, version);
+ #ifdef HAVE_FREEDRENO_VIRTIO
+-   } else if (!strcmp(version->name, "virtio_gpu")) {
++   } else if (version && !strcmp(version->name, "virtio_gpu")) {
+       DEBUG_MSG("virtio_gpu DRM device");
+       dev = virtio_device_new(fd, version);
+       /* Only devices that support a hypervisor are a6xx+, so avoid the
+@@ -67,14 +106,42 @@
+       use_heap = true;
+ #endif
+ #if HAVE_FREEDRENO_KGSL
+-   } else if (!strcmp(version->name, "kgsl")) {
+-      DEBUG_MSG("kgsl DRM device");
++   } else {
++      /* If drm driver not detected assume this is KGSL */
+       dev = kgsl_device_new(fd);
+-#endif
+-   }
+-
++      /* Userspace fences are not supported with KGSL */
++      support_use_heap = false;
++      if (dev)
++         goto out;
++#endif
++   }
++
++#if HAVE_FREEDRENO_KGSL
++   /* On the kgsl stack the Adreno GPU is reachable only through the
++    * /dev/kgsl-3d0 char device, never through a DRM render node.  When EGL is
++    * driven via GBM (e.g. Xwayland glamor) the fd handed to us is the display
++    * controller's DRM node (sde-kms renderD128) or some other non-kgsl fd, so
++    * neither the msm path nor kgsl-on-this-fd above can produce a device.
++    * Open the kgsl GPU node directly as a last resort so native freedreno GL
++    * still comes up instead of failing dri2 screen creation. */
+    if (!dev) {
+-      INFO_MSG("unsupported device: %s", version->name);
++      int kgsl_fd = open("/dev/kgsl-3d0", O_RDWR | O_CLOEXEC);
++      if (kgsl_fd >= 0) {
++         dev = kgsl_device_new(kgsl_fd);
++         if (dev) {
++            support_use_heap = false;
++            /* Render on the kgsl GPU node; keep the fd we were handed as the
++             * control/identity fd (see the FD_FORCE_KGSL block above). */
++            gpu_fd = kgsl_fd;
++         } else {
++            close(kgsl_fd);
++         }
++      }
++   }
++#endif
++
++   if (!dev) {
++      INFO_MSG("unsupported device: %s", version ? version->name : "(none)");
+       goto out;
+    }
+ 
+@@ -90,7 +157,11 @@
+    fd_rd_output_init(&dev->rd, util_get_process_name());
+ 
+    p_atomic_set(&dev->refcnt, 1);
+-   dev->fd = fd;
++   dev->fd = gpu_fd;
++   /* control_fd identifies the screen for the fd-keyed screen cache and DRI3;
++    * it is a dup of the cache key. It equals fd unless rendering was redirected
++    * to a separate kgsl GPU node above, in which case fd != gpu_fd. */
++   dev->control_fd = fd;
+    dev->handle_table =
+       _mesa_hash_table_create(NULL, _mesa_hash_u32, _mesa_key_u32_equal);
+    dev->name_table =
+@@ -117,7 +188,7 @@
+       fd_pipe_del(pipe);
+    }
+ 
+-   if (use_heap) {
++   if (support_use_heap && use_heap) {
+       dev->ring_heap = fd_bo_heap_new(dev, RING_FLAGS);
+       dev->default_heap = fd_bo_heap_new(dev, 0);
+    }
+@@ -210,8 +281,14 @@
+    if (fd_device_threaded_submit(dev))
+       util_queue_destroy(&dev->submit_queue);
+ 
+-   if (dev->closefd)
++   if (dev->closefd) {
+       close(dev->fd);
++      /* On the kgsl stack control_fd is a distinct fd from the kgsl GPU fd;
++       * close it too so it does not leak (guard against double-close when they
++       * are the same fd, the common case). */
++      if (dev->control_fd >= 0 && dev->control_fd != dev->fd)
++         close(dev->control_fd);
++   }
+ 
+    free(dev);
+ }
+@@ -219,7 +296,10 @@
+ int
+ fd_device_fd(struct fd_device *dev)
+ {
+-   return dev->fd;
++   /* Return the control/identity fd, not the GPU submission fd. On the kgsl
++    * stack these differ: the screen cache and DRI3 must see the fd we were
++    * handed (a dup of the cache key), while GPU submission uses dev->fd. */
++   return dev->control_fd;
+ }
+ 
+ enum fd_version
+@@ -240,6 +320,12 @@
+ fd_dbg(void)
+ {
+    return debug_get_option_libgl();
++}
++
++uint32_t
++fd_get_features(struct fd_device *dev)
++{
++   return dev->features;
+ }
+ 
+ bool
+--- a/src/freedreno/drm/freedreno_drmif.h
++++ b/src/freedreno/drm/freedreno_drmif.h
+@@ -50,6 +50,13 @@
+    FD_UCHE_TRAP_BASE,
+ };
+ 
++enum fd_reset_status {
++   FD_RESET_NO_ERROR,
++   FD_RESET_GUILTY,
++   FD_RESET_INNOCENT,
++   FD_RESET_UNKNOWN,
++};
++
+ /**
+  * Helper for fence/seqno comparisions which deals properly with rollover.
+  * Returns true if fence 'a' is before fence 'b'
+@@ -181,6 +188,13 @@
+ enum fd_version fd_device_version(struct fd_device *dev);
+ void fd_device_disable_explicit_sync_heuristic(struct fd_device *dev);
+ 
++enum fd_features {
++   FD_FEATURE_DIRECT_RESET = 1,
++   FD_FEATURE_IMPORT_DMABUF = 2,
++   FD_FEATURE_KGSL = 4,
++};
++
++uint32_t fd_get_features(struct fd_device *dev);
+ bool fd_has_syncobj(struct fd_device *dev);
+ 
+ /* pipe functions:
+@@ -202,6 +216,7 @@
+ /* timeout in nanosec */
+ int fd_pipe_wait_timeout(struct fd_pipe *pipe, const struct fd_fence *fence,
+                          uint64_t timeout);
++int fd_pipe_get_reset_status(struct fd_pipe *pipe, enum fd_reset_status *status);
+ 
+ /* buffer-object functions:
+  */
+--- a/src/freedreno/drm/freedreno_pipe.c
++++ b/src/freedreno/drm/freedreno_pipe.c
+@@ -215,6 +215,12 @@
+    return fence;
+ }
+ 
++int
++fd_pipe_get_reset_status(struct fd_pipe *pipe, enum fd_reset_status *status)
++{
++   return pipe->funcs->reset_status(pipe, status);
++}
++
+ struct fd_fence *
+ fd_fence_new(struct fd_pipe *pipe, bool use_fence_fd)
+ {
+--- a/src/freedreno/drm/freedreno_priv.h
++++ b/src/freedreno/drm/freedreno_priv.h
+@@ -188,9 +188,11 @@
+ }
+ 
+ struct fd_device {
+-   int fd;
++   int fd;          /* GPU submission fd (kgsl GPU node on the kgsl stack) */
++   int control_fd;  /* screen-cache / DRI3 identity fd; == fd unless redirected */
+    enum fd_version version;
+    int32_t refcnt;
++   uint32_t features;
+ 
+    /* tables to keep track of bo's, to avoid "evil-twin" fd_bo objects:
+     *
+@@ -296,6 +298,7 @@
+    struct fd_ringbuffer *(*ringbuffer_new_object)(struct fd_pipe *pipe,
+                                                   uint32_t size);
+    struct fd_submit *(*submit_new)(struct fd_pipe *pipe);
++   int (*reset_status)(struct fd_pipe *pipe, enum fd_reset_status *status);
+ 
+    /**
+     * Flush any deferred submits (if deferred submits are supported by
+--- /dev/null
++++ b/src/freedreno/drm/kgsl/kgsl_bo.c
+@@ -0,0 +1,299 @@
++#include "kgsl_priv.h"
++#include "util/os_file.h"
++#include "util/os_mman.h"
++
++#include <linux/dma-heap.h>
++
++static uint64_t
++kgsl_bo_iova(struct fd_bo *bo)
++{
++    struct kgsl_bo *kgsl_bo = to_kgsl_bo(bo);
++    return kgsl_bo->iova;
++}
++
++static void
++kgsl_bo_set_name(struct fd_bo *bo, const char *fmt, va_list ap)
++{
++    /* This function is a no op for KGSL */
++    return;
++}
++
++static int
++kgsl_bo_offset(struct fd_bo *bo, uint64_t *offset)
++{
++    /* from tu_kgsl.c - offset for mmap needs to be */
++    /* the returned alloc id shifted over 12 */
++    *offset = bo->handle << 12;
++    return 0;
++}
++
++static int
++kgsl_bo_madvise(struct fd_bo *bo, int willneed)
++{
++    /* KGSL does not support this, so simply return willneed */
++    return willneed;
++}
++
++static int
++kgsl_bo_cpu_prep(struct fd_bo *bo, struct fd_pipe *pipe, uint32_t op)
++{
++    /* only need to handle implicit sync here which is a NOP for KGSL */
++    return 0;
++}
++
++void
++kgsl_bo_close_handle(struct fd_bo *bo)
++{
++    struct kgsl_bo *kgsl_bo = to_kgsl_bo(bo);
++    if (kgsl_bo->bo_type == KGSL_BO_IMPORT) {
++       close(kgsl_bo->import_fd);
++    }
++
++    struct kgsl_gpumem_free_id req = {
++        .id = bo->handle
++    };
++
++    kgsl_pipe_safe_ioctl(bo->dev->fd, IOCTL_KGSL_GPUMEM_FREE_ID, &req);
++}
++
++static void
++kgsl_bo_destroy(struct fd_bo *bo)
++{
++    /* KGSL will immediately delete the BO when we close
++     * the handle, so wait on all fences to ensure
++     * the GPU is done using it before we destory it
++     */
++    for (uint32_t i = 0; i < bo->nr_fences; i++) {
++        struct fd_pipe *pipe = bo->fences[i]->pipe;
++        pipe->funcs->wait(pipe, bo->fences[i], ~0);
++    }
++
++    fd_bo_fini_common(bo);
++}
++
++static void *
++kgsl_bo_map(struct fd_bo *bo)
++{
++    struct kgsl_bo *kgsl_bo = to_kgsl_bo(bo);
++    if (!bo->map) {
++        if (kgsl_bo->bo_type == KGSL_BO_IMPORT) {
++            /* in `fd_bo_map` if it tries to mmap this BO. mmap logic is copied from
++             * https://android.googlesource.com/platform/hardware/libhardware/+/master/modules/gralloc/mapper.cpp#44
++             */
++            bo->map = os_mmap(0, bo->size, PROT_READ | PROT_WRITE, MAP_SHARED, kgsl_bo->import_fd, 0);
++        } else {
++            uint64_t offset;
++            int ret;
++
++            ret = bo->funcs->offset(bo, &offset);
++            if (ret) {
++                return NULL;
++            }
++
++            bo->map = os_mmap(0, bo->size, PROT_READ | PROT_WRITE, MAP_SHARED,
++                    bo->dev->fd, offset);
++            if (bo->map == MAP_FAILED) {
++                ERROR_MSG("mmap failed: %s", strerror(errno));
++                bo->map = NULL;
++            }
++        }
++
++        if (bo->map == MAP_FAILED) {
++            ERROR_MSG("mmap failed: %s", strerror(errno));
++            bo->map = NULL;
++        }
++    }
++    return bo->map;
++}
++
++static int kgsl_bo_dmabuf(struct fd_bo *bo) {
++    struct kgsl_bo *kgsl_bo = to_kgsl_bo(bo);
++
++    if (kgsl_bo->bo_type != KGSL_BO_IMPORT || kgsl_bo->import_fd < 0)
++        return -1;
++
++    return os_dupfd_cloexec(kgsl_bo->import_fd);
++}
++
++static const struct fd_bo_funcs bo_funcs = {
++    .iova = kgsl_bo_iova,
++    .set_name = kgsl_bo_set_name,
++    .offset = kgsl_bo_offset,
++    .map = kgsl_bo_map,
++    .madvise = kgsl_bo_madvise,
++    .cpu_prep = kgsl_bo_cpu_prep,
++    .destroy = kgsl_bo_destroy,
++    .dmabuf = kgsl_bo_dmabuf,
++};
++
++/* Size is not used by KGSL */
++struct fd_bo *
++kgsl_bo_from_handle(struct fd_device *dev, uint32_t size, uint32_t handle)
++{
++    struct fd_bo *bo;
++    int ret;
++    struct kgsl_gpuobj_info req = {
++        .id = handle,
++    };
++
++    ret = kgsl_pipe_safe_ioctl(dev->fd,
++            IOCTL_KGSL_GPUOBJ_INFO, &req);
++
++    if (ret) {
++        ERROR_MSG("Failed to get handle info (%s)", strerror(errno));
++        return NULL;
++    }
++
++    struct kgsl_bo *kgsl_bo = calloc(1, sizeof(*kgsl_bo));
++    if (!kgsl_bo)
++        return NULL;
++
++    bo = &kgsl_bo->base;
++    bo->dev = dev;
++    bo->size = req.size;
++    bo->handle = req.id;
++    bo->funcs = &bo_funcs;
++
++    kgsl_bo->iova = req.gpuaddr;
++
++    fd_bo_init_common(bo, dev);
++
++    return bo;
++}
++
++struct fd_bo *
++kgsl_bo_from_dmabuf(struct fd_device *dev, int fd)
++{
++    struct fd_bo *bo;
++    struct kgsl_gpuobj_import_dma_buf import_dmabuf = {
++        .fd = fd,
++    };
++    struct kgsl_gpuobj_import req = {
++        .priv = (uintptr_t)&import_dmabuf,
++        .priv_len = sizeof(import_dmabuf),
++        .flags = 0,
++        .type = KGSL_USER_MEM_TYPE_DMABUF,
++    };
++    int ret;
++
++    ret = kgsl_pipe_safe_ioctl(dev->fd,
++            IOCTL_KGSL_GPUOBJ_IMPORT, &req);
++
++    if (ret) {
++        ERROR_MSG("Failed to import dma-buf (%s)", strerror(errno));
++        return NULL;
++    }
++
++    bo = fd_bo_from_handle(dev, req.id, 0);
++
++    struct kgsl_bo *kgsl_bo = to_kgsl_bo(bo);
++    kgsl_bo->bo_type = KGSL_BO_IMPORT;
++    kgsl_bo->import_fd = os_dupfd_cloexec(fd);
++
++    return bo;
++}
++
++static int
++dma_heap_alloc(uint64_t size)
++{
++   int ret;
++   int dma_heap = open("/dev/dma_heap/system", O_RDONLY);
++
++   if (dma_heap < 0) {
++      int ion_heap = open("/dev/ion", O_RDONLY);
++
++      if (ion_heap < 0)
++         return -1;
++
++      struct ion_allocation_data {
++         __u64 len;
++         __u32 heap_id_mask;
++         __u32 flags;
++         __u32 fd;
++         __u32 unused;
++      } alloc_data = {
++         .len = size,
++         /* ION_HEAP_SYSTEM | ION_SYSTEM_HEAP_ID */
++         .heap_id_mask = (1U << 0) | (1U << 25),
++         .flags = 0, /* uncached */
++      };
++
++      ret = kgsl_pipe_safe_ioctl(ion_heap, _IOWR('I', 0, struct ion_allocation_data),
++                      &alloc_data);
++
++      close(ion_heap);
++
++      if (ret)
++         return -1;
++
++      return alloc_data.fd;
++   } else {
++      struct dma_heap_allocation_data alloc_data = {
++         .len = size,
++         .fd_flags = O_RDWR | O_CLOEXEC,
++      };
++
++      ret = kgsl_pipe_safe_ioctl(dma_heap, DMA_HEAP_IOCTL_ALLOC, &alloc_data);
++
++      close(dma_heap);
++
++      if (ret)
++         return -1;
++
++      return alloc_data.fd;
++   }
++}
++
++static struct fd_bo *
++kgsl_bo_new_dmabuf(struct fd_device *dev, uint32_t size)
++{
++   int fd;
++   struct fd_bo *bo;
++
++   fd = dma_heap_alloc(size);
++   if (fd < 0) {
++      ERROR_MSG("Failed to allocate dma-buf (%s)", strerror(errno));
++      return NULL;
++   }
++
++   bo = kgsl_bo_from_dmabuf(dev, fd);
++
++   close(fd);
++   return bo;
++}
++
++struct fd_bo *
++kgsl_bo_new(struct fd_device *dev, uint32_t size, uint32_t flags)
++{
++    if (flags & (FD_BO_SHARED | FD_BO_SCANOUT)) {
++       return kgsl_bo_new_dmabuf(dev, size);
++    }
++
++    int ret;
++    struct fd_bo *bo;
++    struct kgsl_gpumem_alloc_id req = {
++        .size = size,
++    };
++
++    if (flags & FD_BO_GPUREADONLY)
++        req.flags |= KGSL_MEMFLAGS_GPUREADONLY;
++
++    ret = kgsl_pipe_safe_ioctl(dev->fd, IOCTL_KGSL_GPUMEM_ALLOC_ID, &req);
++
++    if (ret) {
++        ERROR_MSG("GPUMEM_ALLOC_ID failed (%s)", strerror(errno));
++        return NULL;
++    }
++
++    bo = kgsl_bo_from_handle(dev, size, req.id);
++
++    struct kgsl_bo *kgsl_bo = to_kgsl_bo(bo);
++    kgsl_bo->bo_type = KGSL_BO_NATIVE;
++
++    if (!bo) {
++        ERROR_MSG("Failed to allocate buffer object");
++        return NULL;
++    }
++
++    return bo;
++}
+--- /dev/null
++++ b/src/freedreno/drm/kgsl/kgsl_device.c
+@@ -0,0 +1,44 @@
++#include "kgsl_priv.h"
++
++static const struct fd_device_funcs funcs = {
++    .bo_new = kgsl_bo_new,
++    .pipe_new = kgsl_pipe_new,
++    .bo_from_handle = kgsl_bo_from_handle,
++    .bo_from_dmabuf = kgsl_bo_from_dmabuf,
++    .bo_close_handle = kgsl_bo_close_handle,
++    .destroy = kgsl_device_destroy,
++};
++
++struct fd_device *
++kgsl_device_new(int fd)
++{
++    struct kgsl_device *kgsl_dev;
++    struct fd_device *dev;
++    struct kgsl_devinfo info;
++
++    /* Try to read the device info to detect if the FD is really KGSL */
++    if(kgsl_get_prop(fd, KGSL_PROP_DEVICE_INFO, &info, sizeof(info)))
++        return NULL;
++
++    kgsl_dev = calloc(1, sizeof(*kgsl_dev));
++    if (!kgsl_dev)
++      return NULL;
++
++    dev = &kgsl_dev->base;
++    dev->funcs = &funcs;
++    dev->fd = fd;
++    dev->version = FD_VERSION_ROBUSTNESS;
++    dev->features = FD_FEATURE_DIRECT_RESET | FD_FEATURE_IMPORT_DMABUF | FD_FEATURE_KGSL;
++
++    /* async submit_queue used for softpin deffered submits */
++    util_queue_init(&dev->submit_queue, "sq", 8, 1, 0, NULL);
++
++    dev->bo_size = sizeof(struct kgsl_bo);
++
++    return dev;
++}
++
++static void
++kgsl_device_destroy(struct fd_device *dev)
++{
++}
+--- /dev/null
++++ b/src/freedreno/drm/kgsl/kgsl_pipe.c
+@@ -0,0 +1,231 @@
++#include "kgsl_priv.h"
++#include "freedreno_ringbuffer_sp.h"
++
++/* TODO this function is borrowed from turnip, can it be shared in some way? */
++int
++kgsl_pipe_safe_ioctl(int fd, unsigned long request, void *arg)
++{
++   int ret;
++
++   do {
++      ret = ioctl(fd, request, arg);
++   } while (ret == -1 && (errno == EINTR || errno == EAGAIN));
++
++   return ret;
++}
++
++/* TODO this function is borrowed from turnip, can it be shared in some way?
++ * safe_ioctl is not enough as restarted waits would not adjust the timeout
++ * which could lead to waiting substantially longer than requested
++ */
++static int
++wait_timestamp_safe(int fd,
++                    unsigned int context_id,
++                    unsigned int timestamp,
++                    int64_t timeout_ms)
++{
++   int64_t start_time = os_time_get_nano();
++   struct kgsl_device_waittimestamp_ctxtid wait = {
++      .context_id = context_id,
++      .timestamp = timestamp,
++      .timeout = timeout_ms,
++   };
++
++   while (true) {
++      int ret = kgsl_pipe_safe_ioctl(fd, IOCTL_KGSL_DEVICE_WAITTIMESTAMP_CTXTID, &wait);
++
++      if (ret == -1 && (errno == EINTR || errno == EAGAIN)) {
++         int64_t current_time = os_time_get_nano();
++
++         /* update timeout to consider time that has passed since the start */
++         timeout_ms -= (current_time - start_time) / 1000000;
++         if (timeout_ms <= 0) {
++            errno = ETIME;
++            return -1;
++         }
++
++         wait.timeout = (unsigned int) timeout_ms;
++         start_time = current_time;
++      } else {
++         return ret;
++      }
++   }
++}
++
++int
++kgsl_get_prop(int fd, unsigned int type, void *value, size_t size)
++{
++   struct kgsl_device_getproperty getprop = {
++      .type = type,
++      .value = value,
++      .sizebytes = size,
++   };
++
++   return kgsl_pipe_safe_ioctl(fd, IOCTL_KGSL_DEVICE_GETPROPERTY, &getprop);
++}
++
++static int
++kgsl_pipe_get_param(struct fd_pipe *pipe, enum fd_param_id param,
++                    uint64_t *value)
++{
++   struct kgsl_pipe *kgsl_pipe = to_kgsl_pipe(pipe);
++   switch (param) {
++   case FD_DEVICE_ID:
++   case FD_GPU_ID:
++      *value = kgsl_pipe->dev_id.gpu_id;
++      return 0;
++   case FD_GMEM_SIZE:
++      *value = kgsl_pipe->gmem_size;
++      return 0;
++   case FD_GMEM_BASE:
++      *value = kgsl_pipe->gmem_base;
++      return 0;
++   case FD_CHIP_ID:
++      *value = kgsl_pipe->dev_id.chip_id;
++      return 0;
++   case FD_NR_PRIORITIES:
++      /* Take from kgsl kmd source code, if device is a4xx or newer
++       * it has KGSL_PRIORITY_MAX_RB_LEVELS=4 priorities otherwise it just has one.
++       * https://android.googlesource.com/kernel/msm/+/refs/tags/android-13.0.0_r0.21/drivers/gpu/msm/kgsl.h#56
++       */
++      *value = kgsl_pipe->dev_id.gpu_id >= 400 ? 4 : 1;
++      return 0;
++   case FD_MAX_FREQ:
++      /* Explicity fault on MAX_FREQ as we don't have a way to convert
++       * timestamp values from KGSL into time values. If we use the default
++       * path an error message would be generated when this is simply an
++       * unsupported feature.
++       */
++      return -1;
++   case FD_TIMESTAMP:
++      return -1;
++   case FD_UCHE_TRAP_BASE:
++      /* KGSL doesn't expose the UCHE trap base; return failure quietly so the
++       * gallium screen falls back to its built-in default (see
++       * freedreno_screen.c) instead of aborting device-info retrieval with a
++       * noisy "invalid param id" error. */
++      return -1;
++   default:
++      ERROR_MSG("invalid param id: %d", param);
++      return -1;
++   }
++}
++
++static int
++kgsl_pipe_set_param(struct fd_pipe *pipe, uint32_t param, uint64_t value)
++{
++    ERROR_MSG("kgsl_pipe_set_param not implemented");
++    return -1;
++}
++
++static int
++kgsl_pipe_wait(struct fd_pipe *pipe, const struct fd_fence *fence, uint64_t timeout)
++{
++    struct kgsl_pipe *kgsl_pipe = to_kgsl_pipe(pipe);
++    return wait_timestamp_safe(pipe->dev->fd, kgsl_pipe->queue_id, fence->kfence, timeout);
++}
++
++static void
++kgsl_pipe_destroy(struct fd_pipe *pipe)
++{
++    struct kgsl_pipe *kgsl_pipe = to_kgsl_pipe(pipe);
++    struct kgsl_drawctxt_destroy req = {
++        .drawctxt_id = kgsl_pipe->queue_id,
++    };
++
++    fd_pipe_sp_ringpool_fini(pipe);
++    kgsl_pipe_safe_ioctl(pipe->dev->fd, IOCTL_KGSL_DRAWCTXT_DESTROY, &req);
++    free(kgsl_pipe);
++}
++
++static int
++kgsl_reset_status(struct fd_pipe *pipe, enum fd_reset_status *status)
++{
++    struct kgsl_pipe *kgsl_pipe = to_kgsl_pipe(pipe);
++    uint32_t value = kgsl_pipe->queue_id;
++    int ret = kgsl_get_prop(pipe->dev->fd, KGSL_PROP_GPU_RESET_STAT, &value, sizeof(value));
++
++    if (!ret) {
++        switch (value) {
++        case KGSL_CTX_STAT_NO_ERROR:
++            *status = FD_RESET_NO_ERROR;
++            break;
++        case KGSL_CTX_STAT_GUILTY_CONTEXT_RESET_EXT:
++            *status = FD_RESET_GUILTY;
++            break;
++        case KGSL_CTX_STAT_INNOCENT_CONTEXT_RESET_EXT:
++            *status = FD_RESET_INNOCENT;
++            break;
++        case KGSL_CTX_STAT_UNKNOWN_CONTEXT_RESET_EXT:
++        default:
++            *status = FD_RESET_UNKNOWN;
++            break;
++        }
++    }
++
++    return ret;
++}
++
++static const struct fd_pipe_funcs pipe_funcs = {
++    .ringbuffer_new_object = fd_ringbuffer_sp_new_object,
++    .submit_new = kgsl_submit_sp_new,
++    .reset_status = kgsl_reset_status,
++    .flush = fd_pipe_sp_flush,
++    .wait = kgsl_pipe_wait,
++    .get_param = kgsl_pipe_get_param,
++    .set_param = kgsl_pipe_set_param,
++    .destroy = kgsl_pipe_destroy,
++};
++
++struct fd_pipe *kgsl_pipe_new(struct fd_device *dev, enum fd_pipe_id id,
++                              uint32_t prio)
++{
++    struct kgsl_pipe *kgsl_pipe = NULL;
++    struct fd_pipe *pipe = NULL;
++    kgsl_pipe = calloc(1, sizeof(*kgsl_pipe));
++    if (!kgsl_pipe) {
++        ERROR_MSG("allocation failed");
++        goto fail;
++    }
++
++    pipe = &kgsl_pipe->base;
++    pipe->dev = dev;
++    pipe->funcs = &pipe_funcs;
++
++    struct kgsl_devinfo info;
++    if(kgsl_get_prop(dev->fd, KGSL_PROP_DEVICE_INFO, &info, sizeof(info)))
++        goto fail;
++
++    uint64_t gmem_iova;
++    if(kgsl_get_prop(dev->fd, KGSL_PROP_UCHE_GMEM_VADDR, &gmem_iova, sizeof(gmem_iova)))
++        goto fail;
++
++    kgsl_pipe->dev_id.gpu_id =
++        ((info.chip_id >> 24) & 0xff) * 100 +
++        ((info.chip_id >> 16) & 0xff) * 10 +
++        ((info.chip_id >>  8) & 0xff);
++
++    kgsl_pipe->dev_id.chip_id = info.chip_id;
++    kgsl_pipe->gmem_size = info.gmem_sizebytes;
++    kgsl_pipe->gmem_base = gmem_iova;
++
++    struct kgsl_drawctxt_create req = {
++        .flags = KGSL_CONTEXT_SAVE_GMEM |
++                 KGSL_CONTEXT_NO_GMEM_ALLOC |
++                 KGSL_CONTEXT_PREAMBLE,
++    };
++
++    int ret = kgsl_pipe_safe_ioctl(dev->fd, IOCTL_KGSL_DRAWCTXT_CREATE, &req);
++    if(ret)
++        goto fail;
++
++    kgsl_pipe->queue_id = req.drawctxt_id;
++
++    fd_pipe_sp_ringpool_init(pipe);
++
++    return pipe;
++fail:
++    if (pipe)
++        fd_pipe_del(pipe);
++    return NULL;
++}
+--- /dev/null
++++ b/src/freedreno/drm/kgsl/kgsl_priv.h
+@@ -0,0 +1,59 @@
++#ifndef KGSL_PRIV_H
++#define KGSL_PRIV_H
++
++#ifndef __user
++#define __user
++#endif
++
++#include "freedreno_priv.h"
++
++/* TODO the KGSL kernel interface should probably be moved */
++/* into someplace common that both turnip and freedreno can use */
++#include "../../vulkan/msm_kgsl.h"
++
++int kgsl_get_prop(int fd, unsigned int type, void *value, size_t size);
++
++struct kgsl_device {
++    struct fd_device base;
++};
++FD_DEFINE_CAST(fd_device, kgsl_device);
++
++struct fd_device *kgsl_device_new(int fd);
++static void kgsl_device_destroy(struct fd_device *dev);
++
++struct kgsl_pipe {
++    struct fd_pipe base;
++
++    struct fd_dev_id dev_id;
++
++    uint32_t gmem_size;
++    uint64_t gmem_base;
++    uint32_t queue_id;
++};
++FD_DEFINE_CAST(fd_pipe, kgsl_pipe);
++
++struct fd_pipe *kgsl_pipe_new(struct fd_device *dev, enum fd_pipe_id id,
++                              uint32_t prio);
++int kgsl_pipe_safe_ioctl(int fd, unsigned long request, void *arg);
++struct fd_submit *kgsl_submit_sp_new(struct fd_pipe *pipe);
++
++struct kgsl_bo {
++    struct fd_bo base;
++    const char *name;
++    uint64_t iova;
++    uint32_t queue_id;
++    int import_fd; // fd for imported buffers
++
++    enum {
++        KGSL_BO_NATIVE,
++        KGSL_BO_IMPORT,
++    } bo_type;
++};
++FD_DEFINE_CAST(fd_bo, kgsl_bo);
++
++struct fd_bo *kgsl_bo_new(struct fd_device *dev, uint32_t size, uint32_t flags);
++struct fd_bo *kgsl_bo_from_dmabuf(struct fd_device *dev, int fd);
++struct fd_bo *kgsl_bo_from_handle(struct fd_device *dev, uint32_t size, uint32_t handle);
++void kgsl_bo_close_handle(struct fd_bo *bo);
++
++#endif
+--- /dev/null
++++ b/src/freedreno/drm/kgsl/kgsl_ringbuffer_sp.c
+@@ -0,0 +1,119 @@
++#include "kgsl_priv.h"
++#include "freedreno_ringbuffer_sp.h"
++
++static int
++timestamp_to_fd(struct fd_pipe *pipe, uint32_t timestamp)
++{
++    int fd;
++    struct kgsl_pipe *kgsl_pipe = to_kgsl_pipe(pipe);
++    struct kgsl_timestamp_event event = {
++        .type = KGSL_TIMESTAMP_EVENT_FENCE,
++        .context_id = kgsl_pipe->queue_id,
++        .timestamp = timestamp,
++        .priv = &fd,
++        .len = sizeof(fd),
++    };
++
++    int ret = kgsl_pipe_safe_ioctl(pipe->dev->fd, IOCTL_KGSL_TIMESTAMP_EVENT, &event);
++    if (ret)
++        return -1;
++
++    return fd;
++}
++
++static int
++flush_submit_list(struct list_head *submit_list)
++{
++    struct fd_submit_sp *fd_submit = to_fd_submit_sp(last_submit(submit_list));
++    struct fd_pipe *pipe = fd_submit->base.pipe;
++    struct kgsl_pipe *kgsl_pipe = to_kgsl_pipe(pipe);
++    unsigned nr_cmds = 0;
++
++
++    MESA_TRACE_FUNC();
++
++    foreach_submit (submit, submit_list) {
++        assert(submit->pipe == &kgsl_pipe->base);
++        nr_cmds += to_fd_ringbuffer_sp(submit->primary)->u.nr_cmds;
++    }
++
++    struct kgsl_command_object cmds[nr_cmds];
++    unsigned cmd_idx = 0;
++    foreach_submit_safe (submit, submit_list) {
++        struct fd_ringbuffer_sp *deferred_primary =
++            to_fd_ringbuffer_sp(submit->primary);
++
++        for (unsigned i = 0; i < deferred_primary->u.nr_cmds; i++) {
++            struct fd_bo *ring_bo = deferred_primary->u.cmds[i].ring_bo;
++
++            cmds[cmd_idx++] = (struct kgsl_command_object) {
++                .offset = 0,
++                .gpuaddr = ring_bo->iova + submit_offset(ring_bo, deferred_primary->offset),
++                .size = deferred_primary->u.cmds[i].size,
++                .flags = KGSL_CMDLIST_IB,
++                .id = ring_bo->handle,
++            };
++        }
++
++        if (submit == last_submit(submit_list)) {
++            DEBUG_MSG("merged %u submits", cmd_idx);
++            break;
++        }
++
++        list_del(&submit->node);
++        fd_submit_del(submit);
++    }
++
++    struct kgsl_cmd_syncpoint_fence sync_fence = {
++        .fd = fd_submit->in_fence_fd,
++    };
++
++    struct kgsl_command_syncpoint sync = {
++        .type = KGSL_CMD_SYNCPOINT_TYPE_FENCE,
++        .size = sizeof(sync_fence),
++        .priv = (uintptr_t) &sync_fence,
++    };
++
++
++    struct kgsl_gpu_command req = {
++        .flags = KGSL_CMDBATCH_SUBMIT_IB_LIST,
++        .context_id = kgsl_pipe->queue_id,
++        .cmdlist = (uintptr_t) cmds,
++        .numcmds = cmd_idx,
++        .cmdsize = sizeof(struct kgsl_command_object),
++        .synclist = (uintptr_t) &sync,
++        .syncsize = sizeof(struct kgsl_command_syncpoint),
++        .numsyncs = sync_fence.fd != -1 ? 1 : 0,
++    };
++
++    int ret = kgsl_pipe_safe_ioctl(pipe->dev->fd, IOCTL_KGSL_GPU_COMMAND, &req);
++
++    if (ret) {
++        ERROR_MSG("submit failed %d (%s)", ret, strerror(errno));
++        goto fail;
++    }
++
++    fd_submit->out_fence->kfence = req.timestamp;
++
++    if  (fd_submit->out_fence->use_fence_fd) {
++        int fd = timestamp_to_fd(pipe, req.timestamp);
++        if (fd < 0) {
++            ERROR_MSG("Failed to create sync file for timestamp (%s)", strerror(errno));
++            goto fail;
++        }
++
++        fd_submit->out_fence->fence_fd = fd;
++    }
++
++    if (fd_submit->in_fence_fd != -1)
++        close(fd_submit->in_fence_fd);
++
++fail:
++    return ret;
++}
++
++struct fd_submit *
++kgsl_submit_sp_new(struct fd_pipe *pipe)
++{
++    return fd_submit_sp_new(pipe, flush_submit_list);
++}
+--- a/src/freedreno/drm/meson.build
++++ b/src/freedreno/drm/meson.build
+@@ -64,6 +64,17 @@
+   libfreedreno_drm_link_with += libvdrm
+ endif
+ 
++libfreedreno_kgsl_files = files(
++  'kgsl/kgsl_device.c',
++  'kgsl/kgsl_bo.c',
++  'kgsl/kgsl_pipe.c',
++  'kgsl/kgsl_ringbuffer_sp.c',
++)
++
++if freedreno_kmds.contains('kgsl')
++  libfreedreno_drm_files += libfreedreno_kgsl_files
++endif
++
+ libfreedreno_drm = static_library(
+   'freedreno_drm',
+   [
+--- a/src/freedreno/vulkan/tu_device.cc
++++ b/src/freedreno/vulkan/tu_device.cc
+@@ -3488,6 +3488,23 @@
+                                     pName);
+ }
+ 
++VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
++tu_GetDeviceProcAddr(VkDevice _device, const char *pName)
++{
++   VK_FROM_HANDLE(tu_device, device, _device);
++   return vk_device_get_proc_addr(&device->vk, pName);
++}
++
++/* Required ICD entrypoint for the loader */
++PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
++vk_icdGetDeviceProcAddr(VkDevice device, const char *pName);
++
++PUBLIC VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
++vk_icdGetDeviceProcAddr(VkDevice device, const char *pName)
++{
++   return tu_GetDeviceProcAddr(device, pName);
++}
++
+ /* The loader wants us to expose a second GetInstanceProcAddr function
+  * to work around certain LD_PRELOAD issues seen in apps.
+  */
+--- a/src/freedreno/vulkan/tu_knl_kgsl.cc
++++ b/src/freedreno/vulkan/tu_knl_kgsl.cc
+@@ -78,39 +78,21 @@
+ static void kgsl_bo_finish(struct tu_device *dev, struct tu_bo *bo);
+ 
+ static VkResult
+-bo_init_new_dmaheap(struct tu_device *dev, struct tu_bo **out_bo, uint64_t size,
+-                enum tu_bo_alloc_flags flags)
+-{
+-   struct dma_heap_allocation_data alloc = {
+-      .len = size,
+-      .fd_flags = O_RDWR | O_CLOEXEC,
+-   };
+-
+-   int ret;
+-   ret = safe_ioctl(dev->physical_device->kgsl_dma_fd, DMA_HEAP_IOCTL_ALLOC,
+-                    &alloc);
+-
+-   if (ret) {
+-      return vk_errorf(dev, VK_ERROR_OUT_OF_DEVICE_MEMORY,
+-                       "DMA_HEAP_IOCTL_ALLOC failed (%s)", strerror(errno));
+-   }
+-
+-   /* tu_bo_init_dmabuf() only borrows the fd: it keeps a dup of its own in
+-    * bo->shared_fd, which is what kgsl_bo_finish() closes. That is correct for
+-    * an imported dma-buf, whose fd belongs to the caller, but here the fd is
+-    * ours and nobody else will ever drop it. Leaking it keeps the dma-buf
+-    * alive after the BO is destroyed, so the memory is never reclaimed.
+-    */
++kgsl_import_allocated_dmabuf(struct tu_device *dev,
++                             struct tu_bo **out_bo,
++                             uint64_t size,
++                             int fd)
++{
+    VkResult result =
+-      tu_bo_init_dmabuf(dev, out_bo, -1, TU_BO_ALLOC_NO_FLAGS, alloc.fd);
+-   close(alloc.fd);
+-
++      tu_bo_init_dmabuf(dev, out_bo, size, TU_BO_ALLOC_NO_FLAGS, fd);
++
++   close(fd);
+    return result;
+ }
+ 
+ static VkResult
+-bo_init_new_ion(struct tu_device *dev, struct tu_bo **out_bo, uint64_t size,
+-                enum tu_bo_alloc_flags flags)
++bo_init_new_ion_fd(struct tu_device *dev, struct tu_bo **out_bo,
++                   uint64_t size, int ion_fd)
+ {
+    struct ion_new_allocation_data alloc = {
+       .len = size,
+@@ -119,24 +101,18 @@
+       .fd = -1,
+    };
+ 
+-   int ret;
+-   ret = safe_ioctl(dev->physical_device->kgsl_dma_fd, ION_IOC_NEW_ALLOC, &alloc);
++   int ret = safe_ioctl(ion_fd, ION_IOC_NEW_ALLOC, &alloc);
+    if (ret) {
+       return vk_errorf(dev, VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                        "ION_IOC_NEW_ALLOC failed (%s)", strerror(errno));
+    }
+ 
+-   /* See bo_init_new_dmaheap(): the fd is ours to close. */
+-   VkResult result =
+-      tu_bo_init_dmabuf(dev, out_bo, -1, TU_BO_ALLOC_NO_FLAGS, alloc.fd);
+-   close(alloc.fd);
+-
+-   return result;
+-}
+-
+-static VkResult
+-bo_init_new_ion_legacy(struct tu_device *dev, struct tu_bo **out_bo, uint64_t size,
+-                       enum tu_bo_alloc_flags flags)
++   return kgsl_import_allocated_dmabuf(dev, out_bo, size, alloc.fd);
++}
++
++static VkResult
++bo_init_new_ion_legacy_fd(struct tu_device *dev, struct tu_bo **out_bo,
++                          uint64_t size, int ion_fd)
+ {
+    struct ion_allocation_data alloc = {
+       .len = size,
+@@ -146,8 +122,7 @@
+       .handle = -1,
+    };
+ 
+-   int ret;
+-   ret = safe_ioctl(dev->physical_device->kgsl_dma_fd, ION_IOC_ALLOC, &alloc);
++   int ret = safe_ioctl(ion_fd, ION_IOC_ALLOC, &alloc);
+    if (ret) {
+       return vk_errorf(dev, VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                        "ION_IOC_ALLOC failed (%s)", strerror(errno));
+@@ -158,7 +133,7 @@
+       .fd = -1,
+    };
+ 
+-   ret = safe_ioctl(dev->physical_device->kgsl_dma_fd, ION_IOC_SHARE, &share);
++   ret = safe_ioctl(ion_fd, ION_IOC_SHARE, &share);
+    if (ret) {
+       return vk_errorf(dev, VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                        "ION_IOC_SHARE failed (%s)", strerror(errno));
+@@ -167,18 +142,75 @@
+    struct ion_handle_data free = {
+       .handle = alloc.handle,
+    };
+-   ret = safe_ioctl(dev->physical_device->kgsl_dma_fd, ION_IOC_FREE, &free);
++   ret = safe_ioctl(ion_fd, ION_IOC_FREE, &free);
+    if (ret) {
++      close(share.fd);
+       return vk_errorf(dev, VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                        "ION_IOC_FREE failed (%s)", strerror(errno));
+    }
+ 
+-   /* See bo_init_new_dmaheap(): the fd is ours to close. */
+-   VkResult result =
+-      tu_bo_init_dmabuf(dev, out_bo, -1, TU_BO_ALLOC_NO_FLAGS, share.fd);
+-   close(share.fd);
+-
++   return kgsl_import_allocated_dmabuf(dev, out_bo, size, share.fd);
++}
++
++static VkResult
++bo_init_new_ion_fallback(struct tu_device *dev, struct tu_bo **out_bo,
++                         uint64_t size)
++{
++   int ion_fd = open("/dev/ion", O_RDONLY);
++   if (ion_fd < 0)
++      return VK_ERROR_OUT_OF_DEVICE_MEMORY;
++
++   struct ion_handle_data free = { .handle = 0 };
++   bool legacy = safe_ioctl(ion_fd, ION_IOC_FREE, &free) >= 0 || errno != ENOTTY;
++
++   VkResult result = legacy ?
++      bo_init_new_ion_legacy_fd(dev, out_bo, size, ion_fd) :
++      bo_init_new_ion_fd(dev, out_bo, size, ion_fd);
++   close(ion_fd);
+    return result;
++}
++
++static VkResult
++bo_init_new_dmaheap(struct tu_device *dev, struct tu_bo **out_bo, uint64_t size,
++                enum tu_bo_alloc_flags flags)
++{
++   struct dma_heap_allocation_data alloc = {
++      .len = size,
++      .fd_flags = O_RDWR | O_CLOEXEC,
++   };
++
++   int ret;
++   ret = safe_ioctl(dev->physical_device->kgsl_dma_fd, DMA_HEAP_IOCTL_ALLOC,
++                    &alloc);
++
++   if (ret) {
++      int dmaheap_errno = errno;
++      VkResult fallback = bo_init_new_ion_fallback(dev, out_bo, size);
++      if (fallback == VK_SUCCESS)
++         return VK_SUCCESS;
++
++      errno = dmaheap_errno;
++      return vk_errorf(dev, VK_ERROR_OUT_OF_DEVICE_MEMORY,
++                       "DMA_HEAP_IOCTL_ALLOC failed (%s)", strerror(errno));
++   }
++
++   return kgsl_import_allocated_dmabuf(dev, out_bo, size, alloc.fd);
++}
++
++static VkResult
++bo_init_new_ion(struct tu_device *dev, struct tu_bo **out_bo, uint64_t size,
++                enum tu_bo_alloc_flags flags)
++{
++   return bo_init_new_ion_fd(dev, out_bo, size,
++                             dev->physical_device->kgsl_dma_fd);
++}
++
++static VkResult
++bo_init_new_ion_legacy(struct tu_device *dev, struct tu_bo **out_bo, uint64_t size,
++                       enum tu_bo_alloc_flags flags)
++{
++   return bo_init_new_ion_legacy_fd(dev, out_bo, size,
++                                    dev->physical_device->kgsl_dma_fd);
+ }
+ 
+ static VkResult
+@@ -264,6 +296,11 @@
+       if (client_iova) {
+          return vk_errorf(dev, VK_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS,
+                           "cannot allocate an exportable BO with a fixed address");
++      }
++
++      if (dev->physical_device->kgsl_dma_fd < 0) {
++         return vk_errorf(dev, VK_ERROR_OUT_OF_DEVICE_MEMORY,
++                          "no dma-heap or ION fd available for shareable KGSL BO");
+       }
+ 
+       switch(dev->physical_device->kgsl_dma_type) {
+@@ -1788,10 +1825,7 @@
+ VkResult
+ tu_knl_kgsl_load(struct tu_instance *instance, int fd)
+ {
+-   if (instance->vk.enabled_extensions.KHR_display) {
+-      return vk_errorf(instance, VK_ERROR_INITIALIZATION_FAILED,
+-                       "I can't KHR_display");
+-   }
++
+ 
+    struct tu_physical_device *device = (struct tu_physical_device *)
+       vk_zalloc(&instance->vk.alloc, sizeof(*device), 8,
+--- a/src/freedreno/vulkan/tu_wsi.cc
++++ b/src/freedreno/vulkan/tu_wsi.cc
+@@ -15,6 +15,15 @@
+ 
+ #include "tu_device.h"
+ 
++#include <string.h>
++
++static bool
++tu_wsi_is_kgsl(const struct tu_physical_device *pdevice)
++{
++   return pdevice->instance->knl &&
++          strcmp(pdevice->instance->knl->name, "kgsl") == 0;
++}
++
+ static VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL
+ tu_wsi_proc_addr(VkPhysicalDevice physicalDevice, const char *pName)
+ {
+@@ -27,6 +36,11 @@
+ {
+ #ifdef HAVE_LIBDRM
+    VK_FROM_HANDLE(tu_physical_device, pdevice, physicalDevice);
++   const bool is_kgsl = tu_wsi_is_kgsl(pdevice);
++
++   if (is_kgsl)
++      return true;
++
+    return wsi_common_drm_devices_equal(fd, pdevice->local_fd);
+ #else
+    return true;
+--- a/src/gallium/auxiliary/gallivm/lp_bld_misc.cpp
++++ b/src/gallium/auxiliary/gallivm/lp_bld_misc.cpp
+@@ -86,6 +86,23 @@
+ #include "lp_bld_misc.h"
+ #include "lp_bld_debug.h"
+ 
++#if __has_include(<sys/auxv.h>)
++#include <sys/auxv.h>
++#define HAVE_SYS_AUXV 1
++#ifndef AT_HWCAP
++#define AT_HWCAP    16
++#endif
++#ifndef AT_HWCAP2
++#define AT_HWCAP2   26
++#endif
++#ifndef HWCAP_SVE
++#define HWCAP_SVE   (1 << 22)
++#endif
++#ifndef HWCAP2_SVE2
++#define HWCAP2_SVE2 (1 << 1)
++#endif
++#endif
++
+ static void lp_run_atexit_for_destructors(void);
+ 
+ namespace {
+@@ -443,6 +460,29 @@
+    MAttrs.push_back("-lasx");
+ #endif
+ #endif
++
++#if DETECT_ARCH_AARCH64 && defined(HAVE_SYS_AUXV)
++   // Guess SVE/SVE2 support on ARM64
++   bool has_sve  = getauxval(AT_HWCAP)  & HWCAP_SVE;
++   bool has_sve2 = getauxval(AT_HWCAP2) & HWCAP2_SVE2;
++   MAttrs.push_back(has_sve  ? "+sve"  : "-sve");
++   MAttrs.push_back(has_sve2 ? "+sve2" : "-sve2");
++#endif
++
++   // Allow adding extra MAttrs through envs
++   char *env_extra_mattrs = getenv("GALLIVM_EXTRA_MATTRS");
++   if (env_extra_mattrs != NULL) {
++      char *dup = strdup(env_extra_mattrs);
++      if (dup != NULL) {
++         char *state;
++         char *token = strtok_r(dup, ",", &state);
++         while (token) {
++            MAttrs.push_back(token);
++            token = strtok_r(NULL, ",", &state);
++         }
++         free(dup);
++      }
++   }
+ }
+ 
+ void
+--- a/src/gallium/drivers/freedreno/freedreno_context.c
++++ b/src/gallium/drivers/freedreno/freedreno_context.c
+@@ -502,6 +502,22 @@
+    ctx->global_reset_count = global_faults;
+ 
+    return status;
++}
++
++static enum pipe_reset_status
++fd_get_device_reset_status_direct(struct pipe_context *pctx)
++{
++   struct fd_context *ctx = fd_context(pctx);
++   enum pipe_reset_status status_list[] = {
++      [FD_RESET_NO_ERROR] = PIPE_NO_RESET,
++      [FD_RESET_GUILTY] = PIPE_GUILTY_CONTEXT_RESET,
++      [FD_RESET_INNOCENT] = PIPE_INNOCENT_CONTEXT_RESET,
++      [FD_RESET_UNKNOWN] = PIPE_UNKNOWN_CONTEXT_RESET,
++   };
++   enum fd_reset_status fd_status;
++   ASSERTED int ret = fd_pipe_get_reset_status(ctx->pipe, &fd_status);
++   assert(!ret);
++   return status_list[fd_status];
+ }
+ 
+ static bool
+@@ -671,11 +687,6 @@
+ 
+    ctx->in_fence_fd = -1;
+ 
+-   if (fd_device_version(screen->dev) >= FD_VERSION_ROBUSTNESS) {
+-      ctx->context_reset_count = fd_get_reset_count(ctx, true);
+-      ctx->global_reset_count = fd_get_reset_count(ctx, false);
+-   }
+-
+    simple_mtx_init(&ctx->gmem_lock, mtx_plain);
+ 
+    /* need some sane default in case gallium frontends don't
+@@ -690,12 +701,19 @@
+    pctx->flush = fd_context_flush;
+    pctx->emit_string_marker = fd_emit_string_marker;
+    pctx->set_debug_callback = fd_set_debug_callback;
+-   pctx->get_device_reset_status = fd_get_device_reset_status;
+    pctx->create_fence_fd = fd_create_pipe_fence_fd;
+    pctx->fence_server_sync = fd_pipe_fence_server_sync;
+    pctx->fence_server_signal = fd_pipe_fence_server_signal;
+    pctx->texture_barrier = fd_texture_barrier;
+    pctx->memory_barrier = fd_memory_barrier;
++
++   if (fd_get_features(screen->dev) & FD_FEATURE_DIRECT_RESET) {
++      pctx->get_device_reset_status = fd_get_device_reset_status_direct;
++   } else if(fd_device_version(screen->dev) >= FD_VERSION_ROBUSTNESS) {
++      ctx->context_reset_count = fd_get_reset_count(ctx, true);
++      ctx->global_reset_count = fd_get_reset_count(ctx, false);
++      pctx->get_device_reset_status = fd_get_device_reset_status;
++   }
+ 
+    pctx->stream_uploader = u_upload_create_default(pctx);
+    if (!pctx->stream_uploader)
+--- a/src/gallium/drivers/freedreno/freedreno_resource.c
++++ b/src/gallium/drivers/freedreno/freedreno_resource.c
+@@ -1075,6 +1075,15 @@
+ static uint64_t
+ fd_resource_modifier(struct fd_resource *rsc)
+ {
++   struct fd_screen *screen = fd_screen(rsc->b.b.screen);
++
++   if (screen->kgsl_dmabuf) {
++      if (rsc->layout.tile_mode == 0 && !rsc->layout.ubwc_layer_size)
++         return DRM_FORMAT_MOD_LINEAR;
++
++      return DRM_FORMAT_MOD_INVALID;
++   }
++
+    if (rsc->layout.ubwc_layer_size)
+       return DRM_FORMAT_MOD_QCOM_COMPRESSED;
+ 
+@@ -1100,6 +1109,23 @@
+       tc_buffer_disable_cpu_storage(&rsc->b.b);
+ 
+    handle->modifier = fd_resource_modifier(rsc);
++
++   if (fd_screen(pscreen)->kgsl_dmabuf) {
++      handle->modifier = DRM_FORMAT_MOD_LINEAR;
++
++      if (!(prsc->bind & PIPE_BIND_SHARED)) {
++         struct fd_context *ctx = fd_screen_aux_context_get(pscreen);
++
++         prsc->bind |= PIPE_BIND_SHARED;
++
++         bool ret = fd_try_shadow_resource(ctx, rsc, 0, NULL, handle->modifier);
++
++         fd_screen_aux_context_put(pscreen);
++
++         if (!ret)
++            return false;
++      }
++   }
+ 
+    if (prsc->target != PIPE_BUFFER) {
+       struct fdl_metadata metadata = {
+@@ -1306,6 +1332,20 @@
+    if (FD_DBG(NOTILE))
+        return FD_LAYOUT_LINEAR;
+ 
++   if (screen->kgsl_dmabuf &&
++       (tmpl->bind & (PIPE_BIND_SHARED | PIPE_BIND_SCANOUT))) {
++      if (has_implicit_modifier(modifiers, count) ||
++          drm_find_modifier(DRM_FORMAT_MOD_LINEAR, modifiers, count)) {
++         perf_debug("%" PRSC_FMT ": forcing linear: kgsl shared/scanout resource",
++                    PRSC_ARGS(tmpl));
++         return FD_LAYOUT_LINEAR;
++      }
++
++      perf_debug("%" PRSC_FMT ": kgsl shared/scanout resource requires linear",
++                 PRSC_ARGS(tmpl));
++      return FD_LAYOUT_ERROR;
++   }
++
+    /* Shared resources without explicit modifiers must always be linear */
+    if (!can_explicit && (tmpl->bind & PIPE_BIND_SHARED)) {
+       perf_debug("%" PRSC_FMT
+@@ -1524,6 +1564,15 @@
+ 
+    DBG("%" PRSC_FMT ", modifier=%" PRIx64, PRSC_ARGS(prsc), handle->modifier);
+ 
++   if (screen->kgsl_dmabuf &&
++       handle->modifier != DRM_FORMAT_MOD_LINEAR &&
++       handle->modifier != DRM_FORMAT_MOD_INVALID) {
++      if (FD_DBG(LAYOUT))
++         mesa_loge("kgsl cannot import non-linear modifier %" PRIx64,
++                   handle->modifier);
++      goto fail;
++   }
++
+    rsc->b.is_shared = true;
+ 
+    struct fd_bo *bo = fd_screen_bo_from_handle(pscreen, handle);
+--- a/src/gallium/drivers/freedreno/freedreno_screen.c
++++ b/src/gallium/drivers/freedreno/freedreno_screen.c
+@@ -91,6 +91,13 @@
+ int fd_mesa_debug = 0;
+ bool fd_binning_enabled = true;
+ 
++static bool
++fd_kgsl_dmabuf_enabled(void)
++{
++   return debug_get_bool_option("FD_KGSL_ENABLE_DMABUF", false) ||
++          debug_get_bool_option("XWAYLAND_FORCE_KGSL_SURFACELESS", false);
++}
++
+ static const char *
+ fd_screen_get_name(struct pipe_screen *pscreen)
+ {
+@@ -383,6 +390,16 @@
+ 
+    u_init_pipe_screen_caps(&screen->base, 1);
+ 
++   /* On the kgsl stack the screen's control fd may be a display/controller fd
++    * rather than the kgsl GPU fd, so drmGetCap(DRM_CAP_PRIME) cannot describe
++    * the backend's real import/export support.  The kgsl backend allocates
++    * shared buffers from dma-heap/ION and imports them into KGSL, so advertise
++    * dmabuf support only for that path. */
++   if (screen->kgsl_dmabuf) {
++      caps->dmabuf =
++         0x1 /*DRM_PRIME_CAP_IMPORT*/ | 0x2 /*DRM_PRIME_CAP_EXPORT*/;
++   }
++
+    /* this is probably not totally correct.. but it's a start: */
+ 
+    /* Supported features (boolean caps). */
+@@ -660,7 +677,7 @@
+    caps->query_timestamp =
+    caps->query_time_elapsed =
+       /* only a4xx, requires new enough kernel so we know max_freq: */
+-      (screen->max_freq > 0) && (is_a4xx(screen) || is_a5xx(screen) || is_a6xx(screen));
++      (is_a4xx(screen) || is_a5xx(screen) || is_a6xx(screen));
+    caps->timer_resolution = ticks_to_ns(1);
+    caps->query_buffer_object =
+    caps->query_so_overflow =
+@@ -811,6 +828,23 @@
+                                  uint64_t *modifiers,
+                                  unsigned int *external_only, int *count)
+ {
++   struct fd_screen *screen = fd_screen(pscreen);
++
++   if (screen->kgsl_dmabuf) {
++      *count = is_format_supported(pscreen, format,
++                                   DRM_FORMAT_MOD_LINEAR) ? 1 : 0;
++
++      if (*count && max > 0) {
++         if (modifiers)
++            modifiers[0] = DRM_FORMAT_MOD_LINEAR;
++
++         if (external_only)
++            external_only[0] = !is_rendering_supported(pscreen, format);
++      }
++
++      return;
++   }
++
+    const uint64_t all_modifiers[] = {
+       DRM_FORMAT_MOD_LINEAR,
+       DRM_FORMAT_MOD_QCOM_COMPRESSED,
+@@ -843,6 +877,13 @@
+                                        enum pipe_format format,
+                                        bool *external_only)
+ {
++   struct fd_screen *screen = fd_screen(pscreen);
++
++   if (screen->kgsl_dmabuf &&
++       modifier != DRM_FORMAT_MOD_LINEAR &&
++       modifier != DRM_FORMAT_MOD_INVALID)
++      return false;
++
+    return is_format_supported(pscreen, format, modifier);
+ }
+ 
+@@ -943,6 +984,8 @@
+    pscreen = &screen->base;
+ 
+    screen->dev = dev;
++   screen->is_kgsl = fd_get_features(dev) & FD_FEATURE_KGSL;
++   screen->kgsl_dmabuf = screen->is_kgsl && fd_kgsl_dmabuf_enabled();
+    screen->ro = ro;
+ 
+    // maybe this should be in context?
+--- a/src/gallium/drivers/freedreno/freedreno_screen.h
++++ b/src/gallium/drivers/freedreno/freedreno_screen.h
+@@ -75,6 +75,8 @@
+    bool has_timestamp;
+    bool has_robustness;
+    bool has_syncobj;
++   bool is_kgsl;
++   bool kgsl_dmabuf;
+ 
+    struct {
+       /* Conservative LRZ (default true) invalidates LRZ on draws with
+--- a/src/gallium/drivers/zink/zink_compiler.c
++++ b/src/gallium/drivers/zink/zink_compiler.c
+@@ -4242,6 +4242,10 @@
+             NIR_PASS(_, nir, nir_remove_dead_variables, nir_var_shader_temp, NULL);
+             need_optimize = true;
+          }
++         if (zink_driverid(screen) == VK_DRIVER_ID_QUALCOMM_PROPRIETARY) {
++            NIR_PASS(_, nir, nir_opt_vectorize_io_vars, nir_var_shader_in);
++            need_optimize = true;
++         }
+          break;
+       case MESA_SHADER_COMPUTE:
+          if (zink_cs_key(key)->robust_access)
+--- a/src/gallium/drivers/zink/zink_screen.c
++++ b/src/gallium/drivers/zink/zink_screen.c
+@@ -1694,9 +1694,25 @@
+    glsl_type_singleton_decref();
+ }
+ 
++/* On the kgsl-backed turnip stack the GBM/DRI3 fd points at the display
++ * device (msm_drm) while the GPU is exposed through kgsl, so the render-node
++ * DRM major/minor never matches turnip's pdev and device selection fails
++ * (-> llvmpipe fallback). When this env is set, skip the DRM-based matching
++ * for the DRI3 path and let zink take the default (first) physical device. */
++static bool
++zink_force_default_device_dri3(uint64_t adapter_luid)
++{
++   return !adapter_luid &&
++          debug_get_bool_option("MESA_VK_DEVICE_SELECT_FORCE_DEFAULT_DEVICE_DRI3",
++                                false);
++}
++
+ static bool
+ zink_picks_device(int dev_major, uint64_t adapter_luid)
+ {
++   if (zink_force_default_device_dri3(adapter_luid))
++      return false;
++
+    return (dev_major > 0 && dev_major < 255) || adapter_luid;
+ }
+ 
+@@ -2478,6 +2494,10 @@
+ {
+    VkSemaphore sem = VK_NULL_HANDLE;
+ #if defined(HAVE_LIBDRM) && (DETECT_OS_LINUX || DETECT_OS_BSD)
++   static bool no_dma_buf_sync_file = false;
++   if (no_dma_buf_sync_file)
++      return sem;
++
+    struct dma_buf_export_sync_file export = {
+       .flags = DMA_BUF_SYNC_RW,
+       .fd = -1,
+@@ -2493,7 +2513,7 @@
+    close(fd);
+    if (ret) {
+       if (errno == ENOTTY || errno == EBADF || errno == ENOSYS) {
+-         assert(!"how did this fail?");
++         no_dma_buf_sync_file = true;
+          return VK_NULL_HANDLE;
+       } else {
+          mesa_loge("MESA: failed to import sync file '%s'", strerror(errno));
+@@ -2524,6 +2544,10 @@
+ zink_screen_import_dmabuf_semaphore(struct zink_screen *screen, struct zink_resource *res, VkSemaphore sem)
+ {
+ #if defined(HAVE_LIBDRM) && (DETECT_OS_LINUX || DETECT_OS_BSD)
++   static bool no_dma_buf_sync_file = false;
++   if (no_dma_buf_sync_file)
++      return sem;
++
+    const VkSemaphoreGetFdInfoKHR get_fd_info = {
+       .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FD_INFO_KHR,
+       .semaphore = sem,
+@@ -2545,7 +2569,8 @@
+       int ioctl_ret = drmIoctl(fd, DMA_BUF_IOCTL_IMPORT_SYNC_FILE, &import);
+       if (ioctl_ret) {
+          if (errno == ENOTTY || errno == EBADF || errno == ENOSYS) {
+-            assert(!"how did this fail?");
++            no_dma_buf_sync_file = true;
++            ret = true;
+          } else {
+             ret = true;
+          }
+@@ -3182,9 +3207,11 @@
+    case VK_DRIVER_ID_MESA_LLVMPIPE:
+    case VK_DRIVER_ID_MESA_NVK:
+    case VK_DRIVER_ID_NVIDIA_PROPRIETARY:
+-   case VK_DRIVER_ID_MESA_TURNIP:
+    case VK_DRIVER_ID_QUALCOMM_PROPRIETARY:
+       screen->driver_workarounds.general_layout = true;
++      break;
++   case VK_DRIVER_ID_MESA_TURNIP:
++      screen->driver_workarounds.general_layout = false;
+       break;
+    default:
+       screen->driver_workarounds.general_layout = screen->info.have_KHR_unified_image_layouts;
+--- a/src/gallium/frontends/dri/loader_dri3_helper.c
++++ b/src/gallium/frontends/dri/loader_dri3_helper.c
+@@ -26,11 +26,9 @@
+ #include <unistd.h>
+ #include <string.h>
+ 
+-#include <X11/xshmfence.h>
+ #include <xcb/xcb.h>
+ #include <xcb/dri3.h>
+ #include <xcb/present.h>
+-#include <xcb/xfixes.h>
+ 
+ #include <X11/Xlib-xcb.h>
+ 
+@@ -247,19 +245,16 @@
+ static inline void
+ dri3_fence_reset(xcb_connection_t *c, struct loader_dri3_buffer *buffer)
+ {
+-   xshmfence_reset(buffer->shm_fence);
+ }
+ 
+ static inline void
+ dri3_fence_set(struct loader_dri3_buffer *buffer)
+ {
+-   xshmfence_trigger(buffer->shm_fence);
+ }
+ 
+ static inline void
+ dri3_fence_trigger(xcb_connection_t *c, struct loader_dri3_buffer *buffer)
+ {
+-   xcb_sync_trigger_fence(c, buffer->sync_fence);
+ }
+ 
+ static inline void
+@@ -267,7 +262,6 @@
+                  struct loader_dri3_buffer *buffer)
+ {
+    xcb_flush(c);
+-   xshmfence_await(buffer->shm_fence);
+    if (draw) {
+       mtx_lock(&draw->mtx);
+       dri3_flush_present_events(draw);
+@@ -343,8 +337,6 @@
+ 
+    if (buffer->own_pixmap)
+       xcb_free_pixmap(draw->conn, buffer->pixmap);
+-   xcb_sync_destroy_fence(draw->conn, buffer->sync_fence);
+-   xshmfence_unmap_shm(buffer->shm_fence);
+    dri2_destroy_image(buffer->image);
+    if (buffer->linear_buffer)
+       dri2_destroy_image(buffer->linear_buffer);
+@@ -1168,26 +1160,7 @@
+       back->busy = 1;
+       back->last_swap = draw->send_sbc;
+ 
+-      if (!draw->region) {
+-         draw->region = xcb_generate_id(draw->conn);
+-         xcb_xfixes_create_region(draw->conn, draw->region, 0, NULL);
+-      }
+-
+       xcb_xfixes_region_t region = 0;
+-      xcb_rectangle_t xcb_rects[64];
+-
+-      if (n_rects > 0 && n_rects <= ARRAY_SIZE(xcb_rects)) {
+-         for (int i = 0; i < n_rects; i++) {
+-            const int *rect = &rects[i * 4];
+-            xcb_rects[i].x = rect[0];
+-            xcb_rects[i].y = draw->height - rect[1] - rect[3];
+-            xcb_rects[i].width = rect[2];
+-            xcb_rects[i].height = rect[3];
+-         }
+-
+-         region = draw->region;
+-         xcb_xfixes_set_region(draw->conn, region, n_rects, xcb_rects);
+-      }
+ 
+       xcb_present_pixmap(draw->conn,
+                          draw->drawable,
+@@ -1420,26 +1393,12 @@
+    struct dri_image *pixmap_buffer = NULL, *linear_buffer_display_gpu = NULL;
+    enum pipe_format format = loader_fourcc_to_pipe_format(fourcc);
+    xcb_pixmap_t pixmap;
+-   xcb_sync_fence_t sync_fence;
+-   struct xshmfence *shm_fence;
+-   int buffer_fds[4], fence_fd;
++   int buffer_fds[4];
+    int num_planes = 0;
+    uint64_t *modifiers = NULL;
+    uint32_t count = 0;
+    int i, mod;
+    int ret;
+-
+-   /* Create an xshmfence object and
+-    * prepare to send that to the X server
+-    */
+-
+-   fence_fd = xshmfence_alloc_shm();
+-   if (fence_fd < 0)
+-      return NULL;
+-
+-   shm_fence = xshmfence_map_shm(fence_fd);
+-   if (shm_fence == NULL)
+-      goto no_shm_fence;
+ 
+    /* Allocate the image from the driver
+     */
+@@ -1637,7 +1596,7 @@
+                                                         buffer->strides[2], buffer->offsets[2],
+                                                         buffer->strides[3], buffer->offsets[3],
+                                                         depth, buffer->cpp * 8,
+-                                                        buffer->modifier,
++                                                        buffer->modifier ? buffer->modifier : 1274,
+                                                         buffer_fds);
+    } else {
+       cookie_pix = xcb_dri3_pixmap_from_buffer_checked(draw->conn,
+@@ -1648,21 +1607,13 @@
+                                                        depth, buffer->cpp * 8,
+                                                        buffer_fds[0]);
+    }
+-   cookie_fence = xcb_dri3_fence_from_fd_checked(draw->conn,
+-                                                 pixmap,
+-                                                 (sync_fence = xcb_generate_id(draw->conn)),
+-                                                 false,
+-                                                 fence_fd);
++
+    /* Group error checking to limit round-trips. */
+    if (!check_xcb_error(cookie_pix, "xcb_dri3_pixmap_from_buffer[s]"))
+       goto no_buffer_attrib;
+-   if (!check_xcb_error(cookie_fence, "xcb_dri3_fence_from_fd"))
+-      goto no_buffer_attrib;
+ 
+    buffer->pixmap = pixmap;
+    buffer->own_pixmap = true;
+-   buffer->sync_fence = sync_fence;
+-   buffer->shm_fence = shm_fence;
+    buffer->width = width;
+    buffer->height = height;
+ 
+@@ -1684,9 +1635,6 @@
+ no_image:
+    free(buffer);
+ no_buffer:
+-   xshmfence_unmap_shm(shm_fence);
+-no_shm_fence:
+-   close(fence_fd);
+    return NULL;
+ }
+ 
+@@ -1951,11 +1899,8 @@
+    struct loader_dri3_buffer            *buffer = draw->buffers[buf_id];
+    xcb_drawable_t                       pixmap;
+    xcb_void_cookie_t                    cookie;
+-   xcb_sync_fence_t                     sync_fence;
+-   struct xshmfence                     *shm_fence;
+    int                                  width;
+    int                                  height;
+-   int                                  fence_fd;
+    struct dri_screen                          *cur_screen;
+ 
+    if (buffer)
+@@ -1967,15 +1912,6 @@
+    if (!buffer)
+       goto no_buffer;
+ 
+-   fence_fd = xshmfence_alloc_shm();
+-   if (fence_fd < 0)
+-      goto no_fence;
+-   shm_fence = xshmfence_map_shm(fence_fd);
+-   if (shm_fence == NULL) {
+-      close (fence_fd);
+-      goto no_fence;
+-   }
+-
+    /* Get the currently-bound screen or revert to using the drawable's screen if
+     * no contexts are currently bound. The latter case is at least necessary for
+     * obs-studio, when using Window Capture (Xcomposite) as a Source.
+@@ -1984,14 +1920,6 @@
+    if (!cur_screen) {
+        cur_screen = draw->dri_screen_render_gpu;
+    }
+-
+-   cookie = xcb_dri3_fence_from_fd_checked(draw->conn,
+-                                           pixmap,
+-                                           (sync_fence = xcb_generate_id(draw->conn)),
+-                                           false,
+-                                           fence_fd);
+-   if (!check_xcb_error(cookie, "xcb_dri3_fence_from_fd"))
+-      goto no_image;
+ 
+    buffer->image = loader_dri3_get_pixmap_buffer(draw->conn, pixmap, cur_screen, fourcc,
+                                                  draw->multiplanes_available, &width, &height, buffer);
+@@ -2003,17 +1931,12 @@
+    buffer->own_pixmap = false;
+    buffer->width = width;
+    buffer->height = height;
+-   buffer->shm_fence = shm_fence;
+-   buffer->sync_fence = sync_fence;
+ 
+    dri3_set_render_buffer(draw, buf_id, buffer);
+ 
+    return buffer;
+ 
+ no_image:
+-   xcb_sync_destroy_fence(draw->conn, sync_fence);
+-   xshmfence_unmap_shm(shm_fence);
+-no_fence:
+    free(buffer);
+ no_buffer:
+    return NULL;
+--- a/src/loader/loader.c
++++ b/src/loader/loader.c
+@@ -726,6 +726,12 @@
+ bool
+ loader_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
+ {
++#ifdef __TERMUX__
++   const char *env = getenv("MESA_LOADER_DRIVER_OVERRIDE");
++   if (env && strcmp(env, "kgsl") == 0) {
++      return false;
++   }
++#endif
+ #ifdef __linux__
+    /* Implementation without causing full enumeration of DRM devices. */
+    if (loader_get_linux_pci_id_for_fd(fd, vendor_id, chip_id))
+--- a/src/util/os_file.c
++++ b/src/util/os_file.c
+@@ -232,6 +232,10 @@
+ 
+ #endif /* DETECT_OS_DRAGONFLY || DETECT_OS_FREEBSD */
+ 
++#ifdef __TERMUX__
++#undef SYS_kcmp
++#endif
++
+ int
+ os_same_file_description(int fd1, int fd2)
+ {
+--- a/src/vulkan/wsi/wsi_common_x11.c
++++ b/src/vulkan/wsi/wsi_common_x11.c
+@@ -77,6 +77,9 @@
+ #ifndef XCB_PRESENT_CAPABILITY_ASYNC_MAY_TEAR
+ #define XCB_PRESENT_CAPABILITY_ASYNC_MAY_TEAR 8
+ #endif
++#ifndef XCB_VALUE
++#define XCB_VALUE 2
++#endif
+ 
+ #define MAX_DAMAGE_RECTS 64
+ 
+@@ -1246,6 +1249,11 @@
+    bool                                         has_async_may_tear;
+    bool                                         msc_estimate_is_stable;
+ 
++   /* Some X servers reject DRI3FenceFromFD for imported pixmaps.  Fall back
++    * to Present IdleNotify for implicit-sync image reuse when that happens.
++    */
++   bool                                         disable_shm_fences;
++
+    xcb_connection_t *                           conn;
+    xcb_window_t                                 window;
+    xcb_gc_t                                     gc;
+@@ -1775,7 +1783,8 @@
+        !wsi_device->x11.ignore_suboptimal)
+       options |= XCB_PRESENT_OPTION_SUBOPTIMAL;
+ 
+-   xshmfence_reset(image->shm_fence);
++   if (image->shm_fence)
++      xshmfence_reset(image->shm_fence);
+ 
+    if (!chain->base.image_info.explicit_sync) {
+       ++chain->sent_image_count;
+@@ -2634,7 +2643,7 @@
+    xcb_void_cookie_t cookie;
+    xcb_generic_error_t *error = NULL;
+    uint32_t bpp = 32;
+-   int fence_fd;
++   int fence_fd = -1;
+    image->update_region = xcb_generate_id(chain->conn);
+    xcb_xfixes_create_region(chain->conn, image->update_region, 0, NULL);
+ 
+@@ -2670,7 +2679,8 @@
+             for (int j = 0; j < i; j++)
+                close(fds[j]);
+ 
+-            return VK_ERROR_OUT_OF_HOST_MEMORY;
++            result = VK_ERROR_OUT_OF_HOST_MEMORY;
++            goto fail_image;
+          }
+       }
+ 
+@@ -2698,8 +2708,10 @@
+ 
+       /* XCB will take ownership of the FD we pass it. */
+       int fd = os_dupfd_cloexec(image->base.dma_buf_fd);
+-      if (fd == -1)
+-         return VK_ERROR_OUT_OF_HOST_MEMORY;
++      if (fd == -1) {
++         result = VK_ERROR_OUT_OF_HOST_MEMORY;
++         goto fail_image;
++      }
+ 
+       cookie =
+          xcb_dri3_pixmap_from_buffer_checked(chain->conn,
+@@ -2740,6 +2752,12 @@
+ #endif
+ 
+ out_fence:
++   if (chain->disable_shm_fences && !chain->base.image_info.explicit_sync) {
++      image->shm_fence = NULL;
++      image->sync_fence = XCB_NONE;
++      return VK_SUCCESS;
++   }
++
+    fence_fd = xshmfence_alloc_shm();
+    if (fence_fd < 0)
+       goto fail_pixmap;
+@@ -2749,17 +2767,38 @@
+       goto fail_shmfence_alloc;
+ 
+    image->sync_fence = xcb_generate_id(chain->conn);
+-   xcb_dri3_fence_from_fd(chain->conn,
+-                          image->pixmap,
+-                          image->sync_fence,
+-                          false,
+-                          fence_fd);
++   cookie = xcb_dri3_fence_from_fd_checked(chain->conn,
++                                           image->pixmap,
++                                           image->sync_fence,
++                                           false,
++                                           fence_fd);
++   fence_fd = -1;
++   error = xcb_request_check(chain->conn, cookie);
++   if (error != NULL) {
++      const uint8_t error_code = error->error_code;
++      free(error);
++
++      if (error_code == XCB_VALUE && !chain->base.image_info.explicit_sync) {
++         chain->disable_shm_fences = true;
++         image->sync_fence = XCB_NONE;
++         xshmfence_unmap_shm(image->shm_fence);
++         image->shm_fence = NULL;
++         return VK_SUCCESS;
++      }
++
++      goto fail_shmfence_map;
++   }
+ 
+    xshmfence_trigger(image->shm_fence);
+    return VK_SUCCESS;
+ 
++fail_shmfence_map:
++   xshmfence_unmap_shm(image->shm_fence);
++   image->shm_fence = NULL;
++
+ fail_shmfence_alloc:
+-   close(fence_fd);
++   if (fence_fd >= 0)
++      close(fence_fd);
+ 
+ fail_pixmap:
+    cookie = xcb_free_pixmap(chain->conn, image->pixmap);
+@@ -2771,7 +2810,7 @@
+ #else
+    UNREACHABLE("SHM support not compiled in");
+ #endif
+-   return VK_ERROR_INITIALIZATION_FAILED;
++   return result != VK_SUCCESS ? result : VK_ERROR_INITIALIZATION_FAILED;
+ }
+ 
+ static void
+@@ -2782,9 +2821,12 @@
+    xcb_void_cookie_t cookie;
+    if (!chain->base.wsi->sw || chain->has_mit_shm) {
+ #ifdef HAVE_X11_DRM
+-      cookie = xcb_sync_destroy_fence(chain->conn, image->sync_fence);
+-      xcb_discard_reply(chain->conn, cookie.sequence);
+-      xshmfence_unmap_shm(image->shm_fence);
++      if (image->sync_fence != XCB_NONE) {
++         cookie = xcb_sync_destroy_fence(chain->conn, image->sync_fence);
++         xcb_discard_reply(chain->conn, cookie.sequence);
++      }
++      if (image->shm_fence)
++         xshmfence_unmap_shm(image->shm_fence);
+ #endif
+ 
+       cookie = xcb_free_pixmap(chain->conn, image->pixmap);
+@@ -3270,7 +3312,8 @@
+    chain->sent_image_count = 0;
+    chain->last_present_msc = 0;
+    chain->status = VK_SUCCESS;
+-   chain->has_dri3_modifiers = wsi_conn->has_dri3_modifiers;
++   chain->has_dri3_modifiers = wsi_conn->has_dri3_modifiers &&
++                                use_modifiers(wsi_device);
+    chain->has_mit_shm = wsi_conn->has_mit_shm;
+    chain->has_async_may_tear = present_caps & XCB_PRESENT_CAPABILITY_ASYNC_MAY_TEAR;
+    chain->has_reliable_msc = !wsi_conn->is_xwayland;
+--- a/src/x11/x11_dri3.c
++++ b/src/x11/x11_dri3.c
+@@ -23,6 +23,7 @@
+ 
+ #include "x11_dri3.h"
+ 
++#include <string.h>
+ #include <stdbool.h>
+ #include <stdlib.h>
+ #include <fcntl.h>
+@@ -47,6 +48,10 @@
+    xcb_xfixes_query_version_reply_t *fixes_reply;
+    int                          fd;
+    const xcb_query_extension_reply_t *extension;
++
++   const char *env = getenv("MESA_LOADER_DRIVER_OVERRIDE");
++   if (env && !strcmp(env, "kgsl"))
++      return open("/dev/kgsl-3d0", O_RDWR);
+ 
+    xcb_prefetch_extension_data(conn, &xcb_dri3_id);
+    extension = xcb_get_extension_data(conn, &xcb_dri3_id);

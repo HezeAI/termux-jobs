@@ -69,8 +69,8 @@ class GpuTests(unittest.TestCase):
   self.assertEqual(archive,gpu.data_archive(deb,'deb').read())
   with self.assertRaises(ValueError):gpu.data_archive(b'bad','deb')
  def test_renderer_shell_changes_only_its_own_environment(self):
-  base=self.base/'gpu';root=base/'ubuntu-26.04-mesa26.3';lib=root/'usr/lib/aarch64-linux-gnu';lib.mkdir(parents=True);(root/'ready.json').write_text('{}');(lib/'libvulkan_freedreno.so').touch()
-  command='source "$1"; (jobs_gpu_environment ubuntu "$2"; [[ $GALLIUM_DRIVER == zink && ${LIBGL_ALWAYS_SOFTWARE:-} == "" && $LD_LIBRARY_PATH == "$2/ubuntu-26.04-mesa26.3/usr/lib/aarch64-linux-gnu" ]]); [[ $LIBGL_ALWAYS_SOFTWARE == 1 ]]'
+  base=self.base/'gpu';root=base/'ubuntu-26.04-mesa26.2.5';lib=root/'usr/lib/aarch64-linux-gnu';lib.mkdir(parents=True);(root/'ready.json').write_text('{}');(lib/'libvulkan_freedreno.so').touch()
+  command='source "$1"; (jobs_gpu_environment ubuntu "$2"; [[ $GALLIUM_DRIVER == zink && ${LIBGL_ALWAYS_SOFTWARE:-} == "" && $LD_LIBRARY_PATH == "$2/ubuntu-26.04-mesa26.2.5/usr/lib/aarch64-linux-gnu" ]]); [[ $LIBGL_ALWAYS_SOFTWARE == 1 ]]'
   r=subprocess.run(['/bin/bash','-c',command,'fixture',str(ROOT/'x11/src/main/assets/x11-gpu-env.sh'),str(base)],env=dict(os.environ,LIBGL_ALWAYS_SOFTWARE='1',LD_LIBRARY_PATH=''),capture_output=True,text=True);self.assertEqual(0,r.returncode,r.stderr)
 
  def test_new_targets_pin_distinct_libcs_and_matching_runtime_paths(self):
@@ -81,7 +81,7 @@ class GpuTests(unittest.TestCase):
    command='source "$1"; jobs_gpu_environment "$2" "$3"; test "$LD_LIBRARY_PATH" = "$4" && test "$LIBGL_DRIVERS_PATH" = "$4/dri" && test "$VK_DRIVER_FILES" = "$5/turnip-icd.json"; result=$?; if [ "$2" = alpine ];then test -z "${__EGL_VENDOR_LIBRARY_FILENAMES:-}" || exit 1;fi; exit "$result"'
    r=subprocess.run(['/bin/bash','-c',command,'fixture',str(script),target,str(self.base),str(lib),str(component)],env=dict(os.environ,LD_LIBRARY_PATH='',__EGL_VENDOR_LIBRARY_FILENAMES=''),capture_output=True,text=True)
    self.assertEqual(0,r.returncode,r.stderr)
-   self.assertIn('debian' if target=='opensuse' else target,spec['packages'][0][0]);self.assertEqual(64,len(spec['packages'][0][1]))
+   self.assertIn('musl-alpine3.24' if target=='alpine' else 'glibc-',spec['packages'][0][0]);self.assertEqual(64,len(spec['packages'][0][1]))
  def test_missing_new_target_components_fail_without_changing_renderer(self):
   for target in ['debian','alpine','fedora','opensuse','void']:
    r=subprocess.run(['/bin/bash','-c','source "$1"; jobs_gpu_environment "$2" "$3"', 'fixture',str(ROOT/'x11/src/main/assets/x11-gpu-env.sh'),target,str(self.base)],capture_output=True,text=True)
@@ -120,8 +120,10 @@ class DownloadFailures(unittest.TestCase):
     with self.assertRaisesRegex(ValueError,'^'+code+'$'):gpu.download('https://example.invalid','0'*64,1,lambda *_:None)
  def test_termux_packages_use_immutable_release_assets_and_wrapper_shares_loader(self):
   spec=importlib.util.spec_from_file_location('wrapper_pins',ROOT/'x11/src/main/assets/x11-wrapper.py');wrapper=importlib.util.module_from_spec(spec);spec.loader.exec_module(wrapper)
-  for spec in gpu.SPECS.values():
-   for package in spec['packages']:self.assertTrue(package[0].startswith('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/'))
+  for target, spec in gpu.SPECS.items():
+   for index, package in enumerate(spec['packages']):
+    tag='graphics-20261025' if target=='termux' or index>0 else 'mesa-26.2.5'
+    self.assertTrue(package[0].startswith('https://github.com/HezeAI/termux-jobs-components/releases/download/'+tag+'/'))
   self.assertEqual(tuple(gpu.SPECS['termux']['packages'][1][:3]),wrapper.LOADER)
 
 if __name__=='__main__':unittest.main()

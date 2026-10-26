@@ -24,7 +24,7 @@ public final class VirglInstaller implements AutoCloseable {
         if(Files.isSymbolicLink(parent.toPath())||(!parent.isDirectory()&&!parent.mkdirs()))throw new IOException("Unsafe VirGL control directory");
         File directory=Files.createTempDirectory(parent.toPath(),"job-").toFile();
         try{return new VirglInstaller(DesktopProcess.virgl(context,directory,target),directory);}
-        catch(Exception error){for(String name:new String[]{"x11-guardian.sh","x11-virgl-setup.sh","x11-virgl-client.py","x11-virgl-alpine.zip"})new File(directory,name).delete();directory.delete();throw error;}
+        catch(Exception error){for(String name:new String[]{"x11-guardian.sh","x11-virgl-setup.sh","x11-virgl-client.py","x11-extras.py","x11-virgl-alpine.zip"})new File(directory,name).delete();directory.delete();throw error;}
     }
     public void read(Consumer<String> output)throws IOException{child.read(output);}
     public int waitFor()throws InterruptedException{return child.waitFor();}
@@ -36,6 +36,6 @@ public final class VirglInstaller implements AutoCloseable {
     @Override public void close(){child.close();}
     public void cleanup(){
         // Assets only, no recursively followed links. Call after waitFor.
-        for(String name:new String[]{"x11-guardian.sh","x11-virgl-setup.sh","x11-virgl-client.py","x11-virgl-alpine.zip"})new File(directory,name).delete();directory.delete();
+        for(String name:new String[]{"x11-guardian.sh","x11-virgl-setup.sh","x11-virgl-client.py","x11-extras.py","x11-virgl-alpine.zip"})new File(directory,name).delete();directory.delete();
     }
 }

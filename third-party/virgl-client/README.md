@@ -4,7 +4,9 @@ This is a minimal upstream Mesa 26.1.6 build for aarch64 Linux/musl, using only
 Gallium `virgl`, EGL/GLX and GLES. No LLVM, Vulkan ICD, Turnip or Zink is included.
 The source archive URL and hashes, compiler flags and final library hashes are
 recorded in build-info.json. The source is unchanged. License notices are in
-LICENSE.txt and also included as an APK asset next to the client archive.
+LICENSE.txt and retained as an APK asset. Since private test2 the client ZIP is
+a pinned optional component in termux-jobs-components/x11-extras-20261025, not
+an APK asset. Existing valid copies and the verified shared cache work offline.
 
 At runtime the pinned archive is extracted atomically into an application-owned
 cache. Only the selected Alpine VirGL desktop sees it through its own PRoot bind

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Pinned private musl VirGL client. No package-manager/rootfs writes."""
-import hashlib,io,os,shutil,stat,sys,tempfile,zipfile
+import hashlib,io,os,shutil,stat,sys,tempfile,zipfile,importlib.util,signal
 from pathlib import Path,PurePosixPath
 PIN='d226941f42b135c4e5cd58218b50758beb132e5a46d37f4aec8972a481c33739'
 NAME='client-'+PIN[:16]
@@ -52,6 +52,12 @@ def ready(root,files):
  except OSError:return False
 
 def prepare(base,archive,install):
+ if not archive.exists():
+  spec=importlib.util.spec_from_file_location('jobs_extras',Path(__file__).with_name('x11-extras.py'));extras=importlib.util.module_from_spec(spec);spec.loader.exec_module(extras)
+  try:extras.ensure('virgl-alpine',archive,base.parent/'workspace-x11-extras',install)
+  except ValueError as error:
+   if str(error)=='EXTRAS_REQUIRED':raise ValueError('VIRGL_CLIENT_REQUIRED') from None
+   raise
  files=payload(archive)
  if base.is_symlink():raise ValueError('VIRGL_CLIENT_LINK')
  dest=base/NAME
@@ -72,6 +78,7 @@ def prepare(base,archive,install):
  return dest
 
 if __name__=='__main__':
+ signal.signal(signal.SIGTERM,lambda *_:sys.exit(143))
  try:
   op,archive=sys.argv[1:]
   if op not in ('check','install'):raise ValueError('VIRGL_CLIENT_ARGUMENT')
@@ -80,5 +87,5 @@ if __name__=='__main__':
   prepare(prefix.parent/'workspace-x11-virgl-alpine',Path(archive),op=='install')
   print('JOBS_VIRGL_CLIENT='+NAME)
  except (OSError,ValueError,KeyError,zipfile.BadZipFile) as e:
-  reason=str(e) if isinstance(e,ValueError) and str(e).startswith('VIRGL_') else 'VIRGL_CLIENT_FAILED'
+  reason=str(e) if isinstance(e,ValueError) and str(e).startswith(('VIRGL_','EXTRAS_')) else 'VIRGL_CLIENT_FAILED'
   print('ERROR:'+reason,flush=True);raise SystemExit(1)

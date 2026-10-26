@@ -36,9 +36,12 @@ public class DesktopProcessAssetTest {
   try{m.invoke(null,c,dir,"x11-session.sh");fail();}catch(InvocationTargetException e){assertTrue(e.getCause() instanceof IOException);}
   assertArrayEquals(new byte[]{7},Files.readAllBytes(sentinel.toPath()));
  }
- @Test public void privateAlpineVirglClientArchiveAndLicenseArePackaged()throws Exception{
+ @Test public void optionalArchivesAreExternalButLoaderAndLicenseRemainPackaged()throws Exception{
   Context c=RuntimeEnvironment.application;
-  try(java.util.zip.ZipInputStream in=new java.util.zip.ZipInputStream(c.getAssets().open("x11-virgl-alpine.zip"))){int count=0;java.util.zip.ZipEntry entry;while((entry=in.getNextEntry())!=null){assertTrue(entry.getName().startsWith("lib/"));assertFalse(entry.getName().contains(".."));count++;}assertEquals(7,count);}
+  for(String name:new String[]{"x11-virgl-alpine.zip","x11-style.zip"}){
+   try(InputStream in=c.getAssets().open(name)){fail("Optional archive is still embedded: "+name);}catch(IOException expected){}
+  }
+  try(InputStream in=c.getAssets().open("x11-extras.py")){assertTrue(in.read()!=-1);}
   try(InputStream in=c.getAssets().open("x11-virgl-alpine-LICENSE.txt")){assertTrue(in.read()!=-1);}
  }
 }

@@ -44,5 +44,5 @@ class ClientTests(unittest.TestCase):
    with patch.object(m.os,'rename',side_effect=OSError('interrupted')),self.assertRaises(OSError):m.prepare(self.root,self.archive,True)
    self.assertEqual([],list(self.root.iterdir()));self.assertTrue(m.prepare(self.root,self.archive,True).is_dir())
  def test_real_pack_is_pinned_musl_arm64_and_contains_virpipe(self):
-  archive=ROOT/'.tools/x11-runtime/assets/x11-virgl-alpine.zip';files=m.payload(archive)
+  archive=ROOT/'.tools/x11-components/x11-virgl-alpine.zip';files=m.payload(archive)
   self.assertIn(b'virpipe\0',files['lib/libgallium-26.1.6.so']);self.assertNotIn(b'libLLVM',files['lib/libgallium-26.1.6.so'])

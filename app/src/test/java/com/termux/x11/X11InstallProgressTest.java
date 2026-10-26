@@ -2,6 +2,12 @@ package com.termux.x11;
 import org.junit.Test;
 import static org.junit.Assert.*;
 public class X11InstallProgressTest {
+ @Test public void optionalArchiveReportsRealBytesAndResetsBeforePackageInstallation(){
+  X11InstallProgress p=new X11InstallProgress();p.feed("EXTRA_STAGE:kali-style\nEXTRA_PRO",0);p.feed("GRESS:25:100\n",1000);assertEquals(25,p.percent());assertEquals(25,p.downloadedBytes());assertEquals(100,p.totalBytes());assertEquals("Kali theme",p.currentItem());
+  p.feed("EXTRA_PROGRESS:75:100\n",4000);assertEquals(75,p.percent());assertTrue(p.etaSeconds(4000)>0);
+  for(String invalid:new String[]{"EXTRA_PROGRESS:101:100","EXTRA_PROGRESS:1:0","EXTRA_PROGRESS:-1:100","EXTRA_PROGRESS:999999999999999999999:1"})p.feed(invalid+"\n",4001);
+  assertEquals(75,p.percent());p.feed("EXTRA_PROGRESS:100:100\nJOBS_APT_PHASE:install\ndlstatus:p:0:fetching\n",5000);assertEquals(10,p.percent());assertEquals(-1,p.totalBytes());
+ }
  @Test public void zypperPackageSurvivesFragmentsAndSpinnerWithoutInventingBytes(){
   X11InstallProgress p=new X11InstallProgress();p.feed("JOBS_APT_PHASE:install\nPreloa",0);p.feed("ding: libpulse0-1.aarch64.rpm [",1);
   assertEquals("libpulse0-1.aarch64.rpm",p.currentItem());assertEquals(-1,p.percent());

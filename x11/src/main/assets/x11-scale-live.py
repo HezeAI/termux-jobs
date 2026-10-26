@@ -96,6 +96,10 @@ class Conf:
   channel,key=identity.split('|');channel=self.channel(channel);path=key.encode()
   if value is None:self.lib.xfconf_channel_reset_property(channel,path,False);return
   node=ET.fromstring(value);typ=node.get('type');value=node.get('value')
+  # XFCE XML represents an unset leaf as type="empty". Restoring that
+  # original means removing the scalar override, not assigning a new type.
+  if typ=='empty' and value is None and not list(node):
+   self.lib.xfconf_channel_reset_property(channel,path,False);return
   if typ not in ('int','uint','string'):raise ValueError('scale type')
   arg=value.encode() if typ=='string' else int(value)
   if not getattr(self.lib,'xfconf_channel_set_'+typ)(channel,path,arg):raise ValueError('scale write')

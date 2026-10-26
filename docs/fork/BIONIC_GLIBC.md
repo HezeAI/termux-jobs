@@ -1,4 +1,12 @@
-# Current distribution — v2.0.6
+# Current distribution — v2.0.7
+
+The private Mesa Zink/GLX/EGL frontend now uses26.2.5. Its six non-Mesa bridge core files retain their prior bytes. The6,103,917-byte ZIP is downloaded from the pinned [Mesa26.2.5 component release](https://github.com/HezeAI/termux-jobs-components/releases/tag/mesa-26.2.5), never into guest system libraries. Bundle/file validation triggers selected-target preparation when an older cache differs; existing imported drivers remain selected. Matching archives/runtimes work offline. Stop/start the desktop to load updated libraries.
+
+A protected built-in a6xx-a7xx-a8xx choice is available before preparation. Imported rows have confirmed removal while the target is stopped; other targets and the source ZIP remain intact. Source/build attribution is in [third-party/bionic-glibc](../../third-party/bionic-glibc/README.md) and the [components repository](https://github.com/HezeAI/termux-jobs-components#readme). No data reset or account/environment migration is required. The following versioned sections are historical.
+
+---
+
+# Historical distribution — v2.0.6
 
 The established runtime bytes and imported-driver formats are unchanged. The ZIP is no longer embedded in APK assets: when missing, starting the selected supported glibc desktop downloads6,053,026bytes from the pinned [component release](https://github.com/HezeAI/termux-jobs-components/releases/tag/graphics-20261025), verifies its exact SHA-256/size, and prepares that target’s runtime under its existing lock. Select/import the driver before launch. Already valid runtime installations work offline without redownloading. A verified archive can repair that cache; download cancellation/failure or mismatch keeps the previous runtime and selected driver. Different targets retain separate caches and displays.
 

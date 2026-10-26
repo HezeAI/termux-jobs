@@ -75,13 +75,13 @@ class RendererEnvironmentTests(unittest.TestCase):
 
     def test_turnip_all_eight_targets_clear_virgl_and_select_their_pinned_icd(self):
         components = {'termux': ('termux-mesa26.2.5', 'data/data/com.termux/files/usr/lib'),
-                      'ubuntu': ('ubuntu-26.04-mesa26.3', 'usr/lib/aarch64-linux-gnu'),
-                      'debian': ('debian-13-mesa26.3', 'usr/lib/aarch64-linux-gnu'),
-                      'alpine': ('alpine-3.24-mesa26.3', 'usr/lib'),
-                      'fedora': ('fedora-44-mesa26.3', 'usr/lib64'),
-                      'opensuse': ('opensuse-16-mesa26.3', 'usr/lib/aarch64-linux-gnu'),
-                      'void': ('void-mesa26.3', 'usr/lib'),
-                      'archlinux': ('archlinux-mesa26.3', 'usr/lib')}
+                      'ubuntu': ('ubuntu-26.04-mesa26.2.5', 'usr/lib/aarch64-linux-gnu'),
+                      'debian': ('debian-13-mesa26.2.5', 'usr/lib/aarch64-linux-gnu'),
+                      'alpine': ('alpine-3.24-mesa26.2.5', 'usr/lib'),
+                      'fedora': ('fedora-44-mesa26.2.5', 'usr/lib64'),
+                      'opensuse': ('opensuse-16-mesa26.2.5', 'usr/lib/aarch64-linux-gnu'),
+                      'void': ('void-mesa26.2.5', 'usr/lib'),
+                      'archlinux': ('archlinux-mesa26.2.5', 'usr/lib')}
         for target, (name, libdir) in components.items():
             with self.subTest(target=target):
                 component = self.base / name

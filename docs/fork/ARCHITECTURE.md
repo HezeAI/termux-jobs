@@ -1,4 +1,12 @@
-# Current architecture — v2.0.6
+# Current graphics architecture — v2.0.7
+
+Optional archives are fixed-version downloads from graphics-20261025, mesa-26.2.5 and x11-extras-20261025. A content-addressed verified archive cache supports reuse; each target retains its own activated runtime, driver selection, operation lock and X11 display. The bridge validates bundle identity and allowlisted file hashes before using the selected target's runtime. Changed bundles activate by staged replacement only under that target's exclusive lock; active desktops retain shared locks. No guest/system library is replaced.
+
+The optional helper accepts Android's /data/data and /data/user/0 private-directory aliases by filesystem identity while retaining exact PREFIX and per-target checks. Driver removal keeps descriptor-based no-follow deletion, protected defaults and rollback of selected metadata on failure. Package-manager dependencies remain separate from mirrored renderer archives. Existing desktop process ownership, shutdown, permissions and authentication paths are preserved. See [graphics components](GRAPHICS-COMPONENTS.md).
+
+---
+
+# Historical architecture — v2.0.6
 
 The Wayland/KDE experiment is removed. DesktopProfiles accepts XFCE; old Plasma selection is ignored and unsupported profile requests are rejected before runtime preparation. Arch uses the standard X11 program flow. Shared Wayland/Qt package dependencies remain independent of that retired desktop.
 

@@ -6,7 +6,7 @@ ROOT=Path(__file__).resolve().parents[2]
 spec=importlib.util.spec_from_file_location('style',ROOT/'x11/src/main/assets/x11-style.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 class StyleTests(unittest.TestCase):
  def setUp(self):
-  self.tmp=tempfile.TemporaryDirectory(dir=ROOT/'.verification');self.root=Path(self.tmp.name);self.home=self.root/'home';self.home.mkdir();self.prefix=self.root/'usr';self.prefix.mkdir();self.control=self.root/'control';self.control.mkdir();(self.control/'x11-style.zip').write_bytes((ROOT/'.tools/x11-runtime/assets/x11-style.zip').read_bytes());self.config=self.home/'.config';self.channels=self.config/'xfce4/xfconf/xfce-perchannel-xml';self.env=patch.dict(os.environ,{'XDG_CONFIG_HOME':str(self.config)});self.env.start()
+  self.tmp=tempfile.TemporaryDirectory(dir=ROOT/'.verification');self.root=Path(self.tmp.name);self.home=self.root/'home';self.home.mkdir();self.prefix=self.root/'usr';self.prefix.mkdir();self.control=self.root/'control';self.control.mkdir();(self.control/'x11-style.zip').write_bytes((ROOT/'.tools/x11-components/x11-style.zip').read_bytes());self.config=self.home/'.config';self.channels=self.config/'xfce4/xfconf/xfce-perchannel-xml';self.env=patch.dict(os.environ,{'XDG_CONFIG_HOME':str(self.config)});self.env.start()
  def tearDown(self):self.env.stop();self.tmp.cleanup()
  def channel(self,name):return m.tree(m.read(self.channels/(name+'.xml')),name)
  def put(self,name,key,typ,value):

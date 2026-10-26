@@ -3,8 +3,11 @@ package com.termux.app.workspace;
 import android.app.AlertDialog;
 import android.os.*;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.Gravity;
 import android.widget.*;
 import com.termux.app.TermuxActivity;
+import com.termux.R;
 import com.termux.shared.shell.TermuxShellUtils;
 import com.termux.shared.termux.TermuxConstants;
 import java.io.*;
@@ -18,6 +21,8 @@ import org.json.JSONArray;
 
 /** Separate, target-scoped Bionic driver libraries; never replaces system drivers. */
 final class WorkspaceDesktopWrapper implements AutoCloseable {
+    static final String DEFAULT_DRIVER_ID="ce35642c5d93ecdfa08b730f80fd738ad71b473cdd7aa3dc58c37d2e6b1e984f";
+    static final String DEFAULT_DRIVER_NAME="a6xx-a7xx-a8xx";
     private final TermuxActivity activity;
     private final String target;
     private final WorkspaceLocalFilePicker picker;
@@ -47,39 +52,72 @@ final class WorkspaceDesktopWrapper implements AutoCloseable {
             return value;
         }catch(Exception error){return null;}
     }
+    static boolean builtinSelected(android.content.Context context,String target){return metadata(context,target)==null||context.getSharedPreferences("workspace-x11",0).getBoolean("builtin-driver:"+target,false);}
+    static void chooseBuiltin(android.content.Context context,String target){context.getSharedPreferences("workspace-x11",0).edit().putBoolean("builtin-driver:"+target,true).apply();}
+    static void chooseImported(android.content.Context context,String target){context.getSharedPreferences("workspace-x11",0).edit().putBoolean("builtin-driver:"+target,false).apply();}
     static boolean installed(android.content.Context context){return installed(context,"termux");}
     static boolean installed(android.content.Context context,String target){
         File runtime=new File(base(context,target),"runtime"),ready=new File(runtime,"ready.json");
-        return metadata(context,target)!=null&&!Files.isSymbolicLink(runtime.toPath())&&!Files.isSymbolicLink(ready.toPath())&&ready.isFile();
+        JSONObject selected=metadata(context,target);
+        return selected!=null&&(!builtinSelected(context,target)||DEFAULT_DRIVER_ID.equals(selected.optString("id")))&&!Files.isSymbolicLink(runtime.toPath())&&!Files.isSymbolicLink(ready.toPath())&&ready.isFile();
     }
     static String driverLabel(android.content.Context context){return driverLabel(context,"termux");}
-    static String driverLabel(android.content.Context context,String target){JSONObject value=metadata(context,target);return value==null?"":value.optString("name","Turnip Bionic");}
-    void showDrivers(BooleanSupplier unavailable,Runnable updated){libraryJob("catalog","-",unavailable,updated);}
+    static String driverLabel(android.content.Context context,String target){if(builtinSelected(context,target))return DEFAULT_DRIVER_NAME;JSONObject value=metadata(context,target);return value==null?"":value.optString("name","Turnip Bionic");}
+    void showDrivers(BooleanSupplier unavailable,Runnable updated){
+        if(closed||busy||unavailable.getAsBoolean())return;
+        // A fresh installation can choose the virtual preset before host Python exists.
+        if(!new File(base(activity,target),"drivers").exists()&&metadata(activity,target)==null){driverChoices(new JSONArray(),unavailable,updated);return;}
+        libraryJob("catalog","-",unavailable,updated);
+    }
     private void driverChoices(JSONArray drivers,BooleanSupplier unavailable,Runnable updated){
         if(closed)return;if(unavailable.getAsBoolean()){updated.run();return;}
-        if(drivers.length()==0){message(tr("Нет загруженных драйверов. Добавьте ZIP кнопкой папки справа от рендера.","No imported drivers. Add a ZIP using the folder button next to the renderer."),updated);return;}
-        String[] labels=new String[drivers.length()],ids=new String[drivers.length()];boolean[] enabled=new boolean[drivers.length()];
-        JSONObject current=metadata(activity,target);String selected=current==null?"":current.optString("id");int checked=-1;
-        for(int i=0;i<labels.length;i++){
-            JSONObject value=drivers.optJSONObject(i);if(value==null){labels[i]="?";ids[i]="";continue;}
-            ids[i]=value.optString("id");labels[i]=value.optString("name","Turnip Bionic");
+        JSONArray imported=new JSONArray();for(int i=0;i<drivers.length();i++){JSONObject value=drivers.optJSONObject(i);if(value!=null&&!DEFAULT_DRIVER_ID.equals(value.optString("id")))imported.put(value);}
+        String[] labels=new String[imported.length()+1],ids=new String[labels.length];boolean[] enabled=new boolean[labels.length];
+        JSONObject current=metadata(activity,target);String selected=current==null?"":current.optString("id");int checked=builtinSelected(activity,target)?0:-1;
+        labels[0]=DEFAULT_DRIVER_NAME;ids[0]=DEFAULT_DRIVER_ID;enabled[0]=Build.VERSION.SDK_INT>=28;
+        for(int i=1;i<labels.length;i++){
+            JSONObject value=imported.optJSONObject(i-1);ids[i]=value.optString("id");labels[i]=value.optString("name","Turnip Bionic");
             enabled[i]=ids[i].matches("[a-f0-9]{64}")&&value.optInt("minApi",0)<=Build.VERSION.SDK_INT;
-            if(selected.equals(ids[i]))checked=i;
+            if(!builtinSelected(activity,target)&&selected.equals(ids[i]))checked=i;
         }
         for(int i=0;i<labels.length;i++)for(int j=i+1;j<labels.length;j++)if(labels[i].equals(labels[j])){
             String name=labels[i];for(int k=i;k<labels.length;k++)if(labels[k].equals(name))labels[k]+=" · "+ids[k].substring(0,Math.min(8,ids[k].length()));break;
         }
+        final int selectedIndex=checked;
+        BaseAdapter adapter=new BaseAdapter(){
+            public int getCount(){return labels.length;}
+            public Object getItem(int position){return labels[position];}
+            public long getItemId(int position){return position;}
+            public View getView(int position,View recycled,ViewGroup parent){
+                LinearLayout outer=new LinearLayout(activity);outer.setGravity(Gravity.CENTER_VERTICAL);outer.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+                outer.setPadding(WorkspaceDialogs.dp(activity,16),WorkspaceDialogs.dp(activity,4),WorkspaceDialogs.dp(activity,16),WorkspaceDialogs.dp(activity,4));
+                LinearLayout row=new LinearLayout(activity);row.setGravity(Gravity.CENTER_VERTICAL);row.setBackground(WorkspaceDialogs.background(activity,position==selectedIndex));
+                TextView label=WorkspaceDialogs.action(activity,labels[position],0);label.setBackground(null);label.setAlpha(enabled[position]?1f:.4f);row.addView(label,new LinearLayout.LayoutParams(0,-2,1));
+                if(position>0&&ids[position].matches("[a-f0-9]{64}")){
+                    ImageButton trash=new ImageButton(activity);trash.setImageResource(R.drawable.workspace_delete);trash.setImageTintList(android.content.res.ColorStateList.valueOf(WorkspaceDialogs.DANGER));trash.setScaleType(ImageView.ScaleType.CENTER_INSIDE);trash.setPadding(WorkspaceDialogs.dp(activity,10),WorkspaceDialogs.dp(activity,10),WorkspaceDialogs.dp(activity,10),WorkspaceDialogs.dp(activity,10));trash.setBackground(WorkspaceDialogs.background(activity,false));trash.setFocusable(false);trash.setTag("wrapper-remove-"+ids[position]);trash.setContentDescription(tr("Удалить ","Remove ")+labels[position]);trash.setOnClickListener(v->{if(closed||busy||unavailable.getAsBoolean())return;window.dismiss();confirmRemove(ids[position],labels[position],unavailable,updated);});row.addView(trash,new LinearLayout.LayoutParams(WorkspaceDialogs.dp(activity,44),WorkspaceDialogs.dp(activity,44)));
+                }
+                outer.addView(row,new LinearLayout.LayoutParams(-1,-2));return outer;
+            }
+        };
         window=WorkspaceDialogs.builder(activity).setTitle(tr("Драйверы Wrapper","Wrapper drivers"))
-            .setAdapter(WorkspaceDialogs.choiceAdapter(activity,labels,checked,i->enabled[i]),(d,i)->{
-                if(!enabled[i]||closed)return;if(unavailable.getAsBoolean()||selected.equals(ids[i])){updated.run();return;}
+            .setAdapter(adapter,(d,i)->{
+                if(!enabled[i]||closed)return;if(unavailable.getAsBoolean()){updated.run();return;}
+                if(i==0){chooseBuiltin(activity,target);updated.run();return;}
+                if(selected.equals(ids[i])){chooseImported(activity,target);updated.run();return;}
                 libraryJob("select",ids[i],unavailable,updated);
             }).setNegativeButton(tr("Назад","Back"),(d,w)->updated.run()).create();window.show();
+    }
+    private void confirmRemove(String identity,String label,BooleanSupplier unavailable,Runnable updated){
+        window=WorkspaceDialogs.builder(activity).setTitle(tr("Удалить драйвер?","Remove driver?"))
+            .setMessage(label+"\n\n"+tr("Удалится только копия из выбранного окружения. Оригинальный ZIP в памяти телефона сохранится. Если удалён выбранный драйвер, будет выбран a6xx-a7xx-a8xx; загрузка произойдёт при следующем запуске стола.","Removes only this environment’s copy. The original phone ZIP is preserved. Removing the selected driver selects a6xx-a7xx-a8xx; it downloads at the next desktop launch."))
+            .setPositiveButton(tr("Удалить","Remove"),(d,w)->libraryJob("remove",identity,unavailable,updated))
+            .setNegativeButton(tr("Отмена","Cancel"),(d,w)->showDrivers(unavailable,updated)).create();window.show();
     }
     private void libraryJob(String operation,String identity,BooleanSupplier unavailable,Runnable updated){
         if(closed||busy||unavailable.getAsBoolean())return;
         busy=true;AtomicBoolean cancelled=new AtomicBoolean();AtomicReference<File> cancellation=new AtomicReference<>();
         window=WorkspaceDialogs.builder(activity).setTitle(tr("Драйверы Wrapper","Wrapper drivers"))
-            .setMessage(operation.equals("catalog")?tr("Чтение списка драйверов…","Reading driver library…"):tr("Проверка и выбор драйвера…","Verifying and selecting driver…"))
+            .setMessage(operation.equals("catalog")?tr("Чтение списка драйверов…","Reading driver library…"):operation.equals("remove")?tr("Удаление драйвера…","Removing driver…"):tr("Проверка и выбор драйвера…","Verifying and selecting driver…"))
             .setNegativeButton(tr("Отмена","Cancel"),null).create();window.setCancelable(false);window.setCanceledOnTouchOutside(false);window.show();AlertDialog progress=window;
         cancel=()->{cancelled.set(true);File marker=cancellation.get();if(marker!=null)try{marker.createNewFile();}catch(IOException ignored){}progress.getButton(-2).setEnabled(false);};progress.getButton(-2).setOnClickListener(v->cancel.run());
         worker.execute(()->{
@@ -87,9 +125,11 @@ final class WorkspaceDesktopWrapper implements AutoCloseable {
             try{job=jobDirectory();File marker=new File(job,"cancel");cancellation.set(marker);if(cancelled.get())marker.createNewFile();result=run(job,operation,identity,marker,line->{});}catch(Exception ignored){}finally{cleanup(job);}
             Result answer=result;main.post(()->{
                 busy=false;cancel=null;progress.dismiss();if(closed)return;
+                if(operation.equals("remove")&&answer.success&&metadata(activity,target)==null)chooseBuiltin(activity,target);
                 if(cancelled.get()){updated.run();return;}
-                if(!answer.success){message(answer.report.contains("WRAPPER_BUSY")?tr("Сначала остановите рабочий стол Termux. Выбор драйвера сохранён.","Stop the Termux desktop first. The selected driver is preserved."):tr("Не удалось прочитать или выбрать драйвер. Предыдущий выбор сохранён.\n","Could not read or select driver. The previous selection is preserved.\n")+answer.report,updated);return;}
-                if(operation.equals("select")){updated.run();return;}
+                if(!answer.success){message(answer.report.contains("WRAPPER_BUSY")?tr("Сначала остановите рабочий стол выбранного окружения. Выбор драйвера сохранён.","Stop the selected environment’s desktop first. The selected driver is preserved."):(operation.equals("remove")?tr("Не удалось удалить драйвер. Подробности:\n","Could not remove the driver. Details:\n"):tr("Не удалось прочитать или выбрать драйвер. Предыдущий выбор сохранён.\n","Could not read or select driver. The previous selection is preserved.\n"))+answer.report,updated);return;}
+                if(operation.equals("select")){chooseImported(activity,target);updated.run();return;}
+                if(operation.equals("remove")){showDrivers(unavailable,updated);return;}
                 try{for(String line:answer.report.split("\n"))if(line.startsWith("WRAPPER_DRIVERS:")){driverChoices(new JSONArray(line.substring("WRAPPER_DRIVERS:".length())),unavailable,updated);return;}throw new IOException("Missing library");}
                 catch(Exception ignored){message(tr("Не удалось прочитать список драйверов.","Could not read the driver library."),updated);}
             });
@@ -126,14 +166,16 @@ final class WorkspaceDesktopWrapper implements AutoCloseable {
             }catch(Exception ignored){}finally{cleanup(job);}
             boolean ok=success;String detail=report;main.post(()->{
                 busy=false;cancel=null;progress.dismiss();if(closed)return;
-                if(ok||cancelled.get()){updated.run();return;}
+                if(ok){chooseImported(activity,target);updated.run();return;}
+                if(cancelled.get()){updated.run();return;}
                 message(detail.contains("WRAPPER_BUSY")?tr("Остановите выбранный рабочий стол перед заменой драйвера. Предыдущий выбор сохранён.","Stop the selected desktop before replacing its driver. The previous selection is preserved."):tr("Не удалось импортировать драйвер. Нужен ZIP Bionic ARM64 с meta.json, подходящий версии Android. Предыдущий драйвер сохранён.\n","Could not import driver. Choose a Bionic ARM64 ZIP with meta.json matching this Android version. The previous driver is preserved.\n")+detail,updated);
             });
         });
     }
     void prepare(BooleanSupplier unavailable,Runnable updated,WorkspaceDesktopGpu.Inline inline){
         if(closed||busy||unavailable.getAsBoolean()){finish(inline,false,"ERROR:GPU_BUSY",updated);return;}
-        if(metadata(activity,target)==null){finish(inline,false,tr("Выберите ZIP Bionic кнопкой папки рядом с рендером.","Choose a Bionic ZIP using the folder button next to the renderer."),updated);return;}
+        if(!builtinSelected(activity,target)&&metadata(activity,target)==null){finish(inline,false,tr("Выберите ZIP Bionic кнопкой папки рядом с рендером.","Choose a Bionic ZIP using the folder button next to the renderer."),updated);return;}
+        if(builtinSelected(activity,target)){install(unavailable,updated,inline);return;}
         if(bridge()){install(unavailable,updated,inline);return;}
         if(installed(activity,target)){updated.run();return;}
         window=WorkspaceDialogs.builder(activity).setTitle(tr("Подготовить Wrapper?","Prepare Wrapper?"))
@@ -151,7 +193,7 @@ final class WorkspaceDesktopWrapper implements AutoCloseable {
             try{
                 job=jobDirectory();File marker=new File(job,"cancel");cancellation.set(marker);if(cancelled.get())marker.createNewFile();
                 long began=SystemClock.elapsedRealtime();long[] last={0};
-                Result result=run(job,"install","-",marker,line->{
+                Result result=run(job,builtinSelected(activity,target)?"install-default":"install","-",marker,line->{
                     if(!line.startsWith("GPU_PROGRESS:"))return;
                     try{String[] parts=line.split(":");long done=Long.parseLong(parts[1]),total=Long.parseLong(parts[2]),now=SystemClock.elapsedRealtime();if(now-last[0]<200&&done<total)return;last[0]=now;
                         int percent=(int)Math.min(100,done*100/Math.max(1,total));long eta=done==0?-1:(now-began)*(total-done)/done/1000;
@@ -169,13 +211,13 @@ final class WorkspaceDesktopWrapper implements AutoCloseable {
     }
     private static final class Result{final boolean success;final String report;Result(boolean ok,String text){success=ok;report=text;}}
     private Result run(File job,String operation,String source,File cancel,Consumer<String> output)throws Exception{
-        for(String name:bridge()?new String[]{"x11-wrapper.py","x11-bionic-glibc.py","x11-gpu.py"}:new String[]{"x11-wrapper.py","x11-gpu.py"})try(InputStream in=activity.getAssets().open(name);OutputStream out=new FileOutputStream(new File(job,name))){byte[] data=new byte[8192];int count;while((count=in.read(data))!=-1)out.write(data,0,count);}
-        ProcessBuilder builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/python3","-B",new File(job,bridge()?"x11-bionic-glibc.py":"x11-wrapper.py").getPath(),operation,target,base(activity,target).getPath(),source,Integer.toString(Build.VERSION.SDK_INT),cancel.getPath());
+        for(String name:bridge()?new String[]{"x11-wrapper.py","x11-bionic-glibc.py","x11-gpu.py","x11-extras.py","x11-default-driver.py"}:new String[]{"x11-wrapper.py","x11-gpu.py","x11-extras.py","x11-default-driver.py"})try(InputStream in=activity.getAssets().open(name);OutputStream out=new FileOutputStream(new File(job,name))){byte[] data=new byte[8192];int count;while((count=in.read(data))!=-1)out.write(data,0,count);}
+        ProcessBuilder builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/python3","-B",new File(job,operation.equals("install-default")?"x11-default-driver.py":bridge()?"x11-bionic-glibc.py":"x11-wrapper.py").getPath(),operation,target,base(activity,target).getPath(),source,Integer.toString(Build.VERSION.SDK_INT),cancel.getPath());
         builder.directory(job);builder.environment().clear();for(String value:TermuxShellUtils.buildEnvironment(activity,false,TermuxConstants.TERMUX_HOME_DIR_PATH)){int eq=value.indexOf('=');if(eq>0)builder.environment().put(value.substring(0,eq),value.substring(eq+1));}builder.environment().put("PREFIX",TermuxConstants.TERMUX_PREFIX_DIR_PATH);builder.redirectErrorStream(true);
         java.lang.Process process=builder.start();process.getOutputStream().close();StringBuilder tail=new StringBuilder();
         try(BufferedReader reader=new BufferedReader(new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8))){String line;while((line=reader.readLine())!=null){tail.append(line).append('\n');if(tail.length()>262144)tail.delete(0,tail.length()-262144);output.accept(line);}}
         return new Result(process.waitFor()==0,tail.toString());
     }
-    private static void cleanup(File job){if(job==null)return;for(String name:new String[]{"driver.zip","cancel","x11-wrapper.py","x11-gpu.py","x11-bionic-glibc.py","x11-bionic-glibc.zip"})new File(job,name).delete();job.delete();}
+    private static void cleanup(File job){if(job==null)return;for(String name:new String[]{"driver.zip","cancel","x11-wrapper.py","x11-gpu.py","x11-bionic-glibc.py","x11-bionic-glibc.zip","x11-extras.py","x11-default-driver.py"})new File(job,name).delete();job.delete();}
     @Override public void close(){closed=true;picker.close();if(cancel!=null)cancel.run();if(window!=null)window.dismiss();worker.shutdown();main.removeCallbacksAndMessages(null);}
 }

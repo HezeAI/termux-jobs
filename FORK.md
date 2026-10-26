@@ -1,4 +1,10 @@
-# Current release — v2.0.6 (code1395)
+# Current release — v2.0.7 (code1410)
+
+Mesa 26.2.5 and on-demand components extend the existing graphics repository distribution. The accepted desktop/input behavior, Android8+/ARM64 app, Android11+ X11, com.termux/signer/schema8 and min26/target28/compile35 remain. No data reset, account migration or rootfs reinstallation. Build inputs are repository-local; optional theme/Alpine VirGL ZIPs are prepared separately and excluded from APK assets. See [release](docs/fork/RELEASE-v2.0.7.md), [validation](docs/fork/VALIDATION-v2.0.7.md) and [component sources](docs/fork/GRAPHICS-COMPONENTS.md).
+
+---
+
+# Historical release — v2.0.6 (code1395)
 
 X11-only source: the retired Wayland/KDE experiment and its build flag/runtime inputs are removed. The app retains Android8+/ARM64, X11 Android11+, min26/target28/compile35, com.termux, the existing signing identity and workspace schema8. No data reset or rootfs migration is required.
 

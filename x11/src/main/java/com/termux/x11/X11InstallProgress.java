@@ -18,6 +18,15 @@ public final class X11InstallProgress {
         else if(!overflow){if(line.length()<4096)line.append(c);else{line.setLength(0);overflow=true;}}
     }if(!overflow&&line.length()>0)zypp(line.toString(),now,false);}
     private void parse(String value,long now){
+        if(value.equals("EXTRA_STAGE:kali-style")||value.equals("EXTRA_STAGE:virgl-alpine")){
+            apt="extra";newStage("downloading");percent=-1;item=value.endsWith("kali-style")?"Kali theme":"Alpine VirGL client";return;
+        }
+        if(value.startsWith("EXTRA_PROGRESS:")&&apt.equals("extra")){
+            if(!value.matches("EXTRA_PROGRESS:[0-9]{1,8}:[0-9]{1,8}"))return;
+            String[] n=value.split(":");long done=Long.parseLong(n[1]),all=Long.parseLong(n[2]);if(all<=0||all>8*1024*1024||done>all)return;
+            double p=100.0*done/all;if(start<0||p<last){start=now;initial=p;}last=p;lastTime=now;downloaded=done;total=all;percent=(int)p;return;
+        }
+        if((value.equals("JOBS_APT_PHASE:update")||value.equals("JOBS_APT_PHASE:install"))&&apt.equals("extra"))percent=-1;
         if(value.equals("JOBS_APT_PHASE:update")||value.equals("JOBS_APT_PHASE:install")){apt=value.substring(15);item="";if(apt.equals("update"))percent=-1;newStage(apt.equals("update")?"updating":"downloading");return;}
         if(zypp(value,now,true))return;
         java.util.regex.Matcher dnf=DNF.matcher(value);

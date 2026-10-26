@@ -19,12 +19,12 @@ _spec = importlib.util.spec_from_file_location('jobs_driver_library', Path(__fil
 w = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(w)
 VERSION = 'hybris-wsi-ubuntu-2'
-PIN = 'bfa1acd82b0f69283125174f68e248add7c1d851bb2a90b3fc96218c819f4872'
-SIZE = 6053026
-URL = 'https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/x11-bionic-glibc.zip'
+PIN = 'e05b6abb19916e007330e19566b8833f10505133505d786bee127a71f1e4aa1d'
+SIZE = 6103917
+URL = 'https://github.com/HezeAI/termux-jobs-components/releases/download/mesa-26.2.5/x11-bionic-glibc.zip'
 FILES = {'libjobs-bionic.so', 'libhybris-common.so.1', 'linker/q.so',
          'libVkLayer_window_system_integration.so', 'bionic-icd.json',
-         'mesa/libGLX_mesa.so.0', 'mesa/libEGL_mesa.so.0', 'mesa/libgallium-26.1.6.so',
+         'mesa/libGLX_mesa.so.0', 'mesa/libEGL_mesa.so.0', 'mesa/libgallium-26.2.5.so',
          'share/vulkan/implicit_layer.d/jobs-bionic.json'}
 
 
@@ -175,6 +175,9 @@ def main(argv):
     elif operation == 'select':
         w.select_driver(base, source, int(api))
         print('READY:wrapper-selected')
+    elif operation == 'remove':
+        w.remove_driver(base, source)
+        print('READY:wrapper-removed')
     elif operation == 'install':
         install(base)
         print('READY:wrapper')

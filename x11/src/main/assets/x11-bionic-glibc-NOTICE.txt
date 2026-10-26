@@ -2,7 +2,7 @@ Bionic for glibc (Experimental)
 Source pins, patches and build notes: third-party/bionic-glibc and x11/src/bridge in the Termux Jobs source repository.
 libhybris upstream + TAWC/ARLinux fork; Vulkan WSI Layer by Arm and xMeM.
 Our ICD, cache/environment integration and compatibility patches are provided with this fork. No Vortek/Venus or Universal driver is included.
-Mesa 26.1.6: unmodified upstream source, private Zink/GLX/EGL build for this renderer only. Mesa and its contributors; license collection follows.
+Mesa 26.2.5: unmodified upstream source, private Zink/GLX/EGL build for this renderer only. Mesa and its contributors; license collection follows.
 
 LICENSE.Apache2
 

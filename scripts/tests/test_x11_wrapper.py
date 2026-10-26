@@ -36,6 +36,58 @@ class WrapperTests(unittest.TestCase):
  def source(self,data):
   path=self.root/'driver.zip';path.write_bytes(data);return path
  def imported(self):return w.import_driver(self.cache,self.source(self.zip()),35)
+ def test_remove_selected_and_unselected_driver_preserves_other_targets_and_source_zip(self):
+  first=self.imported();original=self.root/'driver.zip';raw=original.read_bytes()
+  second=w.import_driver(self.cache,self.source(self.zip(payload=self.elf(b'second'))),35)
+  other=self.root/'another-target';w.import_driver(other,original,35)
+  self.assertFalse(w.remove_driver(self.cache,first['id']))
+  self.assertEqual(second,w.driver(self.cache)[0]);self.assertEqual(second,w.driver(other)[0])
+  self.assertEqual(1,len(w.catalog(self.cache)))
+  self.assertTrue(w.remove_driver(self.cache,second['id']))
+  self.assertFalse((self.cache/'current.json').exists());self.assertEqual([],w.catalog(self.cache))
+  self.assertEqual(second,w.driver(other)[0]);self.assertTrue(original.is_file())
+  self.assertFalse(list(self.cache.glob('.delete-driver-*')))
+ def test_remove_protects_builtin_and_rejects_busy_cancelled_paths_and_main_library_links(self):
+  value=self.imported();root=self.cache/'drivers'/value['id']
+  with self.assertRaisesRegex(ValueError,'PROTECTED'):w.remove_driver(self.cache,w.DEFAULT_DRIVER_ID)
+  for identity in ('../escape','../'+'a'*64,'x'*64):
+   with self.assertRaisesRegex(ValueError,'METADATA'):w.remove_driver(self.cache,identity)
+  with (self.cache/'operation.lock').open('r') as fd:
+   fcntl.flock(fd,fcntl.LOCK_SH)
+   with self.assertRaisesRegex(ValueError,'BUSY'):w.remove_driver(self.cache,value['id'])
+  w.CANCEL=self.root/'cancel';w.CANCEL.touch()
+  with self.assertRaisesRegex(ValueError,'CANCELLED'):w.remove_driver(self.cache,value['id'])
+  w.CANCEL=None
+  victim=self.root/'keep';victim.write_text('keep');library=root/value['library'];data=library.read_bytes();library.unlink();library.symlink_to(victim)
+  with self.assertRaisesRegex(ValueError,'FILE'):w.remove_driver(self.cache,value['id'])
+  library.unlink();library.write_bytes(data)
+  self.assertEqual('keep',victim.read_text());self.assertEqual(value,w.driver(self.cache)[0])
+ def test_remove_used_driver_with_auxiliary_files_caches_and_links_never_follows_external_targets(self):
+  first=self.imported();root=self.cache/'drivers'/first['id']
+  (root/'meta.json').write_text('{"runtime":"generated"}')
+  (root/'cache'/'nested').mkdir(parents=True);(root/'cache'/'nested'/'shader.bin').write_bytes(b'cache')
+  external=self.root/'external';external.mkdir();victim=external/'keep';victim.write_text('keep')
+  (root/'cache'/'outside-directory').symlink_to(external,target_is_directory=True)
+  (root/'outside-file').symlink_to(victim)
+  os.link(victim,root/'hardlink')
+  archive=self.source(self.zip(payload=self.elf(b'second')));second=w.import_driver(self.cache,archive,35)
+  original=archive.read_bytes();other=self.root/'another-target';w.import_driver(other,archive,35)
+  self.assertFalse(w.remove_driver(self.cache,first['id']))
+  self.assertFalse(root.exists());self.assertEqual(second,w.driver(self.cache)[0]);self.assertEqual(second,w.driver(other)[0])
+  self.assertEqual('keep',victim.read_text());self.assertEqual(original,archive.read_bytes())
+  self.assertEqual([victim],list(external.iterdir()));self.assertFalse(list(self.cache.glob('.delete-driver-*')))
+ def test_remove_requires_no_follow_recursive_removal_support_before_mutating_selection(self):
+  value=self.imported()
+  with patch.object(w.shutil.rmtree,'avoids_symlink_attacks',False),self.assertRaisesRegex(ValueError,'REMOVE_UNSUPPORTED'):
+   w.remove_driver(self.cache,value['id'])
+  self.assertEqual(value,w.driver(self.cache)[0]);self.assertFalse(list(self.cache.glob('.delete-driver-*')))
+ def test_remove_rolls_back_directory_if_selected_metadata_cannot_be_cleared(self):
+  value=self.imported();original=Path.unlink
+  def unlink(path,*args,**kw):
+   if path==self.cache/'current.json':raise OSError('fixture unlink failure')
+   return original(path,*args,**kw)
+  with patch.object(Path,'unlink',unlink),self.assertRaises(OSError):w.remove_driver(self.cache,value['id'])
+  self.assertEqual(value,w.driver(self.cache)[0]);self.assertFalse(list(self.cache.glob('.delete-driver-*')))
  def test_successful_import_is_private_verified_and_retains_previous_driver(self):
   first=self.imported();keep=self.root/'ubuntu';keep.mkdir();(keep/'keep').write_text('keep')
   value,path=w.driver(self.cache);self.assertEqual(first,value);self.assertEqual(0o600,(path/'libvulkan_freedreno.so').stat().st_mode&0o777)

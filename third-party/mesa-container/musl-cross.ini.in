@@ -1,0 +1,21 @@
+[binaries]
+c = ['/data/data/com.termux/files/usr/bin/clang', '--target=aarch64-linux-musl', '--sysroot=@ROOT@/.tools/virgl-fix/sysroot', '-resource-dir=@ROOT@/.tools/virgl-fix/clang-resource', '-fuse-ld=lld', '-rtlib=compiler-rt', '-Qunused-arguments', '--unwindlib=libgcc', '-mno-outline-atomics']
+cpp = ['/data/data/com.termux/files/usr/bin/clang++', '--target=aarch64-linux-musl', '--sysroot=@ROOT@/.tools/virgl-fix/sysroot', '-resource-dir=@ROOT@/.tools/virgl-fix/clang-resource', '-fuse-ld=lld', '-rtlib=compiler-rt', '-Qunused-arguments', '--unwindlib=libgcc', '-mno-outline-atomics', '-stdlib=libstdc++', '-nostdinc++', '-isystem@ROOT@/.tools/virgl-fix/sysroot/usr/include/c++/15.2.0', '-isystem@ROOT@/.tools/virgl-fix/sysroot/usr/include/c++/15.2.0/aarch64-alpine-linux-musl', '-isystem@ROOT@/.tools/virgl-fix/sysroot/usr/include/c++/15.2.0/backward']
+ar = '/data/data/com.termux/files/usr/bin/llvm-ar'
+strip = '/data/data/com.termux/files/usr/bin/llvm-strip'
+pkg-config = '/data/data/com.termux/files/usr/bin/pkg-config'
+exe_wrapper = ['/data/data/com.termux/files/usr/var/lib/proot-distro/containers/alpine/rootfs/lib/ld-musl-aarch64.so.1', '--library-path', '/data/data/com.termux/files/usr/var/lib/proot-distro/containers/alpine/rootfs/usr/lib']
+[host_machine]
+system = 'linux'
+cpu_family = 'aarch64'
+cpu = 'aarch64'
+endian = 'little'
+[properties]
+needs_exe_wrapper = true
+sys_root = '@ROOT@/.tools/virgl-fix/sysroot'
+pkg_config_libdir = ['@ROOT@/.tools/virgl-fix/sysroot/usr/lib/pkgconfig', '@ROOT@/.tools/virgl-fix/sysroot/usr/share/pkgconfig']
+[built-in options]
+c_args = ['-Wno-unused-command-line-argument']
+cpp_args = ['-Wno-unused-command-line-argument']
+c_link_args = ['-Wl,--gc-sections']
+cpp_link_args = ['-Wl,--gc-sections']

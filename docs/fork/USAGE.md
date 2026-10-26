@@ -1,4 +1,12 @@
-# Current desktop and file behavior — v2.0.6
+# Current desktop and driver behavior — v2.0.7
+
+Choose the renderer before starting the desktop. Wrapper and Bionic for glibc offer a protected **a6xx-a7xx-a8xx** default when no imported selection exists; selecting it alone does not download. Startup verifies/prepares the selected runtime and default ZIP as needed. Existing imported selections remain available. A trash button removes an imported driver after confirmation while that environment's desktop is stopped; the original phone ZIP and unrelated drivers remain.
+
+Enabling Kali style prepares its verified optional archive before desktop launch. Alpine VirGL prepares its own musl client; other distribution packages still use their native repositories. Downloads use the components repository, exact sizes and SHA-256. Matching verified caches can be reused offline. Updating the app does not hot-replace libraries in an active desktop: stop/start it to adopt changed components. Live scale Apply/reset restores unset defaults correctly. See [component behavior](GRAPHICS-COMPONENTS.md) and [release](RELEASE-v2.0.7.md).
+
+---
+
+# Historical desktop and file behavior — v2.0.6
 
 All eight ordinary environments use X11/XFCE; no Wayland/KDE entry remains. Open Programs in Arch directly for its X11 applications. Select the renderer and, for Wrapper/Bionic for glibc, import or choose a trusted saved Bionic driver before starting the desktop. Missing pinned graphics components download from the [components repository](https://github.com/HezeAI/termux-jobs-components) through the existing preparation/progress flow. Cancellation or a bad checksum does not activate a partial runtime. Valid installed components need no repeat download; ordinary Linux packages still use each system’s package manager.
 

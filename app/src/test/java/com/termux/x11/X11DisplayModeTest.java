@@ -21,8 +21,8 @@ public class X11DisplayModeTest {
         assertEquals(600,X11Viewport.visibleHeight(600,1216,0,616));
         assertEquals(1216,X11Viewport.visibleHeight(1216,1216,0,0));
         assertEquals(1,X11Viewport.visibleHeight(600,1216,900,616));
-        X11Viewport v=new X11Viewport();assertEquals(1216,v.update(2688,1216,2688,1216,0,0).height);
-        X11Viewport.Size crop=v.update(2688,X11Viewport.visibleHeight(1216,1216,0,616),2688,1216,0,0);
+        X11Viewport v=new X11Viewport();assertEquals(1216,v.update(2688,1216,2688,1216,0,0,false).height);
+        X11Viewport.Size crop=v.update(2688,X11Viewport.visibleHeight(1216,1216,0,616),2688,1216,0,0,true);
         assertEquals(1216,crop.height);assertEquals(600,crop.visibleHeight);
         X11DisplayMode mode=X11DisplayMode.fit(crop.width,crop.height);assertEquals(2688,mode.width);assertEquals(1216,mode.height);
     }

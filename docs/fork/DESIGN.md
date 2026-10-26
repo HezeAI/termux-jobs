@@ -1,4 +1,12 @@
-# Current desktop design — v2.0.6
+# Current component design — v2.0.7
+
+Wrapper driver libraries show a deferred built-in preset even before installation, and a confirmed trash action for imported rows. The preset is protected. A missing selection resolves to the default on desktop preparation; it never overrides an existing explicit import. The preparation area shows optional-theme download progress through the existing cancellation flow. Valid cache hits skip network access.
+
+Driver removal handles auxiliary files and nested caches without following symlinks outside the selected directory. Live XFCE scale restoration treats unset scalar properties as unset values. Portrait host dimensions use the measured surface without inventing hidden-bottom navigation space. There is no new compositor or rotation mode. See [usage](USAGE.md) and [architecture](ARCHITECTURE.md).
+
+---
+
+# Historical desktop design — v2.0.6
 
 The desktop menu contains the existing X11 switch, renderer/import, screen, theme and keyboard controls. Wayland rows and the separate Arch program chooser are removed. Header branding remains v2.0.
 

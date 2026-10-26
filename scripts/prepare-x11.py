@@ -3,6 +3,7 @@
 from pathlib import Path, PurePosixPath
 import hashlib, io, json, re, subprocess, tarfile, urllib.request, zipfile
 ROOT=Path(__file__).resolve().parents[1]
+COMPONENTS=ROOT/'.tools/x11-components'
 def verified_file(name,record):
     cache=ROOT/'.tools/termux-x11-downloads';cache.mkdir(parents=True,exist_ok=True)
     file=cache/name
@@ -92,6 +93,8 @@ def main():
     style_pin=re.search(r"^PIN='([a-f0-9]{64})'$",(ROOT/'x11/src/main/assets/x11-style.py').read_text(),re.M)
     if not style_pin or hashlib.sha256((assets/'x11-style.zip').read_bytes()).hexdigest()!=style_pin[1]:
         raise ValueError('Generated style differs from its reviewed runtime pin')
+    COMPONENTS.mkdir(parents=True,exist_ok=True)
+    (assets/'x11-style.zip').replace(COMPONENTS/'x11-style.zip')
     # Retired resources must also disappear from an existing build cache.
     for retired in ('x11-touch-style.zip','x11-touch-workspace'):
         (assets/retired).unlink(missing_ok=True)
@@ -99,7 +102,8 @@ def main():
     client=(ROOT/'third-party/virgl-client/alpine-mesa-26.1.6-virgl.zip').read_bytes()
     client_pin=re.search(r"^PIN='([a-f0-9]{64})'$",(ROOT/'x11/src/main/assets/x11-virgl-client.py').read_text(),re.M)
     if not client_pin or hashlib.sha256(client).hexdigest()!=client_pin[1]:raise ValueError('VirGL client integrity')
-    (assets/'x11-virgl-alpine.zip').write_bytes(client)
+    (COMPONENTS/'x11-virgl-alpine.zip').write_bytes(client)
+    (assets/'x11-virgl-alpine.zip').unlink(missing_ok=True)
     (assets/'x11-virgl-alpine-LICENSE.txt').write_bytes((ROOT/'third-party/virgl-client/LICENSE.txt').read_bytes())
     alpine_compat(assets)
     openh264(assets)

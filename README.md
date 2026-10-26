@@ -5,7 +5,15 @@
 Команды по-прежнему выполняются в настоящем Termux или выбранном окружении;
 интерфейс помогает организовать работу и не требует писать свою оболочку скриптов.
 
-## v2.0.6 — X11 scaling, renderer setup and chat files
+## v2.0.7 — Mesa 26.2.5 and on-demand X11 components
+
+Turnip + Zink in the seven Linux environments and the Bionic-for-glibc Mesa frontend now use **Mesa 26.2.5**. The Kali theme, Alpine VirGL client and default **a6xx-a7xx-a8xx** driver are prepared on demand from [Termux Job’s Components](https://github.com/HezeAI/termux-jobs-components#readme), with fixed versions, sizes and SHA-256. Existing valid caches work offline; running desktops adopt new libraries after stop/start. Distribution packages continue using their native repositories.
+
+Driver libraries have a protected built-in default and trash buttons for imported drivers. Theme preparation, cleanup of used drivers, live scale restoration and portrait viewport behavior are corrected. Same com.termux/signature/schema8/ARM64 and Android requirements; **no data reset or environment reinstall**.
+
+[Download v2.0.7](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.7) · [Release notes](docs/fork/RELEASE-v2.0.7.md) · [Validation](docs/fork/VALIDATION-v2.0.7.md) · [Graphics components](docs/fork/GRAPHICS-COMPONENTS.md).
+
+## Historical v2.0.6 — X11 scaling, renderer setup and chat files
 
 Live interface-scale Apply now reaches the owned XFCE settings service in all seven PRoot environments; native Termux retains its working path. The keyboard no longer squeezes a manually sized X11 desktop. Agent chats accept files up to **5 GiB** and original images up to **100 MiB**, with bounded prepared images for model input.
 

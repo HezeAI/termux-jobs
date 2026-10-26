@@ -7,10 +7,10 @@ public class WorkspaceDesktopGpuTest {
   TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();
   a.getSharedPreferences("workspace-x11",0).edit().clear().putString("renderer:debian","turnip").commit();
   assertEquals("turnip",WorkspaceDesktopGpu.mode(a,"debian"));assertEquals("cpu",WorkspaceDesktopGpu.mode(a,"alpine"));
-  assertEquals("debian-13-mesa26.3",WorkspaceDesktopGpu.directory("debian"));assertEquals("alpine-3.24-mesa26.3",WorkspaceDesktopGpu.directory("alpine"));assertEquals("fedora-44-mesa26.3",WorkspaceDesktopGpu.directory("fedora"));assertTrue(WorkspaceDesktopGpu.supported("fedora"));
+  assertEquals("debian-13-mesa26.2.5",WorkspaceDesktopGpu.directory("debian"));assertEquals("alpine-3.24-mesa26.2.5",WorkspaceDesktopGpu.directory("alpine"));assertEquals("fedora-44-mesa26.2.5",WorkspaceDesktopGpu.directory("fedora"));assertTrue(WorkspaceDesktopGpu.supported("fedora"));
  }
  @Test public void voidGpuHasPrivateComponentsAndDoesNotChangeAnotherEnvironment(){
-  TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();assertEquals("void-mesa26.3",WorkspaceDesktopGpu.directory("void"));assertTrue(WorkspaceDesktopGpu.supported("void"));
+  TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();assertEquals("void-mesa26.2.5",WorkspaceDesktopGpu.directory("void"));assertTrue(WorkspaceDesktopGpu.supported("void"));
   a.getSharedPreferences("workspace-x11",0).edit().clear().putString("renderer:void","turnip").commit();assertEquals("turnip",WorkspaceDesktopGpu.mode(a,"void"));assertEquals("cpu",WorkspaceDesktopGpu.mode(a,"ubuntu"));
  }
  @Test public void rendererCanBeChosenBeforeConnectionButNotWhileRunning()throws Exception{
@@ -41,7 +41,7 @@ public class WorkspaceDesktopGpuTest {
  }
 
  @Test public void archGpuChoicesAndPreferencesStaySeparate(){
-  TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();assertEquals("archlinux-mesa26.3",WorkspaceDesktopGpu.directory("archlinux"));
+  TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();assertEquals("archlinux-mesa26.2.5",WorkspaceDesktopGpu.directory("archlinux"));
   a.getSharedPreferences("workspace-x11",0).edit().clear().putString("renderer:archlinux","virgl").commit();assertEquals("virgl",WorkspaceDesktopGpu.mode(a,"archlinux"));assertEquals("cpu",WorkspaceDesktopGpu.mode(a,"void"));assertEquals("cpu",WorkspaceDesktopGpu.mode(a,"ubuntu"));
   WorkspaceDesktopGpu.select(a,"archlinux",()->false,v->{},()->{});AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();assertTrue(d.getListView().getAdapter().isEnabled(1));assertTrue(d.getListView().getAdapter().isEnabled(2));d.dismiss();
  }

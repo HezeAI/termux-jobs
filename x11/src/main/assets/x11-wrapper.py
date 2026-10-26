@@ -5,6 +5,7 @@ Never installs a package, executes an archive member, or writes another renderer
 Imported drivers are native code, not a sandbox: UI consent precedes import/use.
 """
 import contextlib
+import shutil
 import fcntl
 import hashlib
 import importlib.util
@@ -31,6 +32,7 @@ RUNTIME = {'libvulkan_wrapper.so', 'libadrenotools.so', 'libfile_redirect_hook.s
 MAX_ZIP = 64 * 1024 * 1024
 MAX_EXPANDED = 192 * 1024 * 1024
 CANCEL = None
+DEFAULT_DRIVER_ID = 'ce35642c5d93ecdfa08b730f80fd738ad71b473cdd7aa3dc58c37d2e6b1e984f'
 
 def cancelled():
     if CANCEL is not None and CANCEL.exists():
@@ -200,6 +202,46 @@ def select_driver(base, identity, api):
         write_json(base / 'current.json', value)
         return value
 
+def remove_driver(base, identity):
+    """Delete one flat imported driver under the same lock held by desktop users."""
+    if not re.fullmatch('[a-f0-9]{64}', identity):
+        raise ValueError('WRAPPER_DRIVER_METADATA')
+    if identity == DEFAULT_DRIVER_ID:
+        raise ValueError('WRAPPER_DRIVER_PROTECTED')
+    with lock(base):
+        cancelled()
+        parent = base / 'drivers'
+        root = parent / identity
+        if parent.is_symlink() or root.is_symlink():
+            raise ValueError('WRAPPER_DIRECTORY')
+        value = read_json(root / 'library.json')
+        if value.get('id') != identity:
+            raise ValueError('WRAPPER_DRIVER_METADATA')
+        validate_driver(base, value, verify=False)
+        # Used drivers may create auxiliary files and nested runtime caches.
+        # Delete this explicitly chosen private directory without following links;
+        # never widen the scope to the parent library or original phone ZIP.
+        if not shutil.rmtree.avoids_symlink_attacks:
+            raise ValueError('WRAPPER_REMOVE_UNSUPPORTED')
+        current = base / 'current.json'
+        if current.is_symlink():
+            raise ValueError('WRAPPER_METADATA_LINK')
+        selected = current.exists() and read_json(current).get('id') == identity
+        cancelled()
+        # Commit cannot be interrupted by the cancellation marker midway.
+        # Rename first; unlink failure restores the complete driver directory.
+        stage = Path(tempfile.mkdtemp(prefix='.delete-driver-', dir=base))
+        stage.rmdir()
+        root.rename(stage)
+        try:
+            if selected:
+                current.unlink()
+        except OSError:
+            stage.rename(root)
+            raise
+        shutil.rmtree(stage)
+        return selected
+
 def import_driver(base, source, api):
     with lock(base):
         cancelled()
@@ -339,6 +381,9 @@ def main():
     elif operation == 'select':
         select_driver(base, source, int(api))
         print('READY:wrapper-selected')
+    elif operation == 'remove':
+        remove_driver(base, source)
+        print('READY:wrapper-removed')
     elif operation == 'install':
         install_runtime(base)
         print('READY:wrapper')

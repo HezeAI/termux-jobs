@@ -1,0 +1,33 @@
+{
+  "mesaVersion": "26.2.5",
+  "source": {
+    "url": "https://archive.mesa3d.org/mesa-26.2.5.tar.xz",
+    "sha256": "794b3d1729075dae7ebd47c7283b7ca0cdb5dec668f7f11cc0a5d82f6138a0a5"
+  },
+  "adaptations": {
+    "author": "lfdevs and upstream Mesa contributors",
+    "repository": "https://github.com/lfdevs/mesa-for-android-container",
+    "commit": "98f3d6229d61452cef80f8563af7c56ae599dc14",
+    "upstreamParent": "4c1c22e9d1a483b27f2502d9becc213257cfa7c5",
+    "changes": "Existing Android/KGSL/X11 adaptations ported to Mesa26.2.5; build-definition context adjusted. No new desktop/input/presentation policy.",
+    "patch": "lfdevs-android-26.2.5.patch",
+    "patchSha256": "43f614d59fe691dfde4e912d69e733f6e416d8e53451aa4cc3670340aa9f650b"
+  },
+  "status": "Mesa26.2.5 component source/build record for v2.0.7; native checks and developer GUI evidence have separate scopes",
+  "targets": [
+    "ubuntu",
+    "debian",
+    "alpine",
+    "fedora",
+    "opensuse",
+    "void",
+    "archlinux"
+  ],
+  "buildRecipes": {
+    "build-bridge.sh": "b5b091291463c2e2bd2e552a5c8e8b4a21485dbf1ae2ece16e60d81889d5e5d1",
+    "build-glibc.sh": "e0822aadbc7047e1508edac7b065a29533bacdb92f966982192019e1c99bc6b9",
+    "build-musl.sh": "1690650216bd526c219e3b7f24aa0e58ba9d8bfb1a17c438880973629664dbcb",
+    "glibc-native.ini.in": "6760b64d635235d8952d900323f0b88e033982c22fa31689288bf8c387f26d0b",
+    "musl-cross.ini.in": "a632d049ed3ec7ee68e627b0f3c5a779895e627085705cf199be1300bb098e66"
+  }
+}

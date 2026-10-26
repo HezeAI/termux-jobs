@@ -1,3 +1,10 @@
+Private test1 Mesa refresh: official Mesa 26.2.5 plus existing lfdevs Android/KGSL/X11 adaptations.
+Source: https://archive.mesa3d.org/mesa-26.2.5.tar.xz
+Adaptations: https://github.com/lfdevs/mesa-for-android-container/commit/98f3d6229d61452cef80f8563af7c56ae599dc14
+Exact patch/build recipes/provenance: third-party/mesa-container in this application's source.
+Container binaries built for Termux Job’s by HezeAI with OpenAI Codex assistance.
+The previous component/source/license collection follows for attribution history; it does not identify the new runtime version.
+
 Optional Turnip + Zink graphics components
 
 Mesa / Turnip / Zink are third-party projects, not drivers authored by Termux Job's.

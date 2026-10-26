@@ -24,11 +24,11 @@
     "commit": "2c6ac3dcc4f8db593dd69906b0ec22822abfed91"
   },
   "mesa": {
-    "url": "https://archive.mesa3d.org/mesa-26.1.6.tar.xz",
-    "sha256": "5296b88a0f1e012e2cb9ada150a2bbadf728ca81e5a4fb2ab43c83a4d2158606",
+    "url": "https://archive.mesa3d.org/mesa-26.2.5.tar.xz",
+    "sha256": "794b3d1729075dae7ebd47c7283b7ca0cdb5dec668f7f11cc0a5d82f6138a0a5",
     "sourceChanges": [],
     "compatibilitySource": "x11/src/bridge/mesa-libm-compat.c",
-    "compatibilitySourceSHA256": "9acd2180334f5ad906588a7665f0c2bff15e81acfb296afb01912d5ff69cc378",
+    "compatibilitySourceSHA256": "0c3c02c2c7580441d4385567e46e547cd2907716bbcc884b2b01286f05cafd74",
     "galliumDrivers": [
       "zink"
     ],
@@ -42,18 +42,18 @@
   ],
   "bundle": {
     "file": "ubuntu-arm64-runtime.zip",
-    "bytes": 6053026,
-    "sha256": "bfa1acd82b0f69283125174f68e248add7c1d851bb2a90b3fc96218c819f4872",
+    "bytes": 6103917,
+    "sha256": "e05b6abb19916e007330e19566b8833f10505133505d786bee127a71f1e4aa1d",
     "files": {
-      "libjobs-bionic.so": "63e7c04cff0e1966382ac7d68ebc0d4fb10b0b0b6f269082d37ef43b1d5dc2d7",
-      "libhybris-common.so.1": "001658b3514e038b12abc0ae70240c059fb6bd64235da72f6de228ab78e43f37",
-      "linker/q.so": "3f7f01e8ce80da36484cc69b236c3af872f0dcb2e687bbb1c475b8b47406e398",
-      "libVkLayer_window_system_integration.so": "acbdf178a5d4421610d0f2cd9e275c7506236ddf99cc3ac282eb551b97b41511",
-      "mesa/libGLX_mesa.so.0": "e881b8ca371eace6e38c80b2140d5b47748c09fdfcecaa0a56f9ca4ef211c124",
-      "mesa/libEGL_mesa.so.0": "2a89b21f066e4b60d617db698cbb4e48436865e175fb9a94241dc1dc6da374fb",
-      "mesa/libgallium-26.1.6.so": "689da7da8fa5d7edfa0090d6497178e37171b5a937a9201fe9648b01f681ee78",
       "bionic-icd.json": "239b6c2b697244da93695e98f1a34cc53f7cb533d31b41be710e902b1ad72f18",
-      "share/vulkan/implicit_layer.d/jobs-bionic.json": "fea96385d9898ec40a812c84929526a09f95f9d2016703c97c45044436524adc"
+      "libVkLayer_window_system_integration.so": "acbdf178a5d4421610d0f2cd9e275c7506236ddf99cc3ac282eb551b97b41511",
+      "libhybris-common.so.1": "001658b3514e038b12abc0ae70240c059fb6bd64235da72f6de228ab78e43f37",
+      "libjobs-bionic.so": "63e7c04cff0e1966382ac7d68ebc0d4fb10b0b0b6f269082d37ef43b1d5dc2d7",
+      "linker/q.so": "3f7f01e8ce80da36484cc69b236c3af872f0dcb2e687bbb1c475b8b47406e398",
+      "share/vulkan/implicit_layer.d/jobs-bionic.json": "fea96385d9898ec40a812c84929526a09f95f9d2016703c97c45044436524adc",
+      "mesa/libGLX_mesa.so.0": "447bed95fcbe296b1dc33b9125698e42829f73745ed1aaf2f7928bdcf210d853",
+      "mesa/libEGL_mesa.so.0": "0f81645a2587faf5824b268f807ef6b421fae3c75b34518ea1ee5971369f4c11",
+      "mesa/libgallium-26.2.5.so": "31ef0caec0651eb46f1c9069dafd2234aa303749264400d9b5dede564278ecdc"
     }
   },
   "requirements": {

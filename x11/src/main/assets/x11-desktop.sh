@@ -140,6 +140,7 @@ check_renderer() {
 if [[ $op == check ]]; then
     if [[ $target == archlinux ]] && installed && ! arch_root_permissions check;then echo MISSING:root-permissions;exit 0;fi
     command -v setsid >/dev/null || { echo 'MISSING:setsid';exit; }
+    if [[ ${JOBS_X11_STYLE:-0} == 1 && ! -x $PREFIX/bin/python3 ]];then echo MISSING:style-python;exit;fi
     desktop_ready=false
     if [[ $target == termux ]];then
         if eval "$components" && jobs_audio_available;then desktop_ready=true;else echo 'MISSING:xfce';fi
@@ -153,6 +154,7 @@ if [[ $op == install ]]; then
     # Debian is an existing user environment: never create/replace it from X11.
     if [[ $target == debian || $target == alpine || $target == fedora || $target == opensuse || $target == void || $target == archlinux ]] && ! installed;then echo 'ERROR:INSTALL_ENVIRONMENT_FIRST';exit 1;fi
     command -v setsid >/dev/null || { echo 'ERROR:SETSID_REQUIRED';exit 1; }
+    if [[ ${JOBS_X11_STYLE:-0} == 1 && ! -x $PREFIX/bin/python3 ]];then pkg install -y python;fi
     if [[ $target == termux ]];then
         pkg install -y x11-repo
         sh "$control/x11-native-desktop.sh" install termux "$control"

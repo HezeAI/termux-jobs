@@ -24,26 +24,14 @@ CANCEL_FILE = None
 def check_cancel():
  if CANCEL_FILE is not None and CANCEL_FILE.exists():raise ValueError("GPU_CANCELLED")
 
-SPECS = {
- 'ubuntu': {'directory':'ubuntu-26.04-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
-  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-for-android-container_26.3.0-devel-20260824_ubuntu_resolute_arm64.tar.gz', 'ee762f0855c47f9a245df3ce53a46d40b2240ede9b5c9ddf7606e724362fec77', 12069639, 'tar')]},
- 'debian': {'directory':'debian-13-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
-  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-for-android-container_26.3.0-devel-20260824_debian_trixie_arm64.tar.gz','c014cf66bdbff96417ee30d34f006cf51df64ae04893d599711b0b6b73b52ccf',11648933,'tar')]},
- 'alpine': {'directory':'alpine-3.24-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
-  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-for-android-container_26.3.0-devel-20260824_alpine_3.24_arm64.tar.gz','2f3e14dc57fa4ec75297a67af747872e7c460d3f3fcfff9e758e479874578ea3',12099886,'tar')]},
- 'fedora': {'directory':'fedora-44-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
-  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-for-android-container_26.3.0-devel-20260824_fedora_44_arm64.tar.gz','fc5a7f80bdd99720b083ec0d6bf9d349c493858acb03753e9fd99af5e04bde0b',12449267,'tar')]},
- 'opensuse': {'directory':'opensuse-16-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
-  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-for-android-container_26.3.0-devel-20260824_debian_trixie_arm64.tar.gz','c014cf66bdbff96417ee30d34f006cf51df64ae04893d599711b0b6b73b52ccf',11648933,'tar'),
-  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/libsensors5_3.6.2-2_arm64.deb','7469f1ccce8afdba33d3b11847d0ecdf2221805a0694dee21ee4d622e8f72145',36444,'deb')]},
- 'void': {'directory':'void-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
-  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-for-android-container_26.3.0-devel-20260824_void_arm64.tar.gz','9b6051ee45e2891de6c150598305814900f2e48088d5fedc3d75d8d50f644dc7',11533566,'tar')]},
- 'archlinux': {'directory':'archlinux-mesa26.3', 'version':'26.3.0-devel-20260824', 'packages':[
-  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-for-android-container_26.3.0-devel-20260824_archlinux_arm64.tar','75b7638829b211c20c26b6110e525ca23ab28980ce58af824ab16c8e7afcfa26',14018560,'arch-bundle')]},
- 'termux': {'directory':'termux-mesa26.2.5', 'version':'26.2.5', 'packages':[
-  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-vulkan-icd-freedreno_26.2.5_aarch64.deb','79d4328e41b3b40edea91088c7992f5522469c682e44223efb69ef0861903c37',1599892,'deb'),
-  ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/vulkan-loader-generic_1.4.366_aarch64.deb','5b0a17efdd27e064c06dcf5befba4b466eac6025110ecc44be768019b00abdb7',150484,'deb')]},
-}
+SPECS = {'ubuntu': {'directory': 'ubuntu-26.04-mesa26.2.5', 'version': '26.2.5-jobs1', 'packages': [('https://github.com/HezeAI/termux-jobs-components/releases/download/mesa-26.2.5/mesa-26.2.5-jobs1-glibc-multiarch-aarch64.tar.gz', 'a848b94d5950b8573c42d41f89592d3d20f7dd0e6a969e44475da2589751a632', 10348020, 'tar')]},
+ 'debian': {'directory': 'debian-13-mesa26.2.5', 'version': '26.2.5-jobs1', 'packages': [('https://github.com/HezeAI/termux-jobs-components/releases/download/mesa-26.2.5/mesa-26.2.5-jobs1-glibc-multiarch-aarch64.tar.gz', 'a848b94d5950b8573c42d41f89592d3d20f7dd0e6a969e44475da2589751a632', 10348020, 'tar')]},
+ 'alpine': {'directory': 'alpine-3.24-mesa26.2.5', 'version': '26.2.5-jobs1', 'packages': [('https://github.com/HezeAI/termux-jobs-components/releases/download/mesa-26.2.5/mesa-26.2.5-jobs1-musl-alpine3.24-aarch64.tar.gz', '85cbbb81c7c30cb8eb3675c97babf3fc6f47d0f9021fe4664a40e3a47709f192', 8221445, 'tar')]},
+ 'fedora': {'directory': 'fedora-44-mesa26.2.5', 'version': '26.2.5-jobs1', 'packages': [('https://github.com/HezeAI/termux-jobs-components/releases/download/mesa-26.2.5/mesa-26.2.5-jobs1-glibc-lib64-aarch64.tar.gz', '196b9ba40741958adff13e988c76e4d1082fca36dc165c1dcf34e7c9ced6d141', 10347945, 'tar')]},
+ 'opensuse': {'directory': 'opensuse-16-mesa26.2.5', 'version': '26.2.5-jobs1', 'packages': [('https://github.com/HezeAI/termux-jobs-components/releases/download/mesa-26.2.5/mesa-26.2.5-jobs1-glibc-multiarch-aarch64.tar.gz', 'a848b94d5950b8573c42d41f89592d3d20f7dd0e6a969e44475da2589751a632', 10348020, 'tar'), ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/libsensors5_3.6.2-2_arm64.deb', '7469f1ccce8afdba33d3b11847d0ecdf2221805a0694dee21ee4d622e8f72145', 36444, 'deb')]},
+ 'void': {'directory': 'void-mesa26.2.5', 'version': '26.2.5-jobs1', 'packages': [('https://github.com/HezeAI/termux-jobs-components/releases/download/mesa-26.2.5/mesa-26.2.5-jobs1-glibc-lib-aarch64.tar.gz', 'be26f1d122d2e626d8411c968ff7074d3d7c614f35f59fe8c97164f690c70dcb', 10347926, 'tar')]},
+ 'archlinux': {'directory': 'archlinux-mesa26.2.5', 'version': '26.2.5-jobs1', 'packages': [('https://github.com/HezeAI/termux-jobs-components/releases/download/mesa-26.2.5/mesa-26.2.5-jobs1-glibc-lib-aarch64.tar.gz', 'be26f1d122d2e626d8411c968ff7074d3d7c614f35f59fe8c97164f690c70dcb', 10347926, 'tar')]},
+ 'termux': {'directory': 'termux-mesa26.2.5', 'version': '26.2.5', 'packages': [('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-vulkan-icd-freedreno_26.2.5_aarch64.deb', '79d4328e41b3b40edea91088c7992f5522469c682e44223efb69ef0861903c37', 1599892, 'deb'), ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/vulkan-loader-generic_1.4.366_aarch64.deb', '5b0a17efdd27e064c06dcf5befba4b466eac6025110ecc44be768019b00abdb7', 150484, 'deb')]}}
 
 class HttpsOnly(urllib.request.HTTPRedirectHandler):
  def redirect_request(self, req, fp, code, msg, headers, newurl):

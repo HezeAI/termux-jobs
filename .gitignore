@@ -12,6 +12,7 @@ release/
 *.zip
 !third-party/virgl-client/alpine-mesa-26.1.6-virgl.zip
 !third-party/bionic-glibc/ubuntu-arm64-runtime.zip
+!third-party/graphics-drivers/Turnip-a6xx-a7xx-a8xx.zip
 
 # Crashlytics configuations
 com_crashlytics_export_strings.xml
@@ -54,3 +55,6 @@ __pycache__/
 *.pyc
 
 /app/src/main/assets/opencode-mini-v2.0.28-jobs2.bundle
+
+# Local signing material may be a directory or a worktree symlink.
+.signing

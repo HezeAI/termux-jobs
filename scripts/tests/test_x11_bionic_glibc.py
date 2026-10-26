@@ -83,7 +83,7 @@ class BionicBridgeTest(unittest.TestCase):
         self.assertEqual('keep',other.read_text())
     def test_launcher_extracts_download_helper_without_bundled_zip(self):
         java=(ROOT/'app/src/main/java/com/termux/app/workspace/WorkspaceDesktopWrapper.java').read_text()
-        self.assertIn('bridge()?new String[]{"x11-wrapper.py","x11-bionic-glibc.py","x11-gpu.py"}',java)
+        self.assertIn('bridge()?new String[]{"x11-wrapper.py","x11-bionic-glibc.py","x11-gpu.py","x11-extras.py","x11-default-driver.py"}',java)
         self.assertIn("'x11-bionic-glibc.zip'",(ROOT/'x11/build.gradle').read_text())
         self.assertIn("(assets/'x11-bionic-glibc.zip').unlink(missing_ok=True)",(ROOT/'scripts/prepare-x11.py').read_text())
     def test_corrupt_runtime_is_repaired_but_driver_is_preserved(self):

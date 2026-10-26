@@ -196,7 +196,7 @@ final class WorkspaceDesktop {
     }
     private void addX11Renderer(LinearLayout body,WorkspaceStore.Session p,AlertDialog[] dialog){
         rendererRow=AgentStatusUi.row(body,tr("Рендеринг: ","Rendering: ")+WorkspaceDesktopGpu.label(activity,target(p)),"desktop-renderer",()->{if(rendererBusy())return;dialog[0].dismiss();WorkspaceDesktopGpu.select(activity,target(p),this::rendererBusy,choice->selectRenderer(p,choice),this::menu);});
-        if(WorkspaceDesktopGpu.mode(activity,target(p)).equals("turnip"))AgentStatusUi.info(body,target(p).equals("termux")?"Termux package build. Turnip: Mesa 26.2.5; Zink uses the installed Termux Mesa.":"Lfdevs build with Android adaptations.");
+        if(WorkspaceDesktopGpu.mode(activity,target(p)).equals("turnip"))AgentStatusUi.info(body,target(p).equals("termux")?"Termux package build. Turnip: Mesa 26.2.5; Zink uses the installed Termux Mesa.":"Mesa 26.2.5 built for Termux Job’s with lfdevs Android adaptations.");
         if(target(p).equals("termux")&&WorkspaceDesktopGpu.mode(activity,"termux").equals("wrapper")||WorkspaceDesktopWrapper.bridgeSupported(target(p))&&WorkspaceDesktopGpu.mode(activity,target(p)).equals("bionic-glibc")){
             body.removeView(rendererRow);LinearLayout renderLine=new LinearLayout(activity);renderLine.setGravity(Gravity.CENTER_VERTICAL);
             renderLine.addView(rendererRow,new LinearLayout.LayoutParams(0,-2,1));
@@ -363,6 +363,13 @@ final class WorkspaceDesktop {
         String phase=matches?state.getString("phase",""):"checking";
         if(rendererPreparationFailed&&!preparationGpu){preparation.details(null);preparation.preparation(tr("Подготовка рендера","Renderer preparation"),rendererProgressText,-1,"",tr("В терминал","Return to terminal"),true,this::preparationAction);preparation.preparationIdle();return;}
         if(preparationGpu){preparation.details(null);preparation.preparation(tr("Установка рендера","Installing renderer"),rendererProgressText,rendererProgress,"",preparationCancelling?tr("Отменяется…","Cancelling…"):tr("Отменить установку","Cancel installation"),rendererCancel!=null&&!preparationCancelling,this::preparationAction);return;}
+        if(matches&&state.getBoolean("preparingExtras",false)&&phase.equals("preparing")){
+            int progress=state.getInt("installPercent",-1);long done=state.getLong("downloadBytes",-1),total=state.getLong("downloadTotal",-1),eta=state.getLong("installEta",-1);
+            String text=tr("Проверка и загрузка темы Kali…","Checking and downloading Kali theme…");
+            if(total>0&&done>=0)text+="\n"+formatBytes(done)+" / "+formatBytes(total);
+            if(eta>0)text+="\n"+tr("Осталось: ≈ ","Remaining: ≈ ")+eta+tr(" с"," s");
+            preparation.details(null);preparation.preparation(tr("Подготовка темы Kali","Preparing Kali theme"),text,progress,"",preparationCancelling?tr("Отменяется…","Cancelling…"):tr("Отменить установку","Cancel installation"),!preparationCancelling,this::preparationAction);return;
+        }
         boolean installing=phase.equals("installing")||phase.equals("cancelling")&&state.getString("componentOperation","").equals("install")||preparationNeedsInstall;
         boolean finished=phase.equals("error")||phase.equals("cancelled")||phase.equals("stopped")||phase.equals("ended");
         String heading=preparationLaunching?tr("Запуск рабочего стола","Starting desktop"):installing?tr("Установка рабочего стола","Installing desktop"):tr("Проверка рабочего стола","Checking desktop");

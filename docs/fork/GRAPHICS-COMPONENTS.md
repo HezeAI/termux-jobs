@@ -1,4 +1,24 @@
-# Pinned graphics components — v2.0.6
+# Pinned graphics components — v2.0.7
+
+All fixed graphics archives used by this release are pinned in [HezeAI/termux-jobs-components](https://github.com/HezeAI/termux-jobs-components#readme). The app uses immutable asset URLs, sizes and SHA-256; it does not follow a moving component latest release. Previous assets/tags remain unchanged for older application versions.
+
+| Components | Release |
+| --- | --- |
+| Mesa 26.2.5 Turnip/Zink for Ubuntu, Debian, Alpine, Fedora, openSUSE, Void, Arch; Bionic-for-glibc Mesa frontend | [mesa-26.2.5](https://github.com/HezeAI/termux-jobs-components/releases/tag/mesa-26.2.5) |
+| Native Termux Turnip, Vulkan Loader, Termux Wrapper and private libsensors | [graphics-20261025](https://github.com/HezeAI/termux-jobs-components/releases/tag/graphics-20261025) |
+| Kali style, Alpine musl VirGL client and default a6xx-a7xx-a8xx driver | [x11-extras-20261025](https://github.com/HezeAI/termux-jobs-components/releases/tag/x11-extras-20261025) |
+
+## Updates and caches
+
+The next launch of the selected renderer prepares missing/changed components. A running desktop keeps its existing loaded libraries until stopped and started. Valid runtime/archive caches are reused; a URL change alone does not force download of identical bytes. The new bridge ZIP is6,103,917bytes and its bundle hash changes, so older selected runtimes are repaired through the existing staged/locked flow. Imported selections remain intact. Turnip runtimes use versioned private directories; ordinary guest Mesa is untouched.
+
+Kali and Alpine VirGL archives are optional downloads, not embedded APK payloads. They share a verified archive cache while activation stays target-specific. The default driver is downloaded/imported only when needed; choosing an existing import preserves that choice. Its upstream source is StevenMXZ; full sources/licenses remain in the components README/catalogue. User imports are not uploaded automatically.
+
+Normal XFCE, Python, VirGL server/ANGLE and application packages continue using pkg/apt/apk/dnf/zypper/XBPS/pacman. This mirrors fixed graphics archives; it does not replace distribution repositories. Downloads retain normal TLS, size/hash verification, cancellation and no-follow/path/lock protections. A checksum verifies expected bytes, not driver safety or universal GPU compatibility.
+
+---
+
+# Historical graphics components — v2.0.6
 
 Optional fixed graphics archives are distributed from the separate public [HezeAI/termux-jobs-components](https://github.com/HezeAI/termux-jobs-components) repository. Its releases do not appear in the application repository or affect the in-app updater. The app pins the immutable `graphics-20261025` set; it does not query a moving component latest release.
 

@@ -1,0 +1,28 @@
+{
+  "ru": [
+    "Mesa 26.2.5 для Turnip + Zink в Ubuntu, Debian, Alpine, Fedora, openSUSE, Void и Arch; обновлена Mesa моста Bionic for glibc.",
+    "Тема Kali, клиент VirGL для Alpine и стандартный драйвер a6xx-a7xx-a8xx загружаются при необходимости из репозитория компонентов.",
+    "В библиотеках Wrapper и Bionic for glibc доступны выбор стандартного драйвера и удаление импортированных драйверов корзинкой.",
+    "Исправлены применение темы, удаление использованных драйверов и применение/сброс масштаба работающего XFCE.",
+    "Исправлена лишняя вертикальная прокрутка X11 без открытой клавиатуры."
+  ],
+  "en": [
+    "Mesa 26.2.5 for Turnip + Zink in Ubuntu, Debian, Alpine, Fedora, openSUSE, Void and Arch; refresh the Bionic-for-glibc Mesa frontend.",
+    "Download the Kali theme, Alpine VirGL client and default a6xx-a7xx-a8xx driver on demand from the components repository.",
+    "Choose the built-in driver or remove imported drivers with the trash button in Wrapper and Bionic-for-glibc libraries.",
+    "Fix theme preparation, removal of used driver folders, and applying/restoring live XFCE scale.",
+    "Fix unwanted portrait X11 panning when the keyboard is closed."
+  ],
+  "compatibility": {
+    "ru": [
+      "Те же com.termux, подпись, ARM64 и schema8; приложение Android 8+, X11 Android 11+. Код 1410. Сброс данных, перенос аккаунтов и переустановка окружений не требуются.",
+      "Отсутствующие или изменённые компоненты выбранного рендера подготавливаются при следующем запуске стола. Нужен интернет либо подходящий проверенный кэш; запущенный стол обновляется после остановки и запуска.",
+      "Пресеты, файлы и выбранные импортированные драйверы сохраняются. Пакеты Linux устанавливаются из репозиториев своего окружения. Завершите важную работу перед обновлением. Совместимость драйверов зависит от устройства."
+    ],
+    "en": [
+      "Same com.termux, signer, ARM64 and schema8; Android 8+ app, Android 11+ X11. Code 1410. No data reset, account migration or environment reinstallation required.",
+      "Missing or changed selected-renderer components are prepared on the next desktop launch. Internet or a matching verified cache is needed; running desktops adopt the update after stop/start.",
+      "Presets, files and selected imported drivers are preserved. Linux packages retain their environment repositories. Finish important work before updating. Driver compatibility is device specific."
+    ]
+  }
+}

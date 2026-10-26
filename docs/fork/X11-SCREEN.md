@@ -1,3 +1,9 @@
+# Current behavior — v2.0.7
+
+Live scale restoration supports original unset scalar properties, including DPI and cursor size, without clearing unrelated settings. Without IME, the measured portrait surface is the full host; navigation gaps are not treated as a keyboard crop. With IME, the prior full host remains stable while visible height changes. Rotation follows the existing presentation path; no experimental retention, compositor or direct-buffer mode is added.
+
+---
+
 # X11 screen settings
 
 Each supported X11 environment has an **X11 screen** entry in its desktop menu.

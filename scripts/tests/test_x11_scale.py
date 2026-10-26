@@ -29,7 +29,7 @@ class ScaleTests(unittest.TestCase):
   defaults=self.prefix/'etc/xdg/xfce4/panel/default.xml';defaults.parent.mkdir(parents=True);defaults.write_text('<channel name="xfce4-panel"><property name="panels" type="array"><property name="panel-1" type="empty"><property name="size" type="uint" value="44"/><property name="icon-size" type="uint" value="0"/></property></property></channel>')
   self.put('xfce4-panel','/panels/panel-1','empty','');self.cycle(75);self.assertEqual('33',self.value('xfce4-panel','/panels/panel-1/size'));self.assertIsNone(self.value('xfce4-panel','/panels/panel-1/icon-size'));self.cycle(100);self.assertIsNone(self.value('xfce4-panel','/panels/panel-1/size'))
  def test_theme_switching_does_not_treat_scale_as_user_edits(self):
-  (self.control/'x11-style.zip').write_bytes((ROOT/'.tools/x11-runtime/assets/x11-style.zip').read_bytes());self.put('xfce4-desktop','/desktop-icons/icon-size','uint',48)
+  (self.control/'x11-style.zip').write_bytes((ROOT/'.tools/x11-components/x11-style.zip').read_bytes());self.put('xfce4-desktop','/desktop-icons/icon-size','uint',48)
   scale.restore(self.home);style.apply(self.home,self.prefix,self.control,True);scale.apply(self.home,self.prefix,75);self.assertEqual('56',self.value('xfce4-desktop','/desktop-icons/icon-size'))
   scale.restore(self.home);style.apply(self.home,self.prefix,self.control,False);scale.apply(self.home,self.prefix,75);self.assertEqual('36',self.value('xfce4-desktop','/desktop-icons/icon-size'))
   self.cycle(100);self.assertEqual('48',self.value('xfce4-desktop','/desktop-icons/icon-size'))

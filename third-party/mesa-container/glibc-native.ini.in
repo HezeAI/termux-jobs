@@ -1,0 +1,11 @@
+[binaries]
+c = '/usr/bin/gcc'
+cpp = '/usr/bin/g++'
+ar = '/usr/bin/ar'
+strip = '/usr/bin/strip'
+pkg-config = '/data/data/com.termux/files/usr/bin/pkg-config'
+[built-in options]
+c_args = ['-I@ROOT@/.tools/universal-mesa/sysroot/usr/include', '-I@ROOT@/.tools/universal-mesa/sysroot/usr/include/aarch64-linux-gnu']
+cpp_args = ['-I@ROOT@/.tools/universal-mesa/sysroot/usr/include', '-I@ROOT@/.tools/universal-mesa/sysroot/usr/include/aarch64-linux-gnu']
+c_link_args = ['-Wl,--wrap=atan2f,--wrap=asinf,--wrap=acosf', '@ROOT@/.tools/mesa-26.2.5/mesa-libm-compat.o', '-lm', '-L@ROOT@/.tools/universal-mesa/sysroot/usr/lib/aarch64-linux-gnu', '-Wl,-rpath-link,@ROOT@/.tools/universal-mesa/sysroot/usr/lib/aarch64-linux-gnu']
+cpp_link_args = ['-Wl,--wrap=atan2f,--wrap=asinf,--wrap=acosf', '@ROOT@/.tools/mesa-26.2.5/mesa-libm-compat.o', '-lm', '-L@ROOT@/.tools/universal-mesa/sysroot/usr/lib/aarch64-linux-gnu', '-Wl,-rpath-link,@ROOT@/.tools/universal-mesa/sysroot/usr/lib/aarch64-linux-gnu']

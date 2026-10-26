@@ -39,6 +39,15 @@ class Live(unittest.TestCase):
    with self.assertRaises(ValueError):live.session(control)
   for n in (49,151):
    with self.assertRaises(ValueError):self.apply(n)
+ def test_native_put_restores_empty_leaf_without_setting_scalar_or_clearing_subtree(self):
+  from unittest.mock import Mock
+  conf=live.Conf.__new__(live.Conf);conf.lib=Mock();conf.channel=Mock(return_value=23)
+  conf.put('xsettings|/Gtk/CursorThemeSize','<property name="CursorThemeSize" type="empty" />')
+  conf.lib.xfconf_channel_reset_property.assert_called_once_with(23,b'/Gtk/CursorThemeSize',False)
+  conf.lib.xfconf_channel_set_int.assert_not_called();conf.lib.xfconf_channel_set_string.assert_not_called()
+  conf.lib.reset_mock()
+  with self.assertRaises(ValueError):conf.put('xsettings|/Gtk/CursorThemeSize','<property name="CursorThemeSize" type="empty"><property name="keep" type="int" value="1" /></property>')
+  conf.lib.xfconf_channel_reset_property.assert_not_called()
  def test_native_xfconf_string_lifetime_and_scale_roundtrip(self):
   import subprocess,signal,textwrap
   prefix=Path('/data/data/com.termux/files/usr');python=prefix/'bin/python3';bus=prefix/'bin/dbus-run-session'
@@ -53,7 +62,28 @@ class Live(unittest.TestCase):
     spec=importlib.util.spec_from_file_location('live',Path(os.environ['SCALE_SOURCE']));m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
     conf=m.Conf()
     try:
-     key='xsettings|/Xft/DPI';template=m.m.prop('/Xft/DPI','int',96);conf.put(key,template)
+     key='xsettings|/Xft/DPI';template=m.m.prop('/Xft/DPI','int',96)
+     cursor='xsettings|/Gtk/CursorThemeSize';cursor_template=m.m.prop('/Gtk/CursorThemeSize','int',24)
+     conf.put(key,None);conf.put(cursor,None)
+     default_dpi=conf.get(key,template);default_cursor=conf.get(cursor,cursor_template)
+     conf.put(key,template)
+     # Real xfconf API plus a startup journal whose originals are XFCE's
+     # untyped empty leaves, as found in developer Termux/Fedora/Ubuntu configs.
+     directory=Path.home()/'.config/xfce4/xfconf/xfce-perchannel-xml'
+     directory.mkdir(parents=True,exist_ok=True)
+     for prop in ('/Xft/DPI','/Gtk/CursorThemeSize'):
+      file=directory/'xsettings.xml';raw=m.m.read(file);root=m.m.tree(raw,'xsettings')
+      m.m.set_node(root,prop,'<property name="'+prop.rsplit('/',1)[-1]+'" type="empty" />')
+      file.write_bytes(m.ET.tostring(root))
+     m.s.apply(Path.home(),Path(os.environ['PREFIX']),75)
+     _,roots=m.s.documents(Path.home(),directory)
+     record=Path.home()/'.local/state/termux-jobs/scale/previous.json'
+     import json
+     for identity,value in json.loads(record.read_text())['applied'].items():conf.put(identity,value)
+     m.apply(Path.home(),Path(os.environ['PREFIX']),100,conf)
+     assert conf.get(key,template)==default_dpi
+     assert conf.get(cursor,cursor_template)==default_cursor
+     conf.put(key,template)
      for percent,expected in [(75,72),(150,144),(75,72),(100,96)]:
       m.apply(Path.home(),Path(os.environ['PREFIX']),percent,conf)
       assert conf.get(key,template)==m.m.prop('/Xft/DPI','int',expected)

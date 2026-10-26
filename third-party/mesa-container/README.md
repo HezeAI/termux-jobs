@@ -1,0 +1,21 @@
+# Mesa 26.2.5 container components
+
+The v2.0.7 component set replaces only the Mesa payload used by the selected Turnip+Zink renderer in seven existing PRoot desktops, and the private Mesa frontend inside the existing Bionic-for-glibc bridge. The public v2.0.6 component set remains immutable. Desktop settings, launch logic, driver import, screen/input behavior and other renderers retain their existing paths. Native Termux keeps its established Mesa26.2.5 package.
+
+## Source and existing Android adaptations
+
+Start from official Mesa26.2.5, SHA-256 recorded in `provenance.json`. The container patch carries the existing lfdevs Android/KGSL/X11 adaptations from pinned commit98f3d6229d61452cef80f8563af7c56ae599dc14, compared against its upstream merge parent4c1c22e9d1a483b27f2502d9becc213257cfa7c5. The upstream fork comparison is https://github.com/lfdevs/mesa-for-android-container/compare/4c1c22e9d1a483b27f2502d9becc213257cfa7c5...98f3d6229d61452cef80f8563af7c56ae599dc14 . Only source/build adaptations are retained, without the fork's CI workflows. The Meson feature-definition context is adjusted to the stable tree; no new application presentation policy is introduced.
+
+The bridge frontend uses unmodified official Mesa 26.2.5. The build-only compatibility object binds atan2f, asinf and acosf to their original ARM64 GLIBC_2.17 exports, avoiding a dependency on new host-libm defaults. libhybris, the Vulkan WSI layer, our ICD, linker, manifests and their existing patches remain byte-for-byte unchanged. See the sibling `bionic-glibc` build recipe and provenance.
+
+## Local build boundary
+
+Keep source, sysroots, compilers/caches and outputs inside the application repository. Do not install packages into Android, native Termux or installed guest environments to build these components. The current recipes reuse reviewed local glibc and musl sysroots, Python/Meson/Ninja and ARM64 compilers. Source release bytes and patch hashes must be verified before compilation. Cross builds execute only isolated compiler probes with the appropriate musl loader.
+
+The selected GPU runtime builds Turnip/KGSL and Gallium Zink, freedreno, virgl and softpipe without LLVM, plus X11/GLX/EGL/GBM. XML configuration and Zstd shader-cache support remain enabled. Application CPU rendering continues to use the environment's normal Mesa, outside this private path. One portable glibc build is packaged at each selected target's established library layout; Alpine uses its own musl/non-GLVND build. Existing required guest package checks remain in place. Packaging checks ARM64, GLIBC <= 2.38 and GLIBCXX <= 3.4.32, safe library paths and the absence of glibc libc dependencies in the musl build. Alpine's two weak GCC unwind helpers retain their GLIBC_2.0 symbol labels exported by Alpine libgcc_s; this is not a glibc libc dependency.
+
+The three `build-*.sh` scripts record the exact configuration used for these components. Populate the reviewed repository-local sysroots/tooling described above; expand `@ROOT@` in the two `.ini.in` templates to the repository path and place them at the script's named `.tools` paths. The glibc compatibility object comes from `x11/src/bridge/mesa-libm-compat.c`; the existing Bionic bridge recipe documents it. Keep these inputs inside the repository and verify them before building. Extract official source to `.tools/mesa-26.2.5/mesa-26.2.5`; make a separate `container-src` tree, apply `lfdevs-android-26.2.5.patch` with `patch -p1 --fuzz=0`, then run the appropriate build script from this directory. The scripts stage results only; they never install system packages. Musl's compiler-probe loader reads the existing Alpine runtime without changing it.
+
+These source/build records do not establish universal GPU/device compatibility or a performance improvement. Native rendering checks and developer-reported GUI acceptance have separate scopes; see the application release validation.
+
+Upstream authors retain their copyrights and per-file licenses. Mesa is predominantly MIT with exceptions in its source/license collection. Include original source, the exact adaptation patch and component-specific notices with any distributed binary set. HezeAI maintains the fork with development assistance from OpenAI Codex.
