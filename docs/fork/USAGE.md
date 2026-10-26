@@ -2,7 +2,8 @@
 
 The native Developer Markdown layout is shared by Codex, Claude, Gemini and
 OpenCode. Code cards show the language, syntax colours and separate line numbers;
-Copy copies the complete original code without those numbers. Long blocks can be
+Copy has its own outlined button with pressed feedback and copies the complete
+original code without those numbers. Long blocks can be
 expanded. Tables scroll horizontally inside the message. Existing raw history is
 retained. Web links open only after a tap; Markdown does not execute HTML/scripts
 or automatically fetch remote images.
@@ -33,7 +34,10 @@ files or transfer selections.
 
 The hand button between model/limits and Server + Agent interrupts the current
 agent request. It is red while available, grey and crossed out while idle. The
-activity cue passes around its circle. Completed file changes are not rolled back.
+activity cue enters the right half of its circle, crosses the top toward the
+left and continues right along the line. Its redraw is synchronized with Android
+display frames, targeting60FPS; actual smoothness still needs device verification.
+Completed file changes are not rolled back.
 Sending a chat message hides the keyboard only after acknowledgement, while a
 failed send or a different selected session retains its current input state.
 

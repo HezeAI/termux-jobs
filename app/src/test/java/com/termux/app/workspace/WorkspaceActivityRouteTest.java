@@ -20,4 +20,19 @@ public class WorkspaceActivityRouteTest {
    host.removeView(line);assertFalse(line.routing());
   }finally{line.working(false);host.removeView(line);}
  }
+
+ @Test public void circleEntersRightHalfThenCrossesTopToLeftAndExitsRight(){
+  float[] points=WorkspaceActivityLine.routePath(600,90,400,40,20).approximate(.01f);int entry=-1;
+  for(int i=0;i<points.length;i+=3)if(Math.abs(points[i+1]-400)<.01&&Math.abs(points[i+2]-60)<.01){entry=i;break;}
+  assertTrue("Circle must start at its lower tangent",entry>=0);int first=entry+3;
+  while(first<points.length&&Math.hypot(points[first+1]-400,points[first+2]-60)<.1)first+=3;
+  assertTrue("Enter the right half before travelling across the top",points[first+1]>400);
+  int right=-1,top=-1,left=-1;
+  for(int i=first;i<points.length;i+=3){float x=points[i+1],y=points[i+2];if(right<0&&Math.abs(x-420)<.1&&Math.abs(y-40)<.1)right=i;if(top<0&&Math.abs(x-400)<.1&&Math.abs(y-20)<.1)top=i;if(left<0&&Math.abs(x-380)<.1&&Math.abs(y-40)<.1)left=i;}
+  assertTrue(right>entry&&top>right&&left>top);assertEquals(600,points[points.length-2],.01);assertEquals(90,points[points.length-1],.01);
+ }
+ @Test public void frameCadenceTargets60AcrossDifferentDisplayRefreshRates(){
+  for(int hz:new int[]{60,90,120,144}){WorkspaceActivityLine.FrameCadence clock=new WorkspaceActivityLine.FrameCadence();int redraws=0;for(int frame=0;frame<hz*10;frame++)if(clock.due(1000000000L+Math.round(frame*1000000000d/hz)))redraws++;assertTrue("Refresh "+hz+": "+redraws,Math.abs(redraws-600)<=1);}
+ }
+ @Test public void missedFramesResumeWithoutBurstAndResetStartsImmediately(){WorkspaceActivityLine.FrameCadence clock=new WorkspaceActivityLine.FrameCadence();assertTrue(clock.due(1000000000L));assertFalse(clock.due(1000000000L));assertTrue(clock.due(5000000000L));assertFalse(clock.due(5000000000L));clock.reset();assertTrue(clock.due(5000000000L));}
 }

@@ -4,11 +4,11 @@ Use Mesa 26.2.5 for seven PRoot Turnip/Zink runtimes and the private bridge fron
 
 ## Unreleased — chat and file improvements
 
-- Native Developer-style Markdown for Codex, Claude, Gemini and OpenCode.
+- Native Developer-style Markdown for Codex, Claude, Gemini and OpenCode, with an outlined Copy action and pressed feedback.
 - Downloadable generic file cards, including archives, 3D-print formats and executables; explicit user actions only.
 - Saved name/size/date sorting in the shared file browser and pickers.
 - Long-press attachment multi-selection and native gallery photo/video selection into the draft.
-- Current-agent Stop control with coordinated activity animation, plus keyboard dismissal after acknowledged sends.
+- Current-agent Stop control with a reversed circular activity route and VSync-driven60FPS target, plus keyboard dismissal after acknowledged sends.
 - No account, rootfs or raw-history migration. Device validation is pending.
 
 ## v2.0.6 — X11 scaling, renderer setup and chat files

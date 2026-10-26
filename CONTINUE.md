@@ -1,3 +1,20 @@
+# Private agent-chat test2 — pending developer acceptance
+
+Test1 was installed; follow-up feedback requested a Copy outline and a smoother,
+reversed Stop activity route. Those changes are implemented. The line now uses
+Choreographer with a60FPS target; the existing server/robot borders remain16ms
+scheduled and are not a fixed/measured60FPS reference. No X11/native changes.
+
+2.0.8-test2/code1412: build/apk/Termux-Jobs-test2.apk, 39773208bytes,
+SHA25690757864d6400360f521326971ce35a8dde27f4081188bd5c409b8a34e6ac17a.
+109 JVM cases pass; modern lint5modules0errors/217warnings; isolated build and
+final package/ABI/signer/ZIP/runtime/assets/secret checks pass. See
+[validation](docs/fork/VALIDATION-chat-test2.md). Physical animation/touch checks
+are pending. No GitHub publication without developer acceptance; next stable
+must exceedcode1412. Preserve the separate root-worktree rotation experiments.
+
+---
+
 # Private agent-chat test1 — pending developer acceptance
 
 Active branch work/chat-file-cards is based on stable v2.0.7/b832b681. It adds

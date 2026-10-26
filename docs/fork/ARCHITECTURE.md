@@ -21,7 +21,9 @@ presentation preference and does not rewrite paths or mutate listing metadata.
 The Stop control sends the existing chat-interrupt operation to the selected
 native session. It does not terminate the server or neighbouring agents. Its
 activity animation paints into a temporary parent overlay and retains the old
-one-pixel layout height. Idle, hidden and detached states release that overlay.
+one-pixel layout height. A single Choreographer callback drives a60Hz target;
+geometry is cached without per-frame strings and draw does not schedule another
+redraw itself. Only the scheduled frame invalidates the line/overlay. Idle, hidden and detached states release that overlay.
 The accepted-send callback clears/hides the composer only when the same terminal
 and unchanged submitted draft are still selected; failed requests keep the draft.
 
