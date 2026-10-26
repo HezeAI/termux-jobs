@@ -37,3 +37,7 @@ HezeAI reported that driver deletion, theme application and live scale changes w
 The APK keeps the accepted desktop presentation behavior. A new fix for rotation artifacts is not part of this release. Normal Android installer/updater interaction and third-party GPU driver compatibility cannot be inferred solely from the source/build checks.
 
 The release includes `update.json` with RU/EN highlights and compatibility, `SHA256SUMS` and a machine-readable `validation.json`. Publication verification downloads all four release assets and compares their bytes and updater metadata.
+
+## Publication verification
+
+[v2.0.7](https://github.com/HezeAI/termux-jobs/releases/tag/v2.0.7) is published as the latest stable release. The immutable tag points to `621ce4ccd9e6e8e465324d60d960c2a058e8bd5d`. Anonymous HTTPS downloads of all four assets matched local file lengths, SHA-256 values and GitHub asset digests. The downloaded checksum list and updater metadata agree with the APK, including both localized compatibility sections. Release body/credit and tagged README/release/validation/component documentation were also verified.
