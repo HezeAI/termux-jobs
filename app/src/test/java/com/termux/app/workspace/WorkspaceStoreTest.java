@@ -61,6 +61,18 @@ public class WorkspaceStoreTest {
         assertEquals("ciphertext",store.sessions.get(2).sshEncryptedPassword);assertEquals("pwd",store.commands.get(0).command);assertEquals("Keep note",store.notes.get(0).text);assertEquals("keep recent",store.recentCommands.get(0).command);
         org.json.JSONObject encoded=store.encode();assertEquals(8,encoded.getInt("version"));assertEquals(3,encoded.getJSONArray("sessions").length());assertFalse(encoded.toString().contains("localAi"));assertFalse(encoded.toString().contains("localChat"));store.close();
     }
+    @Test public void test7OptionalModelMetadataDoesNotResetPreModelReaderOrRunInference() throws Exception {
+        WorkspaceStore store=new WorkspaceStore(context,errors::add);
+        WorkspaceStore.Session codex=new WorkspaceStore.Session();codex.environment="codex";codex.codexChat="id";codex.codexThread="01900000-0000-7000-8000-000000000001";codex.codexEnvironment="ubuntu-ai";codex.agentConnectionCommand="/root/owned/example-agent-command";
+        WorkspaceStore.Session oldModel=new WorkspaceStore.Session();oldModel.environment="termux";oldModel.name="Former local session";oldModel.directory="/root";oldModel.startup="";
+        store.sessions.add(codex);store.sessions.add(oldModel);
+        WorkspaceStore.Command command=new WorkspaceStore.Command();command.command="pwd";store.commands.add(command);
+        WorkspaceStore.Note note=new WorkspaceStore.Note();note.text="Preserved note";store.notes.add(note);
+        org.json.JSONObject data=store.encode();data.getJSONArray("sessions").getJSONObject(1).put("localRuntime",2).put("localModel","qwen35-9b-q6").put("localBackend","opencl").put("localContext",16384).put("localConfirm",true).put("localAccess","ask");
+        store.decode(data.toString());assertEquals(2,store.sessions.size());assertEquals(codex.codexThread,store.sessions.get(0).codexThread);assertEquals(codex.agentConnectionCommand,store.sessions.get(0).agentConnectionCommand);
+        assertEquals("termux",store.sessions.get(1).environment);assertTrue(store.sessions.get(1).startupCommands().isEmpty());assertEquals("pwd",store.commands.get(0).command);assertEquals("Preserved note",store.notes.get(0).text);
+        assertFalse(store.encode().toString().contains("localRuntime"));store.close();
+    }
     @Test public void passwordProfilesPersistOnlyCiphertextAndMigrateSshVersionSix() throws Exception {
         WorkspaceStore store = new WorkspaceStore(context, errors::add); WorkspaceStore.Session s = new WorkspaceStore.Session();
         s.environment = "ssh"; s.sshHost = "example.invalid"; s.sshAuth = "password"; s.sshEncryptedPassword = "1:iv:ciphertext";

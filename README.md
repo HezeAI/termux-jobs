@@ -5,6 +5,17 @@
 Команды по-прежнему выполняются в настоящем Termux или выбранном окружении;
 интерфейс помогает организовать работу и не требует писать свою оболочку скриптов.
 
+## Private rollback to chat-link test1
+
+The private rollback restores commit `49e4f070`, before the Local AI experiment,
+with versionCode **1425** so it can update over test7/code1424. The versionName
+remains **2.0.10-test1**. The chat-link preview/copy/browser fix is retained.
+No model inference runtime, model catalogue or model-download feature is included.
+Downloaded experimental model files are not automatically deleted. Schema8,
+package and signing identity are retained; former experimental model profiles are
+read as plain, empty Termux profiles by the original reader.
+See [rollback validation](docs/fork/VALIDATION-test1-rollback.md).
+
 ## v2.0.9 — Environment aliases & agent chat scale
 
 Create persistent **Alias** for Termux, Ubuntu, Debian, Alpine, Arch Linux, Fedora,

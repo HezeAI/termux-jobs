@@ -1,3 +1,31 @@
+# READY FOR DELIVERY — test1 rollback, Local AI cancelled by the developer
+
+Active checkout: /root/termux-fork/.verification/chat-file-cards/source.
+Branch work/rollback-chat-links-test1; base49e4f070 (original chat-link test1).
+User explicitly cancelled Local AI development and all model launches. Do not
+launch models or continue that experiment. The unfinished test8 source is kept
+only in the git stash; old committed source remains on work/chat-file-cards.
+Own diagnostics have completed; no model diagnostic process remained at check.
+
+Verified build/apk/Termux-Jobs-test1-rollback.apk: versionName2.0.10-test1,
+code1425 > deliveredtest7/code1424. Application implementation is the original
+test1; only versionCode changes. Added isolated compatibility regression test.
+No install or publication authorized. Deliver APK in chat, not Download.
+Do not modify installed app data, remove weights or change existing sessions.
+Former test7 model profiles serialize as termux with empty startup and optional
+metadata; original reader ignores metadata and does not load any inference engine.
+All other schema8 profile/alias/notes data must remain readable. Existing model
+files/history remain on disk; do not claim rollback frees them.
+237 JVM/26classes pass, modern lint0errors/220existingwarnings. Release/runtime/
+artifact/signing/privacy checks pass. Originaltest1 assets/resources/JNI exact;
+only manifest and4DEXpayloadversionbytes changed. Size39800325bytes,
+SHA c265f45b329d0e962f6a52eb8bb1150fb22861560382cc3689e9ad520b3ddc61.
+Same signer dd37d983cd2496ebe49c7e88ddbc0088f311d38b8a8503e4392c81b48a11a644.
+See docs/fork/VALIDATION-test1-rollback.md and .verification/rollback-test1.
+
+---
+Historical original test1 handoff below:
+
 # Private chat-link test1 ready
 
 Active source /root/termux-fork/.verification/chat-file-cards/source,
