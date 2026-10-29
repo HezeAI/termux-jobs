@@ -5,6 +5,12 @@ isolated native checks, developer-reported device evidence, remaining limits and
 data compatibility. No app-data reset is required. Explicit environment image
 replacement has its own confirmation and complete rollback checkpoint.
 
+Public v2.1.0 verification completed: APK, SHA256SUMS, update.json and validation.json
+were downloaded anonymously and matched local hashes/sizes. Latest stable/updater
+metadata, release body/credit, tagged documentation and release page were verified.
+The immutable release tag remains ad3b63f8; this post-publication note does not
+rebuild or replace the APK.
+
 ---
 
 # Historical release validation — v2.0.9

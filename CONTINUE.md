@@ -1,4 +1,26 @@
-# Current release preparation — v2.1.0 / code1443
+# Published stable — v2.1.0 / code1443
+
+https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.0
+Immutable tag commit: ad3b63f8266f688a9bb8e3d4fcca566d346072d0.
+Default fork/base updated by fast-forward; prior release/component tags unchanged.
+APK Termux-Jobs-v2.1.0-arm64.apk, 39,903,643 bytes, SHA-256
+ e835b7425a97eb33dcea9bc71d40c1588182b77610ed067b0f49dc53e3842b89.
+Same com.termux/signer/schema8, ARM64. No app-data reset required.
+All four public assets were downloaded anonymously and matched local hashes/sizes;
+latest-stable API, RU/EN updater metadata, exact release body/credit, tagged
+release-document links and the public release page were verified.
+Evidence: .verification/release-v2.1.0/public-review.json and supporting logs.
+
+Stable repeats:128JVM,41Python,4Node suites; all5-module lint0errors/225warnings.
+Thirty-five Components pins match published URL/size/SHA-256 metadata.
+All test11 assets/resources/JNI retain identical bytes; version metadata changed.
+Device/online official-image/renderer limits remain in VALIDATION-v2.1.0.md.
+This publication did not change installed apps, environments, sessions, tunnel or bot.
+Next versionCode must exceed1443. Cancelled Local AI/VM/Wayland stay cancelled.
+
+---
+
+# Historical release preparation — v2.1.0 / code1443
 
 Active source: /root/termux-fork/.verification/rollback-live-actions/source.
 User explicitly authorized GitHub publication of v2.1.0. Preserve com.termux,
