@@ -1,3 +1,12 @@
+## Manjaro compatibility — v2.1.0
+
+Manjaro ARM uses a separate glibc 2.35/GCC 12 build of the same bridge, keeping
+Mesa 26.2.5, its source patches and presentation behavior. The other guests keep
+their existing >=2.38 runtime. See [build notes](../../third-party/bionic-glibc/MANJARO.md)
+and [build evidence](VALIDATION-test6-manjaro-bridge.md). HezeAI reported working
+Manjaro integration during testing; this does not establish universal fresh-device
+GUI or third-party driver compatibility. See [release validation](VALIDATION-v2.1.0.md).
+
 # Current distribution — v2.0.7
 
 The private Mesa Zink/GLX/EGL frontend now uses26.2.5. Its six non-Mesa bridge core files retain their prior bytes. The6,103,917-byte ZIP is downloaded from the pinned [Mesa26.2.5 component release](https://github.com/HezeAI/termux-jobs-components/releases/tag/mesa-26.2.5), never into guest system libraries. Bundle/file validation triggers selected-target preparation when an older cache differs; existing imported drivers remain selected. Matching archives/runtimes work offline. Stop/start the desktop to load updated libraries.

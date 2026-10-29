@@ -43,12 +43,15 @@ GROUPS={
   'fonts':['ttf-dejavu','adwaita-icon-theme'],'browser':['firefox'],
   'office':['libreoffice'],'pdf':['evince','libandroid-complex-math'],
   'media':['parole','gst-libav','gst-plugins-good','gst-plugins-bad','gst-plugins-base']}}
-CORE=re.compile(r'(?:pacman(?:-.*)?|archlinuxarm-keyring|xbps(?:-.*)?|base-(?:files|filesystem|system)|Thunar(?:-.*)?|rpm(?:-.*)?|dnf(?:5)?(?:-.*)?|zypper(?:-.*)?|libzypp(?:-.*)?|glibc(?:-.*)?|systemd(?:-.*)?|bash|coreutils(?:-.*)?|xfce4(?:-.*)?|xfdesktop(?:4)?(?:-.*)?|xfwm4(?:-.*)?|thunar(?:-.*)?|xfconf|libxfconf.*|fcitx5(?:-.*)?|dbus(?:-.*)?|libpulse(?:0)?|pulseaudio|gst-plugins-good|gstreamer1\.0-pulseaudio|musl(?:-.*)?|apk-tools(?:-.*)?|ca-certificates(?:-.*)?|font-.*|fonts-.*|ttf-.*|adwaita-icon-theme|hicolor-icon-theme|python(?:3)?(?:-.*)?|xauth|xorg-xauth|xprop|xorg-xprop|xwininfo|xorg-xwininfo|x11-.*)')
-GPU_PACKAGES={'archlinux':['glmark2','mesa-utils'],'void':['glmark2','glxinfo'],
+GROUPS['manjaro']={key:list(value) for key,value in GROUPS['archlinux'].items()}
+GROUPS['manjaro']['archives']=['xarchiver','unzip','zip','p7zip']
+GROUPS['manjaro']['office']=['libreoffice-fresh','sed']
+CORE=re.compile(r'(?:pacman(?:-.*)?|archlinuxarm-keyring|manjaro(?:-.*)?|xbps(?:-.*)?|base-(?:files|filesystem|system)|Thunar(?:-.*)?|rpm(?:-.*)?|dnf(?:5)?(?:-.*)?|zypper(?:-.*)?|libzypp(?:-.*)?|glibc(?:-.*)?|systemd(?:-.*)?|bash|coreutils(?:-.*)?|xfce4(?:-.*)?|xfdesktop(?:4)?(?:-.*)?|xfwm4(?:-.*)?|thunar(?:-.*)?|xfconf|libxfconf.*|fcitx5(?:-.*)?|dbus(?:-.*)?|libpulse(?:0)?|pulseaudio|gst-plugins-good|gstreamer1\.0-pulseaudio|musl(?:-.*)?|apk-tools(?:-.*)?|ca-certificates(?:-.*)?|font-.*|fonts-.*|ttf-.*|adwaita-icon-theme|hicolor-icon-theme|python(?:3)?(?:-.*)?|xauth|xorg-xauth|xprop|xorg-xprop|xwininfo|xorg-xwininfo|x11-.*)')
+GPU_PACKAGES={'manjaro':['glmark2','mesa-utils'],'archlinux':['glmark2','mesa-utils'],'void':['glmark2','glxinfo'],
  'opensuse':['glmark2','Mesa-demo-x'],'alpine':['mesa-utils'],
  'fedora':['glmark2','glx-utils'],'termux':['glmark2','mesa-demos']}
 for _target,_packages in GPU_PACKAGES.items():GROUPS[_target]['gpu-tools']=_packages
-for _target,_packages in GPU_PACKAGES.items():GROUPS[_target]['gpu-test']=[*list(_packages),'python' if _target in ('termux','archlinux') else 'python3']
+for _target,_packages in GPU_PACKAGES.items():GROUPS[_target]['gpu-test']=[*list(_packages),'python' if _target in ('termux','archlinux','manjaro') else 'python3']
 # The local GLX diagnostic does not execute glmark2 or mesa-demos.
 GROUPS['termux']['gpu-test']=['python','libx11','mesa']
 def clean(value,limit):return ' '.join(str(value or '').split())[:limit]
@@ -166,7 +169,7 @@ def arch_manifests(directory=Path('/var/lib/pacman/local'),verify=False):
  return owners,sums
 
 def installed(target):
- if target=='archlinux':return {n for n in output(['pacman','-Qq']).splitlines() if NAME.fullmatch(n)}
+ if target in ('archlinux','manjaro'):return {n for n in output(['pacman','-Qq']).splitlines() if NAME.fullmatch(n)}
  if target=='alpine':return set(apk_database()[0])
  if target=='void':return {name for line in output(['xbps-query','-l']).splitlines() if line.startswith('ii ') and len(line.split())>=2 and (name:=xbps_name(line.split()[1]))}
  if target in ('fedora','opensuse'):return {n for n in output(['rpm','-qa','--qf','%{NAME}\n']).splitlines() if NAME.fullmatch(n)}
@@ -181,6 +184,7 @@ def packages(target,id):
   if name=='parole':id='media'
   elif name=='ristretto':id='images'
   elif name=='evince' and target in ('termux','opensuse'):id='pdf'
+  elif target=='manjaro' and name=='libreoffice-fresh':id='office'
   else:return [name]
  if id not in GROUPS[target]:raise ValueError('unknown program')
  return GROUPS[target][id]
@@ -195,7 +199,7 @@ def local_gpu_test(target,pkgs):
 
 def available(target):
  result={}
- if target=='archlinux':
+ if target in ('archlinux','manjaro'):
   for block in re.split(r'\n\s*\n',output(['pacman','-Si'])):
    fields={}
    for line in block.splitlines():
@@ -242,7 +246,7 @@ def catalog(target,only_installed=False,prefix=None):
  have=installed(target);result={}
  if only_installed:
   directory=(prefix/'share/applications') if prefix else Path('/usr/share/applications')
-  if target=='archlinux':owners=arch_manifests()[0]
+  if target in ('archlinux','manjaro'):owners=arch_manifests()[0]
   elif target=='alpine':owners=apk_database()[1]
   elif target=='void':owners=xbps_manifests()[0]
   elif target in ('fedora','opensuse'):
@@ -277,7 +281,7 @@ def catalog(target,only_installed=False,prefix=None):
 
 def remove(target,name):
  if not NAME.fullmatch(name) or CORE.fullmatch(name):raise ValueError('protected desktop component')
- if target=='archlinux':
+ if target in ('archlinux','manjaro'):
   if name in {'breeze-icons','xkeyboard-config','libglvnd','vulkan-icd-loader','libdrm','llvm22-libs','spirv-tools','libdisplay-info','xcb-util-keysyms'}:raise ValueError('protected desktop graphics component')
   run(['pacman','-R','--noconfirm','--',name])
   if name in installed(target):raise ValueError('program still installed')
@@ -317,7 +321,7 @@ def repair(target,prefix=None):
  if target=='termux':
   m.DIRS=(prefix/'share/applications',prefix/'local/share/applications')
   sums=m.package_checksums(prefix/'var/lib/dpkg/info')
- elif target=='archlinux':sums=arch_manifests(verify=True)[1]
+ elif target in ('archlinux','manjaro'):sums=arch_manifests(verify=True)[1]
  elif target=='void':
   sums={}
   for path,digest in xbps_manifests()[1].items():
@@ -366,7 +370,7 @@ def main():
    return main_check(target)
   resume=op=='install' and os.environ.get('JOBS_X11_PROGRAM_RESUME')=='1'
   print('JOBS_APT_PHASE:update',flush=True)
-  if target=='archlinux':
+  if target in ('archlinux','manjaro'):
    # Resume reuses pacman's package cache and sync DB; -u still prevents partial upgrades.
    print('JOBS_APT_PHASE:install',flush=True)
    run(['pacman','-Su' if resume else '-Syu','--needed','--noconfirm','--',*pkgs])
@@ -380,8 +384,8 @@ def main():
   elif not resume:run(['apt-get','-o','Acquire::Retries=3','-o','Acquire::http::Timeout=30','-o','Acquire::https::Timeout=30','-o','Debug::acquire::progress=true','-o','APT::Status-Fd=3','-o','Dpkg::Use-Pty=0','update'])
   if target!='opensuse':print('JOBS_PROGRAM_INDEX_READY',flush=True)
   if pkgs:
-   if target not in ('opensuse','archlinux'):print('JOBS_APT_PHASE:install',flush=True)
-   if target=='archlinux':pass # Same transaction refreshed, upgraded and installed.
+   if target not in ('opensuse','archlinux','manjaro'):print('JOBS_APT_PHASE:install',flush=True)
+   if target in ('archlinux','manjaro'):pass # Same transaction refreshed, upgraded and installed.
    elif target=='void':run(['xbps-install','-y','--',*pkgs])
    elif target=='alpine':
     run(['mkdir','-p','--','/var/cache/apk'])
@@ -404,6 +408,8 @@ def main():
   if id=='pkg:termux-jobs-gpu-test':load('x11-gpu-test-setup').remove(Path.home())
   else:remove(target,id[4:])
  elif op not in ('check','catalog','installed'):raise ValueError('invalid operation')
+ if target=='manjaro' and op in ('install','remove'):
+  load('x11-app-launchers').prepare(target,Path(__file__).parent)
  if op in ('catalog','catalog-install','installed'):catalog(target,op=='installed',prefix);return
  main_check(target)
 

@@ -2,7 +2,7 @@
 """Private session configuration: keep EXTERNAL and admit this app's kernel UID."""
 from pathlib import Path
 import os,re,stat,sys,tempfile
-TARGETS={'ubuntu','debian','alpine','fedora','opensuse','void','archlinux'}
+TARGETS={'ubuntu','debian','alpine','fedora','opensuse','void','archlinux','kali','manjaro'}
 
 def prepare(control,target,uid,token,source=Path('/usr/share/dbus-1/session.conf')):
  control=Path(control)

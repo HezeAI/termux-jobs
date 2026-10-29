@@ -34,7 +34,7 @@ public class CodexActionTimelineTest {
     }
     @Test public void streamingKeepsCardExpansionAndStepIdentityAndOpensOriginalOutput()throws Exception{
         Activity a=Robolectric.buildActivity(Activity.class).setup().get();WorkspaceLanguage.select(a,"ru");AtomicReference<JSONObject> opened=new AtomicReference<>();AgentChatView v=view(a,opened);
-        JSONObject one=shell("one","t","pwd","completed"),two=shell("two","t","ls","inProgress");v.rows(Arrays.asList(one,two),false);CodexActionsView card=(CodexActionsView)v.timeline.getChildAt(1);assertEquals(View.GONE,card.steps.getVisibility());assertTrue(card.summary.getText().toString().contains("ls"));card.heading.performClick();View first=card.steps.getChildAt(0);assertEquals(View.VISIBLE,card.steps.getVisibility());
+        JSONObject one=shell("one","t","pwd","completed"),two=shell("two","t","ls","inProgress");v.rows(Arrays.asList(one,two),false);CodexActionsView card=(CodexActionsView)v.timeline.getChildAt(1);assertEquals(View.VISIBLE,card.steps.getVisibility());assertTrue(card.summary.getText().toString().contains("ls"));View first=card.steps.getChildAt(0);assertEquals(View.VISIBLE,card.steps.getVisibility());
         two.put("body","ls\nnew native output").put("status","completed").put("exitCode",0).put("durationMs",250);JSONObject third=shell("three","t","uname -a","inProgress");v.rows(Arrays.asList(one,two,third),false);assertSame(card,v.timeline.getChildAt(1));assertSame(first,card.steps.getChildAt(0));assertEquals(View.VISIBLE,card.steps.getVisibility());assertEquals(3,card.steps.getChildCount());assertEquals(3,v.timeline.getChildCount());card.steps.getChildAt(1).performClick();assertSame(two,opened.get());assertEquals("two-message",opened.get().getString("message"));assertEquals("command",opened.get().getString("part"));assertTrue(opened.get().getString("body").contains("new native output"));assertTrue(((TextView)card.steps.getChildAt(1)).getText().toString().contains("250 мс"));
     }
     @Test public void failuresAndRussianEnglishLabelsUseNativeFacts()throws Exception{
@@ -62,6 +62,12 @@ public class CodexActionTimelineTest {
     @Test public void completedCardIsCompactAndUnknownStatusDoesNotFabricateCompletion()throws Exception{
         Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=view(a,new AtomicReference<>());v.rows(Arrays.asList(shell("one","t","pwd","completed")),false);layout(v);CodexActionsView card=(CodexActionsView)v.timeline.getChildAt(1);assertEquals(View.GONE,card.summary.getVisibility());assertTrue(card.getMeasuredHeight()<=v.dp(65));
         JSONObject unknown=shell("one","t","pwd","unknown");v.rows(Arrays.asList(unknown),false);card.heading.performClick();assertFalse(((TextView)card.steps.getChildAt(0)).getText().toString().startsWith("✓"));
+    }
+
+    @Test public void activeTimelineOpensOnceAndRespectsManualCollapse()throws Exception{
+        Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});v.actionCards(true);
+        JSONObject running=shell("running","t","build","inProgress").put("outputTail","compiling module");v.rows(java.util.Collections.singletonList(running),false);CodexActionsView card=(CodexActionsView)v.timeline.getChildAt(1);assertEquals(View.VISIBLE,card.steps.getVisibility());
+        assertTrue(((TextView)card.steps.getChildAt(0)).getText().toString().contains("compiling module"));running.put("outputTail","packaging module");v.rows(java.util.Collections.singletonList(running),false);assertTrue(((TextView)card.steps.getChildAt(0)).getText().toString().contains("packaging module"));card.heading.performClick();assertEquals(View.GONE,card.steps.getVisibility());running.put("body","new output");v.rows(java.util.Collections.singletonList(running),false);assertEquals(View.GONE,card.steps.getVisibility());running.put("status","completed");v.rows(java.util.Collections.singletonList(running),false);assertEquals(View.GONE,card.steps.getVisibility());
     }
 
 }

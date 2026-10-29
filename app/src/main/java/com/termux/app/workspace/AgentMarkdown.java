@@ -33,11 +33,17 @@ final class AgentMarkdown {
         android.widget.ScrollView scroll=new android.widget.ScrollView(c);scroll.addView(address);
         android.app.AlertDialog dialog=WorkspaceDialogs.builder(c).setTitle(ru?"Ссылка":"Link").setView(scroll)
                 .setNeutralButton(ru?"Скопировать":"Copy",(d,w)->{android.content.ClipboardManager clipboard=(android.content.ClipboardManager)c.getSystemService(Context.CLIPBOARD_SERVICE);if(clipboard!=null)clipboard.setPrimaryClip(ClipData.newPlainText("url",url));})
-                .setPositiveButton(ru?"Перейти":"Open",(d,w)->{
+                .setNegativeButton(ru?"Показать":"Show",(d,w)->WorkspaceDocumentationUi.link(host,url))
+                .setPositiveButton(ru?"В браузере":"Browser",(d,w)->{
                     try{Intent browser=new Intent(Intent.ACTION_VIEW,uri).addCategory(Intent.CATEGORY_BROWSABLE);c.startActivity(Intent.createChooser(browser,ru?"Открыть в браузере":"Open in browser"));}
                     catch(ActivityNotFoundException|SecurityException unavailable){android.widget.Toast.makeText(c,ru?"Не удалось открыть браузер.":"Could not open a browser.",android.widget.Toast.LENGTH_SHORT).show();}
                 }).create();
         dialog.setCanceledOnTouchOutside(true);dialog.show();
+        dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).setEnabled(WorkspaceDocumentation.https(url)!=null);
+        dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setContentDescription(ru?"Открыть в браузере":"Open in browser");
+        for(int id:new int[]{android.app.AlertDialog.BUTTON_NEUTRAL,android.app.AlertDialog.BUTTON_NEGATIVE,android.app.AlertDialog.BUTTON_POSITIVE}){
+            android.widget.Button button=dialog.getButton(id);button.setBackground(WorkspaceDialogs.background(c,false));int pad=WorkspaceDialogs.dp(c,8);button.setPadding(pad,pad,pad,pad);
+        }
         int width=Math.min(WorkspaceDialogs.dp(c,480),Math.round(c.getResources().getDisplayMetrics().widthPixels*.92f));
         dialog.getWindow().setLayout(width,android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
     }

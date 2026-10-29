@@ -15,11 +15,13 @@ public final class X11Environment {
    case "opensuse":return new X11Environment(target,":jobs_x11_opensuse","workspace-x11-opensuse",103,X11Service.OpenSuse.class);
    case "void":return new X11Environment(target,":jobs_x11_void","workspace-x11-void",104,X11Service.VoidLinux.class);
    case "archlinux":return new X11Environment(target,":jobs_x11_archlinux","workspace-x11-archlinux",105,X11Service.ArchLinux.class);
+   case "kali":return new X11Environment(target,":jobs_x11_kali","workspace-x11-kali",106,X11Service.Kali.class);
+   case "manjaro":return new X11Environment(target,":jobs_x11_manjaro","workspace-x11-manjaro",107,X11Service.Manjaro.class);
    default:throw new IllegalArgumentException("Unsupported desktop environment");
   }
  }
  static X11Environment context(Context context){
-  Class<?> c=context.getClass();for(String t:new String[]{"termux","ubuntu","jobs-x11-ubuntu","debian","alpine","fedora","opensuse","void","archlinux"}){X11Environment e=forTarget(t);if(c==e.service)return e;}
+  Class<?> c=context.getClass();for(String t:new String[]{"termux","ubuntu","jobs-x11-ubuntu","debian","alpine","fedora","opensuse","void","archlinux","kali","manjaro"}){X11Environment e=forTarget(t);if(c==e.service)return e;}
   return forTarget("termux"); // JVM fixtures / old private test activity only.
  }
  boolean owns(String name,String pkg){return (pkg+process).equals(name);}

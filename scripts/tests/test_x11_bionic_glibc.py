@@ -217,6 +217,60 @@ class BionicBridgeTest(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()) as output:self.b.environment(self.cache)
         value=self.b.w.driver(self.cache)[0]
         self.assertEqual('export JOBS_BIONIC_DRIVER=/tmp/termux-jobs-bionic-glibc/drivers/'+value['id']+'/libvulkan_freedreno.so\n',output.getvalue())
+
+    def test_manjaros_real_bundle_install_resume_and_target_separation(self):
+        self.b.install(self.cache)
+        other=(self.cache/'runtime/ready.json').read_bytes()
+        cache=self.root/'workspace-x11-bionic-glibc-manjaro'
+        self.b.w.import_driver(cache,self.zip,36)
+        selected=(cache/'current.json').read_bytes()
+        archive=(ROOT/'third-party/bionic-glibc/manjaro-arm64-runtime.zip').read_bytes()
+        calls=[]
+        def fetch(url,pin,size,progress):
+            calls.append((url,pin,size));progress(len(archive),size);return archive
+        with self.b.shared(self.cache):
+            self.b.install(cache,fetch,target='manjaro')
+            self.b.install(cache,lambda *a:self.fail('ready runtime must be offline'),target='manjaro')
+        self.assertEqual([(self.b.MANJARO_URL,self.b.MANJARO_PIN,self.b.MANJARO_SIZE)],calls)
+        self.b.valid_runtime(cache,'manjaro')
+        self.assertEqual(selected,(cache/'current.json').read_bytes())
+        self.assertEqual(other,(self.cache/'runtime/ready.json').read_bytes())
+        with self.assertRaisesRegex(ValueError,'CHANGED'):self.b.valid_runtime(cache,'ubuntu')
+        with self.assertRaisesRegex(ValueError,'CHANGED'):self.b.valid_runtime(self.cache,'manjaro')
+        result=subprocess.run(['python3','-B',str(self.root/'x11-bionic-glibc.py'),'check','manjaro',str(cache),'-','36','-'],capture_output=True,text=True)
+        self.assertEqual(0,result.returncode,result.stdout+result.stderr)
+        with self.b.shared(cache),self.assertRaisesRegex(ValueError,'BUSY'):self.b.install(cache,target='manjaro')
+        (cache/'runtime/libjobs-bionic.so').write_bytes(b'corrupted')
+        self.b.install(cache,lambda *a:self.fail('verified bundle is already cached'),target='manjaro')
+        self.b.valid_runtime(cache,'manjaro')
+        self.assertEqual(selected,(cache/'current.json').read_bytes())
+
+    def test_ordinary_bundle_is_never_accepted_for_manjaros_first_install(self):
+        cache=self.root/'workspace-x11-bionic-glibc-manjaro'
+        self.b.w.import_driver(cache,self.zip,36);self.seed(cache)
+        with self.assertRaisesRegex(ValueError,'CHECKSUM'):
+            self.b.install(cache,lambda *a:(self.root/'x11-bionic-glibc.zip').read_bytes(),target='manjaro')
+        self.assertFalse((cache/'runtime').exists())
+        self.assertFalse(list(cache.glob('.runtime-*')))
+
+    def test_manjaros_guest_minimum_does_not_lower_other_environments_requirement(self):
+        from unittest.mock import patch
+        import ctypes,platform
+        text=(ASSETS/'x11-bionic-glibc-env.sh').read_text()
+        block=text.split("python3 - <<'PY' || return 1\n",1)[1].split('\nPY',1)[0]
+        for target in ('manjaro','ubuntu','debian','kali','fedora','archlinux','opensuse','void'):
+            with patch.dict(os.environ,{'JOBS_X11_TARGET':target}),patch.object(platform,'libc_ver',return_value=('glibc','2.35')),patch.object(ctypes,'CDLL') as load,contextlib.redirect_stdout(io.StringIO()):
+                if target=='manjaro':exec(block,{});self.assertEqual(6,load.call_count)
+                else:
+                    with self.assertRaises(SystemExit):exec(block,{})
+                    load.assert_not_called()
+
+    def test_manjaros_bridge_dependency_check_rejects_missing_library_only_for_bridge(self):
+        prefix=(ASSETS/'x11-native-desktop.sh').read_text().split('case $op in',1)[0]
+        body=prefix+'\npacman(){ for p in "$@";do [ "$p" != libxxf86vm ] || return 1;done; };command(){ return 0; };fcitx5(){ return 0; };check\n'
+        for mode in ('cpu','virgl','bionic-glibc'):
+            result=subprocess.run(['sh','-c',body,'fixture','check','manjaro'],env={**os.environ,'JOBS_X11_RENDERER':mode},capture_output=True,text=True)
+            self.assertEqual(1 if mode=='bionic-glibc' else 0,result.returncode,result.stderr)
     def test_other_targets_rejected_before_any_write(self):
         for target in ['termux','ubuntu-ai','alpine']:
             dest=self.root/'must-not-exist'
@@ -226,12 +280,12 @@ class BionicBridgeTest(unittest.TestCase):
             self.assertEqual(2,run.returncode);self.assertTrue('BIONIC_TARGET_UNSUPPORTED' in run.stdout or 'UNSUPPORTED_DESKTOP' in run.stdout)
     def test_missing_bridge_package_fails_selected_ubuntu_readiness_only(self):
         script=(ASSETS/'x11-desktop.sh').read_text()
-        block=script.split('if [[ ( $target == ubuntu || $target == debian ) && ${JOBS_X11_RENDERER:-cpu} == bionic-glibc ]];then',1)[1].split('\nfi',1)[0]
-        body='set -eu;target=$1;JOBS_X11_RENDERER=$2;components=true;packages=base; if [[ ( $target == ubuntu || $target == debian ) && $JOBS_X11_RENDERER == bionic-glibc ]];then '+block+'\nfi; configured(){ [[ $1 != libxcb-dri3-0 ]]; };eval "$components"'
-        for target in ['ubuntu','termux','debian','alpine','fedora','opensuse','void','archlinux']:
+        block=script.split('if [[ ( $target == ubuntu || $target == debian || $target == kali ) && ${JOBS_X11_RENDERER:-cpu} == bionic-glibc ]];then',1)[1].split('\nfi',1)[0]
+        body='set -eu;target=$1;JOBS_X11_RENDERER=$2;components=true;packages=base; if [[ ( $target == ubuntu || $target == debian || $target == kali ) && $JOBS_X11_RENDERER == bionic-glibc ]];then '+block+'\nfi; configured(){ [[ $1 != libxcb-dri3-0 ]]; };eval "$components"'
+        for target in ['ubuntu','termux','debian','kali','manjaro','alpine','fedora','opensuse','void','archlinux']:
             for mode in ['cpu','turnip','virgl','bionic-glibc']:
                 result=subprocess.run(['bash','-c',body,'fixture',target,mode],capture_output=True,text=True)
-                self.assertEqual(1 if target in ('ubuntu','debian') and mode=='bionic-glibc' else 0,result.returncode,result.stderr)
+                self.assertEqual(1 if target in ('ubuntu','debian','kali') and mode=='bionic-glibc' else 0,result.returncode,result.stderr)
     def test_guest_packages_required_only_by_selected_ubuntu_bridge(self):
         script=(ASSETS/'x11-desktop.sh').read_text()
         block=script.split("jobs_bionic_packages='",1)[1].split("'",1)[0]
@@ -240,6 +294,6 @@ class BionicBridgeTest(unittest.TestCase):
         self.assertIn('components+=" && configured $jobs_bionic_package"',script)
         env=(ASSETS/'x11-bionic-glibc-env.sh').read_text()
         self.assertNotIn('export LD_PRELOAD=',env)
-        self.assertIn('ubuntu|debian|fedora|archlinux|opensuse|void)',env)
+        self.assertIn('ubuntu|debian|kali|fedora|archlinux|opensuse|void|manjaro)',env)
 
 if __name__=='__main__':unittest.main()

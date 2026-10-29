@@ -4,7 +4,7 @@ import importlib.util,json,os,re,subprocess,sys,ctypes as c
 from pathlib import Path
 import xml.etree.ElementTree as ET
 spec=importlib.util.spec_from_file_location('scale',Path(__file__).with_name('x11-scale.py'));s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s);m=s.m
-TARGETS={'termux':97,'ubuntu':98,'debian':100,'alpine':101,'fedora':102,'opensuse':103,'void':104,'archlinux':105}
+TARGETS={'termux':97,'ubuntu':98,'debian':100,'alpine':101,'fedora':102,'opensuse':103,'void':104,'archlinux':105,'kali':106,'manjaro':107}
 
 def session(control,register=False):
  target=os.environ.get('JOBS_X11_TARGET','');token=os.environ.get('JOBS_X11_FOCUS_TOKEN','')

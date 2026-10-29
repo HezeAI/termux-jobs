@@ -33,6 +33,9 @@ SPECS = {'ubuntu': {'directory': 'ubuntu-26.04-mesa26.2.5', 'version': '26.2.5-j
  'archlinux': {'directory': 'archlinux-mesa26.2.5', 'version': '26.2.5-jobs1', 'packages': [('https://github.com/HezeAI/termux-jobs-components/releases/download/mesa-26.2.5/mesa-26.2.5-jobs1-glibc-lib-aarch64.tar.gz', 'be26f1d122d2e626d8411c968ff7074d3d7c614f35f59fe8c97164f690c70dcb', 10347926, 'tar')]},
  'termux': {'directory': 'termux-mesa26.2.5', 'version': '26.2.5', 'packages': [('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/mesa-vulkan-icd-freedreno_26.2.5_aarch64.deb', '79d4328e41b3b40edea91088c7992f5522469c682e44223efb69ef0861903c37', 1599892, 'deb'), ('https://github.com/HezeAI/termux-jobs-components/releases/download/graphics-20261025/vulkan-loader-generic_1.4.366_aarch64.deb', '5b0a17efdd27e064c06dcf5befba4b466eac6025110ecc44be768019b00abdb7', 150484, 'deb')]}}
 
+SPECS['kali'] = dict(SPECS['debian'], directory='kali-mesa26.2.5')
+SPECS['manjaro'] = {'directory': 'manjaro-mesa26.2.5-glibc235', 'version': '26.2.5-jobs1-glibc235', 'packages': [('https://github.com/HezeAI/termux-jobs-components/releases/download/xfce-base-20261028/mesa-26.2.5-jobs1-glibc235-manjaro-aarch64.tar.gz', '55ba75820036a193d2fbd393ff95c39c52043e54d21846b49f1f9f3644c6ebba', 9916572, 'tar')]}
+
 class HttpsOnly(urllib.request.HTTPRedirectHandler):
  def redirect_request(self, req, fp, code, msg, headers, newurl):
   if not newurl.startswith('https://'): raise ValueError('INSECURE_REDIRECT')
@@ -172,10 +175,12 @@ def requirements(target):
    'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; export XDG_DATA_DIRS=/usr/local/share:/usr/share XDG_CONFIG_DIRS=/etc/xdg; unset LD_LIBRARY_PATH LD_PRELOAD DBUS_SYSTEM_BUS_ADDRESS; . /etc/os-release; [ "$ID" = ubuntu ] && [ "$VERSION_ID" = 26.04 ] || exit 72; dpkg-query -W -f=\'${Status}\\n\' libvulkan1 libegl1 2>/dev/null | grep -c "install ok installed" | grep -qx 2']
   if subprocess.run(command,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=25).returncode:raise ValueError('UBUNTU_26_04_LIBVULKAN1_LIBEGL1_REQUIRED')
 
- if target in ('debian','alpine','fedora','opensuse','void','archlinux'):
+ if target in ('debian','alpine','fedora','opensuse','void','archlinux','kali','manjaro'):
   # Check only the selected rootfs. Never install or change its packages here.
   os_check = '[ "$ID" = debian ] && [ "${VERSION_ID%%.*}" = 13 ]' if target=='debian' else '[ "$ID" = alpine ] && [ "${VERSION_ID%.*}" = 3.24 ]'
   if target=='opensuse':os_check='[ "$ID" = opensuse-leap ] && [ "$VERSION_ID" = 16.0 ]'
+  if target=='kali':os_check='[ "$ID" = kali ]'
+  if target=='manjaro':os_check='[ "$ID" = manjaro-arm ] || [ "$ID" = manjaro ]'
   if target=='archlinux':os_check='[ "$ID" = archarm ] || [ "$ID" = arch ]'
   if target=='void':os_check='[ "$ID" = void ] && getconf GNU_LIBC_VERSION >/dev/null'
   if target=='fedora':os_check='[ "$ID" = fedora ] && [ "$VERSION_ID" = 44 ]'
@@ -192,6 +197,8 @@ def requirements(target):
    if target=='archlinux':raise ValueError('ARCH_ARM_VULKAN_EGL_LLVM22_REQUIRED')
    if target=='void':raise ValueError('VOID_GLIBC_VULKAN_EGL_REQUIRED')
    if target=='fedora':raise ValueError('FEDORA_44_VULKAN_EGL_REQUIRED')
+   if target=='kali':raise ValueError('KALI_VULKAN_EGL_REQUIRED')
+   if target=='manjaro':raise ValueError('MANJARO_VULKAN_EGL_REQUIRED')
    raise ValueError('DEBIAN_13_VULKAN_EGL_REQUIRED' if target=='debian' else 'ALPINE_3_24_VULKAN_EGL_REQUIRED')
 
 def main():

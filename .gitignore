@@ -12,6 +12,7 @@ release/
 *.zip
 !third-party/virgl-client/alpine-mesa-26.1.6-virgl.zip
 !third-party/bionic-glibc/ubuntu-arm64-runtime.zip
+!third-party/bionic-glibc/manjaro-arm64-runtime.zip
 !third-party/graphics-drivers/Turnip-a6xx-a7xx-a8xx.zip
 
 # Crashlytics configuations

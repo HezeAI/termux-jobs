@@ -18,6 +18,18 @@ public final class X11InstallProgress {
         else if(!overflow){if(line.length()<4096)line.append(c);else{line.setLength(0);overflow=true;}}
     }if(!overflow&&line.length()>0)zypp(line.toString(),now,false);}
     private void parse(String value,long now){
+        if(value.matches("BASE_STAGE:checking:[a-z-]+")||value.equals("BASE_STAGE:recovering-apt")){
+            apt="";newStage("preparing");percent=-1;item="";return;
+        }
+        if(value.matches("BASE_STAGE:download:[a-z-]+")){apt="base";newStage("downloading");percent=10;item="XFCE base packages";return;}
+        if(apt.equals("base")&&value.startsWith("IMAGE_PROGRESS:")){
+            java.util.regex.Matcher image=java.util.regex.Pattern.compile("^IMAGE_PROGRESS: ([0-9]{1,3})% \\(([0-9]{1,10})/([0-9]{1,10}) bytes\\)$").matcher(value);
+            if(!image.matches())return;
+            long done=Long.parseLong(image.group(2)),all=Long.parseLong(image.group(3));
+            if(all<=0||all>2147483648L||done>all)return;
+            double p=100.0*done/all;
+            if(start<0||p<last){start=now;initial=p;}last=p;lastTime=now;downloaded=done;total=all;percent=10+(int)(p*.45);return;
+        }
         if(value.equals("EXTRA_STAGE:kali-style")||value.equals("EXTRA_STAGE:virgl-alpine")){
             apt="extra";newStage("downloading");percent=-1;item=value.endsWith("kali-style")?"Kali theme":"Alpine VirGL client";return;
         }

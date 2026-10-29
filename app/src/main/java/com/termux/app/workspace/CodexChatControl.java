@@ -15,7 +15,7 @@ final class CodexChatControl {
         if(!p.environment.equals("codex")||!AgentEnvironments.ubuntu(p.codexEnvironment))return;
         if(!CodexSessionShell.validThread(p.codexSocketId))throw new IOException("Invalid Codex run");
         File dir=CodexSessionShell.socketDirectory(c.getFilesDir());if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create Codex controls");
-        for(String asset:new String[]{"codex-chat.cjs","codex-control.js","agent-receipts.cjs"}){
+        for(String asset:new String[]{"codex-chat.cjs","codex-control.js","agent-receipts.cjs","agent-action-preview.cjs"}){
             String name=asset.equals("codex-control.js")?"codex-wire-v0.2.22.js":asset.equals("codex-chat.cjs")?"codex-chat-v1.cjs":asset;
             File temp=File.createTempFile("codex-chat-",".tmp",dir);try{try(InputStream in=c.getAssets().open(asset);OutputStream out=new FileOutputStream(temp)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}protect(temp);if(!temp.renameTo(new File(dir,name)))throw new IOException("Cannot publish Codex chat helper");}finally{temp.delete();}
         }

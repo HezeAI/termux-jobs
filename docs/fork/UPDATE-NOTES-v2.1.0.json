@@ -1,0 +1,32 @@
+{
+  "ru": [
+    "Kali Linux и Manjaro: отдельные окружения, X11, программы, alias и настройки стола; совместимые графические компоненты Manjaro.",
+    "Закреплённые базовые ARM64-образы и наборы XFCE из Components для повторяемой первой установки. Ubuntu AI сохраняет прежнюю политику.",
+    "Проверка и обновление пакетов окружения, восстановление базового набора, полные снимки и откат.",
+    "Проверка новых официальных образов и явная установка/замена выбранного окружения. Проверки остаются в его меню.",
+    "ArchWiki, форум и документация окружений внутри приложения с сохранением страницы до закрытия приложения.",
+    "Понятнее действия агентов: текущий вывод команд, миниатюры изображений, файлы и сайты; компактные окна и ссылки Копировать / Показать / Браузер.",
+    "Плашка сессии на всю ширину; исправления Evince в Kali, LibreOffice в Manjaro и проверок пакетов Fedora/openSUSE."
+  ],
+  "en": [
+    "Kali Linux and Manjaro: separate environments, X11, programs, aliases and desktop controls; compatible Manjaro graphics components.",
+    "Pinned ARM64 base images and matching XFCE sets from Components for reproducible first installation. Ubuntu AI keeps its existing policy.",
+    "Environment package checks/upgrades, base restoration, complete checkpoints and rollback.",
+    "Check new official images and explicitly install/replace the selected environment. Checks remain in its menu.",
+    "ArchWiki, Forum and environment documentation inside the app, with page retention until the app closes.",
+    "Clearer agent actions: live command output, image previews, files and sites; compact panels and Copy / Show / Browser links.",
+    "Full-width session card; Kali Evince, Manjaro LibreOffice and Fedora/openSUSE package-check fixes."
+  ],
+  "compatibility": {
+    "ru": [
+      "Те же com.termux, подпись, ARM64 и schema8. Android 8+ для приложения / 11+ для X11. Код 1443. Обновление APK не требует сброса данных, переноса аккаунтов или переустановки окружений.",
+      "Истории, пресеты, проекты, окружения, команды и заметки сохраняются. Завершите важную работу перед обновлением приложения.",
+      "Отдельно выбранная замена образа меняет ОС и набор программ окружения; дополнительные приложения может потребоваться установить заново. Сохранение /root и /home предлагается перед заменой, старая система остаётся снимком для отката. Нужны свободное место и закрытые сессии выбранного окружения. Termux и Ubuntu AI исключены из этих операций."
+    ],
+    "en": [
+      "Same com.termux, signer, ARM64 and schema8. Android 8+ app / 11+ X11. Code 1443. Updating the APK requires no data reset, account migration or environment reinstallation.",
+      "Histories, presets, projects, environments, commands and notes are retained. Finish important work before updating the app.",
+      "Explicit image replacement changes the selected environment OS/program set; additional apps may need reinstalling. Home preservation is offered before replacement; the previous system remains a rollback checkpoint. Free space and stopped sessions of the selected environment are required. Native Termux and Ubuntu AI are excluded from these operations."
+    ]
+  }
+}

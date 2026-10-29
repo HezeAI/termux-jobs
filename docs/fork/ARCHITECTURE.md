@@ -1,4 +1,27 @@
-# Private follow-up — selectable chat links
+# v2.1.0 — environment transactions and documentation
+
+WorkspaceEnvironmentUpdates owns selected-menu state; EnvironmentUpdateJobs and
+its foreground service run owned workers outside UI lifetime. Target locks,
+private plans, validated temporary containers and atomic publication guard
+package/image changes. Full checkpoints and a recovery journal cover swaps;
+initial publication has a separate absent-target recovery path. No unrelated
+session is killed to obtain a lock. See [transaction boundaries](ENVIRONMENT-UPDATES.md).
+
+Official downloads freeze source identities and verify OCI blobs/checksums or
+Arch Linux ARM signatures. Only inode-bound private origin receipts select the
+new guest's repository desktop policy; Android/Termux host pins stay unchanged.
+Managed PRoot l2s links are materialized before alias publication. Normal first
+installation uses pinned matching base/XFCE sets. Ubuntu AI policy is unchanged.
+
+WorkspaceDocumentation holds process-lifetime reader state and
+WorkspaceDocumentationUi restricts in-app navigation and external actions.
+AgentActionPresentation/Details and bounded native event previews share live
+command/image/file/web presentation across provider adapters.
+No raw-auth transport or new native renderer is introduced by this release.
+
+---
+
+# Historical chat-link implementation
 
 AgentLinkTextView adds short URL-span tap handling to selectable transcript views,
 including normal rows, Markdown blocks and table cells. Android retains the
@@ -6,7 +29,7 @@ selection movement method. Gestures cancel on slop, long press, multiple pointer
 CANCEL, detach or replaced text. Link actions run before generic row clicks so a
 truncated message does not open its detail dialog at the same time.
 AgentMarkdown's shared resolver presents the full HTTP(S) URL with explicit
-Copy/Open actions; only Open sends an external browser chooser intent. Code
+Copy / Show / Browser actions; Show opens the restricted reader and Browser sends an external chooser intent. Code
 literals remain inert. Local-file/command schemes, credential-bearing addresses,
 missing hosts and raw control/whitespace are refused. No agent request, shell,
 new permission or authentication state is involved.

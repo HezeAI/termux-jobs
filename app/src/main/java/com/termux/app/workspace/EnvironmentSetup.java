@@ -78,7 +78,7 @@ final class EnvironmentSetup implements AutoCloseable {
     private void offerInstall(WorkspaceEnvironments.Choice choice){
         InstallJob job=installations.get(choice.alias);if(job!=null&&job.active){stopInstall(job);return;}
         WorkspaceDialogs.builder(activity).setTitle((resumable(choice.alias)?t("Продолжить установку ","Resume installing "):t("Установить ","Install "))+choice.label+"?")
-            .setMessage(t("Система будет скачана и установлена как отдельное окружение внутри Termux Job’s. Другое приложение Termux устанавливать не нужно. Нужны интернет и свободное место. Установку выполняет штатный proot-distro. Он повторно использует целиком скачанные и проверенные слои; оборванный слой может скачиваться заново. Если proot-distro отсутствует, установим его. Уже установленные системы не заменяются. Поддержка зависит от версии proot-distro и архитектуры; недоступный образ будет отклонён.","Download and install a separate environment inside Termux Job’s. No separate Termux app is needed. Internet and free storage are required. Installation uses the native proot-distro CLI. It can reuse complete verified layers; an interrupted layer may download again. Missing proot-distro will be installed. Existing systems are never replaced. Availability depends on proot-distro and architecture; unavailable images are rejected.")+(choice.alias.equals("archlinux")?t("\nНа ARM64 устанавливается Arch Linux ARM из архива Termux, с проверкой SHA-256. Это отдельный проект от Arch Linux для x86-64.","\nOn ARM64, install Arch Linux ARM from a Termux archive with SHA-256 verification. It is a separate project from x86-64 Arch Linux."):""))
+            .setMessage((choice.alias.equals("ubuntu-ai")?t("Ubuntu AI будет скачана штатным proot-distro из его источника для агентов. Другое приложение Termux не требуется. Нужны интернет и свободное место. Уже установленное окружение не заменяется.","Ubuntu AI downloads through native proot-distro from its upstream agent environment source. No separate Termux app is needed. Internet and free storage are required. An existing environment is never replaced."):t("Система будет скачана и установлена как отдельное окружение внутри Termux Job’s. Другое приложение Termux устанавливать не нужно. Нужны интернет и свободное место. Закреплённый ARM64-образ скачивается из Termux Jobs Components с проверкой SHA-256. Скачанное сохраняется для продолжения и повторной установки. Распаковку выполняет штатный proot-distro. Пакеты внутри системы могут обновляться отдельно. Если proot-distro отсутствует, установим его. Уже установленные системы не заменяются. Поддержка зависит от версии proot-distro и архитектуры; недоступный образ будет отклонён.","Download and install a separate environment inside Termux Job’s. No separate Termux app is needed. Internet and free storage are required. A pinned ARM64 image downloads from Termux Jobs Components with SHA-256 verification. Downloads are retained for resuming and reinstallation. Extraction uses the native proot-distro CLI. Packages inside the system can update separately. Missing proot-distro will be installed. Existing systems are never replaced. Availability depends on proot-distro and architecture; unavailable images are rejected."))+(choice.alias.equals("archlinux")?t("\nНа ARM64 устанавливается Arch Linux ARM из закреплённого архива Termux, сохранённого в Termux Jobs Components, с проверкой SHA-256. Это отдельный проект от Arch Linux для x86-64.","\nOn ARM64, install Arch Linux ARM from a pinned Termux archive mirrored in Termux Jobs Components with SHA-256 verification. It is a separate project from x86-64 Arch Linux."):""))
             .setPositiveButton(resumable(choice.alias)?t("Продолжить","Resume"):t("Установить","Install"),(d,w)->startInstall(choice)).setNegativeButton(t("Назад","Back"),null).show();
     }
     private void showInstallLog(WorkspaceEnvironments.Choice choice){
@@ -124,7 +124,7 @@ final class EnvironmentSetup implements AutoCloseable {
                         else if(failure.equals("MISSING:shell"))failure=t("Папка системы найдена, но её оболочка отсутствует. Возможно, установка была прервана.","System directory found, but its shell is missing. Installation may have been interrupted.");
                         else if(failure.equals("MISSING:environment"))failure=t("Папка установленной системы не найдена.","Installed system directory not found.");
                         else if(failure.equals("MISSING:proot-distro"))failure=t("Не найден proot-distro.","proot-distro not found.");
-                        line.setText(active?job.progress.line:failure.isEmpty()?t("Причина не указана установщиком","Installer did not report the cause"):failure);}
+                        line.setText(active?job.progress.displayLine(WorkspaceLanguage.code(activity).equals("ru")):failure.isEmpty()?t("Причина не указана установщиком","Installer did not report the cause"):failure);}
                 };
                 // ListView also asks for unattached rows during measurement. Those must
                 // never steal the subscription from a card actually visible on screen.
@@ -172,6 +172,10 @@ final class EnvironmentSetup implements AutoCloseable {
         try{
         File script=new File(directory,"runtime.sh");try(InputStream in=activity.getAssets().open("environment-runtime.sh");OutputStream out=new FileOutputStream(script)){byte[] bytes=new byte[8192];int count;while((count=in.read(bytes))!=-1)out.write(bytes,0,count);}
         if(!script.setReadable(false,false)||!script.setWritable(false,false)||!script.setReadable(true,true)||!script.setWritable(true,true))throw new IOException("SETUP_PERMISSIONS");
+        for(String name:new String[]{"environment-image.py","environment-images.json"}){
+            File file=new File(directory,name);try(InputStream in=activity.getAssets().open(name);OutputStream out=new FileOutputStream(file)){byte[] bytes=new byte[8192];int count;while((count=in.read(bytes))!=-1)out.write(bytes,0,count);}
+            if(!file.setReadable(false,false)||!file.setWritable(false,false)||!file.setReadable(true,true)||!file.setWritable(true,true))throw new IOException("SETUP_PERMISSIONS");
+        }
         ProcessBuilder builder;
         if(job!=null){
             File supervisor=new File(directory,"environment-install.py");try(InputStream in=activity.getAssets().open("environment-install.py");OutputStream out=new FileOutputStream(supervisor)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}
@@ -190,7 +194,7 @@ final class EnvironmentSetup implements AutoCloseable {
     static void cleanExecution(File directory,File cancel){
         // Only fixed files from this invocation; never recurse into downloads/rootfs.
         if(cancel!=null)cancel.delete();
-        new File(directory,"runtime.sh").delete();new File(directory,"environment-install.py").delete();directory.delete();
+        new File(directory,"environment-image.py").delete();new File(directory,"environment-images.json").delete();new File(directory,"runtime.sh").delete();new File(directory,"environment-install.py").delete();directory.delete();
     }
     static Result collectProcess(Process process,Consumer<String> update,File cancel)throws Exception{
         boolean exited=false,interrupted=false;

@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const root=path.resolve(__dirname,'../..'),base=path.join(root,'.verification/chat-history-v1.7.5');fs.mkdirSync(base,{recursive:true});const dir=fs.mkdtempSync(path.join(base,'paging-'));
-for(const [from,to]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],['agent-receipts.cjs','agent-receipts.cjs']])fs.copyFileSync(path.join(root,'app/src/main/assets',from),path.join(dir,to));
+for(const [from,to]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],['agent-receipts.cjs','agent-receipts.cjs'],['agent-action-preview.cjs','agent-action-preview.cjs']])fs.copyFileSync(path.join(root,'app/src/main/assets',from),path.join(dir,to));
 const {CodexChat}=require(path.join(dir,'codex-chat.cjs'));
 const item=(prefix,n)=>({id:prefix+n,type:'agentMessage',text:prefix+' message '+n});
 (async()=>{

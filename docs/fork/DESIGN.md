@@ -1,3 +1,19 @@
+# v2.1.0 — environment updates and integrated reading
+
+The session card spans the row and contains separate bordered settings,
+packages/agent and files actions. Update checks keep the selected environment
+menu alive, with status/progress and explicit Stop. Image checking and applying
+are separate; confirmation explains OS/application replacement and home options.
+A complete snapshot makes rollback available without silently clearing data.
+
+ArchWiki, Forum, environment docs and the Show agent-link action share the
+restricted reader UI. Wiki state is common to the app process. Live agent actions
+use outlined compact cards and bounded details, with image previews and ongoing
+command output where the provider supplies it.
+See [updates](ENVIRONMENT-UPDATES.md) and [reader](DOCUMENTATION-READER.md).
+
+---
+
 # Private follow-up — link actions
 
 Agent web links open a compact full-address panel. Copy is the left action; Open

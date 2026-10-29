@@ -1,4 +1,5 @@
 'use strict';
+const {preview:actionPreview,trimPreviews,outputTail}=require('./agent-action-preview.cjs');
 // Structured view of one owned native session. Never parses terminal escape output.
 const crypto=require('node:crypto');
 const {Attachments,attachmentRows}=require('./agent-attachments.cjs');
@@ -6,6 +7,7 @@ const {ReceiptStore,clean}=require('./agent-receipts.cjs');
 const id=v=>typeof v==='string'&&/^msg_[A-Za-z0-9_-]{1,124}$/.test(v);
 const canonical=v=>JSON.stringify(v,(_,value)=>value&&typeof value==='object'&&!Array.isArray(value)?Object.fromEntries(Object.keys(value).sort().map(k=>[k,value[k]])):value);
 const text=v=>typeof v==='string'?clean(v):'';
+function toolBody(part){if(['bash','run_shell_command'].includes(part?.name)){const s=part.state||{};return [text(s.input?.command),text(s.output),text(s.error?.message||s.error)].filter(Boolean).join('\n');}if(['read','write','edit','read_file','write_file','replace'].includes(part?.name)){const s=part.state||{};return [text(s.output),JSON.stringify(s.input||{},null,2)].filter(Boolean).join('\n\n');}return JSON.stringify(part?.state||{},null,2);}
 class OpenCodeChat {
  constructor(request,session,file,options={}){this.request=request;this.session=session;this.file=file;this.attachments=new Attachments(options.attachmentRoot||require("node:path").dirname(file));this.live=new Map();this.asked=new Map();this.pending=new Map();this.forms=new Map();this.connected=false;this.closed=false;this.lastMessage='';this.shells=new Set();this.endedShells=new Set();this.admissions=new Map();}
  event(e){
@@ -35,7 +37,7 @@ class OpenCodeChat {
   const receipts=new ReceiptStore(this.file,'O');const rows=[];const unlinked=receipts.rows.map(r=>{try{return {row:r,anchor:JSON.parse(r.body).anchorMessage};}catch{return {row:r};}});const used=new Set();
   for(const m of messages){
    if(!id(m.id))continue;
-   const push=(key,kind,body,title='',meta={})=>rows.push({...meta,key:m.id+':'+key,message:m.id,part:key,kind,title:text(title),body:text(body).slice(0,12000),more:text(body).length>12000});
+   const push=(key,kind,body,title='',meta={})=>rows.push({...meta,key:m.id+':'+key,message:m.id,part:key,kind,title:text(title),body:text(body).slice(0,12000),bodyLength:text(body).length,more:text(body).length>12000});
    if(m.type==='user'){const projected=this.attachments.project(m.text,this.session);if(projected.text)push('user','user',projected.text);rows.push(...attachmentRows(m.id,projected.files));}
    else if(m.type==='assistant'){
     const ord={text:0,reasoning:0};
@@ -47,7 +49,7 @@ class OpenCodeChat {
      }else if(part.type==='tool'){
       const receipt=receipts.get(part.id);
       if(receipt){used.add(receipt.key);push('receipt:'+part.id,'receipt',receipt.body,receipts.label(receipt,false));}
-      push('tool:'+part.id,'tool',JSON.stringify(part.state||{},null,2),part.name+' · '+(part.state?.status||''),{toolName:text(part.name),toolType:text(part.name),status:text(part.state?.status),toolPath:text(part.state?.input?.filePath||part.state?.input?.file_path||part.state?.input?.path).slice(0,2048),...(['bash','run_shell_command'].includes(part.name)&&typeof part.state?.input?.command==='string'?{actionType:'shell',command:text(part.state.input.command).slice(0,2000)}:{})});
+      push('tool:'+part.id,'tool',toolBody(part),part.name+' · '+(part.state?.status||''),{toolName:text(part.name),toolType:text(part.name),toolOutputLength:text(part.state?.output).length,outputTail:outputTail(text(part.state?.output)),actionPreview:actionPreview(null,part.name,part.state?.input),status:text(part.state?.status),toolPath:text(part.state?.input?.filePath||part.state?.input?.file_path||part.state?.input?.path).slice(0,2048),...(['bash','run_shell_command'].includes(part.name)&&typeof part.state?.input?.command==='string'?{actionType:'shell',command:text(part.state.input.command).slice(0,2000)}:{})});
      }
     }
     if(m.error)push('error','error',JSON.stringify(m.error,null,2));
@@ -74,7 +76,7 @@ class OpenCodeChat {
   this.forms=new Map(pending.map(f=>[f.id,{raw:canonical(f),nonce:crypto.createHash('sha256').update(canonical(f)).digest('hex')} ]));
   for(const m of page.messages)if(m.type==='shell'&&m.status==='running'&&!this.endedShells.has(m.shellID)&&/^sh_[A-Za-z0-9_-]+$/.test(m.shellID||''))this.shells.add(m.shellID);
   const rows=this.rows(page.messages);if(!q.cursor)for(const pending of inbox.data||[])if(pending.type==='user'&&id(pending.id)&&!rows.some(r=>r.message===pending.id)){const projected=this.attachments.project(pending.payload?.text,this.session);if(projected.text)rows.push({key:pending.id+':user',message:pending.id,part:'user',kind:'user',body:text(projected.text).slice(0,12000),queued:true});rows.push(...attachmentRows(pending.id,projected.files).map(r=>({...r,queued:true})));}let budget=60000;for(const r of rows){const max=Math.max(100,Math.floor(budget/Math.max(1,rows.length)));if(r.body.length>max){r.body=r.body.slice(0,max);r.more=true;}}
-  return {nativeChat:true,attachmentsSupported:true,session:this.session,model:{providerID:text(model.providerID).slice(0,256),id:text(model.id).slice(0,256),variant:text(model.variant).slice(0,80)},rows,older:page.older,needsTerminal:pending.some(f=>(f.fields||[]).some(field=>field.when||field.hidden||!['string','boolean','number','integer','multiselect'].includes(field.type)||(field.type==='multiselect'&&field.custom)))||(permissions.data||[]).some(p=>!['shell','edit','read','list','glob','grep','webfetch','websearch'].includes(p.action)),directShell:this.shells.size>0,busy:this.shells.size>0||!!active.data?.[this.session]||(inbox.data||[]).some(item=>item.type!=='synthetic'),connected:this.connected,forms:pending.map(f=>({id:f.id,title:text(f.title),fields:f.fields,nonce:this.forms.get(f.id).nonce}))};
+  return {nativeChat:true,attachmentsSupported:true,session:this.session,model:{providerID:text(model.providerID).slice(0,256),id:text(model.id).slice(0,256),variant:text(model.variant).slice(0,80)},rows:trimPreviews(rows),older:page.older,needsTerminal:pending.some(f=>(f.fields||[]).some(field=>field.when||field.hidden||!['string','boolean','number','integer','multiselect'].includes(field.type)||(field.type==='multiselect'&&field.custom)))||(permissions.data||[]).some(p=>!['shell','edit','read','list','glob','grep','webfetch','websearch'].includes(p.action)),directShell:this.shells.size>0,busy:this.shells.size>0||!!active.data?.[this.session]||(inbox.data||[]).some(item=>item.type!=='synthetic'),connected:this.connected,forms:pending.map(f=>({id:f.id,title:text(f.title),fields:f.fields,nonce:this.forms.get(f.id).nonce}))};
  }
  async command(q){
   if(this.closed)throw Error('Closed chat');
@@ -128,7 +130,7 @@ class OpenCodeChat {
   if(part==='synthetic'||part==='system')return m.description||m.text;
   if(part==='shell')return JSON.stringify(m,null,2);
   if(part.startsWith('receipt:'))return new ReceiptStore(this.file,'O').get(part.slice(8))?.body||'';
-  if(part.startsWith('tool:'))return JSON.stringify((m.content||[]).find(p=>p.id===part.slice(5))?.state||{},null,2);
+  if(part.startsWith('tool:'))return toolBody((m.content||[]).find(p=>p.id===part.slice(5)));
   const [kind,ordinal]=part.split(':');const p=(m.content||[]).filter(p=>p.type===kind)[Number(ordinal)];return this.live.get(m.id+':'+part)?.text||p?.text||'';
  }
  close(){this.closed=true;this.live.clear();this.pending.clear();}

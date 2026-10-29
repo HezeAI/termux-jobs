@@ -75,12 +75,19 @@ public class X11IntegrationTest {
     }
     @Test public void fixedEnvironmentSlotsCannotAliasProcessesDisplaysOrPaths(){
         java.util.Set<String> processes=new java.util.HashSet<>(),paths=new java.util.HashSet<>();java.util.Set<Integer> displays=new java.util.HashSet<>(),ports=new java.util.HashSet<>();
-        for(String t:new String[]{"termux","ubuntu","jobs-x11-ubuntu","debian","alpine","fedora","opensuse","void","archlinux"}){
+        for(String t:new String[]{"termux","ubuntu","jobs-x11-ubuntu","debian","alpine","fedora","opensuse","void","archlinux","kali","manjaro"}){
             X11Environment e=X11Environment.forTarget(t);assertTrue(processes.add(e.process));assertTrue(paths.add(e.directory));assertTrue(displays.add(e.display));assertTrue(ports.add(e.port));assertEquals(7900+e.display,e.port);
             assertTrue(e.owns("com.termux"+e.process,"com.termux"));assertFalse(e.owns("com.termux","com.termux"));assertFalse(e.owns("com.termux"+e.process+"-other","com.termux"));
         }
         assertEquals("workspace-x11",X11Environment.forTarget("termux").directory);
         try{X11Environment.forTarget("../ubuntu");fail();}catch(IllegalArgumentException expected){}
+    }
+    @Test public void manjaroServiceAcceptsGpuChoicesButRefusesLiveRendererSwitch()throws Exception{
+        X11Service.Manjaro s=org.robolectric.Robolectric.buildService(X11Service.Manjaro.class).get();
+        field(s,"ownProcess",true);field(s,"target","manjaro");field(s,"started",true);field(s,"renderer","cpu");
+        android.os.Bundle q=X11Remote.command("launch");q.putString("target","manjaro");for(String renderer:new String[]{"bionic-glibc","turnip"}){q.putString("renderer",renderer);
+        try{command(s,q);fail("live renderer change accepted");}catch(IllegalStateException expected){}}
+        assertEquals("cpu",s.snapshot().getString("renderer"));assertTrue(s.snapshot().getBoolean("started"));
     }
     @Test public void fedoraHasItsOwnServiceAndRejectsAnotherEnvironment()throws Exception{
         X11Service.Fedora s=org.robolectric.Robolectric.buildService(X11Service.Fedora.class).get();
@@ -111,7 +118,7 @@ public class X11IntegrationTest {
         q.putString("target","archlinux");assertFalse(command(s,q).getBoolean("started"));
     }
     @Test public void everyPrivateServiceRejectsAnotherRootfsBeforeWorkStarts()throws Exception{
-        for(String target:new String[]{"termux","ubuntu","jobs-x11-ubuntu","debian","alpine","fedora","opensuse","void","archlinux"}){
+        for(String target:new String[]{"termux","ubuntu","jobs-x11-ubuntu","debian","alpine","fedora","opensuse","void","archlinux","kali","manjaro"}){
             X11Environment env=X11Environment.forTarget(target);
             X11Service service=org.robolectric.Robolectric.buildService(env.service).get();
             assertEquals(target,X11Environment.context(service).target);field(service,"ownProcess",true);

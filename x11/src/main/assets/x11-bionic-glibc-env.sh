@@ -1,16 +1,17 @@
 # Sourced only inside the selected glibc desktop's process tree.
 jobs_bionic_glibc_environment() {
-    case ${JOBS_X11_TARGET:-} in ubuntu|debian|fedora|archlinux|opensuse|void) ;; *) echo ERROR:BIONIC_TARGET_UNSUPPORTED;return 1;;esac
+    case ${JOBS_X11_TARGET:-} in ubuntu|debian|kali|fedora|archlinux|opensuse|void|manjaro) ;; *) echo ERROR:BIONIC_TARGET_UNSUPPORTED;return 1;;esac
     jobs_bionic_base=/tmp/termux-jobs-bionic-glibc
     jobs_bionic_exports=$(python3 -B /tmp/termux-jobs-x11/x11-bionic-glibc.py environment "$JOBS_X11_TARGET" "$jobs_bionic_base" - 0 -) || { printf '%s\n' "$jobs_bionic_exports";return 1; }
     eval "$jobs_bionic_exports"
     # Guest dependencies remain installed normally; private Mesa is process-local.
     python3 - <<'PY' || return 1
-import ctypes, platform
+import ctypes, os, platform
 try:
     version = platform.libc_ver()
-    if version[0] != 'glibc' or tuple(map(int,version[1].split('.')[:2])) < (2,38):
-        raise RuntimeError('BIONIC_REQUIRES_GLIBC_2_38')
+    minimum = (2,35) if os.environ.get('JOBS_X11_TARGET') == 'manjaro' else (2,38)
+    if version[0] != 'glibc' or tuple(map(int,version[1].split('.')[:2])) < minimum:
+        raise RuntimeError('BIONIC_REQUIRES_GLIBC_'+'_'.join(map(str,minimum)))
     for name in ('libvulkan.so.1','libGLX_mesa.so.0','libEGL_mesa.so.0','libX11-xcb.so.1','libxcb-present.so.0','libxcb-dri3.so.0'):
         ctypes.CDLL(name)
 except (OSError,ValueError,RuntimeError) as error:

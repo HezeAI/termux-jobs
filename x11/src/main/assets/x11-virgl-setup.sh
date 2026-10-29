@@ -3,7 +3,7 @@
 set -euo pipefail
 op=${1:-};target=${2:-};control=${3:-}
 [[ $op == check || $op == install ]] || exit 2
-case $target in termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux) ;; *) echo ERROR:VIRGL_TARGET;exit 2;;esac
+case $target in termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux|kali|manjaro) ;; *) echo ERROR:VIRGL_TARGET;exit 2;;esac
 : "${PREFIX:?}"
 [[ $PREFIX == /data/data/com.termux/files/usr ]] || exit 2
 fail() {
@@ -13,8 +13,15 @@ fail() {
  echo "ERROR:$1";exit 1
 }
 backend=gl
-case $target in void|fedora|debian|archlinux|termux) backend=vulkan;;esac
+case $target in void|fedora|debian|archlinux|kali|manjaro|termux) backend=vulkan;;esac
 client_bind=();client_name=none
+base_bind=()
+if [[ ${JOBS_X11_PINNED_BASES:-0} == 1 && $target != termux ]];then
+ desktop_control="${PREFIX%/usr}/workspace-x11-$target"
+ [[ ! -L $desktop_control ]] || fail BASE_PACKAGE_CONTROL
+ mkdir -p -- "$desktop_control"
+ base_bind=(--bind "$desktop_control:/tmp/termux-jobs-x11-base" --bind "$control/x11-base-install.sh:/tmp/termux-jobs-x11-base-install.sh")
+fi
 if [[ $target == alpine ]];then
  client_name=$("$PREFIX/bin/python3" -B "$control/x11-virgl-client.py" "$op" "$control/x11-virgl-alpine.zip") || { echo "$client_name";fail VIRGL_CLIENT_REQUIRED; }
  client_name=${client_name#JOBS_VIRGL_CLIENT=}
@@ -37,25 +44,28 @@ guest_components() {
  local entry=(login)
  # The Void image can name an absent /bin/bash in passwd; bypass login shell.
  if [[ $target == void ]];then entry=(run --work-dir /root);fi
- proot-distro "${entry[@]}" "${client_bind[@]}" "$target" -- /bin/sh -s -- "$1" "$target" "$client_name" <<'GUEST'
+ proot-distro "${entry[@]}" "${client_bind[@]}" "${base_bind[@]}" "$target" -- /bin/sh -s -- "$1" "$target" "$client_name" "${JOBS_X11_PINNED_BASES:-0}" <<'GUEST'
 set -eu
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export XDG_DATA_DIRS=/usr/local/share:/usr/share XDG_CONFIG_DIRS=/etc/xdg LC_ALL=C
 unset LD_LIBRARY_PATH LD_PRELOAD DBUS_SYSTEM_BUS_ADDRESS
 op=$1;target=$2;client_name=$3
 case $target in
- ubuntu|debian) packages='libgl1-mesa-dri libglx-mesa0 libegl-mesa0';;
+ ubuntu|debian|kali) packages='libgl1-mesa-dri libglx-mesa0 libegl-mesa0';;
  alpine) packages='mesa-dri-gallium mesa-gl mesa-egl';;
  fedora) packages='mesa-dri-drivers mesa-libGL mesa-libEGL';;
  opensuse) packages='Mesa-dri Mesa-libGL1 Mesa-libEGL1';;
  void) packages='mesa-dri libglvnd';;
- archlinux) packages='mesa libglvnd';;
+ archlinux|manjaro) packages='mesa libglvnd';;
  *) exit 2;;
 esac
 if [ "$op" = install ];then
  echo JOBS_APT_PHASE:install
+ if [ "$4" = 1 ];then
+  sh /tmp/termux-jobs-x11-base-install.sh "/tmp/termux-jobs-x11-base/base-packages-20261028-$target/packages" "$target"
+ else
  case $target in
-  ubuntu|debian)
+  ubuntu|debian|kali)
    export DEBIAN_FRONTEND=noninteractive
    echo JOBS_APT_PHASE:update
    apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Debug::acquire::progress=true -o APT::Status-Fd=3 -o Dpkg::Use-Pty=0 update 3>&1
@@ -65,8 +75,9 @@ if [ "$op" = install ];then
   fedora) dnf --setopt=retries=3 --setopt=timeout=30 install -y $packages;;
   opensuse) zypper --non-interactive install --no-recommends $packages;;
   void) xbps-install -Sy $packages;;
-  archlinux) pacman -Syu --needed --noconfirm -- $packages;;
+  archlinux|manjaro) pacman -Syu --needed --noconfirm -- $packages;;
  esac
+ fi
 fi
 if [ "$target" = alpine ];then
  # Fixed application-owned mount. No global /etc/ld.so or system Mesa changes.
@@ -75,11 +86,11 @@ if [ "$target" = alpine ];then
 fi
 for package in $packages;do
  case $target in
-  ubuntu|debian) case "$(dpkg-query -W -f='${Status}' "$package" 2>/dev/null)" in *' ok installed') ;;*) exit 1;;esac;;
+  ubuntu|debian|kali) case "$(dpkg-query -W -f='${Status}' "$package" 2>/dev/null)" in *' ok installed') ;;*) exit 1;;esac;;
   alpine) apk info -e "$package" >/dev/null;;
   fedora|opensuse) rpm -q -- "$package" >/dev/null;;
   void) xbps-query -p pkgver "$package" >/dev/null;;
-  archlinux) pacman -Q -- "$package" >/dev/null;;
+  archlinux|manjaro) pacman -Q -- "$package" >/dev/null;;
  esac
 done
 # Package presence alone is insufficient (Alpine 3.24 omits the virpipe driver).
@@ -101,7 +112,18 @@ if not found:print('ERROR:VIRGL_GUEST_DRIVER_MISSING',flush=True);raise SystemEx
 CAPABILITY
 GUEST
 }
-if [[ $op == install ]];then
+if [[ $op == install && ${JOBS_X11_PINNED_BASES:-0} == 1 ]];then
+ [[ -x $PREFIX/bin/python3 ]] || pkg install -y python
+ if ! host_ready;then
+  host_control="${PREFIX%/usr}/workspace-x11-host"
+  "$PREFIX/bin/python3" -B "$control/x11-base.py" host-virgl "$host_control"
+  sh "$control/x11-base-install.sh" "$host_control/base-packages-20261028-host-virgl/packages" termux
+ fi
+ if ! guest_components check;then
+  "$PREFIX/bin/python3" -B "$control/x11-base.py" "$target" "$desktop_control"
+  guest_components install
+ fi
+elif [[ $op == install ]];then
  if ! host_ready;then
   echo JOBS_APT_PHASE:update
   apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Debug::acquire::progress=true -o APT::Status-Fd=3 -o Dpkg::Use-Pty=0 update 3>&1

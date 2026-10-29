@@ -5,8 +5,16 @@ case ${JOBS_X11_FOCUS_TOKEN:-} in ''|*[!a-f0-9-]*) echo 'ERROR:FOCUS_TOKEN';exit
 case ${JOBS_X11_DESKTOP:-xfce} in xfce) ;; *) echo ERROR:DESKTOP_CHOICE;exit 2;;esac
 jobs_control=${JOBS_X11_CONTROL:-/tmp/termux-jobs-x11}
 export JOBS_X11_CONTROL="$jobs_control"
+# Private, app-specific command lookup; no session-wide GTK/GPU override.
+case ${JOBS_X11_TARGET:-} in kali|manjaro)
+ if [ -r "$jobs_control/x11-app-launchers.py" ];then
+  if jobs_apps=$(python3 -B "$jobs_control/x11-app-launchers.py" "$JOBS_X11_TARGET");then
+   if [ "$jobs_apps" = "$jobs_control/app-launchers" ];then export PATH="$jobs_apps:$PATH";else echo JOBS_X11_APP_COMPAT=invalid-path;fi
+  else echo JOBS_X11_APP_COMPAT=unavailable;fi
+ fi
+;;esac
 case ${JOBS_X11_TARGET:-} in
- termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux)
+ termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux|kali|manjaro)
     case ${JOBS_X11_SCALE:-100} in [5-9][0-9]|1[0-4][0-9]|150) ;; *) echo ERROR:X11_SCALE;exit 2;;esac
     if [ -r "$jobs_control/x11-scale.py" ];then python3 -B "$jobs_control/x11-scale.py" restore || exit 1;elif [ "${JOBS_X11_SCALE:-100}" != 100 ];then echo ERROR:X11_SCALE_MISSING;exit 1;fi
     if [ -r "$jobs_control/x11-style.py" ];then
@@ -29,13 +37,13 @@ if [ "${JOBS_X11_ALPINE_COMPAT:-0}" = 1 ];then
     echo JOBS_X11_ALPINE_COMPAT=filesystem-and-image-decoder
 fi
 # Same Glycin 2 ABI on these glibc guests; preload stays in this desktop tree.
-if [ "${JOBS_X11_TARGET:-}" = fedora ] || [ "${JOBS_X11_TARGET:-}" = archlinux ];then
+if [ "${JOBS_X11_TARGET:-}" = fedora ] || [ "${JOBS_X11_TARGET:-}" = archlinux ] || [ "${JOBS_X11_TARGET:-}" = kali ];then
     [ -f "$jobs_control/x11-fedora-glycin.so" ] || { echo ERROR:FEDORA_GLYCIN_MISSING;exit 1; }
     case :${LD_PRELOAD:-}: in
       *":$jobs_control/x11-fedora-glycin.so:"*) ;;
       *) export LD_PRELOAD="$jobs_control/x11-fedora-glycin.so${LD_PRELOAD:+:$LD_PRELOAD}";;
     esac
-    if [ "${JOBS_X11_TARGET:-}" = archlinux ];then echo JOBS_X11_ARCH_GLYCIN=proot-image-decoder;else echo JOBS_X11_FEDORA_GLYCIN=proot-image-decoder;fi
+    case ${JOBS_X11_TARGET:-} in archlinux) echo JOBS_X11_ARCH_GLYCIN=proot-image-decoder;;kali) echo JOBS_X11_KALI_GLYCIN=proot-image-decoder;;fedora) echo JOBS_X11_FEDORA_GLYCIN=proot-image-decoder;;esac
 fi
 # Fixed shortcuts avoid browsing Android root, whose directory listing may be denied.
 # Runs once in this selected environment; no storage scan or permission changes.
@@ -63,7 +71,7 @@ fi
 # makes XFCE's duplicate exit and can leave its failsafe registration counter pending.
 # Keep renderer-specific compositing through a private executable shim, not xfconf.
 jobs_compositor=on
-case "${JOBS_X11_TARGET:-}:${JOBS_X11_RENDERER:-cpu}" in ubuntu:bionic-glibc|debian:bionic-glibc|fedora:bionic-glibc|archlinux:bionic-glibc|opensuse:bionic-glibc|void:bionic-glibc|termux:wrapper|*:virgl|ubuntu:turnip|debian:turnip|alpine:turnip|fedora:turnip|opensuse:turnip|void:turnip|archlinux:turnip) jobs_compositor=off;;esac
+case "${JOBS_X11_TARGET:-}:${JOBS_X11_RENDERER:-cpu}" in manjaro:bionic-glibc|ubuntu:bionic-glibc|debian:bionic-glibc|kali:bionic-glibc|fedora:bionic-glibc|archlinux:bionic-glibc|opensuse:bionic-glibc|void:bionic-glibc|termux:wrapper|*:virgl|ubuntu:turnip|debian:turnip|kali:turnip|alpine:turnip|fedora:turnip|opensuse:turnip|void:turnip|archlinux:turnip|manjaro:turnip) jobs_compositor=off;;esac
 export JOBS_X11_COMPOSITOR="$jobs_compositor"
 JOBS_X11_WM_BINARY=$(command -v xfwm4) || { echo ERROR:WINDOW_MANAGER_MISSING;exit 1; }
 export JOBS_X11_WM_BINARY

@@ -346,7 +346,12 @@ public final class WorkspaceController {
         TextView name = text("Termux Job’s v2.0", 17, TEXT); name.setTypeface(null, Typeface.BOLD_ITALIC);
         name.setSingleLine(); name.setEllipsize(TextUtils.TruncateAt.END);
         LinearLayout brand = row();
-        brand.addView(name, new LinearLayout.LayoutParams(0, -2, 1));
+        name.setMaxWidth(dp(220));brand.addView(name,new LinearLayout.LayoutParams(-2,-2));
+        LinearLayout wiki=new LinearLayout(activity);wiki.setOrientation(LinearLayout.VERTICAL);wiki.setGravity(Gravity.CENTER);wiki.setTag("workspace-archwiki");wiki.setContentDescription(tr("ArchWiki — справочник Linux","ArchWiki — Linux reference"));wiki.setFocusable(true);wiki.setBackground(WorkspaceDialogs.background(activity,false));
+        android.widget.ImageView book=new android.widget.ImageView(activity);book.setImageResource(R.drawable.workspace_library);book.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);wiki.addView(book,new LinearLayout.LayoutParams(dp(21),dp(21)));
+        TextView wikiLabel=text("ArchWiki",9,TEXT);wikiLabel.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);wikiLabel.setGravity(Gravity.CENTER);wiki.addView(wikiLabel);
+        wiki.setOnClickListener(v->WorkspaceDocumentationUi.wiki(activity));LinearLayout.LayoutParams wikiParams=new LinearLayout.LayoutParams(dp(42),dp(44));wikiParams.setMarginStart(dp(5));brand.addView(wiki,wikiParams);
+        brand.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{int max=Math.max(dp(40),r-l-dp(47));if(name.getMaxWidth()!=max)name.setMaxWidth(max);});
         top.addView(brand, new LinearLayout.LayoutParams(0, -2, 1));
         if(screen==Screen.TERMINAL){
             boolean directActive=desktopUi!=null&&desktopUi.hasSurface()?desktopUi.keyboardEnabled():interactiveInput;
@@ -470,7 +475,7 @@ public final class WorkspaceController {
     }
     private void renderTabs() {
         syncTerminalInput();if(agentChatUi!=null)agentChatUi.sync();if(desktopUi!=null)desktopUi.sync(); updateActivityLine(); renderCodexStatus(); tabs.removeAllViews();
-        tabs.setPadding(dp(10),dp(4),dp(10),dp(8));tabs.setGravity(Gravity.TOP);
+        tabs.setPadding(dp(10),dp(4),dp(10),dp(4));tabs.setGravity(Gravity.TOP);
         TerminalSession current=activity.getCurrentSession();
         String name=current==null?WorkspaceText.tr("Сессии"):current.mSessionName==null?"Bash":current.mSessionName;
         WorkspaceStore.Session profile=current==null?null:store.findByHandle(current.mHandle);
@@ -478,27 +483,27 @@ public final class WorkspaceController {
         TextView selector=button(name+"  ▾"+(subtitle.isEmpty()?"":"\n"+subtitle),false,()->{});
         selector.setTextSize(13);selector.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);selector.setMaxLines(2);selector.setEllipsize(TextUtils.TruncateAt.END);
         selector.setContentDescription(name);selector.setOnClickListener(v->showSessionStack(selector));
+        FrameLayout panel=new FrameLayout(activity);panel.setTag("session-current-panel");panel.setBackground(shape(PANEL,BORDER,12));
+        selector.setTag("session-current-selector");selector.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),shape(Color.TRANSPARENT,Color.TRANSPARENT,12),null));panel.addView(selector,new FrameLayout.LayoutParams(-1,-1));
+        LinearLayout toolIcons=row();toolIcons.setTag("session-current-actions");toolIcons.setPadding(0,0,dp(4),0);
+        boolean cancellable=current!=null&&SessionShell.hasCancellableStartup(profile);
+        if(cancellable){
+            TextView cancel=button("",false,()->confirmCancelStartup(profile));cancel.setTag("cancel-startup");cancel.setContentDescription(WorkspaceText.tr("Отменить команды запуска"));
+            android.graphics.drawable.Drawable icon=activity.getDrawable(R.drawable.workspace_cancel_startup).mutate();icon.setTint(MUTED);((WorkspaceIconButton)cancel).setIcon(icon,dp(22));
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dp(48),dp(48));lp.setMarginEnd(dp(4));toolIcons.addView(cancel,lp);
+        }
         if(current!=null){
-            FrameLayout panel=new FrameLayout(activity);panel.addView(selector,new FrameLayout.LayoutParams(-1,-1));
-            boolean cancellable=SessionShell.hasCancellableStartup(profile);
-            selector.setPadding(selector.getPaddingLeft(),selector.getPaddingTop(),dp(cancellable?96:52),selector.getPaddingBottom());
-            TextView settings=sessionSettingsButton(name,false,()->{if(profile!=null)sessionMenu(profile,true);});settings.setTag("session-current-settings");settings.setEnabled(profile!=null);
-            panel.addView(settings,new FrameLayout.LayoutParams(dp(40),dp(40),Gravity.END|Gravity.CENTER_VERTICAL));
-            if(cancellable){
-                TextView cancel=button("",false,()->confirmCancelStartup(profile));cancel.setTag("cancel-startup");cancel.setContentDescription(WorkspaceText.tr("Отменить команды запуска"));
-                android.graphics.drawable.Drawable icon=activity.getDrawable(R.drawable.workspace_cancel_startup).mutate();icon.setTint(MUTED);((WorkspaceIconButton)cancel).setIcon(icon,dp(22));
-                cancel.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),shape(Color.TRANSPARENT,Color.TRANSPARENT,12),null));
-                FrameLayout.LayoutParams cancelParams=new FrameLayout.LayoutParams(dp(48),dp(48),Gravity.END|Gravity.CENTER_VERTICAL);cancelParams.setMarginEnd(dp(40));panel.addView(cancel,cancelParams);
-            }
-            tabs.addView(panel,new LinearLayout.LayoutParams(0,dp(48),1));
-        }else tabs.addView(selector,new LinearLayout.LayoutParams(0,dp(48),1));
-        LinearLayout serverTools=row();LinearLayout toolIcons=serverTools;
+            TextView settings=sessionSettingsButton(name,false,()->{if(profile!=null)sessionMenu(profile,true);});settings.setTag("session-current-settings");settings.setEnabled(profile!=null);settings.setBackground(WorkspaceDialogs.background(activity,false));
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dp(48),dp(48));lp.setMarginEnd(dp(4));toolIcons.addView(settings,lp);
+        }
+        selector.setPadding(selector.getPaddingLeft(),selector.getPaddingTop(),dp((current!=null?3:2)*48+(current!=null?2:1)*4+12+(cancellable?52:0)),selector.getPaddingBottom());
+        panel.addView(toolIcons,new FrameLayout.LayoutParams(-2,-1,Gravity.END|Gravity.CENTER_VERTICAL));tabs.addView(panel,new LinearLayout.LayoutParams(-1,dp(56)));
         boolean chat=agentChatUi!=null&&agentChatUi.terminalAvailable();
         if(agentTerminalBorder!=null)agentTerminalBorder.active(false);agentTerminalBorder=null;
-        TextView packages=button(chat?"":"📦",false,chat?()->agentChatUi.terminal():this::showCurrentPackages);packages.setContentDescription(chat?tr("Терминал ","Terminal ")+agentChatUi.name():WorkspaceText.tr("Пакеты"));
+        TextView packages=button(chat?"":"📦",false,chat?()->agentChatUi.terminal():this::showCurrentPackages);packages.setTag("session-current-packages");packages.setContentDescription(chat?tr("Терминал ","Terminal ")+agentChatUi.name():WorkspaceText.tr("Пакеты"));
         if(chat){((WorkspaceIconButton)packages).setIcon(activity.getDrawable(R.drawable.workspace_ai_agent).mutate(),dp(22));agentTerminalBorder=new WorkspaceTransferBorder(activity.getResources().getDisplayMetrics().density);packages.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{packages.getBackground(),agentTerminalBorder}));agentTerminalBorder.active(agentChatUi.requiresTerminal());}
         toolIcons.addView(packages,new LinearLayout.LayoutParams(dp(48),dp(48)));
-        TextView files=button("▱",false,this::showProjectFiles);files.setContentDescription(WorkspaceText.tr("Файлы проекта"));LinearLayout.LayoutParams fileParams=new LinearLayout.LayoutParams(dp(48),dp(48));fileParams.setMarginStart(dp(10));toolIcons.addView(files,fileParams);
+        TextView files=button("▱",false,this::showProjectFiles);files.setTag("session-current-files");files.setContentDescription(WorkspaceText.tr("Файлы проекта"));LinearLayout.LayoutParams fileParams=new LinearLayout.LayoutParams(dp(48),dp(48));fileParams.setMarginStart(dp(4));toolIcons.addView(files,fileParams);
         String serverLabel=WorkspaceLanguage.code(activity).equals("ru")?"Сервер + Agent":"Server + Agent";
         FrameLayout statusRow=activity.findViewById(R.id.workspace_terminal_tools);
         statusRow.setVisibility(screen==Screen.TERMINAL?View.VISIBLE:View.GONE);
@@ -509,7 +514,7 @@ public final class WorkspaceController {
         if(agentStop==null){agentStop=new AgentStopButton(activity);agentStop.setTag("agent-stop");agentStop.setOnClickListener(v->{if(agentChatUi!=null)agentChatUi.stopCurrent();updateActivityLine();});FrameLayout.LayoutParams stopParams=new FrameLayout.LayoutParams(dp(44),dp(44),Gravity.END|Gravity.CENTER_VERTICAL);stopParams.setMarginEnd(dp(112));statusRow.addView(agentStop,stopParams);}
         agentStop.setVisibility(chat?View.VISIBLE:View.GONE);FrameLayout.LayoutParams statusParams=(FrameLayout.LayoutParams)codexStatus.getLayoutParams();int statusMargin=dp(chat?162:112);if(statusParams.getMarginEnd()!=statusMargin){statusParams.setMarginEnd(statusMargin);codexStatus.setLayoutParams(statusParams);}activityLine.stopTarget(chat?agentStop:null);updateActivityLine();
 
-        LinearLayout.LayoutParams toolsParams=new LinearLayout.LayoutParams(dp(106),-2);toolsParams.setMarginStart(dp(6));tabs.addView(serverTools,toolsParams);
+
     }
     static void configureAgentOutput(TerminalSession session,WorkspaceStore.Session profile) {
         boolean framed=profile!=null&&(profile.geminiAgent||profile.aiAgent.equals("opencode"));
@@ -2128,6 +2133,7 @@ public final class WorkspaceController {
         settingsRow(form,WorkspaceErrorLibraryUi.label(activity),()->{menu[0].dismiss();WorkspaceErrorLibraryUi.show(activity,text->{WorkspaceStore.Command command=new WorkspaceStore.Command();command.command=text;insertCommand(command);});});
         settingsRow(form,WorkspaceText.tr("Настройки приложения"),()->{menu[0].dismiss();activity.startActivity(new android.content.Intent(activity,SettingsActivity.class));});
         settingsRow(form,WorkspaceStorageCleanup.label(activity),()->{menu[0].dismiss();new WorkspaceStorageCleanup(activity,store,this::cleanupScopeInUse,p->liveFor(p)!=null,()->WorkspaceBackupUi.showRestored(activity,store,this::refreshLanguage),()->showChatHistories(true),this::refreshLanguage).show();});
+        settingsRow(form,WorkspaceEnvironmentUpdates.label(activity),()->{menu[0].dismiss();WorkspaceEnvironmentUpdates.show(activity);});
         menu[0]=WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Настройки приложения")).setView(formScroll(form)).setNegativeButton(WorkspaceText.tr("Закрыть"),null).create();menu[0].show();
     }
     private void showChatHistories(){showChatHistories(false);}
@@ -2419,6 +2425,7 @@ public final class WorkspaceController {
         show(Screen.HOME, true); return true;
     }
     public void close() {
+        WorkspaceDocumentationUi.dispose(activity);
         activity.getTerminalView().setWorkspaceTerminalVisible(false);
         if(transferBorder!=null)transferBorder.active(false);if(agentTerminalBorder!=null)agentTerminalBorder.active(false);if(desktopSessionBar!=null)desktopSessionBar.working(false);servers.close();if(activityLine!=null)activityLine.working(false);
         if(desktopUi!=null)desktopUi.close();geminiInputDispatch.cancel();if(agentChatUi!=null)agentChatUi.close();if(geminiLiveUi!=null)geminiLiveUi.close();if(claudeLiveUi!=null)claudeLiveUi.close();if(agentReceiptsUi!=null)agentReceiptsUi.close();activity.getTerminalView().setTranscriptTapListener(null);

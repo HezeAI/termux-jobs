@@ -1,4 +1,5 @@
 'use strict';
+const {preview:actionPreview,trimPreviews,outputTail}=require('./agent-action-preview.cjs');
 // Structured projection of native committed React state. Never parses terminal output.
 const crypto=require('node:crypto');
 const {clean}=require('./agent-receipts.cjs');
@@ -29,13 +30,13 @@ class GeminiChat {
   this.groups=[];this.full.clear();let remaining=2*1024*1024;
   const project=(item,index,live=false)=>{
    if(!item||typeof item!=='object')return;const message=live?hash('pending:'+item.type+':'+index):hash(item.id+':'+item.type);const rows=[];
-   const row=(part,kind,body,title='',meta={})=>{body=text(body).slice(0,Math.max(0,Math.min(200000,remaining)));remaining-=body.length;if(!body&&kind!=='tool')return;const key=message+':'+part;this.full.set(key,body);rows.push({key,message,part,kind,...meta,title:text(title).slice(0,160),body:body.slice(0,12000),more:body.length>12000,...(live?{queued:true}:{})});};
+   const row=(part,kind,body,title='',meta={})=>{body=text(body).slice(0,Math.max(0,Math.min(200000,remaining)));remaining-=body.length;if(!body&&kind!=='tool')return;const key=message+':'+part;this.full.set(key,body);rows.push({key,message,part,kind,...meta,title:text(title).slice(0,160),body:body.slice(0,12000),bodyLength:body.length,more:body.length>12000,...(live?{queued:true}:{})});};
    if(item.type==='user'){const projected=this.attachments.project(item.text,this.api.session());if(projected.text)row('user','user',projected.text);rows.push(...attachmentRows(message,projected.files));}else if(item.type==='user_shell')row('shell-input','user','Shell: '+text(item.text));
    else if(['gemini','gemini_content'].includes(item.type)){row('text','text',item.text);rows.push(...attachmentRows(message,this.attachments.output(item.text)));}
    else if(item.type==='thinking')row('thought','reasoning',[text(item.thought?.subject),text(item.thought?.description)].filter(Boolean).join('\n'));
    else if(item.type==='tool_group')for(const tool of (item.tools||[]).slice(0,100)){
     const id=typeof tool.callId==='string'?tool.callId.slice(0,160):'';if(!id)continue;const receipt=this.api.receipt(id);if(receipt)row('receipt:'+id,'receipt',receipt.body,receipt.label);
-    row('tool:'+id,'tool',[text(tool.description),display(tool.resultDisplay)].filter(Boolean).join('\n\n'),text(tool.name)+' · '+text(tool.status),{toolName:text(tool.name),toolType:text(tool.name),status:text(tool.status)});
+    const output=display(tool.resultDisplay),description=text(tool.description);row('tool:'+id,'tool',[description,output].filter(Boolean).join('\n\n'),text(tool.name)+' · '+text(tool.status),{toolName:text(tool.name),toolType:text(tool.name),toolOutputLength:output.length,outputTail:outputTail(output),toolOutputOffset:output&&description?description.length+2:0,actionPreview:actionPreview(null,tool.name,tool.args||tool.request?.args),status:text(tool.status)});
    }
    else if(['info','error','warning','hint'].includes(item.type))row(item.type,item.type==='error'?'error':'info',item.text);
    if(!live&&this.thoughts.has(message))row('summary','reasoning',this.thoughts.get(message));
@@ -52,7 +53,7 @@ class GeminiChat {
   if(q.cursor){if(typeof q.cursor!=='string'||q.cursor.length>128)throw Error('Invalid cursor');end=this.groups.findIndex(g=>g.id===q.cursor);if(end<0)throw Error('Expired cursor');}
   const groups=this.groups.slice(Math.max(0,end-20),end);let rows=groups.flatMap(g=>g.rows);if(rows.length>200)rows=rows.slice(-200);
   let budget=60000;rows=rows.map((r,i)=>{const max=Math.min(12000,Math.max(100,Math.floor(budget/(rows.length-i))));budget-=Math.min(r.body.length,max);return {...r,body:r.body.slice(0,max),more:r.more||r.body.length>max};});
-  return {ok:true,nativeChat:true,attachmentsSupported:true,authError:this.source?.authError===true,session:this.api.session(),nativeUiReady:!!this.binding,knownMessages:this.groups.map(g=>g.id),connected:!!this.binding&&s.available&&(this.binding.ready||this.binding.native),rows,older:end>20?groups[0]?.id||'':'',forms:[],permission:this.api.permission(),busy:s.state==='responding'||s.state==='waiting_for_confirmation',needsTerminal:!!this.binding?.native||!s.available||(s.state==='waiting_for_confirmation'&&!this.api.permission()),directShell:false,model:{providerID:'google',id:s.model||s.selectedModel||''}};
+  return {ok:true,nativeChat:true,attachmentsSupported:true,authError:this.source?.authError===true,session:this.api.session(),nativeUiReady:!!this.binding,knownMessages:this.groups.map(g=>g.id),connected:!!this.binding&&s.available&&(this.binding.ready||this.binding.native),rows:trimPreviews(rows),older:end>20?groups[0]?.id||'':'',forms:[],permission:this.api.permission(),busy:s.state==='responding'||s.state==='waiting_for_confirmation',needsTerminal:!!this.binding?.native||!s.available||(s.state==='waiting_for_confirmation'&&!this.api.permission()),directShell:false,model:{providerID:'google',id:s.model||s.selectedModel||''}};
  }
  async command(q){
   if(q.op==='chat-snapshot')return this.snapshot(q);

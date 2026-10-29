@@ -26,14 +26,27 @@ FILES = {'libjobs-bionic.so', 'libhybris-common.so.1', 'linker/q.so',
          'libVkLayer_window_system_integration.so', 'bionic-icd.json',
          'mesa/libGLX_mesa.so.0', 'mesa/libEGL_mesa.so.0', 'mesa/libgallium-26.2.5.so',
          'share/vulkan/implicit_layer.d/jobs-bionic.json'}
+MANJARO_VERSION = 'hybris-wsi-manjaro-1'
+MANJARO_PIN = '2f80dc4212b4f7d1fa5455d4eac28fa356b2f2779973fcde4f393f7c9ee0003e'
+MANJARO_SIZE = 5820211
+MANJARO_URL = 'https://github.com/HezeAI/termux-jobs-components/releases/download/xfce-base-20261028/x11-bionic-glibc-manjaro.zip'
 
 
-def valid_runtime(base):
+def runtime_spec(target):
+    if target == 'manjaro':
+        return MANJARO_VERSION, MANJARO_PIN, MANJARO_SIZE, MANJARO_URL
+    if target not in ('ubuntu', 'debian', 'fedora', 'archlinux', 'opensuse', 'void', 'kali'):
+        raise ValueError('BIONIC_TARGET_UNSUPPORTED')
+    return VERSION, PIN, SIZE, URL
+
+
+def valid_runtime(base, target='ubuntu'):
+    version, pin, _, _ = runtime_spec(target)
     runtime = base / 'runtime'
     if runtime.is_symlink() or not runtime.is_dir():
         raise ValueError('BIONIC_RUNTIME_MISSING')
     value = w.read_json(runtime / 'ready.json')
-    if value.get('version') != VERSION or value.get('bundle') != PIN or set(value.get('files', {})) != FILES:
+    if value.get('version') != version or value.get('bundle') != pin or set(value.get('files', {})) != FILES:
         raise ValueError('BIONIC_RUNTIME_CHANGED')
     for name, digest in value['files'].items():
         path = runtime / name
@@ -48,19 +61,20 @@ def valid_runtime(base):
     return runtime
 
 
-def bundle(base, fetch=None):
+def bundle(base, fetch=None, target='ubuntu'):
+    _, pin, size, url = runtime_spec(target)
     archive = base / 'runtime-bundle.zip'
     if archive.is_symlink():
         raise ValueError('BIONIC_BUNDLE_LINK')
-    if archive.exists() and archive.stat().st_size == SIZE and w.digest(archive) == PIN:
+    if archive.exists() and archive.stat().st_size == size and w.digest(archive) == pin:
         return archive
     gpu = w.gpu_module()
     if fetch is None:
         fetch = gpu.download
     def progress(done, total):
         print(f'GPU_PROGRESS:{done}:{total}', flush=True)
-    data = fetch(URL, PIN, SIZE, progress)
-    if len(data) != SIZE or hashlib.sha256(data).hexdigest() != PIN:
+    data = fetch(url, pin, size, progress)
+    if len(data) != size or hashlib.sha256(data).hexdigest() != pin:
         raise ValueError('BIONIC_BUNDLE_CHECKSUM')
     w.cancelled()
     fd, name = tempfile.mkstemp(prefix='.bundle-', dir=base)
@@ -77,15 +91,16 @@ def bundle(base, fetch=None):
     return archive
 
 
-def install(base, fetch=None):
+def install(base, fetch=None, target='ubuntu'):
+    version, pin, _, _ = runtime_spec(target)
     with w.lock(base):
         w.driver(base)
         try:
-            valid_runtime(base)
+            valid_runtime(base, target)
             return
         except (OSError, ValueError, TypeError, KeyError, AttributeError):
             pass
-        archive = bundle(base, fetch)
+        archive = bundle(base, fetch, target)
         stage = Path(tempfile.mkdtemp(prefix='.runtime-', dir=base))
         try:
             hashes = {}
@@ -104,7 +119,7 @@ def install(base, fetch=None):
                     out.write_bytes(data)
                     out.chmod(0o700 if '.so' in out.name else 0o600)
                     hashes[member.filename] = w.digest(out)
-            w.write_json(stage / 'ready.json', dict(version=VERSION, bundle=PIN, files=hashes))
+            w.write_json(stage / 'ready.json', dict(version=version, bundle=pin, files=hashes))
             w.cancelled()
             runtime = base / 'runtime'
             if runtime.is_symlink():
@@ -142,9 +157,9 @@ def shared(base):
         os.close(fd)
 
 
-def environment(base):
+def environment(base, target='ubuntu'):
     with shared(base):
-        valid_runtime(base)
+        valid_runtime(base, target)
         value, _ = w.driver(base)
         # A fixed guest bind, never a shared-storage path or shell text from metadata.
         driver = '/tmp/termux-jobs-bionic-glibc/drivers/' + value['id'] + '/' + value['library']
@@ -155,8 +170,7 @@ def main(argv):
     if len(argv) != 7:
         raise ValueError('BIONIC_ARGUMENTS')
     _, operation, target, cache, source, api, cancel = argv
-    if target not in ('ubuntu', 'debian', 'fedora', 'archlinux', 'opensuse', 'void'):
-        raise ValueError('BIONIC_TARGET_UNSUPPORTED')
+    runtime_spec(target)
     base = Path(cache)
     if not base.is_absolute():
         raise ValueError('BIONIC_CACHE_PATH')
@@ -179,15 +193,15 @@ def main(argv):
         w.remove_driver(base, source)
         print('READY:wrapper-removed')
     elif operation == 'install':
-        install(base)
+        install(base, target=target)
         print('READY:wrapper')
     elif operation == 'check':
         with shared(base):
             w.driver(base)
-            valid_runtime(base)
+            valid_runtime(base, target)
         print('READY:wrapper')
     elif operation == 'environment':
-        environment(base)
+        environment(base, target)
     else:
         raise ValueError('BIONIC_OPERATION')
 

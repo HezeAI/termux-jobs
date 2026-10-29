@@ -10,6 +10,13 @@
 
 ## Ошибки и предложения
 
+For v2.1.0 environment-update issues, include the target, native proot-distro
+version, operation (package upgrade / Components restore / official image),
+source/checkpoint identity and safe error text. Distinguish first installation
+from replacement, cancellation, retry and rollback. Never attach checkpoint
+contents: they can contain private credentials. See [update guide](docs/fork/ENVIRONMENT-UPDATES.md).
+
+
 Используйте [Issues этого форка](https://github.com/HezeAI/termux-jobs/issues).
 Для ошибок загрузки графических компонентов укажите имя архива, безопасный
 HTTP/код ошибки и была ли это первая установка или восстановление. Архивы и

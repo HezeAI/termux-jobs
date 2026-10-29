@@ -1,3 +1,20 @@
+# v2.1.0 environment integration sources
+
+Official metadata/images remain the work of their respective distributions;
+container/archive installation uses [Termux proot-distro](https://github.com/termux/proot-distro).
+The fork's transaction, discovery and reader integration is included in this source tree.
+See [pinned provenance](PINNED-ENVIRONMENTS.md), [update trust](ENVIRONMENT-UPDATES.md)
+and [Components sources/licenses](https://github.com/HezeAI/termux-jobs-components#readme).
+Manjaro bridge/build provenance: [Bionic-for-glibc](../../third-party/bionic-glibc/MANJARO.md).
+
+The bundled environment-archlinuxarm.gpg is a public verification key from the
+[official Arch Linux ARM keyring](https://github.com/archlinuxarm/archlinuxarm-keyring),
+primary fingerprint 68B3537F39A313B3E574D06777193F152BDBE6A6.
+It contains no private key. Exact source/hash and signature tests are recorded in
+[validation](VALIDATION-v2.1.0.md). No third-party TLS CA is installed.
+
+---
+
 # v2.0.6 graphics distribution
 
 Pinned optional archives now use [Termux Job’s Components](https://github.com/HezeAI/termux-jobs-components). Original archive bytes, versions, credits, SHA-256 and sizes are retained; only the unavailable Vulkan Loader package is updated1.4.365→1.4.366. Bionic-for-glibc runtime bytes are unchanged but downloaded on demand rather than embedded in the APK. Source/license archives accompany the component set. This is distribution/integration work by HezeAI with Codex assistance, not authorship of Mesa, libhybris, WSI, AdrenoTools or vendor drivers. See [component manifest and license details](GRAPHICS-COMPONENTS.md). Ordinary package-manager dependencies are outside the mirror.

@@ -10,9 +10,9 @@ import subprocess
 import sys
 import tempfile
 
-TARGETS={'termux','ubuntu','jobs-x11-ubuntu','debian','alpine','fedora','opensuse','void','archlinux'}
+TARGETS={'termux','ubuntu','jobs-x11-ubuntu','debian','alpine','fedora','opensuse','void','archlinux','kali','manjaro'}
 MAX=512*1024
-VIRGL_EGL_INFO={'ubuntu','alpine','fedora','void','debian','archlinux','opensuse'}
+VIRGL_EGL_INFO={'ubuntu','alpine','fedora','void','debian','archlinux','kali','manjaro','opensuse'}
 
 def egl_info():
     """Query this process's selected Mesa, without GLX/X_GetImage or a window."""

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: MIT
- * Fedora/glibc PRoot image compatibility. No filesystem permission overrides.
+ * Fedora/Arch/Kali glibc PRoot image compatibility. No filesystem permission overrides.
  */
 #define _GNU_SOURCE
 #include <dlfcn.h>
@@ -7,7 +7,7 @@
 
 /* Glycin 2 public enum: Auto=0, Bwrap=1, FlatpakSpawn=2, NotSandboxed=3.
  * PRoot cannot create Bubblewrap's namespaces. This affects only image decoding
- * in the Fedora PRoot desktop; it is not an Android/Firefox sandbox switch.
+ * in the selected PRoot desktop; it is not an Android/Firefox sandbox switch.
  */
 void *gly_loader_new(void *file) {
     /* GdkPixbuf can itself be loaded RTLD_LOCAL (Python/GI, plugins). RTLD_NEXT
@@ -27,7 +27,7 @@ void *gly_loader_new(void *file) {
 
 /* Thumbnail generation also ENCodes a PNG into its private cache. The creator
  * uses a separate sandbox selector; changing only the decoder is insufficient.
- * Keep this on the same exact ABI and within the already Fedora desktop tree.
+ * Keep this on the same exact ABI and within the selected desktop tree.
  */
 void *gly_creator_new(const char *mimetype,void **error) {
     void *library=dlopen("libglycin-2.so.0",RTLD_LAZY|RTLD_NOLOAD);

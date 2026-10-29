@@ -17,7 +17,18 @@ final class WorkspaceEnvironments {
         if(s.environment.startsWith("proot:"))return s.environment.substring(6);
         return s.environment.equals("ubuntu")?"ubuntu":"";
     }
-    static String label(String alias){switch(alias){case "jobs-x11-ubuntu":return "Ubuntu X11 Test";case "ubuntu-ai":return "Ubuntu AI";case "ubuntu":return "Ubuntu";case "debian":return "Debian";case "alpine":return "Alpine";case "archlinux":return "Arch Linux";case "fedora":return "Fedora";case "opensuse":return "openSUSE";case "void":return "Void Linux";default:return alias;}}
+    static String label(String alias){switch(alias){case "jobs-x11-ubuntu":return "Ubuntu X11 Test";case "ubuntu-ai":return "Ubuntu AI";case "ubuntu":return "Ubuntu";case "debian":return "Debian";case "alpine":return "Alpine";case "archlinux":return "Arch Linux";case "kali":return "Kali Linux";case "manjaro":return "Manjaro";case "fedora":return "Fedora";case "opensuse":return "openSUSE";case "void":return "Void Linux";default:return alias;}}
+    static boolean internalAlias(File proot,String alias){
+        if(!alias.matches("jobs-update-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"))return false;
+        File files=proot;for(int n=0;n<4&&files!=null;n++)files=files.getParentFile();if(files==null)return false;
+        String id=alias.substring(12);
+        try{
+            File journal=new File(files.getCanonicalFile(),"workspace-environment-updates/jobs/"+id+"/state.json");
+            if(java.nio.file.Files.isSymbolicLink(journal.toPath())||!journal.isFile()||journal.length()>128*1024||!journal.getCanonicalFile().equals(journal.getAbsoluteFile()))return false;
+            org.json.JSONObject row=new org.json.JSONObject(new String(java.nio.file.Files.readAllBytes(journal.toPath()),java.nio.charset.StandardCharsets.UTF_8));
+            return row.optString("owner").equals("termux-jobs-environment-updates")&&row.optString("id").equals(id)&&row.optString("temporary").equals(alias);
+        }catch(Exception ignored){return false;}
+    }
     static File root(File proot,String alias){
         if(!WorkspaceLocalFilePicker.validAlias(alias))return null;
         for(String layout:new String[]{"containers","installed-rootfs"}){
@@ -49,7 +60,7 @@ final class WorkspaceEnvironments {
     static String entryCommand(String alias,boolean isolated){String verb=verb(alias);return "proot-distro "+verb+" "+(isolated?"--isolated ":"")+(verb.equals("run")?"--work-dir /root ":"")+SessionShell.quote(alias)+(verb.equals("run")?" -- /bin/sh -i":"");}
     static List<Choice> choices(File home,File proot){
         List<Choice> rows=new ArrayList<>();rows.add(new Choice("termux","","Termux",home.getPath(),true));
-        Set<String> names=new LinkedHashSet<>(Arrays.asList("ubuntu","debian","alpine","archlinux","fedora","opensuse","void"));
+        Set<String> names=new LinkedHashSet<>(Arrays.asList("ubuntu","debian","alpine","archlinux","kali","manjaro","fedora","opensuse","void"));
         for(WorkspaceLocalFilePicker.Location location:WorkspaceLocalFilePicker.locations(home,proot,""))if(location.environment.startsWith("proot:"))names.add(location.environment.substring(6));
         for(String alias:names){File fs=root(proot,alias);rows.add(new Choice(alias.equals("ubuntu")?"ubuntu":"proot:"+alias,alias,label(alias),fs!=null&&new File(fs,"root").isDirectory()?"/root":"/",fs!=null));}
         return rows;

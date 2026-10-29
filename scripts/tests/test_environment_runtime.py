@@ -18,6 +18,8 @@ class EnvironmentRuntimeTests(unittest.TestCase):
         self.prefix = self.root / 'usr'
         (self.prefix / 'bin').mkdir(parents=True)
         self.log = self.root / 'calls'
+        self.runtime=self.root/'runtime.sh';self.runtime.write_bytes(SCRIPT.read_bytes())
+        (self.root/'environment-image.py').write_text("import os,sys\nfrom pathlib import Path\na=sys.argv[1];key='ubuntu' if a in ('ubuntu-ai','jobs-x11-ubuntu') else a\np=Path(os.environ['PREFIX']).parent/(key+'-pinned.tar')\np.write_text('verified fixture')\nwith open(os.environ['FIXTURE_LOG'],'a') as f:f.write('IMAGE:'+key+'\\n')\nprint(p)\n")
         self.downloads=self.root/'downloads'
         self.env = dict(os.environ, PREFIX=str(self.prefix), PATH=str(self.prefix / 'bin') + ':/usr/bin:/bin', FIXTURE_LOG=str(self.log), JOBS_ENVIRONMENT_DOWNLOAD_DIR=str(self.downloads), JOBS_ENVIRONMENT_DOWNLOADER=str(self.root/"no-downloader.py"))
         self.stub('proot-distro', '''printf '%s\\n' "$*" >> "$FIXTURE_LOG"
@@ -52,7 +54,7 @@ printf 'SHA256\\n' >> "$FIXTURE_LOG"
         p.chmod(0o700)
 
     def run_helper(self, op, alias):
-        return subprocess.run(['/bin/bash', str(SCRIPT), op, alias], env=self.env, text=True, capture_output=True, timeout=10)
+        return subprocess.run(['/bin/bash', str(self.runtime), op, alias], env=self.env, text=True, capture_output=True, timeout=10)
 
     def test_check_never_installs_missing_environment(self):
         result = self.run_helper('check', 'debian')
@@ -70,26 +72,16 @@ printf 'SHA256\\n' >> "$FIXTURE_LOG"
         result = self.run_helper('install', 'debian')
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn('READY:shell', result.stdout)
-        self.assertEqual(['install --help', 'install debian --name debian'], self.log.read_text().splitlines())
+        self.assertEqual(['install --help', 'IMAGE:debian', 'install '+str(self.root/'debian-pinned.tar')+' --name debian'], self.log.read_text().splitlines())
 
     def test_x11_test_ubuntu_installs_under_separate_alias(self):
         self.env['FIXTURE_HELP'] = 'install IMAGE --name NAME'
         result = self.run_helper('install', 'jobs-x11-ubuntu')
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn('READY:shell', result.stdout)
-        self.assertEqual(['install --help', 'install ubuntu --name jobs-x11-ubuntu'], self.log.read_text().splitlines())
+        self.assertEqual(['install --help', 'IMAGE:ubuntu', 'install '+str(self.root/'ubuntu-pinned.tar')+' --name jobs-x11-ubuntu'], self.log.read_text().splitlines())
         self.assertFalse((self.prefix/'var/lib/proot-distro/containers/ubuntu').exists())
 
-    def test_legacy_install_requires_plugin(self):
-        result = self.run_helper('install', 'alpine')
-        self.assertNotEqual(0, result.returncode)
-        self.assertIn('DISTRIBUTION_UNAVAILABLE', result.stdout)
-        plugin = self.prefix / 'etc/proot-distro/alpine.sh'
-        plugin.parent.mkdir(parents=True)
-        plugin.touch()
-        result = self.run_helper('install', 'alpine')
-        self.assertEqual(0, result.returncode, result.stderr)
-        self.assertIn('install alpine', self.log.read_text().splitlines())
 
     def test_invalid_alias_never_calls_tools(self):
         for alias in ('../ubuntu', '-name', 'foo;touch X', 'a\nb'):
@@ -107,46 +99,17 @@ printf 'SHA256\\n' >> "$FIXTURE_LOG"
         result = self.run_helper('install', 'void')
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn('READY:shell',result.stdout)
-        self.assertEqual(['install --help', 'install ghcr.io/void-linux/void-glibc-full:latest --name void'], self.log.read_text().splitlines())
+        self.assertEqual(['install --help', 'IMAGE:void', 'install '+str(self.root/'void-pinned.tar')+' --name void'], self.log.read_text().splitlines())
 
-    def test_arch_arm_archive_is_verified_before_install_and_deleted_afterwards(self):
-        self.env['FIXTURE_HELP'] = '--name'
-        result=self.run_helper('install','archlinux')
-        self.assertEqual(0,result.returncode,result.stderr)
-        calls=self.log.read_text().splitlines()
-        self.assertEqual(['install --help','CURL','SHA256'],calls[:3])
-        self.assertIn('archlinux-arm64.tar.xz --name archlinux',calls[3])
-        self.assertIn('READY:shell',result.stdout)
-        self.assertEqual([],list(self.downloads.iterdir()))
 
-    def test_arch_bad_checksum_never_installs_and_cleans_download(self):
-        self.env.update(FIXTURE_HELP='--name',FIXTURE_BAD_CHECKSUM='1')
-        result=self.run_helper('install','archlinux')
-        self.assertNotEqual(0,result.returncode)
-        self.assertIn('ROOTFS_CHECKSUM_MISMATCH',result.stdout)
-        self.assertEqual(['install --help','CURL','SHA256'],self.log.read_text().splitlines())
-        self.assertEqual([],list(self.downloads.iterdir()))
 
-    def test_arch_download_failure_never_verifies_or_installs(self):
-        self.env.update(FIXTURE_HELP='--name',FIXTURE_DOWNLOAD_FAIL='1')
-        result=self.run_helper('install','archlinux')
-        self.assertNotEqual(0,result.returncode)
-        self.assertIn('ROOTFS_DOWNLOAD_FAILED',result.stdout)
-        self.assertEqual(['install --help','CURL'],self.log.read_text().splitlines())
-        self.assertEqual([],list(self.downloads.iterdir()))
 
-    def test_arch_installer_failure_cleans_archive_without_false_ready(self):
-        self.env.update(FIXTURE_HELP='--name',FIXTURE_FAIL='1')
-        result=self.run_helper('install','archlinux')
-        self.assertEqual(17,result.returncode)
-        self.assertNotIn('READY:shell',result.stdout)
-        self.assertEqual([],list(self.downloads.iterdir()))
 
     def test_arch_other_architecture_is_rejected_before_download(self):
         self.env.update(FIXTURE_HELP='--name',FIXTURE_MACHINE='x86_64')
         result=self.run_helper('install','archlinux')
         self.assertNotEqual(0,result.returncode)
-        self.assertIn('ARCH_ARM64_REQUIRED',result.stdout)
+        self.assertIn('IMAGE_ARM64_REQUIRED',result.stdout)
         self.assertEqual(['install --help'],self.log.read_text().splitlines())
 
     def test_symlink_alias_is_never_accepted(self):
@@ -191,11 +154,6 @@ printf 'SHA256\\n' >> "$FIXTURE_LOG"
         result=self.run_helper('install','debian')
         self.assertNotEqual(0,result.returncode);self.assertIn('ERROR:INCOMPLETE_ROOTFS_REQUIRES_REMOVAL',result.stdout);self.assertEqual('retained',keep.read_text());self.assertFalse(self.log.exists())
 
-    def test_all_oci_environments_use_only_public_cli_even_with_retired_helper_present(self):
-        self.env['FIXTURE_HELP']='--name';helper=self.root/'retired-download.py';helper.write_text('raise RuntimeError("RETIRED_HELPER_MUST_NOT_RUN")\n');self.env['JOBS_ENVIRONMENT_DOWNLOADER']=str(helper)
-        for alias,image in [('ubuntu','ubuntu'),('ubuntu-ai','ubuntu'),('debian','debian'),('alpine','alpine'),('fedora','fedora'),('opensuse','opensuse/leap'),('void','ghcr.io/void-linux/void-glibc-full:latest')]:
-            result=self.run_helper('install',alias);self.assertEqual(0,result.returncode,alias+result.stderr);self.assertIn('READY:shell',result.stdout);self.assertIn('install '+image+' --name '+alias,self.log.read_text())
-        self.assertNotIn('PKG:',self.log.read_text());self.assertNotIn('RESUME_UNSUPPORTED',result.stdout)
 
     def test_retry_with_partial_root_is_refused_without_removal_or_native_install(self):
         fs=self.prefix/'var/lib/proot-distro/containers/debian/rootfs';fs.mkdir(parents=True);(fs/'keep').write_text('keep');self.env['JOBS_ENVIRONMENT_RETRY']='1'
@@ -243,3 +201,23 @@ printf 'SHA256\\n' >> "$FIXTURE_LOG"
         (fs/'bin/sh').symlink_to('../../../../../../../../bin/bash')
         result=self.run_helper('check','debian')
         self.assertIn('MISSING:shell',result.stdout);self.assertNotIn('READY:shell',result.stdout)
+
+    def test_legacy_installer_is_rejected_without_falling_back_to_mutable_tags(self):
+        result=self.run_helper('install','alpine');self.assertNotEqual(0,result.returncode);self.assertIn('NATIVE_ARCHIVE_INSTALL_REQUIRED',result.stdout);self.assertEqual(['install --help'],self.log.read_text().splitlines())
+
+    def test_every_base_installs_exact_alias_from_verified_archive(self):
+        self.env['FIXTURE_HELP']='--name'
+        for alias in ['ubuntu','ubuntu-ai','debian','alpine','fedora','opensuse','void','archlinux','kali','manjaro']:
+            result=self.run_helper('install',alias);self.assertEqual(0,result.returncode,alias+result.stderr);self.assertIn('READY:shell',result.stdout)
+            key='ubuntu' if alias=='ubuntu-ai' else alias
+            expected='install ubuntu --name ubuntu-ai' if alias=='ubuntu-ai' else 'install '+str(self.root/(key+'-pinned.tar'))+' --name '+alias
+            self.assertIn(expected,self.log.read_text())
+        self.assertIn('login manjaro -- /bin/sh -s',self.log.read_text());self.assertIn('login archlinux -- /bin/sh -s',self.log.read_text());self.assertNotIn('PKG:',self.log.read_text())
+
+    def test_fresh_arch_initializes_original_local_keys_only_once(self):
+        self.env['FIXTURE_HELP']='--name';self.env['FIXTURE_SETUP_LOG']=str(self.root/'setup')
+        original=(self.prefix/'bin/proot-distro').read_text()
+        (self.prefix/'bin/proot-distro').write_text(original+'\nif [ "$1" = login ];then cat >> "$FIXTURE_SETUP_LOG";fi\n')
+        result=self.run_helper('install','archlinux');self.assertEqual(0,result.returncode,result.stderr)
+        setup=(self.root/'setup').read_text();self.assertIn('pacman-key --init',setup);self.assertIn('pacman-key --populate archlinuxarm',setup);self.assertNotIn('--refresh-keys',setup);self.assertNotIn('--recv-keys',setup)
+        again=self.run_helper('install','archlinux');self.assertEqual(0,again.returncode,again.stderr);self.assertEqual(setup,(self.root/'setup').read_text())

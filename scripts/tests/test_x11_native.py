@@ -5,7 +5,7 @@ ROOT=Path(__file__).resolve().parents[2]
 s=importlib.util.spec_from_file_location('native',ROOT/'x11/src/main/assets/x11-native-programs.py');m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
 class NativeTests(unittest.TestCase):
  def test_all_recommended_groups_map_to_reviewed_native_packages(self):
-  self.assertEqual({'alpine','termux','fedora','opensuse','void','archlinux'},set(m.GROUPS))
+  self.assertEqual({'alpine','termux','fedora','opensuse','void','archlinux','manjaro'},set(m.GROUPS))
   self.assertIn('fcitx5', (ROOT/'x11/src/main/assets/x11-native-desktop.sh').read_text())
   self.assertEqual(['libreoffice'],m.packages('termux','office'))
   self.assertIn('libreoffice-writer',m.packages('alpine','office'))

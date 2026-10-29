@@ -5,8 +5,9 @@ op=${1:-}; resume=0
 if [[ $op == resume ]];then op=install;resume=1;fi
 target=${2:-}; control=${3:-}; program=${4:-}; language=${5:-en}
 [[ $op == check || $op == install || $op == catalog || $op == catalog-install || $op == installed || $op == remove || $op == firefox-compat-on || $op == firefox-compat-off || $op == firefox-dns-on || $op == firefox-dns-off ]] || exit 2
-case $target in ubuntu|jobs-x11-ubuntu|debian|alpine|termux|fedora|opensuse|void|archlinux) ;; *) echo 'ERROR:UNSUPPORTED_DESKTOP';exit 2;;esac
-case $program in ''|files|terminal|editor|archives|images|fonts|browser|office|pdf|media|gpu-tools|gpu-test|catalog-tools) ;; pkg:*) [[ ${program#pkg:} =~ ^[A-Za-z0-9][A-Za-z0-9+_.-]{0,127}$ ]] || exit 2;; *) echo 'ERROR:UNKNOWN_PROGRAM';exit 2;;esac
+case $target in ubuntu|jobs-x11-ubuntu|debian|alpine|termux|fedora|opensuse|void|archlinux|kali|manjaro) ;; *) echo 'ERROR:UNSUPPORTED_DESKTOP';exit 2;;esac
+case $program in ''|files|terminal|editor|archives|images|fonts|browser|office|pdf|media|gpu-tools|gpu-test|catalog-tools|kali-nmap|kali-wireshark|kali-burp|kali-apktool) ;; pkg:*) [[ ${program#pkg:} =~ ^[A-Za-z0-9][A-Za-z0-9+_.-]{0,127}$ ]] || exit 2;; *) echo 'ERROR:UNKNOWN_PROGRAM';exit 2;;esac
+case $program in kali-*) [[ $target == kali ]] || { echo ERROR:PROGRAM_TARGET;exit 2; };;esac
 [[ $op != install || -n $program ]] || exit 2
 [[ $op != remove || $program == pkg:* ]] || exit 2
 case $language in ru|en) ;; *) exit 2;;esac
@@ -37,12 +38,13 @@ export LC_ALL=C
 op=$1; program=$2; language=$3; target=$4
 export JOBS_X11_PROGRAM_RESUME=$5
 export JOBS_X11_NATIVE_TARGET=$target
-if [ "$target" = alpine ] || [ "$target" = fedora ] || [ "$target" = opensuse ] || [ "$target" = void ] || [ "$target" = archlinux ];then
+if [ "$target" = alpine ] || [ "$target" = fedora ] || [ "$target" = opensuse ] || [ "$target" = void ] || { [ "$target" = archlinux ] || [ "$target" = manjaro ]; };then
  export JOBS_X11_NATIVE_TARGET=$target JOBS_X11_LANGUAGE=$language
  exec python3 /tmp/termux-jobs-x11/x11-native-programs.py "$op" "$program" 3>&1
 fi
 packages() {
  case $1 in
+ kali-nmap) echo nmap;;kali-wireshark) echo wireshark;;kali-burp) echo 'burpsuite default-jre';;kali-apktool) echo 'apktool default-jre-headless';;
  files) echo thunar;;terminal) echo xfce4-terminal;;editor) echo mousepad;;
  archives) echo 'xarchiver unzip zip 7zip';;images) echo 'ristretto tumbler';;
  fonts) echo 'fonts-dejavu-core fonts-liberation adwaita-icon-theme';;
@@ -62,11 +64,12 @@ ready() {
   if [ "$pkg" = 7zip ];then configured 7zip || configured p7zip-full || return 1
   else configured "$pkg" || return 1;fi
  done
+ case $1 in kali-nmap) command -v nmap >/dev/null || return 1;;kali-wireshark) command -v wireshark >/dev/null || return 1;;kali-burp) command -v burpsuite >/dev/null && command -v java >/dev/null || return 1;;kali-apktool) command -v apktool >/dev/null && command -v java >/dev/null || return 1;;esac
  if [ "$1" = gpu-test ];then python3 -B /tmp/termux-jobs-x11/x11-gpu-test-setup.py check "$target" || return 1;fi
  if [ "$1" = gpu-tools ];then command -v glxinfo >/dev/null && command -v glmark2 >/dev/null || return 1;fi
 }
 if [ "$op" = firefox-compat-on ] || [ "$op" = firefox-compat-off ];then
- case $target in ubuntu|jobs-x11-ubuntu|debian) ;; *) echo ERROR:COMPAT_TEST_ONLY;exit 2;;esac
+ case $target in ubuntu|jobs-x11-ubuntu|debian|kali) ;; *) echo ERROR:COMPAT_TEST_ONLY;exit 2;;esac
  JOBS_X11_MAINTENANCE=1 python3 /tmp/termux-jobs-x11/x11-maintenance.py "$op"
 fi
 if [ "$op" = firefox-dns-on ];then command -v firefox >/dev/null || { echo ERROR:FIREFOX_NOT_INSTALLED;exit 1; };fi
@@ -128,7 +131,12 @@ if [ "$op" = catalog ] || [ "$op" = catalog-install ];then
  ready catalog-tools || { echo ERROR:CATALOG_TOOLS_REQUIRED;exit 3; }
  exec /usr/bin/python3 /tmp/termux-jobs-x11/x11-catalog.py "$language"
 fi
-for id in files terminal editor archives images fonts browser office pdf media gpu-tools gpu-test;do
+if [ "$target" = kali ] && { [ "$op" = install ] || [ "$op" = remove ]; };then
+ python3 -B /tmp/termux-jobs-x11/x11-app-launchers.py "$target" >/dev/null || echo JOBS_X11_APP_COMPAT=unavailable
+fi
+program_ids="files terminal editor archives images fonts browser office pdf media gpu-tools gpu-test"
+if [ "$target" = kali ];then program_ids="$program_ids kali-nmap kali-wireshark kali-burp kali-apktool";fi
+for id in $program_ids;do
  if ready "$id";then echo "PROGRAM:$id:installed";else echo "PROGRAM:$id:missing";fi
 done
 echo READY:programs

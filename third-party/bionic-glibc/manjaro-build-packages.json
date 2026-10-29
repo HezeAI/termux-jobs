@@ -1,0 +1,193 @@
+{
+  "binutils": {
+    "repo": "core",
+    "VERSION": "2.38-5.1",
+    "FILENAME": "binutils-2.38-5.1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "dfa0e2872fc4adc74bcc7ed593707c7d73560c94a9cb84a0863b6fd1761587a6",
+    "CSIZE": "5495376",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/core/aarch64/binutils-2.38-5.1-aarch64.pkg.tar.xz"
+  },
+  "expat": {
+    "repo": "core",
+    "VERSION": "2.6.0-1",
+    "FILENAME": "expat-2.6.0-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "6990157b93384a7b3477a203a11deb15338134f11e2257fc06444fabda24f147",
+    "CSIZE": "105612",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/core/aarch64/expat-2.6.0-1-aarch64.pkg.tar.xz"
+  },
+  "gcc": {
+    "repo": "core",
+    "VERSION": "12.1.0-2.1",
+    "FILENAME": "gcc-12.1.0-2.1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "a763cd514230dfc1ee281a9a2b24d81f70ea933e43a68ca1f87b70a4e14905e2",
+    "CSIZE": "34109112",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/core/aarch64/gcc-12.1.0-2.1-aarch64.pkg.tar.xz"
+  },
+  "gcc-libs": {
+    "repo": "core",
+    "VERSION": "12.1.0-2.1",
+    "FILENAME": "gcc-libs-12.1.0-2.1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "3b8cda462182766dd240e979d0135eef841faf5390d874d92c15bfcefaf646fb",
+    "CSIZE": "24855136",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/core/aarch64/gcc-libs-12.1.0-2.1-aarch64.pkg.tar.xz"
+  },
+  "glibc": {
+    "repo": "core",
+    "VERSION": "2.35-5.1",
+    "FILENAME": "glibc-2.35-5.1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "26fc5bb95350210e70971fdebd34c318261118891b57e45e9437e0e18c258b26",
+    "CSIZE": "9260208",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/core/aarch64/glibc-2.35-5.1-aarch64.pkg.tar.xz"
+  },
+  "linux-api-headers": {
+    "repo": "core",
+    "VERSION": "6.7-1",
+    "FILENAME": "linux-api-headers-6.7-1-any.pkg.tar.xz",
+    "SHA256SUM": "32fb54bdf3585d7f388fe9f0bdbe853f02d13c5a43bea55c731e64206174d4c4",
+    "CSIZE": "1229280",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/core/aarch64/linux-api-headers-6.7-1-any.pkg.tar.xz"
+  },
+  "zlib": {
+    "repo": "core",
+    "VERSION": "1:1.3.1-1",
+    "FILENAME": "zlib-1:1.3.1-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "92181e02240019cc52001934db7e1638adc0c7b13d1df6fecdcc5217488884f3",
+    "CSIZE": "83668",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/core/aarch64/zlib-1:1.3.1-1-aarch64.pkg.tar.xz"
+  },
+  "zstd": {
+    "repo": "core",
+    "VERSION": "1.5.5-1",
+    "FILENAME": "zstd-1.5.5-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "f5d9530da0460d50ca471e099a61584648d7c9528dfbc9735da1d2a9c83f1065",
+    "CSIZE": "414780",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/core/aarch64/zstd-1.5.5-1-aarch64.pkg.tar.xz"
+  },
+  "libdrm": {
+    "repo": "extra",
+    "VERSION": "2.4.120-1",
+    "FILENAME": "libdrm-2.4.120-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "1b9575b5f90f78ac91cae1275579635d28dcda4773e17681b125ddadc9625583",
+    "CSIZE": "351332",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/libdrm-2.4.120-1-aarch64.pkg.tar.xz"
+  },
+  "libglvnd": {
+    "repo": "extra",
+    "VERSION": "1.7.0-1",
+    "FILENAME": "libglvnd-1.7.0-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "c900fd3d16a5a7b0bd429e85cd4519a10af97db080f545092e0c4be980cf475a",
+    "CSIZE": "315616",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/libglvnd-1.7.0-1-aarch64.pkg.tar.xz"
+  },
+  "libx11": {
+    "repo": "extra",
+    "VERSION": "1.8.7-1",
+    "FILENAME": "libx11-1.8.7-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "bdf66f12191caaf0d884155590ac0a6a381778e3cd32a33ca6c5a25ecc013fa4",
+    "CSIZE": "2024304",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/libx11-1.8.7-1-aarch64.pkg.tar.xz"
+  },
+  "libxau": {
+    "repo": "extra",
+    "VERSION": "1.0.11-2",
+    "FILENAME": "libxau-1.0.11-2-aarch64.pkg.tar.xz",
+    "SHA256SUM": "4277b57413526b916af9a48472cfacc3303f1ebe836a6196d3212e6964cdab5e",
+    "CSIZE": "11000",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/libxau-1.0.11-2-aarch64.pkg.tar.xz"
+  },
+  "libxcb": {
+    "repo": "extra",
+    "VERSION": "1.16-1",
+    "FILENAME": "libxcb-1.16-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "1e27e9e2c3a7cb35252be6db423630bbbd15b0b5cf1f0b2f938354455f13c523",
+    "CSIZE": "1024892",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/libxcb-1.16-1-aarch64.pkg.tar.xz"
+  },
+  "libxdamage": {
+    "repo": "extra",
+    "VERSION": "1.1.6-1",
+    "FILENAME": "libxdamage-1.1.6-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "76ef01686fcaa36778400ab8a34b682fdaa7aad27c16d93745f822e8bec0783d",
+    "CSIZE": "7120",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/libxdamage-1.1.6-1-aarch64.pkg.tar.xz"
+  },
+  "libxdmcp": {
+    "repo": "extra",
+    "VERSION": "1.1.4-2",
+    "FILENAME": "libxdmcp-1.1.4-2-aarch64.pkg.tar.xz",
+    "SHA256SUM": "00f26da8adebf9459876986e78298d09cb69d60695535b160dd0a2ab2bdf6cac",
+    "CSIZE": "26268",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/libxdmcp-1.1.4-2-aarch64.pkg.tar.xz"
+  },
+  "libxext": {
+    "repo": "extra",
+    "VERSION": "1.3.6-1",
+    "FILENAME": "libxext-1.3.6-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "8e146bcd8401b20a3e1deecb610216866c9274c4fcc2344f5b823bdf2aa4c6e5",
+    "CSIZE": "104524",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/libxext-1.3.6-1-aarch64.pkg.tar.xz"
+  },
+  "libxfixes": {
+    "repo": "extra",
+    "VERSION": "6.0.1-1",
+    "FILENAME": "libxfixes-6.0.1-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "ab06e87cb054d6dbe84dd47befdc19f8a14a967326893754205b0ccab0243771",
+    "CSIZE": "13540",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/libxfixes-6.0.1-1-aarch64.pkg.tar.xz"
+  },
+  "libxrandr": {
+    "repo": "extra",
+    "VERSION": "1.5.4-1",
+    "FILENAME": "libxrandr-1.5.4-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "7c10642c33a9e947d2da34b65cab712c13d1c5002f19bd0fc437762825bb4862",
+    "CSIZE": "25600",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/libxrandr-1.5.4-1-aarch64.pkg.tar.xz"
+  },
+  "libxrender": {
+    "repo": "extra",
+    "VERSION": "0.9.11-1",
+    "FILENAME": "libxrender-0.9.11-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "42ab59fa18d864a754bcd37910dec143588812b232259738b45c64f3ff87d52a",
+    "CSIZE": "27304",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/libxrender-0.9.11-1-aarch64.pkg.tar.xz"
+  },
+  "libxshmfence": {
+    "repo": "extra",
+    "VERSION": "1.3.2-1",
+    "FILENAME": "libxshmfence-1.3.2-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "ce3bd41a92503fb3e53778da3bb0789105a21e8c780b55ac0f1df549b16437bd",
+    "CSIZE": "5848",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/libxshmfence-1.3.2-1-aarch64.pkg.tar.xz"
+  },
+  "libxxf86vm": {
+    "repo": "extra",
+    "VERSION": "1.1.5-1",
+    "FILENAME": "libxxf86vm-1.1.5-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "d84726d9eb05645249f75711a3a6511f53064c963a6c3f604f177dcfe8abdbe2",
+    "CSIZE": "14920",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/libxxf86vm-1.1.5-1-aarch64.pkg.tar.xz"
+  },
+  "xcb-proto": {
+    "repo": "extra",
+    "VERSION": "1.16.0-1",
+    "FILENAME": "xcb-proto-1.16.0-1-any.pkg.tar.xz",
+    "SHA256SUM": "a59297236acf5325c3f794d235cd94a852b79a4dafd5971d9281426381bf85bf",
+    "CSIZE": "128636",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/xcb-proto-1.16.0-1-any.pkg.tar.xz"
+  },
+  "xorgproto": {
+    "repo": "extra",
+    "VERSION": "2023.2-1",
+    "FILENAME": "xorgproto-2023.2-1-any.pkg.tar.xz",
+    "SHA256SUM": "1a9d8f24ad6ce94147c86f3ad90197ba6d5943b5bda75c1ca7bdbf1c06809a28",
+    "CSIZE": "238296",
+    "url": "https://coresite.mm.fcix.net/manjaro/arm-stable/extra/aarch64/xorgproto-2023.2-1-any.pkg.tar.xz"
+  },
+  "vulkan-icd-loader": {
+    "repo": "extra",
+    "VERSION": "1.3.276-1",
+    "FILENAME": "vulkan-icd-loader-1.3.276-1-aarch64.pkg.tar.xz",
+    "SHA256SUM": "5e7f59367cc3ddd7e78a2945f97acb995b3b9e7d270f2d9cdb6337bb53191917",
+    "CSIZE": "122092"
+  }
+}

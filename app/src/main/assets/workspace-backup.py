@@ -317,7 +317,7 @@ def inspect_alias_shell(request):
     if len(raw) > 1024 * 1024 or b'\0' in raw:
         raise BackupError('INVALID_ALIAS_FILE')
     environment = request['environment']
-    if environment not in ('termux', 'ubuntu', 'debian', 'alpine', 'archlinux', 'fedora', 'opensuse', 'void'):
+    if environment not in ('termux', 'ubuntu', 'debian', 'alpine', 'archlinux', 'kali', 'manjaro', 'fedora', 'opensuse', 'void'):
         raise BackupError('ALIAS_INVALID_ENVIRONMENT')
     definitions, skipped = literal_alias_commands(raw.decode('utf-8-sig').replace('\r\n', '\n'))
     aliases = [dict(id=str(uuid.uuid4()), name=name, command=command, environment=environment, category='', favorite=False) for name, command in definitions.items()]

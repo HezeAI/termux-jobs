@@ -13,7 +13,7 @@ def module(name):
 
 
 def prepare(base, target, api, cancel, fetch=None):
-    if target not in ('termux', 'ubuntu', 'debian', 'fedora', 'opensuse', 'void', 'archlinux'):
+    if target not in ('termux', 'ubuntu', 'debian', 'fedora', 'opensuse', 'void', 'archlinux','kali','manjaro'):
         raise ValueError('WRAPPER_TARGET_UNSUPPORTED')
     wrapper, gpu, extras = module('wrapper'), module('gpu'), module('extras')
     wrapper.CANCEL = cancel
@@ -38,7 +38,7 @@ def prepare(base, target, api, cancel, fetch=None):
     else:
         bridge = module('bionic-glibc')
         bridge.w.CANCEL = cancel
-        bridge.install(base)
+        bridge.install(base, target=target)
     print('READY:wrapper', flush=True)
 
 

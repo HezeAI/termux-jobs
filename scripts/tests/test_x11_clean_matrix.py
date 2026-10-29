@@ -12,7 +12,7 @@ class CleanMatrix(unittest.TestCase):
    f=bin/n;f.write_text('#!/bin/sh\nprintf "%s\\n" "'+n+':$*" >> "$CAPTURE"\n'+body+'\n');f.chmod(0o700)
   return bin,dict(os.environ,PATH=str(bin),PREFIX=str(base),CAPTURE=str(capture)),capture
  def test_every_native_install_requests_complete_set_and_rejects_missing_desktop_binary(self):
-  expected={'termux':'apt-get:','alpine':'apk:','fedora':'dnf:','opensuse':'zypper:','void':'xbps-install:','archlinux':'pacman:'}
+  expected={'termux':'apt-get:','alpine':'apk:','fedora':'dnf:','opensuse':'zypper:','void':'xbps-install:','archlinux':'pacman:','manjaro':'pacman:'}
   for target,manager in expected.items():
    with self.subTest(target=target),tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d:
     base=Path(d);bin,env,capture=self.fixture(base)
@@ -27,7 +27,7 @@ class CleanMatrix(unittest.TestCase):
      f.write_text(content);f.chmod(0o700)
  def test_apt_guests_reject_absent_desktop_runtime_audio_and_ca(self):
   source=(ASSETS/'x11-desktop.sh').read_text();components=source.split("components='",1)[1].split("\npackages=",1)[0][:-1]
-  for target in ['ubuntu','jobs-x11-ubuntu','debian']:
+  for target in ['ubuntu','jobs-x11-ubuntu','debian','kali']:
    with self.subTest(target=target),tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d:
     base=Path(d);bin,env,_=self.fixture(base);cert=base/'ca.crt';cert.write_text('fixture');components_=components.replace('/etc/ssl/certs/ca-certificates.crt',str(cert))
     r=subprocess.run(['/bin/sh','-c',components_],env=env,text=True,capture_output=True,timeout=5);self.assertEqual(0,r.returncode,r.stderr)
@@ -38,7 +38,7 @@ class CleanMatrix(unittest.TestCase):
     self.assertNotEqual(0,subprocess.run(['/bin/sh','-c',components_],env=env,capture_output=True,timeout=5).returncode)
  def test_every_guest_install_run_and_program_operation_keeps_selected_rootfs(self):
   import json
-  for target in ['ubuntu','jobs-x11-ubuntu','debian','alpine','fedora','opensuse','void','archlinux']:
+  for target in ['ubuntu','jobs-x11-ubuntu','debian','alpine','fedora','opensuse','void','archlinux','kali','manjaro']:
    with self.subTest(target=target),tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d:
     base=Path(d);prefix=base/'files/usr';bin=prefix/'bin';bin.mkdir(parents=True);control=prefix.parent/('workspace-x11-'+target);control.mkdir();(prefix/('var/lib/proot-distro/containers/'+target+'/rootfs')).mkdir(parents=True);capture=base/'capture'; (bin/'python3').symlink_to('/usr/bin/python3')
     fake=bin/'proot-distro';fake.write_text('#!/usr/bin/python3\nimport os,sys,json\nwith open(os.environ["CAPTURE"],"a") as f:f.write(json.dumps(sys.argv[1:])+"\\n")\n');fake.chmod(0o700)

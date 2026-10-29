@@ -1,6 +1,13 @@
 package com.termux.app.workspace;
 import org.junit.Test;import static org.junit.Assert.*;
 public class EnvironmentInstallProgressTest {
+ @Test public void pinnedDownloadStagesAreLocalizedAndShowMeasuredVolume(){
+  EnvironmentInstallProgress p=new EnvironmentInstallProgress();p.update("STAGE:checking-image-cache\n",1000);
+  assertEquals("Checking cached image",p.displayLine(false));assertEquals("Проверка сохранённого образа",p.displayLine(true));assertEquals(-1,p.percent);
+  p.update("IMAGE_PROGRESS: 1% (3145728/211549268 bytes)\n",2000);
+  assertEquals("Downloading image: 3.1 / 211.5 MB",p.displayLine(false));assertEquals(1,p.percent);
+  p.update("STAGE:verifying-image-download\n",3000);assertEquals("Verifying image integrity",p.displayLine(false));assertEquals(-1,p.percent);assertEquals(-1,p.eta);
+ }
  @Test public void etaRequiresMeasuredProgressAndResetsBetweenPhases(){
   EnvironmentInstallProgress p=new EnvironmentInstallProgress();p.update("Preparing",1000);assertEquals(-1,p.percent);assertEquals(-1,p.eta);
   p.update("Downloading 20%",2000);assertEquals(20,p.percent);assertEquals(-1,p.eta);

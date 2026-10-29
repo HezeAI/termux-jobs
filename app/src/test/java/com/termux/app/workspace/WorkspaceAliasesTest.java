@@ -17,13 +17,13 @@ public class WorkspaceAliasesTest {
         Context c=RuntimeEnvironment.application;File file=new File(c.getFilesDir(),"workspace-v1.json");file.delete();new File(file+".bak").delete();WorkspaceStore s=new WorkspaceStore(c,e->fail(e));
         try{WorkspaceStore.Command command=new WorkspaceStore.Command();command.name="keep";command.command="pwd";command.favorite=true;s.commands.add(command);JSONObject old=s.encode();old.remove("aliases");s.decode(old.toString());assertTrue(s.aliases.isEmpty());
             for(String env:WorkspaceAliases.ENVIRONMENTS){WorkspaceStore.Alias a=new WorkspaceStore.Alias();a.environment=env;a.name="ll";a.command="ls -lah\nprintf '%s' 'hello'";a.category="Files";a.favorite=true;s.aliases.add(a);}
-            s.save();s.awaitWrites();WorkspaceStore reopened=new WorkspaceStore(c,e->fail(e));try{assertEquals(8,reopened.aliases.size());assertTrue(reopened.aliases.get(0).favorite);assertEquals("Files",reopened.aliases.get(0).category);assertTrue(reopened.commands.get(0).favorite);assertEquals("pwd",reopened.commands.get(0).command);}finally{reopened.close();}
+            s.save();s.awaitWrites();WorkspaceStore reopened=new WorkspaceStore(c,e->fail(e));try{assertEquals(WorkspaceAliases.ENVIRONMENTS.size(),reopened.aliases.size());assertTrue(reopened.aliases.get(0).favorite);assertEquals("Files",reopened.aliases.get(0).category);assertTrue(reopened.commands.get(0).favorite);assertEquals("pwd",reopened.commands.get(0).command);}finally{reopened.close();}
         }finally{s.close();}
     }
     @Test public void installedSelectorAndTransportRejectAiMissingAndOtherEnvironments(){
         List<WorkspaceEnvironments.Choice> all=new ArrayList<>();for(String env:WorkspaceAliases.ENVIRONMENTS)all.add(new WorkspaceEnvironments.Choice("termux",env.equals("termux")?"":env,env,"/root",true));
         all.add(new WorkspaceEnvironments.Choice("termux","ubuntu-ai","Ubuntu AI","/root",true));all.add(new WorkspaceEnvironments.Choice("termux","jobs-abcd","Imported","/root",true));
-        assertEquals(8,WorkspaceAliases.installed(all).size());all.set(1,new WorkspaceEnvironments.Choice("ubuntu","ubuntu","Ubuntu","/root",false));assertEquals(7,WorkspaceAliases.installed(all).size());
+        assertEquals(WorkspaceAliases.ENVIRONMENTS.size(),WorkspaceAliases.installed(all).size());all.set(1,new WorkspaceEnvironments.Choice("ubuntu","ubuntu","Ubuntu","/root",false));assertEquals(WorkspaceAliases.ENVIRONMENTS.size()-1,WorkspaceAliases.installed(all).size());
         for(String bad:new String[]{"ubuntu-ai","ssh","../ubuntu",""})try{WorkspaceAliases.profile(bad);fail(bad);}catch(IllegalArgumentException expected){}
         for(String env:WorkspaceAliases.ENVIRONMENTS){WorkspaceStore.Session p=WorkspaceAliases.profile(env);assertEquals(env.equals("termux")?"termux":"proot:"+env,ProjectFiles.environment(p));String command=ProjectFiles.command(p,"printf test");if(!env.equals("termux"))assertTrue(command,command.contains("'"+env+"' -- /bin/sh -c"));assertFalse(command.contains("ubuntu-ai"));}
     }

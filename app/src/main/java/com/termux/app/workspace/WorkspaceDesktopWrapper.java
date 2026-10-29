@@ -33,7 +33,7 @@ final class WorkspaceDesktopWrapper implements AutoCloseable {
     private AlertDialog window;
     WorkspaceDesktopWrapper(TermuxActivity activity){this(activity,"termux");}
     WorkspaceDesktopWrapper(TermuxActivity activity,String target){if(!supported(target)&&!bridgeSupported(target))throw new IllegalArgumentException("Bionic target");this.activity=activity;this.target=target;picker=new WorkspaceLocalFilePicker(activity);}
-    static boolean bridgeSupported(String target){return "ubuntu".equals(target)||"debian".equals(target)||"fedora".equals(target)||"archlinux".equals(target)||"opensuse".equals(target)||"void".equals(target);}
+    static boolean bridgeSupported(String target){return "ubuntu".equals(target)||("debian".equals(target)||"kali".equals(target))||"fedora".equals(target)||"archlinux".equals(target)||"manjaro".equals(target)||"opensuse".equals(target)||"void".equals(target);}
     private boolean bridge(){return bridgeSupported(target);}
     static boolean supported(String target){return "termux".equals(target);}
     static File base(android.content.Context context){return base(context,"termux");}

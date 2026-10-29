@@ -7,7 +7,7 @@ import java.io.*;import java.nio.charset.StandardCharsets;import java.util.*;imp
 /** Read-only inventory before a user-approved launch; installation runs in the new terminal only. */
 final class AgentPreparation {
     static final String GUEST="/tmp/termux-jobs-setup";
-    static final String[] ASSETS={"agent-dependencies.sh","agent-host-setup.sh","codex-bootstrap.sh","vertex-bootstrap.sh","vertex-project.sh","environment-runtime.sh"};
+    static final String[] ASSETS={"agent-dependencies.sh","agent-host-setup.sh","codex-bootstrap.sh","vertex-bootstrap.sh","vertex-project.sh","environment-runtime.sh","environment-image.py","environment-images.json"};
     static final Set<String> COMPONENTS=new HashSet<>(Arrays.asList("proot-distro","ubuntu","curl","tar","sha256sum","flock","xz","find","sort","xargs","ca-certificates","node","codex-cli","claude-cli","gemini-cli","opencode-cli","gcloud","python3"));
     interface Runner {Plan run(Context c,WorkspaceStore.Session p)throws Exception;}
     static final Runner SYSTEM=AgentPreparation::query;

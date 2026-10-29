@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'../..'),base=require('./fixture-paths.cjs').fixture('files');
-for(const [a,b]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],['agent-receipts.cjs','agent-receipts.cjs']])fs.copyFileSync(path.join(root,'app/src/main/assets',a),path.join(base,b));
+for(const [a,b]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],['agent-receipts.cjs','agent-receipts.cjs'],['agent-action-preview.cjs','agent-action-preview.cjs']])fs.copyFileSync(path.join(root,'app/src/main/assets',a),path.join(base,b));
 const {CodexChat}=require(path.join(base,'codex-chat.cjs'));
 const {Attachments}=require('../../app/src/main/assets/agent-attachments.cjs');
 const {ClaudeChat}=require('../../app/src/main/assets/claude-chat.cjs');

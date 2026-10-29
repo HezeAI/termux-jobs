@@ -9,11 +9,14 @@ final class CodexActionLabels {
         String type=row.optString("toolType");
         if(row.optString("skillSource").equals("read"))return (ru?"Чтение инструкций: ":"Read instructions: ")+row.optString("skillName");
         if(type.equals("skill"))return (ru?"Подключён навык: ":"Skill attached: ")+row.optString("skillName");
+        String friendly=AgentActionPresentation.title(row,ru);if(!friendly.isEmpty())return friendly;
         String original=row.optString("title");
+        if(original.equals("Files")||original.startsWith("Files · "))return ru?"Работа с файлами":"File operations";
         String name=row.optString("toolName");if(name.isEmpty())name=type.isEmpty()?original:type;
         if(name.equals("mcpToolCall")||name.equals("dynamicToolCall")||name.equals("functionCallOutput"))name=row.optString("toolName",original);
         String[] parts=name.split("[./]|__");String last=parts.length==0?name:parts[parts.length-1];
         switch(last) {
+            case "Files":case "fileChange":return ru?"Работа с файлами":"File operations";
             case "imageView":case "image_view":case "view_image":return ru?"Просмотр изображения":"View image";
             case "imageGeneration":case "image_generation":case "imagegen":case "generate_image":return ru?"Создание изображения":"Generate image";
             case "WebSearch":case "webSearch":case "web_search":case "google_web_search":return ru?"Поиск в интернете":"Search the web";

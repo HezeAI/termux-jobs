@@ -5,18 +5,42 @@
 Команды по-прежнему выполняются в настоящем Termux или выбранном окружении;
 интерфейс помогает организовать работу и не требует писать свою оболочку скриптов.
 
-## Private rollback to chat-link test1
+## v2.1.0 — More environments, controlled updates & better agent chats
 
-The private rollback restores commit `49e4f070`, before the Local AI experiment,
-with versionCode **1425** so it can update over test7/code1424. The versionName
-remains **2.0.10-test1**. The chat-link preview/copy/browser fix is retained.
-No model inference runtime, model catalogue or model-download feature is included.
-Downloaded experimental model files are not automatically deleted. Schema8,
-package and signing identity are retained; former experimental model profiles are
-read as plain, empty Termux profiles by the original reader.
-See [rollback validation](docs/fork/VALIDATION-test1-rollback.md).
+Kali Linux and Manjaro join the existing terminal/X11 environments, with presets,
+aliases, programs and desktop controls. Manjaro has compatible Mesa 26.2.5
+Turnip + Zink and Bionic-for-glibc components. Nine ordinary ARM64 environments
+now use verified, pinned base images and matching XFCE package sets for first
+installation; normal package installation and user-controlled updates remain available.
 
-## v2.0.9 — Environment aliases & agent chat scale
+App settings offer environment package checks/upgrades, Components base discovery,
+restoration, full checkpoints and rollback. Each environment menu can also check
+and explicitly install/update an official upstream image. Checks and progress
+stay in the selected menu. A replacement is prepared separately and verified
+before publication; the previous system is kept for rollback. Optional home
+preservation does not preserve every installed application. Native Termux and
+Ubuntu AI are excluded from these operations.
+
+ArchWiki, its Forum and official environment documentation open inside the app.
+Wiki state remains until the app closes. Agent chats gain live command details,
+image previews, clearer file/web actions and compact panels; links offer
+Copy / Show / Browser. Session controls sit inside a full-width session card.
+Kali Evince, Manjaro LibreOffice and Fedora/openSUSE package checks are corrected.
+
+Android 8+ app / Android 11+ X11, ARM64, same `com.termux`, signer and schema8;
+versionCode **1443**. **No data reset or environment reinstall is required to
+update the APK.** Explicit image replacement is a separate confirmed operation
+that changes the selected OS/application set. New upstream images still require
+package/renderer compatibility testing; automated fixtures are not universal
+fresh-phone GUI validation.
+
+[Download v2.1.0](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.0) ·
+[Release notes](docs/fork/RELEASE-v2.1.0.md) · [Validation](docs/fork/VALIDATION-v2.1.0.md) ·
+[Environment updates](docs/fork/ENVIRONMENT-UPDATES.md) ·
+[Pinned environments](docs/fork/PINNED-ENVIRONMENTS.md) ·
+[Documentation reader](docs/fork/DOCUMENTATION-READER.md)
+
+## Previous release — v2.0.9 — Environment aliases & agent chat scale
 
 Create persistent **Alias** for Termux, Ubuntu, Debian, Alpine, Arch Linux, Fedora,
 openSUSE and Void. Organize commands and aliases with separate categories,

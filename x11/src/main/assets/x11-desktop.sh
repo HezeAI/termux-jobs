@@ -4,17 +4,17 @@ set -euo pipefail
 op=${1:-}; target=${2:-}; control=${3:-}; desktop=${4:-xfce}
 case $desktop in xfce) ;; *) echo ERROR:DESKTOP_CHOICE;exit 2;;esac
 [[ $op == scale || $op == check || $op == install || $op == repair-launchers || $op == firefox-compat-on || $op == firefox-compat-off || $op == run ]] || exit 2
-case $target in termux|ubuntu|jobs-x11-ubuntu|debian|alpine|fedora|opensuse|void|archlinux) ;; *) echo 'ERROR:UNSUPPORTED_DESKTOP';exit 2;;esac
+case $target in termux|ubuntu|jobs-x11-ubuntu|debian|alpine|fedora|opensuse|void|archlinux|kali|manjaro) ;; *) echo 'ERROR:UNSUPPORTED_DESKTOP';exit 2;;esac
 : "${PREFIX:?}"
 case ${JOBS_X11_STYLE:-0} in 0|1) ;;*) echo ERROR:STYLE_VALUE;exit 2;;esac
 case ${JOBS_X11_SCALE:-100} in [5-9][0-9]|1[0-4][0-9]|150) ;; *) echo ERROR:X11_SCALE;exit 2;;esac
 if [[ ${JOBS_X11_STYLE:-0} == 1 ]];then
- case $target in termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux) ;;*) echo ERROR:STYLE_TARGET;exit 2;;esac
+ case $target in termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux|kali|manjaro) ;;*) echo ERROR:STYLE_TARGET;exit 2;;esac
 fi
-if [[ ${JOBS_X11_RENDERER:-cpu} == bionic-glibc && $target != ubuntu && $target != debian && $target != fedora && $target != archlinux && $target != opensuse && $target != void ]];then echo ERROR:BIONIC_TARGET_UNSUPPORTED;exit 2;fi
+if [[ ${JOBS_X11_RENDERER:-cpu} == bionic-glibc && $target != manjaro && $target != ubuntu && $target != debian && $target != kali && $target != fedora && $target != archlinux && $target != opensuse && $target != void ]];then echo ERROR:BIONIC_TARGET_UNSUPPORTED;exit 2;fi
 if [[ ${JOBS_X11_RENDERER:-cpu} == wrapper && $target != termux ]];then echo ERROR:WRAPPER_TERMUX_ONLY;exit 2;fi
 jobs_bionic_root="${PREFIX%/usr}/workspace-x11-bionic-glibc"
-if [[ $target == debian || $target == fedora || $target == archlinux || $target == opensuse || $target == void ]];then jobs_bionic_root+="-$target";fi
+if [[ $target == debian || $target == kali || $target == fedora || $target == archlinux || $target == manjaro || $target == opensuse || $target == void ]];then jobs_bionic_root+="-$target";fi
 # Android bind mounts can expose the same directory under different paths.
 # Compare filesystem identity, not pwd/realpath text. Never accept a different directory.
 case $target in termux) expected="${PREFIX%/usr}/workspace-x11";; *) expected="${PREFIX%/usr}/workspace-x11-$target";;esac
@@ -35,16 +35,17 @@ installed() { [[ -d $fs_root/containers/$target/rootfs || -d $fs_root/installed-
 # IN_ATTRIB feedback in Thunar. Inspect/repair only this root directory from
 # native Termux, before starting a guest; never recursively change its contents.
 arch_root_permissions() {
-    [[ $target == archlinux ]] || return 0
+    [[ $target == archlinux || $target == manjaro ]] || return 0
     [[ -x $PREFIX/bin/python3 ]] || { echo MISSING:python3;return 1; }
-    "$PREFIX/bin/python3" - "$fs_root" "$1" <<'ROOT_PERMISSIONS'
+    "$PREFIX/bin/python3" - "$fs_root" "$1" "$target" <<'ROOT_PERMISSIONS'
 import os,stat,sys
-base,operation=sys.argv[1:]
+base,operation,target=sys.argv[1:]
+if target not in ("archlinux","manjaro"):raise SystemExit(2)
 if operation not in ('check','repair'):raise SystemExit(2)
 fd=None
 try:
     # Open each selected-container component without following a rootfs link.
-    for relative in ('containers/archlinux/rootfs','installed-rootfs/archlinux'):
+    for relative in ('containers/'+target+'/rootfs','installed-rootfs/'+target):
         opened=[]
         try:
             parent=os.open(base,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW);opened.append(parent)
@@ -71,7 +72,7 @@ ROOT_PERMISSIONS
 }
 gpu_bind=()
 jobs_native_bridge_env=
-if [[ ( $target == fedora || $target == archlinux || $target == opensuse || $target == void ) && ${JOBS_X11_RENDERER:-cpu} == bionic-glibc ]];then jobs_native_bridge_env="JOBS_X11_RENDERER=bionic-glibc ";fi
+if [[ ( $target == fedora || $target == archlinux || $target == manjaro || $target == opensuse || $target == void ) && ${JOBS_X11_RENDERER:-cpu} == bionic-glibc ]];then jobs_native_bridge_env="JOBS_X11_RENDERER=bionic-glibc ";fi
 # Void OCI has /bin/sh but its passwd still names absent /bin/bash.
 # run executes our explicit command; login wraps it in that absent shell.
 proot_entry=(login)
@@ -93,27 +94,28 @@ if [[ $op == scale ]];then
 fi
 components='configured() { case "$(dpkg-query -W -f="\${Status}" "$1" 2>/dev/null)" in *" ok installed") return 0;; *) return 1;; esac; }; configured libpulse0 && configured gstreamer1.0-pulseaudio && test -s /etc/ssl/certs/ca-certificates.crt && configured ca-certificates && command -v python3 >/dev/null && command -v thunar >/dev/null && command -v xfce4-terminal >/dev/null && command -v xwininfo >/dev/null && command -v xprop >/dev/null && command -v xfdesktop >/dev/null && command -v xfce4-panel >/dev/null && command -v xfsettingsd >/dev/null && command -v xfconf-query >/dev/null && command -v xfwm4 >/dev/null && command -v xfce4-session >/dev/null && command -v dbus-run-session >/dev/null && command -v xauth >/dev/null && command -v fcitx5 >/dev/null && command -v dbus-monitor >/dev/null && configured fcitx5-frontend-gtk3 && configured fcitx5-frontend-qt5 && configured fonts-dejavu-core && configured fonts-liberation && configured adwaita-icon-theme && configured hicolor-icon-theme && { fcitx5 --version || echo WARNING:X11_INPUT_COMPONENT_UNAVAILABLE; }'
 packages='xfce4 xfdesktop4 xfce4-panel xfce4-session xfce4-settings xfconf thunar xfwm4 xfce4-terminal'
-if [[ ( $target == ubuntu || $target == debian ) && ${JOBS_X11_RENDERER:-cpu} == bionic-glibc ]];then
+if [[ $target == kali ]];then packages+=" libvulkan1 libegl1 libgl1-mesa-dri libegl-mesa0 libglx-mesa0";components+=" && configured libvulkan1 && configured libegl1";fi
+if [[ ( $target == ubuntu || $target == debian || $target == kali ) && ${JOBS_X11_RENDERER:-cpu} == bionic-glibc ]];then
     jobs_bionic_packages='libgl1-mesa-dri libegl-mesa0 libglx-mesa0 libgl1 libegl1 libstdc++6 libvulkan1 libxcb1 libxcb-present0 libxcb-dri3-0 libx11-xcb1 libdrm2 zlib1g libxcb-randr0 libxcb-xfixes0 libxcb-sync1 libxshmfence1 libxcb-glx0 libxcb-shm0 libx11-6 libxext6 libxxf86vm1'
     packages+=" $jobs_bionic_packages"
     for jobs_bionic_package in $jobs_bionic_packages;do components+=" && configured $jobs_bionic_package";done
 fi
-if [[ $target == alpine || $target == fedora || $target == opensuse || $target == void || $target == archlinux ]];then components="sh /tmp/termux-jobs-x11/x11-native-desktop.sh check $target";if [[ ( $target == fedora || $target == archlinux || $target == opensuse || $target == void ) && ${JOBS_X11_RENDERER:-cpu} == bionic-glibc ]];then components="JOBS_X11_RENDERER=bionic-glibc $components";fi;fi
+if [[ $target == alpine || $target == fedora || $target == opensuse || $target == void || $target == archlinux || $target == manjaro ]];then components="sh /tmp/termux-jobs-x11/x11-native-desktop.sh check $target";if [[ ( $target == fedora || $target == archlinux || $target == manjaro || $target == opensuse || $target == void ) && ${JOBS_X11_RENDERER:-cpu} == bionic-glibc ]];then components="JOBS_X11_RENDERER=bionic-glibc $components";fi;fi
 if [[ $target == termux ]];then components="sh $control/x11-native-desktop.sh check termux $control";fi
-if [[ ( $target == alpine || $target == termux || $target == fedora || $target == opensuse || $target == void || $target == archlinux ) && ( $op == repair-launchers || $op == firefox-compat-on || $op == firefox-compat-off ) ]];then
-    if [[ $target == alpine || $target == fedora || $target == opensuse || $target == void || $target == archlinux ]];then installed || { echo MISSING:environment;exit 1; };guest "sh /tmp/termux-jobs-x11/x11-native-desktop.sh $op $target"
+if [[ ( $target == alpine || $target == termux || $target == fedora || $target == opensuse || $target == void || $target == archlinux || $target == manjaro ) && ( $op == repair-launchers || $op == firefox-compat-on || $op == firefox-compat-off ) ]];then
+    if [[ $target == alpine || $target == fedora || $target == opensuse || $target == void || $target == archlinux || $target == manjaro ]];then installed || { echo MISSING:environment;exit 1; };guest "sh /tmp/termux-jobs-x11/x11-native-desktop.sh $op $target"
     else sh "$control/x11-native-desktop.sh" "$op" termux "$control";fi
     echo READY:desktop;exit
 fi
 if [[ $op == firefox-compat-on || $op == firefox-compat-off ]];then
-    [[ $target == ubuntu || $target == jobs-x11-ubuntu || $target == debian ]] || { echo ERROR:COMPAT_TEST_ONLY;exit 2; }
+    [[ $target == ubuntu || $target == jobs-x11-ubuntu || $target == debian || $target == kali ]] || { echo ERROR:COMPAT_TEST_ONLY;exit 2; }
     installed || { echo MISSING:environment;exit 1; }
     if [[ $op == firefox-compat-on ]];then guest 'JOBS_X11_MAINTENANCE=1 python3 /tmp/termux-jobs-x11/x11-maintenance.py firefox-compat-on'
     else guest 'JOBS_X11_MAINTENANCE=1 python3 /tmp/termux-jobs-x11/x11-maintenance.py firefox-compat-off';fi
     echo READY:desktop;exit
 fi
 if [[ $op == repair-launchers ]];then
-    [[ $target == ubuntu || $target == jobs-x11-ubuntu || $target == debian ]] || { echo 'ERROR:REPAIR_TARGET';exit 2; }
+    [[ $target == ubuntu || $target == jobs-x11-ubuntu || $target == debian || $target == kali ]] || { echo 'ERROR:REPAIR_TARGET';exit 2; }
     installed || { echo 'MISSING:environment';exit 1; }
     guest 'JOBS_X11_LAUNCHERS_REPAIR=1 python3 /tmp/termux-jobs-x11/x11-launchers.py --repair'
     guest "$components"
@@ -138,7 +140,7 @@ check_renderer() {
     esac
 }
 if [[ $op == check ]]; then
-    if [[ $target == archlinux ]] && installed && ! arch_root_permissions check;then echo MISSING:root-permissions;exit 0;fi
+    if [[ $target == archlinux || $target == manjaro ]] && installed && ! arch_root_permissions check;then echo MISSING:root-permissions;exit 0;fi
     command -v setsid >/dev/null || { echo 'MISSING:setsid';exit; }
     if [[ ${JOBS_X11_STYLE:-0} == 1 && ! -x $PREFIX/bin/python3 ]];then echo MISSING:style-python;exit;fi
     desktop_ready=false
@@ -149,10 +151,46 @@ if [[ $op == check ]]; then
     if $desktop_ready;then check_renderer;echo 'READY:desktop';fi
     exit
 fi
+jobs_package_source=pinned
+if [[ $op == install && $target != termux && -d ${PREFIX%/usr}/workspace-environment-updates/origins ]];then
+    jobs_package_source=$("$PREFIX/bin/python3" -I -S "$control/environment-desktop-policy.py" "${JOBS_APP_FILES_DIR:-${PREFIX%/usr}}" "$PREFIX" "$target") || { echo ERROR:ENVIRONMENT_ORIGIN_UNAVAILABLE;exit 1; }
+fi
+if [[ $op == install && ${JOBS_X11_PINNED_BASES:-0} == 1 && $jobs_package_source == official ]] && ! jobs_audio_available;then
+    # An official guest base does not opt the Android/Termux host out of its pins.
+    jobs_host_control="${PREFIX%/usr}/workspace-x11-host"
+    "$PREFIX/bin/python3" -B "$control/x11-base.py" host-audio "$jobs_host_control"
+    sh "$control/x11-base-install.sh" "$jobs_host_control/base-packages-20261028-host-audio/packages" termux
+    jobs_audio_available || { echo ERROR:AUDIO_COMPONENTS_REQUIRED;exit 1; }
+fi
+if [[ $op == install && ${JOBS_X11_PINNED_BASES:-0} == 1 && $jobs_package_source != official ]];then
+    # Fixed package files are resolved/verified outside the guest. No repository
+    # refresh or full upgrade is hidden inside desktop installation.
+    if ! command -v "$PREFIX/bin/python3" >/dev/null;then pkg install -y python;fi
+    if [[ $target != termux ]] && ! installed;then
+        case $target in ubuntu|jobs-x11-ubuntu) bash "$control/environment-runtime.sh" install "$target";;*)echo ERROR:INSTALL_ENVIRONMENT_FIRST;exit 1;;esac
+    fi
+    arch_root_permissions repair || exit 1
+    jobs_base_target=$target
+    if [[ $target == jobs-x11-ubuntu ]];then jobs_base_target=ubuntu;fi
+    "$PREFIX/bin/python3" -B "$control/x11-base.py" "$jobs_base_target" "$control"
+    if [[ $target == termux ]];then
+        sh "$control/x11-base-install.sh" "$control/base-packages-20261028-$jobs_base_target/packages" termux
+    else
+        guest "sh /tmp/termux-jobs-x11/x11-base-install.sh /tmp/termux-jobs-x11/base-packages-20261028-$jobs_base_target/packages $jobs_base_target"
+    fi
+    if ! jobs_audio_available;then
+        jobs_host_control="${PREFIX%/usr}/workspace-x11-host"
+        "$PREFIX/bin/python3" -B "$control/x11-base.py" host-audio "$jobs_host_control"
+        sh "$control/x11-base-install.sh" "$jobs_host_control/base-packages-20261028-host-audio/packages" termux
+    fi
+    jobs_audio_available || { echo ERROR:AUDIO_COMPONENTS_REQUIRED;exit 1; }
+    if [[ $target == termux ]];then eval "$components";else guest "$components";fi
+    check_renderer;echo READY:desktop;exit
+fi
 if [[ $op == install ]]; then
     # No host upgrade, no reset, no removal. All operations require app consent.
     # Debian is an existing user environment: never create/replace it from X11.
-    if [[ $target == debian || $target == alpine || $target == fedora || $target == opensuse || $target == void || $target == archlinux ]] && ! installed;then echo 'ERROR:INSTALL_ENVIRONMENT_FIRST';exit 1;fi
+    if [[ $target == debian || $target == kali || $target == alpine || $target == fedora || $target == opensuse || $target == void || $target == archlinux || $target == manjaro ]] && ! installed;then echo 'ERROR:INSTALL_ENVIRONMENT_FIRST';exit 1;fi
     command -v setsid >/dev/null || { echo 'ERROR:SETSID_REQUIRED';exit 1; }
     if [[ ${JOBS_X11_STYLE:-0} == 1 && ! -x $PREFIX/bin/python3 ]];then pkg install -y python;fi
     if [[ $target == termux ]];then
@@ -169,9 +207,9 @@ if [[ $op == install ]]; then
             elif [[ $target == ubuntu ]];then proot-distro install ubuntu
             else echo ERROR:INSTALL_ENVIRONMENT_FIRST;exit 1;fi
         fi
-        if [[ $target == archlinux && ! -x $PREFIX/bin/python3 ]];then pkg install -y python;fi
+        if [[ ( $target == archlinux || $target == manjaro ) && ! -x $PREFIX/bin/python3 ]];then pkg install -y python;fi
         arch_root_permissions repair || exit 1
-        if [[ $target == alpine || $target == fedora || $target == opensuse || $target == void || $target == archlinux ]];then guest "${jobs_native_bridge_env:-}sh /tmp/termux-jobs-x11/x11-native-desktop.sh install $target 3>&1"
+        if [[ $target == alpine || $target == fedora || $target == opensuse || $target == void || $target == archlinux || $target == manjaro ]];then guest "${jobs_native_bridge_env:-}sh /tmp/termux-jobs-x11/x11-native-desktop.sh install $target 3>&1"
         else
         guest "export LC_ALL=C; packages='$packages'; "'export DEBIAN_FRONTEND=noninteractive; echo JOBS_APT_PHASE:update; apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Debug::acquire::progress=true -o APT::Status-Fd=3 -o Dpkg::Use-Pty=0 update 3>&1 && { echo JOBS_APT_PHASE:install; apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Debug::acquire::progress=true -o APT::Status-Fd=3 -o Dpkg::Use-Pty=0 install -y --no-remove --no-install-recommends $packages x11-utils python3 libpulse0 gstreamer1.0-pulseaudio ca-certificates fonts-dejavu-core fonts-liberation adwaita-icon-theme hicolor-icon-theme dbus-x11 xauth fcitx5 fcitx5-frontend-gtk3 fcitx5-frontend-qt5 3>&1 && update-ca-certificates; }'
         fi
@@ -197,7 +235,7 @@ if [[ $gpu_mode == bionic-glibc ]];then
     done
 fi
 if [[ $gpu_mode == turnip ]];then
-    case $target in termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux) ;; *) echo ERROR:GPU_TARGET_UNSUPPORTED;exit 2;;esac
+    case $target in termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux|kali|manjaro) ;; *) echo ERROR:GPU_TARGET_UNSUPPORTED;exit 2;;esac
     gpu_root="${PREFIX%/usr}/workspace-x11-gpu"
     "$PREFIX/bin/python3" -B "$control/x11-gpu.py" check "$target" "$gpu_root" || exit
     if [[ $target != termux ]];then gpu_bind=(--bind "$gpu_root:/tmp/termux-jobs-x11-gpu");fi
@@ -215,7 +253,7 @@ if [[ $gpu_mode == virgl ]];then
     jobs_virgl_start || exit
 fi
 unset SESSION_MANAGER DBUS_SESSION_BUS_ADDRESS
-case $target in termux) desktop_display=97;;ubuntu) desktop_display=98;;jobs-x11-ubuntu) desktop_display=99;;debian) desktop_display=100;;alpine) desktop_display=101;;fedora) desktop_display=102;;opensuse) desktop_display=103;;void) desktop_display=104;;archlinux) desktop_display=105;;esac
+case $target in termux) desktop_display=97;;ubuntu) desktop_display=98;;jobs-x11-ubuntu) desktop_display=99;;debian) desktop_display=100;;alpine) desktop_display=101;;fedora) desktop_display=102;;opensuse) desktop_display=103;;void) desktop_display=104;;archlinux) desktop_display=105;;kali) desktop_display=106;;manjaro) desktop_display=107;;esac
 export DISPLAY=:$desktop_display
 export XAUTHORITY="$control/authority"
 export LIBGL_ALWAYS_SOFTWARE=1
@@ -249,4 +287,4 @@ else
     jobs_virgl_name=none;if [[ $gpu_mode == virgl ]];then jobs_virgl_name=${jobs_virgl_dir##*/};fi
     jobs_app_uid=$(id -u)
     [[ $jobs_app_uid =~ ^[0-9]{1,10}$ ]] || { echo ERROR:APP_UID;exit 1; }
-    jobs_desktop_run guest "export JOBS_X11_APP_UID=$jobs_app_uid; export JOBS_X11_DISPLAY=$desktop_display JOBS_X11_VIRGL_NAME=$jobs_virgl_name JOBS_X11_VIRGL_CLIENT=${jobs_virgl_client:-none} JOBS_X11_ALPINE_COMPAT=$alpine_compat JOBS_X11_RENDERER=$gpu_mode JOBS_X11_TARGET=$target JOBS_X11_STYLE=${JOBS_X11_STYLE:-0} JOBS_X11_SCALE=${JOBS_X11_SCALE:-100}; export PULSE_SERVER=unix:$jobs_audio_guest/native PULSE_COOKIE=$jobs_audio_guest/cookie; export JOBS_X11_FOCUS_TOKEN=$token JOBS_X11_DESKTOP=$desktop; "'unset SESSION_MANAGER DBUS_SESSION_BUS_ADDRESS; export DISPLAY=:$JOBS_X11_DISPLAY XAUTHORITY=/tmp/termux-jobs-x11/authority; if [ "$JOBS_X11_RENDERER" = turnip ];then . /tmp/termux-jobs-x11/x11-gpu-env.sh; jobs_gpu_environment "$JOBS_X11_TARGET" /tmp/termux-jobs-x11-gpu || exit;elif [ "$JOBS_X11_RENDERER" = bionic-glibc ];then . /tmp/termux-jobs-x11/x11-bionic-glibc-env.sh;jobs_bionic_glibc_environment || exit;elif [ "$JOBS_X11_RENDERER" = virgl ];then . /tmp/termux-jobs-x11/x11-virgl-env.sh;jobs_virgl_environment "$JOBS_X11_TARGET" "/tmp/termux-jobs-x11/$JOBS_X11_VIRGL_NAME/sock" "$JOBS_X11_VIRGL_CLIENT" || exit;else export LIBGL_ALWAYS_SOFTWARE=1;fi; export XDG_RUNTIME_DIR=/tmp/jobs-x11-runtime-$JOBS_X11_DISPLAY; mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"; if [ "$JOBS_X11_ALPINE_COMPAT" = 1 ];then test -f /tmp/termux-jobs-x11/x11-alpine-compat.so || { echo ERROR:ALPINE_COMPAT_MISSING;exit 1; }; export LD_PRELOAD="/tmp/termux-jobs-x11/x11-alpine-compat.so${LD_PRELOAD:+:$LD_PRELOAD}";fi; if [ "$JOBS_X11_TARGET" = fedora ] || [ "$JOBS_X11_TARGET" = archlinux ];then test -f /tmp/termux-jobs-x11/x11-fedora-glycin.so || { echo ERROR:FEDORA_GLYCIN_MISSING;exit 1; }; export LD_PRELOAD="/tmp/termux-jobs-x11/x11-fedora-glycin.so${LD_PRELOAD:+:$LD_PRELOAD}";fi; jobs_bus_config=$(python3 -B /tmp/termux-jobs-x11/x11-session-bus.py) || exit; exec dbus-run-session --config-file="$jobs_bus_config" -- /bin/sh /tmp/termux-jobs-x11/x11-session.sh';fi
+    jobs_desktop_run guest "export JOBS_X11_APP_UID=$jobs_app_uid; export JOBS_X11_DISPLAY=$desktop_display JOBS_X11_VIRGL_NAME=$jobs_virgl_name JOBS_X11_VIRGL_CLIENT=${jobs_virgl_client:-none} JOBS_X11_ALPINE_COMPAT=$alpine_compat JOBS_X11_RENDERER=$gpu_mode JOBS_X11_TARGET=$target JOBS_X11_STYLE=${JOBS_X11_STYLE:-0} JOBS_X11_SCALE=${JOBS_X11_SCALE:-100}; export PULSE_SERVER=unix:$jobs_audio_guest/native PULSE_COOKIE=$jobs_audio_guest/cookie; export JOBS_X11_FOCUS_TOKEN=$token JOBS_X11_DESKTOP=$desktop; "'unset SESSION_MANAGER DBUS_SESSION_BUS_ADDRESS; export DISPLAY=:$JOBS_X11_DISPLAY XAUTHORITY=/tmp/termux-jobs-x11/authority; if [ "$JOBS_X11_RENDERER" = turnip ];then . /tmp/termux-jobs-x11/x11-gpu-env.sh; jobs_gpu_environment "$JOBS_X11_TARGET" /tmp/termux-jobs-x11-gpu || exit;elif [ "$JOBS_X11_RENDERER" = bionic-glibc ];then . /tmp/termux-jobs-x11/x11-bionic-glibc-env.sh;jobs_bionic_glibc_environment || exit;elif [ "$JOBS_X11_RENDERER" = virgl ];then . /tmp/termux-jobs-x11/x11-virgl-env.sh;jobs_virgl_environment "$JOBS_X11_TARGET" "/tmp/termux-jobs-x11/$JOBS_X11_VIRGL_NAME/sock" "$JOBS_X11_VIRGL_CLIENT" || exit;else export LIBGL_ALWAYS_SOFTWARE=1;fi; export XDG_RUNTIME_DIR=/tmp/jobs-x11-runtime-$JOBS_X11_DISPLAY; mkdir -p "$XDG_RUNTIME_DIR"; chmod 700 "$XDG_RUNTIME_DIR"; if [ "$JOBS_X11_ALPINE_COMPAT" = 1 ];then test -f /tmp/termux-jobs-x11/x11-alpine-compat.so || { echo ERROR:ALPINE_COMPAT_MISSING;exit 1; }; export LD_PRELOAD="/tmp/termux-jobs-x11/x11-alpine-compat.so${LD_PRELOAD:+:$LD_PRELOAD}";fi; if [ "$JOBS_X11_TARGET" = fedora ] || [ "$JOBS_X11_TARGET" = archlinux ] || [ "$JOBS_X11_TARGET" = kali ];then test -f /tmp/termux-jobs-x11/x11-fedora-glycin.so || { echo ERROR:FEDORA_GLYCIN_MISSING;exit 1; }; export LD_PRELOAD="/tmp/termux-jobs-x11/x11-fedora-glycin.so${LD_PRELOAD:+:$LD_PRELOAD}";fi; jobs_bus_config=$(python3 -B /tmp/termux-jobs-x11/x11-session-bus.py) || exit; exec dbus-run-session --config-file="$jobs_bus_config" -- /bin/sh /tmp/termux-jobs-x11/x11-session.sh';fi

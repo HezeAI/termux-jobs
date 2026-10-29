@@ -1,7 +1,7 @@
 # POSIX shell, shared by the native and selected guest VirGL sessions only.
 # GLX may otherwise try Kopper/Zink before Gallium honors GALLIUM_DRIVER.
 jobs_virgl_environment() {
-    case $1 in termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux) ;; *) return 2;;esac
+    case $1 in termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux|kali|manjaro) ;; *) return 2;;esac
     if [ "$1" = alpine ];then
         case ${3:-} in client-????????????????) ;; *) echo ERROR:VIRGL_CLIENT_ID;return 1;;esac
         case ${3#client-} in *[!a-f0-9]*) echo ERROR:VIRGL_CLIENT_ID;return 1;;esac

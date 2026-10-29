@@ -4,10 +4,12 @@ jobs_gpu_environment() {
       termux) jobs_gpu_component="$2/termux-mesa26.2.5";jobs_gpu_lib="$jobs_gpu_component/data/data/com.termux/files/usr/lib";;
       ubuntu) jobs_gpu_component="$2/ubuntu-26.04-mesa26.2.5";jobs_gpu_lib="$jobs_gpu_component/usr/lib/aarch64-linux-gnu";;
       debian) jobs_gpu_component="$2/debian-13-mesa26.2.5";jobs_gpu_lib="$jobs_gpu_component/usr/lib/aarch64-linux-gnu";;
+      kali) jobs_gpu_component="$2/kali-mesa26.2.5";jobs_gpu_lib="$jobs_gpu_component/usr/lib/aarch64-linux-gnu";;
       alpine) jobs_gpu_component="$2/alpine-3.24-mesa26.2.5";jobs_gpu_lib="$jobs_gpu_component/usr/lib";;
       fedora) jobs_gpu_component="$2/fedora-44-mesa26.2.5";jobs_gpu_lib="$jobs_gpu_component/usr/lib64";;
       opensuse) jobs_gpu_component="$2/opensuse-16-mesa26.2.5";jobs_gpu_lib="$jobs_gpu_component/usr/lib/aarch64-linux-gnu";;
       void) jobs_gpu_component="$2/void-mesa26.2.5";jobs_gpu_lib="$jobs_gpu_component/usr/lib";;
+      manjaro) jobs_gpu_component="$2/manjaro-mesa26.2.5-glibc235";jobs_gpu_lib="$jobs_gpu_component/usr/lib";;
       archlinux) jobs_gpu_component="$2/archlinux-mesa26.2.5";jobs_gpu_lib="$jobs_gpu_component/usr/lib";;
       *) echo ERROR:GPU_TARGET_UNSUPPORTED;return 2;;
     esac

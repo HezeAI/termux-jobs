@@ -3,7 +3,11 @@
 set -eu
 export LC_ALL=C
 op=${1:-};target=${2:-};base=${3:-/tmp/termux-jobs-x11}
-case $target in alpine)
+case $target in ubuntu|debian|kali)
+ pkgs='xfce4 xfdesktop4 xfce4-panel xfce4-session xfce4-settings xfconf thunar xfwm4 xfce4-terminal x11-utils python3 libpulse0 gstreamer1.0-pulseaudio ca-certificates fonts-dejavu-core fonts-liberation adwaita-icon-theme hicolor-icon-theme dbus-x11 xauth fcitx5 fcitx5-frontend-gtk3 fcitx5-frontend-qt5'
+ if [ "$target" = kali ];then pkgs="$pkgs libvulkan1 libegl1 libgl1-mesa-dri libegl-mesa0 libglx-mesa0";fi
+ ;;
+ alpine)
  pkgs='xfce4 xfdesktop xfce4-panel xfce4-session xfce4-settings xfconf thunar xfwm4 xfce4-terminal python3 xauth xprop xwininfo dbus dbus-x11 fcitx5 fcitx5-gtk fcitx5-qt font-dejavu font-liberation adwaita-icon-theme hicolor-icon-theme ca-certificates libpulse gst-plugins-good'
  ;;
  fedora)
@@ -18,6 +22,9 @@ case $target in alpine)
  archlinux)
  pkgs='xfce4-session xfce4-panel xfdesktop xfwm4 xfce4-settings xfconf thunar xfce4-terminal xfce4-appfinder libxfce4ui python xorg-xauth xorg-xprop xorg-xwininfo dbus fcitx5 fcitx5-gtk fcitx5-qt ttf-dejavu ttf-liberation adwaita-icon-theme hicolor-icon-theme ca-certificates ca-certificates-utils libpulse gst-plugins-good mesa libglvnd vulkan-icd-loader llvm22-libs spirv-tools lm_sensors libdisplay-info xcb-util-keysyms'
  ;;
+ manjaro)
+ pkgs='xfce4-session xfce4-panel xfdesktop xfwm4 xfce4-settings xfconf thunar xfce4-terminal xfce4-appfinder libxfce4ui python xorg-xauth xorg-xprop xorg-xwininfo dbus fcitx5 fcitx5-gtk fcitx5-qt ttf-dejavu ttf-liberation adwaita-icon-theme hicolor-icon-theme ca-certificates ca-certificates-utils libpulse gst-plugins-good mesa libglvnd vulkan-icd-loader'
+ ;;
  termux)
  pkgs='xfce4 xfdesktop xfce4-panel xfce4-session xfce4-settings xfconf thunar xfwm4 xfce4-terminal exo gtk3 libx11 libc++ python xorg-xauth xorg-xprop xorg-xwininfo dbus fcitx5 fcitx5-gtk3 fcitx5-qt ttf-dejavu adwaita-icon-theme hicolor-icon-theme ca-certificates pulseaudio gst-plugins-good'
  : "${PREFIX:?}"
@@ -29,7 +36,7 @@ case $target in alpine)
 if [ "$target" = fedora ] && [ "${JOBS_X11_RENDERER:-cpu}" = bionic-glibc ];then
  pkgs="$pkgs libglvnd-glx libstdc++ libgcc libxcb libX11-xcb libXext libXxf86vm libdrm libxshmfence zlib-ng-compat"
 fi
-if [ "$target" = archlinux ] && [ "${JOBS_X11_RENDERER:-cpu}" = bionic-glibc ];then
+if { [ "$target" = archlinux ] || [ "$target" = manjaro ]; } && [ "${JOBS_X11_RENDERER:-cpu}" = bionic-glibc ];then
  pkgs="$pkgs gcc-libs libx11 libxcb libxext libxxf86vm libdrm libxshmfence zlib"
 fi
 if [ "$target" = opensuse ] && [ "${JOBS_X11_RENDERER:-cpu}" = bionic-glibc ];then
@@ -43,7 +50,7 @@ fi
 xbps_command() { ( unset FORCE_IPV6; FORCE_IPV4=1 "$@"; ); }
 check() {
  if [ "$target" = alpine ];then apk info -e $pkgs >/dev/null 2>&1 || return 1
- elif [ "$target" = archlinux ];then pacman -Q -- $pkgs >/dev/null 2>&1 || return 1
+ elif { [ "$target" = archlinux ] || [ "$target" = manjaro ]; };then pacman -Q -- $pkgs >/dev/null 2>&1 || return 1
  elif [ "$target" = void ];then
   for p in $pkgs;do [ "$(xbps_command xbps-query -p state -- "$p" 2>/dev/null)" = installed ] || return 1;done
  elif [ "$target" = fedora ] || [ "$target" = opensuse ];then rpm -q $pkgs >/dev/null 2>&1 || return 1
@@ -65,7 +72,7 @@ case $op in
    echo JOBS_APT_PHASE:install
    apk add --no-progress --progress-fd 3 $pkgs
    update-ca-certificates
-  elif [ "$target" = archlinux ];then
+  elif { [ "$target" = archlinux ] || [ "$target" = manjaro ]; };then
    # A rolling rootfs must not receive a partial upgrade after database refresh.
    echo JOBS_APT_PHASE:install
    pacman -Syu --needed --noconfirm -- $pkgs

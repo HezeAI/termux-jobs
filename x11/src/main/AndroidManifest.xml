@@ -14,5 +14,7 @@
         <service android:name="com.termux.x11.X11Service$OpenSuse" android:exported="false" android:process=":jobs_x11_opensuse" android:stopWithTask="false" />
         <service android:name="com.termux.x11.X11Service$VoidLinux" android:exported="false" android:process=":jobs_x11_void" android:stopWithTask="false" />
         <service android:name="com.termux.x11.X11Service$ArchLinux" android:exported="false" android:process=":jobs_x11_archlinux" android:stopWithTask="false" />
+        <service android:name="com.termux.x11.X11Service$Kali" android:exported="false" android:process=":jobs_x11_kali" android:stopWithTask="false" />
+        <service android:name="com.termux.x11.X11Service$Manjaro" android:exported="false" android:process=":jobs_x11_manjaro" android:stopWithTask="false" />
     </application>
 </manifest>

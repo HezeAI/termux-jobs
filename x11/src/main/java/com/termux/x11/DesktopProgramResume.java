@@ -32,11 +32,11 @@ final class DesktopProgramResume {
             ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] bytes=new byte[1024];int n;
             while((n=in.read(bytes))!=-1){out.write(bytes,0,n);if(out.size()>32768)return new Bundle();}
             JSONObject data=new JSONObject(out.toString("UTF-8"));if(data.length()>128)return result;
-            java.util.Iterator<String> keys=data.keys();while(keys.hasNext()){String key=keys.next();Object value=data.get(key);if(!DesktopPrograms.requestId(key)||key.isEmpty()||!(value instanceof Boolean))return new Bundle();result.putBoolean(key,(Boolean)value);}
+            java.util.Iterator<String> keys=data.keys();while(keys.hasNext()){String key=keys.next();Object value=data.get(key);if(!DesktopPrograms.requestId(key,target)||key.isEmpty()||!(value instanceof Boolean))return new Bundle();result.putBoolean(key,(Boolean)value);}
         }catch(Exception ignored){}return result;
     }
     synchronized void put(String target,String id,Boolean prepared){
-        if(id.isEmpty()||!DesktopPrograms.requestId(id))throw new IllegalArgumentException("Invalid program resume id");
+        if(id.isEmpty()||!DesktopPrograms.requestId(id,target))throw new IllegalArgumentException("Invalid program resume id");
         AtomicFile atomic=null;FileOutputStream stream=null;
         try{
             Bundle pending=read(target);if(prepared==null)pending.remove(id);else pending.putBoolean(id,prepared);

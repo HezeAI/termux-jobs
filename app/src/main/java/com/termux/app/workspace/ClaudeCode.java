@@ -24,7 +24,7 @@ final class ClaudeCode {
         File dir=directory(context.getFilesDir());
         if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create Claude controls");
         protect(dir);
-        for(String asset:new String[]{"claude-bootstrap.sh","claude-control.js","claude-control-v2.js","claude-chat.cjs","claude-native-hook.cjs","agent-receipts.cjs","agent-attachments.cjs"}) {
+        for(String asset:new String[]{"claude-bootstrap.sh","claude-control.js","claude-control-v2.js","claude-chat.cjs","claude-native-hook.cjs","agent-receipts.cjs","agent-action-preview.cjs","agent-attachments.cjs"}) {
             File temporary=File.createTempFile("claude-",".tmp",dir);
             try {
                 try(InputStream in=context.getAssets().open(asset);OutputStream out=new FileOutputStream(temporary)) {

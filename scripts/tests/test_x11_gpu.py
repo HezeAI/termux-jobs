@@ -75,20 +75,20 @@ class GpuTests(unittest.TestCase):
 
  def test_new_targets_pin_distinct_libcs_and_matching_runtime_paths(self):
   script=ROOT/'x11/src/main/assets/x11-gpu-env.sh'
-  for target,libdir in [('debian','usr/lib/aarch64-linux-gnu'),('alpine','usr/lib'),('fedora','usr/lib64'),('opensuse','usr/lib/aarch64-linux-gnu'),('void','usr/lib')]:
+  for target,libdir in [('debian','usr/lib/aarch64-linux-gnu'),('alpine','usr/lib'),('fedora','usr/lib64'),('opensuse','usr/lib/aarch64-linux-gnu'),('void','usr/lib'),('manjaro','usr/lib')]:
    spec=gpu.SPECS[target];component=self.base/spec['directory'];lib=component/libdir;lib.mkdir(parents=True)
    (component/'ready.json').write_text('{}');(lib/'libvulkan_freedreno.so').touch()
    command='source "$1"; jobs_gpu_environment "$2" "$3"; test "$LD_LIBRARY_PATH" = "$4" && test "$LIBGL_DRIVERS_PATH" = "$4/dri" && test "$VK_DRIVER_FILES" = "$5/turnip-icd.json"; result=$?; if [ "$2" = alpine ];then test -z "${__EGL_VENDOR_LIBRARY_FILENAMES:-}" || exit 1;fi; exit "$result"'
    r=subprocess.run(['/bin/bash','-c',command,'fixture',str(script),target,str(self.base),str(lib),str(component)],env=dict(os.environ,LD_LIBRARY_PATH='',__EGL_VENDOR_LIBRARY_FILENAMES=''),capture_output=True,text=True)
    self.assertEqual(0,r.returncode,r.stderr)
-   self.assertIn('musl-alpine3.24' if target=='alpine' else 'glibc-',spec['packages'][0][0]);self.assertEqual(64,len(spec['packages'][0][1]))
+   self.assertIn('musl-alpine3.24' if target=='alpine' else 'glibc235-manjaro' if target=='manjaro' else 'glibc-',spec['packages'][0][0]);self.assertEqual(64,len(spec['packages'][0][1]))
  def test_missing_new_target_components_fail_without_changing_renderer(self):
-  for target in ['debian','alpine','fedora','opensuse','void']:
+  for target in ['debian','alpine','fedora','opensuse','void','manjaro']:
    r=subprocess.run(['/bin/bash','-c','source "$1"; jobs_gpu_environment "$2" "$3"', 'fixture',str(ROOT/'x11/src/main/assets/x11-gpu-env.sh'),target,str(self.base)],capture_output=True,text=True)
    self.assertNotEqual(0,r.returncode);self.assertIn('GPU_COMPONENTS_MISSING',r.stdout)
  def test_guest_requirements_are_scoped_and_reject_missing_libraries(self):
   from unittest.mock import patch,Mock
-  for target in ['debian','alpine','fedora','opensuse','void']:
+  for target in ['debian','alpine','fedora','opensuse','void','manjaro']:
    with patch.object(gpu.platform,'machine',return_value='aarch64'),patch.object(gpu.Path,'read_text',return_value='Adreno830v2'),patch('builtins.open',unittest.mock.mock_open()),patch.object(gpu.subprocess,'run',return_value=Mock(returncode=0)) as run,patch.dict(os.environ,{'PREFIX':'/fixture/usr'}):
     gpu.requirements(target)
     argv=run.call_args.args[0];self.assertEqual(['/fixture/usr/bin/proot-distro',*(['run','--work-dir','/root'] if target=='void' else ['login']),target,'--'],argv[:-3]);self.assertIn('libvulkan.so.1',argv[-1]);self.assertNotIn('apt-get',argv[-1]);self.assertNotIn('apk add',argv[-1])
@@ -122,7 +122,7 @@ class DownloadFailures(unittest.TestCase):
   spec=importlib.util.spec_from_file_location('wrapper_pins',ROOT/'x11/src/main/assets/x11-wrapper.py');wrapper=importlib.util.module_from_spec(spec);spec.loader.exec_module(wrapper)
   for target, spec in gpu.SPECS.items():
    for index, package in enumerate(spec['packages']):
-    tag='graphics-20261025' if target=='termux' or index>0 else 'mesa-26.2.5'
+    tag='graphics-20261025' if target=='termux' or index>0 else 'xfce-base-20261028' if target=='manjaro' else 'mesa-26.2.5'
     self.assertTrue(package[0].startswith('https://github.com/HezeAI/termux-jobs-components/releases/download/'+tag+'/'))
   self.assertEqual(tuple(gpu.SPECS['termux']['packages'][1][:3]),wrapper.LOADER)
 

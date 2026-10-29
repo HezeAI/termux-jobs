@@ -1,3 +1,23 @@
+# Current release preparation — v2.1.0 / code1443
+
+Active source: /root/termux-fork/.verification/rollback-live-actions/source.
+User explicitly authorized GitHub publication of v2.1.0. Preserve com.termux,
+signer, ARM64, schema8 and immutable previous app/component releases.
+Kali/Manjaro, pinned ordinary bases/XFCE, scoped package/official image updates,
+full snapshots/rollback, integrated documentation and live agent action details
+are included. Local AI, VM and Wayland experiments remain cancelled/absent.
+Do not launch them or change installed user environments, sessions, tunnel or bot.
+
+See docs/fork/RELEASE-v2.1.0.md, VALIDATION-v2.1.0.md and
+UPDATE-NOTES-v2.1.0.json for final identity/evidence and compatibility.
+Test11 evidence remains historical; stable repeats JVM/build/artifact/lint checks.
+Online package managers/new official images and fresh-device GUI acceptance have
+explicit remaining limits. No APK installation is authorized by publication.
+
+---
+
+# Historical handoff — previous rollback work
+
 # READY FOR DELIVERY — test1 rollback, Local AI cancelled by the developer
 
 Active checkout: /root/termux-fork/.verification/chat-file-cards/source.

@@ -27,6 +27,8 @@ public class X11Service extends Service {
     public static final class OpenSuse extends X11Service {}
     public static final class VoidLinux extends X11Service {}
     public static final class ArchLinux extends X11Service {}
+    public static final class Kali extends X11Service {}
+    public static final class Manjaro extends X11Service {}
     private X11Environment environment(){return X11Environment.context(this);}
     static final String STOP="com.termux.x11.STOP_PRIVATE_TEST";
     private static final int NOTIFICATION=7981;
@@ -145,10 +147,10 @@ public class X11Service extends Service {
             if((style!=termuxStyle)&&(started||stopping||phase.equals("checking")||phase.equals("installing")||phase.equals("preparing")))throw new IllegalStateException("Stop the desktop before changing style");
             String renderChoice=q.getString("renderer","cpu");
             if(!renderChoice.equals("cpu")&&!renderChoice.equals("turnip")&&!renderChoice.equals("virgl")&&!renderChoice.equals("wrapper")&&!renderChoice.equals("bionic-glibc"))throw new IllegalArgumentException("Invalid renderer");
-            if(renderChoice.equals("bionic-glibc")&&!wanted.equals("ubuntu")&&!wanted.equals("debian")&&!wanted.equals("fedora")&&!wanted.equals("archlinux")&&!wanted.equals("opensuse")&&!wanted.equals("void"))throw new IllegalArgumentException("Bionic for glibc requires a supported glibc desktop");
+            if(renderChoice.equals("bionic-glibc")&&!wanted.equals("manjaro")&&!wanted.equals("ubuntu")&&!wanted.equals("debian")&&!wanted.equals("kali")&&!wanted.equals("fedora")&&!wanted.equals("archlinux")&&!wanted.equals("opensuse")&&!wanted.equals("void"))throw new IllegalArgumentException("Bionic for glibc requires a supported glibc desktop");
             if(renderChoice.equals("wrapper")&&!wanted.equals("termux"))throw new IllegalArgumentException("Wrapper is Termux-only");
             if(renderChoice.equals("virgl")&&!VirglInstaller.supported(wanted))throw new IllegalArgumentException("VirGL target unsupported");
-            if(renderChoice.equals("turnip")&&!wanted.equals("ubuntu")&&!wanted.equals("termux")&&!wanted.equals("debian")&&!wanted.equals("alpine")&&!wanted.equals("fedora")&&!wanted.equals("opensuse")&&!wanted.equals("void")&&!wanted.equals("archlinux"))throw new IllegalArgumentException("GPU target unsupported");
+            if(renderChoice.equals("turnip")&&!wanted.equals("manjaro")&&!wanted.equals("ubuntu")&&!wanted.equals("termux")&&!wanted.equals("debian")&&!wanted.equals("kali")&&!wanted.equals("alpine")&&!wanted.equals("fedora")&&!wanted.equals("opensuse")&&!wanted.equals("void")&&!wanted.equals("archlinux"))throw new IllegalArgumentException("GPU target unsupported");
             if(!renderer.equals(renderChoice)&&(started||stopping||phase.equals("checking")||phase.equals("installing")||phase.equals("preparing")))throw new IllegalStateException("Stop the desktop before changing renderer");
             String choice=q.getString("desktop","xfce");
             DesktopProfiles.validate(wanted,choice,renderChoice,style);

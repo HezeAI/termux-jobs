@@ -2,6 +2,12 @@ package com.termux.x11;
 import org.junit.Test;
 import static org.junit.Assert.*;
 public class X11InstallProgressTest {
+ @Test public void localPackageChecksAndRecoveryClearCompletedDownloadBytes(){
+  X11InstallProgress p=new X11InstallProgress();p.feed("BASE_STAGE:download:kali\nIMAGE_PROGRESS: 100% (100/100 bytes)\n",1000);assertEquals(100,p.totalBytes());
+  p.feed("BASE_STAGE:checking:kali\n",2000);assertEquals("preparing",p.stage());assertEquals(-1,p.totalBytes());assertEquals(-1,p.percent());
+  p.feed("JOBS_APT_PHASE:install\nBASE_STAGE:recovering-apt\n",3000);assertEquals("preparing",p.stage());assertEquals(-1,p.percent());
+  p.feed("JOBS_APT_PHASE:install\npmstatus:p:50:configuring\n",4000);assertEquals("installing",p.stage());assertTrue(p.percent()>=55);
+ }
  @Test public void optionalArchiveReportsRealBytesAndResetsBeforePackageInstallation(){
   X11InstallProgress p=new X11InstallProgress();p.feed("EXTRA_STAGE:kali-style\nEXTRA_PRO",0);p.feed("GRESS:25:100\n",1000);assertEquals(25,p.percent());assertEquals(25,p.downloadedBytes());assertEquals(100,p.totalBytes());assertEquals("Kali theme",p.currentItem());
   p.feed("EXTRA_PROGRESS:75:100\n",4000);assertEquals(75,p.percent());assertTrue(p.etaSeconds(4000)>0);
@@ -69,4 +75,10 @@ public class X11InstallProgressTest {
   X11InstallProgress p=new X11InstallProgress();p.feed("JOBS_APT_PHASE:install\n[ 2/ 10] Installing mousepad\n",1000);assertEquals("installing",p.stage());assertTrue(p.percent()>55);assertEquals(-1,p.totalBytes());
   p.feed("[9/0] Installing invalid\n[11/10] Installing invalid\n",2000);assertTrue(p.percent()<99);
  }
+    @org.junit.Test public void pinnedBaseDownloadUsesMeasuredBytesAndDoesNotAcceptOversizedTotals(){
+        X11InstallProgress p=new X11InstallProgress();p.feed("BASE_STAGE:download:kali\n",0);p.feed("IMAGE_PROGRESS: 25% (50000000/200000000 bytes)\n",1000);assertEquals(50000000L,p.downloadedBytes());assertEquals(200000000L,p.totalBytes());assertEquals("downloading",p.stage());assertEquals(21,p.percent());
+        p.feed("IMAGE_PROGRESS: 90% (5000000000/6000000000 bytes)\n",3000);assertEquals(50000000L,p.downloadedBytes());
+        p.feed("IMAGE_PROGRESS: 75% (150000000/200000000 bytes)\n",4000);assertEquals(43,p.percent());assertTrue(p.etaSeconds(4000)>0);
+        p.feed("JOBS_APT_PHASE:install\npmstatus:p:50:unpacking\n",5000);assertEquals("installing",p.stage());assertTrue(p.percent()>=55);
+    }
 }

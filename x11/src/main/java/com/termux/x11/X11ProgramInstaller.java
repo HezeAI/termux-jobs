@@ -31,7 +31,7 @@ final class X11ProgramInstaller implements AutoCloseable {
     void start(String op,String target,String id){start(op,target,id,false);}
     void start(String op,String target,String id,boolean refresh){
         if(closed||busy())throw new IllegalStateException("Desktop program operation is busy");
-        if(!DesktopProcess.supported(target)||!(op.equals("check")||op.equals("install")||op.equals("catalog")||op.equals("catalog-install")||op.equals("installed")||op.equals("remove")||op.equals("firefox-compat-on")||op.equals("firefox-compat-off")||op.equals("firefox-dns-on")||op.equals("firefox-dns-off"))||(!id.isEmpty()&&!DesktopPrograms.requestId(id))||(op.equals("install")&&id.isEmpty()))throw new IllegalArgumentException("Unsupported desktop program");
+        if(!DesktopProcess.supported(target)||!(op.equals("check")||op.equals("install")||op.equals("catalog")||op.equals("catalog-install")||op.equals("installed")||op.equals("remove")||op.equals("firefox-compat-on")||op.equals("firefox-compat-off")||op.equals("firefox-dns-on")||op.equals("firefox-dns-off"))||(!id.isEmpty()&&!DesktopPrograms.requestId(id,target))||(op.equals("install")&&id.isEmpty()))throw new IllegalArgumentException("Unsupported desktop program");
         if(op.startsWith("firefox-compat-")&&!DesktopPrograms.supportsFirefox(target))throw new IllegalArgumentException("Compatibility requires a supported desktop environment");
         if(op.startsWith("firefox-dns-")&&!DesktopPrograms.supportsFirefox(target))throw new IllegalArgumentException("HTTPS DNS requires a supported Firefox environment");
         Bundle pending=resume.read(target);
@@ -40,13 +40,13 @@ final class X11ProgramInstaller implements AutoCloseable {
         if(!op.equals("remove")&&id.startsWith("pkg:")&&!(op.equals("install")&&pending.containsKey(id))&&(catalog==null||!catalog.allows(id.substring(4))))throw new IllegalArgumentException("Package is not in the current installable catalog");
         if(op.equals("remove")||op.equals("install")||op.equals("catalog-install")){catalogs.remove(target);installedCatalogs.remove(target);catalogRevision++;}
         if(op.equals("install"))resume.put(target,id,pending.getBoolean(id,false));
-        int epoch=++generation;Bundle initial=new Bundle();if(target.equals(target())){Bundle known=state.getBundle("items");if(known!=null){Bundle retained=new Bundle(known);if(op.equals("install")||op.equals("remove")){for(String group:DesktopPrograms.IDS)if(group.equals(id)||(id.startsWith("pkg:")&&DesktopPrograms.mainPackage(group,target).equals(id.substring(4))))retained.remove(group);}initial.putBundle("items",retained);}if(state.getBoolean("firefoxDnsKnown",false)){initial.putBoolean("firefoxDnsKnown",true);initial.putBoolean("firefoxDns",state.getBoolean("firefoxDns",false));}}initial.putInt("job",epoch);initial.putString("target",target);initial.putString("program",id);initial.putString("phase",op.equals("catalog")?"cataloguing":(op.equals("check")||op.equals("installed"))?"checking":op.equals("remove")?"removing":"installing");initial.putString("action",op);initial.putInt("percent",-1);initial.putLong("eta",-1);state=initial;
+        int epoch=++generation;Bundle initial=new Bundle();if(target.equals(target())){Bundle known=state.getBundle("items");if(known!=null){Bundle retained=new Bundle(known);if(op.equals("install")||op.equals("remove")){for(String group:DesktopPrograms.ids(target))if(group.equals(id)||(id.startsWith("pkg:")&&DesktopPrograms.mainPackage(group,target).equals(id.substring(4))))retained.remove(group);}initial.putBundle("items",retained);}if(state.getBoolean("firefoxDnsKnown",false)){initial.putBoolean("firefoxDnsKnown",true);initial.putBoolean("firefoxDns",state.getBoolean("firefoxDns",false));}}initial.putInt("job",epoch);initial.putString("target",target);initial.putString("program",id);initial.putString("phase",op.equals("catalog")?"cataloguing":(op.equals("check")||op.equals("installed"))?"checking":op.equals("remove")?"removing":"installing");initial.putString("action",op);initial.putInt("percent",-1);initial.putLong("eta",-1);state=initial;
         worker.execute(()->run(epoch,op,target,id,initial,refresh));
     }
     private void run(int epoch,String op,String target,String id,Bundle seed,boolean refresh){
         Bundle initial=new Bundle(seed);int compat=FirefoxCompatibilityState.read(target);initial.putBoolean("firefoxCompatKnown",compat>=0);initial.putBoolean("firefoxCompat",compat==1);
         DesktopProcess owned=null;StringBuilder log=new StringBuilder();X11InstallProgress progress=new X11InstallProgress();
-        ProgramOutput output=new ProgramOutput();java.util.concurrent.atomic.AtomicBoolean prepared=new java.util.concurrent.atomic.AtomicBoolean();DesktopCatalog.Parser catalogOutput=new DesktopCatalog.Parser(op.equals("installed"));
+        ProgramOutput output=new ProgramOutput(target);java.util.concurrent.atomic.AtomicBoolean prepared=new java.util.concurrent.atomic.AtomicBoolean();DesktopCatalog.Parser catalogOutput=new DesktopCatalog.Parser(op.equals("installed"));
         try{
             if(closed||epoch!=generation)return;
             if(op.equals("check")&&!refresh){
@@ -105,13 +105,16 @@ final class X11ProgramInstaller implements AutoCloseable {
 
     /** Results are accepted only from a complete successful child, never partial APT output. */
     static final class ProgramOutput {
+        private final java.util.Set<String> expected;
+        ProgramOutput(){this("");}
+        ProgramOutput(String target){expected=new java.util.HashSet<>(java.util.Arrays.asList(DesktopPrograms.ids(target)));}
         private final StringBuilder line=new StringBuilder();private boolean overflow,ready,exited;
         boolean dnsSeen,dnsKnown,dnsEnabled,indexReady;
         private final Bundle items=new Bundle();
         void feed(String chunk){for(int i=0;i<chunk.length();i++){char c=chunk.charAt(i);if(c=='\n'||c=='\r'){if(!overflow)parse(line.toString());line.setLength(0);overflow=false;}else if(!overflow){if(line.length()<512)line.append(c);else{line.setLength(0);overflow=true;}}}}
         private void parse(String value){if(value.equals("JOBS_PROGRAM_INDEX_READY"))indexReady=true;if(value.equals("FIREFOX_DNS:unknown")){dnsSeen=true;dnsKnown=false;}if(value.equals("FIREFOX_DNS:on")||value.equals("FIREFOX_DNS:off")){dnsSeen=true;dnsKnown=true;dnsEnabled=value.endsWith(":on");}if(value.equals("READY:programs"))ready=true;if(value.equals("DESKTOP_CHILD_EXIT=0"))exited=true;
-            String[] p=value.split(":",-1);if(p.length==3&&p[0].equals("PROGRAM")&&DesktopPrograms.valid(p[1])&&(p[2].equals("installed")||p[2].equals("missing")))items.putBoolean(p[1],p[2].equals("installed"));}
-        boolean success(){return ready&&exited&&items.size()==DesktopPrograms.IDS.length;}
+            String[] p=value.split(":",-1);if(p.length==3&&p[0].equals("PROGRAM")&&expected.contains(p[1])&&(p[2].equals("installed")||p[2].equals("missing")))items.putBoolean(p[1],p[2].equals("installed"));}
+        boolean success(){return ready&&exited&&items.size()==expected.size();}
         Bundle items(){return new Bundle(items);}
     }
 }

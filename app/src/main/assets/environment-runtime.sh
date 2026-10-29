@@ -79,52 +79,50 @@ if find_root >/dev/null;then
     fi
     check;exit
 fi
-case $alias in ubuntu-ai|jobs-x11-ubuntu|ubuntu|debian|alpine|archlinux|fedora|opensuse|void) ;;*)printf 'ERROR:UNSUPPORTED_DISTRIBUTION\n';exit 2;;esac
+case $alias in ubuntu-ai|jobs-x11-ubuntu|ubuntu|debian|alpine|archlinux|fedora|opensuse|void|kali|manjaro) ;;*)printf 'ERROR:UNSUPPORTED_DISTRIBUTION\n';exit 2;;esac
 if ! command -v proot-distro >/dev/null;then
     printf 'STAGE:install-proot-distro\n'
     command -v pkg >/dev/null || { printf 'ERROR:PROOT_REQUIRED\n';exit 2; }
     pkg install -y proot-distro
 fi
+printf 'STAGE:check-environment-installer\n'
 help=$(proot-distro install --help 2>&1 || true)
 printf 'STAGE:install-environment\n'
-# Arch Linux itself targets x86-64. On this ARM64 build use the Arch Linux ARM
-# rootfs published by Termux. URL and SHA-256 match the official v4.35.0 plugin
-# and GitHub v4.34.2 release asset digest; never execute a downloaded plugin.
-install_arch_arm() {
-    case $(uname -m) in aarch64|arm64) ;; *)printf 'ERROR:ARCH_ARM64_REQUIRED\n';return 2;;esac
-    command -v curl >/dev/null || { printf 'MISSING:curl\n';return 2; }
-    command -v sha256sum >/dev/null || { printf 'MISSING:sha256sum\n';return 2; }
-    local download_root=${JOBS_ENVIRONMENT_DOWNLOAD_DIR:-${TMPDIR:-$PREFIX/tmp}}
-    mkdir -p -- "$download_root"
-    archive_directory=$(mktemp -d -- "$download_root/jobs-arch.XXXXXXXX")
-    trap 'rm -rf -- "$archive_directory"' EXIT
-    local file="$archive_directory/archlinux-arm64.tar.xz"
-    local sha=dabc2382ddcb725969cf7b9e2f3b102ec862ea6e0294198a30c71e9a4b837f81
-    printf 'STAGE:download-arch-linux-arm\n'
-    curl --fail --location --proto '=https' --proto-redir '=https' --retry 2 --connect-timeout 20 \
-        --output "$file" 'https://github.com/termux/proot-distro/releases/download/v4.34.2/archlinux-aarch64-pd-v4.34.2.tar.xz' || { printf 'ERROR:ROOTFS_DOWNLOAD_FAILED\n';return 1; }
-    printf 'STAGE:verify-rootfs-sha256\n'
-    printf '%s  %s\n' "$sha" "$file" | sha256sum -c - || { printf 'ERROR:ROOTFS_CHECKSUM_MISMATCH\n';return 1; }
-    printf 'STAGE:install-environment\n'
-    proot-distro install "$file" --name "$alias"
-}
-if [[ $help == *--name* ]];then
-    case $alias in
-        ubuntu-ai|jobs-x11-ubuntu) image=ubuntu;;
-        ubuntu|debian|alpine|fedora) image=$alias;;
-        opensuse) image=opensuse/leap;;
-        void) image=ghcr.io/void-linux/void-glibc-full:latest;;
-        archlinux) install_arch_arm;printf 'STAGE:verify\n';check;exit;;
-        *)printf 'ERROR:DISTRIBUTION_UNAVAILABLE\n';exit 2;;
-    esac
-    # Use the public CLI directly. No private Python callbacks or custom OCI prefetch.
-    proot-distro install "$image" --name "$alias"
-else
-    if [[ $alias == jobs-x11-ubuntu || $alias == ubuntu-ai ]];then
-        proot-distro install --override-alias "$alias" ubuntu
-        printf 'STAGE:verify\n';check;exit
-    fi
-    [[ -f $PREFIX/etc/proot-distro/$alias.sh ]] || { printf 'ERROR:DISTRIBUTION_UNAVAILABLE\n';exit 2; }
-    proot-distro install "$alias"
+# Agent Ubuntu intentionally retains its existing upstream installation policy.
+if [[ $alias == ubuntu-ai ]];then
+    if [[ $help == *--name* ]];then proot-distro install ubuntu --name ubuntu-ai
+    else proot-distro install --override-alias ubuntu-ai ubuntu;fi
+    printf 'STAGE:verify\n';check;exit
+fi
+# ARM64 base images are immutable application pins, mirrored in Components.
+# Keep extraction/fixups/locking in the public native CLI; no private OCI APIs.
+case $(uname -m) in aarch64|arm64) ;; *)printf 'ERROR:IMAGE_ARM64_REQUIRED\n';exit 2;;esac
+[[ $help == *--name* ]] || { printf 'ERROR:NATIVE_ARCHIVE_INSTALL_REQUIRED\n';exit 2; }
+command -v python3 >/dev/null || { printf 'ERROR:PYTHON3_REQUIRED\n';exit 2; }
+image=$(python3 -B "${BASH_SOURCE[0]%/*}/environment-image.py" "$alias") || exit
+[[ -f $image && ! -L $image ]] || { printf 'ERROR:ROOTFS_IMAGE_REQUIRED\n';exit 2; }
+printf 'STAGE:install-environment\n'
+proot-distro install "$image" --name "$alias"
+if [[ $alias == archlinux ]];then
+    printf 'STAGE:prepare-archlinux-keyring\n'
+    proot-distro login archlinux -- /bin/sh -s <<'ARCH_SETUP'
+set -eu
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+pacman-key --init
+pacman-key --populate archlinuxarm
+ARCH_SETUP
+fi
+if [[ $alias == manjaro ]];then
+    printf 'STAGE:prepare-manjaro-keyring\n'
+    proot-distro login manjaro -- /bin/sh -s <<'MANJARO_SETUP'
+set -eu
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# The pinned upstream ARM base still lists community, which merged into extra.
+# Only this just-created rootfs is adjusted; existing environments return above.
+awk '/^\[/{skip=($0=="[community]")} !skip{print}' /etc/pacman.conf > /etc/pacman.conf.jobs
+mv /etc/pacman.conf.jobs /etc/pacman.conf
+pacman-key --init
+pacman-key --populate archlinuxarm manjaro-arm manjaro
+MANJARO_SETUP
 fi
 printf 'STAGE:verify\n';check

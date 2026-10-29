@@ -18,7 +18,7 @@ public class WorkspaceAliasImportTest {
     @Test public void exportContainsOnlySelectedAliasesAndRoundTripsEnvironmentCategoryFavorites()throws Exception{
         List<WorkspaceStore.Alias> selected=new ArrayList<>();for(String environment:WorkspaceAliases.ENVIRONMENTS){WorkspaceStore.Alias a=alias(environment,"files","ls -lah");a.category="Files";a.favorite=true;selected.add(a);}
         JSONObject file=WorkspaceAliasImport.export(selected);assertEquals(6,file.length());for(String key:new String[]{"sessions","commands","notes","recentCommands"})assertEquals(0,file.getJSONArray(key).length());
-        List<WorkspaceStore.Alias> imported=WorkspaceAliasImport.read(activity,file);assertEquals(8,imported.size());for(int i=0;i<8;i++){assertEquals(selected.get(i).id,imported.get(i).id);assertEquals(selected.get(i).environment,imported.get(i).environment);assertEquals("Files",imported.get(i).category);assertTrue(imported.get(i).favorite);}
+        List<WorkspaceStore.Alias> imported=WorkspaceAliasImport.read(activity,file);assertEquals(WorkspaceAliases.ENVIRONMENTS.size(),imported.size());for(int i=0;i<WorkspaceAliases.ENVIRONMENTS.size();i++){assertEquals(selected.get(i).id,imported.get(i).id);assertEquals(selected.get(i).environment,imported.get(i).environment);assertEquals("Files",imported.get(i).category);assertTrue(imported.get(i).favorite);}
         assertTrue(store.aliases.isEmpty());
     }
     @Test public void selectionNormalizesEmptyCategoryPreservesBindingAndDoesNotMutateSource()throws Exception{

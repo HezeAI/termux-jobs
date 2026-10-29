@@ -136,7 +136,7 @@ def main():
     if str(prefix) != EXPECTED_PREFIX:
         raise ValueError('EXTRAS_PREFIX')
     control = Path(sys.argv[2])
-    allowed = {'workspace-x11'} | {'workspace-x11-' + t for t in ('ubuntu', 'debian', 'alpine', 'fedora', 'opensuse', 'void', 'archlinux')}
+    allowed = {'workspace-x11'} | {'workspace-x11-' + t for t in ('ubuntu', 'debian', 'alpine', 'fedora', 'opensuse', 'void', 'archlinux','kali','manjaro')}
     # Context.filesDir and PREFIX can expose Android's same private directory
     # through /data/user/0 and /data/data respectively.
     try:

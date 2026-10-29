@@ -125,3 +125,13 @@ present. Cover absent-component paths with isolated tests. Treat successful
 runs on a configured phone as regression evidence only; report fresh-device
 installation and GUI verification separately. Do not clear user data or alter
 installed environments to simulate a clean installation without authorization.
+
+# End-to-end checks for new installation behavior
+
+New environment/component installation paths need successful real package-manager
+transactions in disposable, initially clean project fixtures, not only archive
+validation, dependency simulation, mocks or negative tests. Check empty download
+caches as well as cached installs, mandatory binaries, repeat launch, cancellation
+and resume. Do not use installed phone rootfs or development packages as evidence
+of a clean baseline. Explicitly distinguish fixture/package verification from
+fresh-device GUI verification, and record unavailable checks before delivery.

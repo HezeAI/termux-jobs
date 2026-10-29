@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "release": "rootfs-arm64-20261028",
+  "images": [
+    {
+      "alias": "ubuntu",
+      "filename": "ubuntu-arm64.oci.tar",
+      "sha256": "c08828893609894e5ab6d80f146961961148afde007ce904292418d8fcd011e0",
+      "size": 41144320,
+      "source": "ubuntu@sha256:86eb1bc1059720a19a777ba5a109e9ee3690d5dfe3e319871a6d6beb86fb7f85",
+      "sourceTag": "26.04",
+      "format": "oci",
+      "architecture": "aarch64",
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/rootfs-arm64-20261028/ubuntu-arm64.oci.tar"
+    },
+    {
+      "alias": "debian",
+      "filename": "debian-arm64.oci.tar",
+      "sha256": "cafa585db56828e9dc7c987925483c3cdd1107b9ef32dcd3e7a9cba9436097dd",
+      "size": 49786880,
+      "source": "debian@sha256:39f862f398f8ea1a2ffee9bbe02c649be6779244bd6a834c4f71155172f801f2",
+      "sourceTag": "13",
+      "format": "oci",
+      "architecture": "aarch64",
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/rootfs-arm64-20261028/debian-arm64.oci.tar"
+    },
+    {
+      "alias": "alpine",
+      "filename": "alpine-arm64.oci.tar",
+      "sha256": "db73eab803add4c6e46ef24bb20300c896b7fd9a503cde99cd97cf536552f8eb",
+      "size": 4198400,
+      "source": "alpine@sha256:e311ae748be7f56ae5cba304bc488f0786df68ee507513f654a5cc8597cffb42",
+      "sourceTag": "3.24",
+      "format": "oci",
+      "architecture": "aarch64",
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/rootfs-arm64-20261028/alpine-arm64.oci.tar"
+    },
+    {
+      "alias": "fedora",
+      "filename": "fedora-arm64.oci.tar",
+      "sha256": "1be6ffcfc5c74b322dfb07119c2a6128ca5e0e761e65b494166265df19b55d89",
+      "size": 65832960,
+      "source": "fedora@sha256:e402cca673711fee025f9ce21c6c08b1bd25ee26b3c482119c8675fbaaedbc85",
+      "sourceTag": "44",
+      "format": "oci",
+      "architecture": "aarch64",
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/rootfs-arm64-20261028/fedora-arm64.oci.tar"
+    },
+    {
+      "alias": "opensuse",
+      "filename": "opensuse-arm64.oci.tar",
+      "sha256": "3516dab69a3868fdd1d7a2eee8fee21f2087829f8b2a112d2f8e3b713c78e1b8",
+      "size": 41441280,
+      "source": "opensuse/leap@sha256:0c60c4f9ac36f76dc3961af043cdf2b13ee9b238f3adf9b1b64fec8403dce8a5",
+      "sourceTag": "16.0",
+      "format": "oci",
+      "architecture": "aarch64",
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/rootfs-arm64-20261028/opensuse-arm64.oci.tar"
+    },
+    {
+      "alias": "void",
+      "filename": "void-arm64.oci.tar",
+      "sha256": "d23587a71c3d87f49ac2f5e10a97308a03239e38aaa6bf28fc3229748745f834",
+      "size": 73768960,
+      "source": "ghcr.io/void-linux/void-glibc-full@sha256:7a00d22fad3d24fff1ae2ef331505e963ed3b780c65eb048f7b84bf8dabf37df",
+      "sourceTag": "latest",
+      "format": "oci",
+      "architecture": "aarch64",
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/rootfs-arm64-20261028/void-arm64.oci.tar"
+    },
+    {
+      "alias": "kali",
+      "filename": "kali-arm64.oci.tar",
+      "sha256": "352a53cdc669e814a255f2b8e6b1b0afbd807c7746a3d619d3108254e849609d",
+      "size": 52357120,
+      "source": "kalilinux/kali-rolling@sha256:987cdd03256802a1c9801d0d836cdebafb49bc538d719debf9694bd86f0a45c6",
+      "sourceTag": "latest",
+      "format": "oci",
+      "architecture": "aarch64",
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/rootfs-arm64-20261028/kali-arm64.oci.tar"
+    },
+    {
+      "alias": "archlinux",
+      "filename": "archlinux-arm64.tar.xz",
+      "sha256": "dabc2382ddcb725969cf7b9e2f3b102ec862ea6e0294198a30c71e9a4b837f81",
+      "size": 163892644,
+      "source": "https://github.com/termux/proot-distro/releases/download/v4.34.2/archlinux-aarch64-pd-v4.34.2.tar.xz",
+      "format": "rootfs-tar",
+      "architecture": "aarch64",
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/rootfs-arm64-20261028/archlinux-arm64.tar.xz"
+    },
+    {
+      "alias": "manjaro",
+      "filename": "manjaro-arm64.tar.gz",
+      "sha256": "1ae540a80e21e1ca55e0576df9618fd2865cf4596b8204d20780f225aca5164a",
+      "size": 211549268,
+      "source": "https://github.com/manjaro-arm/rootfs/releases/download/20261012/Manjaro-ARM-aarch64-latest.tar.gz",
+      "format": "rootfs-tar",
+      "architecture": "aarch64",
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/rootfs-arm64-20261028/manjaro-arm64.tar.gz"
+    }
+  ],
+  "scope": "Clean upstream base images only; XFCE/fonts/application packages are not included. Ubuntu AI keeps its upstream installation policy.",
+  "sources": {
+    "ubuntu": "https://hub.docker.com/_/ubuntu",
+    "debian": "https://hub.docker.com/_/debian",
+    "alpine": "https://hub.docker.com/_/alpine",
+    "fedora": "https://hub.docker.com/_/fedora",
+    "opensuse": "https://hub.docker.com/r/opensuse/leap",
+    "void": "https://github.com/void-linux/void-containers",
+    "kali": "https://www.kali.org/docs/containers/official-kalilinux-docker-images/",
+    "archlinux": "https://github.com/termux/proot-distro/releases/tag/v4.34.2",
+    "manjaro": "https://github.com/manjaro-arm/rootfs/releases/tag/20261012"
+  }
+}

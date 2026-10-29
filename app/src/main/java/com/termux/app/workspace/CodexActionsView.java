@@ -22,7 +22,7 @@ final class CodexActionsView extends LinearLayout {
     private final Consumer<JSONObject> open;
     private final Map<String,TextView> entries=new HashMap<>();
     private final Map<String,JSONObject> data=new HashMap<>();
-    private boolean expanded;
+    private boolean expanded,userToggled,sawRunning;
     private String skillName="";
     private int count,active,errors,failures,declined,interrupted;
     private boolean onlyShell;
@@ -33,7 +33,7 @@ final class CodexActionsView extends LinearLayout {
         GradientDrawable background=new GradientDrawable();background.setColor(0xff0b1319);
         background.setCornerRadius(owner.dp(12));background.setStroke(owner.dp(1),0xff28433d);setBackground(background);
         heading=owner.label("",13);heading.setMinHeight(owner.dp(36));heading.setPadding(owner.dp(10),owner.dp(5),owner.dp(10),owner.dp(5));heading.setGravity(Gravity.CENTER_VERTICAL);
-        heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);heading.setOnClickListener(v->{expanded=!expanded;refreshHeading();});addView(heading,new LayoutParams(-1,-2));
+        heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);heading.setOnClickListener(v->{userToggled=true;expanded=!expanded;refreshHeading();});addView(heading,new LayoutParams(-1,-2));
         summary=owner.label("",12);summary.setTextColor(0xff91a6af);summary.setMaxLines(2);summary.setPadding(owner.dp(10),0,owner.dp(10),owner.dp(4));summary.setOnClickListener(v->heading.performClick());addView(summary,new LayoutParams(-1,-2));
         steps=new LinearLayout(getContext());steps.setOrientation(VERTICAL);steps.setVisibility(GONE);addView(steps,new LayoutParams(-1,-2));
         LinearLayout.LayoutParams layout=new LinearLayout.LayoutParams(-1,-2);layout.setMargins(0,owner.dp(4),0,owner.dp(6));setLayoutParams(layout);
@@ -49,15 +49,20 @@ final class CodexActionsView extends LinearLayout {
             String key=row.optString("key");present.add(key);data.put(key,row);
             TextView item=entries.get(key);
             if(item==null){item=owner.label("",12);item.setMinHeight(owner.dp(48));item.setMaxLines(4);entries.put(key,item);
+                android.graphics.drawable.StateListDrawable outline=new android.graphics.drawable.StateListDrawable();
+                for(boolean pressed:new boolean[]{true,false}){GradientDrawable bg=new GradientDrawable();bg.setColor(pressed?0xff17312c:0xff0d171b);bg.setCornerRadius(owner.dp(8));bg.setStroke(owner.dp(1),0xff28433d);outline.addState(pressed?new int[]{android.R.attr.state_pressed}:new int[]{},bg);}item.setBackground(outline);
+                LinearLayout.LayoutParams itemLayout=new LinearLayout.LayoutParams(-1,-2);itemLayout.setMargins(owner.dp(6),owner.dp(3),owner.dp(6),owner.dp(3));item.setLayoutParams(itemLayout);
                 final String id=key;item.setOnClickListener(v->{JSONObject original=data.get(id);if(original!=null)open.accept(original);});}
-            String state=state(row),command=caption(row);
-            String caption=(CodexActionTimeline.failed(row)?"! ":CodexActionTimeline.running(row)?"● ":CodexActionTimeline.status(row).equals("completed")?"✓ ":"○ ")+command+"\n    "+state;
+            String state=state(row),command=caption(row);boolean liveOutput=CodexActionTimeline.running(row)&&!row.optString("outputTail").isEmpty();String shownCommand=liveOutput?compactLine(item,command):command;
+            String caption=(CodexActionTimeline.failed(row)?"! ":CodexActionTimeline.running(row)?"● ":CodexActionTimeline.status(row).equals("completed")?"✓ ":"○ ")+shownCommand+"\n    "+state;
+            if(liveOutput)caption+="\n    ↳ "+compactLine(item,row.optString("outputTail"));
             if(!item.getText().toString().equals(caption))item.setText(caption);
             item.setTextColor(CodexActionTimeline.failed(row)?0xffffb08f:0xffd5e4e0);
             item.setContentDescription(command+". "+state+". "+owner.tr("Открыть действие и подробности","Open action and details"));
             if(item.getParent()==null)steps.addView(item,i);else if(steps.indexOfChild(item)!=i){steps.removeView(item);steps.addView(item,i);}
         }
         for(String key:new HashSet<>(entries.keySet()))if(!present.contains(key)){steps.removeView(entries.remove(key));data.remove(key);}
+        if(active>0&&!sawRunning){sawRunning=true;if(!userToggled)expanded=true;}
         String errorText=failures==1?owner.tr(onlyShell?"Одна команда завершилась с ошибкой":"Одно действие завершилось с ошибкой",onlyShell?"One command failed":"One action failed"):failures>1?owner.tr(onlyShell?"Команд с ошибкой: ":"Действий с ошибкой: ",onlyShell?"Failed commands: ":"Failed actions: ")+failures:"";
         if(declined>0)errorText+=(errorText.isEmpty()?"":" · ")+owner.tr("Отклонено: ","Declined: ")+declined;
         if(interrupted>0)errorText+=(errorText.isEmpty()?"":" · ")+owner.tr("Прервано: ","Interrupted: ")+interrupted;
@@ -72,21 +77,13 @@ final class CodexActionsView extends LinearLayout {
         return CodexActionLabels.title(row,WorkspaceLanguage.code(getContext()).equals("ru"));
     }
 
-    private String state(JSONObject row) {
-        String status=CodexActionTimeline.status(row);
-        String value=status.equals("attached")?owner.tr("Инструкции переданы агенту","Instructions supplied to the agent")
-            :status.equals("declined")?owner.tr("Отклонено","Declined")
-            :status.equals("aborted")||status.equals("cancelled")||status.equals("canceled")?owner.tr("Прервано","Interrupted")
-            :CodexActionTimeline.failed(row)?owner.tr("Ошибка","Failed")
-            :CodexActionTimeline.running(row)?owner.tr("В работе","Running")
-            :status.equals("awaiting_approval")?owner.tr("Ожидает разрешения","Awaiting approval")
-            :status.equals("pending")||status.equals("scheduled")?owner.tr("В очереди","Queued")
-            :status.equals("completed")?owner.tr("Завершено","Completed"):owner.tr("Статус неизвестен","Status unknown");
-        if(row.has("exitCode")&&!row.isNull("exitCode"))value+=owner.tr(" · код "," · exit ")+row.optInt("exitCode");
-        if(row.has("durationMs")&&!row.isNull("durationMs")&&row.optLong("durationMs",-1)>=0){long ms=row.optLong("durationMs");
-            value+=" · "+(ms<1000?ms+owner.tr(" мс"," ms"):String.format(Locale.ROOT,"%.1f",ms/1000d).replace(".",owner.tr(",","."))+owner.tr(" с"," s"));}
-        return value;
+    private String compactLine(TextView item,String value){
+        int width=owner.getWidth()>0?owner.getWidth():getResources().getDisplayMetrics().widthPixels;
+        float available=Math.max(owner.dp(80),width-owner.dp(96))*100f/owner.scalePercent();
+        return android.text.TextUtils.ellipsize(value.replace('\n',' ').replace('\r',' '),item.getPaint(),available,android.text.TextUtils.TruncateAt.MIDDLE).toString();
     }
+
+    private String state(JSONObject row) {return AgentActionPresentation.state(row,WorkspaceLanguage.code(getContext()).equals("ru"));}
 
     private String actionWord(){
         String ru=count%100>=11&&count%100<=14?" действий":count%10==1?" действие":count%10>=2&&count%10<=4?" действия":" действий";

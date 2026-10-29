@@ -2,19 +2,19 @@
 # separate short socket per desktop; never attach to an existing global server.
 jobs_virgl_start() {
     [[ ${JOBS_X11_RENDERER:-cpu} == virgl ]] || return 2
-    case $target in termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux) ;; *) return 2;;esac
+    case $target in termux|ubuntu|debian|alpine|fedora|opensuse|void|archlinux|kali|manjaro) ;; *) return 2;;esac
     [[ -x $PREFIX/bin/virgl_test_server_android ]] || { echo ERROR:VIRGL_COMPONENTS_REQUIRED;return 1; }
     jobs_virgl_dir=$(mktemp -d "$control/v.XXXXXX") || return 1
     chmod 700 "$jobs_virgl_dir" || return 1
     jobs_virgl_socket="$jobs_virgl_dir/sock"
     [[ ${#jobs_virgl_socket} -lt 108 ]] || { echo ERROR:VIRGL_SOCKET_PATH;return 1; }
     local jobs_backend=gl
-    case $target in void|fedora|debian|archlinux|termux) jobs_backend=vulkan;;esac
+    case $target in void|fedora|debian|archlinux|kali|manjaro|termux) jobs_backend=vulkan;;esac
     local jobs_server_flags=(--no-fork --multi-clients)
     # These guests use upstream per-connection fork mode. It supports older
     # vtest protocols and avoids sharing ANGLE contexts between applications.
     # Children retain this guardian's group: no daemon, setsid or PID adoption.
-    case $target in debian|alpine|fedora|opensuse|void|archlinux|termux) jobs_server_flags=();;esac
+    case $target in debian|alpine|fedora|opensuse|void|archlinux|kali|manjaro|termux) jobs_server_flags=();;esac
     # A subshell drops guest driver overrides before loading native Android EGL.
     (
         unset LIBGL_ALWAYS_SOFTWARE LIBGL_KOPPER_DISABLE GALLIUM_DRIVER MESA_LOADER_DRIVER_OVERRIDE LIBGL_DRIVERS_PATH

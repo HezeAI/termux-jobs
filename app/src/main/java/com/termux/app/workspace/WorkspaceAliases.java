@@ -7,7 +7,7 @@ import java.util.*;
 /** Alias definitions are written as data to one explicit installed environment. */
 final class WorkspaceAliases {
     static final java.util.concurrent.atomic.AtomicBoolean BUSY=new java.util.concurrent.atomic.AtomicBoolean();
-    static final List<String> ENVIRONMENTS=Collections.unmodifiableList(Arrays.asList("termux","ubuntu","debian","alpine","archlinux","fedora","opensuse","void"));
+    static final List<String> ENVIRONMENTS=Collections.unmodifiableList(Arrays.asList("termux","ubuntu","debian","alpine","archlinux","kali","manjaro","fedora","opensuse","void"));
     static boolean validName(String name){return name!=null&&name.matches("[A-Za-z_][A-Za-z0-9_-]{0,63}")&&!Arrays.asList("if","then","else","elif","fi","do","done","for","while","until","case","esac","in","function","select","time","coproc").contains(name);}
     static boolean valid(WorkspaceStore.Alias a){
         if(a==null||!validName(a.name)||!ENVIRONMENTS.contains(a.environment)||a.command==null||a.command.trim().isEmpty()||a.command.length()>16384||a.command.indexOf('\0')>=0||a.command.indexOf('\r')>=0)return false;

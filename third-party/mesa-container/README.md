@@ -19,3 +19,21 @@ The three `build-*.sh` scripts record the exact configuration used for these com
 These source/build records do not establish universal GPU/device compatibility or a performance improvement. Native rendering checks and developer-reported GUI acceptance have separate scopes; see the application release validation.
 
 Upstream authors retain their copyrights and per-file licenses. Mesa is predominantly MIT with exceptions in its source/license collection. Include original source, the exact adaptation patch and component-specific notices with any distributed binary set. HezeAI maintains the fork with development assistance from OpenAI Codex.
+
+## Separate Manjaro glibc2.35 Turnip build
+
+`build-manjaro-turnip.sh` uses the reviewed private GCC12.1/binutils2.38 sysroot
+prepared by `scripts/prepare-manjaro-bridge-sysroot.py` (exact packages in
+`third-party/bionic-glibc/manjaro-build-packages.json`). Set
+`JOBS_BRIDGE_INPUT_ROOT` to the repository holding the verified Mesa archive and
+local Meson/Ninja/flex inputs, if different. The same official Mesa26.2.5 and
+lfdevs patch/configuration are used; old-GCC nullability annotation defines are
+build compatibility only. The compiler receives an explicit sysroot, while host
+binutils helper libraries stay separate from target libc.
+
+The build stages only; `scripts/package-manjaro-turnip.py` packages runtime
+shared libraries and the EGL vendor JSON at `usr/lib`. It strips and checks ARM64
+ELFs against glibc<=2.35, GLIBCXX<=3.4.30 and CXXABI<=1.3.13, rejects external
+RPATHs and escaping symlinks, and never packages development headers, compiler
+or system libc. This is a separate asset/cache for Manjaro, with no change to
+existing component URLs/pins. Phone GPU acceptance remains a separate check.

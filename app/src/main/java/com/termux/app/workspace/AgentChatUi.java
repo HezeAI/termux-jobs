@@ -36,6 +36,9 @@ final class AgentChatUi {
     private AlertDialog terminal,details,formDialog,vertexDialog;
     private String vertexPrompted="";
     private TextView thinkingBody;private ScrollView thinkingScroll;private String thinkingKey="";
+    private AgentActionDetailsView actionDetails;
+    private boolean actionLiveLoading,actionManual;
+    private String actionLiveStamp="";
     private ViewGroup terminalParent;
     private ViewGroup.LayoutParams terminalParams;
     private Runnable visibilityChanged=()->{};
@@ -167,6 +170,7 @@ final class AgentChatUi {
                 JSONArray list=r.optJSONArray("rows");LinkedHashMap<String,JSONObject> updated=new LinkedHashMap<>();if(previous&&list!=null)for(int i=0;i<list.length();i++){JSONObject row=list.optJSONObject(i);if(row!=null&&!rows.containsKey(row.optString("key")))updated.put(row.optString("key"),row);}if(previous)updated.putAll(rows);else{Set<String> refreshed=new HashSet<>();if(list!=null)for(int i=0;i<list.length();i++)refreshed.add(list.optJSONObject(i).optString("message"));for(Map.Entry<String,JSONObject> e:rows.entrySet())if((known==null||known.contains(e.getValue().optString("message")))&&!refreshed.contains(e.getValue().optString("message"))&&!e.getValue().optBoolean("queued"))updated.put(e.getKey(),e.getValue());}
                 if(!previous&&list!=null)for(int i=0;i<list.length();i++){JSONObject row=list.optJSONObject(i);if(row!=null)updated.put(row.optString("key"),row);}
                 rows.clear();rows.putAll(updated);if(previous||older.isEmpty()&&!historyExhausted){Object cursor=r.opt("older");older=cursor instanceof String?(String)cursor:"";if(previous)historyExhausted=older.isEmpty();}connectionState(r);if(previous){view.olderRows(new ArrayList<>(rows.values()),!older.isEmpty());view.olderState(false,null);}else view.rows(new ArrayList<>(rows.values()),!older.isEmpty());requests(r.optJSONObject("permission"),r.optJSONArray("forms"),r.optBoolean("needsTerminal"));if(p.environment.equals("codex")&&codexLoginTerminal&&!codexAuthRequired&&connected&&terminal!=null)terminal.dismiss();
+                refreshActionDetails();
                 JSONObject thought=rows.get(thinkingKey);if(details!=null&&details.isShowing()&&thinkingBody!=null&&thought!=null&&!thought.optBoolean("more")&&thinkingBody.getSelectionStart()==thinkingBody.getSelectionEnd()&&!thinkingBody.getText().toString().equals(thought.optString("body"))){boolean bottom=thinkingBody.getHeight()-thinkingScroll.getHeight()-thinkingScroll.getScrollY()<view.dp(48);thinkingBody.setText(thought.optString("body"));if(bottom){ScrollView held=thinkingScroll;held.post(()->held.fullScroll(View.FOCUS_DOWN));}}
                 }finally{if(!closed&&g==generation&&olderQueued){olderQueued=false;if(selected()&&!older.isEmpty())load(true);else view.olderState(false,null);}}
             });});
@@ -200,7 +204,9 @@ final class AgentChatUi {
             handler.post(()->{if(closed||g!=generation)return;if(done){actionNotice="";if(success!=null)success.run();requestStamp="";if(!loading)load(false);}else {actionNotice=tr("Агент не подтвердил действие: он может запускаться, ожидать выбора в терминале или быть недоступен. Текст остался в поле ввода.\nПроверьте терминал кнопкой робота. Перед повтором убедитесь, что действие не выполнено; сообщение можно отправить ещё раз.","The agent did not confirm the action: it may be starting, waiting for a terminal choice or unavailable. Your text remains in the input field.\nCheck the robot terminal. Before retrying, check that the action did not run; you can send the message again.");view.connection(actionNotice);if(failure!=null)failure.run();}});});
     }
     private void details(JSONObject row){
-        if(!selected())return;if(row.optString("kind").equals("attachment")&&row.optJSONObject("attachment")!=null){attachments.open(row.optJSONObject("attachment"));return;}if(details!=null)details.dismiss();thinkingBody=null;thinkingScroll=null;thinkingKey="";LinearLayout box=new LinearLayout(activity);box.setOrientation(LinearLayout.VERTICAL);TextView body=view.label(row.optString("body"),14);body.setTextIsSelectable(true);if((row.optString("toolType").equals("contextCompaction")||row.optString("part").equals("context"))&&!row.optBoolean("more")){
+        boolean compactContext=(row.optString("toolType").equals("contextCompaction")||row.optString("part").equals("context"))&&!row.optBoolean("more");
+        if(row.optString("kind").equals("tool")&&!compactContext){actionDetails(row);return;}
+        if(!selected())return;if(row.optString("kind").equals("attachment")&&row.optJSONObject("attachment")!=null){attachments.open(row.optJSONObject("attachment"));return;}if(details!=null)details.dismiss();thinkingBody=null;thinkingScroll=null;thinkingKey="";LinearLayout box=new LinearLayout(activity);box.setOrientation(LinearLayout.VERTICAL);TextView body=view.label(row.optString("body"),14);body.setTextIsSelectable(true);if(compactContext){
             body.setPadding(view.dp(20),view.dp(14),view.dp(20),view.dp(18));
             details=WorkspaceDialogs.builder(activity).setTitle(CodexActionLabels.title(row,WorkspaceLanguage.code(activity).equals("ru"))).setView(body).create();details.setCanceledOnTouchOutside(true);details.show();
             int width=Math.min(Math.round(activity.getResources().getDisplayMetrics().widthPixels*.94f),Math.max(view.dp(240),Math.round(body.getPaint().measureText(row.optString("body")))+view.dp(64)));
@@ -214,6 +220,37 @@ final class AgentChatUi {
         final AlertDialog dialog=details;final int[] offset={0};final int g=generation;final WorkspaceStore.Session p=snapshot();
         Runnable[] page=new Runnable[1];page[0]=()->{next.setEnabled(false);JSONObject q=op("chat-detail");try{if(p.geminiAgent||p.claudeAgent||p.environment.equals("codex")||p.aiAgent.equals("opencode"))q.put("session",nativeSession);q.put("message",row.optString("message")).put("part",row.optString("part")).put("offset",offset[0]);}catch(JSONException ignored){}
             reads.execute(()->{JSONObject r=null;try{r=transport.request(p,q);}catch(Exception ignored){}final JSONObject result=r;handler.post(()->{if(closed||g!=generation||!dialog.isShowing())return;next.setEnabled(true);if(result==null){next.setVisibility(View.VISIBLE);next.setText(tr("Повторить загрузку","Retry loading"));return;}if(offset[0]==0)body.setText((row.optString("kind").equals("receipt")?tr("Разрешение не означает успешного выполнения.\n\n","Permission does not mean successful execution.\n\n"):"")+result.optString("body"));else body.append(result.optString("body"));if(markdownBody!=null)markdownBody.update(name(),body.getText().toString(),null);offset[0]=result.isNull("next")?-1:result.optInt("next",-1);next.setVisibility(offset[0]<0?View.GONE:View.VISIBLE);next.setText(tr("Далее","More"));});});};next.setOnClickListener(v->page[0].run());page[0].run();
+    }
+    private JSONObject detailRequest(WorkspaceStore.Session p,JSONObject row,int offset,String session){
+        JSONObject q=op("chat-detail");try{if(p.geminiAgent||p.claudeAgent||p.environment.equals("codex")||p.aiAgent.equals("opencode"))q.put("session",session);q.put("message",row.optString("message")).put("part",row.optString("part")).put("offset",offset);}catch(JSONException impossible){throw new IllegalStateException(impossible);}return q;
+    }
+    private void actionDetails(JSONObject row){
+        if(!selected())return;if(details!=null)details.dismiss();thinkingBody=null;thinkingScroll=null;thinkingKey="";
+        AgentActionDetailsView panel=new AgentActionDetailsView(view,row,attachments::thumbnail,attachments::open);actionDetails=panel;actionManual=false;actionLiveLoading=false;actionLiveStamp="";
+        AlertDialog.Builder builder=WorkspaceDialogs.builder(activity).setTitle(CodexActionLabels.title(row,WorkspaceLanguage.code(activity).equals("ru"))).setView(panel);
+        if(!panel.compactPreview())builder.setPositiveButton(tr("Назад","Back"),null);
+        AlertDialog dialog=builder.create();details=dialog;
+        dialog.setOnDismissListener(d->{if(actionDetails==panel){actionDetails=null;actionLiveLoading=false;actionLiveStamp="";}});dialog.setCanceledOnTouchOutside(true);dialog.show();dialog.getWindow().setLayout(Math.round(activity.getResources().getDisplayMetrics().widthPixels*.94f),panel.compactPreview()?android.view.ViewGroup.LayoutParams.WRAP_CONTENT:Math.round(activity.getResources().getDisplayMetrics().heightPixels*.72f));
+        final WorkspaceStore.Session p=snapshot();final String session=nativeSession;final int g=generation;final int[] offset={0};final StringBuilder buffer=new StringBuilder();
+        Runnable[] page=new Runnable[1];page[0]=()->{actionManual=true;panel.more.setEnabled(false);JSONObject request=detailRequest(p,row,offset[0],session);
+            reads.execute(()->{JSONObject r=null;try{r=transport.request(p,request);}catch(Exception ignored){}JSONObject result=r;handler.post(()->{
+                if(closed||g!=generation||actionDetails!=panel||!dialog.isShowing())return;panel.more.setEnabled(true);
+                if(result==null||!result.optBoolean("ok",true)||!(result.opt("body") instanceof String)){panel.more.setVisibility(View.VISIBLE);panel.more.setText(tr("Повторить загрузку","Retry loading"));return;}
+                String chunk=result.optString("body");int next=result.isNull("next")?-1:result.optInt("next",-1);if(chunk.length()>30000||buffer.length()+chunk.length()>2000000||next>=0&&(next<=offset[0]||next>2000000)){panel.more.setText(tr("Достигнут лимит просмотра","Preview limit reached"));panel.more.setEnabled(false);return;}
+                if(offset[0]==0)buffer.setLength(0);buffer.append(chunk);panel.nativeText(buffer.toString(),next<0);JSONObject latest=rows.get(panel.key());if(next<0&&latest!=null&&CodexActionTimeline.running(latest))actionManual=false;offset[0]=Math.max(0,next);panel.more.setVisibility(next<0?View.GONE:View.VISIBLE);panel.more.setText(tr("Далее","More"));
+            });});};panel.more.setOnClickListener(v->page[0].run());refreshActionDetails();
+    }
+    private void refreshActionDetails(){
+        AgentActionDetailsView panel=actionDetails;AlertDialog dialog=details;if(panel==null||dialog==null||!dialog.isShowing())return;JSONObject row=rows.get(panel.key());if(row==null)return;
+        panel.update(row);dialog.setTitle(CodexActionLabels.title(row,WorkspaceLanguage.code(activity).equals("ru")));
+        JSONObject preview=AgentActionPresentation.preview(row);if(actionManual||actionLiveLoading||!row.optBoolean("more")||preview!=null||!panel.followsOutput())return;
+        long length=row.optLong("bodyLength",row.optString("body").length());if(length<0||length>2000000)return;String stamp=row.optString("body")+":"+length+":"+row.optString("status");if(stamp.equals(actionLiveStamp))return;
+        actionLiveLoading=true;int offset=(int)Math.max(0,length-24000);final int g=generation;final WorkspaceStore.Session p=snapshot();final String session=nativeSession;JSONObject request=detailRequest(p,row,offset,session);
+        reads.execute(()->{JSONObject r=null;try{r=transport.request(p,request);}catch(Exception ignored){}JSONObject result=r;handler.post(()->{
+            if(closed||g!=generation||actionDetails!=panel||!dialog.isShowing())return;actionLiveLoading=false;
+            if(actionManual||!panel.followsOutput()||result==null||!result.optBoolean("ok",true)||!(result.opt("body") instanceof String))return;
+            actionLiveStamp=stamp;panel.nativeText((offset>0?tr("… последние строки вывода …\n","… latest output …\n"):"")+result.optString("body"),false);
+        });});
     }
     private void requests(JSONObject permission,JSONArray forms,boolean needsTerminal){
         String stamp=String.valueOf(permission)+String.valueOf(forms)+needsTerminal;if(stamp.equals(requestStamp))return;requestStamp=stamp;

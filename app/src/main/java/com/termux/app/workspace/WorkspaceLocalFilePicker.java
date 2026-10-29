@@ -16,7 +16,7 @@ final class WorkspaceLocalFilePicker implements AutoCloseable {
     static List<Location> locations(File home,File proot,String storageLabel){
         List<Location> result=new ArrayList<>();result.add(new Location("Termux","termux",home.getPath(),false));
         Set<String> aliases=new TreeSet<>();
-        for(String name:new String[]{"installed-rootfs","containers"}){File[] roots=new File(proot,name).listFiles();if(roots==null)continue;for(File root:roots){File fs=name.equals("containers")?new File(root,"rootfs"):root;try{if(validAlias(root.getName())&&fs.isDirectory()&&root.getCanonicalFile().equals(new File(root.getParentFile().getCanonicalFile(),root.getName()))&&fs.getCanonicalFile().equals(new File(fs.getParentFile().getCanonicalFile(),fs.getName())))aliases.add(root.getName());}catch(IOException ignored){}}}
+        for(String name:new String[]{"installed-rootfs","containers"}){File[] roots=new File(proot,name).listFiles();if(roots==null)continue;for(File root:roots){File fs=name.equals("containers")?new File(root,"rootfs"):root;try{if(validAlias(root.getName())&&!WorkspaceEnvironments.internalAlias(proot,root.getName())&&fs.isDirectory()&&root.getCanonicalFile().equals(new File(root.getParentFile().getCanonicalFile(),root.getName()))&&fs.getCanonicalFile().equals(new File(fs.getParentFile().getCanonicalFile(),fs.getName())))aliases.add(root.getName());}catch(IOException ignored){}}}
         for(String alias:aliases)result.add(new Location(alias.equals("ubuntu")?"Ubuntu":alias,"proot:"+alias,"/",false));
         result.add(new Location(storageLabel,"termux","/sdcard",true));return result;
     }

@@ -99,7 +99,7 @@ final class ChatAttachmentUi implements AutoCloseable {
         final boolean apk=a.optString("type").equals("apk"),binary=a.optString("type").equals("binary");
         AlertDialog.Builder builder=WorkspaceDialogs.builder(activity).setTitle(a.optString("name",t("Вложение","Attachment"))).setView(box);
         if(apk)builder.setNeutralButton(t("В Download","To Download"),null).setPositiveButton(t("Установить","Install"),null);
-        else {builder.setPositiveButton(t("Сохранить в Download","Save to Download"),null);if(!binary)builder.setNegativeButton(t("Закрыть","Close"),null);}
+        else {builder.setPositiveButton(t("Сохранить в Download","Save to Download"),null);if(!binary&&!a.optString("type").equals("image"))builder.setNegativeButton(t("Закрыть","Close"),null);}
         AlertDialog dialog=builder.create();viewer=dialog;dialog.setCanceledOnTouchOutside(true);dialog.show();dialog.getWindow().setLayout(Math.round(activity.getResources().getDisplayMetrics().widthPixels*.94f),android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
         final int saveButton=apk?AlertDialog.BUTTON_NEUTRAL:AlertDialog.BUTTON_POSITIVE;
         dialog.getButton(saveButton).setEnabled(false);if(apk)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);

@@ -1,0 +1,126 @@
+{
+  "version": "xfce-base-20261028",
+  "targets": {
+    "termux": {
+      "filename": "xfce-termux-arm64.tar",
+      "size": 156876800,
+      "sha256": "4a5cae39faba449aae3049a590f34d4629d462d71329d1a1e9c67255a383bef5",
+      "manifestSha256": "5622d6291b88e23d45d302412c0fa8e1128a2695e4f5efc84e3e8815fc650bd2",
+      "packages": 191,
+      "manager": "apt",
+      "files": 191,
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/xfce-base-20261028/xfce-termux-arm64.tar"
+    },
+    "kali": {
+      "filename": "xfce-kali-arm64.tar",
+      "size": 171540480,
+      "sha256": "6b153cc185e5c92c618ce7224044184276739e576eb678fad9031cbfef6406fe",
+      "manifestSha256": "30c61c1b7ece6b96a3a577a84c611a91cd1ef8702c1707bf2b8a5a1b73b6a5db",
+      "packages": 336,
+      "manager": "apt",
+      "files": 336,
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/xfce-base-20261028/xfce-kali-arm64.tar"
+    },
+    "ubuntu": {
+      "filename": "xfce-ubuntu-arm64.tar",
+      "size": 165703680,
+      "sha256": "3adf653d523e57e39b60c4b9ae9fbe0b94290321fb730770248ec356ac5ed12b",
+      "manifestSha256": "b27f353a3484062585966ceed6442e4554f988e503f49f09ebff308708c94634",
+      "packages": 332,
+      "manager": "apt",
+      "files": 332,
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/xfce-base-20261028/xfce-ubuntu-arm64.tar"
+    },
+    "debian": {
+      "filename": "xfce-debian-arm64.tar",
+      "size": 153579520,
+      "sha256": "a5872a8df747b73e18efa8e270925a3a9d1ad605af42007d3ed221974a8cdb53",
+      "manifestSha256": "f59c6445946f8fc86506955c2491c479925701d420e1c02c4cf8439052e7d61d",
+      "packages": 329,
+      "manager": "apt",
+      "files": 329,
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/xfce-base-20261028/xfce-debian-arm64.tar"
+    },
+    "alpine": {
+      "filename": "xfce-alpine-arm64.tar",
+      "size": 315504640,
+      "sha256": "4478b788018fced9dca8799bdb6f59d340d8982d55b71ffe2a528adcf240e370",
+      "manifestSha256": "6c5922e91efebcd4f912f99f9547396831807f4f76c3e1a75df770878a5a7dca",
+      "packages": 378,
+      "files": 378,
+      "manager": "apk",
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/xfce-base-20261028/xfce-alpine-arm64.tar"
+    },
+    "host-audio": {
+      "filename": "xfce-host-audio-arm64.tar",
+      "size": 7802880,
+      "sha256": "9419bf21363187c6e0ba21008c6cb142d66ff36e67022bdf5e00a6e8c7134821",
+      "manifestSha256": "cf6c4c463e3eabe412e423d0459d70032240017918c593b7413f3e5a286f5de6",
+      "packages": 23,
+      "manager": "apt",
+      "files": 23,
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/xfce-base-20261028/xfce-host-audio-arm64.tar"
+    },
+    "host-virgl": {
+      "filename": "xfce-host-virgl-arm64.tar",
+      "size": 42926080,
+      "sha256": "001bdd6537b285232319bbee4cc0da75755ccc50be3b01f7de99fe87ba73244e",
+      "manifestSha256": "566053a2759e34a09e33177842adb648c603768409ff3eeaeae760ae7e43e069",
+      "packages": 24,
+      "manager": "apt",
+      "files": 24,
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/xfce-base-20261028/xfce-host-virgl-arm64.tar"
+    },
+    "opensuse": {
+      "filename": "xfce-opensuse-arm64.tar",
+      "size": 223528960,
+      "sha256": "3f1a6148f2e79de8073d2bf048234a21a188cc860416ceebe8e62d634760a8f6",
+      "manifestSha256": "a77167cf8fb2b18a8bcb1b8c1ce0255acf04cfee6a27cf0d6701af6bdbd594bb",
+      "packages": 375,
+      "manager": "zypper",
+      "files": 375,
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/xfce-base-20261028/xfce-opensuse-arm64.tar"
+    },
+    "void": {
+      "filename": "xfce-void-arm64.tar",
+      "size": 326502400,
+      "sha256": "733b609beb223bc80bbd6e4fcff642ee1e0c91408b7a8f9b4983ceac620c0f44",
+      "manifestSha256": "b72f5377639b181defcb05c7480223b94bef9ab272d7d2ce5fee23d476d9cebe",
+      "packages": 312,
+      "manager": "xbps",
+      "files": 627,
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/xfce-base-20261028/xfce-void-arm64.tar"
+    },
+    "manjaro": {
+      "filename": "xfce-manjaro-arm64.tar",
+      "size": 215398400,
+      "sha256": "07d396cbff3c1f9b9d467a5c14d8d589af597b7d2520ae039ff61f8d9f4f3660",
+      "manifestSha256": "48ccde62868a4e2040e7f82d8801e14d1ba03077e98f8a7c1cf76673d1c88083",
+      "packages": 223,
+      "files": 446,
+      "manager": "pacman",
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/xfce-base-20261028/xfce-manjaro-arm64.tar"
+    },
+    "fedora": {
+      "filename": "xfce-fedora-arm64.tar",
+      "size": 231495680,
+      "sha256": "15982be3b9efca85bbc4d033e5aec20257f5e3c1aa96218b377b4e9a63371a1e",
+      "manifestSha256": "e8a47b9d2ba3c9557cfa34c63790e4a09eaee22b5fe7fb7fc25eed2f09ee00de",
+      "packages": 300,
+      "files": 300,
+      "manager": "dnf",
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/xfce-base-20261028/xfce-fedora-arm64.tar"
+    },
+    "archlinux": {
+      "filename": "xfce-archlinux-arm64.tar",
+      "size": 346624000,
+      "sha256": "60ae6e83ed71935f7ab10585a86f6e2f922d3ae0b8a3f81d65d5ba2d99f366b9",
+      "manifestSha256": "3875beafd89ee2960efdd1147a5a63b4fd07db61b62cbd17b3b0d4485431b737",
+      "packages": 339,
+      "files": 678,
+      "manager": "pacman",
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/xfce-base-20261028/xfce-archlinux-arm64.tar"
+    }
+  },
+  "scope": "Pinned initial desktop/runtime closures, not permanent package holds. Ubuntu AI is excluded. Official distribution repositories remain enabled for user software and explicit updates."
+}

@@ -1,10 +1,14 @@
-# Unreleased — agent web links
+# v2.1.0 — More environments, controlled updates & better agent chats
 
-- Fix short taps on links in selectable agent transcript text, Markdown blocks
-  and table cells across Codex, Claude, Gemini and OpenCode.
-- Show the full HTTP(S) address first, with Copy on the left and Open on the right.
-  Open launches the Android browser chooser; outside tap dismisses the panel.
-- Preserve text selection, drag scrolling, streaming and per-session chat scale.
+- Add Kali Linux and Manjaro environments, X11 integration, programs, aliases and target-specific graphics components.
+- Pin nine ordinary base images and matching XFCE package sets through verified Components assets; preserve Ubuntu AI policy and user-controlled package updates.
+- Add scoped environment package checks/upgrades, base restoration, complete checkpoints, rollback and cancellation/recovery.
+- Add official ARM64 image discovery and confirmed initial installation/replacement, with optional homes and the previous system retained for rollback; keep checks in the selected menu.
+- Add in-app ArchWiki, Forum and environment documentation with process-lifetime reader state and explicit link actions.
+- Improve live agent command/image/file/web action details, compact dialogs and shared link handling.
+- Move session controls into a full-width bordered card; correct Kali Evince, Manjaro LibreOffice and Fedora/openSUSE update queries.
+- Same package/signer/schema8/ARM64 and Android requirements; code1443. Updating the APK requires no reset or rootfs migration. Explicit image replacement separately changes the selected OS/program set.
+- [Release](docs/fork/RELEASE-v2.1.0.md) · [Validation](docs/fork/VALIDATION-v2.1.0.md).
 
 ---
 

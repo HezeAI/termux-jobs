@@ -28,7 +28,7 @@ final class GeminiCli {
         File dir=directory(context.getFilesDir());
         if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create Gemini controls");
         protect(dir);
-        for(String asset:new String[]{"gemini-bootstrap.sh","gemini-control.js","gemini-live.cjs","gemini-thinking.cjs","gemini-live-loader.mjs","gemini-chat.cjs","agent-receipts.cjs","agent-attachments.cjs"}) {
+        for(String asset:new String[]{"gemini-bootstrap.sh","gemini-control.js","gemini-live.cjs","gemini-thinking.cjs","gemini-live-loader.mjs","gemini-chat.cjs","agent-receipts.cjs","agent-action-preview.cjs","agent-attachments.cjs"}) {
             File temporary=File.createTempFile("gemini-",".tmp",dir);
             try {
                 try(InputStream in=context.getAssets().open(asset);OutputStream out=new FileOutputStream(temporary)) {

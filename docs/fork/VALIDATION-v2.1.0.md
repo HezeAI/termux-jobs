@@ -1,81 +1,103 @@
-> Historical private candidate (code1351); final release evidence: [v2.0.3](VALIDATION-v2.0.3.md).
+# v2.1.0 validation
 
-# v2.1.0 release-candidate validation — code1351 / 2026-10-24
-
-Public stable remains v2.0.2 until publication. This candidate retains the cumulative
-private audit, landscape X11 and optional styles across all eight targets. The
-developer reported the earlier result good overall, with Fedora MP4 failure and
-a request for a lower/translucent input control. Code1351 addresses those items.
-Evidence: `.verification/fedora-media-20261024/`; [focused review](AUDIT-FEDORA-MP4-2026-10-24.md).
-[Previous1350 evidence](VALIDATION-v2.1.0-code1350.md) is historical.
+Release authorization: HezeAI explicitly requested publication as v2.1.0 after
+the private test11 delivery. HezeAI is the fork developer; Codex assisted with
+implementation and verification. Automated evidence and reported device tests
+are distinguished below; this is not a claim of exhaustive device validation.
 
 ## Final APK
 
-| Field | Verified result |
+| Field | Value |
 | --- | --- |
-| File | `build/apk/Termux-Jobs-v2.1.0-arm64.apk` |
-| Version | 2.1.0 /1351; header branding stays v2.0 |
-| Package / ABI | com.termux / arm64-v8a only |
-| Size | 45,882,878 bytes |
-| SHA-256 | `17e9f92b053f4cffffc994d9dc7c9d80b833dcba0db0854aff3137181f77080a` |
-| Signer SHA-256 | `dd37d983cd2496ebe49c7e88ddbc0088f311d38b8a8503e4392c81b48a11a644` |
-| Android | min26 / target28 / compile35; embedded X11 requires30 |
-| Packaging | Fresh ZIP CRC/signature valid, nondebuggable; same package/signer, higher code |
-| Runtime | 13,655 definitions; required missing0, reviewed optional31 |
-| Native | Android JNI libraries and existing OpenH264/style payloads match1350 |
-| Assets | Changed: x11-native-programs.py/x11-openh264.py; added: pinned GNU GStreamer bridge/full copyright |
+| File | Termux-Jobs-v2.1.0-arm64.apk |
+| Package | com.termux |
+| versionName / versionCode | 2.1.0 / 1443 |
+| Bytes | 39,903,643 |
+| SHA-256 | e835b7425a97eb33dcea9bc71d40c1588182b77610ed067b0f49dc53e3842b89 |
+| Certificate SHA-256 | dd37d983cd2496ebe49c7e88ddbc0088f311d38b8a8503e4392c81b48a11a644 |
+| ABI | arm64-v8a only |
+| Requirements | Android8+ app / Android11+ X11, min26/target28/compile35 |
+| Workspace data | schema8 retained |
 
-Bounded auth/key filename, private-key/token and configured-private-server pattern
-checks found no matches in packaged assets/DEX; not a universal secret guarantee.
-Changed/new assets match their sources/pins; all494 main files match source-test,
-modern-lint and ARM64 build stages. The APK/update.json/SHA256SUMS release copies
-agree exactly. Incremental ZIP dead space was removed by fresh packaging; no source
-or native code was rebuilt unnecessarily for that packaging step.
+ZIP CRC, non-debug manifest, ABI, signing identity, required DEX definitions,
+96 source assets, runtime payload pins and forbidden-file/secret-pattern checks
+passed. All three JNI libraries retain the previous baseline. Every assets/lib/res
+entry matches test11 byte-for-byte; the stable application change is release
+version metadata. Local AI, VM and retired Wayland payloads are absent.
 
-## Verification and review
+## Relevant checks
 
-- Fresh **72 JVM cases/6classes**, no failures/errors/skips. Window alpha/offset,
-  enabled fill/focus/teardown, exact v2.0 header, service boundaries and Fedora's
-  once-only recommended-status schema3 invalidation in the same file are covered.
-- Fresh **66 Python cases**, including owned private codec files/proof, partial
-  setup and retry, invalid/edited inputs, unchanged openSUSE mode, no setup during
-  status checks, explicit media dependencies and command-local DNF repo exclusion.
-- Native isolated Fedora tests reproduce baseline decode failure; private setup
-  decodes synthetic H.264/AAC MP4 to EOS with5video/47audio buffers. The real helper
-  creates a decoder, verifies factories and reports ready on initial/repeated setup
-  in a fixture HOME. This is neither a Parole GUI nor fresh-phone install test.
-- Five-module lint7.4.2: **0 errors /210 warnings**. The one added warning is the
-  intentional GNU GStreamer asset, reviewed with its pin and extraction scope.
-  No metadata/rule-loading errors. CompileSDK35 exceeds AGP7.4's tested33, so latest
-  API35 lint coverage is not claimed. [Warning categories](LINT-WARNINGS-2026-10-24.md).
-- Localization584/key/format parity passes. Previous full JVM1224/184 belongs to
-  code1347; code1350's110/61 scoped cases remain historical. Unrelated Python/Node
-  runtime suites were not repeated for this narrow fix.
+- Stable isolated release build succeeded and repeated **128 JVM checks** with
+  zero failures/errors. Selected-menu state, official-image request/confirmation,
+  update service, X11 profiles, documentation, chats and aliases are included.
+- Stable source repeated **41 Python checks**: official initial/replacement paths,
+  complete checkpoints/homes/rollback, missing required desktop rejection,
+  expired/changed plans, cancellation, recovery, private path aliases, managed
+  links and owned process-group termination with an unrelated guard surviving.
+- **Four Node suites** repeated: agent action previews/live events, attachments
+  and generated-file cards. No real provider authentication was used by fixtures.
+- Independent modern lint7.4.2/Gradle7.5.1 covered **all five modules**: **0 errors,
+  225 warnings**, no rule-loading/infrastructure failures. Warnings include
+  existing UI/localization/accessibility/resource/API patterns. SDK28/package-ID
+  architectural limitations remain; no blanket warning baseline was added.
+- All **35 unique pinned Components assets** matched their published URLs, sizes
+  and GitHub SHA-256 metadata across five immutable releases. This check did not
+  redownload all large component archives or alter any published component.
+- Candidate evidence retained in [test11 validation](VALIDATION-test11-official-install.md):
+  117 Python checks plus its final41-case rerun, real isolated APT/dpkg
+  transactions from empty fixture databases/caches, a repeat complete required
+  desktop-package request, actual upstream ARM64 OCI download/native extraction,
+  and official Arch signature verification with tampered-content refusal.
+  APT packages were script-free fixtures with executable placeholders, not a
+  full GUI. Native extraction prohibited guest subprocesses and is not a nested
+  PRoot CLI-startup test. The full Arch rootfs was not downloaded for the small
+  signed-package proof.
+- Source/runtime asset comparison, tracked plus new-file secret review, release
+  links, metadata consistency and git diff whitespace checks were performed.
 
-Five main files differ from1350: fullscreen presentation, codec asset routing,
-recommended-cache schema selection and two program/codec helpers. Build-input
-changes add one pinned GNU plugin and license notices with reproducible extraction.
-No permission, renderer, process ownership/stop protocol, auth or workspace schema
-change. Fixed per-target paths, ownership/hash/symlink guards, a pending→verified
-codec proof and a private registry prevent false readiness or cross-app plugin
-registration. DNF signatures/TLS remain enabled; no RPM library replacement or
-third-party repo is introduced. Only Fedora's recommendation flags are refreshed;
-catalogs, resume state and other environments' metadata remain.
+Build/lint/fixture evidence is kept in project-private
+`.verification/release-v2.1.0/` and `.verification/official-install/`.
 
-## Device check and compatibility
+## Sources and trust
 
-Stop/relaunch Parole after running Fedora Programs→Recommended→Video and audio→
-Install again. Open from the applications menu, then test the reported MP4 and
-actual video/audio output. Inspect the lower translucent input control, its fill
-and keyboard/Back behavior. A clean phone's complete package-download/GUI path
-remains to be checked separately; the installer targets that baseline explicitly
-and rejects missing codec proof. Other MP4 codecs/HEVC/hardware decoding and other
-devices retain separate limits. Surrogate tests cannot prove IME/composition.
+Base/XFCE provenance is documented in [pinned environments](PINNED-ENVIRONMENTS.md)
+and [Components](https://github.com/HezeAI/termux-jobs-components#readme).
+Official OCI blobs require matching SHA-256 and LinuxARM64 metadata; Manjaro
+archives require exact published hashes/sizes. Arch Linux ARM uses the official
+public signing key, fingerprint `68B3537F39A313B3E574D06777193F152BDBE6A6`, from
+[official keyring git blob](https://api.github.com/repos/archlinuxarm/archlinuxarm-keyring/git/blobs/6b352c02e42b64d1867e265558e582f921ca05e8).
+Its bundled key asset SHA-256 is
+`4e4202772328674af68f90f675e077d192337fc8ced15cddcd35875a9de5b5f9`.
+Only this public key is bundled. HTTPS verification stays enabled and no
+third-party CA or credentials are added.
 
-Same package/signer/schema8; no valid-data reset, environment/account migration or
-reinstallation required by source/data review. Finish important operations before
-updating. Existing HOME-only SAF boundaries, malformed-library read-only behavior,
-exclusive outputs and uncertain remote Copy/Move outcomes remain in both localized
-update notes and [release notes](RELEASE-v2.1.0.md). Local SSH/proot exit is not proof
-of descendant termination. The final broad audit and publication await the new
-phone result. No remote release/update asset has been replaced.
+## Data compatibility and device evidence
+
+The APK keeps package/signing identity and schema8. No automatic reset, account
+migration, rootfs replacement or reinstallation is required. Installing the APK
+alone preserves histories, presets, projects, commands, notes, drivers and
+environments. Image replacement is a separate explicit operation: its confirmation
+explains the changed OS/program set, optional home carry and complete old-system
+checkpoint. Snapshots may contain credentials and consume substantial storage.
+Native Termux and Ubuntu AI are excluded from these replacement/update controls.
+
+HezeAI reported working Kali/Manjaro desktop/program/graphics integration during
+private testing. Automated tests do not establish fresh-device keyboard, gestures,
+WebView rendering, permission/notification behavior or all GPU/driver combinations.
+Successful online DNF/Zypper/XBPS/APK/Pacman transactions and GUI/renderers for
+every new upstream image remain separate acceptance checks. Official-image
+initial install/update, Stop/retry and rollback on a disposable stopped target
+should be checked while an unrelated environment stays open. Refresh installed
+program lists if their cached view predates a root replacement. Upstream package
+names/ABIs can change; mandatory checks abort before publishing an incomplete
+replacement. Missing GnuPG is reported as a prerequisite, never bypassed.
+
+## Release assets and update path
+
+APK, SHA256SUMS, update.json and validation.json use the final hash/version above.
+RU/EN updater highlights explicitly describe preserved app data and the separate
+image-replacement behavior. Public assets, latest-release metadata and tagged
+links are downloaded/checked after publication; that result is recorded in the
+release handoff without changing the tagged APK.
+
+AI development assistance: OpenAI Codex

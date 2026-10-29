@@ -122,6 +122,13 @@ def main():
     bridge_size=re.search(r'^SIZE = ([0-9]+)$',(ROOT/'x11/src/main/assets/x11-bionic-glibc.py').read_text(),re.M)
     if not bridge_pin or not bridge_size or len(bridge_data)!=int(bridge_size[1]) or hashlib.sha256(bridge_data).hexdigest()!=bridge_pin[1]:raise ValueError('Bionic glibc bridge pin mismatch')
     (assets/'x11-bionic-glibc.zip').unlink(missing_ok=True)
+    manjaro_bridge=ROOT/'third-party/bionic-glibc/manjaro-arm64-runtime.zip'
+    manjaro_data=manjaro_bridge.read_bytes()
+    helper=(ROOT/'x11/src/main/assets/x11-bionic-glibc.py').read_text()
+    manjaro_pin=re.search(r"^MANJARO_PIN = '([a-f0-9]{64})'$",helper,re.M)
+    manjaro_size=re.search(r'^MANJARO_SIZE = ([0-9]+)$',helper,re.M)
+    if not manjaro_pin or not manjaro_size or len(manjaro_data)!=int(manjaro_size[1]) or hashlib.sha256(manjaro_data).hexdigest()!=manjaro_pin[1]:raise ValueError('Manjaro Bionic glibc bridge pin mismatch')
+    (assets/'x11-bionic-glibc-manjaro.zip').unlink(missing_ok=True)
     # Finished diagnostics/failed trial: never ship or compile the guest modules.
     for name in ['x11-gtk-observe.so','x11-garcon-source.zip']:(assets/name).unlink(missing_ok=True)
     report=dict(commit=pins['commit'],nativeSha256=hashlib.sha256(native).hexdigest(),keyboardSha256=hashlib.sha256((assets/'x11-keyboard.zip').read_bytes()).hexdigest(),keyboardFiles=len(entries))

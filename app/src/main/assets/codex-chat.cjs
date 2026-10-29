@@ -4,6 +4,7 @@ const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypt
 const {spawn}=require('node:child_process');
 const {Connection}=require('./codex-wire-v0.2.22.js');
 const {ReceiptStore,clean}=require('./agent-receipts.cjs');
+const {preview:actionPreview,trimPreviews,outputTail}=require('./agent-action-preview.cjs');
 const text=v=>typeof v==='string'?clean(v).slice(0,200000):'';
 const key=v=>'msg_x'+crypto.createHash('sha256').update(String(v)).digest('hex').slice(0,28);
 const valid=v=>typeof v==='string'&&/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(v);
@@ -48,6 +49,7 @@ function attachmentManifest(root,id,thread){
  if(a.type==='video'){if(!Array.isArray(a.frames)||!a.frames.length||a.frames.length>12)throw Error('INVALID_ATTACHMENT');for(const frame of a.frames){attachmentFile(root,frame.path);if(fs.statSync(frame.path).size>20*1024*1024||!Number.isSafeInteger(frame.timeMs)||frame.timeMs<0)throw Error('INVALID_ATTACHMENT');}}
  return {file:f,data:a};
 }
+function actionStatus(item){return item.error||item.result?.isError===true?'failed':['failed','error','declined','aborted','cancelled','canceled'].includes(item.status)?item.status:item._jobsStatus||item.status||'';}
 function itemPhase(item,status){if(!status)return item;const value={...item};Object.defineProperty(value,'_jobsStatus',{value:status});return value;}
 function processTree(root){const all=new Map();for(const id of fs.readdirSync('/proc'))if(/^\d+$/.test(id))try{const raw=fs.readFileSync('/proc/'+id+'/stat','utf8'),f=raw.slice(raw.lastIndexOf(')')+2).split(' ');all.set(Number(id),{parent:Number(f[1]),start:f[19],state:f[0]});}catch{}const owned=new Map();if(!all.has(root))return owned;owned.set(root,all.get(root));let changed=true;while(changed){changed=false;for(const [id,v]of all)if(!owned.has(id)&&owned.has(v.parent)){owned.set(id,v);changed=true;}}return owned;}
 function sameProcess(id,start){try{const raw=fs.readFileSync('/proc/'+id+'/stat','utf8'),f=raw.slice(raw.lastIndexOf(')')+2).split(' ');return f[19]===start&&f[0]!=='Z';}catch{return false;}}
@@ -136,7 +138,7 @@ class CodexChat {
  }
  permissionBody(p){return text(p.params.command||JSON.stringify(p.params.permissions||this.turns.get(p.turn)?.get(p.params.itemId)?.changes||{},null,2));}
  groups(turns=this.turns){
-  const groups=[];for(const [turn,entries]of turns){let skillContext='';for(const [id,item]of entries){const message=key(turn+':'+id),rows=[];const add=(part,kind,body,title='')=>{body=text(body);if(!body)return;const k=message+':'+part;this.full.delete(k);this.full.set(k,body);rows.push({key:k,message,part,kind,title,body:body.slice(0,12000),more:body.length>12000});};
+  const groups=[];for(const [turn,entries]of turns){let skillContext='';for(const [id,item]of entries){const message=key(turn+':'+id),rows=[];const add=(part,kind,body,title='')=>{body=text(body);if(!body)return;const k=message+':'+part;this.full.delete(k);this.full.set(k,body);rows.push({key:k,message,part,kind,title,body:body.slice(0,12000),bodyLength:body.length,more:body.length>12000});};
    for(const receipt of this.receipts.rows.filter(r=>r.key.startsWith(item.id+':')))add('receipt:'+receipt.token,'receipt',receipt.body,this.receipts.label(receipt,this.language==='ru'));
    if(item.type==='userMessage'){
     const skills=(item.content||[]).filter(input=>input.type==='skill'&&text(input.name));skillContext=skills.length===1?text(skills[0].name).slice(0,120):'';
@@ -179,7 +181,7 @@ class CodexChat {
    else if(item.type==='commandExecution'){
     add('command','tool',[item.command,item.aggregatedOutput,item.exitCode!=null?'Exit: '+item.exitCode:''].filter(Boolean).join('\n'),'Shell · '+(item.status||'running'));
     const read=skillRead(item.command);if(read)skillContext=['inProgress','running'].includes(item.status)||item.status==='completed'&&item.exitCode===0?read:'';
-    const row=rows.at(-1);if(row?.part==='command')Object.assign(row,{...(read?{skillName:read,skillSource:'read'}:{}),actionType:'shell',turn,status:item.status||'inProgress',command:text(item.command).slice(0,512),exitCode:Number.isInteger(item.exitCode)?item.exitCode:null,durationMs:Number.isSafeInteger(item.durationMs)&&item.durationMs>=0?item.durationMs:null});
+    const row=rows.at(-1);if(row?.part==='command')Object.assign(row,{...(read?{skillName:read,skillSource:'read'}:{}),actionType:'shell',outputTail:outputTail(text(item.aggregatedOutput)),turn,status:actionStatus(item)||'inProgress',command:text(item.command).slice(0,512),exitCode:Number.isInteger(item.exitCode)?item.exitCode:null,durationMs:Number.isSafeInteger(item.durationMs)&&item.durationMs>=0?item.durationMs:null});
    }
    else if(item.type==='fileChange')add('files','tool',JSON.stringify(item.changes||[],null,2),'Files · '+item.status);
    else if(item.type==='plan')add('plan','tool',item.text,'Plan');
@@ -189,12 +191,13 @@ class CodexChat {
     const output=Array.isArray(item.output)?item.output:[],images=output.filter(v=>v.type==='input_image');
     const body=typeof item.output==='string'?item.output:images.length?output.map(v=>v.type==='input_text'?v.text:v.type==='input_image'?'[Image]':'[Media]').join('\n'):JSON.stringify(item.output);
     add('output','tool',body,[item.namespace,item.name].filter(Boolean).join('.'));
-    let savedImages=this.mediaCache.get(item);if(!savedImages){savedImages=images.slice(0,4).map((image,i)=>{try{return savedToolImage(this.root,this.thread+':'+item.id+':'+i,image.image_url);}catch{return '';}});this.mediaCache.set(item,savedImages);}
+    const outputRow=rows.at(-1);let savedImages=this.mediaCache.get(item);if(!savedImages){savedImages=images.slice(0,4).map((image,i)=>{try{return savedToolImage(this.root,this.thread+':'+item.id+':'+i,image.image_url);}catch{return '';}});this.mediaCache.set(item,savedImages);}
+    const firstImage=savedImages.find(Boolean);if(firstImage&&outputRow)outputRow.actionPreview={kind:'image',image:{type:'image',name:path.basename(firstImage),path:firstImage,cacheKey:message}};
     for(const [i,saved]of savedImages.entries())if(saved){add('tool-image:'+i,'attachment','Image');Object.assign(rows.at(-1),{attachment:{type:'image',name:path.basename(saved),path:saved,cacheKey:message+':'+i}});}
    }
    else if(item.type==='contextCompaction')add('context','tool',this.language==='ru'?'Контекст чата сокращён штатным Codex.':'Chat context compacted by Codex.','Codex');
    else if(!['hookPrompt','sleep'].includes(item.type))add('event','tool',JSON.stringify(item,null,2),item.type||'Codex');
-   if(rows.length){for(const row of rows)if(row.kind==='tool'){row.turn=turn;if(!row.toolType&&item.type!=='commandExecution')Object.assign(row,{toolType:item.type,toolName:text(item.tool||item.name).slice(0,160),status:item.status||item._jobsStatus||''});if(skillContext)row.skillContextName=skillContext;}groups.push({id:message,rows});}
+   if(rows.length){for(const row of rows)if(row.kind==='tool'){row.turn=turn;if(!row.toolType&&item.type!=='commandExecution')Object.assign(row,{toolType:item.type,toolName:text(item.tool||item.name).slice(0,160),status:actionStatus(item)});const preview=actionPreview(item);if(preview){row.actionPreview=preview;if(preview.kind==='files'&&(preview.files.some(f=>f.diffTruncated)||preview.filesTruncated))row.more=true;if(preview.kind==='image')preview.image.cacheKey=message+':view';}if(skillContext)row.skillContextName=skillContext;}groups.push({id:message,rows});}
   }}let chars=0;for(const body of this.full.values())chars+=body.length;for(const [k,body]of this.full){if(chars<=2*1024*1024&&this.full.size<=800)break;this.full.delete(k);chars-=body.length;}return groups;
  }
  historyWindow(groups,next){
@@ -228,7 +231,7 @@ class CodexChat {
   }else groups=this.groups();
   const page=this.historyWindow(groups,next),rows=page.groups.flatMap(g=>g.rows);let budget=90000;
   const limited=rows.map((r,i)=>{const n=Math.max(100,Math.floor(budget/(rows.length-i)));budget-=Math.min(n,r.body.length);return {...r,body:r.body.slice(0,n),more:r.more||r.body.length>n};});
-  return {ok:true,nativeChat:true,connected:this.ready&&!this.closed,session:this.thread,busy:this.busy,directShell:!!this.shellRunning,rows:limited,knownMessages:groups.map(g=>g.id),partialHistory:true,older:page.older||null,permission:this.permission(),forms:this.forms(),needsTerminal:!!this.native,model:{model:this.model},attachmentsSupported:true,authRequired:this.authRequired,loginPending:!!(this.loginId||this.loginRequest),loginError:this.loginError,connectionNotice:this.native?(this.language==='ru'?'Завершите действие в терминале или нажмите «Вернуться в чат Codex». Выполняющийся запрос продолжится до завершения.':'Finish the action in the terminal or tap Return to Codex chat. A running request continues until completion.'):''};
+  return {ok:true,nativeChat:true,connected:this.ready&&!this.closed,session:this.thread,busy:this.busy,directShell:!!this.shellRunning,rows:trimPreviews(limited),knownMessages:groups.map(g=>g.id),partialHistory:true,older:page.older||null,permission:this.permission(),forms:this.forms(),needsTerminal:!!this.native,model:{model:this.model},attachmentsSupported:true,authRequired:this.authRequired,loginPending:!!(this.loginId||this.loginRequest),loginError:this.loginError,connectionNotice:this.native?(this.language==='ru'?'Завершите действие в терминале или нажмите «Вернуться в чат Codex». Выполняющийся запрос продолжится до завершения.':'Finish the action in the terminal or tap Return to Codex chat. A running request continues until completion.'):''};
  }
  async send(q){
   if(this.returnToChat&&!this.busy)await this.closeTerminal();

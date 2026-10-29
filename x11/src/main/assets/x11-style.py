@@ -225,7 +225,7 @@ def apply(home,prefix,control,enabled):
  return 'on' if enabled else 'restored'
 
 def environment_prefix(target,prefix):
- if target in ('ubuntu','debian','alpine','fedora','opensuse','void','archlinux'):return Path('/')  # Each guest owns its /etc/xdg; never inherit Termux PREFIX.
+ if target in ('ubuntu','debian','alpine','fedora','opensuse','void','archlinux','kali','manjaro'):return Path('/')  # Each guest owns its /etc/xdg; never inherit Termux PREFIX.
  if target=='termux' and prefix:return Path(prefix)
  raise ValueError('style requires a supported X11 desktop')
 

@@ -26,7 +26,7 @@ public class WorkspaceDesktopProfilesTest {
  private View tagged(AlertDialog d,String tag){return d.getWindow().getDecorView().findViewWithTag(tag);}
  @Test public void everyDesktopMenuUsesTheExistingX11Controls()throws Exception{
   set("remote",new Binder());
-  for(String target:new String[]{"termux","ubuntu","debian","alpine","fedora","opensuse","void","archlinux"}){
+  for(String target:new String[]{"termux","ubuntu","debian","alpine","fedora","opensuse","void","archlinux","kali","manjaro"}){
    p.environment=target.equals("termux")?"termux":"proot:"+target;ui.menu();AlertDialog d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
    assertNotNull(target,tagged(d,"agent-status-desktop-switch"));assertNotNull(target,tagged(d,"agent-status-desktop-renderer"));assertNotNull(target,tagged(d,"agent-status-desktop-screen"));
    assertNull(tagged(d,"agent-status-desktop-plasma"));assertNull(tagged(d,"agent-status-desktop-xfce"));assertNull(tagged(d,"desktop-wayland-driver-folder"));assertEquals("xfce",profile());d.dismiss();
@@ -37,5 +37,23 @@ public class WorkspaceDesktopProfilesTest {
   assertEquals("xfce",profile());assertEquals("bionic-glibc",invoke("renderer",new Class<?>[]{WorkspaceStore.Session.class},p));
   String report=ui.sessionDiagnostic(p);assertTrue(report.startsWith("X11 transport"));assertFalse(report.contains("Wayland"));
   assertTrue(a.getSharedPreferences("workspace-x11",0).getBoolean("termux-style:archlinux",false));
+ }
+ @Test public void manjaroBridgeKeepsItsOwnCacheAndRendererSelection(){
+  assertTrue(WorkspaceDesktopWrapper.bridgeSupported("manjaro"));
+  assertTrue(WorkspaceDesktopGpu.supported("manjaro"));
+  assertEquals("manjaro-mesa26.2.5-glibc235",WorkspaceDesktopGpu.directory("manjaro"));
+  assertNotEquals(WorkspaceDesktopGpu.directory("archlinux"),WorkspaceDesktopGpu.directory("manjaro"));
+  assertEquals("workspace-x11-bionic-glibc-manjaro",WorkspaceDesktopWrapper.base(a,"manjaro").getName());
+  assertNotEquals(WorkspaceDesktopWrapper.base(a,"archlinux"),WorkspaceDesktopWrapper.base(a,"manjaro"));
+  a.getSharedPreferences("workspace-x11",0).edit().putString("renderer:manjaro","bionic-glibc").commit();
+  assertEquals("bionic-glibc",WorkspaceDesktopGpu.mode(a,"manjaro"));
+  assertEquals("cpu",WorkspaceDesktopGpu.mode(a,"archlinux"));
+  String[] choice={""};WorkspaceDesktopGpu.select(a,"manjaro",()->false,v->choice[0]=v,()->{});
+  AlertDialog d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+  assertEquals(4,d.getListView().getAdapter().getCount());
+  assertTrue(d.getListView().getAdapter().isEnabled(1));
+  assertTrue(d.getListView().getAdapter().isEnabled(3));
+  d.getListView().performItemClick(d.getListView().getAdapter().getView(3,null,d.getListView()),3,3);
+  assertEquals("bionic-glibc",choice[0]);d.dismiss();
  }
 }

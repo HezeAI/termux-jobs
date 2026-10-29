@@ -1,4 +1,13 @@
-# Current release validation — v2.0.9
+# Current release validation — v2.1.0
+
+See [VALIDATION-v2.1.0.md](VALIDATION-v2.1.0.md) for the final APK, automated and
+isolated native checks, developer-reported device evidence, remaining limits and
+data compatibility. No app-data reset is required. Explicit environment image
+replacement has its own confirmation and complete rollback checkpoint.
+
+---
+
+# Historical release validation — v2.0.9
 
 See [VALIDATION-v2.0.9.md](VALIDATION-v2.0.9.md) for the final artifact, tests,
 lint findings, compatibility and device-specific limits. Earlier reports retain

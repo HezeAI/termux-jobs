@@ -1,3 +1,30 @@
+# Environments, documentation and agent actions — v2.1.0
+
+Choose Kali or Manjaro like other ordinary terminal environments. Their X11
+controls retain resolution, scale, theme, input and renderer selection. Manjaro
+has its own compatible optional Turnip/Zink and Bionic-for-glibc downloads.
+
+Open app settings → Check environment updates, then choose an environment.
+Package checks and official image checks stay in that menu. Review results and
+explicitly confirm a package upgrade, base restore or official image replacement.
+Stop that environment's sessions first; the app refuses conflicting use instead
+of closing them. Mutating operations create complete checkpoints; review storage
+use and rollback options. Optional current /root and /home preservation does not
+migrate every application. Native Termux and Ubuntu AI are excluded.
+See [full update guide](ENVIRONMENT-UPDATES.md).
+
+The ArchWiki book beside the brand and Documentation inside Programs open the
+in-app HTTPS reader. Forum opens there too. Wiki/history/position survive closing
+its window until the process ends. Long-press links to copy/open in a browser;
+agent links offer Copy / Show / Browser. See [reader](DOCUMENTATION-READER.md).
+
+Tap outlined agent actions to inspect current command output, image previews,
+file changes or website details. Output availability depends on provider events;
+completed actions retain their details. Compact panels dismiss on outside tap.
+No command executes merely by opening its details.
+
+---
+
 # Agent chats, aliases and files — v2.0.9
 
 The native Developer Markdown layout is shared by Codex, Claude, Gemini and

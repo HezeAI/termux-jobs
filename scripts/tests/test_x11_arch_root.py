@@ -12,7 +12,7 @@ def chmod(path,value):
  try:os.fchmod(fd,value)
  finally:os.close(fd)
 class ArchRootTests(unittest.TestCase):
- def run_helper(self,base,operation):return subprocess.run(['/usr/bin/python3','-B','-c',CODE,str(base),operation],text=True,capture_output=True,timeout=4)
+ def run_helper(self,base,operation):return subprocess.run(['/usr/bin/python3','-B','-c',CODE,str(base),operation,'archlinux'],text=True,capture_output=True,timeout=4)
  def test_check_is_non_mutating_and_repair_preserves_children_and_other_bits(self):
   for layout in ['containers/archlinux/rootfs','installed-rootfs/archlinux']:
    with self.subTest(layout=layout),tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d:
@@ -28,10 +28,10 @@ class ArchRootTests(unittest.TestCase):
  def test_missing_wrong_owner_and_unknown_operation_do_not_repair(self):
   with tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d:
    base=Path(d);self.assertEqual(1,self.run_helper(base,'repair').returncode);root=base/'containers/archlinux/rootfs';root.mkdir(parents=True);chmod(root,0o555)
-   probe=CODE.replace('base,operation=sys.argv[1:]','base,operation=sys.argv[1:]\nos.getuid=lambda: 999999')
-   r=subprocess.run(['/usr/bin/python3','-B','-c',probe,str(base),'repair'],capture_output=True,timeout=4);self.assertEqual(1,r.returncode);self.assertEqual(0o555,mode(root));self.assertEqual(2,self.run_helper(base,'unknown').returncode)
+   probe=CODE.replace('base,operation,target=sys.argv[1:]','base,operation,target=sys.argv[1:]\nos.getuid=lambda: 999999')
+   r=subprocess.run(['/usr/bin/python3','-B','-c',probe,str(base),'repair','archlinux'],capture_output=True,timeout=4);self.assertEqual(1,r.returncode);self.assertEqual(0o555,mode(root));self.assertEqual(2,self.run_helper(base,'unknown').returncode)
  def test_shell_gates_repair_to_selected_arch_and_to_consented_install(self):
-  text=ASSET.read_text();self.assertIn('[[ $target == archlinux ]] || return 0',text)
+  text=ASSET.read_text();self.assertIn('[[ $target == archlinux || $target == manjaro ]] || return 0',text)
   check=text.split('if [[ $op == check ]]; then',1)[1].split('if [[ $op == install ]]; then',1)[0];self.assertIn('arch_root_permissions check',check);self.assertNotIn('arch_root_permissions repair',check)
   run=text.split('gpu_mode=${JOBS_X11_RENDERER:-cpu}',1)[1];self.assertNotIn('arch_root_permissions repair',run)
  def test_missing_native_python_fails_check_but_other_targets_do_not_need_it(self):

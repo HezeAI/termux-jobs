@@ -1,4 +1,18 @@
-# Current release — v2.0.9 (code1417)
+# Current release — v2.1.0 (code1443)
+
+Kali/Manjaro and pinned ordinary ARM64/XFCE installation sets, explicit package
+and image updates with full snapshots/rollback, in-app documentation and richer
+agent action details. Same com.termux/signer/schema8, ARM64, min26/target28/compile35,
+Android8+ app / Android11+ X11. No APK-update data reset or environment reinstall.
+Official image replacement is a separate confirmed OS/application-set change.
+Build tools and SDK remain repository-local; all three JNI libraries retain the
+previous baseline. See [release](docs/fork/RELEASE-v2.1.0.md),
+[validation](docs/fork/VALIDATION-v2.1.0.md),
+[updates](docs/fork/ENVIRONMENT-UPDATES.md) and [pinned bases](docs/fork/PINNED-ENVIRONMENTS.md).
+
+---
+
+# Historical release — v2.0.9 (code1417)
 
 Persistent aliases in eight standard terminal environments, explicit shell/JSON
 import and export, and per-session50–150% chat scaling for all four agents.

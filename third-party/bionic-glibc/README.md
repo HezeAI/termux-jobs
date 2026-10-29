@@ -61,3 +61,14 @@ The application can replace only its own bridge runtime and private driver cache
 libhybris is predominantly LGPL-2.1 with additional BSD, MIT, ISC and Apache-2.0 components, including its Android linker sources. The Vulkan WSI layer is MIT licensed. Mesa has component-specific licenses, predominantly MIT with SGI-B for GLX; its upstream overview and license-text collection are retained in `MESA-LICENSE.txt`. Included notices retain upstream copyright/license texts. Corresponding upstream revisions, local patches, ICD source and build instructions are supplied with this tree. Before distributing a modified runtime publicly, preserve those source references and notices alongside the matching artifact.
 
 See [validation and limitations](../../docs/fork/BIONIC_GLIBC.md).
+
+## Separate Manjaro ARM build
+
+The Manjaro ARM base uses glibc 2.35 and cannot load the existing >=2.38 runtime.
+A separate build of the same bridge/Mesa 26.2.5 is prepared against GCC 12.1 and
+Manjaro's pinned libraries. It keeps its own optional archive, pin, private cache
+and guest minimum; the existing archive and other target requirements remain
+unchanged. See [Manjaro build and isolation](MANJARO.md),
+[toolchain pins](manjaro-build-packages.json) and
+[validation](../../docs/fork/VALIDATION-test6-manjaro-bridge.md). Phone GPU
+acceptance is separate from compiler/ELF/cache checks.

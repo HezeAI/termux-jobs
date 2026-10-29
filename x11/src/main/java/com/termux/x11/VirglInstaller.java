@@ -10,12 +10,12 @@ public final class VirglInstaller implements AutoCloseable {
     private final DesktopProcess child;
     private final File directory;
     private VirglInstaller(DesktopProcess child,File directory){this.child=child;this.directory=directory;}
-    public static boolean supported(String target){return target!=null&&java.util.Arrays.asList("termux","ubuntu","debian","alpine","fedora","opensuse","void","archlinux").contains(target);}
+    public static boolean supported(String target){return target!=null&&java.util.Arrays.asList("termux","ubuntu","debian","alpine","fedora","opensuse","void","archlinux","kali","manjaro").contains(target);}
     public static boolean installed(Context context,String target){
         if(!supported(target))return false;
         File bin=new File(com.termux.shared.termux.TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH,"virgl_test_server_android");
         File marker=new File(context.getFilesDir(),"workspace-x11-virgl-"+target+"/ready");
-        File angle=new File(com.termux.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR_PATH,"opt/angle-android/"+((target.equals("void")||target.equals("fedora")||target.equals("debian")||target.equals("archlinux")||target.equals("termux"))?"vulkan":"gl")+"/libEGL_angle.so");
+        File angle=new File(com.termux.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR_PATH,"opt/angle-android/"+((target.equals("void")||target.equals("fedora")||(target.equals("debian")||target.equals("kali")||target.equals("manjaro"))||target.equals("archlinux")||target.equals("termux"))?"vulkan":"gl")+"/libEGL_angle.so");
         try{return bin.canExecute()&&angle.isFile()&&!Files.isSymbolicLink(marker.toPath())&&marker.isFile()&&marker.length()<128&&new String(Files.readAllBytes(marker.toPath()),java.nio.charset.StandardCharsets.UTF_8).equals("virgl-android-v2\n");}catch(IOException error){return false;}
     }
     public static VirglInstaller start(Context context,String target)throws Exception{
@@ -24,7 +24,7 @@ public final class VirglInstaller implements AutoCloseable {
         if(Files.isSymbolicLink(parent.toPath())||(!parent.isDirectory()&&!parent.mkdirs()))throw new IOException("Unsafe VirGL control directory");
         File directory=Files.createTempDirectory(parent.toPath(),"job-").toFile();
         try{return new VirglInstaller(DesktopProcess.virgl(context,directory,target),directory);}
-        catch(Exception error){for(String name:new String[]{"x11-guardian.sh","x11-virgl-setup.sh","x11-virgl-client.py","x11-extras.py","x11-virgl-alpine.zip"})new File(directory,name).delete();directory.delete();throw error;}
+        catch(Exception error){for(String name:new String[]{"x11-guardian.sh","x11-virgl-setup.sh","x11-virgl-client.py","x11-extras.py","x11-virgl-alpine.zip","x11-base.py","x11-base-packages.json","x11-base-install.sh","environment-image.py","environment-images.json","environment-runtime.sh"})new File(directory,name).delete();directory.delete();throw error;}
     }
     public void read(Consumer<String> output)throws IOException{child.read(output);}
     public int waitFor()throws InterruptedException{return child.waitFor();}
@@ -36,6 +36,6 @@ public final class VirglInstaller implements AutoCloseable {
     @Override public void close(){child.close();}
     public void cleanup(){
         // Assets only, no recursively followed links. Call after waitFor.
-        for(String name:new String[]{"x11-guardian.sh","x11-virgl-setup.sh","x11-virgl-client.py","x11-extras.py","x11-virgl-alpine.zip"})new File(directory,name).delete();directory.delete();
+        for(String name:new String[]{"x11-guardian.sh","x11-virgl-setup.sh","x11-virgl-client.py","x11-extras.py","x11-virgl-alpine.zip","x11-base.py","x11-base-packages.json","x11-base-install.sh","environment-image.py","environment-images.json","environment-runtime.sh"})new File(directory,name).delete();directory.delete();
     }
 }

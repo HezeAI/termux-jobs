@@ -6,36 +6,48 @@ public final class DesktopPrograms {
     /** Exact aliases only; never redirect a distribution to another rootfs. */
     public static boolean supportsTarget(String target){return target.equals("ubuntu")||supportsMaintenance(target);}
     /** Optional appearance is limited to the eight current non-agent desktops. */
-    public static boolean supportsStyle(String target){return "termux".equals(target)||"ubuntu".equals(target)||"debian".equals(target)||"alpine".equals(target)||"fedora".equals(target)||"opensuse".equals(target)||"void".equals(target)||"archlinux".equals(target);}
+    public static boolean supportsStyle(String target){return "termux".equals(target)||"ubuntu".equals(target)||("debian".equals(target)||"kali".equals(target)||"manjaro".equals(target))||"alpine".equals(target)||"fedora".equals(target)||"opensuse".equals(target)||"void".equals(target)||"archlinux".equals(target);}
     public static boolean supportsFirefox(String target){return supportsTarget(target);}
-    public static boolean supportsMaintenance(String target){return target.equals("ubuntu")||target.equals("jobs-x11-ubuntu")||target.equals("debian")||target.equals("alpine")||target.equals("termux")||target.equals("fedora")||target.equals("opensuse")||target.equals("void")||target.equals("archlinux");}
+    public static boolean supportsMaintenance(String target){return target.equals("ubuntu")||target.equals("jobs-x11-ubuntu")||(target.equals("debian")||target.equals("kali")||target.equals("manjaro"))||target.equals("alpine")||target.equals("termux")||target.equals("fedora")||target.equals("opensuse")||target.equals("void")||target.equals("archlinux");}
     public static final String[] IDS={"files","terminal","editor","archives","images","fonts","browser","office","pdf","media","gpu-tools","gpu-test"};
     public static final String[] RECOMMENDED={"editor","archives","images","browser","office","pdf","media","gpu-tools","gpu-test"};
+    public static final String[] KALI_TOOLS={"kali-nmap","kali-wireshark","kali-burp","kali-apktool"};
+    private static String[] withKali(String[] base,String target){if(!"kali".equals(target))return base.clone();String[] all=java.util.Arrays.copyOf(base,base.length+KALI_TOOLS.length);System.arraycopy(KALI_TOOLS,0,all,base.length,KALI_TOOLS.length);return all;}
+    public static String[] ids(String target){return withKali(IDS,target);}
+    public static String[] recommended(String target){return RECOMMENDED.clone();}
+    public static boolean kaliTool(String id){for(String value:KALI_TOOLS)if(value.equals(id))return true;return false;}
+    static boolean requestId(String id,String target){return requestId(id)&&(!kaliTool(id)||"kali".equals(target));}
     public static boolean removable(String pkg){
-        return DesktopCatalog.packageName(pkg)&&!pkg.matches("(?:pacman(?:-.*)?|archlinuxarm-keyring|Thunar(?:-.*)?|rpm(?:-.*)?|dnf(?:5)?(?:-.*)?|xbps(?:-.*)?|base-(?:files|filesystem|system)|zypper(?:-.*)?|libzypp(?:-.*)?|glibc(?:-.*)?|systemd(?:-.*)?|bash|coreutils(?:-.*)?|xfce4(?:-.*)?|xfdesktop4(?:-.*)?|xfwm4(?:-.*)?|thunar(?:-.*)?|xfconf|libxfconf-.*|fcitx5(?:-.*)?|dbus(?:-.*)?|libpulse0|libpulse|musl(?:-.*)?|apk-tools(?:-.*)?|gst-plugins-good|xfdesktop|font-.*|ttf-.*|ca-certificates(?:-.*)?|pulseaudio|gstreamer1\\.0-pulseaudio|xauth|x11-.*|fonts-.*|adwaita-icon-theme|hicolor-icon-theme|python3(?:-.*)?|appstream|gir1\\.2-appstream-.*)");
+        return DesktopCatalog.packageName(pkg)&&!pkg.matches("(?:pacman(?:-.*)?|archlinuxarm-keyring|manjaro(?:-.*)?|Thunar(?:-.*)?|rpm(?:-.*)?|dnf(?:5)?(?:-.*)?|xbps(?:-.*)?|base-(?:files|filesystem|system)|zypper(?:-.*)?|libzypp(?:-.*)?|glibc(?:-.*)?|systemd(?:-.*)?|bash|coreutils(?:-.*)?|xfce4(?:-.*)?|xfdesktop4(?:-.*)?|xfwm4(?:-.*)?|thunar(?:-.*)?|xfconf|libxfconf-.*|fcitx5(?:-.*)?|dbus(?:-.*)?|libpulse0|libpulse|musl(?:-.*)?|apk-tools(?:-.*)?|gst-plugins-good|xfdesktop|font-.*|ttf-.*|ca-certificates(?:-.*)?|pulseaudio|gstreamer1\\.0-pulseaudio|xauth|x11-.*|fonts-.*|adwaita-icon-theme|hicolor-icon-theme|python3(?:-.*)?|appstream|gir1\\.2-appstream-.*)");
     }
     /** Main application only: keep shared codecs, thumbnailers and documents. */
     public static String mainPackage(String id,String target){switch(id){
+        case "kali-nmap":return target.equals("kali")?"nmap":"";case "kali-wireshark":return target.equals("kali")?"wireshark":"";case "kali-burp":return target.equals("kali")?"burpsuite":"";case "kali-apktool":return target.equals("kali")?"apktool":"";
         case "gpu-test":return "termux-jobs-gpu-test";
-        case "gpu-tools":return target.equals("alpine")?"mesa-utils":target.equals("ubuntu")||target.equals("jobs-x11-ubuntu")||target.equals("debian")?"glmark2-x11":"glmark2";
+        case "gpu-tools":if(target.equals("manjaro"))return "glmark2";return target.equals("alpine")?"mesa-utils":target.equals("ubuntu")||target.equals("jobs-x11-ubuntu")||(target.equals("debian")||target.equals("kali")||target.equals("manjaro"))?"glmark2-x11":"glmark2";
         case "editor":return "mousepad";case "archives":return target.equals("opensuse")?"engrampa":"xarchiver";case "images":return "ristretto";
-        case "browser":return target.equals("opensuse")?"MozillaFirefox":"firefox";case "office":return target.equals("termux")?"libreoffice":target.equals("archlinux")?"libreoffice-fresh":"libreoffice-writer";
+        case "browser":return target.equals("opensuse")?"MozillaFirefox":"firefox";case "office":return target.equals("termux")?"libreoffice":(target.equals("archlinux")||target.equals("manjaro"))?"libreoffice-fresh":"libreoffice-writer";
         case "pdf":return "evince";case "media":return "parole";default:return "";}}
     static boolean knownRecommendedPackage(String pkg,String target,android.os.Bundle items){
         if(items==null)return false;
-        for(String id:RECOMMENDED)if(items.getBoolean(id,false)&&mainPackage(id,target).equals(pkg))return true;
+        for(String id:recommended(target))if(items.getBoolean(id,false)&&mainPackage(id,target).equals(pkg))return true;
         return false;
     }
-    public static boolean valid(String id){for(String known:IDS)if(known.equals(id))return true;return false;}
+    public static boolean valid(String id){for(String known:IDS)if(known.equals(id))return true;return kaliTool(id);}
     static boolean requestId(String id){return valid(id)||id.equals("catalog-tools")||(id.startsWith("pkg:")&&DesktopCatalog.packageName(id.substring(4)));}
     public static String title(String id,boolean ru,String target){return id.equals("archives")&&target.equals("opensuse")?"Engrampa":title(id,ru);}
     public static String title(String id,boolean ru){switch(id){
+        case "kali-nmap":return "Nmap";case "kali-wireshark":return "Wireshark";case "kali-burp":return "Burp Suite";case "kali-apktool":return "Apktool";
         case "gpu-test":return "Jobs GPU Test";
         case "gpu-tools":return "GPU & GPU INFO";
         case "catalog-tools":return ru?"Подготовка каталога":"Catalog setup";case "files":return "Thunar";case "terminal":return "XFCE Terminal";case "editor":return "Mousepad";
         case "archives":return "Xarchiver";case "images":return "Ristretto";case "fonts":return ru?"Шрифты и значки":"Fonts and icons";
         case "media":return "Parole";case "browser":return "Firefox";case "office":return "LibreOffice";case "pdf":return "Evince · PDF";default:throw new IllegalArgumentException("Unknown desktop program");}}
     public static String description(String id,boolean ru){switch(id){
+        case "kali-nmap":return ru?"Сетевые службы и TCP-подключения. Ярлык открывает терминал с режимом без привилегий. Сырые сокеты и функции ядра ограничены правами Android.":"Explore network services and TCP connections. The shortcut opens an unprivileged terminal session. Raw sockets and kernel features depend on Android permissions.";
+        case "kali-wireshark":return ru?"Графический анализ сетевых записей PCAP/PCAPNG. Захват трафика интерфейсов требует отдельных прав Android и может быть недоступен в PRoot.":"Graphical analysis of PCAP/PCAPNG network recordings. Live interface capture needs Android permissions and may be unavailable in PRoot.";
+        case "kali-burp":return ru?"Исследование HTTP/HTTPS и отладка веб-приложений. Устанавливается Burp Suite из репозитория Kali с Java. Требует больше памяти; сертификаты автоматически не устанавливаются.":"Inspect HTTP/HTTPS and debug web applications. Installs Kali's Burp Suite package with Java. Requires more memory; certificates are not installed automatically.";
+        case "kali-apktool":return ru?"Разбор ресурсов и сборка APK через командную строку. Устанавливаются Apktool и Java; ярлык открывает терминал. Подпись APK выполняется отдельно.":"Decode resources and rebuild APKs from the command line. Installs Apktool and Java; the shortcut opens a terminal. APK signing is separate.";
         case "gpu-test":return ru?"Наш графический тест: 3D, текстуры, время кадра, VSync и информация о драйвере. Создаёт ярлык GPU TEST. Работает с выбранным рендером; отчёт JSON сохраняется по кнопке. FPS не является баллом glmark2.":"Our graphics diagnostic: 3D, textures, frame timing, VSync and driver information. Creates a GPU TEST shortcut. Uses the selected renderer; save a JSON report with the Report button. FPS is not a glmark2 score.";
         case "gpu-tools":return ru?"Тест рендера и информация о GPU. Установит пакеты выбранной системы и создаст на рабочем столе ярлыки GPU и GPU INFO. Тест — glmark2; в openSUSE — glmark2-es2/EGL. В Alpine — glxgears без балла glmark2. Информация — glxinfo -B. Используется выбранный рендер рабочего стола.":"Renderer test and GPU information. Installs this environment's packages and creates GPU and GPU INFO desktop shortcuts. Uses glmark2; openSUSE uses glmark2-es2/EGL. Alpine uses glxgears without a glmark2 score. Information uses glxinfo -B. Keeps the desktop's selected renderer.";
         case "files":return ru?"Файлы и папки выбранного окружения.":"Browse files and folders in the selected environment.";

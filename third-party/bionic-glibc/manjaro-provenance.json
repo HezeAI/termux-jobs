@@ -1,0 +1,70 @@
+{
+  "name": "Bionic for glibc — Manjaro ARM build",
+  "scope": "Manjaro ARM only; private runtime and driver cache",
+  "libhybris": {
+    "url": "https://github.com/taowen/libhybris",
+    "commit": "07dfa88569d60f00e34a9f127ccae2fcc0730618",
+    "patch": "libhybris.patch"
+  },
+  "wsi": {
+    "url": "https://github.com/xMeM/vulkan-wsi-layer",
+    "commit": "d5624d42d8b2debbd910ad25662a05c751eb38b7",
+    "patch": "wsi.patch"
+  },
+  "icd": {
+    "source": "x11/src/bridge/bionic-icd.c",
+    "sha256": "338c34fed7e1108d08afefacbc5d958974af0893f900223026d9a32a7876b700",
+    "libraryFlags": [
+      "NODELETE"
+    ],
+    "nativeBufferImport": "Qualcomm proprietary driver only; exact BGRA UNORM AHardwareBuffer format, queried import memory type/size/usage"
+  },
+  "androidHeaders": {
+    "url": "https://github.com/Halium/android-headers",
+    "commit": "2c6ac3dcc4f8db593dd69906b0ec22822abfed91"
+  },
+  "mesa": {
+    "url": "https://archive.mesa3d.org/mesa-26.2.5.tar.xz",
+    "sha256": "794b3d1729075dae7ebd47c7283b7ca0cdb5dec668f7f11cc0a5d82f6138a0a5",
+    "sourceChanges": [],
+    "galliumDrivers": [
+      "zink"
+    ],
+    "vulkanDrivers": [],
+    "llvm": false,
+    "scope": "private library path for selected glibc Bionic-for-glibc desktop only; no installed library replacement"
+  },
+  "references": [
+    "https://github.com/wmww/tawc/blob/main/notes/gpu-strategy.md",
+    "https://github.com/kde-yyds/android-vulkan-bridge"
+  ],
+  "bundle": {
+    "file": "manjaro-arm64-runtime.zip",
+    "bytes": 5820211,
+    "sha256": "2f80dc4212b4f7d1fa5455d4eac28fa356b2f2779973fcde4f393f7c9ee0003e",
+    "files": {
+      "bionic-icd.json": "239b6c2b697244da93695e98f1a34cc53f7cb533d31b41be710e902b1ad72f18",
+      "share/vulkan/implicit_layer.d/jobs-bionic.json": "fea96385d9898ec40a812c84929526a09f95f9d2016703c97c45044436524adc",
+      "libjobs-bionic.so": "c015f64022dfe5557c65d56b7971e1a1bb917bb5a8543dac172b9cd3403c13f1",
+      "libhybris-common.so.1": "40f4a3deb96226788da914321126feb53e3467ffd1c576f483d7c69e14490035",
+      "linker/q.so": "eba61ab2c1767ebc8e05b697e8e76032269764e4847b8a2e593eb16fed64f813",
+      "libVkLayer_window_system_integration.so": "4d07d907d2079bd37dc64b42460b1e7ab449c7b5945c2961748750f0de2985ad",
+      "mesa/libGLX_mesa.so.0": "19922760d530cd8544e548ff49eb45312d975cfec43083bbc2fb891307bf92b7",
+      "mesa/libEGL_mesa.so.0": "a251fe236286674ed8dc34be297626269a4ae9d79b01400721ddd8cc9afd82b6",
+      "mesa/libgallium-26.2.5.so": "3330345202b1dd75d35b4f8e6d7659606207f845f03442806db182e84da19fa0"
+    }
+  },
+  "requirements": {
+    "arch": "aarch64",
+    "libc": "glibc >= 2.35",
+    "cxx": "GLIBCXX_3.4.30 / CXXABI_1.3.13",
+    "android": "API >=29; device verification pending"
+  },
+  "evidence": "docs/fork/VALIDATION-test6-manjaro-bridge.md",
+  "toolchain": {
+    "gcc": "12.1.0-2.1",
+    "binutils": "2.38-5.1",
+    "sysroot": "Manjaro ARM glibc 2.35-5.1",
+    "packages": "manjaro-build-packages.json"
+  }
+}

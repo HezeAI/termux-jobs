@@ -44,10 +44,16 @@ class DefaultDriverTest(unittest.TestCase):
         self.assertEqual(self.extras.SPECS['default-driver'][1], value['id'])
         second, marker = self.marker('workspace-x11-bionic-glibc-debian')
         default.prepare(second, 'debian', 36, marker, Mock(side_effect=AssertionError('network')))
-        self.bridge.install.assert_called_once_with(second)
+        self.bridge.install.assert_called_once_with(second, target='debian')
         self.assertEqual(value['id'], self.wrapper.driver(second)[0]['id'])
         self.assertNotEqual((first/'current.json').stat().st_ino, (second/'current.json').stat().st_ino)
         fetch.assert_called_once()
+
+    def test_manjaros_default_driver_uses_manjaros_runtime(self):
+        base, marker = self.marker('workspace-x11-bionic-glibc-manjaro')
+        default.prepare(base, 'manjaro', 36, marker, lambda *_: self.archive.read_bytes())
+        self.bridge.install.assert_called_once_with(base, target='manjaro')
+        self.assertEqual('a6xx-a7xx-a8xx', self.wrapper.driver(base)[0]['name'])
 
     def test_cancelled_download_is_not_imported_or_activated(self):
         base, marker = self.marker('workspace-x11-wrapper')

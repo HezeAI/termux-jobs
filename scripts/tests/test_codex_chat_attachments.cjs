@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'../..'),dir=require('./fixture-paths.cjs').fixture('cxatt');
-for(const [from,to]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],['agent-receipts.cjs','agent-receipts.cjs']])fs.copyFileSync(path.join(root,'app/src/main/assets',from),path.join(dir,to));
+for(const [from,to]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],['agent-receipts.cjs','agent-receipts.cjs'],['agent-action-preview.cjs','agent-action-preview.cjs']])fs.copyFileSync(path.join(root,'app/src/main/assets',from),path.join(dir,to));
 const {CodexChat}=require(path.join(dir,'codex-chat.cjs'));const calls=[];
 const rpc={send(){},close(){},async call(method,params){calls.push({method,params});return {turn:{id:'turn'}};}};
 const c=new CodexChat(rpc,{endpoint:path.join(dir,'s'),access:'full',approval:'never',cwd:dir,language:'en'});c.ready=true;c.thread='fixture-thread';
