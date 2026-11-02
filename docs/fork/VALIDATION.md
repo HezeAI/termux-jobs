@@ -1,6 +1,6 @@
-# Current candidate validation — v2.1.1
+# Current public release validation — v2.1.1
 
-See [VALIDATION-v2.1.1.md](VALIDATION-v2.1.1.md) for the exact final artifact, fresh checks, reused inputs and device limits. Prepared for review; not published.
+See [VALIDATION-v2.1.1.md](VALIDATION-v2.1.1.md) for the exact final artifact, fresh checks, reused inputs and device limits. Published v2.1.1: anonymous downloads of APK, update.json, SHA256SUMS and validation.json matched the prepared files byte for byte. APK SHA-256 and updater versionCode1454 were verified. The release is stable, not a draft/prerelease. Tagged candidate evidence remains unchanged.
 
 ---
 

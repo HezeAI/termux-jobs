@@ -9,3 +9,6 @@ Body: docs/fork/RELEASE-v2.1.1.md. APK SHA-256:
 No authorization to install APK or restart working sessions.
 HezeAI confirmed execution dots, answer timing and website cards on a phone;
 other device acceptance remains separate. Helper is excluded.
+
+Publication complete. Anonymous download verification passed for all four assets.
+APK SHA-256 and updater metadata match the prepared files.
