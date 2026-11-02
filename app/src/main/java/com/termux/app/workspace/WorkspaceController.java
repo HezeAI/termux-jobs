@@ -71,7 +71,7 @@ public final class WorkspaceController {
     private WorkspaceTransferBorder transferBorder,agentTerminalBorder;
     private boolean wasAgentChat;
     private boolean activityStopped;
-    private void updateTransferBorder(){if(transferBorder!=null)transferBorder.active(!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible()&&servers.transfersActive());if(agentTerminalBorder!=null)agentTerminalBorder.active(agentChatUi!=null&&agentChatUi.requiresTerminal());}
+    private void updateTransferBorder(){if(transferBorder!=null)transferBorder.active(!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible()&&servers.transfersActive());if(agentTerminalBorder!=null)agentTerminalBorder.active(!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible()&&agentChatUi!=null&&agentChatUi.requiresTerminal());}
     private final SessionOutputActivity outputSignal=new SessionOutputActivity();
     public void onTerminalRedrawInteraction(){TerminalSession session=activity.getCurrentSession();if(session!=null)outputSignal.resize(session.mHandle,android.os.SystemClock.uptimeMillis());updateActivityLine();}
     public void onTerminalViewportChanged(){outputSignal.viewport(android.os.SystemClock.uptimeMillis());updateActivityLine();}
@@ -90,7 +90,7 @@ public final class WorkspaceController {
         if(closed||session==null)return;outputSignal.output(session.mHandle,android.os.SystemClock.uptimeMillis());updateActivityLine();
     }
     private void updateActivityLine(){
-        if(activityLine==null)return;TerminalSession session=activity.getCurrentSession();boolean active=false;
+        if(activityLine==null)return;updateTransferBorder();TerminalSession session=activity.getCurrentSession();boolean active=false;
         if(!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible()&&session!=null&&session.isRunning()){
             active=outputSignal.active(session.mHandle,android.os.SystemClock.uptimeMillis());
             if(agentChatUi!=null&&agentChatUi.working())active=true;
@@ -100,8 +100,15 @@ public final class WorkspaceController {
             CodexStatus status=profile==null?null:codexStatuses.get(profile.id);
             if(status!=null&&status.error.isEmpty()&&System.currentTimeMillis()-status.updated<2500&&status.state.equals("active"))active=true;
         }
-        if(agentStop!=null&&agentStop.getVisibility()==View.VISIBLE&&agentChatUi!=null&&agentChatUi.structured())active=agentChatUi.canInterrupt();
-        if(agentStop!=null){boolean enabled=agentChatUi!=null&&agentChatUi.canInterrupt();if(agentStop.isEnabled()!=enabled)agentStop.setEnabled(enabled);agentStop.setContentDescription(tr("Остановить ","Stop ")+(agentChatUi==null?"Codex":agentChatUi.name()));}
+        boolean agent=agentStop!=null&&agentStop.getVisibility()==View.VISIBLE&&agentChatUi!=null;
+        if(agent){
+            boolean enabled=agentChatUi.canInterrupt();if(agentStop.isEnabled()!=enabled)agentStop.setEnabled(enabled);
+            AgentIndicatorState.State state=agentChatUi.indicatorState();agentStop.indicator(agentChatUi.name(),state);
+            String explanation=AgentIndicatorState.label(state,WorkspaceLanguage.code(activity).equals("ru"));
+            agentStop.setContentDescription(tr("Остановить ","Stop ")+agentChatUi.name()+" · "+explanation);
+            if(android.os.Build.VERSION.SDK_INT>=26)agentStop.setTooltipText(explanation);
+            active=!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible()&&agentStop.animated();
+        }
         activityLine.working(active);
     }
     private GeminiLiveUi geminiLiveUi;
@@ -203,6 +210,7 @@ public final class WorkspaceController {
         });
         toolbarVisibility = activity.getTerminalToolbarViewPager().getVisibility();
         agentChatUi=new AgentChatUi(activity,()->{TerminalSession t=activity.getCurrentSession();return t!=null&&t.isRunning()?store.findByHandle(t.mHandle):null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible());
+        activityLine.agentFrame(agentChatUi::animationFrame);
         geminiLiveUi.chatPresentation(this::previewChatScale,store::save);claudeLiveUi.chatPresentation(this::previewChatScale,store::save);
         geminiLiveUi.permissionVisibility(()->!agentChatUi.showing());agentChatUi.onShellCommand(store::recordCommand);agentChatUi.composer(terminalInput,inputRow);
         agentChatUi.onVisibilityChanged(()->{agentChatUi.shellMode(interactiveInput);boolean chat=agentChatUi.showing();boolean focus=chat&&!wasAgentChat;wasAgentChat=chat;terminalInput.setHint(chat?tr("Сообщение ","Message ")+agentChatUi.name()+"…":WorkspaceText.tr("Введите команду…"));activity.getTerminalToolbarViewPager().setVisibility(screen==Screen.TERMINAL&&!activityStopped&&!chat?toolbarVisibility:View.GONE);if(focus)leaveAgentInputIdle();renderHeader();renderTabs();});
@@ -225,7 +233,7 @@ public final class WorkspaceController {
         });
         codexHandler.postDelayed(codexPoll, 1000);
     }
-    public void onStop(){geminiInputDispatch.cancel();activityStopped=true;activity.getTerminalView().setWorkspaceTerminalVisible(false);geminiLiveUi.syncPermissionVisibility();agentReceiptsUi.syncVisibility();if(transferBorder!=null)transferBorder.active(false);if(desktopSessionBar!=null)desktopSessionBar.working(false);codexHandler.removeCallbacks(activityPoll);if(activityLine!=null)activityLine.working(false);WorkspaceUpdates.background(activity);servers.pause();if(agentChatUi!=null)agentChatUi.sync();if(desktopUi!=null)desktopUi.sync();}
+    public void onStop(){geminiInputDispatch.cancel();activityStopped=true;activity.getTerminalView().setWorkspaceTerminalVisible(false);geminiLiveUi.syncPermissionVisibility();agentReceiptsUi.syncVisibility();if(transferBorder!=null)transferBorder.active(false);if(agentTerminalBorder!=null)agentTerminalBorder.active(false);if(desktopSessionBar!=null)desktopSessionBar.working(false);codexHandler.removeCallbacks(activityPoll);if(activityLine!=null)activityLine.working(false);WorkspaceUpdates.background(activity);servers.pause();if(agentChatUi!=null)agentChatUi.sync();if(desktopUi!=null)desktopUi.sync();}
     public void onResume(){activityStopped=false;updateDesktopProgramsBorder();activity.getTerminalView().setWorkspaceTerminalVisible(screen==Screen.TERMINAL);updateTransferBorder();codexHandler.removeCallbacks(activityPoll);codexHandler.post(activityPoll);servers.resume();if(agentChatUi!=null)agentChatUi.sync();if(desktopUi!=null)desktopUi.sync();WorkspaceUpdates.automatic(activity,()->{if(!closed)renderHeader();});}
     public void refreshLanguage() {
         terminalInput.setHint(WorkspaceText.tr("Введите команду…"));
@@ -497,8 +505,8 @@ public final class WorkspaceController {
         }
         selector.setPadding(selector.getPaddingLeft(),selector.getPaddingTop(),dp((current!=null?3:2)*48+(current!=null?2:1)*4+12+(cancellable?52:0)),selector.getPaddingBottom());
         panel.addView(toolIcons,new FrameLayout.LayoutParams(-2,-1,Gravity.END|Gravity.CENTER_VERTICAL));tabs.addView(panel,new LinearLayout.LayoutParams(-1,dp(56)));
-        boolean chat=agentChatUi!=null&&agentChatUi.terminalAvailable();
         if(agentTerminalBorder!=null)agentTerminalBorder.active(false);agentTerminalBorder=null;
+        boolean chat=agentChatUi!=null&&agentChatUi.terminalAvailable();
         TextView packages=button(chat?"":"📦",false,chat?()->agentChatUi.terminal():this::showCurrentPackages);packages.setTag("session-current-packages");packages.setContentDescription(chat?tr("Терминал ","Terminal ")+agentChatUi.name():WorkspaceText.tr("Пакеты"));
         if(chat){((WorkspaceIconButton)packages).setIcon(activity.getDrawable(R.drawable.workspace_ai_agent).mutate(),dp(22));agentTerminalBorder=new WorkspaceTransferBorder(activity.getResources().getDisplayMetrics().density);packages.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{packages.getBackground(),agentTerminalBorder}));agentTerminalBorder.active(agentChatUi.requiresTerminal());}
         toolIcons.addView(packages,new LinearLayout.LayoutParams(dp(48),dp(48)));

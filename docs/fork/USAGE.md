@@ -1,3 +1,20 @@
+> v2.1.1 stable candidate, compared with public v2.1.0. See the release summary
+> and validation in docs/fork (or this directory). Existing dated test records
+> describe historical development, not separate public features.
+
+# Private test18 — agent indicator and request timing
+
+All four structured agent chats use their own glyph inside the stop indicator.
+Motion stays inside the circle; ordinary terminal/SSH line behavior is retained.
+A request summary is attached only to its final answer, using confirmed native turn
+fields or a matched observed lifecycle. It is not CPU usage. Unknown fields remain
+absent; old history is never timestamped merely because it was loaded. Tap a summary
+for the full device-local date/time. See [timing and indicator validation](VALIDATION-test18-agent-indicator.md).
+The helper remains excluded; no user-facing rootfs migration is restored.
+Dated and version-labelled sections below describe earlier source states.
+
+---
+
 # Current source — helper experiment paused (2026-11-02)
 
 The optional Codex helper experiment is excluded from the next public release.

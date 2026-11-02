@@ -91,7 +91,7 @@ function createBridge(send, fetcher=globalThis.fetch) {
     }catch{change={id:request.id,model:request.model,state:'failed'};}
     finally{changing=false;publish();}
   }
-  function ui(value){if(!['idle','responding','waiting_for_confirmation'].includes(value))return;state=value;uiSeen=true;publish();if(value==='idle'){if(queued)setImmediate(apply);if(modeQueued)setImmediate(applyMode);}}
+  function ui(value){if(!['idle','responding','waiting_for_confirmation'].includes(value))return;state=value;uiSeen=true;chat.observeCompletionState(value);publish();if(value==='idle'){if(queued)setImmediate(apply);if(modeQueued)setImmediate(applyMode);}}
   function api(kind,c,event){
     attach(c);
     if(kind==='request')totals.requests++;
@@ -150,7 +150,8 @@ function createBridge(send, fetcher=globalThis.fetch) {
     if(request?.op==='mode')return changeMode(request.mode,request.id);
     return {ok:false,error:'INVALID_OPERATION'};
   }
-  return {attach,ui,chatUI,chatShell,approval,permission,consumePermission,prepareReceipt,receiptSubscribe,receiptText,api,publish,snapshot,command,unsupported(){unsupported=true;queued=null;modeQueued=null;publish(true);}};
+  const status=require('./agent-delivery-status.cjs');
+  return {historyCleared:()=>{for(const record of chat.sent.values())if(record.session===config?.getSessionId?.())record.hidden=true;chat.invalidate();},inputContext:status.current,runInputContext:status.run,historyMeta:status.historyMeta,queueContext:status.queueContext,queuedSubmit:(queue,submit,value)=>status.run(status.queuedContext(queue,config?.getSessionId?.()||''),()=>submit(value)),queueCancelled:queue=>{for(const id of status.queuedContext(queue,config?.getSessionId?.()||'').ids){const record=chat.sent.get(id);if(record){record.receipt=status.receipt({ok:false,accepted:false,delivery:'rejected',error:'CANCELLED',ack:'native-queue-cleared'},id);chat.invalidate();}}},attach,ui,chatUI,chatShell,approval,permission,consumePermission,prepareReceipt,receiptSubscribe,receiptText,api,publish,snapshot,command,unsupported(){unsupported=true;queued=null;modeQueued=null;publish(true);}};
 }
 module.exports={createBridge,safeModel};
 if(process.env.JOBS_GEMINI_LIVE==='1'&&typeof process.send==='function'){

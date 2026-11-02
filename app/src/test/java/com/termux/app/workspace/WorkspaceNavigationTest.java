@@ -311,6 +311,7 @@ public class WorkspaceNavigationTest {
         assertEquals(View.GONE, findDescription(sessionEditor.getWindow().getDecorView(), "Добавить команду запуска").getVisibility());
         sessionEditor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
         shadowOf(Looper.getMainLooper()).idle(); store.awaitWrites();
+        shadowOf(Looper.getMainLooper()).idle(); // Process the acknowledged save callback before asserting the UI state.
         assertEquals(1, store.sessions.size()); assertTrue(store.sessions.get(0).saved); assertNull(activity.getCurrentSession());
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Codex / Ubuntu"));
         assertEquals("termux", store.sessions.get(0).environment);

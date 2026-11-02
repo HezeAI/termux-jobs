@@ -24,7 +24,7 @@ public class AgentChatViewTest {
  @Test public void receiptInsertionKeepsToolAndFollowingAnswerInOrder()throws Exception{
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView view=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(view);
   JSONObject tool=row("tool","tool","result"),answer=row("answer","text","answer"),receipt=row("receipt","receipt","details").put("title","Allowed once");view.rows(Arrays.asList(tool,answer),false);View toolView=view.timeline.getChildAt(1),answerView=view.timeline.getChildAt(2);
-  for(int i=0;i<3;i++){view.rows(Arrays.asList(receipt,tool,answer),false);assertSame(toolView,view.timeline.getChildAt(2));assertSame(answerView,view.timeline.getChildAt(3));assertEquals(5,view.timeline.getChildCount());}
+  for(int i=0;i<3;i++){view.rows(Arrays.asList(receipt,tool,answer),false);assertSame(toolView,view.timeline.getChildAt(2));assertSame(answerView,view.timeline.getChildAt(3));assertEquals(6,view.timeline.getChildCount());}
  }
  @Test public void sendingFollowsNewRowsButReadingHistoryDoesNot()throws Exception{
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);

@@ -93,7 +93,7 @@ final class AgentActionDetailsView extends LinearLayout {
             link(p.optString("title"),p.optString("url"));JSONArray results=p.optJSONArray("results");if(results!=null)for(int i=0;i<Math.min(10,results.length());i++){JSONObject result=results.optJSONObject(i);if(result!=null)link(result.optString("title"),result.optString("url"));}
         }
     }
-    private void link(String title,String value){String url=AgentActionPresentation.webUrl(value);if(url.isEmpty())return;TextView link=owner.label((title.isEmpty()?"":title+"\n")+url,13);link.setTextColor(0xff79dfcd);link.setOnClickListener(v->AgentMarkdown.openLink(v,url));preview.addView(link);}
+    private void link(String title,String value){String url=AgentActionPresentation.webUrl(value);if(url.isEmpty())return;TextView link=owner.label((title.isEmpty()?"":title+"\n")+url,13);link.setTextColor(0xff79dfcd);link.setPadding(owner.dp(12),owner.dp(10),owner.dp(12),owner.dp(10));link.setMinHeight(owner.dp(48));link.setBackground(WorkspaceDialogs.background(getContext(),false));link.setContentDescription((title.isEmpty()?"":title+". ")+url);link.setOnClickListener(v->AgentMarkdown.openLink(v,url));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(owner.dp(6),owner.dp(4),owner.dp(6),owner.dp(4));preview.addView(link,lp);}
     private void renderFiles(JSONArray files,boolean truncated){
         preview.removeAllViews();for(int i=0;i<Math.min(100,files.length());i++){
             JSONObject f=files.optJSONObject(i);if(f==null)continue;String path=f.optString("path");if(path.isEmpty())continue;String id=i+":"+path,diff=f.optString("diff");

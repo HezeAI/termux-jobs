@@ -1,0 +1,6 @@
+package com.termux.app.workspace;
+import android.app.Application;import android.view.View;import org.junit.*;import org.junit.runner.RunWith;import org.robolectric.*;import org.robolectric.annotation.Config;import static org.junit.Assert.*;
+@RunWith(RobolectricTestRunner.class) @Config(sdk=28,application=Application.class)
+public class AgentProgressViewTest {
+ @Test public void footerKeepsHeightAndUsesRequestStatesWithoutAddingHistory(){android.content.Context c=RuntimeEnvironment.application;AgentChatView chat=new AgentChatView(c,r->{},()->{},()->{},()->{},()->{});AgentProgressView p=chat.execution;int height=-1;for(AgentIndicatorState.State state:AgentIndicatorState.State.values()){p.present(state,true);p.frame(1230000000L);p.measure(View.MeasureSpec.makeMeasureSpec(240,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(500,View.MeasureSpec.AT_MOST));if(height<0)height=p.getMeasuredHeight();assertEquals(height,p.getMeasuredHeight());assertEquals(state==AgentIndicatorState.State.IDLE||state==AgentIndicatorState.State.ERROR?View.INVISIBLE:View.VISIBLE,p.getVisibility());}p.present(AgentIndicatorState.State.WORKING,true);p.frame(0);assertFalse(p.getText().toString().isEmpty());p.present(AgentIndicatorState.State.WORKING,false);assertEquals(View.INVISIBLE,p.getVisibility());assertFalse(p.isTextSelectable());}
+}

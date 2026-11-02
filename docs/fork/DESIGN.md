@@ -1,3 +1,19 @@
+> v2.1.1 stable candidate, compared with public v2.1.0. See the release summary
+> and validation in docs/fork (or this directory). Existing dated test records
+> describe historical development, not separate public features.
+
+# Private test18 — compact agent activity
+
+A fixed44dp stop target paints the agent glyph, orbit and inner contacts without
+changing layout. The existing Choreographer clock retains its60Hz ceiling. Idle,
+work, user-wait, native model retry and error are distinct; system animation-off
+uses static glyph/outline/arc states. Request completion summaries are small,
+right aligned, wrappable and tappable; app language and the device clock preference
+both apply. Real phone visual/touch acceptance is separate from modelled checks.
+See [test18 evidence](VALIDATION-test18-agent-indicator.md).
+
+---
+
 # Private test14 — Settings navigation and agent help
 
 The main menu's Advanced submenu owns backup, environment updates, cleanup and

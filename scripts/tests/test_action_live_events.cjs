@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const dir=require('./fixture-paths.cjs').fixture('action');
-for(const [a,b]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],['agent-receipts.cjs','agent-receipts.cjs'],['agent-action-preview.cjs','agent-action-preview.cjs']])fs.copyFileSync(path.resolve('app/src/main/assets',a),path.join(dir,b));
+for(const [a,b]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],['agent-receipts.cjs','agent-receipts.cjs'],['agent-action-preview.cjs','agent-action-preview.cjs'],['agent-completion-times.cjs','agent-completion-times.cjs']])fs.copyFileSync(path.resolve('app/src/main/assets',a),path.join(dir,b));
 const {CodexChat}=require(path.join(dir,'codex-chat.cjs'));
 const c=new CodexChat({close(){}},{endpoint:path.join(dir,'s'),access:'read',approval:'on-request',cwd:dir,chat:'new'});c.thread='owned-thread';c.ready=true;
 const event=(method,item)=>c.event({method,params:{threadId:c.thread,turnId:'owned-turn',item}});

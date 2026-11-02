@@ -1,3 +1,7 @@
+> v2.1.1 stable candidate, compared with public v2.1.0. See the release summary
+> and validation in docs/fork (or this directory). Existing dated test records
+> describe historical development, not separate public features.
+
 # Private test14 — Advanced menu and clearer agent settings
 
 Version2.1.1-test14/code1446, same com.termux/signer/ARM64/schema8.

@@ -1,4 +1,10 @@
-# Current release validation — v2.1.0
+# Current candidate validation — v2.1.1
+
+See [VALIDATION-v2.1.1.md](VALIDATION-v2.1.1.md) for the exact final artifact, fresh checks, reused inputs and device limits. Prepared for review; not published.
+
+---
+
+# Historical public release validation — v2.1.0
 
 See [VALIDATION-v2.1.0.md](VALIDATION-v2.1.0.md) for the final APK, automated and
 isolated native checks, developer-reported device evidence, remaining limits and

@@ -53,16 +53,33 @@ export function instrument(source,name){
    replace('                  isCompact ? /* @__PURE__ */','                  (0,import_jsx_runtime26.jsx)(JobsPermissionReceipt,{callId:tool.callId,borderColor}),\n                  isCompact ? /* @__PURE__ */');
    const shellMarker='  const streamingState = (0, import_react97.useMemo)(';
    replace(shellMarker,'  (0, import_react97.useEffect)(() => globalThis.__jobsGeminiLive?.chatShell(config, text => handleShellCommand(text, new AbortController().signal)), [config,handleShellCommand]);\n'+shellMarker);
+   replace('    historyManager.clearItems();','    historyManager.clearItems();\n    globalThis.__jobsGeminiLive?.historyCleared();');
+   // Side metadata carries Android input IDs. Native prompt strings/queue values stay unchanged.
+   replace('  const addMessage = (0, import_react104.useCallback)((message) => {','  const addMessage = (0, import_react104.useCallback)((message, jobsContext) => {');
+   replace('      setMessageQueue((prev) => [...prev, trimmedMessage]);','      setMessageQueue((prev) => {const next=[...prev, trimmedMessage];globalThis.__jobsGeminiLive?.queueContext(next,prev,jobsContext);return next;});');
+   replace('  const clearQueue = (0, import_react104.useCallback)(() => {\n    setMessageQueue([]);','  const clearQueue = (0, import_react104.useCallback)(() => {\n    setMessageQueue(prev=>{globalThis.__jobsGeminiLive?.queueCancelled(prev);return [];});');
+   replace('    const allMessages = messageQueue2.join("\\n\\n");\n    setMessageQueue([]);','    const allMessages = messageQueue2.join("\\n\\n");\n    setMessageQueue(prev=>{globalThis.__jobsGeminiLive?.queueCancelled(prev);return [];});');
+   replace('      submitQuery(combinedMessage);','      globalThis.__jobsGeminiLive?.queuedSubmit ? globalThis.__jobsGeminiLive.queuedSubmit(messageQueue2,submitQuery,combinedMessage) : submitQuery(combinedMessage);');
+   const userItem='{ type: "user" /* USER */, text: trimmedQuery }';
+   if(source.split(userItem).length!==3)throw Error('UNSUPPORTED_GEMINI_INPUT_IDS');
+   source=source.split(userItem).join('{ type: "user" /* USER */, text: trimmedQuery, ...globalThis.__jobsGeminiLive?.historyMeta() }');
+   const slashUser='{ type: "user" /* USER */, text: trimmed }';
+   if(source.split(slashUser).length!==3)throw Error('UNSUPPORTED_GEMINI_INPUT_IDS');
+   source=source.split(slashUser).join('{ type: "user" /* USER */, text: trimmed, ...globalThis.__jobsGeminiLive?.historyMeta() }');
+   replace('        type: "hint",\n        text: trimmed','        type: "hint",\n        ...globalThis.__jobsGeminiLive?.historyMeta(),\n        text: trimmed');
    // Report the branch actually taken by the native composer, not a prior UI snapshot.
    const submitStart=source.indexOf('  const handleFinalSubmit =');
    const submitEnd=source.indexOf('  const uiActions =',submitStart);
    if(submitStart<0||submitEnd<=submitStart)throw Error('UNSUPPORTED_GEMINI_LAYOUT');
    const submitOriginal=source.slice(submitStart,submitEnd);
-   let submit=submitOriginal;
+   let submit=submitOriginal.replace('async (submittedValue) => {','async (submittedValue) => {\n      const jobsContext=globalThis.__jobsGeminiLive?.inputContext();');
+   if(submit===submitOriginal)throw Error('UNSUPPORTED_GEMINI_INPUT_IDS');
+   submit=submit.replaceAll('void submitQuery(submittedValue);','void (jobsContext ? globalThis.__jobsGeminiLive.runInputContext(jobsContext,()=>submitQuery(submittedValue)) : submitQuery(submittedValue));');
+   submit=submit.replace('addMessage(submittedValue);','addMessage(submittedValue, jobsContext);');
    const mark=(old,next)=>{if(submit.split(old).length!==2)throw Error('UNSUPPORTED_GEMINI_LAYOUT');submit=submit.replace(old,next);};
    mark('        handleHintSubmit(submittedValue);\n        addInput(submittedValue);\n        return;', '        handleHintSubmit(submittedValue);\n        addInput(submittedValue);\n        return {delivery:"current",ack:"steering-injection"};');
    mark('            addInput(submittedValue);\n            return;', '            addInput(submittedValue);\n            return {delivery:"queued",ack:"permission-pending"};');
-   mark('        addMessage(submittedValue);\n      }\n      addInput(submittedValue);', '        addMessage(submittedValue);\n        addInput(submittedValue);\n        return {delivery:"queued",ack:"native-composer-queue"};\n      }\n      addInput(submittedValue);\n      return {delivery:"started",ack:"native-submit-callback"};');
+   mark('        addMessage(submittedValue, jobsContext);\n      }\n      addInput(submittedValue);', '        addMessage(submittedValue, jobsContext);\n        addInput(submittedValue);\n        return {delivery:"queued",ack:"native-composer-queue"};\n      }\n      addInput(submittedValue);\n      return {delivery:"started",ack:"native-submit-callback"};');
    replace(submitOriginal,submit);
    const chatMarker='  const uiActions = (0, import_react119.useMemo)(';
    const chatHook='  (0, import_react119.useEffect)(() => globalThis.__jobsGeminiLive?.chatUI(config,{history:historyManager.history,pending:pendingHistoryItems,thought,ready:isInputActive && isConfigInitialized && isMcpReady && !isCompressing && !isResuming,cancel:cancelOngoingRequest,native:!!((uiState.activePtyId && uiState.embeddedShellFocused) || uiState.dialogsVisible || uiState.isAuthenticating || uiState.authError || uiState.isAuthDialogOpen || uiState.isAwaitingApiKeyInput || uiState.isAwaitingLoginRestart || uiState.isFolderTrustDialogOpen || uiState.permissionConfirmationRequest || uiState.commandConfirmationRequest || uiState.authConsentRequest || uiState.loopDetectionConfirmationRequest || uiState.initError || uiState.customDialog),authError:!!uiState.authError},handleFinalSubmit,shellModeActive,setShellModeActive), [config,historyManager.history,pendingHistoryItems,thought,isInputActive,isConfigInitialized,isMcpReady,isCompressing,isResuming,uiState,handleFinalSubmit,cancelOngoingRequest,shellModeActive,setShellModeActive]);\n';

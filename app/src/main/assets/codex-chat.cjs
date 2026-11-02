@@ -1,4 +1,5 @@
 'use strict';
+const {CompletionTimes}=require('./agent-completion-times.cjs');
 // Android presentation of the native app-server protocol. No auth-file reads or policy overrides.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),net=require('node:net');
 const {spawn}=require('node:child_process');
@@ -81,7 +82,7 @@ class CodexChat {
    if(!metadata?.cwd||(normalize(metadata.cwd)!==normalize(this.cwd)&&(!this.confirmed||normalize(metadata.cwd)!==normalize(this.confirmed))))throw Error('The chat directory changed. Confirm its original folder in session settings.');
    r=await this.rpc.call('thread/resume',{threadId:this.requested,excludeTurns:true,...this.params()});
   }else if(this.chat==='new')r=await this.rpc.call('thread/start',this.params());else throw Error('Choose a specific chat or create a new chat');
-  this.verify(r);if(!valid(r.thread?.id))throw Error('Codex returned an invalid chat');this.thread=r.thread.id;this.model=text(r.model);this.effort=text(r.reasoningEffort);this.receipts=new ReceiptStore(path.join(this.root,this.thread+'.codex-receipts.json'),'X');
+  this.verify(r);if(!valid(r.thread?.id))throw Error('Codex returned an invalid chat');this.thread=r.thread.id;this.model=text(r.model);this.effort=text(r.reasoningEffort);this.receipts=new ReceiptStore(path.join(this.root,this.thread+'.codex-receipts.json'),'X');this.completions=new CompletionTimes(this.root,'codex',this.thread);
   if(this.chat==='id')try{await this.history();}catch{if(this.disconnected)return;this.historySupported=false;this.error('The current Codex cannot load paginated history. Open its native terminal to view older messages.');}if(this.disconnected||this.closed)return;this.ready=true;this.refresh();
  }
  error(body){this.failure=text(body);const id='error_'+crypto.randomUUID();this.put('local',{id,type:'localError',text:this.failure});}
@@ -91,7 +92,7 @@ class CodexChat {
  async history(cursor,detached=false){
   if(!this.thread)return;const r=await this.rpc.call('thread/turns/list',{threadId:this.thread,limit:1,sortDirection:'desc',itemsView:'full',...(cursor?{cursor}:{})});
   if(!Array.isArray(r.data))throw Error('Unsupported history response');const before=new Map(),page=new Map();
-  for(const turn of [...r.data].reverse())if(valid(turn.id)){const old=this.turns.get(turn.id);const entries=new Map((turn.items||[]).filter(i=>i&&typeof i.id==='string').map(i=>[i.id,itemPhase(i,turn.status==='completed'?'completed':'')]));if(old)for(const [id,item]of old)if(!entries.has(id))entries.set(id,item);if(old)for(const [id,item]of old)entries.set(id,item);page.set(turn.id,new Map(entries));before.set(turn.id,entries);}
+  for(const turn of [...r.data].reverse())if(valid(turn.id)){if(turn.status==='completed')this.completeTurn(turn,false);const old=this.turns.get(turn.id);const entries=new Map((turn.items||[]).filter(i=>i&&typeof i.id==='string').map(i=>[i.id,itemPhase(i,turn.status==='completed'?'completed':'')]));if(old)for(const [id,item]of old)if(!entries.has(id))entries.set(id,item);if(old)for(const [id,item]of old)entries.set(id,item);page.set(turn.id,new Map(entries));before.set(turn.id,entries);}
   page.nextCursor=typeof r.nextCursor==='string'?r.nextCursor:'';if(cursor||detached)return page;
   for(const [id,items]of this.turns)if(!before.has(id))before.set(id,items);this.turns=before;this.older=page.nextCursor;this.bound(true);return page;
  }
@@ -113,8 +114,8 @@ class CodexChat {
    }return;
   }
   if(m.method==='thread/settings/updated'){const v=p.threadSettings||{};if(v.model)this.model=text(v.model);if(v.reasoningEffort)this.effort=text(v.reasoningEffort);this.refresh();return;}
-  if(m.method==='turn/started'){this.turn=p.turn?.id||'';this.modelConnection=null;this.lastTurnError=null;this.busy=true;return;}
-  if(m.method==='turn/completed'){if(!this.turn||p.turn?.id===this.turn){if(p.turn?.error){const reason=text(p.turn.error.message||'Codex turn failed').slice(0,4000);if(this.modelConnection?.state!=='failed'||this.modelConnection.turn!==p.turn.id||this.modelConnection.reason!==reason)this.modelConnection={state:'failed',turn:p.turn.id,reason,details:''};this.turnError(p.turn.id,reason);}else if(['completed','interrupted'].includes(p.turn?.status))this.modelConnection=null;this.busy=false;this.shellRunning=false;this.turn='';this.clearRequests();this.refresh();}if(this.returnToChat)this.closeTerminal().catch(()=>{});return;}
+  if(m.method==='turn/started'){this.turn=p.turn?.id||'';this.completions?.start(this.turn);this.modelConnection=null;this.lastTurnError=null;this.busy=true;return;}
+  if(m.method==='turn/completed'){if(p.turn?.status==='completed')this.completeTurn(p.turn,true);if(!this.turn||p.turn?.id===this.turn){if(p.turn?.error){const reason=text(p.turn.error.message||'Codex turn failed').slice(0,4000);if(this.modelConnection?.state!=='failed'||this.modelConnection.turn!==p.turn.id||this.modelConnection.reason!==reason)this.modelConnection={state:'failed',turn:p.turn.id,reason,details:''};this.turnError(p.turn.id,reason);}else if(['completed','interrupted'].includes(p.turn?.status))this.modelConnection=null;this.busy=false;this.shellRunning=false;this.turn='';this.clearRequests();this.refresh();}if(this.returnToChat)this.closeTerminal().catch(()=>{});return;}
   if(m.method==='error'){
    // Native CLI readiness and upstream model delivery are independent. A steer
    // acknowledgement, user echo or waiting tool never establishes recovery.
@@ -165,6 +166,12 @@ class CodexChat {
   return {ok:true};
  }
  permissionBody(p){return text(p.params.command||JSON.stringify(p.params.permissions||this.turns.get(p.turn)?.get(p.params.itemId)?.changes||{},null,2));}
+ completeTurn(turn,received){
+  const entries=new Map(this.turns.get(turn.id)||[]);for(const item of turn.items||[])entries.set(item.id,item);
+  const answers=[...entries.values()].filter(i=>i.type==='agentMessage'&&typeof i.text==='string'&&i.text.trim());
+  const last=answers.filter(i=>i.phase==='final_answer').at(-1)||answers.filter(i=>!i.phase).at(-1);
+  if(last)this.completions?.finish(turn.id,key(turn.id+':'+last.id),{completedAt:turn.completedAt,durationMs:turn.durationMs,startedAt:turn.startedAt},received);
+ }
  groups(turns=this.turns){
   const groups=[];for(const [turn,entries]of turns){let skillContext='';for(const [id,item]of entries){const message=key(turn+':'+id),rows=[];const add=(part,kind,body,title='')=>{body=text(body);if(!body)return;const k=message+':'+part;this.full.delete(k);this.full.set(k,body);rows.push({key:k,message,part,kind,title,body:body.slice(0,12000),bodyLength:body.length,more:body.length>12000});};
    for(const receipt of this.receipts.rows.filter(r=>r.key.startsWith(item.id+':')))add('receipt:'+receipt.token,'receipt',receipt.body,this.receipts.label(receipt,this.language==='ru'));
@@ -179,7 +186,7 @@ class CodexChat {
     for(const [i,input]of (item.content||[]).entries())if(input.type==='skill'&&text(input.name)){add('skill:'+i,'tool',text(input.name)+'\n'+text(input.path),'Skill: '+text(input.name));Object.assign(rows.at(-1),{toolType:'skill',skillName:text(input.name).slice(0,120),status:'attached'});}
    }
    else if(item.type==='agentMessage'){
-    add('text','text',item.text);let i=0;for(const match of String(item.text||'').matchAll(/!\[([^\]\n]{0,200})\]\((\/[^\n)]+\.(?:png|jpe?g|webp|gif))\)/gi)){add('linked-image:'+(i++),'attachment',match[1]||'Image');Object.assign(rows.at(-1),{attachment:{type:'image',name:path.basename(match[2]),path:match[2],cacheKey:message}});if(i>=4)break;}
+    add('text','text',item.text);const summary=this.completions?.summary(message);if(summary&&rows.length)rows.at(-1).requestSummary=summary;let i=0;for(const match of String(item.text||'').matchAll(/!\[([^\]\n]{0,200})\]\((\/[^\n)]+\.(?:png|jpe?g|webp|gif))\)/gi)){add('linked-image:'+(i++),'attachment',match[1]||'Image');Object.assign(rows.at(-1),{attachment:{type:'image',name:path.basename(match[2]),path:match[2],cacheKey:message}});if(i>=4)break;}
     let artifacts=this.mediaCache.get(item);if(!artifacts||artifacts.text!==item.text){
      artifacts={text:item.text,files:[]};const seen=new Set();
      for(const match of String(item.text||'').matchAll(/(?<!!)\[[^\]\n]{1,200}\]\((?:<(\/[^<>\r\n]+)>|(\/[^\r\n)]+))\)/g)){

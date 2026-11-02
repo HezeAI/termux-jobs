@@ -1,10 +1,68 @@
 # Unreleased
 
+No additional changes outside v2.1.1.
+
+# 2026-11-02 — 2.1.1 (versionCode 1454)
+
+Stable release compared with public v2.1.0.
+
+- Add global/project Codex instruction editing, import, revision recovery, source diagnostics and localized template previews.
+- Support native ordinary-mode Codex questions and Claude follow-up queueing. Show ID-bound delivery evidence without claiming model uptake or replaying ambiguous sends.
+- Add scoped Stop confirmation, agent indicators, real reconnect presentation, transient execution status and reliable final-answer timing.
+- Confirm form writes before closing; retain failed drafts. Protect instruction drafts and simplify agent settings/navigation.
+- Align image recognition/fallback and outline clickable web-page previews. Clarify basic-settings backup coverage.
+- Retain package/signer/schema8 without a data reset. Remove the legacy user-facing Ubuntu AI migration action; retain ordinary environment and backup mechanisms.
+
+[Release notes](docs/fork/RELEASE-v2.1.1.md) · [Validation](docs/fork/VALIDATION-v2.1.1.md)
+
+---
+
+# Historical development notes before v2.1.1
+
+- Web-page previews in action details now use outlined, padded full-width link cards. Existing view/copy/open actions and available titles/URLs are retained; no extra network fetches.
+
+- Agent delivery: compact per-message acknowledgements for Claude, Gemini and OpenCode. Keep API admission, CLI queue and current-turn evidence distinct; retain rejected/unconfirmed sends and drafts.
+- Restore native-terminal attention borders independently from the removed agent chat line. Server transfer ownership/listeners remain unchanged.
+- Add a transient execution footer driven by the existing frame clock: sequential dots while a request runs, waiting/reconnect text otherwise, static accessible text with disabled animations. No history entries, new CLI polls or forced scrolling.
+
 - Pause the optional Codex helper experiment and exclude it from the next public release. Preserve its complete source snapshot in local Git branch `archive/codex-helper-test17-20261102`; remove only helper-specific UI, controller integration and adapter protocol from the active source. Keep historical private-test17 records and artifacts.
-- Retain the test17 heart trajectory with its incoming-side fall, six asymmetric inner-circle contacts, continuous exit and stronger pulses, plus the other agreed fixes, including removal of user-facing agent rootfs migration. Session/preset formats and existing user data remain unchanged.
+- Retain the other agreed fixes, including removal of user-facing agent rootfs migration. The later test18 design replaces the heart trajectory with a compact agent indicator. Session/preset formats and existing user data remain unchanged.
 - No APK build, installation or publication accompanies this source separation. Existing version metadata is unchanged; the next APK must exceed reserve1451. [Separation and verification](docs/fork/HELPER-EXPERIMENT-PAUSED.md).
 
 - Development policy now requires dated, versioned CHANGELOG entries and a linked validation report for every delivered APK, with separate checked/reused/unverified evidence. Documentation-only edits do not trigger APK rebuilds.
+
+# 2026-11-02 — 2.1.1-test19 (versionCode 1453)
+
+Private test build. Compact per-message delivery captions for Claude, Gemini and
+OpenCode preserve distinct API/queue/current-request evidence and ID correlation.
+Restore native-terminal attention borders. Add transient execution dots using the
+existing frame clock and request states. Outline clickable web-page previews.
+Preserve Codex delivery, ordinary terminal/SSH lines, server transfer ownership,
+agent stop scope, package/signer/schema8. Helper remains excluded. Receipt metadata
+from a running adapter can be lost after that adapter restarts. Real phone animation,
+keyboard and accessibility acceptance remain separate.
+
+APK SHA-256: `e3dd6057109a3787531b85213179dbc28d301480b024634ff3dfb398b025d50e`.
+
+[Validation](docs/fork/VALIDATION-test19-chat-status.md)
+
+---
+
+# 2026-11-02 — 2.1.1-test18 (versionCode 1452)
+
+Private test APK; not a public release.
+
+- All four agent chats: replace the heart with a monochrome Codex `>_`, Claude ray star, Gemini sparkle or pixel OC. Keep the same circular button/hit area and the request-scoped Yes/No stop confirmation.
+- Keep agent motion inside the indicator: orbit with short tail, six asymmetric inner contacts and contact flashes; calm waiting pulse, amber dashed reconnect, muted idle and red error outline. Drive it with the existing display frame clock, preserve static states when system animations are disabled and retain the ordinary terminal/SSH activity line. Native retry details/counters remain unchanged; CLI readiness never proves model connectivity.
+- One stable timing summary below each final request answer: “Работал 16 с · 05:03” / “Worked for 16s · 5:03 AM”, following app language and device clock/timezone. Use confirmed Codex native turn start/end/duration; otherwise observe matching native request lifecycle events. Unknown start omits duration; old history without reliable completion data has no fabricated time. Tap for full date/time and explanation. Keep a small append-only per-conversation summary journal, not a rewritten copy of history.
+- Exclude the archived helper experiment. Retain removal of the user-facing agent migration feature and the other agreed fixes. Preserve com.termux, signer, ARM64 and workspace/schema8; no data reset or incompatible settings migration. New summaries are optional presentation data ignored by earlier APKs and are not added to existing backup/export formats.
+- Limits: actual phone glyph/trajectory/flash readability, frame smoothness, IME, large-font and touch acceptance remain separate from isolated models. Existing running CLI adapters load this code only after an explicit normal agent restart with history continuation. Observed durations include tool/network/user waits and are not CPU measurements. No old-history timing is inferred from creation timestamps.
+
+- Final APK SHA-256: `ecde761d2b94b09522684d3093769c4dc9c405d0fdadcebc81c81b6a796a708a`. Final ZIP/package/version/ARM64/debug/signature/runtime checks passed; modern Lint has0 errors/234 warnings. Device visual acceptance remains separate.
+
+[Validation](docs/fork/VALIDATION-test18-agent-indicator.md)
+
+---
 
 # 2026-11-02 — 2.1.1-test17 (versionCode 1450)
 

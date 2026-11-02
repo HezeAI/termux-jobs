@@ -1,0 +1,30 @@
+{
+  "ru": [
+    "Редактор общих и проектных инструкций Codex: импорт, история, восстановление, RU/EN-шаблоны и защита черновика.",
+    "Штатные интерактивные вопросы Codex без переключения в Plan.",
+    "Компактные подтверждения доставки по ID; ввод и вложения сохраняются при отказе. Claude поддерживает уточнения через штатную очередь.",
+    "Индикаторы агентов, безопасное подтверждение остановки, состояния реконекта, точки выполнения и достоверное время итогового ответа.",
+    "Подтверждённое сохранение форм, меню «Дополнительно» и понятные настройки доступа агентов.",
+    "Единое распознавание изображений, резервный просмотр исходного файла и оформленные карточки веб-страниц."
+  ],
+  "en": [
+    "Edit actual Codex global/project instructions with import, revision history, RU/EN previews and draft protection.",
+    "Answer native Codex questions without silently switching to Plan mode.",
+    "Per-message delivery evidence; rejected input and attachments stay available. Claude supports native queued follow-ups.",
+    "Agent indicators, scoped Stop confirmation, native reconnect states, execution dots and reliable final-answer timing.",
+    "Forms close after confirmed saves; Advanced navigation and concise agent access guidance.",
+    "Consistent image recognition, original-file fallback and outlined web-page cards."
+  ],
+  "compatibility": {
+    "ru": [
+      "Пакет и подпись сохранены; сброс данных и переустановка окружений не требуются.",
+      "Новые адаптеры применяются после явного перезапуска агента с продолжением диалога.",
+      "Удалён старый пользовательский перенос Ubuntu → Ubuntu AI; обычный выбор среды и резервные копии сохранены."
+    ],
+    "en": [
+      "Same package and signer; no data reset or environment reinstallation is required.",
+      "Changed adapters load after an explicit agent restart with conversation resume.",
+      "The legacy Ubuntu-to-Ubuntu-AI migration action is removed; normal environment selection and backups remain."
+    ]
+  }
+}

@@ -11,6 +11,7 @@ final class AgentChatCache {
         String older="",model="",session="",notice="";
         boolean trimmed,historyExhausted,nativeChat,resolved,busy,directShell,needsTerminal,connected,failed;
         AgentChatView.Position position;
+        AgentIndicatorState.State indicator=AgentIndicatorState.State.IDLE;
         JSONObject modelConnection;
         private int chars;
     }

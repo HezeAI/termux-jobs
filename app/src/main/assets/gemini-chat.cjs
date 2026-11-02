@@ -1,4 +1,6 @@
 'use strict';
+const deliveryStatus=require('./agent-delivery-status.cjs');
+const {CompletionTimes}=require('./agent-completion-times.cjs');
 const {preview:actionPreview,trimPreviews,outputTail}=require('./agent-action-preview.cjs');
 // Structured projection of native committed React state. Never parses terminal output.
 const crypto=require('node:crypto');
@@ -16,10 +18,24 @@ function display(value,depth=0,budget={left:200000,nodes:10000}){
 class GeminiChat {
  constructor(api){this.api=api;this.attachments=new Attachments(api.attachmentRoot||__dirname);this.binding=null;this.shell=null;this.groups=[];this.full=new Map();this.sent=new Map();this.thoughts=new Map();this.revision=0;this.native=false;}
  observe(config,data,submit,shellMode,setShellMode){
-  const session=this.api.session();if(this.sessionKey!==session){this.sessionKey=session;this.thoughts.clear();}
+  const session=this.api.session();if(this.sessionKey!==session){this.sessionKey=session;this.thoughts.clear();this.completions=new CompletionTimes(this.api.attachmentRoot,'gemini',session);this.seenText=new Set();this.pendingTimes=new Set();this.timeBaseline=false;this.responseObserved=false;}
   const binding={config,submit,shellMode,setShellMode,cancel:data.cancel,ready:data.ready===true,native:data.native===true};this.binding=binding;this.revision++;
-  this.source=data;this.dirty=true;
+  this.source=data;for(const item of data.history||[])if(item.jobsInputSession===session)for(const id of item.jobsClientIds||[]){const record=this.sent.get(id);if(record?.session===session){record.bound=true;if(record.receipt?.delivery==='queued')record.receipt=deliveryStatus.receipt({...record.receipt,delivery:'submitted',ack:'native-history-item'},id);}}this.observeCompletionState(this.api.status().state);this.dirty=true;
   return ()=>{if(this.binding===binding)this.binding=null;};
+ }
+ observeCompletionState(state){
+  if(!this.source||!this.completions)return;
+  const history=this.source.history||[],answers=history.filter(m=>['gemini','gemini_content'].includes(m.type));
+  if(state==='responding'&&!this.responseObserved){
+   this.responseObserved=true;this.cancelledRequest='';this.completionRequest='observed:'+crypto.randomUUID();this.completions.start(this.completionRequest);this.endInfo=null;
+   this.responseBaseline=new Set(answers.map(m=>hash(m.id+':'+m.type)));
+  }
+  if(state==='idle'&&this.responseObserved){this.endInfo={request:this.completionRequest,completedAt:Date.now(),durationMs:this.completions.elapsed(this.completionRequest)};this.responseObserved=false;}
+  if(state==='idle'&&this.endInfo&&this.cancelledRequest!==this.endInfo.request&&this.source.ready&&!this.source.authError){
+   const final=answers.filter(m=>!this.responseBaseline.has(hash(m.id+':'+m.type))&&typeof m.text==='string'&&m.text.trim()).at(-1);
+   const position=final?history.lastIndexOf(final):-1,error=position>=0&&history.slice(position).some(m=>m.type==='error');
+   if(final&&!error){this.completions.finish(this.endInfo.request,hash(final.id+':'+final.type),{durationMs:this.endInfo.durationMs},true,this.endInfo.completedAt);this.endInfo=null;this.dirty=true;}
+  }
  }
  invalidate(){this.dirty=true;}
  rebuild(){
@@ -31,8 +47,9 @@ class GeminiChat {
   const project=(item,index,live=false)=>{
    if(!item||typeof item!=='object')return;const message=live?hash('pending:'+item.type+':'+index):hash(item.id+':'+item.type);const rows=[];
    const row=(part,kind,body,title='',meta={})=>{body=text(body).slice(0,Math.max(0,Math.min(200000,remaining)));remaining-=body.length;if(!body&&kind!=='tool')return;const key=message+':'+part;this.full.set(key,body);rows.push({key,message,part,kind,...meta,title:text(title).slice(0,160),body:body.slice(0,12000),bodyLength:body.length,more:body.length>12000,...(live?{queued:true}:{})});};
-   if(item.type==='user'){const projected=this.attachments.project(item.text,this.api.session());if(projected.text)row('user','user',projected.text);rows.push(...attachmentRows(message,projected.files));}else if(item.type==='user_shell')row('shell-input','user','Shell: '+text(item.text));
-   else if(['gemini','gemini_content'].includes(item.type)){row('text','text',item.text);rows.push(...attachmentRows(message,this.attachments.output(item.text)));}
+   const ids=item.jobsInputSession===this.api.session()&&Array.isArray(item.jobsClientIds)?item.jobsClientIds.filter(id=>this.sent.get(id)?.session===this.api.session()):[];
+   if(item.type==='user'||item.type==='hint'&&ids.length){const projected=this.attachments.project(item.text,this.api.session());if(projected.text)row('user','user',projected.text);rows.push(...attachmentRows(message,projected.files));}else if(item.type==='user_shell')row('shell-input','user','Shell: '+text(item.text));
+   else if(['gemini','gemini_content'].includes(item.type)){row('text','text',item.text);const summary=!live&&this.completions?.summary(message);if(summary&&rows.length)rows.at(-1).requestSummary=summary;rows.push(...attachmentRows(message,this.attachments.output(item.text)));}
    else if(item.type==='thinking')row('thought','reasoning',[text(item.thought?.subject),text(item.thought?.description)].filter(Boolean).join('\n'));
    else if(item.type==='tool_group')for(const tool of (item.tools||[]).slice(0,100)){
     const id=typeof tool.callId==='string'?tool.callId.slice(0,160):'';if(!id)continue;const receipt=this.api.receipt(id);if(receipt)row('receipt:'+id,'receipt',receipt.body,receipt.label);
@@ -40,10 +57,11 @@ class GeminiChat {
    }
    else if(['info','error','warning','hint'].includes(item.type))row(item.type,item.type==='error'?'error':'info',item.text);
    if(!live&&this.thoughts.has(message))row('summary','reasoning',this.thoughts.get(message));
-   if(rows.length)this.groups.push({id:message,rows});
+   if(ids.length)deliveryStatus.attach(rows,ids.map(id=>this.sent.get(id)?.receipt));if(rows.length)this.groups.push({id:message,rows});
   };
   // Native history is already owned by CLI. Bound the additional projection, not model context.
   const chosen=[];let estimate=2*1024*1024;for(let i=history.length-1;i>=0;i--){const m=history[i];const size=text(m.text).length+(m.tools||[]).slice(0,100).reduce((n,t)=>n+text(t.description).length+display(t.resultDisplay).length,0);if(size>estimate&&chosen.length)break;estimate-=Math.min(size,estimate);chosen.push(m);}const records=chosen.reverse().map((m,i)=>({m,i,live:false})).concat(pending.map((m,i)=>({m,i,live:true})));for(let i=records.length-1;i>=0;i--){const r=records[i];project(r.m,r.i,r.live);}this.groups.reverse();
+  for(const [id,record]of [...this.sent].reverse())if(record.session===this.api.session()&&!record.hidden&&!record.bound&&record.receipt&&record.presentation){const p=record.presentation,rows=[];if(p.text)rows.push({key:id+':user',message:id,part:'user',kind:'user',body:text(p.text),queued:record.receipt.delivery==='queued'});rows.push(...attachmentRows(id,p.files));deliveryStatus.attach(rows,[record.receipt]);if(rows.length){const anchor=this.groups.findIndex(g=>g.id===record.anchor);this.groups.splice(anchor>=0?anchor+1:this.groups.length,0,{id,rows});}}
 
  }
 
@@ -53,7 +71,7 @@ class GeminiChat {
   if(q.cursor){if(typeof q.cursor!=='string'||q.cursor.length>128)throw Error('Invalid cursor');end=this.groups.findIndex(g=>g.id===q.cursor);if(end<0)throw Error('Expired cursor');}
   const groups=this.groups.slice(Math.max(0,end-20),end);let rows=groups.flatMap(g=>g.rows);if(rows.length>200)rows=rows.slice(-200);
   let budget=60000;rows=rows.map((r,i)=>{const max=Math.min(12000,Math.max(100,Math.floor(budget/(rows.length-i))));budget-=Math.min(r.body.length,max);return {...r,body:r.body.slice(0,max),more:r.more||r.body.length>max};});
-  return {ok:true,nativeChat:true,attachmentsSupported:true,authError:this.source?.authError===true,session:this.api.session(),stopToken:this.stopOwner||"",nativeUiReady:!!this.binding,knownMessages:this.groups.map(g=>g.id),connected:!!this.binding&&s.available&&(this.binding.ready||this.binding.native),rows:trimPreviews(rows),older:end>20?groups[0]?.id||'':'',forms:[],permission:this.api.permission(),busy:s.state==='responding'||s.state==='waiting_for_confirmation',needsTerminal:!!this.binding?.native||!s.available||(s.state==='waiting_for_confirmation'&&!this.api.permission()),directShell:false,model:{providerID:'google',id:s.model||s.selectedModel||''}};
+  return {ok:true,nativeChat:true,attachmentsSupported:true,agentError:this.source?.authError===true||this.source?.history?.at(-1)?.type==='error',authError:this.source?.authError===true,session:this.api.session(),stopToken:this.stopOwner||"",nativeUiReady:!!this.binding,knownMessages:this.groups.map(g=>g.id),connected:!!this.binding&&s.available&&(this.binding.ready||this.binding.native),rows:trimPreviews(rows),older:end>20?groups[0]?.id||'':'',forms:[],permission:this.api.permission(),busy:s.state==='responding'||s.state==='waiting_for_confirmation',needsTerminal:!!this.binding?.native||!s.available||(s.state==='waiting_for_confirmation'&&!this.api.permission()),directShell:false,model:{providerID:'google',id:s.model||s.selectedModel||''}};
  }
  async command(q){
   if(q.op==='chat-snapshot')return this.snapshot(q);
@@ -61,7 +79,7 @@ class GeminiChat {
    this.rebuild();const state=this.api.status().state;
    if(q.session!==this.api.session()||!['responding','waiting_for_confirmation'].includes(state)||q.stopToken!==undefined&&(!this.stopOwner||q.stopToken!==this.stopOwner))return {ok:false,error:'STALE_REQUEST'};
    if(!this.binding||typeof this.binding.cancel!=='function')return {ok:false,error:'STOP_UNAVAILABLE'};
-   await this.binding.cancel();return {ok:true,interrupted:true};
+   this.cancelledRequest=this.completionRequest;await this.binding.cancel();return {ok:true,interrupted:true};
   }
 
   if(q.op==='terminal-open'||q.op==='terminal-close'){this.native=q.op==='terminal-open';return {ok:true};}
@@ -87,10 +105,10 @@ class GeminiChat {
    // after a temporary UI/idle transition; uncertain native calls stay reserved.
    const notReady=()=>{if(this.sent.get(q.id)?.promise===promise)this.sent.delete(q.id);return {ok:false,delivery:'rejected',error:'NOT_READY'};};
    if(this.api.session()!==session||this.binding?.config!==binding.config||!this.binding.ready||this.binding.native)return notReady();
-   if(q.kind==='shell'){if(this.shell?.config!==binding.config||this.api.status().state!=='idle')return notReady();if(!this.shell.send(q.text))throw Error('Shell rejected');}else {const admission=await this.binding.submit(prompt);return {ok:true,accepted:true,id:q.id,delivery:admission?.delivery||'submitted',ack:admission?.ack||'native-callback'};}
+   if(q.kind==='shell'){if(this.shell?.config!==binding.config||this.api.status().state!=='idle')return notReady();if(!this.shell.send(q.text))throw Error('Shell rejected');}else {const admission=await deliveryStatus.run({session,ids:[q.id]},()=>this.binding.submit(prompt));const result={ok:true,accepted:true,id:q.id,delivery:admission?.delivery||'submitted',ack:admission?.ack||'native-callback'};const record=this.sent.get(q.id);if(record){record.receipt=deliveryStatus.receipt(result,q.id);if(record.bound&&record.receipt.delivery==='queued')record.receipt=deliveryStatus.receipt({...record.receipt,delivery:'submitted',ack:'native-history-item'},q.id);this.dirty=true;}return result;}
    return {ok:true,accepted:true,id:q.id,delivery:'shell',ack:'shell-callback'};
   });
-  this.sent.set(q.id,{raw,promise});while(this.sent.size>200)this.sent.delete(this.sent.keys().next().value);return promise;
+  this.sent.set(q.id,{raw,promise,session,presentation:q.kind==='message'?{text:q.text,files}:null,anchor:this.source?.history?.length?hash(this.source.history.at(-1).id+':'+this.source.history.at(-1).type):'',bound:false,receipt:null});while(this.sent.size>200)this.sent.delete(this.sent.keys().next().value);return promise;
  }
 }
 module.exports={GeminiChat};

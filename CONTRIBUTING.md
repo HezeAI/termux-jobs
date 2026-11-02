@@ -148,3 +148,7 @@ For v2.0.9 alias reports, include the selected environment, shell, operation and
 sanitized error marker; never include alias bodies containing secrets. For chat
 scale reports, include the agent, percentage, system font/display scale, streaming
 state and whether the issue concerns messages, cards or input restoration.
+
+For v2.1.1 instruction/delivery issues, include the agent/CLI version, selected scope,
+actual instruction source, acknowledged delivery state and safe error. Do not include
+auth files, private prompts or credentials. Request duration is not CPU usage.

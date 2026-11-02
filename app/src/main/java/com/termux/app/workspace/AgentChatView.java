@@ -33,6 +33,7 @@ final class AgentChatView extends LinearLayout {
     private final Consumer<JSONObject> open;
     private io.noties.markwon.Markwon markdown;
     private boolean touchingTimeline;
+    final AgentProgressView execution;
     private int scalePercent=100;
     int scalePercent(){return scalePercent;}
     void scale(int percent){percent=AgentChatScale.clamp(percent);if(scalePercent==percent)return;Position held=position();scalePercent=percent;scaleContent();queuePosition(held);}
@@ -81,7 +82,7 @@ final class AgentChatView extends LinearLayout {
         scroll.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(restoring==null&&followLayout)bottomAfterLayout();});scroll.setSmoothScrollingEnabled(false);
         timeline=new LinearLayout(c);timeline.setOrientation(VERTICAL);timeline.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(followLayout){followLayout=false;if(restoring==null)bottomAfterLayout();}});timeline.setPadding(dp(12),dp(4),dp(12),dp(16));scroll.addView(timeline);
         older=pill(tr("Предыдущие сообщения","Earlier messages"),loadOlder);timeline.addView(older);
-        addView(scroll,new LayoutParams(-1,0,1));requests=new LinearLayout(c);requests.setOrientation(VERTICAL);requests.setPadding(dp(12),0,dp(12),0);timeline.addView(requests,new LayoutParams(-1,-2));connection=label("",13);connection.setVisibility(GONE);requests.addView(connection);
+        addView(scroll,new LayoutParams(-1,0,1));requests=new LinearLayout(c);requests.setOrientation(VERTICAL);requests.setPadding(dp(12),0,dp(12),0);timeline.addView(requests,new LayoutParams(-1,-2));connection=label("",13);connection.setVisibility(GONE);requests.addView(connection);execution=new AgentProgressView(c);timeline.addView(execution,new LayoutParams(-1,-2));
         attachmentDrafts=new LinearLayout(c);attachmentDrafts.setOrientation(VERTICAL);attachmentDrafts.setVisibility(GONE);addView(attachmentDrafts,new LayoutParams(-1,-2));
         LinearLayout shell=new LinearLayout(c);shellRow=shell;shell.setGravity(Gravity.CENTER_VERTICAL);shell.setPadding(dp(8),dp(4),dp(8),dp(4));shellLabel=label("Shell",12);shell.addView(shellLabel);folder=new WorkspaceIconButton(c);folder.setIcon(c.getDrawable(com.termux.R.drawable.workspace_folder),dp(24));folder.setTextColor(0xff79dfcd);folder.setContentDescription(tr("Прикрепить файл","Attach file"));folder.setVisibility(GONE);shell.addView(folder,new LayoutParams(dp(44),dp(44)));
         shellInput=new EditText(c);shellInput.setTextColor(0xffd5e4e0);shellInput.setHintTextColor(0xff829b96);shellInput.setTextSize(13);shellInput.setMinLines(1);shellInput.setMaxLines(3);shellInput.setHint(tr("Команда без модели…","Command without model…"));shellInput.setTypeface(Typeface.MONOSPACE);shellInput.setSaveEnabled(false);shellInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE|android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);shellInput.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_NONE|android.view.inputmethod.EditorInfo.IME_FLAG_NO_ENTER_ACTION);shell.addView(shellInput,new LayoutParams(0,-2,1));
@@ -99,12 +100,19 @@ final class AgentChatView extends LinearLayout {
     TextView pill(String s,Runnable action){TextView t=label(s,12);GradientDrawable bg=new GradientDrawable();bg.setColor(0xff0b1b19);bg.setCornerRadius(dp(22));bg.setStroke(dp(1),0xff28433d);t.setBackground(bg);t.setOnClickListener(v->action.run());LayoutParams lp=new LayoutParams(-2,-2);lp.setMargins(dp(3),dp(5),dp(3),dp(5));t.setLayoutParams(lp);t.setMinHeight(dp(36));return t;}
     void olderState(boolean loading,String error){older.setEnabled(!loading);older.setText(loading?tr("Загрузка сообщений…","Loading messages…"):error!=null?error:tr("Предыдущие сообщения","Earlier messages"));}
     void olderRows(List<JSONObject> rows,boolean hasOlder){boolean fits=timeline.getHeight()<=scroll.getHeight();Position held=position();rows(rows,hasOlder);restorePosition(fits?new Position(null,0,0,false):new Position(held.anchor,held.offset,held.y,false));}
-    void clear(){olderState(false,null);cancelRestore();touchingTimeline=false;followNextRows=false;followLayout=false;views.clear();values.clear();data.clear();timeline.removeViews(1,timeline.getChildCount()-1);clearRequests();timeline.addView(requests);scroll.scrollTo(0,0);}
+    void clear(){olderState(false,null);cancelRestore();touchingTimeline=false;followNextRows=false;followLayout=false;views.clear();values.clear();data.clear();timeline.removeViews(1,timeline.getChildCount()-1);clearRequests();timeline.addView(requests);timeline.addView(execution);scroll.scrollTo(0,0);}
     void rows(List<JSONObject> rows,boolean hasOlder){
+        rows=AgentMessageTime.captions(rows);
         if(codexActions)rows=CodexActionTimeline.group(rows,groupAllTools);
         Position held=position();final boolean bottom=!touchingTimeline&&(followNextRows||held.bottom);
         boolean changed=false;Set<String> present=new HashSet<>();int index=1;
         for(JSONObject r:rows){String key=r.optString("key");present.add(key);data.put(key,r);String value=r.toString()+(codexActions?WorkspaceLanguage.code(getContext()):"");
+            if(r.optString("kind").equals("completionTime")){
+                TextView caption=views.get(key) instanceof TextView?(TextView)views.get(key):label("",11);
+                String signature=value+java.util.TimeZone.getDefault().getID()+WorkspaceLanguage.code(getContext())+android.text.format.DateFormat.is24HourFormat(getContext());
+                if(!signature.equals(values.get(key))){changed=true;AgentChatScale.prepare(caption);values.put(key,signature);caption.setText(AgentMessageTime.caption(getContext(),r.optJSONObject("requestSummary")));caption.setTextColor(WorkspaceDialogs.MUTED);caption.setGravity(Gravity.END);caption.setSingleLine(false);caption.setTag("completion-"+r.optString("message"));caption.setContentDescription(tr("Ответ завершён: ","Response completed: ")+AgentMessageTime.full(getContext(),r.optJSONObject("requestSummary").optLong("completedAt")));caption.setOnClickListener(v->open.accept(r));LayoutParams lp=new LayoutParams(-1,-2);lp.setMargins(0,0,0,dp(6));caption.setLayoutParams(lp);}
+                views.put(key,caption);if(caption.getParent()==null){changed=true;timeline.addView(caption,index);}else if(timeline.indexOfChild(caption)!=index){changed=true;timeline.removeView(caption);timeline.addView(caption,index);}index++;continue;
+            }
             if(r.optString("kind").equals("actionGroup")){
                 View existing=views.get(key);CodexActionsView card=existing instanceof CodexActionsView?(CodexActionsView)existing:new CodexActionsView(this,open);
                 views.put(key,card);
@@ -166,7 +174,7 @@ final class AgentChatView extends LinearLayout {
         if(changed){if(bottom)followLayout=true;followNextRows=false;queuePosition(bottom?new Position(null,0,0,true):new Position(held.anchor,held.offset,held.y,false));}
     }
     private TextView deliveryCaption(JSONObject row){
-        AgentMessageDelivery delivery=new AgentMessageDelivery(row.optJSONObject("deliveryReceipt"));TextView caption=label(delivery.caption(WorkspaceLanguage.code(getContext()).equals("ru")),11);caption.setTextColor(WorkspaceDialogs.ACCENT);caption.setTag("delivery-"+row.optString("key"));
+        AgentMessageDelivery delivery=new AgentMessageDelivery(row.optJSONObject("deliveryReceipt"));TextView caption=label(delivery.caption(WorkspaceLanguage.code(getContext()).equals("ru")),11);caption.setTextColor(delivery.accepted?WorkspaceDialogs.ACCENT:delivery.state.equals("rejected")?0xffff8895:0xffffc168);caption.setTag("delivery-"+row.optString("key"));
         final String key=row.optString("key");caption.setOnClickListener(v->{JSONObject latest=data.get(key);if(latest==null)return;try{JSONObject details=new JSONObject().put("kind","deliveryReceipt").put("deliveryReceipt",latest.optJSONObject("deliveryReceipt"));open.accept(details);}catch(JSONException ignored){}});return caption;
     }
     private String receiptTitle(JSONObject r){if(r.optBoolean("questionAnswer"))return tr("Ответ: ","Answer: ")+r.optString("answerSummary")+" ▾";String title=r.optString("title");return title.contains("Denied")?tr("Отклонено ▾","Denied ▾"):title.contains("project")?tr("Разрешено для проекта ▾","Allowed for project ▾"):tr("Разрешено разово ▾","Allowed once ▾");}
