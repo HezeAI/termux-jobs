@@ -17,4 +17,6 @@ The legacy user-facing Ubuntu-to-Ubuntu-AI migration action is removed; ordinary
 
 Selected automated checks cover the changed chat, editor, persistence and safety paths. The final APK and full five-module modern Lint are checked separately; see the [validation report](https://github.com/HezeAI/termux-jobs/blob/v2.1.1/docs/fork/VALIDATION-v2.1.1.md) for exact results and remaining warnings. HezeAI confirmed execution dots, response timing and website cards on a phone; other scenarios are not attributed to that device check. No fix for the other phone's network interruptions is claimed.
 
+Publication note: released on 2026-11-02 at 04:02:35 UTC. Anonymous downloads of all four assets matched the prepared files; APK SHA-256 and update.json were verified. The attached validation.json `prepared-not-published` status and tagged report are pre-publication snapshots. See the [publication clarification](https://github.com/HezeAI/termux-jobs/blob/fork/base/docs/fork/VALIDATION-v2.1.1.md#publication-clarification). APK, assets and tag remain unchanged.
+
 AI development assistance: OpenAI Codex

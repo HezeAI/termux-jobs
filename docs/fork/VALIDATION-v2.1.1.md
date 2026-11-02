@@ -1,6 +1,21 @@
-# v2.1.1 release candidate validation — 2026-11-02
+# v2.1.1 release validation — 2026-11-02
 
-Status: prepared for review; not published. Working checkout:
+## Publication clarification
+
+v2.1.1 was published on 2026-11-02 at 04:02:35 UTC:
+[GitHub release](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.1).
+Anonymous downloads of the APK, update.json, SHA256SUMS and validation.json matched
+the prepared files byte for byte. APK SHA-256 and updater versionCode1454 passed.
+
+The attached validation.json status `prepared-not-published` and the tagged
+report's original “not published” wording describe the pre-publication verification
+snapshot, not the current release state. Those immutable files and the release tag
+are preserved. This clarification changes documentation only; no APK rebuild or
+asset replacement was performed.
+
+## Original verification context
+
+The candidate was prepared and checked before publication. Working checkout:
 `/root/termux-fork/.verification/rollback-live-actions/source`.
 The baseline is GitHub HezeAI/termux-jobs v2.1.0, published
 2026-10-29T08:34:33Z, commit ad3b63f8266f688a9bb8e3d4fcca566d346072d0.
