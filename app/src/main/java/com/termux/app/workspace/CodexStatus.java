@@ -5,6 +5,7 @@ import org.json.JSONObject;
 
 /** Account limits are shared; thread model/effort belong to this dedicated Codex terminal. */
 final class CodexStatus {
+    String activeAccess="",activeApproval="";
     String cwd = "", title = "", planType = "", accountType = "";
     String thread = "", model = "", effort = "", state = "", error = "";
     long updated;boolean modelPending;Boolean materialized;
@@ -36,7 +37,11 @@ final class CodexStatus {
         while(state.lastModified()==previous && System.currentTimeMillis()<until)Thread.sleep(50);
         if(!state.isFile()) {CodexStatus pending=new CodexStatus();pending.error=WorkspaceText.tr("Помощник статуса ещё не запущен. Для сессии, созданной до v0.2.13, откройте новый терминал Codex с тем же ID чата.");return pending;}
         CodexStatus result=fromFile(state);
-        if(CodexChatControl.enabled(files,profile))try{JSONObject choice=CodexChatControl.request(files,profile,new JSONObject().put("op","status"));if(choice.optString("thread").equals(result.thread)&&!result.thread.isEmpty()){result.model=choice.optString("model",result.model);result.effort=choice.optString("effort",result.effort);result.modelPending=choice.optBoolean("pending");}}catch(Exception ignored){}
+        if(CodexChatControl.enabled(files,profile))try{JSONObject choice=CodexChatControl.request(files,profile,new JSONObject().put("op","status"));if(choice.optString("thread").equals(result.thread)&&!result.thread.isEmpty()){result.model=choice.optString("model",result.model);result.effort=choice.optString("effort",result.effort);result.modelPending=choice.optBoolean("pending");if(choice.optBoolean("connected")){
+            String access=choice.optString("activeAccess");result.activeAccess=java.util.Arrays.asList("full","project","read").contains(access)?access:"";
+            String approval=choice.optString("activeApproval");result.activeApproval=java.util.Arrays.asList("never","on-request").contains(approval)?approval:"";
+            String cwd=choice.optString("activeCwd");if(cwd.startsWith("/")&&cwd.indexOf('\0')<0)result.cwd=cwd;
+        }}}catch(Exception ignored){}
         return result;
     }
     static CodexStatus read(CodexRpc rpc, String preferredThread) throws Exception {

@@ -48,7 +48,7 @@ public final class AiAgents {
             client.getOutputStream().write(data);client.getOutputStream().flush();client.shutdownOutput();
             ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] b=new byte[4096];int n;
             while((n=client.getInputStream().read(b))!=-1){if(out.size()+n>524288)throw new IOException("Response too large");out.write(b,0,n);}
-            JSONObject value=new JSONObject(out.toString("UTF-8"));if(!value.optBoolean("ok"))throw new IOException("OpenCode request failed");return value;
+            JSONObject value=new JSONObject(out.toString("UTF-8"));if(request.optString("op").equals("chat-send")||request.optString("op").equals("chat-interrupt"))return value;if(!value.optBoolean("ok"))throw new IOException("OpenCode request failed");return value;
         }
     }
     static JSONObject call(Context c,String connection,WorkspaceStore.Session live,JSONObject request) throws Exception {

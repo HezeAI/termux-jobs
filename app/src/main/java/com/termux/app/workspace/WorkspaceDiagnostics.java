@@ -32,7 +32,7 @@ public final class WorkspaceDiagnostics {
     public static synchronized void register(WorkspaceStore.Session s,boolean launched){
         Run r=RUNS.get(s.id);
         if(r==null){r=new Run();r.id=s.id;r.agent=agent(s);r.environment=s.environment;RUNS.put(s.id,r);append(r,"COLLECTOR attached; previous process output is not reconstructed");}
-        r.handle=s.handle;if(launched){r.agent=agent(s);r.environment=s.environment;r.extended=s.extendedDebug;r.extendedAtLaunch=s.extendedDebug;r.startedAt=System.currentTimeMillis();r.startedElapsed=android.os.SystemClock.elapsedRealtime();r.endedElapsed=0;r.launches++;}
+        r.handle=s.handle;if(launched){r.agent=agent(s);r.environment=s.environment;r.extended=s.extendedDebugEnabled();r.extendedAtLaunch=s.extendedDebugEnabled();r.startedAt=System.currentTimeMillis();r.startedElapsed=android.os.SystemClock.elapsedRealtime();r.endedElapsed=0;r.launches++;}
         if(launched){r.paused=false;append(r,"START environment="+r.environment+" agent="+r.agent+" extended="+r.extended+"; custom commands and credentials omitted");}
         while(RUNS.size()>64)RUNS.remove(RUNS.keySet().iterator().next());
     }
@@ -69,11 +69,11 @@ public final class WorkspaceDiagnostics {
         Run r=RUNS.get(profile.id);
         StringBuilder b=new StringBuilder("Termux Job's diagnostics\nApp: "+com.termux.BuildConfig.VERSION_NAME+"\nFormat: 2\nGenerated: ").append(stamp()).append('\n');
         b.append("Session: ").append(profile.id).append("\nEnvironment: ").append(profile.environment).append("\nAgent: ").append(agent(profile));
-        b.append("\nExtended requested: ").append(profile.extendedDebug).append("\nExtended active at launch: ").append(r!=null&&r.extendedAtLaunch);
+        b.append("\nExtended requested: ").append(profile.extendedDebugEnabled()).append("\nExtended active at launch: ").append(r!=null&&r.extendedAtLaunch);
         b.append("\nDetailed collection now: ").append(r!=null&&r.extended).append("\nLaunches observed: ").append(r==null?0:r.launches).append("\nLast event timestamp: ").append(r==null?0:r.lastEvent);
         b.append("\nCollector paused: ").append(r!=null&&r.paused).append("\nProcess: ").append(terminal==null?"unavailable":terminal.isRunning()?"running pid="+terminal.getPid():"exited status="+terminal.getExitStatus());
         b.append("\nLimit: 2 MiB per session, 32 MiB total; dropped old entries: ").append(r==null?0:r.dropped);
-        b.append("\nPrivacy: structured events/codes; X11 may include redacted installer transfer failures. No terminal transcript is exported. URL, credential and path redaction is best-effort; review the report before sharing.\nHTTP/internal details depend on native agent output; this is not a network trace.\nNative verbose mode currently supported for Gemini only, enabled before launch. Other agents: extended activity timeline and observed error codes.\nRuntime events retained while app process lives; saved report files survive restart.\n\n");
+        b.append("\nPrivacy: structured events/codes; X11 may include redacted installer transfer failures. No terminal transcript is exported. URL, credential and path redaction is best-effort; review the report before sharing.\nHTTP/internal details depend on native agent output; this is not a network trace.\nAgent profiles launch with extended logging disabled. Manual temporary detail mode only controls structured diagnostic activity; it does not enable native CLI debug.\nRuntime events retained while app process lives; saved report files survive restart.\n\n");
         if(r==null)b.append("No collector attached for this session.\n");else for(String line:r.lines)b.append(line);
         return b.toString();
     }

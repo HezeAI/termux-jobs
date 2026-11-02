@@ -24,7 +24,7 @@ final class ChatAttachments {
     static String prefix(WorkspaceStore.Session p){return p!=null&&!p.environment.equals("codex")&&p.geminiAgent?GeminiCli.GUEST+"/chat-attachments/":p!=null&&!p.environment.equals("codex")&&p.claudeAgent?ClaudeCode.GUEST+"/chat-attachments/":p!=null&&!p.environment.equals("codex")&&p.aiAgent.equals("opencode")?"/tmp/termux-jobs-ai/chat-attachments/":GUEST;}
     static String type(String name)throws IOException{
         String n=name.toLowerCase(Locale.ROOT);
-        if(n.matches(".*\\.(png|jpe?g|webp|gif|bmp|heic|heif|avif)$"))return "image";
+        if(ProjectFiles.mime(n).startsWith("image/"))return "image";
         if(n.matches(".*\\.(mp4|mkv|webm|mov|m4v|3gp)$"))return "video";
         if(ProjectFiles.mime(n).equals("text/plain")||n.matches(".*\\.(csv|ini|conf|out|ndjson|jsonl|trace)$"))return "file";
         return n.endsWith(".apk")?"apk":"binary";
@@ -63,7 +63,10 @@ final class ChatAttachments {
         File dir=file.getParentFile();
             CodexChatControl.protect(file);
             JSONObject a=new JSONObject().put("id",id).put("name",name).put("type",kind).put("path",guest(root,file).replace(GUEST,prefix(destination))).put("bytes",file.length());
-            if(kind.equals("image")){checkImage(file);}
+            if(kind.equals("image")){try{checkImage(file);}catch(IOException e){
+                if(!"IMAGE_DECODER_UNAVAILABLE".equals(e.getMessage()))throw e;
+                kind="binary";a.put("type",kind).put("imagePreviewUnavailable",true);
+            }}
             if(kind.equals("file")){textPreview(file,8192);}
             if(kind.equals("video")){video(root,file,a);JSONArray frames=a.getJSONArray("frames");for(int i=0;i<frames.length();i++){JSONObject frame=frames.getJSONObject(i);frame.put("path",frame.getString("path").replace(GUEST,prefix(destination)));}}
             if(kind.equals("image")&&(gallery||!file.getName().matches("(?i).*\\.(png|jpe?g|webp|gif)$")||!prefix(destination).equals(GUEST)||file.length()>20L*1024*1024)){
@@ -98,7 +101,8 @@ final class ChatAttachments {
     }
     static void checkImage(File f)throws IOException{
         BitmapFactory.Options o=new BitmapFactory.Options();o.inJustDecodeBounds=true;BitmapFactory.decodeFile(f.getPath(),o);
-        if(o.outWidth<=0||o.outHeight<=0||(long)o.outWidth*o.outHeight>64000000L)throw new IOException("INVALID_IMAGE");
+        if(o.outWidth<=0||o.outHeight<=0)throw new IOException("IMAGE_DECODER_UNAVAILABLE");
+        if((long)o.outWidth*o.outHeight>64000000L)throw new IOException("INVALID_IMAGE");
     }
     static Bitmap bitmap(File f,int edge)throws IOException{
         checkImage(f);BitmapFactory.Options o=new BitmapFactory.Options();o.inJustDecodeBounds=true;BitmapFactory.decodeFile(f.getPath(),o);int sample=1;while(Math.max(o.outWidth,o.outHeight)/sample>edge)sample*=2;

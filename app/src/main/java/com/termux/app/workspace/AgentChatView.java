@@ -68,7 +68,7 @@ final class AgentChatView extends LinearLayout {
     void followAfterSend(){followNextRows=true;followLayout=true;bottomAfterLayout();}
     AgentChatView(Context c,Consumer<JSONObject> open,Runnable loadOlder,Runnable sendShell,Runnable terminal,Runnable interrupt){
         super(c);this.open=open;setOrientation(VERTICAL);setBackgroundColor(Color.BLACK);
-        status=label("",12);status.setVisibility(GONE);addView(status);
+        status=label("",12);status.setMaxLines(2);status.setEllipsize(android.text.TextUtils.TruncateAt.END);status.setTag("agent-model-connection");status.setVisibility(GONE);status.setBackground(WorkspaceDialogs.background(c,false));addView(status,new LayoutParams(-1,-2));
         scroll=new ScrollView(c){
             @Override public boolean dispatchTouchEvent(MotionEvent e){
                 // Selectable TextViews may consume DOWN before a parent's OnTouchListener.
@@ -126,6 +126,7 @@ final class AgentChatView extends LinearLayout {
                         String type=a.optString("type");if(type.equals("image")||type.equals("video")){ImageView image=new ImageView(getContext());image.setScaleType(ImageView.ScaleType.FIT_CENTER);image.setBackgroundColor(0xff111917);image.setContentDescription(title.getText());card.addView(image,new LayoutParams(-1,dp(160)));thumbnail.accept(a,image);}
                         TextView hint=label(type.equals("video")?tr("Видео · выбранные кадры, без звука · открыть","Video · sampled frames, no audio · open"):tr("Нажмите, чтобы открыть","Tap to open"),11);card.addView(hint);
                     }
+                    if(r.optJSONObject("deliveryReceipt")!=null){LinearLayout captionHost=card.getOrientation()==HORIZONTAL&&card.getChildAt(card.getChildCount()-1) instanceof LinearLayout?(LinearLayout)card.getChildAt(card.getChildCount()-1):card;captionHost.addView(deliveryCaption(r));}
                     GradientDrawable bg=new GradientDrawable();bg.setColor(0xff0b1b19);bg.setCornerRadius(dp(14));bg.setStroke(dp(1),0xff28433d);card.setBackground(bg);LayoutParams lp=new LayoutParams(-1,-2);lp.setMargins(0,dp(6),0,dp(8));card.setLayoutParams(lp);final String k=key;card.setOnClickListener(v->{JSONObject row=data.get(k);if(row!=null)open.accept(row);});
                 }
                 views.put(key,card);if(card.getParent()==null){changed=true;timeline.addView(card,index);}else if(timeline.indexOfChild(card)!=index){changed=true;timeline.removeView(card);timeline.addView(card,index);}index++;continue;
@@ -136,12 +137,20 @@ final class AgentChatView extends LinearLayout {
                 if(existing!=null&&existing!=block){timeline.removeView(existing);}views.put(key,block);
                 if(block.getParent()==null){changed=true;timeline.addView(block,index);}else if(timeline.indexOfChild(block)!=index){changed=true;timeline.removeView(block);timeline.addView(block,index);}index++;continue;
             }
+            if(r.optString("kind").equals("user")&&r.optJSONObject("deliveryReceipt")!=null){
+                View old=views.get(key);LinearLayout bubble=old instanceof LinearLayout?(LinearLayout)old:new LinearLayout(getContext());
+                if(!value.equals(values.get(key))||old!=bubble){changed=true;values.put(key,value);AgentChatScale.prepare(bubble);bubble.removeAllViews();bubble.setOrientation(VERTICAL);TextView text=label(tr("Вы: ","You: ")+r.optString("body")+(r.optBoolean("more")?tr("\nНажмите для полного текста…","\nTap for full text…"):""),14);text.setTextIsSelectable(true);if(r.optBoolean("more"))text.setOnClickListener(v->{JSONObject latest=data.get(key);if(latest!=null)open.accept(latest);});bubble.addView(text);bubble.addView(deliveryCaption(r));
+                    GradientDrawable bg=new GradientDrawable();bg.setColor(Color.BLACK);bg.setStroke(dp(1),0xff43776b);bubble.setBackground(bg);LayoutParams lp=new LayoutParams(-1,-2);lp.setMargins(0,dp(6),0,dp(10));bubble.setLayoutParams(lp);
+                }
+                if(old!=null&&old!=bubble)timeline.removeView(old);views.put(key,bubble);
+                if(bubble.getParent()==null){changed=true;timeline.addView(bubble,index);}else if(timeline.indexOfChild(bubble)!=index){changed=true;timeline.removeView(bubble);timeline.addView(bubble,index);}index++;continue;
+            }
             View previous=views.get(key);if(previous!=null&&!(previous instanceof TextView)){timeline.removeView(previous);views.remove(key);values.remove(key);}
             TextView t=(TextView)views.get(key);
             if(t==null){t=label("",14);views.put(key,t);}
             if(!value.equals(values.get(key))){changed=true;values.put(key,value);AgentChatScale.prepare(t);String kind=r.optString("kind");boolean error=kind.equals("error");boolean chip=kind.equals("reasoning")||kind.equals("tool")||kind.equals("receipt");
                 String caption=kind.equals("reasoning")?tr("Рассуждение ▾","Thinking ▾"):kind.equals("receipt")?receiptTitle(r):(codexActions?CodexActionLabels.title(r,WorkspaceLanguage.code(getContext()).equals("ru")):r.optString("title"))+" ▾";
-                String body=r.optString("body");String shown=AgentChatErrors.nativeDiagnosticHint(body)?tr("Подробности доступны по нажатию на сообщение об ошибке.","Tap the error message for details."):body;
+                String body=r.optString("body");if(r.optBoolean("queued"))body=tr("В очереди · ","Queued · ")+body;else if(r.optString("delivery").equals("cancelled"))body=tr("Отменено · ","Cancelled · ")+body;else if(java.util.Arrays.asList("refused","discarded").contains(r.optString("delivery")))body=tr("Отклонено CLI · ","Rejected by CLI · ")+body;else if(java.util.Arrays.asList("started","current","completed").contains(r.optString("delivery")))body=tr("Принято CLI · ","Accepted by CLI · ")+body;String shown=AgentChatErrors.nativeDiagnosticHint(body)?tr("Подробности доступны по нажатию на сообщение об ошибке.","Tap the error message for details."):body;
                 t.setText(error?tr("Ошибка · ","Error · ")+assistant+"\n"+AgentChatErrors.explain(body,WorkspaceLanguage.code(getContext()).equals("ru"))+tr("\nПодробности ▾","\nDetails ▾"):chip?caption:(kind.equals("user")?tr("Вы: ","You: "):kind.equals("text")?assistant+": ":"")+shown+(r.optBoolean("more")?tr("\nНажмите для полного текста…","\nTap for full text…"):""));
                 t.setTextIsSelectable(!chip&&!error);
                 if(kind.equals("text")){if(markdown==null)markdown=AgentMarkdown.create(getContext());android.text.SpannableStringBuilder formatted=new android.text.SpannableStringBuilder(assistant+": ");formatted.append(markdown.toMarkdown(AgentMarkdown.checkboxes(shown)));if(r.optBoolean("more"))formatted.append(tr("\nНажмите для полного текста…","\nTap for full text…"));markdown.setParsedMarkdown(t,formatted);}
@@ -156,5 +165,9 @@ final class AgentChatView extends LinearLayout {
         scaleContent();
         if(changed){if(bottom)followLayout=true;followNextRows=false;queuePosition(bottom?new Position(null,0,0,true):new Position(held.anchor,held.offset,held.y,false));}
     }
-    private String receiptTitle(JSONObject r){String title=r.optString("title");return title.contains("Denied")?tr("Отклонено ▾","Denied ▾"):title.contains("project")?tr("Разрешено для проекта ▾","Allowed for project ▾"):tr("Разрешено разово ▾","Allowed once ▾");}
+    private TextView deliveryCaption(JSONObject row){
+        AgentMessageDelivery delivery=new AgentMessageDelivery(row.optJSONObject("deliveryReceipt"));TextView caption=label(delivery.caption(WorkspaceLanguage.code(getContext()).equals("ru")),11);caption.setTextColor(WorkspaceDialogs.ACCENT);caption.setTag("delivery-"+row.optString("key"));
+        final String key=row.optString("key");caption.setOnClickListener(v->{JSONObject latest=data.get(key);if(latest==null)return;try{JSONObject details=new JSONObject().put("kind","deliveryReceipt").put("deliveryReceipt",latest.optJSONObject("deliveryReceipt"));open.accept(details);}catch(JSONException ignored){}});return caption;
+    }
+    private String receiptTitle(JSONObject r){if(r.optBoolean("questionAnswer"))return tr("Ответ: ","Answer: ")+r.optString("answerSummary")+" ▾";String title=r.optString("title");return title.contains("Denied")?tr("Отклонено ▾","Denied ▾"):title.contains("project")?tr("Разрешено для проекта ▾","Allowed for project ▾"):tr("Разрешено разово ▾","Allowed once ▾");}
 }

@@ -33,6 +33,6 @@ if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
     printf 'READY:proot-distro\n'
     if ! jobs_agent_host_exists "$alias";then printf 'MISSING:ubuntu\nCHECK:done\n';exit;fi
     # A failed check of an existing root is an error, not a missing-package plan.
-    proot-distro login --bind "${BASH_SOURCE[0]%/*}:/tmp/termux-jobs-setup" "$alias" -- /bin/bash --noprofile --norc /tmp/termux-jobs-setup/agent-dependencies.sh check "$2" "${3:-api}" || exit 1
+    proot-distro login --bind "${BASH_SOURCE[0]%/*}:/tmp/termux-jobs-setup" "$alias" -- /bin/bash --noprofile --norc /tmp/termux-jobs-setup/agent-dependencies.sh check "$2" "${3:-api}" "$alias" || exit 1
     printf 'READY:ubuntu\n'
 fi

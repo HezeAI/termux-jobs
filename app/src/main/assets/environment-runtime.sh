@@ -7,13 +7,13 @@ op=${1:-};alias=${2:-}
 : "${PREFIX:?Termux PREFIX is required}"
 root="$PREFIX/var/lib/proot-distro"
 # Explicitly consented prerequisite preparation; never enters/modifies a guest rootfs.
-if [[ $op == install && $alias == agent-migration-tools ]];then
+if [[ $op == install && $alias == agent-operation-tools ]];then
     needed=()
     command -v python3 >/dev/null || needed+=(python)
     if ! command -v proot-distro >/dev/null || ! python3 -B -c 'from proot_distro.constants import RUNTIME_DIR; from proot_distro.locking import LOCKS_DIR; import os; assert RUNTIME_DIR==os.environ["PREFIX"]+"/var/lib/proot-distro" and LOCKS_DIR==RUNTIME_DIR+"/locks"' >/dev/null 2>&1;then needed+=(proot-distro);fi
     if (( ${#needed[@]} ));then
         command -v pkg >/dev/null || { printf 'ERROR:PKG_REQUIRED\n';exit 2; }
-        printf 'STAGE:prepare-migration-tools\n'
+        printf 'STAGE:prepare-operation-tools\n'
         pkg install -y "${needed[@]}"
     fi
     python3 -B -c 'from proot_distro.constants import RUNTIME_DIR; from proot_distro.locking import LOCKS_DIR; import os; assert RUNTIME_DIR==os.environ["PREFIX"]+"/var/lib/proot-distro" and LOCKS_DIR==RUNTIME_DIR+"/locks"' >/dev/null 2>&1 || { printf 'ERROR:NATIVE_LOCKS_REQUIRED\n';exit 1; }

@@ -1,3 +1,29 @@
+# Private test15 — native active input
+
+The actual pinned Claude2.1.296 supports bidirectional streaming input and emits
+`command_lifecycle` keyed by `command_uuid`. Follow-ups during responses or a
+pending tool use that existing process; native queued/started acknowledgements,
+not stdin.write success, control Android admission and composer clearing.
+Busy input requires `msg_lifecycle_v1` and `interrupt_cancel_queued_v1`. An older
+unsupported launch preserves the draft and explains the limitation.
+
+Queued messages may be merged by Claude into its next input. They are labelled
+as queued, never promised as immediate steering of the current response. The
+same-process projection retains the separate admitted messages without duplicating
+merged replay text; after full restart native history remains canonical. Same-ID
+reconnect retrieves the recorded admission instead of writing again. Interruption
+uses the existing native control path with its supported cancel_queued receipt;
+rights and tool permission nonces are unchanged. No auth data is read by tests.
+
+Actual pinned CLI + loopback synthetic provider fixtures cover response/tool busy
+input, ordered follow-ups, completion races, cancellation, reconnect, permissions,
+history resume and unrelated-process survival. This is protocol evidence, not
+live cloud-model/phone acceptance. See [test15 validation](VALIDATION-test15-audit-fixes.md).
+Official references: [CLI streaming flags](https://code.claude.com/docs/en/cli-reference),
+[Agent SDK types](https://code.claude.com/docs/en/agent-sdk/typescript).
+
+---
+
 # Claude Android chat — v2.0.8
 
 The shared native chat UI supports Developer Markdown, outlined code Copy,

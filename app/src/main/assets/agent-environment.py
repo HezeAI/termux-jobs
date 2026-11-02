@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Explicit, offline, descriptor-relative clone/removal of stopped proot-distro 5 systems.
+"""Explicit, offline, descriptor-relative removal of stopped proot-distro 5 systems.
 No archive of credentials is produced; stdout contains counters/error codes only.
 """
 import functools, contextlib, ctypes, errno, fcntl, hashlib, json, os, platform, re, shutil, stat, sys, time, uuid
@@ -27,14 +27,14 @@ def access_stage(code):
   def run(*args,**kwargs):
    try:return fn(*args,**kwargs)
    except PermissionError as e:
-    if not hasattr(e,'migration_code'):e.migration_code=code
+    if not hasattr(e,'operation_code'):e.operation_code=code
     raise
   return run
  return decorate
 
 def error_event(e):
  # Error path is root-relative metadata for the local dialog, never file content.
- result=dict(event='error',code=getattr(e,'migration_code','FILES_ACCESS_DENIED'),errno=e.errno)
+ result=dict(event='error',code=getattr(e,'operation_code','FILES_ACCESS_DENIED'),errno=e.errno)
  if hasattr(e,'scan_path') and getattr(e,'scan_operation','') in ('list','stat','open-directory'):
   result['scanPath']=e.scan_path[:512]+('…' if len(e.scan_path)>512 else '');result['scanOperation']=e.scan_operation
  return result
@@ -80,37 +80,7 @@ def at(root,path):
   return fd,parts[-1]
  except BaseException:os.close(fd);raise
 
-def copy_xattrs(source,destination):
- # Termux Python is built without os.*xattr; use fd-only Bionic calls there.
- if all(callable(getattr(os,n,None)) for n in ('listxattr','getxattr','setxattr')):
-  for key in os.listxattr(source):
-   if key!='security.selinux':os.setxattr(destination,key,os.getxattr(source,key))
-  return
- libc=ctypes.CDLL(None,use_errno=True)
- listing=libc.flistxattr;listing.argtypes=(ctypes.c_int,ctypes.c_void_p,ctypes.c_size_t);listing.restype=ctypes.c_ssize_t
- getting=libc.fgetxattr;getting.argtypes=(ctypes.c_int,ctypes.c_char_p,ctypes.c_void_p,ctypes.c_size_t);getting.restype=ctypes.c_ssize_t
- setting=libc.fsetxattr;setting.argtypes=(ctypes.c_int,ctypes.c_char_p,ctypes.c_void_p,ctypes.c_size_t,ctypes.c_int);setting.restype=ctypes.c_int
- def read(fn,*args):
-  for attempt in range(3):
-   size=fn(*args,None,0)
-   if size<0:raise OSError(ctypes.get_errno(),'xattr query refused')
-   if size>1024*1024:raise Refused('XATTR_TOO_LARGE')
-   buf=ctypes.create_string_buffer(max(1,size));actual=fn(*args,buf,size)
-   if actual>=0:return buf.raw[:actual]
-   if ctypes.get_errno()!=errno.ERANGE:raise OSError(ctypes.get_errno(),'xattr read refused')
-  raise Refused('SOURCE_CHANGED')
- for key in read(listing,source).split(b'\0'):
-  if not key or key==b'security.selinux':continue
-  value=read(getting,source,key)
-  if setting(destination,key,value,len(value),0):raise OSError(ctypes.get_errno(),'xattr write refused')
 
-def hard_link(old,new,src_dir_fd=None,dst_dir_fd=None,follow_symlinks=False):
- if callable(getattr(os,'link',None)):
-  return os.link(old,new,src_dir_fd=src_dir_fd,dst_dir_fd=dst_dir_fd,follow_symlinks=follow_symlinks)
- if follow_symlinks:raise Refused('UNSAFE_LINK')
- libc=ctypes.CDLL(None,use_errno=True);fn=libc.linkat
- fn.argtypes=(ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_int);fn.restype=ctypes.c_int
- if fn(-100 if src_dir_fd is None else src_dir_fd,os.fsencode(old),-100 if dst_dir_fd is None else dst_dir_fd,os.fsencode(new),0):raise OSError(ctypes.get_errno(),'hardlink creation refused')
 
 def rename_new(parent,old,new):
  # Atomic no-replace publication, including an existing empty target directory.
@@ -180,13 +150,13 @@ class Runtime:
     except FileExistsError:pass
     locks=os.open('locks',DIR,dir_fd=base)
    except PermissionError as e:
-    e.migration_code='LOCKS_ACCESS_DENIED';raise
+    e.operation_code='LOCKS_ACCESS_DENIED';raise
    handles=[]
    try:
     for n in sorted(set(names)):
      try:fd=os.open(n+'.lock',os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW|os.O_CLOEXEC,0o600,dir_fd=locks)
      except PermissionError as e:
-      e.migration_code='LOCKS_ACCESS_DENIED';raise
+      e.operation_code='LOCKS_ACCESS_DENIED';raise
      handles.append(fd)
      s=os.fstat(fd)
      if not stat.S_ISREG(s.st_mode) or s.st_nlink!=1 or s.st_uid!=os.getuid():raise Refused('UNSAFE_LOCK')
@@ -220,136 +190,18 @@ class Runtime:
   digest=hashlib.sha256()
   for p,s in result.items():digest.update(os.fsencode(p)+b'\0'+repr(s).encode()+b'\n')
   return result,size,digest.hexdigest()
- def prepare_empty_workspace(self,root):
-  # Fixed legacy empty placeholder only. rmdir atomically refuses any payload.
-  try:s=os.stat('workspace',dir_fd=root,follow_symlinks=False)
-  except FileNotFoundError:return False
-  if not stat.S_ISDIR(s.st_mode) or stat.S_IMODE(s.st_mode)!=0:return False
-  try:os.rmdir('workspace',dir_fd=root)
-  except OSError as e:
-   if e.errno in (errno.ENOTEMPTY,errno.EEXIST,errno.ENOENT):return False
-   raise
-  os.fsync(root);return True
  @access_stage('ENVIRONMENT_ACCESS_DENIED')
- def plan(self,alias='ubuntu',prepare=False):
+ def plan(self,alias='ubuntu'):
   with self.locked([alias]) as base:
    self.idle(alias)
    parent=os.open('containers',DIR,dir_fd=base)
    try:
     src=os.open(alias,DIR,dir_fd=parent)
     try:
-     self.tick('prepare')
-     root=os.open('rootfs',DIR,dir_fd=src)
-     try:cleaned=self.prepare_empty_workspace(root) if prepare and alias=='ubuntu' else False
-     finally:os.close(root)
      entries,size,token=self.snapshot(src)
-     return dict(event='plan',alias=alias,bytes=size,files=len(entries),token=token,emptyWorkspaceRemoved=cleaned,free=os.fstatvfs(parent).f_bavail*os.fstatvfs(parent).f_frsize)
+     return dict(event='plan',alias=alias,bytes=size,files=len(entries),token=token,free=os.fstatvfs(parent).f_bavail*os.fstatvfs(parent).f_frsize)
     finally:os.close(src)
    finally:os.close(parent)
- @access_stage('COPY_ACCESS_DENIED')
- def clone(self,token):
-  with self.locked(['ubuntu','ubuntu-ai']) as base:
-   self.idle('ubuntu');self.idle('ubuntu-ai')
-   parent=os.open('containers',DIR,dir_fd=base);src=None;stage=None
-   try:
-    try:os.stat('ubuntu-ai',dir_fd=parent,follow_symlinks=False)
-    except FileNotFoundError:pass
-    else:raise Refused('DESTINATION_EXISTS')
-    src=os.open('ubuntu',DIR,dir_fd=parent)
-    entries,size,actual=self.snapshot(src)
-    if actual!=token:raise Refused('SOURCE_CHANGED')
-    space=os.fstatvfs(parent)
-    if space.f_bavail*space.f_frsize<size+256*1024*1024:raise Refused('NOT_ENOUGH_SPACE')
-    # OCI metadata and shell/package database must exist before any publication.
-    manifest=os.open('manifest.json',FILE,dir_fd=src)
-    try:
-     if os.fstat(manifest).st_size>1024*1024:raise Refused('INVALID_MANIFEST')
-     with os.fdopen(os.dup(manifest)) as f:data=json.load(f)
-     if not isinstance(data,dict):raise Refused('INVALID_MANIFEST')
-    finally:os.close(manifest)
-    root=os.open('rootfs',DIR,dir_fd=src)
-    try:
-     for required in ['etc/os-release','var/lib/dpkg/status']:
-      d,n=at(root,required)
-      try:
-       st=os.stat(n,dir_fd=d,follow_symlinks=False)
-       if not stat.S_ISREG(st.st_mode) and not (required=='etc/os-release' and stat.S_ISLNK(st.st_mode)):raise Refused('INVALID_ROOTFS')
-      finally:os.close(d)
-    finally:os.close(root)
-    stage='.jobs-ai-'+uuid.uuid4().hex;os.mkdir(stage,0o700,dir_fd=parent);dst=os.open(stage,DIR,dir_fd=parent)
-    try:
-     self.copy(src,dst,entries,size)
-     if self.snapshot(src)[2]!=token:raise Refused('SOURCE_CHANGED')
-     if os.stat('ubuntu',dir_fd=parent,follow_symlinks=False).st_ino!=os.fstat(src).st_ino:raise Refused('SOURCE_CHANGED')
-     self.idle('ubuntu');self.idle('ubuntu-ai')
-     self.tick('publish',size,size,len(entries))
-     os.fsync(dst)
-     rename_new(parent,stage,'ubuntu-ai');stage=None;os.fsync(parent)
-    finally:os.close(dst)
-    return dict(event='done',alias='ubuntu-ai',bytes=size,files=len(entries))
-   finally:
-    if stage is not None:remove_tree(parent,stage)
-    if src is not None:os.close(src)
-    os.close(parent)
- def copy(self,src,dst,entries,total):
-  done=0;hard={};dirs=[]
-  old=self.base+'/containers/ubuntu';new=self.base+'/containers/ubuntu-ai'
-  for p,expected in entries.items():
-   a,n=at(src,p);b,m=at(dst,p)
-   try:
-    s=os.stat(n,dir_fd=a,follow_symlinks=False)
-    if identity(s)!=expected:raise Refused('SOURCE_CHANGED')
-    mode=s.st_mode
-    if stat.S_ISDIR(mode):os.mkdir(m,0o700,dir_fd=b);dirs.append((p,s))
-    elif stat.S_ISLNK(mode):
-     target=os.readlink(n,dir_fd=a)
-     if target==old or target.startswith(old+'/'):target=new+target[len(old):]
-     os.symlink(target,m,dir_fd=b)
-    elif stat.S_ISSOCK(mode):continue # runtime sockets are recreated, never credentials.
-    elif stat.S_ISREG(mode):
-     key=(s.st_dev,s.st_ino)
-     if s.st_nlink>1 and key in hard:hard_link(hard[key],m,src_dir_fd=dst,dst_dir_fd=b,follow_symlinks=False);done+=s.st_size
-     else:
-      f=os.open(n,FILE,dir_fd=a);g=os.open(m,os.O_RDWR|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600,dir_fd=b)
-      try:
-       if identity(os.fstat(f))!=expected:raise Refused('SOURCE_CHANGED')
-       digest=hashlib.sha256()
-       while True:
-        block=os.read(f,1024*1024)
-        if not block:break
-        digest.update(block);view=memoryview(block)
-        while view:view=view[os.write(g,view):]
-        done+=len(block);self.tick('copy',done,total,len(hard))
-       if identity(os.fstat(f))!=expected:raise Refused('SOURCE_CHANGED')
-       os.lseek(g,0,os.SEEK_SET);check=hashlib.sha256()
-       while True:
-        block=os.read(g,1024*1024)
-        if not block:break
-        check.update(block);self.tick('verify',done,total,len(hard))
-       if digest.digest()!=check.digest():raise Refused('COPY_VERIFY_FAILED')
-       copy_xattrs(f,g)
-       os.fchmod(g,stat.S_IMODE(mode));os.utime(g,ns=(s.st_atime_ns,s.st_mtime_ns));os.fsync(g)
-       hard[key]=p
-      finally:os.close(f);os.close(g)
-    else:raise Refused('UNSUPPORTED_SPECIAL_FILE')
-    self.tick('copy',done,total,len(hard))
-   finally:os.close(a);os.close(b)
-  for p,s in reversed(dirs):
-   b,n=at(dst,p)
-   try:
-    f=os.open(n,DIR,dir_fd=b)
-    original=None
-    try:
-     if not mount_placeholder(p):
-      a,m=at(src,p)
-      try:original=os.open(m,DIR,dir_fd=a)
-      finally:os.close(a)
-      copy_xattrs(original,f)
-     os.fchmod(f,stat.S_IMODE(s.st_mode));os.utime(f,ns=(s.st_atime_ns,s.st_mtime_ns));os.fsync(f)
-    finally:
-     os.close(f)
-     if original is not None:os.close(original)
-   finally:os.close(b)
  @access_stage('ENVIRONMENT_ACCESS_DENIED')
  def remove(self,alias,token):
   if not NAME.fullmatch(alias):raise Refused('INVALID_ALIAS')
@@ -387,10 +239,7 @@ def main():
  if RUNTIME_DIR!=base or LOCKS_DIR!=base+'/locks':raise Refused('NATIVE_LOCKS_REQUIRED')
  if not NAME.fullmatch(alias):raise Refused('INVALID_ALIAS')
  runtime=Runtime(base,lambda:os.path.lexists(cancel))
- if op=='plan' and token in ('','prepare-migration'):
-  if token and alias!='ubuntu':raise Refused('INVALID_REQUEST')
-  result=runtime.plan(alias,prepare=token=='prepare-migration')
- elif op=='clone' and alias=='ubuntu' and re.fullmatch('[0-9a-f]{64}',token):result=runtime.clone(token)
+ if op=='plan' and token=='':result=runtime.plan(alias)
  elif op=='remove' and re.fullmatch('[0-9a-f]{64}',token):result=runtime.remove(alias,token)
  else:raise Refused('INVALID_REQUEST')
  emit(**result)

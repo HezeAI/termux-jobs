@@ -1,3 +1,83 @@
+# Current source — helper paused, no new APK (2026-11-02)
+
+The developer rolled back and chose to keep the earlier app version. Do not resume
+helper development or include it in the next public release without a new request.
+The full private-test17 experiment and all then-pending sources are preserved in
+local Git branch `archive/codex-helper-test17-20261102`, commit
+`2f0ecd2d759258e09f89234a18326bdcfc200c96`. The active checkout excludes only helper-specific
+UI, protocol and controller integration. Helper-only files are physically retained
+in ignored `.verification/helper-paused-20261102/preserved-helper-files/` as well.
+
+Retain the test17 heart trajectory (incoming-side fall, six asymmetric contacts,
+continuous exit, stronger beats) and the other agreed fixes, including migration
+feature removal, native questions, instructions, delivery/reconnect presentation,
+audit corrections and existing safety behavior. No user data or helper ledger was
+read, deleted or migrated. No working chat, environment or route was changed.
+
+No APK was rebuilt or issued for this separation. Existing test17/1450 and the
+test16 reserve/1451 remain historical artifacts. Every future APK must use1452+
+and be checked according to project policy; current Gradle version metadata is
+left unchanged and must not be mistaken for a newly built artifact.
+See [separation report](docs/fork/HELPER-EXPERIMENT-PAUSED.md) and
+[CHANGELOG](CHANGELOG.md).
+
+Earlier development records follow.
+
+---
+
+# Private test14 — Advanced menu and clearer agent settings
+
+Version2.1.1-test14/code1446, same com.termux/signer/ARM64/schema8.
+Main menu → **Advanced** contains Backup and restore / Check environment updates /
+Clean up storage / Errors and solutions. **About** is last and retains the former
+App settings destination. Close/Back returns through the existing menu layers.
+
+Agent forms omit the extended-debug option and unrelated terminal/SSH guidance.
+Concise RU/EN summaries follow the selected environment, working folder and rights;
+Codex launch parameters are in collapsible Details. Permission/approval/connection
+behavior is retained. Old agent verbose flags are ignored/normalized to false;
+ordinary terminal flags and baseline error collection remain. Running agents are
+not restarted and old logs are not deleted.
+
+Private phone acceptance build; no public release. Menu tests intercept worker
+starts and do not execute cleanup, restoration or upgrades. See
+[validation](docs/fork/VALIDATION-test14-settings-menu.md) and [project rules](AGENTS.md).
+
+---
+
+# Private test13 — agent instructions; no publication or APK installation
+
+Active source: /root/termux-fork/.verification/rollback-live-actions/source.
+Version2.1.1-test13/code1445, package com.termux, existing signer and schema8.
+User authorized the APK in /sdcard/Download for phone testing only. No GitHub
+publication, installing APKs, working-chat restart or installed-rootfs changes.
+General settings → Agent instructions → Codex/Ubuntu AI: exact real-source edits,
+project AGENTS files, private history/conflicts, dynamic CODEX_HOME, explicit
+RU/EN template/storage addition and version-aware diagnostics. Preserve existing
+custom instructions and CLI versions. No automatic cleanup/limits were added.
+Native fixture evidence covers Codex0.163/0.164 new/current/resumed threads.
+See docs/fork/AGENT-INSTRUCTIONS.md, VALIDATION-test13-agent-instructions-ui.md and
+.verification/agent-instructions-test13 (historical native CLI proof remains in .verification/agent-instructions). Remaining phone checks: UI, keyboard, scrolling,
+rotation, real environment file visibility and post-restart persistence.
+
+Previews now bound long text above fixed bottom Apply/Cancel controls. Project shows
+file precedence and the actual non-empty source separately from the edit target.
+RU/EN preview selectors use the existing assets without changing locale or saving;
+explicit apply preserves history, and storage additions avoid RU/EN duplicates.
+
+Project requirements have one complete source: [AGENTS.md](AGENTS.md). The outer
+workspace file points here; X11 and clean-install checks are preserved together.
+
+Agent gear menus now hide package installation and session diagnostics for all four
+agents; ordinary/base terminal menu access and internal implementations remain.
+
+Instruction menus now import bounded UTF-8 text through the built-in file chooser,
+with destination preview, explicit confirmation, history/conflicts and override
+warnings. General targets its actual active file; Project targets AGENTS.md only.
+The duplicate storage-addition main-screen button is removed; its menu action stays.
+
+---
+
 # Published stable — v2.1.0 / code1443
 
 https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.0

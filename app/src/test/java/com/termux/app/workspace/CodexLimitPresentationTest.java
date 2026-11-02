@@ -14,6 +14,7 @@ import static org.junit.Assert.*;
 
 @RunWith(RobolectricTestRunner.class) @Config(sdk=28,application=Application.class)
 public class CodexLimitPresentationTest {
+    @org.junit.Before public void useRussianUi(){WorkspaceLanguage.select(org.robolectric.RuntimeEnvironment.application,"ru");WorkspaceText.resources=WorkspaceLanguage.wrap(org.robolectric.RuntimeEnvironment.application).getResources();}
     private JSONObject window(long minutes,int used)throws Exception{return new JSONObject().put("windowDurationMins",minutes).put("usedPercent",used).put("resetsAt",1792888860L);}
     @Test public void proWithOnlyWeeklyPrimaryNeverShowsFiveHoursOrInventsSecondary()throws Exception{
         CodexStatus s=new CodexStatus();s.planType="pro";s.accountType="chatgpt";s.limits.put("primary",window(10080,14));

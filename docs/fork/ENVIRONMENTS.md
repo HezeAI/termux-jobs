@@ -18,7 +18,7 @@ verified cached layers; an interrupted layer can restart. Arch Linux ARM uses
 its reviewed source archive and SHA validation. Do not infer network download
 from a fast cached install. Busy environments reject destructive operations.
 
-See [release/compatibility](RELEASE-v2.0.0.md), [agent migration](AGENT-ENVIRONMENTS.md)
+See [release/compatibility](RELEASE-v2.0.0.md), [agent environments](AGENT-ENVIRONMENTS.md)
 and [sources](THIRD-PARTY.md). All older version entries below are historical.
 
 ## Частная v1.7.90: GPU & GPU INFO на рабочих столах X11

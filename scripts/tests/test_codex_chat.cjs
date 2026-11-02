@@ -2,8 +2,8 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),crypto=require('node:crypto'),{spawn}=require('node:child_process');
 const root=path.resolve(__dirname,'../..'),base=require('./fixture-paths.cjs').fixture('cx'),dir=base;for(const [from,to]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],['agent-receipts.cjs','agent-receipts.cjs'],['agent-action-preview.cjs','agent-action-preview.cjs']])fs.copyFileSync(path.join(root,'app/src/main/assets',from),path.join(dir,to));
 const {CodexChat,terminateTree,skillRead}=require(path.join(dir,'codex-chat.cjs'));const calls=[],replies=[];const response={cwd:dir,approvalPolicy:'on-request',sandbox:{type:'workspaceWrite'},thread:{id:'root-chat'},model:'fixture-model',reasoningEffort:'medium'};
-let release;
-const rpc={async initialize(){},send(v){replies.push(v);},close(){},async call(method,params){calls.push({method,params});
+let release,formController;
+const rpc={async initialize(){},send(v){replies.push(v);if(v.result?.answers)queueMicrotask(()=>formController.event({method:'serverRequest/resolved',params:{threadId:formController.thread,requestId:v.id}}));},close(){},async call(method,params){calls.push({method,params});
  if(method==='account/read')return {requiresOpenaiAuth:false,account:null};
  if(method==='thread/start'||method==='thread/resume')return {...response,model:params.model||response.model,reasoningEffort:params.config?.model_reasoning_effort||response.reasoningEffort};
  if(method==='thread/read')return {thread:{id:'root-chat',cwd:dir}};
@@ -25,7 +25,7 @@ const rpc={async initialize(){},send(v){replies.push(v);},close(){},async call(m
  ev('next-turn',{id:'bad-read',type:'commandExecution',command:'cat /root/skills/failing/SKILL.md',status:'completed',exitCode:1});ev('next-turn',{id:'after-failure',type:'imageView',path:'/private/other.png'});assert(!(await skillProjection.snapshot()).rows.at(-1).skillContextName);
  ev('attached-turn',{id:'attached-skill',type:'userMessage',content:[{type:'text',text:'Use a skill'},{type:'skill',name:'custom',path:'/root/skills/custom/SKILL.md'}]});let attached=(await skillProjection.snapshot()).rows.find(r=>r.toolType==='skill');assert.equal(attached.skillName,'custom');assert.equal(attached.status,'attached');
 const c=new CodexChat(rpc,{endpoint:path.join(dir,'s'),access:'project',approval:'on-request',cwd:dir,chat:'id',thread:'root-chat',language:'en'});
- await c.start();assert.equal(c.ready,true);assert.equal((await c.snapshot()).rows.length,2);assert.equal(c.thread,'root-chat');assert(!calls.some(v=>v.method.startsWith('turn/')));
+ formController=c;await c.start();assert.equal(c.ready,true);assert.equal((await c.snapshot()).rows.length,2);assert.equal(c.thread,'root-chat');assert(!calls.some(v=>v.method.startsWith('turn/')));
  c.event({method:'item/completed',params:{threadId:'foreign-chat',turnId:'foreign-turn',item:{id:'foreign',type:'agentMessage',text:'UNRELATED_SECRET'}}});assert(!(JSON.stringify(await c.snapshot()).includes('UNRELATED_SECRET')));
  const q={op:'chat-send',id:'msg_'+'a'.repeat(32),session:c.thread,text:'Hello',kind:'message'};const p1=c.handle(q),p2=c.handle(q);assert.equal(calls.filter(v=>v.method==='turn/start').length,1);release();assert((await p1).ok&&(await p2).ok);assert.equal((await c.handle({...q,text:'Different'})).ok,false);
  c.event({method:'turn/started',params:{threadId:c.thread,turn:{id:'turn-live'}}});
@@ -35,6 +35,23 @@ const c=new CodexChat(rpc,{endpoint:path.join(dir,'s'),access:'project',approval
  c.event({method:'item/started',params:{threadId:c.thread,turnId:c.turn,item:{id:'command',type:'commandExecution',command:'echo test',status:'inProgress'}}});assert((await c.handle({op:'answer',session:c.thread,id:perm.id,nonce:perm.nonce,outcome:'proceed_once'})).ok);assert.deepEqual(replies.at(-1),{id:91,result:{decision:'accept'}});assert.equal((await c.handle({op:'answer',session:c.thread,id:perm.id,nonce:perm.nonce,outcome:'proceed_once'})).ok,false);const receipt=(await c.snapshot()).rows.find(r=>r.kind==='receipt');assert(receipt&&receipt.title.includes('Allowed once'));const receiptKey=receipt.key;
  c.event({method:'item/completed',params:{threadId:c.thread,turnId:c.turn,item:{id:'command',type:'commandExecution',command:'echo test',aggregatedOutput:'test',exitCode:0,durationMs:250,status:'completed'}}});assert.equal((await c.snapshot()).rows.find(r=>r.kind==='receipt').key,receiptKey);
  c.event({id:92,method:'item/tool/requestUserInput',params:{threadId:c.thread,turnId:c.turn,itemId:'question',questions:[{id:'choice',header:'Choice',question:'Pick one',options:[{label:'A',description:'Option A'},{label:'B',description:'Option B'}]}]}});const f=(await c.snapshot()).forms[0];assert.equal((await c.handle({op:'chat-form',id:f.id,nonce:f.nonce,session:c.thread,answer:{choice:'C'}})).ok,false);assert((await c.handle({op:'chat-form',id:f.id,nonce:f.nonce,session:c.thread,answer:{choice:'B'}})).ok);assert.deepEqual(replies.at(-1).result,{answers:{choice:{answers:['B']}}});
+ // Native forms only; receipt means CLI resolution, not a model-uptake guarantee.
+ assert((await c.snapshot()).rows.some(r=>r.questionAnswer&&r.answerSummary==='B'));
+ const firstReplyCount=replies.length;
+ assert((await c.handle({op:'chat-form',id:f.id,nonce:f.nonce,session:c.thread,answer:{choice:'B'}})).ok);assert.equal(replies.length,firstReplyCount);
+ assert.equal((await c.handle({op:'chat-form',id:f.id,nonce:f.nonce,session:'foreign-chat',answer:{choice:'B'}})).ok,false);
+ assert.equal((await c.handle({op:'chat-form',id:f.id,nonce:f.nonce,session:c.thread,answer:{choice:'A'}})).ok,false);
+ c.event({id:192,method:'item/tool/requestUserInput',params:{threadId:c.thread,turnId:c.turn,itemId:'multiple',questions:[{id:'one',question:'First',isOther:true,options:[{label:'X'}]},{id:'two',question:'Second',options:null}]}});
+ const multiple=(await c.snapshot()).forms[0];assert.equal(multiple.fields.length,2);assert.equal(multiple.fields[0].type,'string');assert(multiple.fields[0].custom);
+ assert((await c.handle({op:'chat-form',id:multiple.id,nonce:multiple.nonce,session:c.thread,answer:{one:'free first',two:'free second'}})).ok);assert.deepEqual(replies.at(-1).result,{answers:{one:{answers:['free first']},two:{answers:['free second']}}});
+ c.event({id:193,method:'item/tool/requestUserInput',params:{threadId:c.thread,turnId:c.turn,itemId:'closed',questions:[{id:'one',question:'Late',isOther:true}]}});
+ const closed=(await c.snapshot()).forms[0];c.event({method:'serverRequest/resolved',params:{threadId:c.thread,requestId:193}});const closedCount=replies.length;
+ assert.equal((await c.handle({op:'chat-form',id:closed.id,nonce:closed.nonce,session:c.thread,answer:{one:'late'}})).ok,false);assert.equal(replies.length,closedCount);
+ const originalSend=rpc.send;rpc.send=m=>{replies.push(m);};
+ c.event({id:194,method:'item/tool/requestUserInput',params:{threadId:c.thread,turnId:c.turn,itemId:'unconfirmed',questions:[{id:'one',question:'Delayed',isOther:true}]}});
+ const uncertain=(await c.snapshot()).forms[0],replyQ={op:'chat-form',id:uncertain.id,nonce:uncertain.nonce,session:c.thread,answer:{one:'kept'}};
+ const pendingReply=c.handle(replyQ),repeatReply=c.handle(replyQ);const uncertainCount=replies.length;
+ c.clearRequests();assert.equal((await pendingReply).error,'FORM_UNCONFIRMED');assert.equal((await repeatReply).error,'FORM_UNCONFIRMED');assert.equal((await c.handle(replyQ)).error,'FORM_UNCONFIRMED');assert.equal(replies.length,uncertainCount);rpc.send=originalSend;
  c.event({id:93,method:'item/permissions/requestApproval',params:{threadId:c.thread,turnId:c.turn,itemId:'perms',permissions:{network:{enabled:true}}}});const pp=(await c.snapshot()).permission;await c.handle({op:'answer',id:pp.id,nonce:pp.nonce,session:c.thread,outcome:'cancel'});assert.deepEqual(replies.at(-1).result,{permissions:{},scope:'turn'});
  const projectedCommand=(await c.snapshot()).rows.find(r=>r.actionType==='shell');assert.equal(projectedCommand.command,'echo test');assert.equal(projectedCommand.status,'completed');assert.equal(projectedCommand.exitCode,0);assert.equal(projectedCommand.durationMs,250);assert.equal(projectedCommand.turn,'turn-live');
  const steer={...q,id:'msg_'+'b'.repeat(32),text:'Follow-up'};assert((await c.handle(steer)).ok);assert.equal(calls.at(-1).method,'turn/steer');assert.equal(calls.at(-1).params.expectedTurnId,'turn-live');

@@ -77,7 +77,7 @@ public class WorkspaceNavigationTest {
         Field tv=TermuxActivity.class.getDeclaredField("mTerminalView");tv.setAccessible(true);tv.set(a,a.findViewById(R.id.terminal_view));WorkspaceLanguage.select(a,"ru");WorkspaceController c=new WorkspaceController(a);
         try{for(String label:new String[]{"Главная","Команды/Заметки","Терминал"}){
             findDescription(a.findViewById(R.id.workspace_navigation),label).performClick();View header=a.findViewById(R.id.workspace_header);assertNull(findDescription(header,"Язык / Language"));
-            findDescription(header,"Настройки приложения").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog menu=ShadowAlertDialog.getLatestAlertDialog();View dialog=menu.getWindow().getDecorView();assertNotNull(findText(dialog,"Язык / Language"));assertNotNull(findText(dialog,"Проверить обновления"));assertNotNull(findText(dialog,"Резервное копирование"));assertNotNull(findDescription(dialog,"Автопроверка при открытии приложения"));assertNull(findText(dialog,"Автопроверка обновлений · 10 ч"));menu.dismiss();
+            findDescription(header,"Настройки приложения").performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog menu=ShadowAlertDialog.getLatestAlertDialog();View dialog=menu.getWindow().getDecorView();assertNotNull(findText(dialog,"Язык / Language"));assertNotNull(findText(dialog,"Проверить обновления"));assertNull(findText(dialog,"Резервное копирование"));assertNotNull(findText(dialog,"Дополнительно"));assertNotNull(findText(dialog,"О приложении"));assertNotNull(findDescription(dialog,"Автопроверка при открытии приложения"));assertNull(findText(dialog,"Автопроверка обновлений · 10 ч"));menu.dismiss();
         }}finally{c.close();}
     }
 
@@ -153,7 +153,7 @@ public class WorkspaceNavigationTest {
         fields.get(2).setText("Сборка");
         editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
         shadowOf(Looper.getMainLooper()).idle();
-        assertFalse(editor.isShowing()); store.awaitWrites();
+        store.awaitWrites(); shadowOf(Looper.getMainLooper()).idle(); assertFalse(editor.isShowing());
         assertNotNull(findText(activity.findViewById(R.id.workspace_content), "Собрать APK"));
         EditText commandSearch = (EditText) findDescription(activity.findViewById(R.id.workspace_header), "Поиск команд/alias и заметок");
         assertNotNull(commandSearch);
@@ -401,7 +401,7 @@ public class WorkspaceNavigationTest {
         assertNotNull(tab); assertTrue(activity.findViewById(R.id.workspace_tabs).findViewWithTag("session-current-settings").performClick());
         shadowOf(Looper.getMainLooper()).idle();
         AlertDialog menu = ShadowAlertDialog.getLatestAlertDialog();
-        assertEquals(5, menu.getListView().getAdapter().getCount());
+        assertEquals(6, menu.getListView().getAdapter().getCount());
         assertEquals("Диагностика сессии",menu.getListView().getAdapter().getItem(4));
         assertEquals("Добавить в пресеты запуска", menu.getListView().getAdapter().getItem(0));
         assertEquals("Перезапустить", menu.getListView().getAdapter().getItem(1));
@@ -411,7 +411,7 @@ public class WorkspaceNavigationTest {
         store.awaitWrites(); assertTrue(store.sessions.get(0).saved); assertEquals(1, store.sessions.size());
         activity.findViewById(R.id.workspace_tabs).findViewWithTag("session-current-settings").performClick(); shadowOf(Looper.getMainLooper()).idle();
         menu = ShadowAlertDialog.getLatestAlertDialog();
-        assertEquals(4, menu.getListView().getAdapter().getCount());
+        assertEquals(5, menu.getListView().getAdapter().getCount());
         assertEquals("Диагностика сессии",menu.getListView().getAdapter().getItem(3));
         assertEquals("Перезапустить", menu.getListView().getAdapter().getItem(0));
         assertEquals("Настройки", menu.getListView().getAdapter().getItem(1));
@@ -635,7 +635,7 @@ public class WorkspaceNavigationTest {
         AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog(); List<EditText> fields = new ArrayList<>();
         collectEditors(dialog.getWindow().getDecorView(), fields);
         fields.get(0).setText("Build tips"); fields.get(1).setText("First line\nSecond line"); fields.get(2).setText("Build");
-        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); store.awaitWrites();
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick(); store.awaitWrites(); shadowOf(Looper.getMainLooper()).idle();
         assertEquals(1, store.notes.size()); assertEquals("First line\nSecond line", store.notes.get(0).text);
         findDescription(content, "Заметка Build tips").performClick(); shadowOf(Looper.getMainLooper()).idle();
         dialog = ShadowAlertDialog.getLatestAlertDialog(); assertNotNull(findText(dialog.getWindow().getDecorView(), "First line\nSecond line"));
@@ -794,7 +794,7 @@ public class WorkspaceNavigationTest {
         findDescription(decor,"Доступ Codex").performClick(); AlertDialog access = ShadowAlertDialog.getLatestAlertDialog();
         assertEquals(2,access.getListView().getAdapter().getCount()); access.getListView().performItemClick(null,0,0);
         shadowOf(Looper.getMainLooper()).idle();
-        assertEquals(WorkspaceLanguage.code(activity).equals("ru")?"Права: Чтение · read-only":"Permissions: Read · read-only", ((TextView)findDescription(decor,"Доступ Codex")).getText().toString());
+        assertEquals(WorkspaceLanguage.code(activity).equals("ru")?"Права: Чтение":"Permissions: Read", ((TextView)findDescription(decor,"Доступ Codex")).getText().toString());
         assertNotNull(findDescription(decor,"Codex project write scope"));
         assertNotNull(findDescription(decor,"Codex action confirmations"));
         findDescription(decor,"Чат Codex").performClick(); AlertDialog chat=ShadowAlertDialog.getLatestAlertDialog();assertEquals(3,chat.getListView().getAdapter().getCount());chat.getListView().performItemClick(null,0,0);
@@ -920,7 +920,7 @@ public class WorkspaceNavigationTest {
         java.lang.reflect.Method edit=WorkspaceController.class.getDeclaredMethod("editSession",WorkspaceStore.Session.class,boolean.class);edit.setAccessible(true);edit.invoke(controller,profile,false);
         AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();assertNull(findDescription(form.getWindow().getDecorView(),"Среда Codex"));
         shadowOf(Looper.getMainLooper()).idle();form.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
-        assertFalse(form.isShowing());assertEquals("termux",profile.codexEnvironment);assertEquals(com.termux.shared.termux.TermuxConstants.TERMUX_HOME_DIR_PATH,profile.directory);assertEquals("new",profile.codexChat);controller.close();
+        ((WorkspaceStore)field.get(controller)).awaitWrites();shadowOf(Looper.getMainLooper()).idle();assertFalse(form.isShowing());assertEquals("termux",profile.codexEnvironment);assertEquals(com.termux.shared.termux.TermuxConstants.TERMUX_HOME_DIR_PATH,profile.directory);assertEquals("new",profile.codexChat);controller.close();
     }
 
 }

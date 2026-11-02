@@ -6,12 +6,31 @@ JDK11 and enables dependency analysis. The five modules are app, terminal-emulat
 terminal-view, termux-shared and x11. This does not replace the APK build's AGP4.2.2,
 Gradle7.2, native inputs or signer. It does not raise minSDK/targetSDK or install an app.
 
+## Intermediate builds and reusable tools
+
+For an intermediate build, record the affected paths and choose compile/syntax,
+locale/resource and relevant static checks as described in [TESTING.md](TESTING.md).
+Use compatible targeted Lint only when its scope and dependency coverage are
+understood; broaden to this full runner for common mechanisms or uncertainty.
+This runner always requests all five modules: it has no incremental/skip mode.
+A documentation-only change requires document/link/diff review, not a Lint run
+or APK rebuild solely for prose. Omitted analysis is Not checked, not PASS.
+
+Before a public release, execute the complete modern gate on the final applicable
+source/configuration/dependency set; a reused old report or a targeted run cannot
+replace it. Reuse the existing local SDK/JDK/Gradle caches rather than making a
+new full SDK copy for each run. Add missing required components only inside the
+permitted local tool directory. Record compact input identities and results;
+preserve existing evidence and do not restage a running analysis.
+
 ## Local tools and invocation
 
 Use the repository-local JDK/SDK/cache setup from `scripts/build-env.sh` and FORK.md.
-The SDK must be a copy inside this repository; automatic component installation
-must never write to the shared Android SDK. Prepare the existing pinned X11 inputs
-with the documented repository tooling. All stage files and reports remain ignored.
+Reuse the SDK already prepared inside this repository; automatic component
+installation must never write to the shared Android SDK. Verify applicable pinned
+X11 build inputs and prepare only when needed; this is not a graphics execution
+test. See the current preparation-script limits in [TESTING.md](TESTING.md).
+All stage files and reports remain ignored.
 
 Download [Gradle7.5.1 binary distribution](https://downloads.gradle.org/distributions/gradle-7.5.1-bin.zip)
 into `.tools/downloads/gradle-7.5.1-bin.zip`. Before extraction, verify SHA-256

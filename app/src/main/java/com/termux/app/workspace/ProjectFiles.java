@@ -57,6 +57,7 @@ final class ProjectFiles implements AutoCloseable {
         if(n.endsWith(".apk"))return "application/vnd.android.package-archive";
         if(n.endsWith(".png"))return "image/png";if(n.endsWith(".jpg")||n.endsWith(".jpeg"))return "image/jpeg";
         if(n.endsWith(".webp"))return "image/webp";if(n.endsWith(".gif"))return "image/gif";
+        if(n.endsWith(".bmp"))return "image/bmp";if(n.endsWith(".heic"))return "image/heic";if(n.endsWith(".heif"))return "image/heif";if(n.endsWith(".avif"))return "image/avif";
         if(n.endsWith(".mp4")||n.endsWith(".m4v"))return "video/mp4";if(n.endsWith(".webm"))return "video/webm";if(n.endsWith(".mkv"))return "video/x-matroska";if(n.endsWith(".mov"))return "video/quicktime";if(n.endsWith(".3gp"))return "video/3gpp";
         String ext=n.lastIndexOf('.')<0?"":n.substring(n.lastIndexOf('.')+1);
         if(Arrays.asList("md","txt","log","json","xml","yml","yaml","java","kt","kts","gradle","sh","py","js","ts","css","html","rs","toml","properties","c","h","cpp","gitignore").contains(ext)||n.equals("makefile")||n.equals("dockerfile"))return "text/plain";

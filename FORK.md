@@ -1,3 +1,57 @@
+# Private test14 — Advanced menu and clearer agent settings
+
+Version2.1.1-test14/code1446, same com.termux/signer/ARM64/schema8.
+Main menu → **Advanced** contains Backup and restore / Check environment updates /
+Clean up storage / Errors and solutions. **About** is last and retains the former
+App settings destination. Close/Back returns through the existing menu layers.
+
+Agent forms omit the extended-debug option and unrelated terminal/SSH guidance.
+Concise RU/EN summaries follow the selected environment, working folder and rights;
+Codex launch parameters are in collapsible Details. Permission/approval/connection
+behavior is retained. Old agent verbose flags are ignored/normalized to false;
+ordinary terminal flags and baseline error collection remain. Running agents are
+not restarted and old logs are not deleted.
+
+Private phone acceptance build; no public release. Menu tests intercept worker
+starts and do not execute cleanup, restoration or upgrades. See
+[validation](docs/fork/VALIDATION-test14-settings-menu.md) and [project rules](AGENTS.md).
+
+---
+
+# Private test13 build — agent instructions
+
+Version2.1.1-test13/code1445, same com.termux/signer/ARM64/schema8. Relevant checks
+cover instructions, Codex launch/preparation/connection, persistence and helper
+safety. No guest installation, desktop/GPU run or graphics rebuild is needed for
+this change; packaged payload identities are checked. Existing local SDK/JDK,
+bootstrap and JNI inputs are reused with identity evidence. This private build
+uses the full compatible modern Lint runner as conservative static coverage for
+new UI/file handling. See [feature](docs/fork/AGENT-INSTRUCTIONS.md) and
+[validation](docs/fork/VALIDATION-test13-agent-instructions-ui.md).
+
+Previews now bound long text above fixed bottom Apply/Cancel controls. Project shows
+file precedence and the actual non-empty source separately from the edit target.
+RU/EN preview selectors use the existing assets without changing locale or saving;
+explicit apply preserves history, and storage additions avoid RU/EN duplicates.
+
+Project requirements have one complete source: [AGENTS.md](AGENTS.md). The outer
+workspace file points here; X11 and clean-install checks are preserved together.
+
+---
+
+# Current verification policy
+
+Choose checks from the changed behavior, dependencies and risks before editing.
+Use [TESTING.md](docs/fork/TESTING.md) for intermediate/static scope, proof-based
+reuse, the existing script audit and minimal separation proposal. The broad
+`check.sh` / `verify-java.sh` entry points are not the default for every small
+change. Source-only preparation never proves tests ran; X11 packaging hashes are
+not desktop/GPU execution. Every delivered APK retains its final-file identity,
+signature, SHA-256 and runtime audit, and public releases retain full modern Lint.
+Documentation-only changes do not require rebuilding an unchanged APK.
+
+---
+
 # Current release — v2.1.0 (code1443)
 
 Kali/Manjaro and pinned ordinary ARM64/XFCE installation sets, explicit package
@@ -938,7 +992,7 @@ O_NOFOLLOW и защита от подмены ссылками сохранен
 # Частная v1.7.45 / code1260: Ubuntu AI и управление окружениями
 
 В настройках всех четырёх агентов появились выбор Ubuntu / Ubuntu AI и кнопка
-«Миграция среды агента» сразу под проверкой среды запуска. Проверка показывает
+Исторически «Миграция среды агента» находилась под проверкой; в test17 эта пользовательская функция удалена. Проверка показывает
 выбранную систему и её путь. Старые профили остаются на прежней среде. Новая
 установка без обычной Ubuntu использует отдельную Ubuntu AI; существующую общую
 Ubuntu можно явно скопировать со всеми агентами, проектами, инструментами,

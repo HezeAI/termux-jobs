@@ -70,4 +70,24 @@ command(){ if [[ $1 == -v && $2 == proot-distro && ! -e proot-installed ]];then 
 pkg(){ printf '%s\n' "$*" >> pkg-log;touch proot-installed; }
 proot-distro(){ printf '%s\n' "$*" >> proot-log; [[ $1 == login ]]; }
 source "'''+str(assets/'agent-host-setup.sh')+'"\nJOBS_AGENT_SETUP_ALLOWED=1 jobs_agent_host_prepare\n');assert (fixture/'pkg-log').read_text()=='install -y proot-distro\n';assert (fixture/'proot-log').read_text()=='login ubuntu-ai -- /bin/true\n'
+# Codex Ubuntu AI needs Python for real instruction storage; legacy Ubuntu is unchanged.
+r=run('codex-ai-missing-python',r'''
+command(){ if [[ $1 == -v && $2 == python3 ]];then return 1;fi;builtin command "$@"; }
+JOBS_AGENT_UBUNTU=ubuntu-ai jobs_agent_check codex api
+''');assert 'MISSING:python3' in r.stdout
+r=run('codex-legacy-no-new-python-requirement',r'''
+command(){ if [[ $1 == -v && $2 == python3 ]];then return 1;fi;builtin command "$@"; }
+JOBS_AGENT_UBUNTU=ubuntu jobs_agent_check codex api
+''');assert 'MISSING:python3' not in r.stdout
+run('codex-ai-python-plan',r'''
+command(){ if [[ $1 == -v && $2 == python3 ]];then return 1;fi;builtin command "$@"; }
+apt-get(){ printf '%s\n' "$*" >> python-apt-log; }
+JOBS_AGENT_UBUNTU=ubuntu-ai jobs_agent_base_prepare codex api
+''');assert (fixture/'python-apt-log').read_text().splitlines()==['update','install -y --no-install-recommends -o Dpkg::Options::=--force-confold python3']
+# Existing compatible/newer Codex is not replaced by the pinned fallback.
+run('codex-existing-preserved',r'''
+jobs_agent_has_node(){ return 0; }
+codex(){ printf '%s\n' 'codex-cli 99.0.0'; }
+curl(){ printf bad > existing-cli-download;return 99; }
+source "'''+str(assets/'codex-bootstrap.sh')+'"\n');assert not (fixture/'existing-cli-download').exists()
 print('PASS isolated agent setup: read-only inventory, component-only/key privacy, consent guards, missing-only APT, APT failure abort, corrupt archive abort before extraction, existing ADC retained, host preparation consent/no rootfs deletion')

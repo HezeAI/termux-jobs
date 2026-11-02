@@ -1,3 +1,153 @@
+# Unreleased
+
+- Pause the optional Codex helper experiment and exclude it from the next public release. Preserve its complete source snapshot in local Git branch `archive/codex-helper-test17-20261102`; remove only helper-specific UI, controller integration and adapter protocol from the active source. Keep historical private-test17 records and artifacts.
+- Retain the test17 heart trajectory with its incoming-side fall, six asymmetric inner-circle contacts, continuous exit and stronger pulses, plus the other agreed fixes, including removal of user-facing agent rootfs migration. Session/preset formats and existing user data remain unchanged.
+- No APK build, installation or publication accompanies this source separation. Existing version metadata is unchanged; the next APK must exceed reserve1451. [Separation and verification](docs/fork/HELPER-EXPERIMENT-PAUSED.md).
+
+- Development policy now requires dated, versioned CHANGELOG entries and a linked validation report for every delivered APK, with separate checked/reused/unverified evidence. Documentation-only edits do not trigger APK rebuilds.
+
+# 2026-11-02 — 2.1.1-test17 (versionCode 1450)
+
+Private test APK; not a public release.
+
+- Codex: optional helper selected explicitly in session/preset settings. A new helper derives a separate saved conversation from a Codex preset; an existing helper retains its native ID/history and uses its active channel, or the normal verified resume path. Prevent self-linking and concurrent helper ownership; keep privileges and connections separate.
+- Compact helper history/composer, minimize/reopen, earlier-message loading, independent scoped Stop and explicit personal-answer forwarding. Opening/minimizing does not send model requests. Show questions/approvals as requiring the ordinary helper session.
+- Review button on working Codex messages: freeze source/context, persist review/admission/turn IDs, queue busy helpers without steer, and automatically deliver only the exact completed successful final answer with Helper authorship/source. Distinguish app queue, CLI admission, rejection and unknown state; admission does not prove model uptake. Protect duplicate clicks, changed chats, cancellation, disable/re-enable and process recovery from automatic replay.
+- Old helper channels give a capability reason and an explicit helper-only restart/resume action. Preserve its ID/history, do not restart the worker, and require a fresh explicit review after upgrade.
+- Remove the user-facing agent rootfs migration button/clone path and its active instructions. Retain ordinary environment selection, preparation, installation, safe deletion, imports, backups and internal update-data compatibility. Existing sessions, histories and authorization are not changed by this removal.
+- Heart activity line: enter from its incoming side, six asymmetric inner-circle contacts with the final contact leading into the existing outer loop; contact-aligned stronger pulses. Retain the existing frame clock, disabled-animation static state and scoped stop/confirmation.
+- Compatibility: com.termux, signing identity, ARM64 and workspace/schema8 retained. Helper links/delivery states use a separate atomic sidecar; ordinary helper sessions/history remain readable by reserve test16/1451. No incompatible data migration or reset. Existing backup/export formats do not yet include the helper-link sidecar. Target1450 is below reserve1451; every later build must account for both and use1452 or higher.
+- Limits: exact final-result protocol exercised with actual Codex0.166.0 and a synthetic local provider. Pending reviews are cancelled/unknown after an application-process restart rather than silently replayed; already-submitted deliveries cannot be undone. At most256 review records are admitted locally. Real phone overlay/IME/accessibility, live providers and visible trajectory/pulse quality require device acceptance.
+
+- Final APK SHA-256: `6e3a26ae50f69e774a2e9e7abba6d0041a0cbe2e988e6e273803b0426f0496fd`. Checked final72 JVM cases,40 Python cases, actual CLI0.166 local-provider exchange/cancellation and full modern Lint0 errors/233 warnings; phone acceptance remains separate.
+
+[Validation](docs/fork/VALIDATION-test17-codex-helper.md) · [Helper guide](docs/fork/CODEX-HELPER.md)
+
+---
+
+# 2026-11-01 — 2.1.1-test16 reserve (versionCode 1451)
+
+Private reserve based on the installed test16/1449, prepared before helper and
+migration-removal changes. Package com.termux and signer are unchanged. Only
+manifest versionCode and APK signing/container metadata change; all 1103 other
+ZIP entries are byte-identical, including DEX, native libraries, resources and assets.
+Internal BuildConfig remains1449. Source SHA-256:
+`67fce840fde3d1c5b3f758ce5d5216f5b08cd1ca82d4c986c06fd0069d89f3bb`.
+Reserve SHA-256:
+`7456bc269d180acf4857fdba43a2326842ec45c19e852654cd74648011f67bdd`.
+Target test17 uses1450; every later build must account for reserve1451 and use1452
+or greater. Installing this APK does not restore old data.
+
+[Validation](docs/fork/VALIDATION-test17-codex-helper.md)
+
+---
+
+# 2026-11-01 — 2.1.1-test16 (versionCode 1449)
+
+Private test APK; not a public release.
+
+- Codex: show native reconnect progress above the transcript with the reported attempt/limit and tappable reason. Separate local CLI readiness from model response connectivity; steering acknowledgement does not hide an outage. Clear the banner on resumed output, successful completion or confirmed interruption, retain actual final failure/unknown local connection state, and isolate it by chat/request. Keep native retry timing and limits.
+- Codex: attach successful message admission to its corresponding user message or attachment as a compact caption; tap for the admission/uptake distinction. Remove the successful message's bottom delivery notice. Keep failed/unconfirmed delivery noticeable and preserve text/attachments. Correlate by native clientId, including duplicate text; do not change Shell deduplication or other agents' send protocols. Avoid duplicate terminal-error history entries from native error/completed notifications.
+- Instruction editor: horizontal scrolling single-line scope/file tabs, persistent selected state and actual-source caption. Scroll long project/editor content while retaining save/menu/close controls. Bound long status messages; keep preview RU/EN controls and apply/cancel available, with long paths/warnings inside the preview scroll area. Preserve system font sizing and user instruction text.
+- Compatibility: same com.termux, certificate, ARM64 and settings/schema8; no migration/reset, auth/config edit, process restart or network policy change. Code1449 exceeds corrected1447 and reserve1448; subsequent builds must exceed1449. The old reserve1448 cannot be installed directly over1449 as an ordinary update.
+- Limits: the isolated actual-CLI fault reproduces hidden retry state, not an established cause on the other phone. Codex0.164.0 is tested with a synthetic loopback provider; live caption metadata can be lost on adapter restart. Existing running adapters require an explicit restart with conversation resume to load changed helper code. Narrow/large-font/IME layouts are modeled; real phone keyboard, touch, font rendering and cloud transport fallback remain for acceptance.
+
+[Validation](docs/fork/VALIDATION-test16-chat-recovery-layout.md)
+
+---
+
+# 2026-11-01 — 2.1.1-test15 (versionCode 1447)
+
+Private test APK based on test14, for developer phone acceptance.
+
+- F01: close command/note/alias/session/preset forms and show success only after the asynchronous library write is acknowledged. Keep an accessible draft and storage error on failure; do not move file writes to the UI thread.
+- F02: distinguish confirmed active Codex process directory/access/approvals from edited settings for its next launch. Missing legacy process metadata is shown as unknown. No automatic restart or privilege expansion.
+- F03/F04: distinguish current-turn admission, queue admission, new-turn admission, rejection and unconfirmed delivery for all four agents. Clear the composer and attachments only after admission; preserve them on failure. A cached ambiguous Codex retry explicitly says it did not resend; keep Shell deduplication.
+- Claude 2.1.296: admit follow-up messages during responses and pending tools through its native stream and command lifecycle acknowledgement. Label the native queue accurately; preserve ordering, cancellation and same-ID reconnect deduplication. Older launches lacking the required capabilities fail closed without restarting.
+- Codex 0.164.0: enable the supported `default_mode_request_user_input` launch feature when present, without writing this feature into user config or switching to Plan. Native question cards support unselected options, free text and several questions. Reply through the original request ID/nonce/session channel, independently of a pending Send; show CLI resolution and an answer receipt, protect late/duplicate replies and retain failed drafts. Ordinary lists remain text.
+- Replace the stop hand with a pulsing heart driven by the existing display frame clock, including a five-bend interior line segment and stronger beats on traversal. Keep the external border route, layout and hit area; respect disabled system animations. Show a single RU/EN Stop [agent]? confirmation with Yes on the left and No on the right; bind it to the selected run/request. Back, outside tap and No do not stop anything.
+- U01: protect unsaved instruction text from Back/outside dismissal with an explicit discard choice; saving blocks dismissal and the first Back closes a visible keyboard. Explicit Cancel remains a discard action.
+- Persistently highlight the selected General/Project/Diagnostics tab and edited AGENTS file with accent outline, fill and text, including accessibility selection. Keep the separate statement of which file Codex actually reads.
+- F05: clarify the narrow basic-settings backup scope and exclusions; do not expand backup content or change its format.
+- F06: share image extension/MIME recognition across file management and attachments. If the platform cannot decode a recognized image, retain and offer the original as a file instead of reporting it missing; decoder support remains device-dependent.
+- U02 is intentional: agent messages still enter Recent commands. O03 is deferred: preserve documentation pages/history/scroll, background transfers and retained windows until operation quiescence is established.
+- Compatibility: same com.termux, certificate, ARM64 and schema8; no data migration/reset. The existing bounded receipt store gains an optional answered-question receipt; test14 ignores this unfamiliar receipt outcome while native chat history remains unchanged. Existing processes retain their old adapters until an explicit restart with conversation resume.
+- Version order: corrected1447, test14 reserve1448; every later build must exceed1448. Installing the reserve does not restore old user data.
+- Limits: visual heart/line smoothness, actual phone keyboard/accessibility, decoder availability, live authenticated provider/network failures and update acceptance require phone testing. Native protocol tests use actual pinned CLIs with synthetic loopback providers, not cloud-model inference. CLI changes can change feature support and semantics.
+
+[Validation](docs/fork/VALIDATION-test15-audit-fixes.md)
+
+---
+
+# 2026-11-01 — 2.1.1-test14 reserve (versionCode 1448)
+
+Private reserve APK based on the already delivered test14; not a new functional build.
+
+- Raise only AndroidManifest versionCode1446→1448 and re-sign with the same certificate. Keep package com.termux, versionName2.1.1-test14 and every non-manifest executable/resource/asset/native entry byte-identical.
+- Reserve1447 for corrected test15; future builds must use1449 or higher. No settings/schema8 migration, data rollback mechanism or cleanup. Existing user data is not snapshotted by this APK.
+- Limitation: embedded BuildConfig stays test14/1446 because code is unchanged; installed Android metadata is1448. On-device update/rollback acceptance remains to be tested by the developer. No fixes from test15 are included.
+
+[Validation](docs/fork/VALIDATION-test15-audit-fixes.md)
+
+---
+
+# 2026-11-01 — 2.1.1-test14 (versionCode 1446)
+
+Private APK for developer phone testing; not published on GitHub.
+
+- Add **Advanced / Дополнительно** to the main application menu. Move Backup and restore, Check environment updates, Clean up storage, and Errors and solutions there in that order; remove the original duplicate rows.
+- Rename the existing App settings action to **About / О приложении** and place it last, retaining its existing activity destination. Preserve the original workspace menu title, styling, update/language/instruction/history entries.
+- Keep the main menu beneath Advanced and Advanced beneath its child windows, so Close/Back returns without recreating menus or rerunning actions. Close the navigation layers before an explicitly chosen terminal insertion or backup package launch. Keep maintenance engines, confirmations and storage/cleanup guards intact.
+- Hide the extended-debug switch and its explanation for Codex, Claude, Gemini and OpenCode in new/existing session and preset forms. Ordinary terminal profiles retain their switch and stored setting.
+- Previously saved agent extended-debug=true values are normalized to false on read, copy and serialization. Launch guards also ignore stale in-memory flags: the baseline collector stays active, extended startup events are off, and Gemini receives JOBS_GEMINI_DEBUG=0. Normal errors and explicit temporary diagnostic detail controls remain. Existing log files are retained; already running agent processes are not restarted or reconfigured.
+- Simplify RU/EN agent help: show the selected environment and actual editable working folder, applicable access guidance and separate write/confirmation settings. The working folder does not imply an access boundary without enforcement. Retain Android-root and sandbox-failure warnings; move native Codex parameters and component details into collapsible Details.
+- Hide generic terminal/SSH startup guidance in agent forms; shorten the connection launcher explanation. Permission, approval, connection and startup behavior remain unchanged apart from the explicitly disabled agent debug setting.
+- Compatibility: same com.termux/certificate/ARM64/schema8 and Android requirements, versionCode1445→1446. No data reset or environment/account migration. The intentional compatibility change is disabling the old agent verbose flag; ordinary terminal flags remain valid.
+- Limits: actual phone navigation, keyboard/scrolling and disclosure layout still need developer acceptance. Tests open maintenance windows with read-only worker requests intercepted; they do not perform cleanup, restoration or environment upgrades.
+
+[Validation](docs/fork/VALIDATION-test14-settings-menu.md)
+
+---
+
+# 2026-11-01 — 2.1.1-test13 (versionCode 1445)
+
+Private APK for developer phone testing; not published on GitHub.
+
+- Bound built-in template, file-storage addition and revision-history previews to the available window height. Long text and its notice scroll together; Apply/Cancel stay in the bottom button panel.
+- Add RU/EN selectors to template and file-storage previews, defaulting to the UI language. Use the existing asset texts; show the chosen language and exact target file. Switching changes only the preview; replacement/appending requires the explicit apply action.
+- Prevent another standard storage section in either language when its RU or EN heading is already present, including after editing a draft or changing preview language. No automatic translation or existing-text cleanup. Keep the storage-addition action in General's menu; remove its duplicate main-screen button.
+- Add General → Import instructions and Project → Import AGENTS.md using the built-in environment/phone file dialog. Validate bounded UTF-8 text, preview the exact destination, require explicit confirmation and retain previous revisions through the existing atomic/conflict-checked save path. Unsaved drafts require Save, Discard or Cancel first.
+- Shared import targets the actual active CODEX_HOME file, including its override. Project import targets only the selected project's AGENTS.md and warns when its override remains active. Do not translate file contents, change other instruction/config/auth files or restart chats. Refresh the editor/source state and regular save notice after import.
+- Verify RU/EN menus, history, diagnostics, confirmations, errors, both language selectors and preservation of exact user/history text when the UI language changes.
+- Keep explicit apply/save feedback, atomic storage, previous revisions and conflict handling. Cancelling a preview leaves the file and editor draft unchanged. Selectors and Apply/Cancel remain outside the scrolling text.
+- Translate project AGENTS.md into Russian and consolidate all active root/checkout requirements, including X11 and clean-install checks, in the active checkout. The outer AGENTS.md now points to this single full source; update workspace documentation links. Exact technical literals and English public release-note policy remain. The APK is rebuilt for UI/helper changes, not for documentation edits.
+- Add a compact RU/EN Project explanation of AGENTS.md versus AGENTS.override.md, including continued shared instructions. A separate state line reports which non-empty file is selected by Codex's standard precedence in this folder, or that neither contains instructions.
+- Label the editable path separately; choosing a file to edit does not enable it or change the current rules. Refresh the reported state on read/save.
+- Hide Install packages and Session diagnostics in the session gear menu for Codex, Claude, Gemini and OpenCode. Ordinary/base terminals retain diagnostic access and have direct package access in that menu. Keep environment preparation, internal diagnostics and Agent instructions → Diagnostics intact.
+- Compatibility: same com.termux, certificate, ARM64, schema8 and Android requirements; versionCode increases from1444 to1445. No user-data reset, rootfs migration, automatic instruction replacement or working-agent restart is introduced.
+- Limits: phone keyboard/scrolling/rotation and real small-screen visibility need developer acceptance. The source state describes standard file precedence at the latest read/save, not instructions already captured by a running request; custom launch/configuration caveats remain.
+
+[Editor behavior](docs/fork/AGENT-INSTRUCTIONS.md) · [Validation](docs/fork/VALIDATION-test13-agent-instructions-ui.md)
+
+---
+
+# 2026-11-01 — 2.1.1-test12 (versionCode 1444)
+
+Private APK for developer phone testing; not published on GitHub.
+
+- Add **global settings → Agent instructions → Codex → Ubuntu AI**, with General, Project and Diagnostics tabs. The current chat only suggests a project directory.
+- Edit the actual resolved CODEX_HOME AGENTS source, including its active override, and the chosen project's AGENTS.md/AGENTS.override.md. Show masked project files, source diagnostics and actual CLI version.
+- Save exact UTF-8 text atomically, retain previous revisions, preview/restore history and refuse conflicting edits. Closing/cancelling does not save a draft.
+- Add universal RU/EN guidance for programs, websites, APKs, 3D models, documents, file processing and diagnostics. Initialize only absent global files; preserve existing and empty user files on upgrade.
+- Preview a built-in template before explicit replacement, or append the **File and temporary data storage** section while retaining existing text. No automatic cleanup, disk quota or retention enforcement is introduced.
+- Saving works independently of CLI version. Diagnostics distinguishes tested Codex0.163/0.164 refresh behavior from unverified versions. A running request is unchanged; restarting with resumed history rereads shared/project rules in the tested versions. Existing installed Codex is retained by missing-only preparation; Codex Ubuntu AI now declares its Python dependency.
+- Compatibility: same com.termux, signer, ARM64, Android8+ app / Android11+ X11 and workspace schema8. No data reset or account/rootfs migration is required. Existing chats and connections are not restarted by the editor. Other agents/ordinary Ubuntu/Termux are outside this initial instructions integration.
+- Limits: phone editor/keyboard/scrolling/rotation and post-restart persistence still need device testing. Custom connection executables can alter CODEX_HOME beyond the standard shell inspected by diagnostics. Codex instruction size limits and version-dependent behavior remain applicable.
+
+[Feature/source behavior](docs/fork/AGENT-INSTRUCTIONS.md) · [Validation](docs/fork/VALIDATION-test12-agent-instructions.md)
+
+---
+
 # v2.1.0 — More environments, controlled updates & better agent chats
 
 - Add Kali Linux and Manjaro environments, X11 integration, programs, aliases and target-specific graphics components.

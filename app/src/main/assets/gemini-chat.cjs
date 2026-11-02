@@ -17,7 +17,7 @@ class GeminiChat {
  constructor(api){this.api=api;this.attachments=new Attachments(api.attachmentRoot||__dirname);this.binding=null;this.shell=null;this.groups=[];this.full=new Map();this.sent=new Map();this.thoughts=new Map();this.revision=0;this.native=false;}
  observe(config,data,submit,shellMode,setShellMode){
   const session=this.api.session();if(this.sessionKey!==session){this.sessionKey=session;this.thoughts.clear();}
-  const binding={config,submit,shellMode,setShellMode,ready:data.ready===true,native:data.native===true};this.binding=binding;this.revision++;
+  const binding={config,submit,shellMode,setShellMode,cancel:data.cancel,ready:data.ready===true,native:data.native===true};this.binding=binding;this.revision++;
   this.source=data;this.dirty=true;
   return ()=>{if(this.binding===binding)this.binding=null;};
  }
@@ -25,7 +25,7 @@ class GeminiChat {
  rebuild(){
   if(!this.dirty||!this.source)return;this.dirty=false;const data=this.source;
   const history=Array.isArray(data.history)?data.history.slice(-500):[],pending=Array.isArray(data.pending)?data.pending.slice(0,25):[];
-  const lastUser=history.findLast(m=>m.type==='user'||m.type==='user_shell');const anchor=lastUser?hash(lastUser.id+':'+lastUser.type):'';
+  const lastUser=history.findLast(m=>m.type==='user'||m.type==='user_shell');const anchor=lastUser?hash(lastUser.id+':'+lastUser.type):'';this.stopOwner=anchor;
   const thought=[text(data.thought?.subject),text(data.thought?.description)].filter(Boolean).join('\n');if(anchor&&history.slice(history.lastIndexOf(lastUser)+1).some(m=>m.type==='thinking'))this.thoughts.delete(anchor);else if(anchor&&thought)this.thoughts.set(anchor,thought.slice(0,12000));while(this.thoughts.size>100)this.thoughts.delete(this.thoughts.keys().next().value);
   this.groups=[];this.full.clear();let remaining=2*1024*1024;
   const project=(item,index,live=false)=>{
@@ -53,10 +53,17 @@ class GeminiChat {
   if(q.cursor){if(typeof q.cursor!=='string'||q.cursor.length>128)throw Error('Invalid cursor');end=this.groups.findIndex(g=>g.id===q.cursor);if(end<0)throw Error('Expired cursor');}
   const groups=this.groups.slice(Math.max(0,end-20),end);let rows=groups.flatMap(g=>g.rows);if(rows.length>200)rows=rows.slice(-200);
   let budget=60000;rows=rows.map((r,i)=>{const max=Math.min(12000,Math.max(100,Math.floor(budget/(rows.length-i))));budget-=Math.min(r.body.length,max);return {...r,body:r.body.slice(0,max),more:r.more||r.body.length>max};});
-  return {ok:true,nativeChat:true,attachmentsSupported:true,authError:this.source?.authError===true,session:this.api.session(),nativeUiReady:!!this.binding,knownMessages:this.groups.map(g=>g.id),connected:!!this.binding&&s.available&&(this.binding.ready||this.binding.native),rows:trimPreviews(rows),older:end>20?groups[0]?.id||'':'',forms:[],permission:this.api.permission(),busy:s.state==='responding'||s.state==='waiting_for_confirmation',needsTerminal:!!this.binding?.native||!s.available||(s.state==='waiting_for_confirmation'&&!this.api.permission()),directShell:false,model:{providerID:'google',id:s.model||s.selectedModel||''}};
+  return {ok:true,nativeChat:true,attachmentsSupported:true,authError:this.source?.authError===true,session:this.api.session(),stopToken:this.stopOwner||"",nativeUiReady:!!this.binding,knownMessages:this.groups.map(g=>g.id),connected:!!this.binding&&s.available&&(this.binding.ready||this.binding.native),rows:trimPreviews(rows),older:end>20?groups[0]?.id||'':'',forms:[],permission:this.api.permission(),busy:s.state==='responding'||s.state==='waiting_for_confirmation',needsTerminal:!!this.binding?.native||!s.available||(s.state==='waiting_for_confirmation'&&!this.api.permission()),directShell:false,model:{providerID:'google',id:s.model||s.selectedModel||''}};
  }
  async command(q){
   if(q.op==='chat-snapshot')return this.snapshot(q);
+  if(q.op==='chat-interrupt'){
+   this.rebuild();const state=this.api.status().state;
+   if(q.session!==this.api.session()||!['responding','waiting_for_confirmation'].includes(state)||q.stopToken!==undefined&&(!this.stopOwner||q.stopToken!==this.stopOwner))return {ok:false,error:'STALE_REQUEST'};
+   if(!this.binding||typeof this.binding.cancel!=='function')return {ok:false,error:'STOP_UNAVAILABLE'};
+   await this.binding.cancel();return {ok:true,interrupted:true};
+  }
+
   if(q.op==='terminal-open'||q.op==='terminal-close'){this.native=q.op==='terminal-open';return {ok:true};}
   if(q.op==='chat-detail'){
    this.rebuild();
@@ -65,23 +72,23 @@ class GeminiChat {
   }
   if(q.op!=='chat-send')throw Error('Unsupported chat operation');
   if(typeof q.id!=='string'||!/^msg_[A-Za-z0-9_-]{1,124}$/.test(q.id)||typeof q.text!=='string'||(!q.text.trim()&&!(Array.isArray(q.attachments)&&q.attachments.length))||Buffer.byteLength(q.text)>32000||!['message','shell'].includes(q.kind))throw Error('Invalid message');
-  if(!this.api.session()||q.session!==this.api.session())return {ok:false,error:'STALE_SESSION'};
+  if(!this.api.session()||q.session!==this.api.session())return {ok:false,delivery:'rejected',error:'STALE_SESSION'};
   const session=this.api.session(),raw=JSON.stringify([session,q.kind,q.text,q.attachments||[]]);let previous=this.sent.get(q.id);if(previous){if(previous.raw!==raw)throw Error('Changed message ID');return previous.promise;}
-  let binding=this.binding;const s=this.api.status();if(this.native||!this.api.supported()||!s.available||!binding?.ready||binding.native||this.api.permission())return {ok:false,error:'NOT_READY'};
-  if(q.kind==='shell'&&(s.state!=='idle'||this.shell?.config!==binding.config||binding.config.isTrustedFolder?.()!==true))return {ok:false,error:'NOT_READY'};
+  let binding=this.binding;const s=this.api.status();if(this.native||!this.api.supported()||!s.available||!binding?.ready||binding.native||this.api.permission())return {ok:false,delivery:'rejected',error:'NOT_READY'};
+  if(q.kind==='shell'&&(s.state!=='idle'||this.shell?.config!==binding.config||binding.config.isTrustedFolder?.()!==true))return {ok:false,delivery:'rejected',error:'NOT_READY'};
   // The native chat composer must never inherit the terminal's shell-input mode.
-  if(q.kind==='message'&&binding.shellMode){binding.setShellMode(false);const started=Date.now();while(this.binding?.config===binding.config&&this.binding.shellMode&&Date.now()-started<2000)await new Promise(r=>setTimeout(r,20));binding=this.binding;if(!binding||binding.shellMode||!binding.ready||binding.native)return {ok:false,error:'NOT_READY'};}
+  if(q.kind==='message'&&binding.shellMode){binding.setShellMode(false);const started=Date.now();while(this.binding?.config===binding.config&&this.binding.shellMode&&Date.now()-started<2000)await new Promise(r=>setTimeout(r,20));binding=this.binding;if(!binding||binding.shellMode||!binding.ready||binding.native)return {ok:false,delivery:'rejected',error:'NOT_READY'};}
   previous=this.sent.get(q.id);if(previous){if(previous.raw!==raw)throw Error('Changed message ID');return previous.promise;}
-  const current=this.binding;if(current?.config!==binding.config||!current.ready||current.native)return {ok:false,error:'NOT_READY'};
+  const current=this.binding;if(current?.config!==binding.config||!current.ready||current.native)return {ok:false,delivery:'rejected',error:'NOT_READY'};
   const files=this.attachments.prepare(q.attachments,session,q.kind),prompt=this.attachments.prompt(q.text,files,true);
   // Reserve before invoking native callbacks; ambiguous execution is never blindly retried.
   const promise=Promise.resolve().then(async()=>{
    // No native callback has run at these guards. Keep same-ID retry possible
    // after a temporary UI/idle transition; uncertain native calls stay reserved.
-   const notReady=()=>{if(this.sent.get(q.id)?.promise===promise)this.sent.delete(q.id);return {ok:false,error:'NOT_READY'};};
+   const notReady=()=>{if(this.sent.get(q.id)?.promise===promise)this.sent.delete(q.id);return {ok:false,delivery:'rejected',error:'NOT_READY'};};
    if(this.api.session()!==session||this.binding?.config!==binding.config||!this.binding.ready||this.binding.native)return notReady();
-   if(q.kind==='shell'){if(this.shell?.config!==binding.config||this.api.status().state!=='idle')return notReady();if(!this.shell.send(q.text))throw Error('Shell rejected');}else await this.binding.submit(prompt);
-   return {ok:true,accepted:true,id:q.id};
+   if(q.kind==='shell'){if(this.shell?.config!==binding.config||this.api.status().state!=='idle')return notReady();if(!this.shell.send(q.text))throw Error('Shell rejected');}else {const admission=await this.binding.submit(prompt);return {ok:true,accepted:true,id:q.id,delivery:admission?.delivery||'submitted',ack:admission?.ack||'native-callback'};}
+   return {ok:true,accepted:true,id:q.id,delivery:'shell',ack:'shell-callback'};
   });
   this.sent.set(q.id,{raw,promise});while(this.sent.size>200)this.sent.delete(this.sent.keys().next().value);return promise;
  }

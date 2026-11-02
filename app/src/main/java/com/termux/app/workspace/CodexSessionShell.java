@@ -41,7 +41,9 @@ public final class CodexSessionShell {
         return WorkspaceText.tr("(\ncommand -v codex >/dev/null 2>&1 || { printf '%s\\n' 'Codex не установлен в выбранной среде.' >&2; exit 127; }\n")
             + WorkspaceText.tr("command -v node >/dev/null 2>&1 || { printf '%s\\n' 'Для локального управления Codex нужен Node.js в выбранной среде.' >&2; exit 127; }\n")
             + "[ ! -e " + SessionShell.quote(endpoint) + WorkspaceText.tr(" ] || { printf '%s\\n' 'Подключение Codex уже занято.' >&2; exit 1; }\n")
-            + "umask 077\ncodex --no-daemon -c " + SessionShell.quote("sandbox_mode=\"" + sandbox(s.codexAccess) + "\"")
+            + "umask 077\n" + AgentInstructions.initialization(s)
+            + "_jobs_codex_question_args=''\nif codex features list 2>/dev/null | grep -Eq '^default_mode_request_user_input[[:space:]]'; then _jobs_codex_question_args='--enable default_mode_request_user_input'; export JOBS_CODEX_STANDARD_QUESTIONS=1; else export JOBS_CODEX_STANDARD_QUESTIONS=0; fi\n"
+            + "codex --no-daemon $_jobs_codex_question_args -c " + SessionShell.quote("sandbox_mode=\"" + sandbox(s.codexAccess) + "\"")
             + " -c " + SessionShell.quote("approval_policy=\"" + (approval(s)) + "\"")
             + " app-server --listen " + SessionShell.quote("unix://" + endpoint) + " >/dev/null 2>&1 &\n_jobs_codex_pid=$!\n"
             + "trap 'if [ -n \"${_jobs_codex_status_pid:-}\" ]; then kill \"$_jobs_codex_status_pid\" 2>/dev/null; wait \"$_jobs_codex_status_pid\" 2>/dev/null; fi; if [ -n \"${_jobs_codex_watch_pid:-}\" ]; then kill \"$_jobs_codex_watch_pid\" 2>/dev/null; fi; kill \"$_jobs_codex_pid\" 2>/dev/null; wait \"$_jobs_codex_pid\" 2>/dev/null' EXIT\n"
@@ -53,6 +55,7 @@ public final class CodexSessionShell {
             + (CodexChatControl.enabled(files,s)?CodexChatControl.command(files,s,endpoint):resumePreflight(files, s, endpoint) + client) + "\n)";
     }
     public static synchronized void prepareBridge(android.content.Context context) throws IOException {
+        AgentInstructions.prepare(context);
         File directory = socketDirectory(context.getFilesDir()); if (!directory.isDirectory() && !directory.mkdirs()) throw new IOException("Cannot create controls");
         File bridge = new File(directory, "bridge-v0.2.21.js");
         if (bridge.isFile()) return;

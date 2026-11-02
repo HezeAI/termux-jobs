@@ -135,14 +135,14 @@ printf 'SHA256\\n' >> "$FIXTURE_LOG"
 
     def test_migration_tools_ready_does_not_reinstall_or_touch_ubuntu(self):
         self.stub('python3','printf "CHECK_PYTHON\\n" >> "$FIXTURE_LOG"; exit 0\n')
-        result=self.run_helper('install','agent-migration-tools')
+        result=self.run_helper('install','agent-operation-tools')
         self.assertEqual(0,result.returncode,result.stderr);self.assertIn('CHECK:done',result.stdout)
         self.assertNotIn('PKG:',self.log.read_text());self.assertNotIn('install ',self.log.read_text())
         self.assertFalse((self.prefix/'var/lib/proot-distro').exists())
 
     def test_migration_tools_install_failure_is_not_reported_ready(self):
         self.stub('python3','exit 1\n')
-        result=self.run_helper('install','agent-migration-tools')
+        result=self.run_helper('install','agent-operation-tools')
         self.assertEqual(19,result.returncode,result.stderr);self.assertNotIn('READY:shell',result.stdout)
         self.assertIn('PKG:install -y proot-distro',self.log.read_text())
         self.assertFalse((self.prefix/'var/lib/proot-distro').exists())

@@ -69,6 +69,7 @@ public final class WorkspaceStore {
         public transient boolean agentSetupAllowed;
         public boolean geminiAgent;
         public boolean extendedDebug;
+        public boolean extendedDebugEnabled(){return extendedDebug&&AgentPreparation.agent(this).isEmpty();}
         public String agentConnectionCommand="";
         public boolean keepHistory=false;
         public String geminiThinking="default";
@@ -84,7 +85,7 @@ public final class WorkspaceStore {
         }
         public Session copy() {
             Session s = new Session();s.restoreReview=restoreReview;s.keepHistory=keepHistory;s.chatScale=chatScale;
-            s.extendedDebug=extendedDebug;s.agentConnectionCommand=agentConnectionCommand; s.name = name + WorkspaceText.tr(" — копия"); s.directory = directory; s.startup = startup; s.startup2 = startup2; s.startup3 = startup3; s.environment = environment;s.prootAlias=prootAlias;s.prootIsolated=prootIsolated;
+            s.extendedDebug=extendedDebugEnabled();s.agentConnectionCommand=agentConnectionCommand; s.name = name + WorkspaceText.tr(" — копия"); s.directory = directory; s.startup = startup; s.startup2 = startup2; s.startup3 = startup3; s.environment = environment;s.prootAlias=prootAlias;s.prootIsolated=prootIsolated;
             s.sshHost = sshHost; s.sshUser = sshUser; s.sshPort = sshPort; s.sshKeepOpen = sshKeepOpen; s.sshAuth = sshAuth; s.sshIdentity = sshIdentity; // Password is bound to the original profile ID.
             s.codexConfirmActions=codexConfirmActions; s.aiProjectOnly=aiProjectOnly; s.codexEnvironment = codexEnvironment; s.codexAccess = codexAccess; s.codexChat = codexChat; s.codexThread = codexThread; s.codexThreadName = codexThreadName; s.codexSourceDirectory=codexSourceDirectory;
             s.aiAgent=aiAgent; s.aiConnection=aiConnection; s.aiModel=aiModel; s.aiVariant=aiVariant; s.aiMode=aiMode; s.aiAccess=aiAccess;
@@ -150,12 +151,16 @@ public final class WorkspaceStore {
     }
     public void save() { save(null); }
     void save(Runnable completed) {
-        if(closed)return;
-        if (!writable) { errors.onError(WorkspaceText.tr("Библиотека недоступна для записи; исходные данные сохранены.")); return; }
+        save(completed,null);
+    }
+    void save(Runnable completed,Runnable rejected) {
+        Runnable failed=()->{if(rejected!=null)main.post(()->{if(!closed)rejected.run();});};
+        if(closed){failed.run();return;}
+        if (!writable) { errors.onError(WorkspaceText.tr("Библиотека недоступна для записи; исходные данные сохранены.")); failed.run();return; }
         final byte[] snapshot;
         try { snapshot = encode().toString().getBytes(StandardCharsets.UTF_8); }
-        catch (JSONException e) { errors.onError(WorkspaceText.tr("Не удалось сохранить библиотеку.")); return; }
-        persistence.write(snapshot,()->{if(completed!=null)main.post(()->{if(!closed)completed.run();});});
+        catch (JSONException e) { errors.onError(WorkspaceText.tr("Не удалось сохранить библиотеку.")); failed.run();return; }
+        persistence.write(snapshot,()->{if(completed!=null)main.post(()->{if(!closed)completed.run();});},failed);
     }
     void awaitWrites() throws Exception { persistence.awaitWrites(); }
     public void close() { closed=true;persistence.close(); } // Queued atomic writes finish after Activity destruction.
@@ -170,7 +175,7 @@ public final class WorkspaceStore {
             .put("claudeEffort",s.claudeEffort).put("claudeAgent",s.claudeAgent).put("claudeModel",s.claudeModel).put("claudeMode",s.claudeMode).put("claudeChat",s.claudeChat).put("claudeThread",s.claudeThread).put("claudeSocketId",s.claudeSocketId)
             .put("keepHistory",s.keepHistory)
             .put("geminiEncryptedKey",s.geminiEncryptedKey).put("geminiCloudProject",s.geminiCloudProject).put("geminiCloudLocation",s.geminiCloudLocation).put("geminiThinking",s.geminiThinking).put("geminiAuth",s.geminiAuth).put("geminiAgent",s.geminiAgent).put("geminiModel",s.geminiModel).put("geminiMode",s.geminiMode).put("geminiChat",s.geminiChat).put("geminiThread",s.geminiThread).put("geminiSocketId",s.geminiSocketId)
-            .put("agentConnectionCommand",s.agentConnectionCommand).put("restoreReview",s.restoreReview).put("extendedDebug",s.extendedDebug).put("updated", s.updated).put("saved", s.saved);
+            .put("agentConnectionCommand",s.agentConnectionCommand).put("restoreReview",s.restoreReview).put("extendedDebug",s.extendedDebugEnabled()).put("updated", s.updated).put("saved", s.saved);
     }
     JSONObject encode() throws JSONException {
         JSONObject root = new JSONObject().put("version", 8);
@@ -265,7 +270,7 @@ public final class WorkspaceStore {
             s.geminiThinking=o.optString("geminiThinking","default");if(!java.util.Arrays.asList("default","minimal","low","medium","high").contains(s.geminiThinking))s.geminiThinking="default";s.geminiAgent=o.optBoolean("geminiAgent",false); s.geminiModel=o.optString("geminiModel",""); s.geminiMode=o.optString("geminiMode","default"); s.geminiChat=o.optString("geminiChat","new"); s.geminiThread=o.optString("geminiThread",s.geminiThread); s.geminiSocketId=o.optString("geminiSocketId",s.geminiSocketId);
             if(s.geminiAgent&&!GeminiCli.valid(s))throw new JSONException("Invalid Gemini profile");
             s.restoreReview=o.optBoolean("restoreReview",false);
-            s.extendedDebug=o.optBoolean("extendedDebug",false); s.updated = o.optLong("updated"); s.saved = o.optBoolean("saved", true); ss.add(s);
+            s.extendedDebug=o.optBoolean("extendedDebug",false);s.extendedDebug=s.extendedDebugEnabled(); s.updated = o.optLong("updated"); s.saved = o.optBoolean("saved", true); ss.add(s);
         }
         List<Note> ns = new ArrayList<>();
         JSONArray na = root.optJSONArray("notes");

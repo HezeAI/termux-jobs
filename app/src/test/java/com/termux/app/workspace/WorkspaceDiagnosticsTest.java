@@ -42,7 +42,7 @@ public class WorkspaceDiagnosticsTest {
         try{WorkspaceStore.Session s=new WorkspaceStore.Session();s.environment="ubuntu";s.extendedDebug=true;store.sessions.clear();store.sessions.add(s);
             JSONObject data=store.encode();store.decode(data.toString());assertTrue(store.sessions.get(0).extendedDebug);assertTrue(store.sessions.get(0).copy().extendedDebug);
             data.getJSONArray("sessions").getJSONObject(0).remove("extendedDebug");store.decode(data.toString());assertFalse(store.sessions.get(0).extendedDebug);
-            s.geminiAgent=true;s.extendedDebug=true;assertTrue(GeminiCli.command(context.getFilesDir(),s).contains("JOBS_GEMINI_DEBUG=1"));s.extendedDebug=false;assertTrue(GeminiCli.command(context.getFilesDir(),s).contains("JOBS_GEMINI_DEBUG=0"));
+            s.geminiAgent=true;s.extendedDebug=true;assertTrue(GeminiCli.command(context.getFilesDir(),s).contains("JOBS_GEMINI_DEBUG=0"));s.extendedDebug=false;assertTrue(GeminiCli.command(context.getFilesDir(),s).contains("JOBS_GEMINI_DEBUG=0"));
         }finally{store.close();}
     }
     @Test public void reportCanBeSavedWithoutAWindowAndReadBack() throws Exception {

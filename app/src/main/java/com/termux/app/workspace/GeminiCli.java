@@ -51,7 +51,7 @@ final class GeminiCli {
             +"export JOBS_GEMINI_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")
             +(s.geminiAuth.equals("vertex")&&!s.geminiCloudProject.isEmpty()?"; export JOBS_GEMINI_VERTEX_PROJECT="+SessionShell.quote(s.geminiCloudProject)+"; export JOBS_GEMINI_VERTEX_LOCATION="+SessionShell.quote(s.geminiCloudLocation):"")
             +"; export JOBS_GEMINI_THINKING="+SessionShell.quote(s.geminiThinking)
-            +"; export JOBS_GEMINI_DEBUG="+(s.extendedDebug?"1":"0")
+            +"; export JOBS_GEMINI_DEBUG="+(s.extendedDebugEnabled()?"1":"0")
             +"; source "+SessionShell.quote(GUEST+"/gemini-bootstrap.sh")
             +"; exec \"$JOBS_GEMINI_NODE\" "+SessionShell.quote(GUEST+"/gemini-control-v2.js")+" run "
             +SessionShell.quote(GUEST+"/"+s.geminiSocketId+".sock")+" "+SessionShell.quote(s.geminiModel)+" "+SessionShell.quote(s.geminiMode)+" "+SessionShell.quote(s.geminiChat)+" "+SessionShell.quote(s.geminiThread)+" "+SessionShell.quote(s.geminiAuth)+" )";

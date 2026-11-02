@@ -73,7 +73,7 @@ final class ChatAttachmentUi implements AutoCloseable {
         if(busy())view.attachmentDrafts.addView(view.label(t("Подготовка вложения…","Preparing attachment…"),12));
         for(JSONObject a:drafts.getOrDefault(owner,Collections.emptyList())){
             LinearLayout row=new LinearLayout(activity);row.setGravity(Gravity.CENTER_VERTICAL);
-            TextView name=view.label(a.optString("name")+(a.optString("type").equals("video")?t(" · до 12 кадров, без звука"," · up to 12 frames, no audio"):""),12);name.setMaxLines(2);name.setOnClickListener(v->open(a));row.addView(name,new LinearLayout.LayoutParams(0,-2,1));
+            TextView name=view.label(a.optString("name")+(a.optBoolean("imagePreviewUnavailable")?t(" · без предпросмотра, отправится как файл"," · no preview, sent as a file"):"")+(a.optString("type").equals("video")?t(" · до 12 кадров, без звука"," · up to 12 frames, no audio"):""),12);name.setMaxLines(2);name.setOnClickListener(v->open(a));row.addView(name,new LinearLayout.LayoutParams(0,-2,1));
             TextView remove=view.pill("×",()->{List<JSONObject> list=drafts.get(owner);if(list!=null&&list.remove(a)){discard(a);render();}});remove.setTextColor(Color.TRANSPARENT);android.graphics.drawable.LayerDrawable cross=new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{activity.getDrawable(com.termux.R.drawable.workspace_attachment_remove)});cross.setLayerSize(0,view.dp(18),view.dp(18));cross.setLayerGravity(0,Gravity.CENTER);remove.setForeground(cross);remove.setContentDescription(t("Убрать вложение","Remove attachment"));row.addView(remove);view.attachmentDrafts.addView(row);
         }
         view.attachmentDrafts.setVisibility(busy()||has()?View.VISIBLE:View.GONE);
@@ -111,12 +111,17 @@ final class ChatAttachmentUi implements AutoCloseable {
             else if(type.equals("binary"))text=ChatAttachments.badge(a.optString("name"))+" · "+android.text.format.Formatter.formatFileSize(activity,file.length());
             else if(type.equals("file"))text=ChatAttachments.textPreview(file,65536)+(file.length()>65536?t("\n\nПоказаны первые 64 КБ. Полный файл сохранён во вложении.","\n\nShowing the first 64 KB. The complete file remains attached."):"");
         }catch(Exception e){failure=e;}final File ready=file;final Bitmap image=bitmap;final String content=text;final Exception error=failure;final int originalWidth=mediaWidth,originalHeight=mediaHeight;
-            main.post(()->{if(closed||!run.equals(owner)||!dialog.isShowing())return;box.removeAllViews();if(error!=null){box.addView(view.label(t("Вложение недоступно: исходный файл удалён или нет доступа.","Attachment unavailable: the source was removed or access is missing."),14));return;}
+            main.post(()->{if(closed||!run.equals(owner)||!dialog.isShowing())return;box.removeAllViews();if(error!=null){
+                    if(ready!=null&&ready.isFile()){
+                        box.addView(view.label(t("Предпросмотр недоступен: формат не декодируется на этом устройстве или файл повреждён. Оригинал можно сохранить.","Preview unavailable: this device cannot decode the format, or the file is damaged. You can save the original."),14));
+                        dialog.getButton(saveButton).setEnabled(true);dialog.getButton(saveButton).setOnClickListener(v->activity.requestWorkspaceStorageAccess(()->save(ready,a.optString("name","attachment"),dialog,saveButton)));
+                    }else box.addView(view.label(t("Вложение недоступно: исходный файл удалён или нет доступа.","Attachment unavailable: the source was removed or access is missing."),14));return;
+                }
                 if(image!=null){ZoomImage img=new ZoomImage(activity);img.setImageBitmap(image);box.addView(img,compactMedia(dialog,originalWidth,originalHeight));}
                 else if(a.optString("type").equals("video")){VideoView video=new VideoView(activity);MediaController controls=new MediaController(activity);controls.setAnchorView(video);video.setMediaController(controls);video.setVideoPath(ready.getPath());box.addView(video,compactMedia(dialog,originalWidth,originalHeight));box.addView(view.label(t("Агенту передаются выбранные кадры с временными метками, без звука.","The agent receives sampled timestamped frames, without audio."),12));dialog.setOnDismissListener(d->video.stopPlayback());video.start();}
                 else if(apk){TextView details=view.label(content,12);details.setTextIsSelectable(true);box.addView(details);
                     dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->install(ready));}
-                else if(binary){TextView body=view.label(content,13);body.setTextIsSelectable(true);box.addView(body);}
+                else if(binary){if(a.optBoolean("imagePreviewUnavailable"))box.addView(view.label(t("Изображение не декодируется на этом устройстве. Отправляется исходный файл; просмотр моделью не гарантирован.","This device cannot decode the image. The original is sent as a file; model viewing is not guaranteed."),12));TextView body=view.label(content,13);body.setTextIsSelectable(true);box.addView(body);}
                 else {ScrollView scroll=new ScrollView(activity);TextView body=view.label(content,13);body.setTextIsSelectable(true);scroll.addView(body);box.addView(scroll,new LinearLayout.LayoutParams(-1,Math.min(view.dp(420),Math.round(activity.getResources().getDisplayMetrics().heightPixels*.60f))));}
                 dialog.getButton(saveButton).setEnabled(true);dialog.getButton(saveButton).setOnClickListener(v->activity.requestWorkspaceStorageAccess(()->save(ready,a.optString("name","attachment"),dialog,saveButton)));
             });

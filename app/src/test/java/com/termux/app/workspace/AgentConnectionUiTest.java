@@ -15,7 +15,7 @@ public class AgentConnectionUiTest {
    WorkspaceStore.Session p=new WorkspaceStore.Session();p.name=agent;p.environment=agent.equals("codex")?"codex":"ubuntu";p.codexEnvironment="ubuntu-ai";p.geminiAgent=agent.equals("gemini");p.claudeAgent=agent.equals("claude");if(agent.equals("opencode"))p.aiAgent=agent;
    AlertDialog dialog=open(p,false);View row=dialog.getWindow().getDecorView().findViewWithTag("agent-connection-fields");EditText input=dialog.getWindow().getDecorView().findViewWithTag("agent-connection-command");assertNotNull(input);View loginHint=dialog.getWindow().getDecorView().findViewWithTag("codex-login-hint");assertNotNull(loginHint);assertEquals(agent,agent.equals("codex")?View.VISIBLE:View.GONE,loginHint.getVisibility());assertEquals(agent,agent.equals("shell")?View.GONE:View.VISIBLE,row.getVisibility());
    ViewGroup form=(ViewGroup)row.getParent();int debug=form.indexOfChild(dialog.getWindow().getDecorView().findViewWithTag("agent-extended-debug"));
-   assertTrue(debug>form.indexOfChild(row));dialog.dismiss();
+   assertTrue(debug>form.indexOfChild(row));assertEquals(agent.equals("shell")?View.VISIBLE:View.GONE,dialog.getWindow().getDecorView().findViewWithTag("agent-extended-debug").getVisibility());dialog.dismiss();
   }
  }
  @Test public void existingSessionAndPresetSaveConnectionWithoutStartingAProcess()throws Exception{

@@ -39,4 +39,10 @@ public class ChatAttachmentsTest {
   assertEquals("3MF",ChatAttachments.badge("model.3mf"));assertEquals("STL",ChatAttachments.badge("part.stl"));assertEquals("TAR.GZ",ChatAttachments.badge("project.tar.gz"));assertEquals("FILE",ChatAttachments.badge("README"));assertEquals("FILE",ChatAttachments.badge(".env"));
  }
 
+
+ @Test public void imageClassificationMatchesBrowserEvenWhenDecoderIsMissing()throws Exception{
+  for(String ext:new String[]{"png","jpg","jpeg","webp","gif","bmp","heic","heif","avif"}){assertTrue(ProjectFiles.mime("PHOTO."+ext.toUpperCase()).startsWith("image/"));assertEquals("image",ChatAttachments.type("PHOTO."+ext.toUpperCase()));}
+  assertEquals("binary",ChatAttachments.type("document.tiff"));assertEquals("application/octet-stream",ProjectFiles.mime("document.tiff"));
+ }
+
 }

@@ -20,4 +20,18 @@ public class ChatGalleryStagingTest {
   try{ChatAttachments.stageUri(RuntimeEnvironment.application,Uri.parse("file:///private/key"),target);fail();}catch(IOException expected){}
   try{ChatAttachments.stageUri(RuntimeEnvironment.application,Uri.parse("content://fixture.gallery.limit/selected"),target);fail();}catch(IOException expected){assertEquals("FILE_LIMIT",expected.getMessage());}assertEquals(0,p.opens);
  }
+ @Test @Config(shadows=MissingDecoder.class) public void unavailableDecoderIsSeparateFromImageSizeValidation()throws Exception{
+  File unsupported=tmp.newFile("unsupported.heic");Files.write(unsupported.toPath(),new byte[]{1,2,3,4});
+  try{ChatAttachments.checkImage(unsupported);fail();}catch(IOException e){assertEquals("IMAGE_DECODER_UNAVAILABLE",e.getMessage());}
+ }
+ @Test @Config(shadows=MissingDecoder.class) public void undecodableGalleryImageKeepsOriginalAsFileWithWarning()throws Exception{
+  Provider p=new Provider();p.file=tmp.newFile("not-decodable");byte[] data=new byte[]{1,2,3,4};Files.write(p.file.toPath(),data);p.size=data.length;ShadowContentResolver.registerProviderInternal("fixture.no.decoder",p);Uri uri=Uri.parse("content://fixture.no.decoder/image");Shadows.shadowOf(RuntimeEnvironment.application.getContentResolver()).registerInputStream(uri,new ByteArrayInputStream(data));WorkspaceStore.Session target=new WorkspaceStore.Session();target.environment="codex";
+  JSONObject a=ChatAttachments.stageUri(RuntimeEnvironment.application,uri,target);
+  try{assertEquals("binary",a.getString("type"));assertTrue(a.getBoolean("imagePreviewUnavailable"));assertFalse(a.has("modelPath"));File original=ChatAttachments.inside(ChatAttachments.root(RuntimeEnvironment.application,target),a.getString("id")+"/original.heic");assertArrayEquals(data,Files.readAllBytes(original.toPath()));}finally{ChatAttachments.discard(RuntimeEnvironment.application,a);}
+ }
+
+ @org.robolectric.annotation.Implements(android.graphics.BitmapFactory.class)
+ public static class MissingDecoder extends org.robolectric.shadows.ShadowBitmapFactory {
+  @org.robolectric.annotation.Implementation protected static android.graphics.Bitmap decodeFile(String path,android.graphics.BitmapFactory.Options options){if(options!=null){options.outWidth=-1;options.outHeight=-1;}return null;}
+ }
 }

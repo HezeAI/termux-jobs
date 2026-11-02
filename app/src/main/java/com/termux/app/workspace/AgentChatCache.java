@@ -11,6 +11,7 @@ final class AgentChatCache {
         String older="",model="",session="",notice="";
         boolean trimmed,historyExhausted,nativeChat,resolved,busy,directShell,needsTerminal,connected,failed;
         AgentChatView.Position position;
+        JSONObject modelConnection;
         private int chars;
     }
     private final LinkedHashMap<String,State> entries=new LinkedHashMap<>();
@@ -22,7 +23,7 @@ final class AgentChatCache {
         for(int i=list.size()-1;i>=0;i--){Map.Entry<String,JSONObject> row=list.get(i);int n=row.getKey().length()+row.getValue().toString().length();if(size+n>MAX_ENTRY_CHARS)break;reverse.put(row.getKey(),row.getValue());size+=n;}
         List<String> keys=new ArrayList<>(reverse.keySet());for(int i=keys.size()-1;i>=0;i--){String key=keys.get(i);state.rows.put(key,reverse.get(key));}
         state.trimmed=state.rows.size()<list.size();
-        state.chars=size+state.older.length()+state.model.length()+state.session.length()+state.notice.length();
+        state.chars=size+state.older.length()+state.model.length()+state.session.length()+state.notice.length()+(state.modelConnection==null?0:state.modelConnection.toString().length());
         if(state.chars>MAX_TOTAL_CHARS)return;entries.put(owner,state);chars+=state.chars;
         while(entries.size()>MAX_ENTRIES||chars>MAX_TOTAL_CHARS)take(entries.keySet().iterator().next());
     }

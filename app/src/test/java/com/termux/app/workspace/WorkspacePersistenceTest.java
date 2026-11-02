@@ -89,4 +89,12 @@ public class WorkspacePersistenceTest {
  @Test public void duplicateSessionIdsLeaveLibraryReadOnlyAndIntact()throws Exception{duplicate("sessions");}
  @Test public void duplicateCommandIdsLeaveLibraryReadOnlyAndIntact()throws Exception{duplicate("commands");}
  @Test public void duplicateNoteIdsLeaveLibraryReadOnlyAndIntact()throws Exception{duplicate("notes");}
+
+ @Test public void operationFailureCallbackRunsOnlyAfterAtomicRollbackAndRetryAcknowledges()throws Exception{
+  GateFile storage=new GateFile(file);WorkspaceStore store=new WorkspaceStore(context,errors::add,storage);AtomicInteger success=new AtomicInteger(),failure=new AtomicInteger();
+  try{store.commands.add(new WorkspaceStore.Command());store.save();store.awaitWrites();byte[] good=Files.readAllBytes(file.toPath());storage.broken=true;
+   store.commands.get(0).name="retryable draft";store.save(success::incrementAndGet,failure::incrementAndGet);store.awaitWrites();Shadows.shadowOf(Looper.getMainLooper()).idle();assertEquals(0,success.get());assertEquals(1,failure.get());assertArrayEquals(good,Files.readAllBytes(file.toPath()));
+   storage.broken=false;store.save(success::incrementAndGet,failure::incrementAndGet);store.awaitWrites();Shadows.shadowOf(Looper.getMainLooper()).idle();assertEquals(1,success.get());assertEquals(1,failure.get());
+  }finally{store.close();}
+ }
 }

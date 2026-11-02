@@ -12,7 +12,7 @@ public class AgentEnvironmentUiTest {
   }finally{setup.close();}
  }
  @Test public void choosingAgentUbuntuOnlySelectsItWithoutMigrationOrInstall(){
-  TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();WorkspaceStore store=new WorkspaceStore(a,x->{});AgentEnvironmentManager manager=new AgentEnvironmentManager(a,store,x->true);String[] selected={""};int[] installs={0};manager.freshInstall=done->installs[0]++;
+  TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();WorkspaceStore store=new WorkspaceStore(a,x->{});AgentEnvironmentManager manager=new AgentEnvironmentManager(a,store,x->true);String[] selected={""};int[] installs={0};
   try{manager.choose("ubuntu",alias->selected[0]=alias);AlertDialog chooser=ShadowAlertDialog.getLatestAlertDialog();chooser.getListView().performItemClick(null,1,1);org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals("ubuntu-ai",selected[0]);assertEquals(0,installs[0]);assertSame(chooser,ShadowAlertDialog.getLatestAlertDialog());assertFalse(chooser.isShowing());assertTrue(AgentEnvironmentManager.operating.isEmpty());}finally{manager.close();store.close();}
  }
  @Test public void referencedImportedEnvironmentCannotReachDeletion(){
@@ -28,13 +28,13 @@ public class AgentEnvironmentUiTest {
   AgentEnvironmentManager manager=new AgentEnvironmentManager(a,store,x->false);
   try{assertEquals(Arrays.asList("Saved Codex","Attached Codex"),manager.references("ubuntu"));assertEquals(3,store.sessions.size());}finally{manager.close();store.close();}
  }
- @Test public void liveEnvironmentCannotStartMigrationOrDeletion(){
+ @Test public void liveEnvironmentCannotStartDeletion(){
   TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();WorkspaceStore store=new WorkspaceStore(a,x->{});AgentEnvironmentManager manager=new AgentEnvironmentManager(a,store,x->true);
-  try{manager.migrate(alias->fail());assertTrue(ShadowAlertDialog.getLatestAlertDialog().isShowing());assertTrue(AgentEnvironmentManager.operating.isEmpty());ShadowAlertDialog.getLatestAlertDialog().dismiss();manager.remove(new WorkspaceEnvironments.Choice("ubuntu","ubuntu","Ubuntu","/",true),()->fail());assertTrue(ShadowAlertDialog.getLatestAlertDialog().isShowing());assertTrue(AgentEnvironmentManager.operating.isEmpty());ShadowAlertDialog.getLatestAlertDialog().dismiss();}finally{manager.close();store.close();}
+  try{manager.remove(new WorkspaceEnvironments.Choice("ubuntu","ubuntu","Ubuntu","/",true),()->fail());assertTrue(ShadowAlertDialog.getLatestAlertDialog().isShowing());assertTrue(AgentEnvironmentManager.operating.isEmpty());ShadowAlertDialog.getLatestAlertDialog().dismiss();}finally{manager.close();store.close();}
  }
  @Test public void automaticPreparationIsOnlyOfferedForMissingToolsNotAccessErrors()throws Exception {
   TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();WorkspaceStore store=new WorkspaceStore(a,x->{});AgentEnvironmentManager manager=new AgentEnvironmentManager(a,store,x->false);int[] prepared={0};manager.prepareTools=done->{prepared[0]++;done.accept(false);};
-  try{java.lang.reflect.Method problem=AgentEnvironmentManager.class.getDeclaredMethod("problem",String.class,Runnable.class);problem.setAccessible(true);Runnable retry=()->fail("must not retry without successful preparation");problem.invoke(manager,"STORAGE_ACCESS_DENIED",retry);AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();assertFalse(((TextView)d.findViewById(android.R.id.message)).getText().toString().contains("Python/proot-distro 5"));d.dismiss();problem.invoke(manager,"MIGRATION_TOOLS_REQUIRED",retry);d=ShadowAlertDialog.getLatestAlertDialog();d.getButton(AlertDialog.BUTTON_POSITIVE).performClick();org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals(1,prepared[0]);assertTrue(manager.error("FILES_ACCESS_DENIED_ERRNO_13").contains("13"));}finally{manager.close();store.close();}
+  try{java.lang.reflect.Method problem=AgentEnvironmentManager.class.getDeclaredMethod("problem",String.class,Runnable.class);problem.setAccessible(true);Runnable retry=()->fail("must not retry without successful preparation");problem.invoke(manager,"STORAGE_ACCESS_DENIED",retry);AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();assertFalse(((TextView)d.findViewById(android.R.id.message)).getText().toString().contains("Python/proot-distro 5"));d.dismiss();problem.invoke(manager,"ENVIRONMENT_TOOLS_REQUIRED",retry);d=ShadowAlertDialog.getLatestAlertDialog();d.getButton(AlertDialog.BUTTON_POSITIVE).performClick();org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals(1,prepared[0]);assertTrue(manager.error("FILES_ACCESS_DENIED_ERRNO_13").contains("13"));}finally{manager.close();store.close();}
  }
  @Test public void scanDetailShowsRelativePathAndEscapesControlCharacters()throws Exception{
   TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();WorkspaceStore store=new WorkspaceStore(a,x->{});AgentEnvironmentManager manager=new AgentEnvironmentManager(a,store,x->false);

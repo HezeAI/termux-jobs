@@ -1,137 +1,297 @@
-# Workspace boundaries
+# Границы рабочей области
 
-The user requires all fork development and generated files to stay in
-`/root/termux-fork`. Do not change installed Termux, its data, the shared Android
-SDK, or the Ubuntu environment. Do not install APKs, replace apps, start/stop the
-user's terminal sessions, or install system packages.
+Пользователь требует хранить всю разработку форка и создаваемые файлы в
+`/root/termux-fork`. Не изменяй установленный Termux, его данные, общий Android
+SDK или окружение Ubuntu. Не устанавливай APK, не заменяй приложения, не запускай
+и не останавливай терминальные сессии пользователя, не устанавливай системные пакеты.
 
-Existing tools and SDK components may be read. Put any additional tools, caches,
-SDK components and build outputs inside this repository, in ignored `.tools/`
-or `.verification/` directories. Use command-local environment variables only.
-Use a local SDK copy for Gradle so that automatic package installation cannot
-write to the shared SDK. Verification on an installed app requires separate user
-instructions; source edits and isolated builds are authorized.
+Существующие инструменты и компоненты SDK можно читать. Все дополнительные
+инструменты, кеши, компоненты SDK и результаты сборки размещай внутри этого
+репозитория, в игнорируемых каталогах `.tools/` или `.verification/`. Переменные
+окружения задавай только для конкретной команды. Для Gradle используй локальную
+копию SDK, чтобы автоматическая установка пакетов не записывала данные в общий
+SDK. Проверка установленного приложения требует отдельного указания пользователя;
+редактирование исходников и изолированные сборки разрешены.
 
-# Release documentation
+# CHANGELOG для каждого выдаваемого APK
 
-Write GitHub release descriptions and new public release notes in English by
-default, as requested by the developer. Preserve both Russian and English
-in-app update highlights and compatibility notes.
+Веди CHANGELOG.md для каждого APK, выдаваемого пользователю, включая приватные
+сборки. Указывай дату, точные versionName/versionCode, фактически добавленное и
+исправленное поведение, изменения совместимости и известные ограничения.
+Сохраняй старые записи; уточняй существующую запись текущей версии без дублей.
+Давай ссылку на подробный отчёт проверок, а не включай в запись все тестовые логи.
+К завершению задачи запись должна описывать фактически выданный APK, а не
+запланированные или не вошедшие в него изменения.
 
-The user requires documentation to be reviewed and updated with every GitHub
-release, including README.md. Follow docs/fork/RELEASING.md. Update the changelog,
-release notes, validation evidence, version and compatibility information, and
-any usage/design/architecture documents affected by the final implementation.
-Keep historical reports clearly marked and never claim unperformed checks.
-This requirement does not independently authorize publishing a new release.
+После ссылки на APK в финальном ответе давай короткие патчноуты и ссылки на полный
+CHANGELOG и отчёт проверок. Для изменений без APK используй Unreleased, если они
+не относятся к уже выпущенной версии. Изменения только документации или CHANGELOG
+не являются основанием пересобирать неизменённый APK.
 
-# Refactoring completion evidence
+# Документация релизов
 
-Before declaring a refactoring complete, assess three independent areas:
+Описания GitHub releases и новые публичные release notes по умолчанию пиши на
+английском, как потребовал разработчик. Сохраняй как русские, так и английские
+описания изменений и замечания о совместимости во встроенном интерфейсе обновления.
 
-- Relevant testing: verify changed behavior and meaningful failure cases.
-  A passing existing suite alone is not evidence that a new path is covered.
-- Code review: inspect regressions, handling of secrets, permission and trust
-  boundaries, and effects on unrelated terminal sessions and processes.
-- Logical inspection: trace applicable call paths, state transitions, startup,
-  switching, closing, cancellation, and error/recovery handling.
+Пользователь требует проверять и обновлять документацию при каждом GitHub release,
+включая README.md. Следуй docs/fork/RELEASING.md. Обновляй changelog, release notes,
+доказательства проверок, сведения о версии и совместимости, а также документы по
+использованию, дизайну и архитектуре, затронутые окончательной реализацией.
+Явно обозначай исторические отчёты и не заявляй о невыполненных проверках.
+Само это требование не разрешает публикацию нового релиза.
 
-Do not invent a numeric confidence percentage. If an assessment is requested,
-testing/review/logical inspection may use 40/30/30 as qualitative priorities,
-not a calibrated probability or a substitute for evidence.
+# Проверки соразмерно изменениям
 
-A known critical regression, secret exposure, or unresolved safety of affected
-process shutdown blocks completion regardless of how many other checks pass.
-If evidence is incomplete, report what is verified, the main remaining gaps,
-and the smallest next checks needed. Distinguish source/build verification
-from device verification: keyboard, gestures and other device-dependent behavior
-must not be claimed tested on a phone based solely on mocked UI tests.
-Scale checks to the change; do not add redundant tests or broad unrelated
-refactoring just to improve an assessment. User authorization for installing
-APKs or publishing remains separate from technical verification.
+До редактирования определи затронутые функции, вызывающий код, общие помощники,
+зависимости и значимые риски, включая косвенные последствия. Запиши краткий план
+проверок. Выполняй относящиеся к изменению проверки поведения и ошибок; полный
+применимый набор нужен при широких изменениях, изменении общих механизмов или
+зависимостей, границы которых нельзя уверенно определить. Не запускай X11,
+установку окружений, интеграционные проверки драйверов или компонентов только
+потому, что изменён редактор инструкций или оформление чата. До исключения этих
+проверок проследи общие пути layout, хранения, разрешений и выполнения.
 
-# Local phone files and tool access
+Приведённые ниже требования к чистой установке и X11-регрессиям применяются,
+когда затронуто соответствующее поведение или его зависимости. Проверка входных
+данных/хешей APK отличается от запуска графики или установки гостевых систем.
+Сохраняй все применимые проверки принадлежности процессов, безопасности, отмены
+и восстановления; не сокращай их из-за малого diff. Нерешённая безопасность
+остановки процессов по-прежнему блокирует завершение.
 
-Codex runs locally in a Termux or Ubuntu/proot environment. Do not assume it
-is a remote chat without filesystem access. Actual access depends on the
-session sandbox, available tools, Android permissions and proot mounts;
-this file does not grant permissions or bypass any of those restrictions.
+Переиспользуй прежние результаты только при подтверждённом совпадении значимых
+производственных и тестовых исходников, конфигурации, фактически выбранных версий зависимостей,
+инструментария/входных данных сборки и относящихся к проверке условий выполнения.
+Учитывай изменённые и новые файлы. Старого успешного лога, ID коммита или сообщения
+UP-TO-DATE недостаточно. Отдельно отмечай **Проверено заново / Checked anew**,
+**Переиспользовано / Reused** (с доказательствами совпадения) и
+**Не проверено / Not checked** (с причиной и оставшейся проверкой).
 
-On this phone, shared storage has been readable from Ubuntu through `/sdcard`.
-Useful paths are:
+Каждый выдаваемый APK, включая промежуточные сборки, должен пройти проверки
+именно финального файла: целостность ZIP, package ID, versionName/versionCode,
+ABI, статус debug, подпись/сертификат, SHA-256 и применимые проверки включённых
+runtime/DEX/native/assets. Переиспользование функциональных результатов не
+отменяет этот барьер. Для обновлений сравнивай package/подписанта и проверяй рост
+versionCode; ищи случайно включённые приватные данные.
 
-- Screenshots: `/sdcard/Pictures/Screenshots`.
-- Downloads and user-requested APK/PNG delivery: `/sdcard/Download`.
-- Possible shared-storage alias: `/storage/emulated/0`.
+Для промежуточных сборок явно выбирай и обосновывай статические проверки:
+компиляцию, относящиеся к изменению проверки синтаксиса/локализаций/ресурсов и
+совместимый целевой Lint при понятном покрытии либо полный современный Lint при
+широком или неясном влиянии. Отсутствующая или пропущенная проверка не является
+PASS. Полный современный Lint всех пяти модулей остаётся обязательным перед
+публичным релизом. Изменения только документации требуют проверки текста, ссылок
+и diff, а не пересборки APK или запуска Lint исключительно ради текста.
 
-Check paths in the current environment before relying on them. Termux private
-paths are not necessarily visible directly inside Ubuntu. Other phones may
-have different mounts or Android permissions. Never claim access is unavailable
-without trying an appropriate read-only tool; report the actual error if it fails.
+До выбора точек входа изучи существующие скрипты. Если точка входа безусловно
+делает постороннюю работу, предложи минимальное разделение подготовки, выбранных
+тестов, упаковки, аудита финального файла и релизного Lint. Не добавляй общие
+skip-флаги, фиктивные PASS или сложную систему проверок. Переиспользуй существующие
+локальные SDK, инструменты и кеши; не копируй целиком SDK или окружения для каждого
+прогона. Храни компактные идентификаторы входных данных и результаты. Без
+разрешения не удаляй существующие доказательства, созданные файлы или данные
+пользователя. См. [область проверок и аудит скриптов](docs/fork/TESTING.md),
+[Lint](docs/fork/LINT.md) и [выпуск релизов](docs/fork/RELEASING.md).
 
-When asked to inspect the latest screenshot, list the screenshot directory by
-modification time, select the newest image (not a video), and open it with the
-available image-viewing tool. For an exact filename, search for that filename
-instead of substituting a different recent image. Example read-only listing:
+# Доказательства завершения рефакторинга
+
+Перед объявлением рефакторинга завершённым оцени три независимые области:
+
+- Относящиеся к изменению тесты: проверь изменённое поведение и значимые ошибки.
+  Один успешный существующий набор не доказывает покрытие нового пути.
+- Ревью кода: проверь регрессии, обработку секретов, границы разрешений и доверия,
+  влияние на посторонние терминальные сессии и процессы.
+- Логическая проверка: проследи применимые пути вызовов, переходы состояний, запуск,
+  переключение, закрытие, отмену, обработку ошибок и восстановление.
+
+Не выдумывай числовой процент уверенности. Если запрошена оценка, можно использовать
+40/30/30 для тестирования/ревью/логической проверки как качественные приоритеты,
+а не калиброванную вероятность или замену доказательствам.
+
+Известная критическая регрессия, раскрытие секрета или нерешённая безопасность
+остановки затронутых процессов блокирует завершение независимо от числа других
+успешных проверок. Если доказательств недостаточно, сообщи, что проверено, каковы
+основные пробелы и минимальные следующие проверки. Различай проверку исходников/
+сборки и устройства: клавиатуру, жесты и другое зависящее от устройства поведение
+нельзя объявлять проверенными на телефоне только на основании мок-тестов UI.
+Выбирай проверки соразмерно изменению; не добавляй избыточные тесты или широкий
+посторонний рефакторинг ради улучшения оценки. Разрешения пользователя на установку
+APK или публикацию остаются отдельными от технических проверок.
+
+# Локальные файлы телефона и доступ инструментов
+
+Codex работает локально в Termux или Ubuntu/proot. Не считай его удалённым чатом
+без доступа к файловой системе. Фактический доступ зависит от песочницы сессии,
+доступных инструментов, разрешений Android и монтирований proot; этот файл не
+предоставляет разрешения и не обходит ни одно из этих ограничений.
+
+На этом телефоне общее хранилище было доступно для чтения из Ubuntu через
+`/sdcard`. Полезные пути:
+
+- Скриншоты: `/sdcard/Pictures/Screenshots`.
+- Загрузки и запрошенная пользователем выдача APK/PNG: `/sdcard/Download`.
+- Возможный псевдоним общего хранилища: `/storage/emulated/0`.
+
+Проверяй пути в текущей среде, прежде чем на них полагаться. Приватные пути Termux
+не обязательно видны непосредственно в Ubuntu. На других телефонах могут отличаться
+монтирования или разрешения Android. Не заявляй об отсутствии доступа, не попробовав
+подходящий инструмент только для чтения; при ошибке сообщай её фактический текст.
+
+При просьбе посмотреть последний скриншот выведи список каталога скриншотов по
+времени изменения, выбери самое новое изображение (не видео) и открой доступным
+инструментом просмотра изображений. Для точного имени ищи именно это имя, не
+подменяя его другим недавним изображением. Пример списка только для чтения:
 
 ```sh
 ls -t /sdcard/Pictures/Screenshots | head -10
 ```
 
-Use command/file tools for authorized local inspection, source edits and isolated
-builds, and image tools for screenshots. Preserve the workspace boundaries above.
-If an image tool is unavailable, state that limitation separately from whether
-the image file is readable. Ask the user to attach an image only when required
-access or viewing tools are actually unavailable.
+Используй инструменты команд/файлов для разрешённого локального осмотра, изменения
+исходников и изолированных сборок, а инструменты изображений — для скриншотов.
+Сохраняй приведённые выше границы рабочей области. Если инструмент изображений
+недоступен, укажи это отдельно от доступности самого файла для чтения. Проси
+пользователя прикрепить изображение только когда необходимый доступ или инструмент
+просмотра действительно недоступны.
 
-Read-only access does not authorize modifications. Full-access sessions still
-must respect user instructions; do not install APKs, alter running sessions,
-send messages, or publish changes without task authorization. Do not print
-tokens, private keys or authorization file contents in reports.
+Доступ только для чтения не разрешает изменения. Даже сессии с полным доступом
+должны соблюдать указания пользователя; без разрешения задачи не устанавливай
+APK, не меняй работающие сессии, не отправляй сообщения и не публикуй изменения.
+Не выводи токены, приватные ключи или содержимое файлов авторизации в отчёты.
 
-# In-app update compatibility
+# Совместимость встроенного обновления
 
-Every future stable release must remain available to the in-app updater: include
-an update.json asset generated from the final APK, keep package/signing identity
-for compatible updates, and increase versionCode. Before publication, explicitly
-review data compatibility. Put required resets, lost/unportable data, migrations
-and other breaking changes with their reasons in BOTH localized update highlights
-and release notes, so the installed v1.0.19 updater also displays them before
-installation. Never clear user data automatically to make an update work.
+Каждый будущий стабильный релиз должен оставаться доступным встроенному механизму
+обновления: включай asset update.json, созданный из финального APK, сохраняй пакет
+и подписанта для совместимых обновлений и повышай versionCode. Перед публикацией
+явно проверь совместимость данных. Необходимые сбросы, потерянные/непереносимые
+данные, миграции и другие несовместимые изменения с причинами указывай И в
+локализованных описаниях обновления, И в release notes, чтобы установленный
+механизм обновления v1.0.19 также показывал их до установки. Никогда не очищай
+пользовательские данные автоматически ради работоспособности обновления.
 
-# Authorship and validation wording
+# Авторство и формулировки проверок
 
-HezeAI (the user) is the developer of this fork; Codex is an AI assistant helping
-with development. Public documentation must not describe the developer as having
-not installed the APK merely because the assistant did not install it. Attribute
-reported device checks to the developer, distinguish them from automated tests,
-and identify specific unverified scenarios without claiming exhaustive testing.
-Do not add statements about the assistant not installing APKs to release reports.
+HezeAI (пользователь) — разработчик этого форка; Codex — ИИ-помощник в разработке.
+Публичная документация не должна описывать разработчика как не установившего APK
+только потому, что помощник его не устанавливал. Проверки на устройстве, о которых
+сообщил разработчик, приписывай разработчику, отличай их от автоматических тестов
+и указывай конкретные непроверенные сценарии, не заявляя об исчерпывающем
+тестировании. Не добавляй в релизные отчёты заявления о том, что помощник не
+устанавливал APK.
 
-# Clean-install baseline for every environment
+# Чистая установка как основа для каждого окружения
 
-The developer requires installation logic to target a clean app/bootstrap and a
-fresh instance of each selected environment. Never infer required components
-from what happens to be installed on the development phone or in an existing
-rootfs. Maintain explicit required desktop/runtime packages for each supported
-target, including components omitted by a distribution metapackage. Request the
-complete required set in the package-manager transaction even if some packages
-are already installed; let that manager resolve installed state and dependencies.
-Keep optional application dependencies with their own application installation.
+Разработчик требует, чтобы логика установки ориентировалась на чистое приложение/
+bootstrap и новый экземпляр каждого выбранного окружения. Никогда не определяй
+обязательные компоненты по тому, что случайно установлено на телефоне разработчика
+или в существующей rootfs. Поддерживай явные обязательные пакеты рабочего стола/
+runtime для каждой поддерживаемой цели, включая компоненты, отсутствующие в
+метапакете дистрибутива. Запрашивай весь обязательный набор в транзакции пакетного
+менеджера, даже если часть пакетов уже установлена; определение установленного
+состояния и зависимостей оставляй менеджеру. Зависимости необязательных приложений
+держи в установке соответствующего приложения.
 
-Checks must reject a missing required desktop binary instead of reporting a
-complete installation merely because a metapackage, panel or window manager is
-present. Cover absent-component paths with isolated tests. Treat successful
-runs on a configured phone as regression evidence only; report fresh-device
-installation and GUI verification separately. Do not clear user data or alter
-installed environments to simulate a clean installation without authorization.
+Проверки должны отвергать отсутствие обязательного исполняемого компонента
+рабочего стола, а не считать установку завершённой лишь по наличию метапакета,
+панели или оконного менеджера. Покрывай пути отсутствующих компонентов
+изолированными тестами. Успешные прогоны на настроенном телефоне считай только
+доказательствами отсутствия регрессии; установку на новом устройстве и проверку
+GUI описывай отдельно. Не очищай данные пользователя и не меняй установленные
+окружения ради имитации чистой установки без разрешения.
 
-# End-to-end checks for new installation behavior
+# Сквозные проверки нового поведения установки
 
-New environment/component installation paths need successful real package-manager
-transactions in disposable, initially clean project fixtures, not only archive
-validation, dependency simulation, mocks or negative tests. Check empty download
-caches as well as cached installs, mandatory binaries, repeat launch, cancellation
-and resume. Do not use installed phone rootfs or development packages as evidence
-of a clean baseline. Explicitly distinguish fixture/package verification from
-fresh-device GUI verification, and record unavailable checks before delivery.
+Новые пути установки окружений/компонентов требуют успешных реальных транзакций
+пакетного менеджера в одноразовых, исходно чистых фикстурах проекта, а не только
+проверки архивов, симуляции зависимостей, моков или отрицательных тестов. Проверяй
+пустые кеши загрузки наряду с установкой из кеша, обязательные исполняемые
+компоненты, повторный запуск, отмену и продолжение. Не используй установленную
+rootfs телефона или пакеты разработки как доказательство чистой основы.
+Явно различай проверку фикстур/пакетов и GUI на новом устройстве; недоступные
+проверки фиксируй до выдачи результата.
+
+# Регрессионные проверки интеграции X11
+
+Помощники необязательных компонентов должны принимать допустимые псевдонимы
+приватного каталога Android (`/data/data` и `/data/user/0`) по идентичности файловой
+системы, отвергая другой каталог с тем же базовым именем. Перед выдачей APK проверяй
+реальную точку входа помощника с путями-псевдонимами; тесты кеша репозитория сами
+по себе не покрывают различия Android Context.filesDir/PREFIX.
+
+Удаление драйвера проверяй на использовавшемся каталоге драйвера со вспомогательными
+файлами и вложенными кешами runtime, а не только на свежем импорте библиотек и
+метаданных. Сохраняй проверки защищённого пресета, блокировок рабочего стола для
+каждого окружения и удаления без перехода по ссылкам. Проверяй сохранность внешних
+целей символьных ссылок, других драйверов и исходных ZIP на телефоне.
+
+Проверки живого изменения масштаба XFCE должны включать восстановление исходных
+листовых свойств с XML-типом `empty` (не задано), включая DPI и размер курсора.
+Проверяй 75/100/150/100 на реальном изолированном xfconf, а не только на допускающем
+всё моке; восстанавливай пустой лист как незаданный скаляр, не очищая рекурсивно
+другие свойства.
+
+Изменения поворота должны покрывать конфигурацию, пришедшую до layout, промежуточные
+размеры встроенного/полноэкранного вида, задержанные callbacks поверхности, оба
+направления поворота и обрезку IME. Применяй логический режим вместе с геометрией
+хоста; не пересчитывай новую ориентацию по прежнему размеру поверхности. Отменяй
+ожидающие callbacks геометрии при отсоединении/закрытии хоста. Запрошенный пробный
+режим только для одного окружения ограничивай этим окружением и в Activity, и в
+его выделенном сервисе до проверки на устройстве.
+
+Объединение изменений геометрии не доказывает готовность X11-кадра после поворота.
+При изменении полноэкранного представления считай события View attach/detach,
+проверяй непрерывность parent/window-token и восстанавливай layout/политику окна
+при Back, возврате в вертикальную ориентацию, переключении и закрытии. Неудачный
+тест на устройстве считай неудачным, даже если unit-тесты прошли; тайминги нативных
+поверхностей/буферов по-прежнему требуют отдельной проверки на устройстве.
+
+Изменения переиспользования поверхности должны отличать callbacks только размера
+от замены идентичности Surface/control или формата. Используй публичные API и
+консервативно перепривязывай поверхность, если её идентичность неизвестна.
+Проверяй перепривязку при замене и после потери поверхности, сохраняй синхронное
+освобождение нативных ресурсов при suspend/destroy, а окружения вне пробного
+режима оставляй на прежнем пути до принятия ограниченного теста на устройстве.
+
+## Подготовка и публикация релизов
+
+Эти правила применяются к публичным релизам приложения.
+
+### Состав релиза
+
+- Определяй изменения относительно последнего публичного релиза, а не предыдущей тестовой сборки.
+- Учитывай изменённые и новые файлы. Опубликованные исходники должны соответствовать финальному APK.
+- Включай в описание только завершённое поведение, фактически вошедшее в APK.
+- Незавершённые функции и известные существенные дефекты явно обозначай. Не объявляй исправленной проблему только потому, что улучшено её отображение или прошёл отдельный повтор проверки.
+
+### Описание изменений
+
+- Пиши конкретными короткими пунктами: что добавлено, какое действие стало доступно или какая ошибка исправлена.
+- Объединяй связанные изменения по пользовательским функциям.
+- Не превращай release notes в дневник разработки: не перечисляй промежуточные сборки, неудачные подходы и внутренние этапы работы без необходимости для понимания результата.
+- Не обещай ускорение, совместимость или устранение сбоя без соответствующих доказательств.
+- Публичные GitHub release notes пиши на английском. Встроенное описание обновления поддерживай на русском и английском.
+- Веди единый CHANGELOG.md, сохраняя предыдущие записи. Обновляй README и затронутую документацию.
+
+### Версия и совместимость
+
+- Публичный versionCode должен быть выше всех уже выданных основных и резервных APK.
+- Для совместимого обновления сохраняй package ID и сертификат.
+- Указывай изменения форматов, миграции, требования к перезапуску процессов и ограничения совместимости.
+- Не обещай сохранность данных или возможность отката без проверки. Резервный APK не является резервной копией пользовательских данных.
+- Не очищай данные и не переустанавливай окружения автоматически ради обновления.
+
+### Проверки и публикуемые файлы
+
+- Выбирай функциональные проверки по изменениям и рискам согласно остальным правилам проекта.
+- Перед публичным релизом выполняй полный современный Android Lint всех пяти модулей.
+- Проверяй точный финальный APK: package ID, версии, ABI, debug-статус, подпись, целостность, SHA-256 и применимый runtime-состав.
+- Разделяй результаты: проверено заново, переиспользовано с подтверждением идентичности, не проверено.
+- Проверки разработчика на телефоне отличай от автоматических тестов.
+- Подготовь APK, update.json из финального APK, SHA-256 и компактный отчёт. Проверь совместимость со встроенным обновлятором.
+- Исключай из публикации секреты, персональные подключения, авторизацию, локальные среды, кеши и тяжёлые промежуточные данные.
+
+### Публикация
+
+- До публикации подготовь конкретный результат для просмотра: название, release notes, состав исходников, список файлов и результаты проверок.
+- Публикуй только при наличии разрешения пользователя на этот релиз. Если разрешение уже дано, повторно его не запрашивай.
+- Установка APK и остановка рабочих сессий не входят автоматически в разрешение на публикацию.
+

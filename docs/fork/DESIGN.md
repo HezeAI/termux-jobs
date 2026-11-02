@@ -1,3 +1,30 @@
+# Private test14 — Settings navigation and agent help
+
+The main menu's Advanced submenu owns backup, environment updates, cleanup and
+error help; About remains last. Child dialogs retain their parent navigation.
+Agent forms show scoped help and collapsible technical details, with no extended
+startup logging. Legacy agent debug flags normalize to false; ordinary terminal
+settings, base diagnostics and explicit temporary diagnostic controls remain.
+No permission/approval/connection behavior changes. See [test14 validation](VALIDATION-test14-settings-menu.md).
+
+---
+
+# Private test13 — Agent instruction editor
+
+The global settings entry opens three tabs with one general editor, project selection and collapsible technical diagnostics. A template or storage addition is previewed before explicit save; cancel does not apply it. The save notice reflects the observed version-dependent refresh behavior rather than promising immediate replacement of active instructions. See [design and source boundaries](AGENT-INSTRUCTIONS.md).
+
+Previews now bound long text above fixed bottom Apply/Cancel controls. Project shows
+file precedence and the actual non-empty source separately from the edit target.
+RU/EN preview selectors use the existing assets without changing locale or saving;
+explicit apply preserves history, and storage additions avoid RU/EN duplicates.
+
+Instruction menus now import bounded UTF-8 text through the built-in file chooser,
+with destination preview, explicit confirmation, history/conflicts and override
+warnings. General targets its actual active file; Project targets AGENTS.md only.
+The duplicate storage-addition main-screen button is removed; its menu action stays.
+
+---
+
 # v2.1.0 — environment updates and integrated reading
 
 The session card spans the row and contains separate bordered settings,

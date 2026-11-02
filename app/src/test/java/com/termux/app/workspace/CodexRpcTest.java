@@ -11,6 +11,7 @@ import org.json.JSONObject;
 import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class) @Config(sdk=28, application=Application.class)
 public class CodexRpcTest {
+    @org.junit.Before public void useRussianUi(){WorkspaceLanguage.select(org.robolectric.RuntimeEnvironment.application,"ru");WorkspaceText.resources=WorkspaceLanguage.wrap(org.robolectric.RuntimeEnvironment.application).getResources();}
     @Test public void queuedStopKeepsItsOriginalSocketAfterTheProfileRelaunches() throws Exception {
         File files=java.nio.file.Files.createTempDirectory("codex-owned-stop").toFile();
         WorkspaceStore.Session profile=new WorkspaceStore.Session();

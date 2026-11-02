@@ -1,3 +1,42 @@
+# Current source — helper experiment paused (2026-11-02)
+
+The optional Codex helper experiment is excluded from the next public release.
+Its sources are preserved separately in Git; no replacement APK has been built.
+The test17 heart trajectory and the other agreed fixes remain, including removal
+of user-facing rootfs migration. Existing sessions and data are untouched.
+See the [separation report](HELPER-EXPERIMENT-PAUSED.md) and
+[agent environment guide](AGENT-ENVIRONMENTS.md). Version-labelled records below
+are historical and do not re-enable migration or the helper.
+
+---
+
+# Private test14 — Settings navigation and agent help
+
+The main menu's Advanced submenu owns backup, environment updates, cleanup and
+error help; About remains last. Child dialogs retain their parent navigation.
+Agent forms show scoped help and collapsible technical details, with no extended
+startup logging. Legacy agent debug flags normalize to false; ordinary terminal
+settings, base diagnostics and explicit temporary diagnostic controls remain.
+No permission/approval/connection behavior changes. See [test14 validation](VALIDATION-test14-settings-menu.md).
+
+---
+
+# Private test13 — Instruction sources and persistence
+
+AgentInstructionsUi calls a separate bounded Python helper inside Ubuntu AI using the existing control mount. The helper resolves CODEX_HOME, serializes atomic writes, checks revisions and stores private path-bound history. CodexSessionShell initializes only absent global files before starting the existing app-server. No chat protocol, connection transport, workspace schema or broad process signaling is added. Diagnostics and version probing never open authentication files. See [source and trust boundaries](AGENT-INSTRUCTIONS.md).
+
+Previews now bound long text above fixed bottom Apply/Cancel controls. Project shows
+file precedence and the actual non-empty source separately from the edit target.
+RU/EN preview selectors use the existing assets without changing locale or saving;
+explicit apply preserves history, and storage additions avoid RU/EN duplicates.
+
+Instruction menus now import bounded UTF-8 text through the built-in file chooser,
+with destination preview, explicit confirmation, history/conflicts and override
+warnings. General targets its actual active file; Project targets AGENTS.md only.
+The duplicate storage-addition main-screen button is removed; its menu action stays.
+
+---
+
 # v2.1.0 — environment transactions and documentation
 
 WorkspaceEnvironmentUpdates owns selected-menu state; EnvironmentUpdateJobs and
@@ -294,9 +333,10 @@ preset content, including numerically equivalent JSON integer types.
 Program transactions and catalog/resume state are target-scoped. Base installation
 requests an explicit full runtime set; optional application fixes attach to the
 application. Checks reject absent required executables. Agent rootfs routing is
-centralized in AgentEnvironments; Ubuntu AI migration uses bounded source/target
-locks, scan tokens, read-back hashes and staged publication. No general schema8
-reset or silent agent-environment switch is introduced.
+centralized in AgentEnvironments. The user-facing Ubuntu AI rootfs migration is
+removed in private test17; shared environment deletion retains native locks, scan
+tokens and no-follow quarantine. No general schema8 reset or silent
+agent-environment switch is introduced.
 
 Personal connection launchers/configs remain outside APK/assets. The optional
 absolute-path wrapper only changes the new agent process's environment/route.

@@ -1,9 +1,46 @@
+# Private test14 — Advanced menu and clearer agent settings
+
+Version2.1.1-test14/code1446, same com.termux/signer/ARM64/schema8.
+Main menu → **Advanced** contains Backup and restore / Check environment updates /
+Clean up storage / Errors and solutions. **About** is last and retains the former
+App settings destination. Close/Back returns through the existing menu layers.
+
+Agent forms omit the extended-debug option and unrelated terminal/SSH guidance.
+Concise RU/EN summaries follow the selected environment, working folder and rights;
+Codex launch parameters are in collapsible Details. Permission/approval/connection
+behavior is retained. Old agent verbose flags are ignored/normalized to false;
+ordinary terminal flags and baseline error collection remain. Running agents are
+not restarted and old logs are not deleted.
+
+Private phone acceptance build; no public release. Menu tests intercept worker
+starts and do not execute cleanup, restoration or upgrades. See
+[validation](docs/fork/VALIDATION-test14-settings-menu.md) and [project rules](AGENTS.md).
+
+---
+
 # Termux Job’s
 
 Форк Termux для повседневной работы: команды и заметки под рукой, пресеты запуска,
 проекты и файлы рядом с терминалом, внешние AI Agents и управление серверами.
 Команды по-прежнему выполняются в настоящем Termux или выбранном окружении;
 интерфейс помогает организовать работу и не требует писать свою оболочку скриптов.
+
+## Private test13 — Codex instructions in Ubuntu AI
+
+Global settings → **Agent instructions** adds General / Project / Diagnostics.
+General edits the actual Ubuntu AI CODEX_HOME instruction source, including an
+active override; Project edits its AGENTS files. Exact atomic saves include
+private history and parallel-edit conflicts. New users receive the universal
+RU/EN template only when no global file exists. Existing text is retained;
+full-template replacement and appending the file-storage section require preview
+and explicit action. No automatic cleanup or quota is introduced.
+
+Saving is independent of CLI version. Actual Codex0.163/0.164 fixture processes
+confirmed shared-rule refresh between turns and full shared/project rereading
+when a new process resumes history; other versions are marked unverified.
+Package/signature/schema8 stay unchanged; code1445. This is a private APK for
+phone acceptance, not a published release. See [behavior](docs/fork/AGENT-INSTRUCTIONS.md)
+and [validation](docs/fork/VALIDATION-test13-agent-instructions-ui.md).
 
 ## v2.1.0 — More environments, controlled updates & better agent chats
 
@@ -299,7 +336,7 @@ proot-дистрибутивы автоматически не удаляютс�
 [Совместимость и ограничения](docs/fork/RELEASE-v2.0.0.md).
 
 **English:** Android 8+/ARM64, com.termux, unchanged signer, code1320, schema8.
-No general reset from1.7.5. Agent migration is optional and does not delete the
+No general reset from1.7.5. The former agent rootfs migration was removed in private test17; existing data is retained. It did not delete the
 original Ubuntu. Existing data/auth/history remain. Save active work before
 updating; Android may terminate running jobs. Upgrades from before1.5.3 retain
 previously announced retired local-AI cleanup; external models/proot are not
@@ -335,3 +372,16 @@ AI Agents, серверные операции и бэкапы в одном And
 Implementation notes: [experimental glibc desktop bridge (Ubuntu, Debian, Fedora, Arch, openSUSE and Void) and X11 extra keys](docs/fork/BIONIC_GLIBC.md), including the current-frame GPU synchronization and Present event-reader initialization correction, Qualcomm Android-buffer import investigation, and a roughly 8% smaller optional Kali-inspired desktop theme. See the v2.0.4 release limitations.
 
 Desktop feature: [Jobs GPU Test](docs/fork/JOBS_GPU_TEST.md), an optional renderer diagnostic with desktop shortcuts for the eight X11 environments. Device evidence and remaining limits are recorded in v2.0.4 validation.
+
+Previews now bound long text above fixed bottom Apply/Cancel controls. Project shows
+file precedence and the actual non-empty source separately from the edit target.
+RU/EN preview selectors use the existing assets without changing locale or saving;
+explicit apply preserves history, and storage additions avoid RU/EN duplicates.
+
+Project requirements have one complete source: [AGENTS.md](AGENTS.md). The outer
+workspace file points here; X11 and clean-install checks are preserved together.
+
+Instruction menus now import bounded UTF-8 text through the built-in file chooser,
+with destination preview, explicit confirmation, history/conflicts and override
+warnings. General targets its actual active file; Project targets AGENTS.md only.
+The duplicate storage-addition main-screen button is removed; its menu action stays.

@@ -41,10 +41,21 @@ public class ManualOpenCodeChatTest {
                 AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();
                 for(int i=0;i<dialog.getListView().getCount();i++)assertNotEquals(WorkspaceText.tr("Сохранить чат сессии"),dialog.getListView().getItemAtPosition(i));
                 boolean packages=false;
-                for(int i=0;i<dialog.getListView().getCount();i++){String label=dialog.getListView().getItemAtPosition(i).toString();packages|=label.equals("Установка пакетов")||label.equals("Install packages");assertFalse(label.startsWith("Терминал ")||label.startsWith("Terminal "));}
-                assertTrue(packages);
+                for(int i=0;i<dialog.getListView().getCount();i++){String label=dialog.getListView().getItemAtPosition(i).toString();packages|=label.equals("Установка пакетов")||label.equals("Install packages");assertFalse(label.equals("Диагностика сессии")||label.equals("Session diagnostics"));assertFalse(label.startsWith("Терминал ")||label.startsWith("Terminal "));}
+                assertFalse(packages);
                 dialog.dismiss();
             }
         } finally {c.close();}
+    }
+    @Test public void ordinaryTerminalMenuRetainsPackageAndDiagnosticAccessInBothLanguages()throws Exception{
+        WorkspaceController c=controller();try{
+            Field field=WorkspaceController.class.getDeclaredField("activity");field.setAccessible(true);TermuxActivity a=(TermuxActivity)field.get(c);
+            Method menu=WorkspaceController.class.getDeclaredMethod("sessionMenu",WorkspaceStore.Session.class,boolean.class);menu.setAccessible(true);
+            for(String language:new String[]{"ru","en"}){WorkspaceLanguage.select(a,language);for(String env:new String[]{"termux","ubuntu","proot:debian","proot:archlinux"}){
+                WorkspaceStore.Session s=new WorkspaceStore.Session();s.environment=env;menu.invoke(c,s,true);AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();boolean packages=false,diagnostics=false;
+                for(int n=0;n<d.getListView().getCount();n++){String label=d.getListView().getItemAtPosition(n).toString();packages|=label.equals("Установка пакетов")||label.equals("Install packages");diagnostics|=label.equals("Диагностика сессии")||label.equals("Session diagnostics");}
+                assertTrue(packages);assertTrue(diagnostics);d.dismiss();
+            }}
+        }finally{c.close();}
     }
 }

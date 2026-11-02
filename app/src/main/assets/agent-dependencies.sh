@@ -33,6 +33,9 @@ jobs_agent_check() (
     esac
     if [[ -x $tool ]] && "$tool" -e 'process.exit(Number(process.versions.node.split(".")[0])>=20?0:1)' >/dev/null 2>&1; then node_ok=1;fi
     if ((node_ok)); then printf 'READY:node\n'; else printf 'MISSING:node\n'; fi
+    if [[ $agent == codex && ${JOBS_AGENT_UBUNTU:-} == ubuntu-ai ]]; then
+        if command -v python3 >/dev/null; then printf 'READY:python3\n'; else printf 'MISSING:python3\n'; fi
+    fi
     if [[ $agent == gemini && $auth == vertex ]] && ! jobs_agent_cloud_credentials; then
         printf 'AUTH:needed\n'
         if command -v gcloud >/dev/null || [[ -x $(jobs_agent_cloud_path) ]]; then printf 'READY:gcloud\n'; else printf 'MISSING:gcloud\n'; fi
@@ -50,6 +53,7 @@ jobs_agent_base_prepare() (
     done
     [[ -r /etc/ssl/certs/ca-certificates.crt ]] || packages+=(ca-certificates)
     if [[ $agent == gemini && $auth == vertex ]] && ! jobs_agent_cloud_credentials && ! command -v python3 >/dev/null; then packages+=(python3);fi
+    if [[ $agent == codex && ${JOBS_AGENT_UBUNTU:-} == ubuntu-ai ]] && ! command -v python3 >/dev/null; then packages+=(python3);fi
     if ((${#packages[@]})); then
         jobs_agent_say 'Установка недостающих пакетов Ubuntu…' 'Installing missing Ubuntu packages…'
         command -v apt-get >/dev/null || { jobs_agent_say 'В этой среде нет APT. Пакеты не изменены.' 'APT is unavailable in this environment. No packages changed.' >&2;return 1; }
@@ -71,5 +75,6 @@ jobs_agent_prepare() {
 }
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
     [[ ${1:-} == check ]] || exit 2
+    if [[ ${4:-} == ubuntu-ai ]]; then export JOBS_AGENT_UBUNTU=ubuntu-ai;fi
     jobs_agent_check "${2:-}" "${3:-api}"
 fi

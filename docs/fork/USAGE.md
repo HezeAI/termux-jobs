@@ -1,3 +1,46 @@
+# Current source — helper experiment paused (2026-11-02)
+
+The optional Codex helper experiment is excluded from the next public release.
+Its sources are preserved separately in Git; no replacement APK has been built.
+The test17 heart trajectory and the other agreed fixes remain, including removal
+of user-facing rootfs migration. Existing sessions and data are untouched.
+See the [separation report](HELPER-EXPERIMENT-PAUSED.md) and
+[agent environment guide](AGENT-ENVIRONMENTS.md). Version-labelled records below
+are historical and do not re-enable migration or the helper.
+
+---
+
+# Private test14 — Settings navigation and agent help
+
+The main menu's Advanced submenu owns backup, environment updates, cleanup and
+error help; About remains last. Child dialogs retain their parent navigation.
+Agent forms show scoped help and collapsible technical details, with no extended
+startup logging. Legacy agent debug flags normalize to false; ordinary terminal
+settings, base diagnostics and explicit temporary diagnostic controls remain.
+No permission/approval/connection behavior changes. See [test14 validation](VALIDATION-test14-settings-menu.md).
+
+---
+
+# Private test13 — Agent instruction editing
+
+Open global settings → Agent instructions → Codex → Ubuntu AI. General edits the resolved global file; Project edits the selected AGENTS.md/AGENTS.override.md. Review template or storage additions before applying, and use history for explicit restoration. A stale edit is refused without losing its draft. Saving does not restart a chat. See [details and application timing](AGENT-INSTRUCTIONS.md).
+
+Previews now bound long text above fixed bottom Apply/Cancel controls. Project shows
+file precedence and the actual non-empty source separately from the edit target.
+RU/EN preview selectors use the existing assets without changing locale or saving;
+explicit apply preserves history, and storage additions avoid RU/EN duplicates.
+
+Agent-session gear menus omit package installation and session diagnostics. These
+remain available for ordinary terminals; agent preparation at launch and the
+separate Agent instructions → Diagnostics tab keep their existing functions.
+
+Instruction menus now import bounded UTF-8 text through the built-in file chooser,
+with destination preview, explicit confirmation, history/conflicts and override
+warnings. General targets its actual active file; Project targets AGENTS.md only.
+The duplicate storage-addition main-screen button is removed; its menu action stays.
+
+---
+
 # Environments, documentation and agent actions — v2.1.0
 
 Choose Kali or Manjaro like other ordinary terminal environments. Their X11
@@ -223,9 +266,8 @@ before startup; it is not a Kali distribution. Session gear opens settings.
 Stop the desktop through its menu; closing its owner session also stops it.
 
 New agents default to Ubuntu AI. Existing agent selections remain until an
-explicit change/confirmed migration. Migration copies the Ubuntu environment
-(including its credentials), not external mounted phone files; source Ubuntu
-is not automatically removed. Check paths and make backups before deletion.
+explicit user change. The user-facing rootfs migration feature was removed in
+private test17. Existing environments, credentials and histories are retained.
 The optional connection command is an absolute executable wrapper path for
 launching an agent through **your own server/tunnel/proxy**. Empty means ordinary
 startup. Restart the chosen agent/chat to apply it; do not start an interactive
@@ -237,39 +279,11 @@ Coverage varies by phone. Read [release notes](RELEASE-v2.0.0.md),
 
 All older version-labelled entries below are historical development records.
 
-## Private1.7.46: автоматическая подготовка миграции
+## Agent environments
 
-Если нет Python/proot-distro с нужным модулем блокировок, кнопка «Подготовить автоматически»
-предложит подтвердить подготовку в Termux. В Ubuntu AI устанавливать proot-distro не нужно.
-Готовые компоненты не переустанавливаются. После успешной подготовки проверка повторяется.
-При отказе Android в доступе, отсутствии пути или ошибке файловой системы выводится
-конкретная причина и системный код; устанавливать пакеты вместо исправления доступа
-приложение не предлагает. Базовую вкладку Termux закрывать не требуется, но все процессы
-исходной Ubuntu должны быть завершены пользователем до миграции. Автоматической остановки
-сессий нет. Окно копирования по-прежнему закрывается только явной отменой с очисткой.
-
-## Private1.7.45: агентские окружения
-
-В создании/настройках сессии или пресета AI Agents выберите «Окружение агента»:
-Ubuntu либо Ubuntu AI. «Проверка среды запуска» проверяет именно выбранную систему.
-«Миграция среды агента» расположена сразу под проверкой. При отсутствии исходной Ubuntu
-предлагается чистая отдельная установка Ubuntu AI. Если общая Ubuntu уже есть, закройте
-все её сессии, рабочий стол, установки и внешние CLI; затем запустите миграцию, проверьте
-объём и подтвердите копирование. Копируются все находящиеся внутри файлы, включая
-историю и секреты всех агентов. Общая память и внешние монтирования остаются общими.
-
-После копирования можно переключить текущую форму (сохранить обычной кнопкой) либо
-все агентские пресеты. Старую систему проверьте перед удалением. В списке окружений
-корзинка доступна у установленных систем, включая импортированные. Ссылки сессий/
-пресетов и действующие native-lock не дадут удалить используемую систему. Сначала
-переключите или удалите связанные пресеты. Корзинка не удаляет архивы бэкапов, общую
-память или базовый Termux. Произвольные команды с вписанным именем системы автоматически
-не распознаются. Удаление требует отдельного подтверждения и после начала не отменяется.
-
-Вход вручную: `proot-distro login ubuntu-ai`. Обычный `proot-distro login ubuntu`
-по-прежнему открывает обычную Ubuntu. Пакеты и файлы агента следуют выбранной системе;
-доступ к общей памяти/Termux не становится отдельной защитной песочницей. Жёсткие пути
-в пользовательских скриптах и инструкциях могут потребовать корректировки.
+See the current [agent environment guide](AGENT-ENVIRONMENTS.md). The former
+user-facing migration operation was removed in test17. Explicit Ubuntu/Ubuntu AI
+selection, preparation and safe environment deletion remain available.
 
 <!-- Private X11 v1.7.44 -->
 
@@ -1493,25 +1507,11 @@ APT повторяет временно неудачные сетевые зап
 автовызов; без галочки остаётся ручной вызов через «Интерактивный ввод» | вверху.
 Настройка включена по умолчанию и сохраняется отдельно для каждого окружения.
 
-При переносе Ubuntu в Ubuntu AI служебные Android-точки подключения (/apex,
-/data/app, /data/dalvik-cache и другие Android-подключения из фиксированного списка)
-исключаются заранее. В копии сохраняются пустые каталоги для подключения при запуске.
-Проекты, настройки, ключи и пакеты Ubuntu копируются; исходная система сохраняется.
-
-Служебные подключения сессий и агентов в /tmp не переносятся как данные Ubuntu.
-Приложение подключает их заново при запуске. Пресеты и история в приложении сохраняются;
-обычные временные файлы Ubuntu продолжают переноситься. Исходная Ubuntu не очищается.
-
-Подготовка миграции автоматически удаляет только пустой каталог /workspace с правами
-000, если он мешает сканированию. Файлы и ссылки не удаляются; обычные права сохраняются.
-rmdir откажется удалять непустой каталог. После подготовки окно укажет, было ли это
-сделано. Подготовка может остаться выполненной, даже если затем отказаться от копирования.
-
 ## Private 1.7.51: Ubuntu AI defaults and test environment removal
 
 New agent sessions/presets select Ubuntu AI by default; saved choices are preserved.
-The migration button is disabled when Ubuntu AI is selected. Its environment-list row
-says “Used for AI agents”. Ubuntu X11 Test is no longer a built-in catalog entry;
+Its environment-list row says “Used for AI agents”. The former migration
+button was removed in test17. Ubuntu X11 Test is no longer a built-in catalog entry;
 installed legacy aliases remain discoverable for compatibility. Removing its root does
 not remove the APK X11 renderer or the ordinary Ubuntu desktop configuration/code.
 Desktop packages must be installed separately in ordinary Ubuntu.
@@ -1520,8 +1520,7 @@ Desktop packages must be installed separately in ordinary Ubuntu.
 
 Selecting Ubuntu AI in an agent session/preset includes installation of that selected
 root when absent, after the existing preparation confirmation. Ordinary Ubuntu's
-presence does not block it. Migration is a separate optional action, never an automatic
-prerequisite. Existing profiles retain their chosen alias, including ordinary Ubuntu.
+presence does not block it. Existing roots are not copied between aliases. Existing profiles retain their chosen alias, including ordinary Ubuntu.
 
 Host preparation checks container existence independently of login success. It installs
 only missing roots through environment-runtime.sh, retaining v5 --name and legacy
@@ -1554,8 +1553,8 @@ Stopped installations can leave incomplete roots; no root is automatically remov
 No foreground-service persistence across Android killing the app is claimed.
 
 The agent environment selector only records Ubuntu/Ubuntu AI; it no longer starts
-migration or installation implicitly on selection. Missing-root preparation happens
-at explicit launch, and migration remains on its own button.
+installation implicitly on selection. Missing-root preparation happens at explicit
+launch. The migration action was removed in test17.
 
 
 ## Частная v1.7.53: GPU-рендеринг

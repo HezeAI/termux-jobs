@@ -31,15 +31,18 @@ final class WorkspacePersistence implements AutoCloseable {
         }
     }
     void write(byte[] snapshot,Runnable completed){
+        write(snapshot,completed,()->{});
+    }
+    void write(byte[] snapshot,Runnable completed,Runnable rejected){
         synchronized(FILES){
-            if(closed)return;
+            if(closed){rejected.run();return;}
             state.pending=snapshot;
             state.lastWrite=state.writer.submit(()->{
                 FileOutputStream out=null;boolean success=false;List<Runnable> failures=new ArrayList<>();
                 try{out=state.file.startWrite();out.write(snapshot);state.file.finishWrite(out);success=true;}
                 catch(IOException|RuntimeException error){if(out!=null)try{state.file.failWrite(out);}catch(RuntimeException ignored){}}
                 finally{synchronized(FILES){if(state.pending==snapshot)state.pending=null;if(!success)for(WorkspacePersistence owner:state.owners)failures.add(owner.failed);dispose(state);}}
-                if(success)completed.run();else for(Runnable notify:failures)notify.run();
+                if(success)completed.run();else {rejected.run();for(Runnable notify:failures)notify.run();}
             });
         }
     }

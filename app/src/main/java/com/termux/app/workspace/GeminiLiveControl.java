@@ -29,7 +29,7 @@ final class GeminiLiveControl {
             byte[] data=(value.toString()+"\n").getBytes(StandardCharsets.UTF_8);if(data.length>(chat?65536:4096))throw new Failure("REQUEST_TOO_LARGE");
             client.getOutputStream().write(data);client.getOutputStream().flush();
             JSONObject response=new JSONObject(readReply(client.getInputStream(),chat?524288:65536));
-            if(!response.optBoolean("ok")){
+            if(value.optString("op").equals("chat-send")||value.optString("op").equals("chat-interrupt"))return response;if(!response.optBoolean("ok")){
                 String error=response.optString("error");
                 throw new Failure(Arrays.asList("NOT_READY","CONTROL_TIMEOUT","RESTARTED","ENDED","CONTROL_FAILED","INVALID_MODEL","INVALID_MODE","THINKING_UNAVAILABLE","THINKING_BUSY","MODE_UNAVAILABLE","MODE_BUSY","STALE_PERMISSION","PERMISSION_FAILED","INVALID_PERMISSION").contains(error)?error:"CONTROL_FAILED");
             }

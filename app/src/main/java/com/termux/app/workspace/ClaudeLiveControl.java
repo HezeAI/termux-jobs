@@ -29,7 +29,7 @@ final class ClaudeLiveControl {
             client.getOutputStream().write(data);client.getOutputStream().flush();
             JSONObject response=new JSONObject(readReply(client.getInputStream(),chat?524288:65536));
             if(value.optString("op").equals("status")&&!response.optBoolean("ok")&&response.length()==1)return new JSONObject().put("ok",true).put("nativeChat",false);
-            if(!response.optBoolean("ok")){
+            if(value.optString("op").equals("chat-send")||value.optString("op").equals("chat-interrupt"))return response;if(!response.optBoolean("ok")){
                 String error=response.optString("error");
                 throw new Failure(Arrays.asList("NOT_READY","CONTROL_TIMEOUT","RESTARTED","ENDED","CONTROL_FAILED","INVALID_MODEL","INVALID_MODE","MODE_UNAVAILABLE","MODE_BUSY","STALE_PERMISSION","PERMISSION_FAILED","INVALID_PERMISSION").contains(error)?error:"CONTROL_FAILED");
             }

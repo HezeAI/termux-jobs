@@ -1,3 +1,74 @@
+# Current source — helper experiment paused (2026-11-02)
+
+The optional Codex helper experiment is excluded from the next public release.
+Its sources are preserved separately in Git; no replacement APK has been built.
+The test17 heart trajectory and the other agreed fixes remain, including removal
+of user-facing rootfs migration. Existing sessions and data are untouched.
+See the [separation report](HELPER-EXPERIMENT-PAUSED.md) and
+[agent environment guide](AGENT-ENVIRONMENTS.md). Version-labelled records below
+are historical and do not re-enable migration or the helper.
+
+---
+
+# Private test16 — model connection and delivery presentation
+
+The top reconnect banner reflects native retry events, with the native attempt
+and limit only when reported. Tap it for the reason and request. Local app-server
+readiness, a live CLI and `turn/steer` admission do not establish model response
+connectivity. Output/reasoning or successful completion clear the retry state;
+native terminal failure stays visible and local RPC loss makes the response
+state unknown. Normal tool/question/approval waits never start a reconnect banner.
+State is scoped to the chat/turn and survives the bounded presentation cache;
+fresh snapshots replace it. No retry intervals/counts or process ownership change.
+
+Successful ordinary Codex message admission appears as a compact caption on the
+native user message/attachment. Tap explains that admission is not model uptake.
+The native user item's `clientId` binds the receipt; repeated identical text does
+not select a bubble. Successful message delivery no longer leaves a persistent
+bottom notice. Rejected/unconfirmed sends retain their notice and composer/files.
+Shell and other agents' protocols are unchanged. Live captions are not a new
+on-disk transcript schema and can disappear when the native adapter restarts.
+
+Actual Codex0.164.0 synthetic loopback stream-reset tests confirmed hidden retries,
+steer admission during outage, same-turn recovery, native exhaustion and an
+explicit next request after recovery. They did not establish the cause of the
+other phone's hang or test real Hysteria/cloud fallback. See
+[test16 validation](VALIDATION-test16-chat-recovery-layout.md).
+
+---
+
+# Private test15 — native ordinary-mode questions and delivery
+
+New launches probe `codex features list` for the supported feature key and pass
+`--enable default_mode_request_user_input` to the same app-server command when
+available. The application does not rewrite config.toml or set collaborationMode.
+Verified with actual Codex0.164.0: without the flag the tool refuses Default mode;
+with it option/custom/multiple answers continue the identical turn through
+`item/tool/requestUserInput` → JSON-RPC response → `serverRequest/resolved`.
+The current tool requires nonempty options and supports one answer per question,
+with custom text; an answer array is not interpreted as multiselect.
+
+Inline cards never submit a default automatically. Native request ID, thread,
+turn and nonce bind each answer. The reply uses the existing read executor rather
+than waiting behind a Send request. Failed drafts survive tab changes; a cached
+ambiguous reply is queried without a new native write. CLI resolution can mean
+answered or cleared, so the receipt describes resolution after sending, not proof
+that the model has incorporated an answer. A synthetic provider test separately
+checks the exact answer in the next function output and same-turn continuation.
+Unsupported/secret forms fail closed. No silent Plan transition occurs.
+
+Ordinary message sends distinguish turn/start and turn/steer acknowledgements from
+model uptake. Ambiguous cached retry does not send again, including direct Shell.
+The active process panel uses confirmed native cwd/access/approvals separately
+from edited next-launch settings. Old helpers cannot supply absent process data.
+Existing chats are not restarted automatically to load these changes.
+
+See [test15 validation](VALIDATION-test15-audit-fixes.md). The documented protocol
+is [OpenAI app-server](https://learn.chatgpt.com/docs/app-server); installed CLI
+schemas and executable loopback fixtures establish the version-specific behavior.
+
+---
+
 # Codex Android chat — v2.0.8
 
 The shared native chat UI supports Developer Markdown, outlined code Copy,
