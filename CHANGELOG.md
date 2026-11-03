@@ -1,5 +1,8 @@
 # Unreleased
 
+- Backup: explicitly warn in Russian and English that full and selected backups
+  are not encrypted and can contain secrets; preserve the existing consent flow.
+
 - Security: replace the Gemini API-key plaintext handoff file with a one-shot
   local broker bound to the launch ID and verified process ancestry/start time.
   Decrypt only for the matching consumer; retain old profiles and existing files.

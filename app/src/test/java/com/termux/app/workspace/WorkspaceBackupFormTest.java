@@ -36,6 +36,12 @@ public class WorkspaceBackupFormTest {
             assertNotNull(find(d.getWindow().getDecorView(),"Compression method · .tar.gz"));assertNotNull(find(d.getWindow().getDecorView(),"Compression level"));d.dismiss();
         }
     }
+    static boolean contains(View v,String text){if(v instanceof TextView&&((TextView)v).getText().toString().contains(text))return true;if(v instanceof ViewGroup)for(int n=0;n<((ViewGroup)v).getChildCount();n++)if(contains(((ViewGroup)v).getChildAt(n),text))return true;return false;}
+    @Test public void bothBackupModesExplicitlyWarnAboutUnencryptedSecretsInBothLanguages()throws Exception{
+        for(String language:new String[]{"ru","en"}){WorkspaceLanguage.select(a,language);for(boolean selective:new boolean[]{false,true}){
+            AlertDialog dialog=openCached(selective);View root=dialog.getWindow().getDecorView();assertTrue(contains(root,language.equals("ru")?"Резервная копия не зашифрована":"The backup is not encrypted"));assertTrue(contains(root,language.equals("ru")?"секреты":"secrets"));dialog.dismiss();
+        }}
+    }
     @Test public void compressionMethodAndLevelHaveIndependentMenus()throws Exception{
         AlertDialog d=openCached(false);View root=d.getWindow().getDecorView();TextView method=find(root,"gzip · 1 thread"),level=find(root,"Balanced");assertNotNull(method);assertNotNull(level);
         method.performClick();AlertDialog choices=ShadowAlertDialog.getLatestAlertDialog();assertEquals(3,choices.getListView().getAdapter().getCount());assertEquals("pigz — 2 threads",choices.getListView().getAdapter().getItem(1));assertEquals("pigz — 4 threads",choices.getListView().getAdapter().getItem(2));choices.dismiss();
