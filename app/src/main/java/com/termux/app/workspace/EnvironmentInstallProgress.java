@@ -24,7 +24,8 @@ final class EnvironmentInstallProgress {
             case "connecting-image-download":return ru?"Подключение к источнику образа":"Connecting to image source";
             case "reconnecting-image-download":return ru?"Переподключение для продолжения загрузки":"Reconnecting to resume download";
             case "verifying-image-download":case "verified-rootfs-sha256":return ru?"Проверка целостности образа":"Verifying image integrity";
-            case "install-environment":return ru?"Подготовка и распаковка окружения":"Preparing and extracting environment";
+            case "install-environment":return ru?"Подготовка установки окружения":"Preparing environment installation";
+            case "extracting-environment":return ru?"Распаковка Ubuntu AI":"Extracting Ubuntu AI";
             case "prepare-manjaro-keyring":return ru?"Подготовка ключей пакетов Manjaro":"Preparing Manjaro package keys";
             case "prepare-archlinux-keyring":return ru?"Подготовка ключей пакетов Arch Linux":"Preparing Arch Linux package keys";
             default:break;

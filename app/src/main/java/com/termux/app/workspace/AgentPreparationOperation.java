@@ -20,7 +20,7 @@ final class AgentPreparationOperation {
     private static final ExecutorService queue=Executors.newSingleThreadExecutor();
     private static final Handler main=new Handler(Looper.getMainLooper());
     static final Pattern IMAGE=Pattern.compile("IMAGE_PROGRESS: ([0-9]+)% \\(([0-9]+)/([0-9]+) bytes\\)");
-    static String key(WorkspaceStore.Session p){return AgentEnvironments.alias(p)+"|"+AgentPreparation.agent(p);}
+    static String key(WorkspaceStore.Session p){return AgentEnvironments.alias(p)+"|"+AgentPreparation.agent(p)+(p.geminiAgent?"|"+p.geminiAuth:"");}
     static Job start(Context c,WorkspaceStore.Session p,Worker worker){return start(c,p,AgentPreparation.SYSTEM,worker);}
     static synchronized Job start(Context c,WorkspaceStore.Session p,AgentPreparation.Runner checker,Worker worker){
         String key=key(p);Job old=jobs.get(key);if(old!=null&&old.active)return old;
@@ -37,7 +37,12 @@ final class AgentPreparationOperation {
         void output(String raw){
             if(raw.length()>256)return;
             String nextStage=AgentPreparationOutput.stage(raw),nextError=AgentPreparationOutput.error(raw);
-            if(!nextStage.isEmpty()){stage=nextStage;percent=-1;received=total=0;component="";}
+            boolean transition=!nextStage.isEmpty()&&!nextStage.equals(stage);
+            if(!nextStage.isEmpty()){
+                if(nextStage.startsWith("failed-")){if(failedStage.isEmpty())failedStage=stage;}
+                else failedStage="";
+                stage=nextStage;percent=-1;received=total=0;component="";
+            }
             else if(!nextError.isEmpty())error=nextError;
             else if(raw.startsWith("READY:")||raw.startsWith("MISSING:")||raw.startsWith("COMPONENT:")){
                 String id=raw.substring(raw.indexOf(':')+1);if(AgentPreparation.COMPONENTS.contains(id))component=id;
@@ -47,7 +52,7 @@ final class AgentPreparationOperation {
                     if(t>0&&t<=2147483648L&&r>=0&&r<=t){received=r;total=t;percent=(int)(100*r/t);stage="download";}
                 }catch(NumberFormatException ignored){}
             }
-            long now=SystemClock.elapsedRealtime();if(now-notificationTime>200){notificationTime=now;changed();}
+            long now=SystemClock.elapsedRealtime();if(transition||!nextError.isEmpty()||now-notificationTime>200){notificationTime=now;changed();}
         }
         void changed(){main.post(()->{for(Runnable r:new ArrayList<>(observers))r.run();});}
         public void run(){
@@ -57,7 +62,7 @@ final class AgentPreparationOperation {
                 if(!result.ready())throw new PreparationFailure("COMPONENT_CHECK_FAILED",null);
                 exitCode=0;stage="complete";error="";
             }catch(Exception failure){
-                failedStage=stage;stage="failed";
+                if(failedStage.isEmpty())failedStage=stage;stage="failed";
                 if(failure instanceof PreparationFailure){PreparationFailure f=(PreparationFailure)failure;exitCode=f.exitCode;if(error.isEmpty())error=f.code;}
                 if(error.isEmpty())error="PREPARATION_FAILED";
             }finally{active=false;changed();}
@@ -96,6 +101,7 @@ final class AgentPreparationOperation {
         }
         if(readFailure!=null)throw new PreparationFailure("PREPARATION_OUTPUT_READ_FAILED",exit);
         if(exit!=0)throw new PreparationFailure(exit==130?"INSTALL_CANCELLED":"PREPARATION_EXIT_FAILED",exit);
+        output.accept("PREPARATION:verifying-components");
         return AgentPreparation.SYSTEM.run(context,p);
     }
     static String title(Context c,String ru,String en){return AgentPreparation.tr(c,ru,en);}
@@ -110,14 +116,18 @@ final class AgentPreparationOperation {
     private static String phaseText(String stage,Context c){
         boolean ru=AgentPreparation.language(c).equals("ru");
         if(stage.equals("download")||stage.equals("STAGE:download-pinned-ubuntu-ai")||stage.equals("STAGE:download-pinned-ubuntu"))return title(c,"Скачивание базового образа Ubuntu AI","Downloading Ubuntu AI base image");
-        if(stage.startsWith("STAGE:")){EnvironmentInstallProgress p=new EnvironmentInstallProgress();p.line=stage;return p.displayLine(ru);}
         switch(stage){
+            case "ready":return title(c,"Завершение подготовки компонентов…","Finishing component preparation…");
             case "STAGE:download-agent-component":return title(c,"Загрузка компонента агента","Downloading agent component");
             case "STAGE:retry-agent-component":return title(c,"Повтор загрузки компонента","Retrying component download");
             case "failed-ubuntu":return title(c,"Этап: подготовка Ubuntu","Stage: Ubuntu preparation");
             case "failed-components":return title(c,"Этап: компоненты агента","Stage: agent components");
             case "failed-cli":return title(c,"Этап: проверка CLI","Stage: CLI startup check");
-            default:return AgentPreparation.stageText(stage,ru);
+            default:
+                if(stage.equals("STAGE:install-proot-distro")||stage.equals("STAGE:install-python")||stage.equals("STAGE:prepare-operation-tools"))return title(c,"Подготовка пакетов Termux…","Preparing Termux packages…");
+                if(stage.equals("STAGE:verify"))return title(c,"Проверка установленной Ubuntu AI…","Checking installed Ubuntu AI…");
+                if(stage.startsWith("STAGE:")){EnvironmentInstallProgress p=new EnvironmentInstallProgress();p.line=stage;return p.displayLine(ru);}
+                return AgentPreparation.stageText(stage,ru);
         }
     }
     static void show(Activity a,WorkspaceStore.Session p,Consumer<AgentPreparation.Plan> completion){

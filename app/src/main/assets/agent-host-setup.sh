@@ -15,6 +15,8 @@ jobs_agent_host_prepare() {
     jobs_agent_stage checking-ubuntu
     if ! command -v proot-distro >/dev/null; then
         [[ ${JOBS_AGENT_SETUP_ALLOWED:-0} == 1 ]] || { printf '%s\n' 'Missing proot-distro. Confirm environment preparation in the app.' >&2;return 1; }
+        jobs_agent_stage preparing-termux-packages
+        printf 'COMPONENT:proot-distro\n'
         pkg install -y proot-distro || { jobs_agent_stage failed-ubuntu;return 1; }
     fi
     if ! jobs_agent_host_exists "$alias"; then

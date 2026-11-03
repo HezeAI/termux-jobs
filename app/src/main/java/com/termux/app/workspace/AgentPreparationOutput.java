@@ -11,9 +11,10 @@ import java.util.function.Consumer;
 final class AgentPreparationOutput {
     private static final int MAX_RECORD=256;
     private static final Set<String> STAGES=new HashSet<>(Arrays.asList(
-        "checking-ubuntu","installing-ubuntu","failed-ubuntu","checking-components",
+        "checking-ubuntu","preparing-termux-packages","verifying-components","installing-ubuntu","failed-ubuntu","checking-components",
         "installing-components","checking-cli","failed-components","failed-cli","ready"));
     private static final Set<String> IMAGE_STAGES=new HashSet<>(Arrays.asList(
+        "install-python","install-proot-distro","prepare-operation-tools","extracting-environment","verify",
         "ubuntu-ai-installer-5.9.0","download-pinned-ubuntu-ai","download-pinned-ubuntu",
         "download-agent-component","retry-agent-component","check-environment-installer","checking-image-cache","connecting-image-download",
         "reconnecting-image-download","verifying-image-download","verified-rootfs-sha256","install-environment"));

@@ -66,7 +66,6 @@ try:
  # Reuse existing task-owned Java stubs, not a second implementation of the Job.
  fixture=runpy.run_path(str(REPO/'scripts/tests/test_agent_preparation_output.py'))
  src,classes,prefix,files,tmp=(fixture[k] for k in ['src','classes','prefix','files','tmp']);android=fixture['android']
- dep=src/'com/termux/app/workspace/Dependencies.java';s=dep.read_text().replace('String geminiAuth="api";','String geminiAuth="api",agent="claude";').replace('return "codex";','return p.agent;');dep.write_text(s)
  shellenv=src/'com/termux/shared/shell/TermuxShellUtils.java';s=shellenv.read_text().replace('"LANG=C.UTF-8"','"LANG=C.UTF-8",'+json.dumps('CURL_CA_BUNDLE='+str(cert)));shellenv.write_text(s)
  # Host fixture invokes the actual downloader; its EXIT cleanup deliberately outlasts curl.
  cleanup_started=ROOT/'cleanup-started';cleanup_done=ROOT/'cleanup-done';second_started=ROOT/'second-started';retry=ROOT/'retry'
@@ -74,7 +73,7 @@ try:
  (files/'.agent-preparation/agent-host-setup.sh').write_text(host)
  java='''package com.termux.app.workspace;import java.nio.file.*;public class QueueDownloadProbe{
  static void await(java.util.function.BooleanSupplier p)throws Exception{long end=System.nanoTime()+30000000000L;while(!p.getAsBoolean()){if(System.nanoTime()>end)throw new AssertionError("fixture deadline");Thread.sleep(10);}}
- public static void main(String[] args){try{Path root=Path.of(args[0]);android.content.Context c=new android.content.Context();WorkspaceStore.Session firstProfile=new WorkspaceStore.Session(),otherProfile=new WorkspaceStore.Session();otherProfile.agent="codex";AgentPreparation.Runner check=(ctx,p)->new AgentPreparation.Plan();
+ public static void main(String[] args){try{Path root=Path.of(args[0]);android.content.Context c=new android.content.Context();WorkspaceStore.Session firstProfile=new WorkspaceStore.Session(),otherProfile=new WorkspaceStore.Session();firstProfile.agent="claude";otherProfile.agent="codex";AgentPreparation.Runner check=(ctx,p)->new AgentPreparation.Plan();
  AgentPreparationOperation.Job first=AgentPreparationOperation.start(c,firstProfile,check,AgentPreparationOperation::prepare);await(()->Files.exists(root.resolve("queue-connected")));
  AgentPreparationOperation.Job next=AgentPreparationOperation.start(c,otherProfile,check,(ctx,p,o)->{if(!Files.exists(root.resolve("cleanup-done")))throw new AssertionError("queue released before child cleanup");long pid=Long.parseLong(Files.readString(root.resolve("owned-shell.pid")));if(ProcessHandle.of(pid).map(ProcessHandle::isAlive).orElse(false))throw new AssertionError("owned child still alive");Files.writeString(root.resolve("second-started"),"yes");return new AgentPreparation.Plan();});
  if(first!=AgentPreparationOperation.start(c,firstProfile,check,(ctx,p,o)->{throw new AssertionError("duplicate");}))throw new AssertionError("duplicate Job");Runnable observer=()->{};first.observers.add(observer);first.observers.remove(observer);

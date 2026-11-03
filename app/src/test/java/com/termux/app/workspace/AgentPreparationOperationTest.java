@@ -83,4 +83,30 @@ public class AgentPreparationOperationTest {
         AgentPreparationOperation.show(a,p,null);android.app.AlertDialog second=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotSame(first,second);assertSame(job,AgentPreparationOperation.jobs.get(AgentPreparationOperation.key(p)));assertEquals(1,job.observers.size());
         release.countDown();finish(job);org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertTrue(job.result.ready());second.dismiss();a.finish();
     }
+
+    @Test public void everyRealPhaseIsLocalizedAndImmediatelyNotifiesWithinThrottleWindow(){
+        android.content.Context c=RuntimeEnvironment.application;AgentPreparationOperation.Job j=new AgentPreparationOperation.Job(c,profile("codex"),(ctx,p)->ready(),(ctx,p,o)->ready());
+        AtomicInteger updates=new AtomicInteger();j.observers.add(updates::incrementAndGet);
+        String[] events={"PREPARATION:checking-ubuntu","PREPARATION:preparing-termux-packages","STAGE:install-python","STAGE:install-proot-distro","STAGE:prepare-operation-tools","STAGE:download-pinned-ubuntu-ai","IMAGE_PROGRESS: 99% (100/400 bytes)","STAGE:extracting-environment","PREPARATION:installing-components","STAGE:download-agent-component","STAGE:retry-agent-component","PREPARATION:checking-cli","PREPARATION:ready","PREPARATION:verifying-components"};
+        for(String event:events){int before=updates.get();j.output(event);org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+            if(!event.startsWith("IMAGE_PROGRESS:"))assertTrue(event,updates.get()>before);
+            for(String language:new String[]{"ru","en"}){WorkspaceLanguage.select(c,language);String text=AgentPreparationOperation.stage(j,c);assertFalse(event,text.isEmpty());assertFalse(text.startsWith("STAGE:"));assertFalse(text.startsWith("PREPARATION:"));}
+            if(event.startsWith("IMAGE_PROGRESS:")){assertEquals(25,j.percent);assertEquals(100,j.received);}else{assertEquals(-1,j.percent);assertEquals(0,j.total);}
+        }
+        assertEquals("Итоговая проверка компонентов агента…",AgentPreparation.stageText("verifying-components",true));
+        assertEquals("Preparing Termux packages…",AgentPreparation.stageText("preparing-termux-packages",false));
+    }
+    @Test public void failureKeepsActualPackageOrDownloadPhaseInsteadOfGenericFailureMarker(){
+        android.content.Context c=RuntimeEnvironment.application;WorkspaceLanguage.select(c,"en");
+        for(String phase:new String[]{"PREPARATION:preparing-termux-packages","STAGE:connecting-image-download","STAGE:extracting-environment","PREPARATION:verifying-components"}){
+            AgentPreparationOperation.Job j=new AgentPreparationOperation.Job(c,profile("claude"),(ctx,p)->ready(),(ctx,p,o)->{o.accept(phase);o.accept("ERROR:IMAGE_DOWNLOAD_NETWORK");o.accept("PREPARATION:failed-ubuntu");throw new AgentPreparationOperation.PreparationFailure("PREPARATION_EXIT_FAILED",71);});j.run();
+            assertEquals(AgentPreparationOutput.stage(phase),j.failedStage);assertEquals("failed",j.stage);assertTrue(AgentPreparationOperation.stage(j,c).contains("71"));assertTrue(AgentPreparationOperation.stage(j,c).contains("Image download failed"));assertFalse(AgentPreparationOperation.stage(j,c).contains("Stage: Ubuntu preparation"));
+        }
+    }
+    @Test public void extractionClearsMeasuredProgressAndArbitraryPackageOutputCannotChangeStatus(){
+        AgentPreparationOperation.Job j=new AgentPreparationOperation.Job(RuntimeEnvironment.application,profile("gemini"),(c,p)->ready(),(c,p,o)->ready());j.output("PREPARATION:preparing-termux-packages");
+        j.output("Setting up SYNTHETIC_SECRET 55%");assertEquals("preparing-termux-packages",j.stage);assertEquals(-1,j.percent);
+        j.output("IMAGE_PROGRESS: 25% (100/400 bytes)");j.output("STAGE:extracting-environment");assertEquals(-1,j.percent);assertEquals(0,j.total);assertEquals("STAGE:extracting-environment",j.stage);
+        EnvironmentInstallProgress progress=new EnvironmentInstallProgress();progress.update("STAGE:extracting-environment\n",0);assertEquals("Extracting Ubuntu AI",progress.displayLine(false));assertEquals("Распаковка Ubuntu AI",progress.displayLine(true));
+    }
 }

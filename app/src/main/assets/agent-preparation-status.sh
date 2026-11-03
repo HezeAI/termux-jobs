@@ -2,7 +2,7 @@
 # One small status per session, never per frame/request. No secrets or terminal text.
 jobs_agent_stage() {
     local stage=$1 file=${JOBS_AGENT_PREPARATION_STATUS:-} temp
-    case $stage in checking-ubuntu|installing-ubuntu|failed-ubuntu|checking-components|installing-components|checking-cli|failed-components|failed-cli|ready) ;; *) return 2;; esac
+    case $stage in checking-ubuntu|preparing-termux-packages|verifying-components|installing-ubuntu|failed-ubuntu|checking-components|installing-components|checking-cli|failed-components|failed-cli|ready) ;; *) return 2;; esac
     printf 'PREPARATION:%s\n' "$stage"
     [[ -n $file ]] || return 0
     temp=$(mktemp "${file}.XXXXXXXX") || return 0

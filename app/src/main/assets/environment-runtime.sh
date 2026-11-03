@@ -93,7 +93,7 @@ if [[ $alias == ubuntu-ai ]];then
     command -v python3 >/dev/null || { printf 'STAGE:install-python\n';pkg install -y python || exit $?; }
     printf 'STAGE:ubuntu-ai-installer-5.9.0\n'
     image=$(python3 -B "${BASH_SOURCE[0]%/*}/environment-image.py" ubuntu-ai) || exit $?
-    printf 'STAGE:install-environment\n'
+    printf 'STAGE:extracting-environment\n'
     python3 -I "${BASH_SOURCE[0]%/*}/ubuntu-ai-installer.py" install "$image" --name ubuntu-ai
     printf 'STAGE:verify\n';check;exit
 fi

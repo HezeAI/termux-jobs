@@ -14,14 +14,14 @@ write('com/termux/shared/termux/TermuxConstants.java','package com.termux.shared
 write('com/termux/shared/shell/TermuxShellUtils.java','package com.termux.shared.shell; public class TermuxShellUtils {public static String[] buildEnvironment(android.content.Context c,boolean x,String h){return new String[]{"PATH='+str(prefix/'bin')+':/usr/bin:/bin","LANG=C.UTF-8"};}}')
 write('com/termux/app/workspace/Dependencies.java','''package com.termux.app.workspace;
 import android.content.Context;import android.app.AlertDialog;import java.io.*;
-class WorkspaceStore {static class Session {boolean agentSetupAllowed,geminiAgent;String geminiAuth="api";Session copy(){return this;}}}
+class WorkspaceStore {static class Session {boolean agentSetupAllowed,geminiAgent;String agent="codex",geminiAuth="api";Session copy(){return this;}}}
 class AgentEnvironments {static String alias(WorkspaceStore.Session s){return "ubuntu-ai";}}
 class AgentPreparation {
  static final java.util.Set<String> COMPONENTS=new java.util.HashSet<>(java.util.Arrays.asList("node","ubuntu"));static String GUEST="/synthetic/guest";static class Plan {String error="";boolean authNeeded;boolean ready(){return true;}}
  interface Runner{Plan run(Context c,WorkspaceStore.Session s)throws Exception;}
  static Runner SYSTEM=(c,s)->new Plan();static void prepare(Context c){}
  static File directory(File f){return new File(f,".agent-preparation");}static String language(Context c){return "en";}
- static String tr(Context c,String ru,String en){return en;}static String agent(WorkspaceStore.Session p){return "codex";}
+ static String tr(Context c,String ru,String en){return en;}static String agent(WorkspaceStore.Session p){return p.agent;}
  static boolean supports(WorkspaceStore.Session p){return true;}static String stageText(String s,boolean ru){return s;}
  static String summary(Context c,Plan p){return "synthetic";}
 }
@@ -34,10 +34,17 @@ write('com/termux/app/workspace/PreparationPipelineProbe.java','''package com.te
 import java.nio.file.*;import java.lang.reflect.*;
 public class PreparationPipelineProbe {
  public static void main(String[] args)throws Exception{
-  android.content.Context c=new android.content.Context();WorkspaceStore.Session p=new WorkspaceStore.Session();
+  android.content.Context c=new android.content.Context();WorkspaceStore.Session p=new WorkspaceStore.Session();p.agent=args[3].startsWith("gemini")?"gemini":args[3];p.geminiAgent=p.agent.equals("gemini");p.geminiAuth=args[3].endsWith("vertex")?"vertex":"api";
   Path ops=AgentPreparation.directory(c.getFilesDir()).toPath().resolve("operations");Files.createDirectories(ops);
   Path old=ops.resolve("ubuntu-ai-codex.log");Files.writeString(old,"EXISTING_FIXTURE_LOG");
   AgentPreparationOperation.Job job=new AgentPreparationOperation.Job(c,p,(ctx,s)->new AgentPreparation.Plan(),AgentPreparationOperation::prepare);job.run();
+  if(job.stage.equals("complete")){
+   String guest=Files.readString(Path.of(args[4]));
+   if(!guest.contains("jobs_agent_prepare '"+p.agent+"' '"+p.geminiAuth+"'"))throw new AssertionError("wrong guest recipe");
+   if(guest.contains("vertex-bootstrap.sh")!=args[3].equals("gemini-vertex"))throw new AssertionError("wrong auth route");
+   String recipe=p.agent.equals("claude")?"claude-bootstrap.sh":p.agent.equals("gemini")?"gemini-bootstrap.sh":p.agent.equals("opencode")?"ai-agents-bootstrap.sh":"agent-dependencies.sh";
+   if(!guest.contains(recipe))throw new AssertionError("missing agent recipe");
+  }
   for(Field f:job.getClass().getDeclaredFields())if(f.getType()==String.class){f.setAccessible(true);String v=(String)f.get(job);if(v!=null&&v.contains("SYNTHETIC_SECRET_BODY_ONLY"))throw new AssertionError("retained "+f.getName());}
   if(!Files.readString(old).equals("EXISTING_FIXTURE_LOG")||Files.list(ops).count()!=1)throw new AssertionError("old log modified or new log created");
   if(!job.stage.equals(args[0]))throw new AssertionError("stage "+job.stage);
@@ -49,7 +56,7 @@ public class PreparationPipelineProbe {
 ''')
 bash=prefix/'bin/bash'
 if not bash.exists():bash.symlink_to('/bin/bash')
-proot=prefix/'bin/proot-distro';proot.write_text('#!/bin/sh\n# Synthetic boundary: no real proot, guest or CLI is invoked.\nexit 0\n');proot.chmod(0o700)
+proot=prefix/'bin/proot-distro';proot.write_text('#!/bin/sh\n# Synthetic boundary: record arguments, never enter a guest.\nfor arg do printf "%s\n" "$arg"; done > '+str(root/'guest-command')+'\nexit 0\n');proot.chmod(0o700)
 android=REPO/'.tools/sdk/platforms/android-35/android.jar'
 assert android.exists(),android
 original=REPO/'app/src/main/java/com/termux/app/workspace'
@@ -64,9 +71,10 @@ scenarios=[
  ('known-error','printf "ERROR:IMAGE_DOWNLOAD_NETWORK\\n"; return 1','failed','IMAGE_DOWNLOAD_NETWORK',1),
  ('cancelled-child','printf "SYNTHETIC_SECRET_BODY_ONLY\\n"; return 130','failed','INSTALL_CANCELLED',130),
  ('retry-after-cancellation','printf "PREPARATION:checking-components\\n"','complete','',0)]
-for name,script,stage,error,code in scenarios:
- (files/'.agent-preparation/agent-host-setup.sh').write_text('jobs_agent_host_prepare() { '+script+'; }\n')
- r=subprocess.run(['java','-Djava.io.tmpdir='+str(tmp),'-Duser.home='+str(tmp),'-Daudit.files='+str(files),'-cp',str(classes)+':'+str(android),'com.termux.app.workspace.PreparationPipelineProbe',stage,error,str(code)],check=True,capture_output=True,text=True,timeout=30)
- results.append(dict(scenario=name,result=r.stdout.strip()))
+for variant in ['codex','claude','gemini-api','gemini-vertex','opencode']:
+ for name,script,stage,error,code in scenarios:
+  (files/'.agent-preparation/agent-host-setup.sh').write_text('jobs_agent_host_prepare() { '+script+'; }\n')
+  r=subprocess.run(['java','-Djava.io.tmpdir='+str(tmp),'-Duser.home='+str(tmp),'-Daudit.files='+str(files),'-cp',str(classes)+':'+str(android),'com.termux.app.workspace.PreparationPipelineProbe',stage,error,str(code),variant,str(root/'guest-command')],check=True,capture_output=True,text=True,timeout=30)
+  results.append(dict(variant=variant,scenario=name,result=r.stdout.strip()))
 (BASE/'process-pipeline-results.json').write_text(json.dumps(dict(androidUiExecuted=False,realInstallation=False,networkUsed=False,dependencies='synthetic Context/Handler/checker/tool paths; current production prepare/drain/Job; real child pipes',results=results),indent=2)+'\n')
 print(json.dumps(results,indent=2))
