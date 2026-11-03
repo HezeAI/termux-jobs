@@ -1,0 +1,7 @@
+// Explicit integration runner only: native processes and kernel policy are not cacheable evidence.
+gradle.projectsEvaluated {
+    gradle.rootProject.project(':app').tasks.named('testDebugUnitTest') {
+        outputs.upToDateWhen { false }
+        outputs.cacheIf { false }
+    }
+}

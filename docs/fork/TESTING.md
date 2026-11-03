@@ -200,3 +200,30 @@ rootfs телефона или пакеты разработки как дока
 Проверяй перепривязку при замене и после потери поверхности, сохраняй синхронное
 освобождение нативных ресурсов при suspend/destroy, а окружения вне пробного
 режима оставляй на прежнем пути до принятия ограниченного теста на устройстве.
+
+## Native agent permission chains (explicit security check)
+
+Run `bash scripts/test-native-permission-chain.sh` when checking the connection
+between the app's permission buttons and actual Gemini/OpenCode tool effects.
+It requires the existing pinned Gemini 0.64.0 bundle, OpenCode 2.0.28 executable,
+local Java/Android verification toolchain and gcc. It does not install prerequisites.
+The native test Java source lives in `scripts/tests/native`, outside normal app
+unit tests. Missing prerequisites or kernel enforcement is a failure, never a skip
+reported as success. The explicit runner disables test-task output/cache reuse.
+
+Before any native CLI is launched, the runner builds the test-only seccomp user
+notification supervisor and runs enforcement probes. Only listeners created by
+that filtered process tree are reachable, on loopback or owned abstract Unix
+endpoints. External addresses, a host-side localhost sentinel, UDP/packet sockets,
+direct native syscalls and exec inheritance are checked. A configured baseURL,
+proxy, preload hook, or a successful `unshare` command is insufficient evidence.
+The runner does not change the host firewall, application connections or rootfs.
+
+The chain exercises real Robolectric permission buttons and production approval
+adapters with real native tools. HTTP replaces only the Android/proot control
+transport. For OpenCode outside-project file actions, separate native directory
+consent is an explicit fixture precondition; native directory rejection is tested
+separately. Gemini's automatic reads and path validation are recorded separately
+from a user refusal. See [stage two audit](SECURITY-AUDIT-STAGE2.md) for evidence,
+the failed early isolation probe, limits and the device checklist. This is not a
+filesystem sandbox, a complete traffic audit, or proof of phone behavior.
