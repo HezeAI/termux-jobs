@@ -37,6 +37,12 @@ CI additionally selects build-tools 35.0.0 AAPT2 through repository-local Gradle
 properties: the AGP4.2.2 default AAPT2 cannot parse platform35 android.jar.
 NDK22.1.7171670 and build-tools30.0.3 remain installed as required by the source.
 
+JVM tests use the same four check.sh suites plus X11. A short runner-local
+symlink points into source/.tools/tmp for Unix socket fixtures; long workspace
+paths can exceed sockaddr_un limits. Actual temporary files stay in the checkout.
+Test XML and hidden preparation identity reports are explicitly included in the
+artifact; no .git directory, credentials or signing material is uploaded.
+
 The normal Gradle build still uses the tested source's build files and dependency
 versions. CI's debug APK is a build check, not a replacement of the signed stable
 APK. Modern release Lint and final signed APK verification remain separate gates.
