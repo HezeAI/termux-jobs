@@ -80,8 +80,9 @@ jobs:
         run: |
           source scripts/build-env.sh
           # Same suites as check.sh plus the X11 module. Keep Unix socket fixture
-          # paths below sockaddr_un's limit; actual files remain in source/.tools.
-          ln -s "$TMPDIR" "$RUNNER_TEMP/tj"
+          # paths below sockaddr_un's limit. Use a real task-local directory:
+          # a symlink would invalidate canonical-path/security fixture assumptions.
+          mkdir "$RUNNER_TEMP/tj"
           export JAVA_TOOL_OPTIONS="$JAVA_TOOL_OPTIONS -Djava.io.tmpdir=$RUNNER_TEMP/tj"
           ./gradlew --no-daemon :terminal-emulator:testDebugUnitTest :terminal-view:testDebugUnitTest :termux-shared:testDebugUnitTest :app:testDebugUnitTest :x11:testDebugUnitTest
       - name: Build debug APK

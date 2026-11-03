@@ -37,9 +37,11 @@ CI additionally selects build-tools 35.0.0 AAPT2 through repository-local Gradle
 properties: the AGP4.2.2 default AAPT2 cannot parse platform35 android.jar.
 NDK22.1.7171670 and build-tools30.0.3 remain installed as required by the source.
 
-JVM tests use the same four check.sh suites plus X11. A short runner-local
-symlink points into source/.tools/tmp for Unix socket fixtures; long workspace
-paths can exceed sockaddr_un limits. Actual temporary files stay in the checkout.
+JVM tests use the same four check.sh suites plus X11. A short real task-owned
+directory in RUNNER_TEMP is used for JVM fixtures: long workspace paths can
+exceed sockaddr_un limits, and a symlink breaks canonical-path/security fixture
+assumptions. This directory exists only on the disposable GitHub runner; local
+phone tools/data are unchanged. SDK and build-input caches stay in the checkout.
 Test XML and hidden preparation identity reports are explicitly included in the
 artifact; no .git directory, credentials or signing material is uploaded.
 
