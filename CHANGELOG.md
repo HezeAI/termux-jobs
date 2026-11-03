@@ -10,6 +10,25 @@
   mandatory hash guard and allow explicit checks of older source commits with
   separately recorded workflow identity. See [CI inputs](docs/fork/CI-X11.md).
 
+# 2026-11-03 — 2.1.3-test3 (versionCode 1479)
+
+- Preparation: add a plan-stage count and overall bar, plus separate measured
+  download progress or a busy indicator for the current stage. Exclude known-ready
+  work; fill the plan only after a successful final component inventory.
+- Keep a live compact preparation card in session settings, including queue,
+  failure and readiness. Closing/reopening details observes the same job; retry
+  remains explicit. Preserve the shared queue for all four agents and Gemini modes.
+- Match the opaque horizontal star / paperclip group to the initial one-line field
+  height; keep it fixed and bottom-aligned as the draft grows. Keep separate ripples.
+- Add a secondary HH:mm clock only to action/command timeline-group headers, in
+  the device timezone. Use the first event's known time; retain live event times
+  across refresh/restart. Unknown historical times stay hidden. User messages,
+  answers and attachments do not receive new clocks.
+- No component version, environment, permission, signer or native-history change.
+  Automatic fixtures do not establish a successful real installation or phone UI.
+
+[Validation and device plan](docs/fork/VALIDATION-2.1.3-test3.md)
+
 # 2026-11-03 — 2.1.3-test2 (versionCode 1478)
 
 - Preparation: show the actual Termux-package stage before installing proot-distro,

@@ -1576,3 +1576,31 @@ This feature excludes Ubuntu AI and does not alter running sessions.
 metadata. It uses baseline Android text/layout snapshots, stable transcript rows,
 an explicit composer container and normal scroll anchors rather than transforms,
 root reconstruction or native agent RPCs.
+
+
+## Local preparation plan and timeline clocks (2.1.3-test3)
+
+AgentPreparationOperation owns one job per environment/agent (including Gemini
+API versus Vertex) on the existing shared executor. Inventory builds a milestone
+plan, excluding known-ready work. The final milestone completes only after the
+final inventory succeeds. This bar counts stages, not time or transfer percent.
+The existing bounded event protocol drives the current phase and measured bytes.
+AgentPreparationCard subscribes to main-thread job changes while attached and
+unsubscribes on close/detach. Reopening details reuses the job; explicit Retry
+creates a new completed/failed operation. Closing a view never cancels a job.
+No raw stdout/stderr retention, export or expandable log returns.
+
+CodexActionTimeline copies the first step's eventTime into its group. The shared
+CodexActionsView puts a secondary fixed HH:mm label in a separate right-hand
+header cell. The weighted title wraps in the remaining width. Only group headers
+receive clocks, and an unknown first event has no clock. The render signature
+includes the device timezone; a timezone change changes formatting, not the event.
+
+Claude and OpenCode can project native message/tool timestamps. Live Codex and
+Claude tool notifications, and new Gemini tools observed during an active response
+after a ready baseline, record immutable observation times using the existing
+private CompletionTimes metadata store (action-prefixed stable message/tool IDs).
+Only IDs, a timestamp and the existing source marker are stored, without tool
+content. Historical snapshots never assign their opening time. Gemini's initial
+or idle history refresh does not establish a new event; absent prior metadata,
+its old tool timestamps remain unknown. Native chat files are not modified.
