@@ -17,7 +17,7 @@ import android.content.Context;import android.app.AlertDialog;import java.io.*;
 class WorkspaceStore {static class Session {boolean agentSetupAllowed,geminiAgent;String agent="codex",geminiAuth="api";Session copy(){return this;}}}
 class AgentEnvironments {static String alias(WorkspaceStore.Session s){return "ubuntu-ai";}}
 class AgentPreparation {
- static final java.util.Set<String> COMPONENTS=new java.util.HashSet<>(java.util.Arrays.asList("node","ubuntu"));static String GUEST="/synthetic/guest";static class Plan {String error="";boolean authNeeded;boolean ready(){return true;}}
+ static final java.util.Set<String> COMPONENTS=new java.util.HashSet<>(java.util.Arrays.asList("node","ubuntu"));static String GUEST="/synthetic/guest";static class Plan {final java.util.Set<String> missing=new java.util.HashSet<>();String error="";boolean authNeeded;boolean ready(){return true;}}
  interface Runner{Plan run(Context c,WorkspaceStore.Session s)throws Exception;}
  static Runner SYSTEM=(c,s)->new Plan();static void prepare(Context c){}
  static File directory(File f){return new File(f,".agent-preparation");}static String language(Context c){return "en";}
@@ -26,7 +26,7 @@ class AgentPreparation {
  static String summary(Context c,Plan p){return "synthetic";}
 }
 class SessionShell {static String quote(String s){return "'"+s.replace("'","'\\\"'\\\"'")+"'";}}
-class WorkspaceDialogs {static int TEXT=0;static int dp(Context c,int n){return n;}static AlertDialog.Builder builder(Context c){return new AlertDialog.Builder(c);}}
+class WorkspaceDialogs {static int TEXT=0,MUTED=0;static int dp(Context c,int n){return n;}static AlertDialog.Builder builder(Context c){return new AlertDialog.Builder(c);}}
 class DesktopProgramProgress{static String lastLine(String s){return s;}}
 class WorkspaceLocalFilePicker{static boolean validAlias(String s){return true;}}
 ''')
@@ -61,7 +61,7 @@ android=REPO/'.tools/sdk/platforms/android-35/android.jar'
 assert android.exists(),android
 original=REPO/'app/src/main/java/com/termux/app/workspace'
 cmd=['javac','-J-Djava.io.tmpdir='+str(tmp),'-cp',str(android),'-d',str(classes),*(str(p) for p in src.rglob('*.java')),*(str(original/n) for n in ('AgentPreparationOperation.java','AgentPreparationOutput.java','EnvironmentInstallProgress.java','EnvironmentSetupStatus.java'))]
-subprocess.run(cmd,check=True,capture_output=True,text=True)
+subprocess.run(cmd,check=True,text=True)
 results=[]
 scenarios=[
  ('stdout-multiline','printf -- "-----BEGIN PRIVATE KEY-----\\nSYNTHETIC_SECRET_BODY_ONLY\\n-----END PRIVATE KEY-----\\n"', 'complete','',0),

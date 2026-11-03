@@ -68,4 +68,13 @@ public class AgentSettingsPresentationTest {
   open(null,false);tag("session-launch-environment").performClick();AlertDialog kinds=ShadowAlertDialog.getLatestAlertDialog();kinds.getListView().performItemClick(null,2,2);idle();TextView hint=(TextView)tag("agent-runtime-explanation");assertEquals(View.VISIBLE,hint.getVisibility());assertTrue(hint.getText().toString().contains("Ubuntu AI"));assertFalse(hint.isClickable());
  }
 
+ @Test public void settingsCardReopensSamePreparationAndTracksAllSelectedAgentVariants()throws Exception{
+  for(String agent:new String[]{"codex","claude","gemini","gemini-vertex","opencode"}){
+   WorkspaceStore.Session p=profile(agent.equals("gemini-vertex")?"gemini":agent);if(agent.endsWith("vertex"))p.geminiAuth="vertex";
+   AgentPreparationOperation.Job job=new AgentPreparationOperation.Job(activity,p,(c,x)->AgentPreparation.Plan.parse("MISSING:ubuntu\nCHECK:done",0),(c,x,o)->AgentPreparation.Plan.parse("READY:ubuntu\nCHECK:done",0));job.plan=new AgentPreparationOperation.PlanProgress(AgentPreparation.Plan.parse("MISSING:ubuntu\nCHECK:done",0));job.output("STAGE:extracting-environment");AgentPreparationOperation.jobs.put(AgentPreparationOperation.key(p),job);
+   try{open(p,false);AgentPreparationCard card=(AgentPreparationCard)tag("agent-preparation-card");assertNotNull(card);assertTrue(card.phase.getText().toString().contains("Распаковка"));card.performClick();idle();AlertDialog details=ShadowAlertDialog.getLatestAlertDialog();assertNotSame(editor,details);assertTrue(details.isShowing());assertSame(job,AgentPreparationOperation.current(p));details.dismiss();job.output("PREPARATION:verifying-components");idle();assertTrue(card.phase.getText().toString().contains("проверка"));editor.dismiss();idle();open(p,false);card=(AgentPreparationCard)tag("agent-preparation-card");assertTrue(card.phase.getText().toString().contains("проверка"));editor.dismiss();idle();}
+   finally{job.active=false;AgentPreparationOperation.jobs.remove(AgentPreparationOperation.key(p));}
+  }
+ }
+
 }
