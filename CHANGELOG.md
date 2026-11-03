@@ -1,5 +1,8 @@
 # Unreleased
 
+- Docs: put release highlights and Download APK first, followed by requirements
+  and compatibility; fold CI history and technical evidence into details.
+
 - Docs: distinguish internal debug CI/tests from the release build and final
   signed APK verification; no debug APK is required as a release asset.
 
