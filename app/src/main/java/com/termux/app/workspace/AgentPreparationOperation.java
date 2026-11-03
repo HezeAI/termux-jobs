@@ -29,30 +29,45 @@ final class AgentPreparationOperation {
     static final class Job implements Runnable {
         final Context context;final WorkspaceStore.Session session;final Worker worker;final AgentPreparation.Runner checker;
         final List<Runnable> observers=new ArrayList<>();
-        volatile boolean active=true;volatile String stage="queued",item="",log="",error="";
+        volatile boolean active=true;volatile String stage="queued",failedStage="",component="",error="";
+        volatile Integer exitCode;
         volatile int percent=-1;volatile long received,total;volatile AgentPreparation.Plan inventory,result;
-        private long notificationTime,lastLogTime;
+        private long notificationTime;
         Job(Context c,WorkspaceStore.Session p,AgentPreparation.Runner check,Worker w){context=c;checker=check;session=p;session.agentSetupAllowed=true;worker=w;}
         void output(String raw){
-            String clean=EnvironmentInstallLog.clean(raw).trim();if(clean.isEmpty())return;
-            String next=log+clean+"\n";log=next.length()>65536?next.substring(next.length()-65536):next;
-            if(clean.startsWith("PREPARATION:")){stage=clean.substring(12);percent=-1;received=total=0;item="";}
-            else if(clean.startsWith("STAGE:")){stage=clean;percent=-1;received=total=0;item="";}
-            else {Matcher m=IMAGE.matcher(clean);if(m.matches())try{long r=Long.parseLong(m.group(2)),t=Long.parseLong(m.group(3));if(t>0&&r>=0&&r<=t){received=r;total=t;percent=(int)(100*r/t);stage="download";}}catch(NumberFormatException ignored){}else item=clean.length()>240?clean.substring(0,240):clean;}
-            long now=SystemClock.elapsedRealtime();if(now-lastLogTime>2000){lastLogTime=now;saveLog();}if(now-notificationTime>200){notificationTime=now;changed();}
+            if(raw.length()>256)return;
+            String nextStage=AgentPreparationOutput.stage(raw),nextError=AgentPreparationOutput.error(raw);
+            if(!nextStage.isEmpty()){stage=nextStage;percent=-1;received=total=0;component="";}
+            else if(!nextError.isEmpty())error=nextError;
+            else if(raw.startsWith("READY:")||raw.startsWith("MISSING:")){
+                String id=raw.substring(raw.indexOf(':')+1);if(AgentPreparation.COMPONENTS.contains(id))component=id;
+            }else {
+                Matcher m=IMAGE.matcher(raw);if(m.matches())try{
+                    long r=Long.parseLong(m.group(2)),t=Long.parseLong(m.group(3));
+                    if(t>0&&t<=2147483648L&&r>=0&&r<=t){received=r;total=t;percent=(int)(100*r/t);stage="download";}
+                }catch(NumberFormatException ignored){}
+            }
+            long now=SystemClock.elapsedRealtime();if(now-notificationTime>200){notificationTime=now;changed();}
         }
         void changed(){main.post(()->{for(Runnable r:new ArrayList<>(observers))r.run();});}
         public void run(){
             try{output("PREPARATION:checking-ubuntu");inventory=checker.run(context,session);changed();
-                if(!inventory.error.isEmpty())throw new IOException("EXISTING_ENVIRONMENT_CHECK_FAILED");
+                if(!inventory.error.isEmpty())throw new PreparationFailure("EXISTING_ENVIRONMENT_CHECK_FAILED",null);
                 result=worker.run(context,session,this::output);
-                if(!result.ready())throw new IOException("COMPONENT_CHECK_FAILED");
-                stage="complete";
-            }catch(Exception failure){stage="failed";String detail=EnvironmentInstallProgress.failureLine(log);error=detail.isEmpty()?(failure instanceof IOException?failure.getMessage():failure.getClass().getSimpleName()):detail;}
-            finally{active=false;saveLog();changed();}
+                if(!result.ready())throw new PreparationFailure("COMPONENT_CHECK_FAILED",null);
+                exitCode=0;stage="complete";error="";
+            }catch(Exception failure){
+                failedStage=stage;stage="failed";
+                if(failure instanceof PreparationFailure){PreparationFailure f=(PreparationFailure)failure;exitCode=f.exitCode;if(error.isEmpty())error=f.code;}
+                if(error.isEmpty())error="PREPARATION_FAILED";
+            }finally{active=false;changed();}
         }
-        private void saveLog(){try{File dir=new File(AgentPreparation.directory(context.getFilesDir()),"operations");if(!dir.isDirectory()&&!dir.mkdirs())return;File file=new File(dir,AgentEnvironments.alias(session)+"-"+AgentPreparation.agent(session)+".log");File temp=File.createTempFile("preparation-",".tmp",dir);try{try(OutputStream out=new FileOutputStream(temp)){out.write((log+(error.isEmpty()?"":"ERROR:"+error+"\n")).getBytes(StandardCharsets.UTF_8));}java.nio.file.Files.move(temp.toPath(),file.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING,java.nio.file.StandardCopyOption.ATOMIC_MOVE);}finally{temp.delete();}}catch(IOException ignored){}}
     }
+    static final class PreparationFailure extends IOException {
+        final String code;final Integer exitCode;
+        PreparationFailure(String code,Integer exitCode){super(code);this.code=code;this.exitCode=exitCode;}
+    }
+
     static AgentPreparation.Plan prepare(Context context,WorkspaceStore.Session p,Consumer<String> output)throws Exception{
         AgentPreparation.prepare(context);
         String source=SessionShell.quote(new File(AgentPreparation.directory(context.getFilesDir()),"agent-host-setup.sh").getAbsolutePath());
@@ -71,18 +86,16 @@ final class AgentPreparationOperation {
         java.lang.Process child=builder.start();
         IOException readFailure=null;int exit=0;
         try(Reader reader=new InputStreamReader(child.getInputStream(),StandardCharsets.UTF_8)){
-            char[] chars=new char[2048];StringBuilder line=new StringBuilder();int count;
-            while((count=reader.read(chars))!=-1)for(int i=0;i<count;i++){char ch=chars[i];if(ch=='\n'||ch=='\r'){if(line.length()>0){output.accept(line.toString());line.setLength(0);}}else if(line.length()<8192)line.append(ch);}
-            if(line.length()>0)output.accept(line.toString());
-        }catch(IOException failure){readFailure=failure;output.accept("ERROR:PREPARATION_LOG_READ_FAILED");}
+            AgentPreparationOutput.drain(reader,output);
+        }catch(IOException failure){readFailure=failure;}
         finally{
             // Keep the job active until its own child exits, including reader failures.
             boolean interrupted=false;
             for(;;)try{exit=child.waitFor();break;}catch(InterruptedException stop){interrupted=true;}
             if(interrupted)Thread.currentThread().interrupt();
         }
-        if(readFailure!=null)throw readFailure;
-        if(exit!=0)throw new IOException("PREPARATION_EXIT_"+exit);
+        if(readFailure!=null)throw new PreparationFailure("PREPARATION_OUTPUT_READ_FAILED",exit);
+        if(exit!=0)throw new PreparationFailure(exit==130?"INSTALL_CANCELLED":"PREPARATION_EXIT_FAILED",exit);
         return AgentPreparation.SYSTEM.run(context,p);
     }
     static String title(Context c,String ru,String en){return AgentPreparation.tr(c,ru,en);}
@@ -91,27 +104,36 @@ final class AgentPreparationOperation {
         if(job.stage.equals("queued"))return title(c,"Ожидание другой операции подготовки…","Waiting for another preparation operation…");
         if(job.stage.equals("complete")&&job.result!=null&&job.result.authNeeded)return title(c,"Компоненты готовы. Авторизация: требуется отдельный вход Google Cloud при запуске.","Components ready. Authorization: Google Cloud sign-in is required separately on launch.");
         if(job.stage.equals("complete"))return title(c,"Компоненты готовы. Авторизация выполняется отдельно при запуске агента.","Components ready. Sign-in is handled separately when starting the agent.");
-        if(job.stage.equals("failed"))return title(c,"Подготовка не завершена: ","Preparation failed: ")+job.error;
-        if(job.stage.equals("download"))return title(c,"Скачивание базового образа Ubuntu AI","Downloading Ubuntu AI base image");
-        if(job.stage.startsWith("STAGE:")){EnvironmentInstallProgress p=new EnvironmentInstallProgress();p.line=job.stage;return p.displayLine(ru);}
-        return AgentPreparation.stageText(job.stage,ru);
+        if(job.stage.equals("failed")){String phase=phaseText(job.failedStage,c);return (phase.isEmpty()?"":phase+"\n")+AgentPreparationOutput.description(job.error,ru)+(job.exitCode==null?"":" ("+job.exitCode+")");}
+        return phaseText(job.stage,c);
+    }
+    private static String phaseText(String stage,Context c){
+        boolean ru=AgentPreparation.language(c).equals("ru");
+        if(stage.equals("download")||stage.equals("STAGE:download-pinned-ubuntu-ai")||stage.equals("STAGE:download-pinned-ubuntu"))return title(c,"Скачивание базового образа Ubuntu AI","Downloading Ubuntu AI base image");
+        if(stage.startsWith("STAGE:")){EnvironmentInstallProgress p=new EnvironmentInstallProgress();p.line=stage;return p.displayLine(ru);}
+        switch(stage){
+            case "failed-ubuntu":return title(c,"Этап: подготовка Ubuntu","Stage: Ubuntu preparation");
+            case "failed-components":return title(c,"Этап: компоненты агента","Stage: agent components");
+            case "failed-cli":return title(c,"Этап: проверка CLI","Stage: CLI startup check");
+            default:return AgentPreparation.stageText(stage,ru);
+        }
     }
     static void show(Activity a,WorkspaceStore.Session p,Consumer<AgentPreparation.Plan> completion){
         if(!AgentPreparation.supports(p)){WorkspaceDialogs.builder(a).setTitle(title(a,"Проверка среды запуска","Launch environment check")).setMessage(title(a,"Подготовка доступна для выбранной Ubuntu. Для Termux используйте настройки его компонентов.","Preparation is available for a selected Ubuntu environment. For Termux, use its component settings.")).setPositiveButton(title(a,"Закрыть","Close"),null).show();return;}
         Job job=start(a,p,AgentPreparationOperation::prepare);
         LinearLayout body=new LinearLayout(a);body.setOrientation(LinearLayout.VERTICAL);int gap=WorkspaceDialogs.dp(a,12);body.setPadding(gap,gap,gap,gap);
-        TextView found=new TextView(a),phase=new TextView(a),item=new TextView(a),amount=new TextView(a),details=new TextView(a),log=new TextView(a);
-        for(TextView v:new TextView[]{phase,item,amount,found,details,log}){v.setTextColor(WorkspaceDialogs.TEXT);v.setTextSize(14);body.addView(v);}
+        TextView found=new TextView(a),phase=new TextView(a),item=new TextView(a),amount=new TextView(a);
+        for(TextView v:new TextView[]{phase,item,amount,found}){v.setTextColor(WorkspaceDialogs.TEXT);v.setTextSize(14);body.addView(v);}
         ProgressBar progress=new ProgressBar(a,null,android.R.attr.progressBarStyleHorizontal);body.addView(progress,1,new LinearLayout.LayoutParams(-1,WorkspaceDialogs.dp(a,12)));progress.setMax(100);
-        details.setText(title(a,"Подробности ▾","Details ▾"));details.setPadding(0,gap,0,gap);log.setTextIsSelectable(true);log.setVisibility(android.view.View.GONE);details.setOnClickListener(v->{log.setText(job.log);log.setVisibility(log.getVisibility()==android.view.View.GONE?android.view.View.VISIBLE:android.view.View.GONE);});
         ScrollView scroll=new ScrollView(a);scroll.addView(body);
-        AlertDialog dialog=WorkspaceDialogs.builder(a).setTitle(title(a,"Проверка среды запуска","Launch environment check")).setView(scroll).setNegativeButton(title(a,"Закрыть","Close"),null).create();
+        AlertDialog dialog=WorkspaceDialogs.builder(a).setTitle(title(a,"Проверка среды запуска","Launch environment check")).setView(scroll).setNegativeButton(title(a,"Закрыть","Close"),null).setPositiveButton(title(a,"Повторить проверку","Retry check"),null).create();
         boolean[] delivered={false};Runnable update=()->{if(a.isFinishing()||a.isDestroyed())return;
-            found.setText(job.inventory==null?title(a,"Проверка выбранной среды…","Checking the selected environment…"):AgentPreparation.summary(a,job.result==null?job.inventory:job.result));phase.setText(stage(job,a));item.setText(job.item);item.setVisibility(job.item.isEmpty()?android.view.View.GONE:android.view.View.VISIBLE);
+            found.setText(job.inventory==null?title(a,"Проверка выбранной среды…","Checking the selected environment…"):AgentPreparation.summary(a,job.result==null?job.inventory:job.result));phase.setText(stage(job,a));item.setText(job.component);item.setVisibility(job.component.isEmpty()?android.view.View.GONE:android.view.View.VISIBLE);
             progress.setIndeterminate(job.percent<0);progress.setProgress(Math.max(0,job.percent));progress.setVisibility(job.active?android.view.View.VISIBLE:android.view.View.GONE);
-            amount.setText(job.total>0?String.format(Locale.ROOT,title(a,"%d / %d байт · %d%%","%d / %d bytes · %d%%"),job.received,job.total,job.percent):"");if(log.getVisibility()==android.view.View.VISIBLE)log.setText(job.log);
+            amount.setText(job.total>0?String.format(Locale.ROOT,title(a,"%d / %d байт · %d%%","%d / %d bytes · %d%%"),job.received,job.total,job.percent):"");
+            if(dialog.getButton(-1)!=null){dialog.getButton(-1).setEnabled(!job.active);dialog.getButton(-1).setVisibility(job.stage.equals("failed")?android.view.View.VISIBLE:android.view.View.GONE);}
             if(!job.active&&job.result!=null&&job.result.ready()&&!delivered[0]&&dialog.isShowing()){delivered[0]=true;if(completion!=null)completion.accept(job.result);}
         };
-        job.observers.add(update);dialog.setOnDismissListener(d->job.observers.remove(update));dialog.show();update.run();
+        job.observers.add(update);dialog.setOnDismissListener(d->job.observers.remove(update));dialog.show();dialog.getButton(-1).setOnClickListener(v->{if(job.active)return;dialog.dismiss();show(a,job.session,completion);});update.run();
     }
 }

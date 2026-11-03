@@ -1,5 +1,11 @@
 # Unreleased
 
+- Agent preparation: discard arbitrary stdout/stderr after bounded streaming
+  parsing; retain only allowlisted stages/components, measured image progress,
+  exit codes and safe RU/EN errors. Remove the expandable preparation log and
+  new operation-log writes; preserve old files, chat/terminal/CLI histories.
+  Inventory checks also discard raw failure reports. Explicit retry remains.
+
 - Docs: put release highlights and Download APK first, followed by requirements
   and compatibility; fold CI history and technical evidence into details.
 

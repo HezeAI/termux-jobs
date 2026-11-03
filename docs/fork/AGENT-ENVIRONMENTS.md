@@ -1,5 +1,23 @@
 # Agent Ubuntu environments
 
+## Unreleased: structured preparation status
+
+The agent launch-environment check retains only fixed stage/component identifiers,
+measured image bytes/total/percentage, process exit codes and safe RU/EN errors.
+Unknown process output is drained and discarded. There is no expandable raw log,
+new preparation-operation log file, raw failure-report fallback or automatic upload.
+Closing a preparation window keeps the operation running; reopening joins it.
+Retry check becomes available after a failed operation. Cancelling the initial
+inventory window suppresses its callback; it does not cancel a package transaction.
+
+Existing `.agent-preparation/operations/*.log` files are left untouched. Their
+previous contents are not cleaned by this change and may remain accessible through
+the existing setup-directory guest bind. Generic environment installation logs,
+chat histories, ordinary terminal output and native CLI logs are separate and
+unchanged. This intentionally reduces diagnostic detail: package-manager output,
+tracebacks and arbitrary network/error responses are no longer available here.
+Read the [validation and scope](VALIDATION-preparation-structured-status.md).
+
 ## v2.1.2: shared Ubuntu AI and retained bindings
 
 New AI Agents sessions use Ubuntu AI. Their form explains that Termux supplies
@@ -15,8 +33,8 @@ are reused without downloading an image; incomplete/busy roots are preserved and
 reported. All four agents share one Ubuntu AI and add only missing components
 through existing recipes, without automatic CLI upgrades or model conversations.
 
-The explicit launch-environment check shows stages, measured image progress and a
-redacted log; reopening joins the existing serialized job. Closing its window
+In the published v2.1.2 implementation, the explicit launch-environment check
+shows stages, measured image progress and a redacted log; reopening joins the existing serialized job. Closing its window
 does not cancel preparation. Component readiness does not prove authorization or
 model availability. See [installation](ENVIRONMENTS.md) and
 [validation](VALIDATION-v2.1.2.md).
