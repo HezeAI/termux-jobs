@@ -42,6 +42,16 @@ public class AgentPreparationTest {
         String wrapped=AgentPreparation.wrap(p,"run-gemini");assertTrue(wrapped.contains("vertex-bootstrap.sh"));assertTrue(wrapped.contains("JOBS_GEMINI_VERTEX_PROJECT='cloud-project'"));
         p.geminiAuth="api";assertFalse(AgentPreparation.wrap(p,"run-gemini").contains("vertex-bootstrap.sh"));
     }
+
+    @Test public void boundedDownloaderIsBundledInEveryLaunchContext()throws Exception{
+        android.content.Context c=org.robolectric.RuntimeEnvironment.application;
+        AgentPreparation.prepare(c);ClaudeCode.prepare(c);GeminiCli.prepare(c);AiAgents.prepare(c);
+        for(java.io.File dir:new java.io.File[]{AgentPreparation.directory(c.getFilesDir()),ClaudeCode.directory(c.getFilesDir()),GeminiCli.directory(c.getFilesDir()),AiAgents.directory(c.getFilesDir())}){
+            java.io.File helper=new java.io.File(dir,"agent-download.sh");assertTrue(helper.isFile());
+            String text=new String(java.nio.file.Files.readAllBytes(helper.toPath()),java.nio.charset.StandardCharsets.UTF_8);
+            assertTrue(text.contains("connect=45 idle=180 budget=7200 attempts=3"));assertTrue(text.contains("--max-time \"$budget\""));
+        }
+    }
     @Test public void cancellingInventorySuppressesLateCallback() throws Exception {
         android.app.Activity a=Robolectric.buildActivity(android.app.Activity.class).setup().get();
         WorkspaceStore.Session p=new WorkspaceStore.Session();p.environment="ubuntu";p.geminiAgent=true;

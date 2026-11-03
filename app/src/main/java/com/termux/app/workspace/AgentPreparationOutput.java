@@ -15,10 +15,11 @@ final class AgentPreparationOutput {
         "installing-components","checking-cli","failed-components","failed-cli","ready"));
     private static final Set<String> IMAGE_STAGES=new HashSet<>(Arrays.asList(
         "ubuntu-ai-installer-5.9.0","download-pinned-ubuntu-ai","download-pinned-ubuntu",
-        "check-environment-installer","checking-image-cache","connecting-image-download",
+        "download-agent-component","retry-agent-component","check-environment-installer","checking-image-cache","connecting-image-download",
         "reconnecting-image-download","verifying-image-download","verified-rootfs-sha256","install-environment"));
     private static final Set<String> ERRORS=new HashSet<>(Arrays.asList(
-        "INSTALL_CANCELLED","IMAGE_CHECKSUM_MISMATCH","IMAGE_DOWNLOAD_NETWORK",
+        "COMPONENT_DOWNLOAD_FAILED","COMPONENT_DOWNLOAD_TIMEOUT",
+        "COMPONENT_DOWNLOAD_INTERRUPTED","INSTALL_CANCELLED","IMAGE_CHECKSUM_MISMATCH","IMAGE_DOWNLOAD_NETWORK",
         "IMAGE_DOWNLOAD_FAILED","IMAGE_HTTP_STATUS","IMAGE_RANGE_MISMATCH","IMAGE_SIZE_LIMIT",
         "IMAGE_INSECURE_REDIRECT","IMAGE_INSECURE_RESPONSE","IMAGE_UNSAFE_FILE",
         "IMAGE_UNSAFE_LOCK","IMAGE_DOWNLOAD_BUSY","IMAGE_CACHE_DIRECTORY","IMAGE_CACHE_CONTROL",
@@ -47,6 +48,9 @@ final class AgentPreparationOutput {
     }
     static String description(String code,boolean ru){
         switch(code){
+            case "COMPONENT_DOWNLOAD_TIMEOUT":return ru?"Загрузка компонента остановилась или превысила допустимое время. Повторите проверку.":"Component download stalled or timed out. Retry the check.";
+            case "COMPONENT_DOWNLOAD_INTERRUPTED":return ru?"Загрузка компонента прервана. Повторите проверку.":"Component download interrupted. Retry the check.";
+            case "COMPONENT_DOWNLOAD_FAILED":return ru?"Не удалось скачать компонент. Проверьте сеть и повторите проверку.":"Component download failed. Check the network and retry.";
             case "INSTALL_CANCELLED":return ru?"Подготовка прервана. Повторите проверку.":"Preparation interrupted. Retry the check.";
             case "IMAGE_DOWNLOAD_NETWORK":case "IMAGE_DOWNLOAD_FAILED":case "IMAGE_HTTP_STATUS":
                 return ru?"Не удалось скачать образ. Проверьте сеть и повторите проверку.":"Image download failed. Check the network and retry.";

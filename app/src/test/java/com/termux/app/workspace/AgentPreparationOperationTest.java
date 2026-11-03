@@ -53,6 +53,16 @@ public class AgentPreparationOperationTest {
         AgentPreparationOperation.Job retry=new AgentPreparationOperation.Job(RuntimeEnvironment.application,profile("claude"),(c,s)->ready(),(c,s,o)->ready());retry.run();assertEquals("complete",retry.stage);
         assertFalse(new java.io.File(old.getParentFile(),"ubuntu-ai-claude.log").exists());
     }
+
+    @Test public void componentDownloadStatusAndErrorsAreAllowlisted(){
+        AgentPreparationOperation.Job j=new AgentPreparationOperation.Job(RuntimeEnvironment.application,profile("claude"),(c,s)->ready(),(c,s,o)->ready());
+        j.output("STAGE:download-agent-component");j.output("COMPONENT:claude-cli");assertEquals("claude-cli",j.component);assertEquals(-1,j.percent);
+        j.output("COMPONENT:SYNTHETIC_SECRET");assertEquals("claude-cli",j.component);
+        j.output("STAGE:retry-agent-component");assertEquals("",j.component);
+        j.output("ERROR:COMPONENT_DOWNLOAD_TIMEOUT");assertEquals("COMPONENT_DOWNLOAD_TIMEOUT",j.error);
+        j.output("ERROR:SYNTHETIC_SECRET");assertEquals("COMPONENT_DOWNLOAD_TIMEOUT",j.error);
+        assertFalse(AgentPreparationOutput.description(j.error,false).isEmpty());assertFalse(AgentPreparationOutput.description(j.error,true).isEmpty());
+    }
     @Test public void allFourAgentsShareUbuntuButKeepIndividualJobKeys(){
         java.util.Set<String> keys=new java.util.HashSet<>();for(String a:new String[]{"codex","claude","gemini","opencode"}){WorkspaceStore.Session p=profile(a);assertTrue(AgentPreparation.supports(p));assertEquals("ubuntu-ai",AgentEnvironments.alias(p));keys.add(AgentPreparationOperation.key(p));}assertEquals(4,keys.size());
     }

@@ -1,5 +1,11 @@
 # Unreleased
 
+- Bound managed agent CLI/Node/Cloud archive downloads: 45-second connect and
+  180-second low-speed checks, two-hour attempt ceiling, at most three attempts
+  and fixed backoff. Preserve URLs/SHA checks and wait for owned-child exit before
+  releasing preparation; window closing still does not cancel preparation.
+  These limits do not cover the entire environment setup.
+
 - Agent preparation: discard arbitrary stdout/stderr after bounded streaming
   parsing; retain only allowlisted stages/components, measured image progress,
   exit codes and safe RU/EN errors. Remove the expandable preparation log and

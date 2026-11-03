@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Compile current production preparation code; use synthetic Android/tool boundaries only."""
 from pathlib import Path
-import json,subprocess
-REPO=Path(__file__).resolve().parents[2];BASE=REPO/'.verification/preparation-structured-status';root=BASE/'fixtures/prepare-pipeline';src=root/'stubs';classes=root/'classes';prefix=root/'prefix';files=root/'files';tmp=root/'tmp'
+import json,subprocess,tempfile
+REPO=Path(__file__).resolve().parents[2];BASE=REPO/'.verification/preparation-structured-status';BASE.mkdir(parents=True,exist_ok=True);root=Path(tempfile.mkdtemp(prefix='prepare-pipeline-',dir=BASE));src=root/'stubs';classes=root/'classes';prefix=root/'prefix';files=root/'files';tmp=root/'tmp'
 for p in (src,classes,prefix/'bin',files/'.agent-preparation',tmp):p.mkdir(parents=True,exist_ok=True)
 def write(name,text):
  p=src/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(text)

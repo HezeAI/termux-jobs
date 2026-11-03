@@ -18,6 +18,21 @@ unchanged. This intentionally reduces diagnostic detail: package-manager output,
 tracebacks and arbitrary network/error responses are no longer available here.
 Read the [validation and scope](VALIDATION-preparation-structured-status.md).
 
+## Unreleased: bounded component transfers
+
+CLI, Node and Cloud CLI archives use one synchronous downloader across all four
+agents. Connection limit: 45 seconds; low-speed threshold: 1 byte/s for 180 seconds;
+per-attempt deadline: two hours; at most three attempts with 2/4-second pauses.
+The sum of transfer deadlines is six hours plus six seconds of backoff. This is
+not a timeout for APT, extraction, CLI checks, cleanup or the whole preparation.
+Two hours is a conservative allowance for slow mobile transfers, not a device-
+validated optimum. A progressing transfer can still reach that hard ceiling.
+
+The shared queue only advances after the owned shell exits and its stream reaches
+EOF. Closing the dialog does not cancel installation. Errors remain fixed typed
+records, and original URLs/versions/SHA checks and existing installations are
+preserved. See [validation and exact policy](VALIDATION-preparation-download-bounds.md).
+
 ## v2.1.2: shared Ubuntu AI and retained bindings
 
 New AI Agents sessions use Ubuntu AI. Their form explains that Termux supplies

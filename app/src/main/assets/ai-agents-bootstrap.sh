@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Private runtimes only. Invoked in the selected Ubuntu when the user launches OpenCode.
+source "${BASH_SOURCE[0]%/*}/agent-download.sh" || return $?
 set -euo pipefail
     if declare -F jobs_agent_stage >/dev/null;then jobs_agent_stage installing-components;fi
 jobs_ai_prepare() {
@@ -39,7 +40,7 @@ jobs_ai_prepare() {
         trap "rm -rf -- $(printf '%q' "$jobs_download_dir")" EXIT
         if ((jobs_need_node)); then
             jobs_ai_status 'Установка отдельного Node.js…' 'Installing a private Node.js runtime…'
-            curl --fail --location --connect-timeout 20 --max-time 600 --retry 2 --output "$jobs_download_dir/node.tar.xz" "https://nodejs.org/dist/v22.22.1/$jobs_node_name.tar.xz"
+            jobs_agent_download node "$jobs_download_dir/node.tar.xz" "https://nodejs.org/dist/v22.22.1/$jobs_node_name.tar.xz"
             printf '%s  %s\n' "$jobs_node_sha" "$jobs_download_dir/node.tar.xz" | sha256sum -c -
             tar -xJf "$jobs_download_dir/node.tar.xz" -C "$jobs_download_dir"
             "$jobs_download_dir/$jobs_node_name/bin/node" -e 'if(Number(process.versions.node.split(".")[0])<20)process.exit(1)'
@@ -49,7 +50,7 @@ jobs_ai_prepare() {
         fi
         if ((jobs_need_oc)); then
             jobs_ai_status 'Установка OpenCode v2.0.28…' 'Installing OpenCode v2.0.28…'
-            curl --fail --location --connect-timeout 20 --max-time 900 --retry 2 --output "$jobs_download_dir/opencode.tgz" 'https://registry.npmjs.org/@opencode/cli-linux-arm64/-/cli-linux-arm64-2.0.28.tgz'
+            jobs_agent_download opencode-cli "$jobs_download_dir/opencode.tgz" 'https://registry.npmjs.org/@opencode/cli-linux-arm64/-/cli-linux-arm64-2.0.28.tgz'
             printf '%s  %s\n' "$jobs_oc_sha" "$jobs_download_dir/opencode.tgz" | sha256sum -c -
             tar -xzf "$jobs_download_dir/opencode.tgz" -C "$jobs_download_dir"
             [[ "$("$jobs_download_dir/package/bin/opencode" --version)" == 'opencode v2.0.28' ]]

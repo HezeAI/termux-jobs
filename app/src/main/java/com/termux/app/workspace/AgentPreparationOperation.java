@@ -39,7 +39,7 @@ final class AgentPreparationOperation {
             String nextStage=AgentPreparationOutput.stage(raw),nextError=AgentPreparationOutput.error(raw);
             if(!nextStage.isEmpty()){stage=nextStage;percent=-1;received=total=0;component="";}
             else if(!nextError.isEmpty())error=nextError;
-            else if(raw.startsWith("READY:")||raw.startsWith("MISSING:")){
+            else if(raw.startsWith("READY:")||raw.startsWith("MISSING:")||raw.startsWith("COMPONENT:")){
                 String id=raw.substring(raw.indexOf(':')+1);if(AgentPreparation.COMPONENTS.contains(id))component=id;
             }else {
                 Matcher m=IMAGE.matcher(raw);if(m.matches())try{
@@ -112,6 +112,8 @@ final class AgentPreparationOperation {
         if(stage.equals("download")||stage.equals("STAGE:download-pinned-ubuntu-ai")||stage.equals("STAGE:download-pinned-ubuntu"))return title(c,"Скачивание базового образа Ubuntu AI","Downloading Ubuntu AI base image");
         if(stage.startsWith("STAGE:")){EnvironmentInstallProgress p=new EnvironmentInstallProgress();p.line=stage;return p.displayLine(ru);}
         switch(stage){
+            case "STAGE:download-agent-component":return title(c,"Загрузка компонента агента","Downloading agent component");
+            case "STAGE:retry-agent-component":return title(c,"Повтор загрузки компонента","Retrying component download");
             case "failed-ubuntu":return title(c,"Этап: подготовка Ubuntu","Stage: Ubuntu preparation");
             case "failed-components":return title(c,"Этап: компоненты агента","Stage: agent components");
             case "failed-cli":return title(c,"Этап: проверка CLI","Stage: CLI startup check");

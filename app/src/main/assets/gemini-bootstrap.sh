@@ -1,5 +1,6 @@
 #!/bin/bash
 # Sourced only by a user-created Gemini session in Ubuntu. No system installation.
+source "${BASH_SOURCE[0]%/*}/agent-download.sh" || return $?
 _jobs_gemini_prepare() (
     set -euo pipefail
     if declare -F jobs_agent_stage >/dev/null;then jobs_agent_stage installing-components;fi
@@ -18,7 +19,7 @@ _jobs_gemini_prepare() (
     binary="$root/$version/bundle/gemini.js"
     if [ ! -e "$root/$version" ]; then
         say 'Установка Gemini CLI…' 'Installing Gemini CLI…'
-        curl --fail --location --proto '=https' --tlsv1.2 --retry 2 -o "$stage/gemini.tgz" 'https://registry.npmjs.org/@google/gemini-cli/-/gemini-cli-0.64.0.tgz'
+        jobs_agent_download gemini-cli "$stage/gemini.tgz" 'https://registry.npmjs.org/@google/gemini-cli/-/gemini-cli-0.64.0.tgz'
         printf '%s  %s\n' 891a794e55c8319b6b78f6f8f13d6b8b2782a4709dfd2fcabf3a1f63ae8365e6 "$stage/gemini.tgz" | sha256sum -c - >/dev/null
         mkdir "$stage/runtime"
         tar -xzf "$stage/gemini.tgz" --no-same-owner -C "$stage/runtime" --strip-components=1
@@ -34,7 +35,7 @@ _jobs_gemini_prepare() (
         node="$root/node-v22.22.1-linux-arm64/bin/node"
         if [ ! -e "$root/node-v22.22.1-linux-arm64" ]; then
             say 'Установка компонента управления Gemini…' 'Installing the Gemini session controller…'
-            curl --fail --location --proto '=https' --tlsv1.2 --retry 2 -o "$stage/node.tar.xz" 'https://nodejs.org/dist/v22.22.1/node-v22.22.1-linux-arm64.tar.xz'
+            jobs_agent_download node "$stage/node.tar.xz" 'https://nodejs.org/dist/v22.22.1/node-v22.22.1-linux-arm64.tar.xz'
             printf '%s  %s\n' 0f3550d58d45e5d3cf7103d9e3f69937f09fe82fb5dd474c66a5d816fa58c9ee "$stage/node.tar.xz" | sha256sum -c - >/dev/null
             tar -xJf "$stage/node.tar.xz" --no-same-owner -C "$stage"
             mv "$stage/node-v22.22.1-linux-arm64" "$root/"
