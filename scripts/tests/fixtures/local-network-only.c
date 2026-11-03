@@ -65,11 +65,13 @@ static int equal_address(const struct listener *p,const struct sockaddr_storage 
 }
 static int install(void){
  #define TRAP(n) BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K,n,0,1),BPF_STMT(BPF_RET|BPF_K,SECCOMP_RET_USER_NOTIF)
+ #define NO_FASTOPEN(n,arg) BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K,n,0,4),BPF_STMT(BPF_LD|BPF_W|BPF_ABS,offsetof(struct seccomp_data,args[arg])),BPF_JUMP(BPF_JMP|BPF_JSET|BPF_K,MSG_FASTOPEN,0,1),BPF_STMT(BPF_RET|BPF_K,SECCOMP_RET_ERRNO|EPERM),BPF_STMT(BPF_LD|BPF_W|BPF_ABS,offsetof(struct seccomp_data,nr))
  #define DENY(n) BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K,n,0,1),BPF_STMT(BPF_RET|BPF_K,SECCOMP_RET_ERRNO|EPERM)
  struct sock_filter filter[]={
  BPF_STMT(BPF_LD|BPF_W|BPF_ABS,offsetof(struct seccomp_data,arch)),BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K,GUARD_ARCH,1,0),BPF_STMT(BPF_RET|BPF_K,SECCOMP_RET_KILL_PROCESS),
  BPF_STMT(BPF_LD|BPF_W|BPF_ABS,offsetof(struct seccomp_data,nr)),TRAP(__NR_socket),TRAP(__NR_connect),TRAP(__NR_bind),TRAP(__NR_socketpair),TRAP(__NR_setsockopt),
- DENY(__NR_io_uring_setup),DENY(__NR_bpf),
+ NO_FASTOPEN(__NR_sendto,3),NO_FASTOPEN(__NR_sendmsg,2),NO_FASTOPEN(__NR_sendmmsg,3),
+ DENY(__NR_io_uring_setup),DENY(__NR_bpf),DENY(__NR_ptrace),DENY(__NR_process_vm_readv),DENY(__NR_process_vm_writev),DENY(__NR_pidfd_getfd),
  BPF_STMT(BPF_RET|BPF_K,SECCOMP_RET_ALLOW)};
  struct sock_fprog p={.len=sizeof(filter)/sizeof(filter[0]),.filter=filter};if(prctl(PR_SET_NO_NEW_PRIVS,1,0,0,0))return -1;return syscall(__NR_seccomp,SECCOMP_SET_MODE_FILTER,SECCOMP_FILTER_FLAG_NEW_LISTENER,&p);
 }
@@ -78,7 +80,7 @@ static void handle(int listener,struct seccomp_notif *q){
  struct seccomp_notif_resp r={.id=q->id,.error=-EPERM};int nr=q->data.nr;
  if(nr==__NR_socket){
   int family=q->data.args[0],type=q->data.args[1],protocol=q->data.args[2],base=type&~(SOCK_CLOEXEC|SOCK_NONBLOCK);
-  if((family==AF_INET||family==AF_INET6||family==AF_UNIX)&&base==SOCK_STREAM&&socket_count<8192){
+  if(((family==AF_UNIX&&protocol==0)||((family==AF_INET||family==AF_INET6)&&(protocol==0||protocol==IPPROTO_TCP)))&&base==SOCK_STREAM&&socket_count<8192){
    int fd=socket(family,type,protocol);if(fd<0){r.error=-errno;goto answer;}
    struct stat st;if(fstat(fd,&st)){close(fd);goto answer;}
    struct seccomp_notif_addfd add={.id=q->id,.flags=SECCOMP_ADDFD_FLAG_SEND,.srcfd=fd,.newfd_flags=type&SOCK_CLOEXEC?O_CLOEXEC:0};int childfd=ioctl(listener,SECCOMP_IOCTL_NOTIF_ADDFD,&add);
@@ -92,7 +94,7 @@ static void handle(int listener,struct seccomp_notif *q){
  }else if(nr==__NR_setsockopt){
   /* Only immutable numeric arguments decide this exception; never route options. */
   int level=q->data.args[1],option=q->data.args[2];
-  if(level!=IPPROTO_IP&&(level!=IPPROTO_IPV6||option==IPV6_V6ONLY)){r.error=0;r.flags=SECCOMP_USER_NOTIF_FLAG_CONTINUE;}else event("routing-option-denied",nr,EPERM);
+  if(level!=IPPROTO_IP&&(level!=IPPROTO_IPV6||option==IPV6_V6ONLY)&&!(level==IPPROTO_TCP&&(option==23||option==30))){r.error=0;r.flags=SECCOMP_USER_NOTIF_FLAG_CONTINUE;}else event("routing-option-denied",nr,EPERM);
  }else{
   struct sockaddr_storage address;socklen_t length;int fd=known_socket(q->pid,(int)q->data.args[0]);
   if(fd<0||copy_address(q,&address,&length)||!loopback(&address,length)){event("address-denied",nr,EPERM);goto answer;}

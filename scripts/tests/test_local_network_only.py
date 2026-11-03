@@ -42,6 +42,20 @@ if '--child' in sys.argv:
             assert error.errno == errno.EPERM
         result[name] = 'EPERM'
     try:
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM, 132)  # SCTP cannot add unmediated connect paths.
+        raise AssertionError('non-TCP stream escaped')
+    except OSError as error:
+        assert error.errno == errno.EPERM
+    result['non_tcp_stream'] = 'EPERM'
+    probe = socket.socket()
+    try:
+        probe.setsockopt(socket.IPPROTO_TCP, 30, 1)  # TCP_FASTOPEN_CONNECT
+        raise AssertionError('deferred connect escaped')
+    except OSError as error:
+        assert error.errno == errno.EPERM
+    probe.close()
+    result['deferred_connect'] = 'EPERM'
+    try:
         probe = socket.socket(socket.AF_INET6)
     except OSError as error:
         assert error.errno in (errno.EAFNOSUPPORT, errno.EPROTONOSUPPORT)
@@ -59,6 +73,18 @@ if '--child' in sys.argv:
     assert library.syscall(connect_nr, fd, ctypes.byref(address), 16) == -1
     assert ctypes.get_errno() == errno.EPERM
     os.close(fd)
+    fast_fd = library.syscall(socket_nr, socket.AF_INET, socket.SOCK_STREAM, 0)
+    assert fast_fd >= 0
+    payload = ctypes.create_string_buffer(b'SYNTHETIC')
+    sendto_nr, sendmsg_nr, sendmmsg_nr = (206, 211, 269) if platform.machine() == 'aarch64' else (44, 46, 307)
+    assert library.syscall(sendto_nr, fast_fd, ctypes.byref(payload), 1, 0x20000000, ctypes.byref(address), 16) == -1
+    assert ctypes.get_errno() == errno.EPERM
+    assert library.syscall(sendmsg_nr, fast_fd, None, 0x20000000) == -1
+    assert ctypes.get_errno() == errno.EPERM
+    assert library.syscall(sendmmsg_nr, fast_fd, None, 0, 0x20000000) == -1
+    assert ctypes.get_errno() == errno.EPERM
+    os.close(fast_fd)
+    result['send_fastopen'] = 'EPERM'
     result['raw_syscall'] = 'EPERM'
     subprocess.run([sys.executable, __file__, '--grandchild'], check=True, timeout=5)
     result['exec_inheritance'] = 'blocked'
