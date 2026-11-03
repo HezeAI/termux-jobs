@@ -1,5 +1,17 @@
 # Unreleased
 
+- Docs: put release highlights and Download APK first, followed by requirements
+  and compatibility; fold CI history and technical evidence into details.
+
+- Docs: distinguish internal debug CI/tests from the release build and final
+  signed APK verification; no debug APK is required as a release asset.
+
+- CI: prepare verified pinned X11 inputs on clean GitHub runners; preserve the
+  mandatory hash guard and allow explicit checks of older source commits with
+  separately recorded workflow identity. See [CI inputs](docs/fork/CI-X11.md).
+
+# 2026-11-03 — 2.1.3-test1 (versionCode 1477)
+
 - Agent chat: extend messages behind a transparent composer row; arrange the
   existing star / paperclip buttons horizontally with independent ripple targets.
   Keep the field background, Send on the right, dynamic bottom scroll clearance,
@@ -24,15 +36,13 @@
   new operation-log writes; preserve old files, chat/terminal/CLI histories.
   Inventory checks also discard raw failure reports. Explicit retry remains.
 
-- Docs: put release highlights and Download APK first, followed by requirements
-  and compatibility; fold CI history and technical evidence into details.
+- Private release test APK, same com.termux package/public certificate and storage
+  schema. Existing environments, credentials, history and agent permission settings
+  are not migrated or reset. No automatic session restart or old-log cleanup.
+- Limits: real installation, Android UI/IME/transparent drawing and production-length
+  mobile-network timers remain separate phone checks. No independent audit claimed.
 
-- Docs: distinguish internal debug CI/tests from the release build and final
-  signed APK verification; no debug APK is required as a release asset.
-
-- CI: prepare verified pinned X11 inputs on clean GitHub runners; preserve the
-  mandatory hash guard and allow explicit checks of older source commits with
-  separately recorded workflow identity. See [CI inputs](docs/fork/CI-X11.md).
+[Validation and phone plan](docs/fork/VALIDATION-2.1.3-test1.md)
 
 # 2026-11-03 — v2.1.2 (versionCode 1476)
 
