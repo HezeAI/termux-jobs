@@ -10,6 +10,24 @@
   mandatory hash guard and allow explicit checks of older source commits with
   separately recorded workflow identity. See [CI inputs](docs/fork/CI-X11.md).
 
+# 2026-11-03 — 2.1.3-test2 (versionCode 1478)
+
+- Preparation: show the actual Termux-package stage before installing proot-distro,
+  accept bounded prerequisite events, distinguish Ubuntu AI extraction from download,
+  and announce the final inventory check. Notify stage changes immediately; retain
+  the exact failed phase and the existing retry action. Use measured image bytes;
+  other phases stay indeterminate. No raw stdout/stderr capture or logs return.
+- Keep Gemini API and Vertex active preparations distinct while retaining the
+  single shared installation queue and per-operation duplicate protection.
+- Give only the horizontal star / paperclip group an opaque theme-colour fill.
+  Preserve independent ripple targets and transparency of the remaining composer.
+- Component versions/URLs/hashes, existing environments, permissions and histories
+  remain unchanged. Same package/signer; higher versionCode for a private release APK.
+- Checks use isolated artificial tools/workers, with no real package transactions
+  or new phone acceptance claimed. See the detailed matrix and remaining checks.
+
+[Validation and device plan](docs/fork/VALIDATION-2.1.3-test2.md)
+
 # 2026-11-03 — 2.1.3-test1 (versionCode 1477)
 
 - Agent chat: extend messages behind a transparent composer row; arrange the
