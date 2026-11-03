@@ -22,7 +22,7 @@ final class AgentComposerControls {
     private final Context context;
     AgentComposerControls(Context c,LinearLayout row,EditText input,TextView star,TextView send,View attachment){
         context=c;this.row=row;this.input=input;this.star=star;this.send=send;this.attachment=attachment;starBackground=star.getBackground();rowBackground=row.getBackground();baselineAligned=row.isBaselineAligned();
-        pair=new LinearLayout(c);pair.setTag("agent-composer-tools");pair.setOrientation(LinearLayout.HORIZONTAL);pair.setGravity(Gravity.CENTER_VERTICAL);pair.setBackground(shape(0x00000000,0xff365b52));
+        pair=new LinearLayout(c);pair.setTag("agent-composer-tools");pair.setOrientation(LinearLayout.HORIZONTAL);pair.setGravity(Gravity.CENTER_VERTICAL);pair.setBackground(shape(0xff0b1319,0xff365b52));
         labels();
     }
     void overlay(View host,java.util.function.IntConsumer update){
