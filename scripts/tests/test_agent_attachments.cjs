@@ -22,21 +22,22 @@ function stage(root,id,type='image'){
   const refs=[image,log,video,apk].map(a=>({id:a.id})),q={op:'chat-send',kind:'message',id:'msg_all',session:kind==='opencode'?'ses_test':session,text:'Review attachments',attachments:refs};
   let chat,received,counts=0;
   if(kind==='claude'){
-   chat=new ClaudeChat({socket:path.join(base,'s.sock'),binary:'/not-used',model:'sonnet',mode:'manual',chat:'new',thread:session,language:'en'});chat.ready=true;chat.auth=true;chat.workerKind='sdk';chat.write=m=>{counts++;received=m;};
+   chat=new ClaudeChat({socket:path.join(base,'s.sock'),binary:'/not-used',model:'sonnet',mode:'manual',chat:'new',thread:session,language:'en'});chat.ready=true;chat.auth=true;chat.workerKind='sdk';chat.write=m=>{counts++;received=m;chat.event({...m,isReplay:true});};
    assert((await chat.command(q)).ok);assert.equal(received.message.content.filter(b=>b.type==='image').length,3);assert.equal(received.message.content.filter(b=>b.type==='text').length,7);assert(!JSON.stringify(chat.snapshot()).includes(png.toString('base64')));
    const rows=chat.snapshot().rows;assert.equal(rows.filter(r=>r.kind==='attachment').length,4);assert(rows.some(r=>r.kind==='user'&&r.body==='Review attachments'));assert(rows.every(r=>chat.snapshot().knownMessages.includes(r.message)));
   }else if(kind==='gemini'){
    const config={isTrustedFolder:()=>true},api={attachmentRoot:base,session:()=>session,status:()=>({available:true,state:'idle'}),supported:()=>true,permission:()=>null,receipt:()=>null};chat=new GeminiChat(api);
    chat.observe(config,{ready:true,native:false,history:[],pending:[]},async value=>{counts++;received=value;},false,()=>{});
    assert((await chat.command(q)).ok);assert(received.includes('@'+image.modelPath));assert(received.includes('@'+video.frames[1].path));assert(received.includes('1000 ms'));assert(!received.includes('@'+apk.path));assert(received.includes('Sample ends'));
-   chat.observe(config,{ready:true,native:false,history:[{id:1,type:'user',text:received}],pending:[]},async()=>{},false,()=>{});const rows=chat.snapshot({}).rows;assert.equal(rows.filter(r=>r.kind==='attachment').length,4);assert.equal(rows.find(r=>r.kind==='user').body,'Review attachments');
+   chat.observe(config,{ready:true,native:false,history:[{id:1,type:'user',text:received,jobsClientIds:[q.id],jobsInputSession:session}],pending:[]},async()=>{},false,()=>{});const rows=chat.snapshot({}).rows;assert.equal(rows.filter(r=>r.kind==='attachment').length,4);assert.equal(rows.find(r=>r.kind==='user').body,'Review attachments');
   }else{
    chat=new OpenCodeChat(async(method,url,payload)=>{if(method==='POST'){counts++;received=payload;return {};}throw Error('No network in fixture');},'ses_test',path.join(base,'receipts.json'));
    assert((await chat.command(q)).accepted);assert.equal(received.files.length,3);assert(received.files.every(f=>f.uri.startsWith('file:///')));assert(received.text.includes(apk.path));
    const rows=chat.rows([{id:q.id,type:'user',text:received.text}]);assert.equal(rows.filter(r=>r.kind==='attachment').length,4);assert.equal(rows.find(r=>r.kind==='user').body,'Review attachments');assert(rows.every(r=>r.message===q.id));
   }
-  await chat.command(q);assert.equal(counts,1);await assert.rejects(()=>chat.command({...q,attachments:[refs[0]]}));
-  for(const bad of [[null],[refs[0],refs[0]],Array(5).fill(refs[0]),[{id:'../secret'}]])await assert.rejects(()=>chat.command({...q,id:'msg_bad_'+(++serial),attachments:bad}));
+  const rejected=async request=>{let result;try{result=await chat.command(request);}catch{return;}assert(result?.ok===false||result?.accepted===false,'Expected throw or explicit native rejection');};
+  await chat.command(q);assert.equal(counts,1);await rejected({...q,attachments:[refs[0]]});
+  for(const bad of [[null],[refs[0],refs[0]],Array(5).fill(refs[0]),[{id:'../secret'}]])await rejected({...q,id:'msg_bad_'+(++serial),attachments:bad});
   const shellReply=await chat.command({...q,id:'msg_shell',kind:'shell'}).catch(()=>null);assert(!shellReply||shellReply.ok===false);assert.equal(counts,1);
   // The same staged IDs are not admissible to a different native thread.
   const own=chat.attachments;assert.throws(()=>own.prepare(refs,'other-session','message'));

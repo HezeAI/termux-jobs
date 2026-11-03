@@ -1,0 +1,22 @@
+[
+  {
+    "path": "/usr/local/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/bin/codex",
+    "version": "0.166.0",
+    "sha256": "f2e6c980c937e734644bed1b4a9a018d3e63a0ccbe71aafc85c86a8c6e4b462a"
+  },
+  {
+    "path": ".tools/claude-code/claude",
+    "version": "2.1.296",
+    "sha256": "f1f6e96e0d8342b9dbf41d7e88255397a6a52ce3d8736ad6a4c6b59c9b62fefa"
+  },
+  {
+    "path": ".tools/ai-agents/runtime/opencode",
+    "version": "2.0.28",
+    "sha256": "3549c97d73c8046fe06eecd35ce8c928fc8f45e1eae3e4bf017430c168ba04c9"
+  },
+  {
+    "path": "/root/.local/share/termux-jobs/gemini-cli/0.64.0/bundle/chunk-NR7L3FXV.js",
+    "version": "0.64.0",
+    "sha256": "d566e81b1df8d4d44a91bf7aeea96a58ec0e6c8934fa424315ef060507dcbb8c"
+  }
+]
