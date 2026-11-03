@@ -20,6 +20,8 @@ class EnvironmentRuntimeTests(unittest.TestCase):
         self.log = self.root / 'calls'
         self.runtime=self.root/'runtime.sh';self.runtime.write_bytes(SCRIPT.read_bytes())
         (self.root/'environment-image.py').write_text("import os,sys\nfrom pathlib import Path\na=sys.argv[1];key='ubuntu' if a in ('ubuntu-ai','jobs-x11-ubuntu') else a\np=Path(os.environ['PREFIX']).parent/(key+'-pinned.tar')\np.write_text('verified fixture')\nwith open(os.environ['FIXTURE_LOG'],'a') as f:f.write('IMAGE:'+key+'\\n')\nprint(p)\n")
+        # Stub only the pinned install boundary; the real bundled CLI is tested separately.
+        (self.root/'ubuntu-ai-installer.py').write_text("import os,sys,subprocess\nassert sys.argv[1]=='install' and sys.argv[3:]==['--name','ubuntu-ai']\nwith open(os.environ['FIXTURE_LOG'],'a') as f:f.write('PINNED:5.9.0:'+sys.argv[2]+'\\n')\nraise SystemExit(subprocess.call(['proot-distro',*sys.argv[1:]]))\n")
         self.downloads=self.root/'downloads'
         self.env = dict(os.environ, PREFIX=str(self.prefix), PATH=str(self.prefix / 'bin') + ':/usr/bin:/bin', FIXTURE_LOG=str(self.log), JOBS_ENVIRONMENT_DOWNLOAD_DIR=str(self.downloads), JOBS_ENVIRONMENT_DOWNLOADER=str(self.root/"no-downloader.py"))
         self.stub('proot-distro', '''printf '%s\\n' "$*" >> "$FIXTURE_LOG"
@@ -125,7 +127,7 @@ printf 'SHA256\\n' >> "$FIXTURE_LOG"
         result=self.run_helper('install','ubuntu-ai')
         self.assertEqual(0,result.returncode,result.stderr)
         self.assertIn('READY:shell',result.stdout)
-        self.assertEqual(['install --help','install ubuntu --name ubuntu-ai'],self.log.read_text().splitlines())
+        self.assertEqual(['install --help','IMAGE:ubuntu','PINNED:5.9.0:'+str(self.root/'ubuntu-pinned.tar'),'install '+str(self.root/'ubuntu-pinned.tar')+' --name ubuntu-ai'],self.log.read_text().splitlines())
         self.assertFalse((self.prefix/'var/lib/proot-distro/containers/ubuntu').exists())
 
     def test_existing_agent_ubuntu_is_never_replaced(self):
@@ -210,7 +212,7 @@ printf 'SHA256\\n' >> "$FIXTURE_LOG"
         for alias in ['ubuntu','ubuntu-ai','debian','alpine','fedora','opensuse','void','archlinux','kali','manjaro']:
             result=self.run_helper('install',alias);self.assertEqual(0,result.returncode,alias+result.stderr);self.assertIn('READY:shell',result.stdout)
             key='ubuntu' if alias=='ubuntu-ai' else alias
-            expected='install ubuntu --name ubuntu-ai' if alias=='ubuntu-ai' else 'install '+str(self.root/(key+'-pinned.tar'))+' --name '+alias
+            expected='install '+str(self.root/'ubuntu-pinned.tar')+' --name ubuntu-ai' if alias=='ubuntu-ai' else 'install '+str(self.root/(key+'-pinned.tar'))+' --name '+alias
             self.assertIn(expected,self.log.read_text())
         self.assertIn('login manjaro -- /bin/sh -s',self.log.read_text());self.assertIn('login archlinux -- /bin/sh -s',self.log.read_text());self.assertNotIn('PKG:',self.log.read_text())
 

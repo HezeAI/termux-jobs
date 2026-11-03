@@ -42,6 +42,15 @@ public class AgentChatViewTest {
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});v.rows(Arrays.asList(row("hint","info","This request failed. Press F12 for diagnostics, or run /settings and change \"Error Verbosity\" to full for full details.")),false);String shown=((TextView)v.timeline.getChildAt(1)).getText().toString();assertFalse(shown.contains("F12"));assertTrue(shown.contains("подробности")||shown.contains("details"));
  }
 
+ @Test public void olderPageKeepsAnchorOffsetThroughStreamingAndReopeningForBothAgents()throws Exception{
+  for(String agent:new String[]{"Claude","Codex"}){
+   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);v.assistantName(agent);v.scale(150);
+   List<JSONObject> rows=new ArrayList<>();for(int n=0;n<45;n++)rows.add(row("current-"+n,"text","line "+n+"\nsecond line\nthird line"));v.rows(rows,true);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();v.scroll.scrollTo(0,700);AgentChatView.Position before=v.position();assertFalse(before.bottom);assertNotNull(before.anchor);
+   List<JSONObject> expanded=new ArrayList<>();for(int n=0;n<35;n++)expanded.add(row("old-"+n,"text","previous message "+n+"\nextra line"));expanded.addAll(rows);v.olderRows(expanded,true);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();AgentChatView.Position after=v.position();assertEquals(before.anchor,after.anchor);assertEquals(before.offset,after.offset);
+   expanded.get(expanded.size()-1).put("body","response keeps growing\nnew text");v.rows(expanded,true);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();assertEquals(before.anchor,v.position().anchor);assertEquals(before.offset,v.position().offset);
+   AgentChatView.Position saved=v.position();v.clear();v.rows(expanded,true);v.restorePosition(saved);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();assertEquals(before.anchor,v.position().anchor);assertEquals(before.offset,v.position().offset);a.finish();
+  }
+ }
  @Test public void cachedPositionSurvivesClearRepopulateAndLaterTextUpdates()throws Exception{
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);
   List<JSONObject> rows=new ArrayList<>();for(int i=0;i<40;i++)rows.add(row("r"+i,"text","line "+i+"\nextra line\nmore"));v.rows(rows,false);layout(v);v.scroll.scrollTo(0,600);AgentChatView.Position p=v.position();int y=v.scroll.getScrollY();assertTrue(y>0);assertFalse(p.bottom);
@@ -58,12 +67,12 @@ public class AgentChatViewTest {
  @Test public void firstDrawAfterMessageGrowthAlreadyHasFinalScrollWithoutRunningPostedTasks()throws Exception{
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);
   List<JSONObject> rows=new ArrayList<>();for(int i=0;i<30;i++)rows.add(row("r"+i,"text","line "+i+"\nmore"));v.rows(rows,false);layout(v);
-  v.shellEnabled(true);v.shellInput.requestFocus();v.shellInput.setText("draft");
+  android.widget.EditText input=new android.widget.EditText(a);v.addView(input);input.requestFocus();input.setText("draft");
   for(String kind:new String[]{"user","text","tool"}){
    rows.add(row("new-"+kind,kind,"new content\nline2\nline3\nline4"));v.rows(rows,false);
    v.measure(View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(700,View.MeasureSpec.EXACTLY));v.layout(0,0,600,700);
    v.scroll.getViewTreeObserver().dispatchOnPreDraw();
-   assertEquals(kind,v.timeline.getHeight()-v.scroll.getHeight(),v.scroll.getScrollY());assertTrue(v.shellInput.hasFocus());assertEquals("draft",v.shellInput.getText().toString());
+   assertEquals(kind,v.timeline.getHeight()-v.scroll.getHeight(),v.scroll.getScrollY());assertTrue(input.hasFocus());assertEquals("draft",input.getText().toString());
   }
  }
  @Test public void manualTouchCancelsPendingAutomaticScrollBeforeFirstDraw()throws Exception{
@@ -76,8 +85,8 @@ public class AgentChatViewTest {
  @Test public void attachmentCardsKeepIdentityFocusAndTheirOwnOpenTarget()throws Exception{
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AtomicReference<JSONObject> opened=new AtomicReference<>();AgentChatView v=new AgentChatView(a,opened::set,()->{},()->{},()->{},()->{});a.setContentView(v);
   JSONObject attachment=row("file","attachment","report.log").put("attachment",new JSONObject().put("type","file").put("name","report.log").put("path","/tmp/report.log"));JSONObject answer=row("reply","text","first");v.rows(Arrays.asList(attachment,answer),false);layout(v);View card=v.timeline.getChildAt(1);card.performClick();assertSame(attachment,opened.get());
-  v.shellEnabled(true);v.shellInput.setText("keep draft");v.shellInput.requestFocus();answer.put("body","streamed");v.rows(Arrays.asList(attachment,answer),false);layout(v);assertSame(card,v.timeline.getChildAt(1));assertTrue(v.shellInput.hasFocus());assertEquals("keep draft",v.shellInput.getText().toString());
-  v.shellEnabled(false);v.attachmentPicker(true);assertEquals(View.VISIBLE,v.folder.getVisibility());assertTrue(v.folder.isEnabled());assertFalse(v.shellInput.isEnabled());v.attachmentPicker(false);assertEquals(View.GONE,v.folder.getVisibility());
+  android.widget.EditText input=new android.widget.EditText(a);v.addView(input);input.setText("keep draft");input.requestFocus();answer.put("body","streamed");v.rows(Arrays.asList(attachment,answer),false);layout(v);assertSame(card,v.timeline.getChildAt(1));assertTrue(input.hasFocus());assertEquals("keep draft",input.getText().toString());
+  input.setEnabled(false);v.attachmentPicker(true);assertEquals(View.VISIBLE,v.folder.getVisibility());assertTrue(v.folder.isEnabled());assertFalse(input.isEnabled());v.attachmentPicker(false);assertEquals(View.GONE,v.folder.getVisibility());
  }
 
  @Test public void apkCardPlacesBadgeLeftAndMetadataRightWithoutReplacingComposer()throws Exception{
@@ -101,6 +110,11 @@ public class AgentChatViewTest {
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);
   JSONObject answer=row("answer","text","Read [docs](https://example.org/docs)");v.rows(Arrays.asList(answer),false);TextView plain=(TextView)v.timeline.getChildAt(1);
   assertNotNull(plain.getMovementMethod());assertTrue(plain.getText() instanceof android.text.Spanned);android.text.Spanned rendered=(android.text.Spanned)plain.getText();android.text.style.ClickableSpan[] links=rendered.getSpans(0,rendered.length(),android.text.style.ClickableSpan.class);assertEquals(1,links.length);links[0].onClick(plain);assertNull(Shadows.shadowOf(a).getNextStartedActivity());android.app.AlertDialog linkPreview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(linkPreview);assertTrue(linkPreview.isShowing());linkPreview.dismiss();
-  answer.put("body","## Ready\n\n```python\nprint(1)");v.rows(Arrays.asList(answer),false);View rich=v.timeline.getChildAt(1);assertTrue(rich instanceof AgentMarkdownView);View heading=((android.view.ViewGroup)rich).getChildAt(1);v.shellEnabled(true);v.shellInput.setText("new draft");v.shellInput.requestFocus();answer.put("body","## Ready\n\n```python\nprint(12)\n```");v.rows(Arrays.asList(answer),false);layout(v);assertSame(rich,v.timeline.getChildAt(1));assertSame(heading,((android.view.ViewGroup)rich).getChildAt(1));assertTrue(v.shellInput.hasFocus());assertEquals("new draft",v.shellInput.getText().toString());
+  answer.put("body","## Ready\n\n```python\nprint(1)");v.rows(Arrays.asList(answer),false);View rich=v.timeline.getChildAt(1);assertTrue(rich instanceof AgentMarkdownView);View heading=((android.view.ViewGroup)rich).getChildAt(1);android.widget.EditText input=new android.widget.EditText(a);v.addView(input);input.setText("new draft");input.requestFocus();answer.put("body","## Ready\n\n```python\nprint(12)\n```");v.rows(Arrays.asList(answer),false);layout(v);assertSame(rich,v.timeline.getChildAt(1));assertSame(heading,((android.view.ViewGroup)rich).getChildAt(1));assertTrue(input.hasFocus());assertEquals("new draft",input.getText().toString());
+ }
+ @Test public void transcriptAndAttachmentsHaveNoVoiceStatusOrOverlayClearance(){
+  Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);TextView file=new TextView(a);file.setText("attachment.txt");v.attachmentDrafts.addView(file);v.attachmentDrafts.setVisibility(View.VISIBLE);
+  for(int scale:new int[]{50,100,150}){v.scale(scale);layout(v);assertEquals(0,v.attachmentDrafts.getPaddingRight());assertNull(v.findViewWithTag("agent-voice-status"));assertNull(v.findViewWithTag("agent-voice-scroll-clearance"));v.clear();assertEquals(3,v.timeline.getChildCount());}
+  a.finish();
  }
 }

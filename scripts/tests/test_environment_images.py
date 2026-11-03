@@ -66,5 +66,5 @@ class Images(unittest.TestCase):
    m.main();self.assertIn('/ubuntu/image.tar',str(fetch.call_args.args[0]))
   other=self.base/'other/.environment-control';other.mkdir(parents=True)
   with patch.dict(os.environ,{'PREFIX':str(prefix),'JOBS_ENVIRONMENT_DOWNLOAD_DIR':str(other)}),patch.object(m.sys,'argv',['helper','jobs-x11-ubuntu']),patch.object(m,'specs',return_value=rows),self.assertRaises(ValueError):m.main()
- def test_catalog_has_nine_bases_and_excludes_agent_ubuntu(self):
-  rows=m.specs();self.assertEqual({'ubuntu','debian','alpine','archlinux','fedora','opensuse','void','kali','manjaro'},set(rows));self.assertNotIn('ubuntu-ai',m.ALIASES);self.assertEqual(9,len({v[0] for v in rows.values()}))
+ def test_catalog_has_separate_pinned_agent_ubuntu(self):
+  rows=m.specs();self.assertEqual({'ubuntu-ai','ubuntu','debian','alpine','archlinux','fedora','opensuse','void','kali','manjaro'},set(rows));self.assertNotIn('ubuntu-ai',m.ALIASES);self.assertEqual(10,len({v[0] for v in rows.values()}));self.assertEqual("ubuntu-ai-base-arm64-20261102",m.RELEASES["ubuntu-ai"])

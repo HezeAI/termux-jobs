@@ -10,6 +10,97 @@ class Instructions(unittest.TestCase):
  def tearDown(self):self.binary_probe.stop();self.version_probe.stop();self.temp.cleanup()
  def read(self,**kw):return self.editor.call(dict(operation='read',**kw))
  def save(self,view,text,**kw):return self.editor.call(dict(operation='save',path=view['path'],revision=view['revision'],text=text,**kw))
+ def test_project_base_presence_is_independent_of_edit_target(self):
+  q=dict(scope='project',project=str(self.project),name='AGENTS.override.md')
+  (self.project/'AGENTS.override.md').write_text('override')
+  self.assertFalse(self.read(**q)['projectBaseExists'])
+  (self.project/'AGENTS.md').write_text('base')
+  self.assertTrue(self.read(**q)['projectBaseExists'])
+  self.assertEqual('override',(self.project/'AGENTS.override.md').read_text())
+  self.assertTrue(self.read(scope='project',project=str(self.project),name='AGENTS.md')['projectBaseExists'])
+ def test_memory_absent_read_does_not_create_or_enter_instruction_priority(self):
+  q=dict(scope='project',project=str(self.project),name='LEARNING.md')
+  v=self.read(**q);self.assertFalse(v['exists']);self.assertFalse(Path(v['path']).exists());self.assertFalse(v['active'])
+  self.assertIsNone(v['projectSource']);self.assertIsNone(v['maskedBy'])
+ def test_memory_create_replace_restore_conflict_separate_history(self):
+  q=dict(scope='project',project=str(self.project),name='LEARNING.md')
+  first=self.read(**q);one=self.save(first,'lesson one',**q);self.assertEqual('lesson one',one['text'])
+  stale=self.read(**q);two=self.save(one,'lesson two',**q)
+  with self.assertRaisesRegex(m.Refused,'EDIT_CONFLICT'):self.save(stale,'stale',**q)
+  h=self.editor.history(q)['history'];self.assertEqual(1,len(h));old=self.editor.previous(dict(q,id=h[0]['id']))['text'];self.assertEqual('lesson one',old)
+  self.save(two,old,**q);self.assertEqual([],self.editor.history(dict(q,name='AGENTS.md'))['history'])
+ def test_memory_explicit_reference_is_used_without_duplicate(self):
+  memory=self.root/'LEARNING.md';memory.write_text('shared lessons')
+  (self.project/'AGENTS.md').write_text('Memory: `'+str(memory)+'`')
+  q=dict(scope='project',project=str(self.project),name='LEARNING.md');v=self.read(**q)
+  self.assertEqual(str(memory),v['path']);self.save(v,'updated',**q);self.assertFalse((self.project/'LEARNING.md').exists())
+ def test_memory_chosen_file_and_override_are_independent(self):
+  memory=self.root/'LEARNING.md';memory.write_text('lessons')
+  (self.project/'AGENTS.override.md').write_text('priority')
+  q=dict(scope='project',project=str(self.project),name='LEARNING.md',memoryPath=str(memory))
+  v=self.read(**q);self.assertIsNone(v['maskedBy']);self.assertEqual(str(self.project/'AGENTS.override.md'),v['projectSource'])
+  self.save(v,'imported text',**q);self.assertEqual('priority',(self.project/'AGENTS.override.md').read_text())
+ def test_multiple_memory_references_require_selection(self):
+  (self.project/'AGENTS.md').write_text('`'+str(self.root/'LEARNING.md')+'` `'+str(self.project/'LEARNING.md')+'`')
+  with self.assertRaisesRegex(m.Refused,'MEMORY_PATH_REQUIRED'):self.read(scope='project',project=str(self.project),name='LEARNING.md')
+ def test_memory_relative_reference_does_not_execute_text(self):
+  (self.project/'AGENTS.md').write_text('Memory: `../LEARNING.md`\n$(touch SHOULD_NOT_EXIST)')
+  (self.root/'LEARNING.md').write_text('relative')
+  v=self.read(scope='project',project=str(self.project),name='LEARNING.md')
+  self.assertEqual(str(self.root/'LEARNING.md'),v['path']);self.assertEqual('relative',v['text']);self.assertFalse((self.project/'SHOULD_NOT_EXIST').exists())
+ def test_memory_explicit_target_must_not_be_an_auth_file(self):
+  with self.assertRaisesRegex(m.Refused,'INVALID_MEMORY_PATH'):
+   self.read(scope='project',project=str(self.project),name='LEARNING.md',memoryPath=str(self.root/'auth.json'))
+ def test_memory_reference_change_rejects_stale_target(self):
+  q=dict(scope='project',project=str(self.project),name='LEARNING.md');v=self.read(**q)
+  (self.project/'AGENTS.md').write_text('`'+str(self.root/'LEARNING.md')+'`')
+  with self.assertRaisesRegex(m.Refused,'SOURCE_CHANGED'):self.save(v,'draft',**q)
+  self.assertFalse((self.project/'LEARNING.md').exists())
+ def test_storage_addition_stops_before_memory_section(self):
+  self.template.write_text('## Хранение файлов и временных данных\nStorage\n\n## Память проекта — LEARNING.md\nMemory\n')
+  e=m.Editor(self.template,self.home,{})
+  self.assertIn('Storage',e.storage_addition);self.assertNotIn('Memory',e.storage_addition)
+ def test_current_localized_template_storage_preview_excludes_later_sections(self):
+  for filename in ['agent-instructions-ubuntu-ai.md','agent-instructions-ubuntu-ai.en.md']:
+   self.template.write_bytes((ROOT/'app/src/main/assets'/filename).read_bytes())
+   e=m.Editor(self.template,self.home,{})
+   section=e.view({})['storageAddition']
+   self.assertTrue(section.startswith('## '));self.assertIn('AGENTS.md',section)
+   for later in ['## Память проекта','## Project memory','## Организация проектной документации','## Project documentation organization']:
+    self.assertNotIn(later,section)
+   self.assertEqual(1,section.count('## '));self.assertFalse((self.home/'.codex').exists())
+ def test_localized_template_requires_reorganization_and_specific_obstacles(self):
+  assets=ROOT/'app/src/main/assets'
+  ru=(assets/'agent-instructions-ubuntu-ai.md').read_text();en=(assets/'agent-instructions-ubuntu-ai.en.md').read_text()
+  self.assertIn('20 480 байт',ru);self.assertIn('20,480 bytes',en)
+  for text in [ru,en]:
+   for old in ['30 КБ','30 720','30 KB','30,720','30720','либо укажи конкретную причину отсрочки','Perform a beneficial split or state a specific reason for deferral','Само превышение порога не требует разделения','Exceeding the threshold alone does not require splitting']:
+    self.assertNotIn(old,text)
+  self.assertIn('до завершения задачи выполни реорганизацию без отдельного согласования',ru);self.assertIn('reorganize it before completing the task, without separate approval',en)
+  self.assertIn('не более 15 360 байт',ru);self.assertIn('no more than 15,360 bytes',en)
+  self.assertIn('расположение LEARNING.md',ru);self.assertIn('LEARNING.md location',en)
+  self.assertIn('обязательно прочитать до соответствующей работы',ru);self.assertIn('must be read before the corresponding work',en)
+  self.assertIn('Не возвращай перенесённые разделы',ru);self.assertIn('Do not return relocated sections',en)
+  self.assertIn('Объяснение требуется только при препятствии',ru);self.assertIn('An explanation is required only if there is an obstacle',en)
+  self.assertIn('Сверка уникальных условий безопасности является частью этой работы',ru);self.assertIn('Reconciling unique safety conditions is part of this work',en)
+  self.assertIn('Не переноси обязательные ограничения в документы, которые агент может пропустить',ru);self.assertIn('Do not move mandatory restrictions into documents the agent might skip',en)
+  self.assertIn('недоступность записи либо конкретный конфликт требований',ru);self.assertIn('unavailable write access, or a specific requirements conflict',en)
+  self.assertIn('размер AGENTS.md до и после',ru);self.assertIn('AGENTS.md size before and after',en)
+  self.assertIn('Повторное измерение не требуется, пока файл не изменился.',ru);self.assertIn('Do not measure again while the file is unchanged.',en)
+ def test_memory_updates_are_selective_confirmed_and_not_background_training(self):
+  assets=ROOT/'app/src/main/assets'
+  ru=(assets/'agent-instructions-ubuntu-ai.md').read_text().split('### Обновление')[1].split('## Как мне объяснять')[0]
+  en=(assets/'agent-instructions-ubuntu-ai.en.md').read_text().split('### Updating')[1].split('## How to explain things to me')[0]
+  self.assertIn('Перед завершением проектной задачи обязательно оцени',ru);self.assertIn('Before completing a project task, you must assess',en)
+  self.assertIn('существенно упростит будущую работу',ru);self.assertIn('substantially simplify future work',en)
+  self.assertIn('3D-моделям',ru);self.assertIn('3D models',en)
+  self.assertIn('устойчивое проектное решение пользователя',ru);self.assertIn('lasting project decision made by the user',en)
+  self.assertIn('Отдельное согласование не требуется, если проектные правила это допускают',ru);self.assertIn('Separate approval is not required if project rules permit it',en)
+  self.assertIn('разовые внешние сбои',ru);self.assertIn('one-off external failures',en)
+  self.assertIn('Сообщать об отсутствии урока каждый раз не требуется',ru);self.assertIn('You need not report the absence of a lesson every time',en)
+  for a,b in [('секреты','secrets'),('пересказ чужой проверки','secondhand accounts'),('Не добавляй гипотезы','Do not add hypotheses'),('Устаревший вывод','outdated conclusions'),('не заменяет проверки','not establish current-version readiness'),('Не запускай фоновое самообучение','Do not start background self-training')]:
+   self.assertIn(a,ru);self.assertIn(b,en)
+  self.assertNotIn('В рамках порученной проектной работы разрешено создать',ru);self.assertNotIn('During assigned project work, you may create',en)
  def test_absent_initial_install_publishes_template_once(self):
   self.assertTrue(self.editor.initialize()['created']);self.assertFalse(self.editor.initialize()['created']);self.assertEqual('TEMPLATE\n',self.read()['text'])
  def test_existing_custom_text_is_preserved_on_upgrade_with_new_template_offer(self):

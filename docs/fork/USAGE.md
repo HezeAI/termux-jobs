@@ -1,3 +1,26 @@
+> v2.1.2 clarification / Уточнение2026-11-03: Termux Job’s is an independent
+> unofficial fork maintained by HezeAI, not affiliated with or endorsed by Termux.
+> Update compatibility refers to matching-package/certificate Termux Job’s versions;
+> installation over official Termux is not verified. See [README](../../README.md)
+> and [security/data notes](../../SECURITY.md). Dated sections retain their original
+> scope and are historical where superseded by current-release guidance.
+
+# Agent composer — current source
+
+RU: Слева от поля сообщения кнопки расположены вертикально в общей обводке:
+скрепка сверху, звезда снизу. Они сохраняют выбор вложений и сохранённых команд.
+Поле занимает оставшуюся ширину, отправка — справа внизу. Голосовой ввод удалён;
+черновик и вложения сохранены. Поля «Команда без модели» нет, обработка «/» не менялась.
+
+EN: Paperclip above star share an outlined vertical stack left of the message field.
+Their attachment and saved-command actions remain. The field fills the remaining
+width; Send stays at the bottom right. Voice input is removed; drafts and attachments
+remain. Command without model is absent, and slash handling is unchanged.
+
+See [agent composer](AI-AGENTS.md#agent-composer--current-source).
+
+---
+
 > v2.1.1 stable candidate, compared with public v2.1.0. See the release summary
 > and validation in docs/fork (or this directory). Existing dated test records
 > describe historical development, not separate public features.
@@ -40,7 +63,7 @@ No permission/approval/connection behavior changes. See [test14 validation](VALI
 
 # Private test13 — Agent instruction editing
 
-Open global settings → Agent instructions → Codex → Ubuntu AI. General edits the resolved global file; Project edits the selected AGENTS.md/AGENTS.override.md. Review template or storage additions before applying, and use history for explicit restoration. A stale edit is refused without losing its draft. Saving does not restart a chat. See [details and application timing](AGENT-INSTRUCTIONS.md).
+Open global settings → Agent instructions → Codex → Ubuntu AI. General edits the resolved global file; Project edits the selected AGENTS.md/AGENTS.override.md. Review template or storage additions before applying, and use history for explicit restoration. A stale edit is refused without losing its draft. Saving leaves the running request unchanged and does not restart the agent. Shared rules may refresh on the current conversation’s next request. Restart the agent and resume that conversation to reread shared and project rules; history remains. A fresh conversation started by a new agent process reads current applicable rules for its launch directory and CODEX_HOME. See [details and application timing](AGENT-INSTRUCTIONS.md#when-edits-apply).
 
 Previews now bound long text above fixed bottom Apply/Cancel controls. Project shows
 file precedence and the actual non-empty source separately from the edit target.
@@ -227,7 +250,7 @@ other codecs, so this does not promise every MP4/HEVC format or hardware decodin
 
 # Agent files (introduced in v2.0.2)
 
-Tap the folder beside Shell, choose Environments or Phone storage and select a file.
+Tap the paperclip beside the bottom star, choose Environments or Phone storage and select a file.
 Phone storage requests Android access when needed. Review the draft, optionally
 add text, and press Send; × removes an unsent file. You do not need to type its path
 on the phone. The original is made available in the selected agent environment.
@@ -288,7 +311,7 @@ private test17. Existing environments, credentials and histories are retained.
 The optional connection command is an absolute executable wrapper path for
 launching an agent through **your own server/tunnel/proxy**. Empty means ordinary
 startup. Restart the chosen agent/chat to apply it; do not start an interactive
-Codex inside the chat's noninteractive Shell command field.
+Codex through a chat message; use the agent's native terminal for interactive CLI input.
 
 **Tested on RedMagic 10 Pro and Samsung S26 Ultra; other devices require testing.**
 Coverage varies by phone. Read [release notes](RELEASE-v2.0.0.md),
@@ -1635,7 +1658,7 @@ DNS HTTPS отправляет DNS-запросы Firefox Cloudflare по HTTPS 
 
 ## Codex chat attachments (v2.0.2 development build)
 
-Tap the folder beside the Shell field, then choose Environments or Phone storage.
+Tap the paperclip beside the bottom star, then choose Environments or Phone storage.
 The latter requests Android storage access when needed. Choose an image, text/log
 file or supported video, review the attachment and send with optional message text.
 Use × to remove an unsent attachment. Tap a history card to open its preview and
@@ -1927,3 +1950,10 @@ Android browser/app chooser only after confirmation. Tap outside to dismiss.
 Named Markdown links, bare web URLs and table-cell links share this behavior.
 Long-press still selects text; scrolling does not activate links. Code literals
 and local-file/command URI schemes are not web-navigation actions.
+
+## Agent skills / Навыки агентов
+
+General settings → **Agent skills** / **Навыки агентов**, beside Agent instructions.
+Choose Codex/Claude Code, Ubuntu AI and personal/project scope. See the
+[skill management guide](AGENT-SKILLS.md) for preview/install, conflicts, update,
+rollback, discovery limits and safety. Saved instructions are not replaced.

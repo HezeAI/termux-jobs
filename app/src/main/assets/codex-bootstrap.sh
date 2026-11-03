@@ -2,6 +2,7 @@
 # Private missing-only Codex/Node. Existing global tools and accounts are never replaced.
 _jobs_codex_prepare() (
     set -euo pipefail
+    if declare -F jobs_agent_stage >/dev/null;then jobs_agent_stage installing-components;fi
     local root="$HOME/.local/share/termux-jobs/codex-cli" tools="$HOME/.local/share/termux-jobs/agent-tools" stage
     mkdir -p "$root" "$tools" || exit $?;chmod 700 "$root" "$tools" || exit $?
     exec 8>"$root/install.lock" || exit $?;flock -w 300 8 || exit $?
@@ -30,4 +31,7 @@ _jobs_codex_prepare || return
 if ! jobs_agent_has_node; then export PATH="$HOME/.local/share/termux-jobs/agent-tools/node-v22.22.1-linux-arm64/bin:$PATH";fi
 if ! command -v codex >/dev/null; then export PATH="$HOME/.local/share/termux-jobs/codex-cli/0.163.0/vendor/aarch64-unknown-linux-musl/bin:$HOME/.local/share/termux-jobs/codex-cli/0.163.0/vendor/aarch64-unknown-linux-musl/codex-path:$PATH";fi
 jobs_agent_has_node && command -v codex >/dev/null || return 1
+if declare -F jobs_agent_stage >/dev/null;then jobs_agent_stage checking-cli;fi
+codex --version >/dev/null || return $?
+if declare -F jobs_agent_stage >/dev/null;then jobs_agent_stage ready;fi
 unset -f _jobs_codex_prepare

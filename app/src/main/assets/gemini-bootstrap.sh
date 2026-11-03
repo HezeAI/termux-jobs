@@ -2,6 +2,7 @@
 # Sourced only by a user-created Gemini session in Ubuntu. No system installation.
 _jobs_gemini_prepare() (
     set -euo pipefail
+    if declare -F jobs_agent_stage >/dev/null;then jobs_agent_stage installing-components;fi
     root="$HOME/.local/share/termux-jobs/gemini-cli"
     mkdir -p "$root"
     chmod 700 "$root"
@@ -40,6 +41,7 @@ _jobs_gemini_prepare() (
         fi
         "$node" -e 'process.exit(Number(process.versions.node.split(".")[0])>=20?0:1)'
     fi
+    if declare -F jobs_agent_stage >/dev/null;then jobs_agent_stage checking-cli;fi
     [ "$(GEMINI_CLI_HOME="$stage/probe" GEMINI_CLI_NO_RELAUNCH=1 "$node" "$binary" --version)" = "0.64.0" ]
     printf '%s\n' "$node" > "$root/controller-node"
     chmod 600 "$root/controller-node"
@@ -51,4 +53,5 @@ _jobs_gemini_status=$?
 unset _jobs_gemini_status
 export JOBS_GEMINI_BINARY="$HOME/.local/share/termux-jobs/gemini-cli/0.64.0/bundle/gemini.js"
 export JOBS_GEMINI_NODE="$(cat "$HOME/.local/share/termux-jobs/gemini-cli/controller-node")"
+if declare -F jobs_agent_stage >/dev/null;then jobs_agent_stage ready;fi
 unset -f _jobs_gemini_prepare

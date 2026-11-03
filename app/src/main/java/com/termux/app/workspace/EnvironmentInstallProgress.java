@@ -12,6 +12,8 @@ final class EnvironmentInstallProgress {
     String displayLine(boolean ru){
         String stage=line.startsWith("STAGE:")?line.substring(6):"";
         switch(stage){
+            case "ubuntu-ai-installer-5.9.0":return ru?"Установщик Ubuntu AI 5.9.0":"Ubuntu AI installer 5.9.0";
+            case "download-pinned-ubuntu-ai":return ru?"Скачивание закреплённой Ubuntu AI":"Downloading pinned Ubuntu AI";
             case "check-environment-installer":return ru?"Проверка установщика окружения":"Checking environment installer";
             case "checking-image-cache":return ru?"Проверка сохранённого образа":"Checking cached image";
             case "connecting-image-download":return ru?"Подключение к источнику образа":"Connecting to image source";

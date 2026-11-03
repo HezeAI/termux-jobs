@@ -1,6 +1,10 @@
-> v2.1.1 stable candidate, compared with public v2.1.0. See the release summary
-> and validation in docs/fork (or this directory). Existing dated test records
-> describe historical development, not separate public features.
+> Current stable release: v2.1.2, versionCode1476, compared with v2.1.1.
+> Update compatibility: previous Termux Job’s builds with matching com.termux/certificate;
+> schema8, ARM64, min26/target28/compile35. Official-Termux compatibility is not verified.
+> Build with the repository-local SDK/JDK/Gradle setup below; preserve the reviewed
+> ubuntu-ai-proot-distro-5.9.0.zip source asset and its upstream LICENSE.
+> Source/APK validation: [VALIDATION-v2.1.2](docs/fork/VALIDATION-v2.1.2.md).
+> Dated private-build sections below are historical development records.
 
 # Private test14 — Advanced menu and clearer agent settings
 

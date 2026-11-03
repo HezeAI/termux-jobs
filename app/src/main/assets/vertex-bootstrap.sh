@@ -22,6 +22,7 @@ _jobs_vertex_prepare() (
         fi
         flock -u 8;exec 8>&-
     fi
+    [[ ${JOBS_AGENT_COMPONENTS_ONLY:-0} != 1 ]] || { printf 'AUTH:needed\n';exit 0; }
     mkdir -p "$root" || exit $?;chmod 700 "$root" || exit $?;exec 9>"$root/gcloud-auth.lock" || exit $?;flock -w 300 9 || exit $?
     jobs_agent_cloud_credentials && exit 0
     jobs_agent_say 'Вход Google Cloud: откройте ссылку из терминала в браузере и подтвердите доступ. Затем вернитесь и выполните подсказки Google.' 'Google Cloud sign-in: open the terminal link in your browser and approve access. Then return and follow Google instructions.'

@@ -90,8 +90,11 @@ help=$(proot-distro install --help 2>&1 || true)
 printf 'STAGE:install-environment\n'
 # Agent Ubuntu intentionally retains its existing upstream installation policy.
 if [[ $alias == ubuntu-ai ]];then
-    if [[ $help == *--name* ]];then proot-distro install ubuntu --name ubuntu-ai
-    else proot-distro install --override-alias ubuntu-ai ubuntu;fi
+    command -v python3 >/dev/null || { printf 'STAGE:install-python\n';pkg install -y python || exit $?; }
+    printf 'STAGE:ubuntu-ai-installer-5.9.0\n'
+    image=$(python3 -B "${BASH_SOURCE[0]%/*}/environment-image.py" ubuntu-ai) || exit $?
+    printf 'STAGE:install-environment\n'
+    python3 -I "${BASH_SOURCE[0]%/*}/ubuntu-ai-installer.py" install "$image" --name ubuntu-ai
     printf 'STAGE:verify\n';check;exit
 fi
 # ARM64 base images are immutable application pins, mirrored in Components.

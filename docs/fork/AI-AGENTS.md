@@ -1,3 +1,66 @@
+# Agent composer — current source
+
+RU: Слева от поля сообщения — общая обводка с двумя отдельными кнопками: сверху
+векторная скрепка, снизу звезда. Каждая область нажатия —48dp с заметной реакцией.
+Скрепка открывает прежний выбор вложений, звезда — сохранённые команды. Поле
+сообщения занимает оставшуюся ширину; отправка остаётся справа внизу. Черновик,
+выделение и вложения сохраняются при переключении режимов. Голосовой ввод удалён:
+нет микрофона, меню удержания, системного окна распознавания или разрешения на запись.
+
+EN: A shared outline to the left of the message field holds two independent48dp
+buttons: vector paperclip above star, each with visible press feedback. The existing
+attachment picker and saved-command actions remain. The field fills the remaining
+width; Send stays at the bottom right. Drafts, selection and attachments survive
+mode switches. Voice input is removed, including the microphone, hold menu, Android
+recognition activity and recording permission.
+
+Верхняя кнопка «Интерактивный ввод» в чате по-прежнему отключена. Штатный терминал
+агента доступен через его кнопку. Обычные терминальные и графические сессии сохраняют
+собственный ввод. Обработка «/» остаётся прежней.
+
+The top Interactive input button remains disabled in chat. The agent button still
+opens its native terminal. Ordinary terminal/desktop input and slash handling stay.
+Historical test36–39 voice descriptions below/in version reports do not re-enable
+that removed feature. Claude history and project-instruction fixes remain.
+
+---
+
+# Private test30 — local HTML/GIF files in all agent chats
+
+Codex, Claude Code, Gemini and OpenCode use the same file viewer for an agent's
+absolute local Markdown link and file card. The rendered link/card captures the
+originating session/environment; selecting another chat/environment does not
+redirect the read or discard its pending viewer. Reopening a saved chat binds
+its rendered file entries to that chat again. File operations use the existing
+independent ProjectFiles transport, never commands typed into a working terminal.
+
+HTML/HTM is rendered with inline JavaScript for self-contained previews. GIF is
+shown by Android System WebView to retain animation, rather than a static bitmap.
+The document uses a unique temporary HTTPS origin serving only that cached file.
+There is no JavaScript app bridge, network, file/content access, environment
+command access, local sibling resources, file chooser or new-window permission.
+Embedded data/blob media are allowed; external scripts/links/resources are blocked.
+Use a self-contained HTML document. Ordinary HTTP/HTTPS chat links retain their
+existing Copy / Show / Browser actions and documentation viewer.
+
+The original remains available through Save to Download. Preview size limits are
+4 MiB for HTML and 16 MiB/16 million canvas pixels for GIF; larger/invalid previews
+show a reason and retain saving when the original was read successfully. Existing
+transport limits remain 100 MiB for images and 5 GiB for other attachments.
+Missing/inaccessible files and a missing/broken WebView show errors. These are
+separate from a successful original-file download.
+
+RU: Локальная ссылка и карточка используют среду исходного чата у всех четырёх
+агентов. HTML/HTM поддерживает встроенные скрипты и кнопки, GIF — анимацию.
+Просмотрщик не получает доступ к приложению, командам, соседним файлам или сети.
+Для HTML с внешними скриптами/стилями нужен автономный вариант со встроенными
+ресурсами. «Сохранить в Download» сохраняет оригинал. При отсутствии доступа,
+превышении лимита предпросмотра или сбое WebView приложение показывает причину.
+
+[Checks and device acceptance](VALIDATION-test30-local-files.md).
+
+---
+
 # AI agents — v2.0.8
 
 The shared native chat UI supports Developer Markdown, outlined code Copy,
@@ -1019,3 +1082,34 @@ auth/policy changes. Pending permission/form controls require a fresh native
 snapshot. Gemini resume tokens invalidate old restored rows. Claude migration is
 next after developer checking; not included. See
 [VALIDATION-v1.5.20-test.md](VALIDATION-v1.5.20-test.md).
+
+
+## Claude history pages (test39)
+
+RU: Claude использует общий с Codex интерфейс «Предыдущие сообщения», сохранение
+позиции и просмотр полного текста. Снимок содержит часть истории, а не полный
+список существующих сообщений. Старые загруженные строки сохраняются при обновлении;
+большой журнал инструментов продолжается курсором, включая части одного сообщения.
+Длинный ответ открывайте через «Показать полностью»/просмотр сообщения и «Далее».
+Если тело уже вышло из кеша, адаптер перечитывает нужную запись нативного JSONL.
+Нативные файлы не изменяются. После установки перезапустите только Claude в покое
+с продолжением сохранённого диалога, чтобы загрузился новый адаптер. Автоматического
+перезапуска или нового диалога нет.
+
+EN: Claude uses the same earlier-message control, scroll-position/cache and full-text
+viewer as Codex. Snapshots are partial; polling retains previously loaded rows.
+Dense tool records continue across pages, even within one message. Open a long
+response's full text and use More for subsequent chunks. Evicted detail bodies are
+reread from native JSONL. Native files remain read-only. To load the updated adapter,
+explicitly restart only idle Claude with its saved conversation after installing.
+The application does not restart it or create a new conversation automatically.
+
+The format adapter reads backward in64KiB blocks, normally up to20visible records
+or2MiB per page, allowing one larger record up to32MiB. No64MiB transcript-tail or
+8000-line/500-message horizon is used. Rows remain bounded to200/350000bytes and bodies
+are previewed within a60000-character budget; cursors preserve omitted rows.
+Detailed text uses24000-character chunks. Unresolvable native parent chains and
+records above the individual safety bound are outside automatic reconstruction;
+no native file is rewritten to invent missing links.
+
+See [test39 checks and limitations](VALIDATION-test39-history-instructions.md).

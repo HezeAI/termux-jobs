@@ -1,0 +1,49 @@
+package com.termux.app.workspace;
+import android.app.Application;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
+import org.robolectric.annotation.Config;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import static org.junit.Assert.*;
+@RunWith(RobolectricTestRunner.class)
+@Config(sdk=28,application=Application.class)
+public class AgentPreparationOperationTest {
+    WorkspaceStore.Session profile(String agent){WorkspaceStore.Session p=new WorkspaceStore.Session();p.environment=agent.equals("codex")?"codex":"ubuntu";p.codexEnvironment="ubuntu-ai";p.claudeAgent=agent.equals("claude");p.geminiAgent=agent.equals("gemini");if(agent.equals("opencode"))p.aiAgent="opencode";return p;}
+    AgentPreparation.Plan ready(){return AgentPreparation.Plan.parse("READY:ubuntu\nCHECK:done\n",0);}
+    void finish(AgentPreparationOperation.Job j)throws Exception {for(int n=0;j.active&&n<100;n++)Thread.sleep(20);assertFalse(j.active);}
+    @Test public void sameAgentReusesActiveJobAndOtherAgentIsSeparate()throws Exception{
+        AgentPreparationOperation.jobs.clear();AtomicInteger calls=new AtomicInteger();CountDownLatch entered=new CountDownLatch(1),release=new CountDownLatch(1);
+        AgentPreparationOperation.Worker worker=(c,p,o)->{calls.incrementAndGet();entered.countDown();assertTrue(release.await(3,TimeUnit.SECONDS));return ready();};
+        WorkspaceStore.Session p=profile("claude");AgentPreparation.Runner check=(c,s)->ready();
+        AgentPreparationOperation.Job first=AgentPreparationOperation.start(RuntimeEnvironment.application,p,check,worker);assertTrue(entered.await(2,TimeUnit.SECONDS));
+        assertSame(first,AgentPreparationOperation.start(RuntimeEnvironment.application,p,check,worker));
+        AgentPreparationOperation.Job second=AgentPreparationOperation.start(RuntimeEnvironment.application,profile("gemini"),check,(c,s,o)->ready());assertNotSame(first,second);assertEquals(1,calls.get());
+        release.countDown();finish(first);finish(second);assertTrue(first.result.ready());
+    }
+    @Test public void brokenExistingEnvironmentNeverReachesInstallerAndRetryIsExplicit()throws Exception{
+        AgentPreparationOperation.jobs.clear();AtomicInteger calls=new AtomicInteger();WorkspaceStore.Session p=profile("codex");
+        AgentPreparationOperation.Job failed=AgentPreparationOperation.start(RuntimeEnvironment.application,p,(c,s)->AgentPreparation.Plan.parse("",1),(c,s,o)->{calls.incrementAndGet();return ready();});finish(failed);assertEquals(0,calls.get());assertEquals("failed",failed.stage);
+        AgentPreparationOperation.Job retry=AgentPreparationOperation.start(RuntimeEnvironment.application,p,(c,s)->ready(),(c,s,o)->ready());finish(retry);assertNotSame(failed,retry);assertTrue(retry.result.ready());
+    }
+    @Test public void progressIsMeasuredAndJournalRedactsSecrets(){
+        AgentPreparationOperation.Job j=new AgentPreparationOperation.Job(RuntimeEnvironment.application,profile("opencode"),(c,s)->ready(),(c,s,o)->ready());
+        j.output("IMAGE_PROGRESS: 25% (100/400 bytes)");assertEquals(25,j.percent);assertEquals(100,j.received);assertEquals(400,j.total);
+        j.output("PREPARATION:installing-components");assertEquals(-1,j.percent);assertEquals(0,j.total);
+        j.output("Authorization: Bearer SYNTHETIC_TEST_SECRET");assertFalse(j.log.contains("SYNTHETIC_TEST_SECRET"));
+        for(int i=0;i<1000;i++)j.output(new String(new char[100]).replace('\0','x'));assertTrue(j.log.length()<=65536);
+    }
+    @Test public void allFourAgentsShareUbuntuButKeepIndividualJobKeys(){
+        java.util.Set<String> keys=new java.util.HashSet<>();for(String a:new String[]{"codex","claude","gemini","opencode"}){WorkspaceStore.Session p=profile(a);assertTrue(AgentPreparation.supports(p));assertEquals("ubuntu-ai",AgentEnvironments.alias(p));keys.add(AgentPreparationOperation.key(p));}assertEquals(4,keys.size());
+    }
+    @Test public void closingAndReopeningWindowKeepsOperationWithoutLaunchingChat()throws Exception{
+        AgentPreparationOperation.jobs.clear();android.app.Activity a=org.robolectric.Robolectric.buildActivity(android.app.Activity.class).setup().get();WorkspaceStore.Session p=profile("claude");
+        CountDownLatch entered=new CountDownLatch(1),release=new CountDownLatch(1);
+        AgentPreparationOperation.Job job=AgentPreparationOperation.start(a,p,(c,s)->ready(),(c,s,o)->{entered.countDown();assertTrue(release.await(30,TimeUnit.SECONDS));return ready();});assertTrue(entered.await(3,TimeUnit.SECONDS));
+        AgentPreparationOperation.show(a,p,null);android.app.AlertDialog first=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(first.isShowing());first.dismiss();org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertTrue("closing must not cancel preparation",job.active);assertTrue("dismiss releases the window observer",job.observers.isEmpty());
+        AgentPreparationOperation.show(a,p,null);android.app.AlertDialog second=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotSame(first,second);assertSame(job,AgentPreparationOperation.jobs.get(AgentPreparationOperation.key(p)));assertEquals(1,job.observers.size());
+        release.countDown();finish(job);org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertTrue(job.result.ready());second.dismiss();a.finish();
+    }
+}

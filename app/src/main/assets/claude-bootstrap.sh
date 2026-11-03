@@ -2,6 +2,7 @@
 # Sourced only by a user-created Claude session in Ubuntu. No system installation.
 _jobs_claude_prepare() (
     set -eu
+    if declare -F jobs_agent_stage >/dev/null;then jobs_agent_stage installing-components;fi
     root="$HOME/.local/share/termux-jobs/claude-code"
     mkdir -p "$root"
     chmod 700 "$root"
@@ -41,6 +42,8 @@ _jobs_claude_prepare() (
         fi
         "$node" -e 'process.exit(Number(process.versions.node.split(".")[0])>=20?0:1)'
     fi
+    if declare -F jobs_agent_stage >/dev/null;then jobs_agent_stage checking-cli;fi
+    [ "$(DISABLE_AUTOUPDATER=1 CLAUDE_CONFIG_DIR="$stage/probe" "$binary" --version)" = '2.1.296 (Claude Code)' ]
     printf '%s\n' "$node" > "$root/controller-node"
     chmod 600 "$root/controller-node"
     say 'Claude Code готов. Авторизация выполняется в терминале.' 'Claude Code is ready. Sign in in the terminal.'
@@ -51,4 +54,5 @@ _jobs_claude_status=$?
 unset _jobs_claude_status
 export JOBS_CLAUDE_BINARY="$HOME/.local/share/termux-jobs/claude-code/2.1.296/claude"
 export JOBS_CLAUDE_NODE="$(cat "$HOME/.local/share/termux-jobs/claude-code/controller-node")"
+if declare -F jobs_agent_stage >/dev/null;then jobs_agent_stage ready;fi
 unset -f _jobs_claude_prepare

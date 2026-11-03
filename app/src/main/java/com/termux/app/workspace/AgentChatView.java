@@ -14,30 +14,31 @@ import java.util.function.Consumer;
 final class AgentChatView extends LinearLayout {
     final ScrollView scroll;
     final LinearLayout timeline,requests,keysHost,attachmentDrafts;
-    final WorkspaceIconButton folder;private final TextView shellLabel;
+    final WorkspaceIconButton folder;
     java.util.function.BiConsumer<JSONObject,ImageView> thumbnail=(a,v)->{};
     java.util.function.BiConsumer<JSONObject,TextView> apkDetails=(a,v)->{};
     final TextView status,older,connection;
-    final EditText shellInput;
-    private WorkspaceIconButton shellSend;
-    private LinearLayout shellRow;
     private String assistant="AI";
     private boolean codexActions,groupAllTools;
     void actionCards(boolean allTools){codexActions=true;groupAllTools=allTools;}
     void codexActions(boolean enabled){codexActions=enabled;}
     void assistantName(String name){assistant=name;}
-    void shellEnabled(boolean enabled){shellInput.setEnabled(enabled);shellInput.setFocusable(enabled);shellInput.setFocusableInTouchMode(enabled);shellInput.setClickable(enabled);shellSend.setEnabled(enabled);shellSend.setAlpha(enabled?1f:.4f);if(!enabled)shellInput.clearFocus();}
+
     private final Map<String,View> views=new LinkedHashMap<>();
     private final Map<String,String> values=new HashMap<>();
     private final Map<String,JSONObject> data=new HashMap<>();
     private final Consumer<JSONObject> open;
     private io.noties.markwon.Markwon markdown;
+    java.util.function.Function<String,Runnable> localFileAction=path->null;
+    java.util.function.Function<JSONObject,Runnable> fileCardAction=attachment->null;
+    io.noties.markwon.Markwon fileMarkdown(){return AgentMarkdown.create(getContext(),localFileAction);}
     private boolean touchingTimeline;
     final AgentProgressView execution;
     private int scalePercent=100;
     int scalePercent(){return scalePercent;}
     void scale(int percent){percent=AgentChatScale.clamp(percent);if(scalePercent==percent)return;Position held=position();scalePercent=percent;scaleContent();queuePosition(held);}
-    void scaleContent(){AgentChatScale.apply(timeline,scalePercent);AgentChatScale.apply(attachmentDrafts,scalePercent);if(shellRow!=null)AgentChatScale.apply(shellRow,scalePercent);}
+    void scaleContent(){AgentChatScale.apply(timeline,scalePercent);AgentChatScale.apply(attachmentDrafts,scalePercent);}
+
     private boolean followNextRows;
     private boolean followLayout;
     static final class Position {final String anchor;final int offset,y;final boolean bottom;Position(String anchor,int offset,int y,boolean bottom){this.anchor=anchor;this.offset=offset;this.y=y;this.bottom=bottom;}}
@@ -84,13 +85,12 @@ final class AgentChatView extends LinearLayout {
         older=pill(tr("Предыдущие сообщения","Earlier messages"),loadOlder);timeline.addView(older);
         addView(scroll,new LayoutParams(-1,0,1));requests=new LinearLayout(c);requests.setOrientation(VERTICAL);requests.setPadding(dp(12),0,dp(12),0);timeline.addView(requests,new LayoutParams(-1,-2));connection=label("",13);connection.setVisibility(GONE);requests.addView(connection);execution=new AgentProgressView(c);timeline.addView(execution,new LayoutParams(-1,-2));
         attachmentDrafts=new LinearLayout(c);attachmentDrafts.setOrientation(VERTICAL);attachmentDrafts.setVisibility(GONE);addView(attachmentDrafts,new LayoutParams(-1,-2));
-        LinearLayout shell=new LinearLayout(c);shellRow=shell;shell.setGravity(Gravity.CENTER_VERTICAL);shell.setPadding(dp(8),dp(4),dp(8),dp(4));shellLabel=label("Shell",12);shell.addView(shellLabel);folder=new WorkspaceIconButton(c);folder.setIcon(c.getDrawable(com.termux.R.drawable.workspace_folder),dp(24));folder.setTextColor(0xff79dfcd);folder.setContentDescription(tr("Прикрепить файл","Attach file"));folder.setVisibility(GONE);shell.addView(folder,new LayoutParams(dp(44),dp(44)));
-        shellInput=new EditText(c);shellInput.setTextColor(0xffd5e4e0);shellInput.setHintTextColor(0xff829b96);shellInput.setTextSize(13);shellInput.setMinLines(1);shellInput.setMaxLines(3);shellInput.setHint(tr("Команда без модели…","Command without model…"));shellInput.setTypeface(Typeface.MONOSPACE);shellInput.setSaveEnabled(false);shellInput.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE|android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);shellInput.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_NONE|android.view.inputmethod.EditorInfo.IME_FLAG_NO_ENTER_ACTION);shell.addView(shellInput,new LayoutParams(0,-2,1));
-        WorkspaceIconButton send=new WorkspaceIconButton(c);shellSend=send;send.setIcon(c.getDrawable(com.termux.R.drawable.workspace_play),dp(24));send.setTextColor(0xff79dfcd);send.setContentDescription(tr("Выполнить shell-команду","Run shell command"));send.setOnClickListener(v->sendShell.run());shell.addView(send,new LayoutParams(dp(44),dp(44)));addView(shell,new LayoutParams(-1,-2));shellEnabled(false);
+        folder=new WorkspaceIconButton(c);folder.setIcon(c.getDrawable(com.termux.R.drawable.workspace_paperclip),dp(24));folder.setTextColor(WorkspaceDialogs.ACCENT);folder.setContentDescription(tr("Прикрепить файл","Attach file"));folder.setTooltipText(tr("Прикрепить файл","Attach file"));folder.setVisibility(GONE);
+
         keysHost=new LinearLayout(c);keysHost.setOrientation(VERTICAL);keysHost.setVisibility(GONE);addView(keysHost,new LayoutParams(-1,-2));
 
     }
-    void attachmentPicker(boolean enabled){folder.setVisibility(enabled?VISIBLE:GONE);shellLabel.setVisibility(enabled?GONE:VISIBLE);}
+    void attachmentPicker(boolean enabled){folder.setVisibility(enabled?VISIBLE:GONE);}
     void connection(String message){connection(message,null);}
     void connection(String message,Runnable retry){connection.setOnClickListener(retry==null?null:v->retry.run());connection.setClickable(retry!=null);if(connection.getText().toString().equals(message)&&connection.getVisibility()==(message.isEmpty()?GONE:VISIBLE))return;boolean bottom=timeline.getHeight()-scroll.getHeight()-scroll.getScrollY()<dp(48);connection.setText(message);connection.setVisibility(message.isEmpty()?GONE:VISIBLE);if(bottom){followLayout=true;bottomAfterLayout();}}
     void clearRequests(){requests.removeAllViews();requests.addView(connection);}
@@ -135,12 +135,12 @@ final class AgentChatView extends LinearLayout {
                         TextView hint=label(type.equals("video")?tr("Видео · выбранные кадры, без звука · открыть","Video · sampled frames, no audio · open"):tr("Нажмите, чтобы открыть","Tap to open"),11);card.addView(hint);
                     }
                     if(r.optJSONObject("deliveryReceipt")!=null){LinearLayout captionHost=card.getOrientation()==HORIZONTAL&&card.getChildAt(card.getChildCount()-1) instanceof LinearLayout?(LinearLayout)card.getChildAt(card.getChildCount()-1):card;captionHost.addView(deliveryCaption(r));}
-                    GradientDrawable bg=new GradientDrawable();bg.setColor(0xff0b1b19);bg.setCornerRadius(dp(14));bg.setStroke(dp(1),0xff28433d);card.setBackground(bg);LayoutParams lp=new LayoutParams(-1,-2);lp.setMargins(0,dp(6),0,dp(8));card.setLayoutParams(lp);final String k=key;card.setOnClickListener(v->{JSONObject row=data.get(k);if(row!=null)open.accept(row);});
+                    GradientDrawable bg=new GradientDrawable();bg.setColor(0xff0b1b19);bg.setCornerRadius(dp(14));bg.setStroke(dp(1),0xff28433d);card.setBackground(bg);LayoutParams lp=new LayoutParams(-1,-2);lp.setMargins(0,dp(6),0,dp(8));card.setLayoutParams(lp);final String k=key;final Runnable fileAction=a==null?null:fileCardAction.apply(a);card.setOnClickListener(v->{if(fileAction!=null){fileAction.run();return;}JSONObject row=data.get(k);if(row!=null)open.accept(row);});
                 }
                 views.put(key,card);if(card.getParent()==null){changed=true;timeline.addView(card,index);}else if(timeline.indexOfChild(card)!=index){changed=true;timeline.removeView(card);timeline.addView(card,index);}index++;continue;
             }
             if(r.optString("kind").equals("text")&&AgentMarkdown.rich(r.optString("body"))){
-                if(markdown==null)markdown=AgentMarkdown.create(getContext());View existing=views.get(key);AgentMarkdownView block=existing instanceof AgentMarkdownView?(AgentMarkdownView)existing:new AgentMarkdownView(getContext(),markdown);
+                if(markdown==null)markdown=fileMarkdown();View existing=views.get(key);AgentMarkdownView block=existing instanceof AgentMarkdownView?(AgentMarkdownView)existing:new AgentMarkdownView(getContext(),markdown);
                 if(!value.equals(values.get(key))||existing!=block){changed=true;values.put(key,value);AgentChatScale.prepare(block);final String k=key;block.update(assistant,r.optString("body"),r.optBoolean("more")?()->{JSONObject row=data.get(k);if(row!=null)open.accept(row);}:null);}
                 if(existing!=null&&existing!=block){timeline.removeView(existing);}views.put(key,block);
                 if(block.getParent()==null){changed=true;timeline.addView(block,index);}else if(timeline.indexOfChild(block)!=index){changed=true;timeline.removeView(block);timeline.addView(block,index);}index++;continue;
@@ -161,7 +161,7 @@ final class AgentChatView extends LinearLayout {
                 String body=r.optString("body");if(r.optBoolean("queued"))body=tr("В очереди · ","Queued · ")+body;else if(r.optString("delivery").equals("cancelled"))body=tr("Отменено · ","Cancelled · ")+body;else if(java.util.Arrays.asList("refused","discarded").contains(r.optString("delivery")))body=tr("Отклонено CLI · ","Rejected by CLI · ")+body;else if(java.util.Arrays.asList("started","current","completed").contains(r.optString("delivery")))body=tr("Принято CLI · ","Accepted by CLI · ")+body;String shown=AgentChatErrors.nativeDiagnosticHint(body)?tr("Подробности доступны по нажатию на сообщение об ошибке.","Tap the error message for details."):body;
                 t.setText(error?tr("Ошибка · ","Error · ")+assistant+"\n"+AgentChatErrors.explain(body,WorkspaceLanguage.code(getContext()).equals("ru"))+tr("\nПодробности ▾","\nDetails ▾"):chip?caption:(kind.equals("user")?tr("Вы: ","You: "):kind.equals("text")?assistant+": ":"")+shown+(r.optBoolean("more")?tr("\nНажмите для полного текста…","\nTap for full text…"):""));
                 t.setTextIsSelectable(!chip&&!error);
-                if(kind.equals("text")){if(markdown==null)markdown=AgentMarkdown.create(getContext());android.text.SpannableStringBuilder formatted=new android.text.SpannableStringBuilder(assistant+": ");formatted.append(markdown.toMarkdown(AgentMarkdown.checkboxes(shown)));if(r.optBoolean("more"))formatted.append(tr("\nНажмите для полного текста…","\nTap for full text…"));markdown.setParsedMarkdown(t,formatted);}
+                if(kind.equals("text")){if(markdown==null)markdown=fileMarkdown();android.text.SpannableStringBuilder formatted=new android.text.SpannableStringBuilder(assistant+": ");formatted.append(markdown.toMarkdown(AgentMarkdown.checkboxes(shown)));if(r.optBoolean("more"))formatted.append(tr("\nНажмите для полного текста…","\nTap for full text…"));markdown.setParsedMarkdown(t,formatted);}
                 final String k=key;t.setOnClickListener(error||chip||r.optBoolean("more")?v->{JSONObject row=data.get(k);if(row!=null)open.accept(row);}:null);t.setTextSize(chip?12:14);t.setTypeface(chip?Typeface.DEFAULT:Typeface.DEFAULT);
                 GradientDrawable bg=new GradientDrawable();bg.setColor(error?0xff241416:chip?0xff0b1b19:Color.BLACK);bg.setCornerRadius(error?dp(12):chip?dp(22):0);bg.setStroke(dp(1),error?0xff704343:chip?0xff28433d:kind.equals("user")?0xff43776b:Color.BLACK);t.setBackground(bg);
                 LayoutParams lp=new LayoutParams(chip?-2:-1,-2);lp.setMargins(0,dp(6),0,dp(chip?3:10));lp.gravity=Gravity.START;t.setLayoutParams(lp);

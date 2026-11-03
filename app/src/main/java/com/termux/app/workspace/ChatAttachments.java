@@ -152,7 +152,7 @@ final class ChatAttachments {
         synchronized(ChatAttachments.class){if(f.isFile())return f;File temp=File.createTempFile("image-",".tmp",cache);try{
             if(managed!=null){if(managed.length()>MAX_FILE)throw new IOException("FILE_LIMIT");try(InputStream in=new FileInputStream(managed);OutputStream out=new FileOutputStream(temp)){byte[] buffer=new byte[65536];int n;long count=0;while((n=in.read(buffer))!=-1){count+=n;if(count>MAX_FILE)throw new IOException("FILE_LIMIT");out.write(buffer,0,n);}}}
             else try(ProjectFiles files=new ProjectFiles((android.app.Activity)c,profile)){files.export(new ProjectFiles.Entry(new File(path).getParent(),new File(path).getName(),false,0),temp,image?MAX_IMAGE:MAX_FILE);}
-            if(!image){if(temp.length()<=0)throw new IOException("FILE_LIMIT");}else checkImage(temp);if(!temp.renameTo(f))throw new IOException("STORAGE_UNAVAILABLE");
+            if(!image){if(temp.length()<=0)throw new IOException("FILE_LIMIT");}else if(!a.optBoolean("originalPreview"))checkImage(temp);if(!temp.renameTo(f))throw new IOException("STORAGE_UNAVAILABLE");
             File[] cached=cache.listFiles();if(cached!=null){Arrays.sort(cached,Comparator.comparingLong(File::lastModified));long total=0;for(File x:cached)total+=x.length();for(File x:cached)if(total>(image?64L:512L)*1024*1024&&!x.equals(f)){long n=x.length();if(x.delete())total-=n;}}
         }finally{temp.delete();}}return f;
     }

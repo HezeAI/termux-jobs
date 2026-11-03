@@ -9,6 +9,10 @@ class AgentHostEnvironmentTests(unittest.TestCase):
     tearDown=fixture.EnvironmentRuntimeTests.tearDown
     def setUp(self):
         fixture.EnvironmentRuntimeTests.setUp(self)
+        # Exercise the real host/runtime routing with isolated downloader/install boundaries.
+        assets=ROOT/'app/src/main/assets'
+        for name in ('agent-host-setup.sh','environment-runtime.sh','agent-preparation-status.sh'):
+            (self.root/name).write_bytes((assets/name).read_bytes())
         self.env.update(JOBS_AGENT_SETUP_ALLOWED='1', FIXTURE_HELP='install IMAGE --name NAME')
         self.stub('proot-distro', '''printf '%s\\n' "$*" >> "$FIXTURE_LOG"
 if [ "$1" = login ];then
@@ -28,7 +32,7 @@ cp /bin/sh "$PREFIX/var/lib/proot-distro/containers/$alias/rootfs/bin/sh"
     def run_host(self, alias=None, check=False):
         env=dict(self.env)
         if alias is not None:env['JOBS_AGENT_UBUNTU']=alias
-        script=ROOT/'app/src/main/assets/agent-host-setup.sh'
+        script=self.root/'agent-host-setup.sh'
         cmd=['/bin/bash',str(script),'check','gemini','api',alias or 'ubuntu-ai'] if check else ['/bin/bash','--noprofile','--norc','-c','source "$1"; jobs_agent_host_prepare','fixture',str(script)]
         return subprocess.run(cmd,env=env,text=True,capture_output=True,timeout=10)
     def installed(self,alias,legacy=False):
@@ -38,11 +42,11 @@ cp /bin/sh "$PREFIX/var/lib/proot-distro/containers/$alias/rootfs/bin/sh"
     def test_ai_clean_install_is_independent_of_ordinary(self):
         normal=self.installed('ubuntu');marker=normal/'keep';marker.write_text('keep')
         r=self.run_host('ubuntu-ai');self.assertEqual(0,r.returncode,r.stderr)
-        self.assertEqual(['install --help','install ubuntu --name ubuntu-ai','login ubuntu-ai -- /bin/true'],self.log.read_text().splitlines())
+        self.assertEqual(['install --help','IMAGE:ubuntu','PINNED:5.9.0:'+str(self.root/'ubuntu-pinned.tar'),'install '+str(self.root/'ubuntu-pinned.tar')+' --name ubuntu-ai','login ubuntu-ai -- /bin/true'],self.log.read_text().splitlines())
         self.assertEqual('keep',marker.read_text())
     def test_no_environment_defaults_to_ai(self):
         r=self.run_host();self.assertEqual(0,r.returncode,r.stderr)
-        self.assertIn('install ubuntu --name ubuntu-ai',self.log.read_text())
+        self.assertIn('PINNED:5.9.0:'+str(self.root/'ubuntu-pinned.tar'),self.log.read_text())
         self.assertFalse((self.prefix/'var/lib/proot-distro/containers/ubuntu').exists())
     def test_existing_ai_only_logs_in(self):
         self.installed('ubuntu-ai');r=self.run_host();self.assertEqual(0,r.returncode)
@@ -60,7 +64,7 @@ cp /bin/sh "$PREFIX/var/lib/proot-distro/containers/$alias/rootfs/bin/sh"
         self.assertNotIn('install ',self.log.read_text())
     def test_explicit_ordinary_selection_preserved(self):
         r=self.run_host('ubuntu');self.assertEqual(0,r.returncode,r.stderr)
-        self.assertIn('install ubuntu --name ubuntu\n',self.log.read_text());self.assertNotIn('ubuntu-ai',self.log.read_text())
+        self.assertIn('install '+str(self.root/'ubuntu-pinned.tar')+' --name ubuntu\n',self.log.read_text());self.assertNotIn('ubuntu-ai',self.log.read_text());self.assertNotIn('PINNED:',self.log.read_text())
     def test_missing_without_consent_never_installs(self):
         self.env['JOBS_AGENT_SETUP_ALLOWED']='0';self.assertNotEqual(0,self.run_host().returncode)
         self.assertFalse(self.log.exists())
@@ -76,7 +80,7 @@ cp /bin/sh "$PREFIX/var/lib/proot-distro/containers/$alias/rootfs/bin/sh"
         self.assertNotIn('MISSING:ubuntu',r.stdout);self.assertNotIn('install ',self.log.read_text())
     def test_invalid_alias_rejected(self):
         self.assertNotEqual(0,self.run_host('../ubuntu').returncode);self.assertFalse(self.log.exists())
-    def test_ai_legacy_installer_alias(self):
+    def test_ai_uses_private_installer_even_with_legacy_system_help(self):
         self.env['FIXTURE_HELP']='legacy';r=self.run_host()
         self.assertEqual(0,r.returncode,r.stderr)
-        self.assertIn('install --override-alias ubuntu-ai ubuntu',self.log.read_text())
+        self.assertIn('PINNED:5.9.0:',self.log.read_text());self.assertNotIn('--override-alias',self.log.read_text())

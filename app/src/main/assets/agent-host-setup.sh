@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Termux side. Only prepare may install, after the application's explicit confirmation.
 # Existence is deliberately separate from login: a busy/broken root is never reinstalled.
+source "${BASH_SOURCE[0]%/*}/agent-preparation-status.sh"
 jobs_agent_host_exists() {
     local alias=$1 base="${PREFIX:?Termux PREFIX is required}/var/lib/proot-distro" path
     for path in "$base/containers/$alias" "$base/installed-rootfs/$alias"; do
@@ -11,17 +12,20 @@ jobs_agent_host_exists() {
 jobs_agent_host_prepare() {
     local alias=${JOBS_AGENT_UBUNTU:-ubuntu-ai}
     case $alias in ubuntu|ubuntu-ai) ;;*) return 2;;esac
+    jobs_agent_stage checking-ubuntu
     if ! command -v proot-distro >/dev/null; then
         [[ ${JOBS_AGENT_SETUP_ALLOWED:-0} == 1 ]] || { printf '%s\n' 'Missing proot-distro. Confirm environment preparation in the app.' >&2;return 1; }
-        pkg install -y proot-distro || return
+        pkg install -y proot-distro || { jobs_agent_stage failed-ubuntu;return 1; }
     fi
     if ! jobs_agent_host_exists "$alias"; then
         [[ ${JOBS_AGENT_SETUP_ALLOWED:-0} == 1 ]] || { printf '%s\n' 'Selected Ubuntu is missing. Confirm environment preparation in the app.' >&2;return 1; }
         printf 'Installing selected agent environment: %s…\n' "$alias"
-        bash "${BASH_SOURCE[0]%/*}/environment-runtime.sh" install "$alias" || return
+        jobs_agent_stage installing-ubuntu
+        bash "${BASH_SOURCE[0]%/*}/environment-runtime.sh" install "$alias" || { local code=$?;jobs_agent_stage failed-ubuntu;return "$code"; }
     fi
     # Keep the actual login error visible. Do not install, reset or fall back on failure.
-    if proot-distro login "$alias" -- /bin/true; then return 0; fi
+    if proot-distro login "$alias" -- /bin/true; then jobs_agent_stage checking-components;return 0; fi
+    jobs_agent_stage failed-ubuntu
     printf '%s\n' 'Selected Ubuntu could not be opened. It may be busy or incomplete. Retry after its installation finishes; no environment was replaced.' >&2
     return 1
 }

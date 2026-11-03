@@ -1,3 +1,60 @@
+# v2.1.2 agent windows and composer
+
+Instructions and Skills share fixed headings/tabs/actions with one scrollable
+middle filling remaining space. New managers default to Ubuntu AI; session access
+retains the source environment/project. General offers template preview/application;
+Project offers Edit AGENTS.md/CLAUDE.md for an existing base, or optional creation
+for a missing file. A creation request during loading is queued once.
+
+Agent chat has48dp attachment and star targets stacked vertically within one
+outline. Send remains bottom-right beside the existing message field. There is
+no separate command-without-model field or voice control. Native terminal access
+and stop confirmation remain. Icon highlights use the existing frame mechanism
+and preserve reduced-motion, waiting, reconnect/error and hidden-screen behavior.
+
+Earlier dated design sections below are historical.
+
+# Agent composer geometry — current source after test35
+
+RU: Нижняя панель сохраняет звезду и скрепку в общей обводке и отправку справа.
+Микрофон Codex — прозрачная48dp область с залитым векторным значком поверх
+нижнего правого угла чата. Он не увеличивает высоту панели. Отступ56dp находится
+только в прокручиваемом содержимом Codex и удаляется при скрытии значка;
+при масштабе чата50–150% его высота сохраняется. Остальные чаты получают всё
+место бывшего shell-поля. Состояние распознавания не подменяет состояние агента.
+
+EN: Star/paperclip share the bottom outline; Send stays on the right. Codex's
+filled microphone has a transparent48dp overlay target above Send and adds no
+composer height. A56dp scroll-content clearance exists only while it is visible
+and stays fixed at50–150% chat zoom. Other chats regain the entire former shell
+row. Recognition state remains separate from agent state.
+
+See [interaction and permissions](AI-AGENTS.md#agent-composer--current-source-after-test35)
+and [source validation](VALIDATION-agent-composer.md). Older version-labelled
+records below retain their original scope. Included in [test36](VALIDATION-test36-agent-composer.md); test35 remains unchanged.
+
+---
+
+# Private test29 — individual agent glyph animation
+
+The circular stop target keeps its size and existing frame clock. App-designed
+motion replaces the flying point/bounces: Codex uses a short rotating arc with
+an upright glowing >_; Claude rays brighten in sequence with gentle scale;
+Gemini's fixed four-ray spark shimmers/scales; OpenCode pixels brighten while
+the complete OC stays visible. These are custom app animations, not official ones.
+User-wait uses only a calm pulse; reconnect remains amber with existing details;
+error and idle are static. System animation-off uses static state cues.
+No extra polling or network calls. Hidden views cancel the existing frame loop.
+Stop ownership/tokens, request dots and terminal/transfer attention borders stay.
+[Validation and phone acceptance](VALIDATION-test29-agent-icons.md).
+
+RU: Это анимации приложения в стиле агентов. Центральные значки не вращаются.
+Требование ответа/разрешения отображается спокойной пульсацией; реконект —
+янтарным оформлением. Обводки терминала и передач сохранены. Плавность требует
+отдельной проверки на телефоне.
+
+---
+
 > v2.1.1 stable candidate, compared with public v2.1.0. See the release summary
 > and validation in docs/fork (or this directory). Existing dated test records
 > describe historical development, not separate public features.

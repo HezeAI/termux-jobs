@@ -1,3 +1,42 @@
+# Agent composer — current source
+
+RU: Голосовой ввод, кнопка микрофона, системное окно распознавания и его диагностика
+удалены по запросу разработчика. Слева — скрепка над звездой в общей обводке,
+сообщение занимает оставшуюся ширину, отправка остаётся справа внизу.
+Черновики, вложения, штатный терминал, остановка с подтверждением и обработка «/»
+сохранены. Исправления истории Claude используют общие с Codex компоненты.
+
+EN: Voice input, microphone, Android recognition activity and speech diagnostics
+are removed at the developer's request. Paperclip above star share an outline at
+the left; the message field fills the remaining width and Send stays bottom right.
+Drafts, attachments, native terminal, stop confirmation and slash handling remain.
+Claude history fixes retain the shared Codex components.
+
+Historical version sections and validation reports describe their original APKs.
+They do not advertise voice input in the current source.
+
+---
+
+# Private test29 — individual agent glyph animation
+
+The circular stop target keeps its size and existing frame clock. App-designed
+motion replaces the flying point/bounces: Codex uses a short rotating arc with
+an upright glowing >_; Claude rays brighten in sequence with gentle scale;
+Gemini's fixed four-ray spark shimmers/scales; OpenCode pixels brighten while
+the complete OC stays visible. These are custom app animations, not official ones.
+User-wait uses only a calm pulse; reconnect remains amber with existing details;
+error and idle are static. System animation-off uses static state cues.
+No extra polling or network calls. Hidden views cancel the existing frame loop.
+Stop ownership/tokens, request dots and terminal/transfer attention borders stay.
+[Validation and phone acceptance](VALIDATION-test29-agent-icons.md).
+
+RU: Это анимации приложения в стиле агентов. Центральные значки не вращаются.
+Требование ответа/разрешения отображается спокойной пульсацией; реконект —
+янтарным оформлением. Обводки терминала и передач сохранены. Плавность требует
+отдельной проверки на телефоне.
+
+---
+
 # Private test18 — agent indicator and request timing
 
 All four structured agent chats use their own glyph inside the stop indicator.

@@ -62,4 +62,10 @@ public class ProjectFilesTest {
         try{Process p=new ProcessBuilder("sh","-c",ProjectFiles.portableListScript(dir.getPath())).start();ByteArrayOutputStream bytes=new ByteArrayOutputStream();byte[] buffer=new byte[1024];int n;while((n=p.getInputStream().read(buffer))!=-1)bytes.write(buffer,0,n);assertEquals(0,p.waitFor());ProjectFiles.Entry e=ProjectFiles.parse(bytes.toByteArray()).entries.get(0);assertTrue(e.directory);assertEquals(child.getName(),e.name);assertEquals(1700000012000L,e.modified);}finally{child.delete();dir.delete();}
     }
 
+    @Test public void fingerprintUsesOneQuotedFileAndTracksChanges()throws Exception{
+        File dir=Files.createTempDirectory("fingerprint-").toFile(),file=new File(dir,"Макет ' $(touch forbidden) +.html");Files.write(file.toPath(),new byte[]{1,2});
+        try{String first=fingerprint(file);assertTrue(first.startsWith("2:"));Files.write(file.toPath(),new byte[]{1,2,3});assertTrue(fingerprint(file).startsWith("3:"));assertNotEquals(first,fingerprint(file));assertFalse(new File(dir,"forbidden").exists());Process missing=new ProcessBuilder("sh","-c",ProjectFiles.fingerprintScript(new File(dir,"missing").getPath())).start();assertNotEquals(0,missing.waitFor());}finally{file.delete();dir.delete();}
+    }
+    private String fingerprint(File file)throws Exception{Process p=new ProcessBuilder("sh","-c",ProjectFiles.fingerprintScript(file.getPath())).start();ByteArrayOutputStream bytes=new ByteArrayOutputStream();byte[] buffer=new byte[1024];int n;while((n=p.getInputStream().read(buffer))!=-1)bytes.write(buffer,0,n);assertEquals(0,p.waitFor());return bytes.toString("UTF-8").trim();}
+
 }

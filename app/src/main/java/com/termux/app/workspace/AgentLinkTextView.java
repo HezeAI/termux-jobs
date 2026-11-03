@@ -79,7 +79,7 @@ final class AgentLinkTextView extends AppCompatTextView {
     @Override public boolean performClick() {
         URLSpan link = pendingLink; pendingLink = null;
         if (link == null) return super.performClick();
-        AgentMarkdown.openLink(this, link.getURL());
+        if(link instanceof AgentMarkdown.LocalLink)link.onClick(this);else AgentMarkdown.openLink(this, link.getURL());
         return true;
     }
 }

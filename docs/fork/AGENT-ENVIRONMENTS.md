@@ -1,23 +1,29 @@
 # Agent Ubuntu environments
 
-## Current source after private test17
+## v2.1.2: shared Ubuntu AI and retained bindings
 
-The user-facing Ubuntu → Ubuntu AI migration feature has been removed. There is
-no migration button, rootfs clone command or automatic switching of saved agent
-profiles. Existing sessions, environments, histories and authorization are retained.
-This removal does not disable internal application-data compatibility on update.
+New AI Agents sessions use Ubuntu AI. Their form explains that Termux supplies
+launch and component installation; it no longer offers ordinary-Ubuntu versus
+Ubuntu-AI selection. Existing ordinary-Ubuntu and direct-Termux Codex profiles
+keep their actual bindings during edit, save and launch. Managers opened from a
+session use that original environment/project and do not silently redirect files.
 
-All four agents can still explicitly select Ubuntu or Ubuntu AI. New profiles
-default to Ubuntu AI; existing selections remain unchanged. Selection itself does
-not install a rootfs. Explicit launch uses the existing preparation confirmation
-and creates only a missing selected environment, without replacing an installed
-system or falling back to another alias. `proot-distro login ubuntu-ai` enters the
-separate AI environment; `proot-distro login ubuntu` enters ordinary Ubuntu.
+When Ubuntu AI is missing, the common preparation flow downloads the fixed clean
+ARM64 image from GitHub Components and installs the local archive using a bundled,
+private proot-distro5.9.0. It never downgrades the system manager. Ready environments
+are reused without downloading an image; incomplete/busy roots are preserved and
+reported. All four agents share one Ubuntu AI and add only missing components
+through existing recipes, without automatic CLI upgrades or model conversations.
 
-Normal environment import, backup, history/resume and package installation remain
-independent features. The optional connection launcher stays an absolute executable
-path without arguments; empty means ordinary launch. Authorization is read by the
-CLI in its selected environment and is not copied to another rootfs.
+The explicit launch-environment check shows stages, measured image progress and a
+redacted log; reopening joins the existing serialized job. Closing its window
+does not cancel preparation. Component readiness does not prove authorization or
+model availability. See [installation](ENVIRONMENTS.md) and
+[validation](VALIDATION-v2.1.2.md).
+
+The former manual Ubuntu-to-Ubuntu-AI migration action remains removed. Rootfs,
+authorization, history and project data are not copied or reset automatically.
+Ordinary environment import, backup and explicit update operations remain separate.
 
 ## Shared environment deletion
 

@@ -98,9 +98,20 @@
       "format": "rootfs-tar",
       "architecture": "aarch64",
       "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/rootfs-arm64-20261028/manjaro-arm64.tar.gz"
+    },
+    {
+      "alias": "ubuntu-ai",
+      "filename": "ubuntu-ai-arm64.oci.tar",
+      "sha256": "c08828893609894e5ab6d80f146961961148afde007ce904292418d8fcd011e0",
+      "size": 41144320,
+      "source": "ubuntu@sha256:86eb1bc1059720a19a777ba5a109e9ee3690d5dfe3e319871a6d6beb86fb7f85",
+      "sourceTag": "26.04",
+      "format": "oci",
+      "architecture": "aarch64",
+      "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/ubuntu-ai-base-arm64-20261102/ubuntu-ai-arm64.oci.tar"
     }
   ],
-  "scope": "Clean upstream base images only; XFCE/fonts/application packages are not included. Ubuntu AI keeps its upstream installation policy.",
+  "scope": "Clean upstream base images only; XFCE/fonts/application packages are not included. Ubuntu AI uses its own pinned base asset and private proot-distro 5.9.0 installer.",
   "sources": {
     "ubuntu": "https://hub.docker.com/_/ubuntu",
     "debian": "https://hub.docker.com/_/debian",

@@ -59,3 +59,6 @@ __pycache__/
 
 # Local signing material may be a directory or a worktree symlink.
 .signing
+
+# Reviewed upstream source bundle used by the private Ubuntu AI installer.
+!/app/src/main/assets/ubuntu-ai-proot-distro-5.9.0.zip

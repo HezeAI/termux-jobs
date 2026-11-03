@@ -1,6 +1,235 @@
-# Unreleased
+# 2026-11-03 — v2.1.2 (versionCode 1476)
 
-No additional changes outside v2.1.1.
+Changes since stable v2.1.1:
+
+- Add Claude Code instruction sources/diagnostics, shared LEARNING.md, project-file creation and session-scoped access to Instructions and Skills.
+- Add general/project skills for Codex and Claude: reviewed GitHub/folder/ZIP import, in-app creation, explicit managed updates, conflict detection, rollback and removal.
+- Install missing Ubuntu AI from a pinned clean GitHub Components image through a separate proot-distro5.9.0 local-archive installer. Reuse existing environments and CLI components; show preparation stages, progress and redacted logs without starting a model conversation.
+- Simplify new AI session defaults while preserving legacy bindings. Improve manager scrolling, template preview/application, RU/EN memory/documentation guidance, vertical attachment/star actions and individual agent animations.
+- Fix older Claude history disappearing during refresh; retain bounded paging/scroll anchors and full long-answer access. Fix local links/cards and animated HTML/GIF opening in the originating chat environment for all four agents.
+- Include required third-party notices in the APK/About, preserve upstream authorship and publish a separate exact Ubuntu source supplement without changing existing Components assets. Extend release/Git/license checks.
+- Clarify the independent unofficial fork, RU/EN data/security boundaries and public reporting channel. Publish the verified certificate digest separately from APK hashes; update compatibility is with matching-package/certificate Termux Job’s versions, not an unverified official-Termux installation. No independent security audit is claimed.
+- Same Termux Job’s package/certificate/schema8; ARM64, app Android8+, X11 Android11+. No reset, incompatible migration or automatic environment replacement. Existing processes need an explicit idle restart to load changed adapters. Skill discovery and component readiness do not prove model/account access. The previous Docker Hub failure cause remains unknown.
+
+[English release notes](docs/fork/RELEASE-v2.1.2.md) · [Validation](docs/fork/VALIDATION-v2.1.2.md)
+
+# 2026-11-03 — 2.1.1-test40 (versionCode 1475)
+
+- Remove voice input entirely: microphone, hold menu/system recognition activity, speech callbacks and speech diagnostics. Remove recording permission, microphone hardware and speech-service/activity visibility declarations; no other app recording consumer was found.
+- Agent composer: stack paperclip above star in the same outline with independent48dp feedback targets. Reuse the existing field/draft and attachment/saved-command actions; expand remaining input width and keep Send at the bottom right. Ordinary terminal layout remains.
+- Project instructions: distinguish Edit AGENTS.md / Edit CLAUDE.md from Create project instructions using actual base-file presence. Existing files focus the current editor/keyboard without an added status-row resize; missing files retain the creation form. Preserve drafts, selection, project binding and captured save revision. No separate diagnostic menu or artificial delay. Retain test39 history/anchor fixes.
+- RU/EN labels retained. Package, signing identity and user storage formats remain; slash-message behavior is unchanged. Phone acceptance of the new composer and project action remains separate.
+
+[Validation](docs/fork/VALIDATION-test40-composer-instructions.md)
+
+# 2026-11-03 — 2.1.1-test39 (versionCode 1474)
+
+- Claude history: use bounded read-only JSONL pages with continuation cursors, stable record UUIDs and partial snapshots. Earlier rows remain after polls; dense tool records continue across pages instead of dropping rows beyond the snapshot limit. Full older responses are reread from native history instead of relying on the live preview cache. Common history, scroll-position/cache and detail UI remain shared with Codex.
+- Project instructions: queue a creation request tapped during file loading, coalesce repeated opens into one form and preserve its text. Existing files stay in the editor; missing files use the confirmed source/revision. Show loading/errors and retain draft/CAS safeguards for Codex/Claude from settings and session menus. No artificial opening delay.
+- Retain test38 Codex microphone diagnostics and explicit Android recognition window, plus test37 Send alignment and previous features. Package/signer unchanged; instructions helper cache is instructions-1474 and saved user instructions are not replaced.
+- Limits: phone acceptance remains separate for history/scrolling and window flicker/opening. Existing Claude helpers need an explicit idle restart with saved conversation to load the new adapter; no session restarts automatically. Native user history is read only. Voice provider error5 remains unexplained; stable voice publication is held pending the developer's phone check.
+
+[Validation](docs/fork/VALIDATION-test39-history-instructions.md)
+
+# 2026-11-03 — 2.1.1-test38 (versionCode 1473)
+
+- Codex voice input: hold the microphone for Embedded recognition, Android recognition window or copyable diagnostics. The bounded journal shows configured/visible services, permission at startup, launch/callback/cleanup order and cancellation reasons without audio, dictation, drafts or chat identifiers.
+- Add an explicit system recognition activity alternative. Results enter only the original draft, never auto-send; cancellation, unavailable handlers and chat changes preserve text. Pending recognition prevents duplicate launches. Completed embedded results/errors release without an extra cancel.
+- Retain test37 Send alignment and previous composer, attachments, agent indicators, stop confirmation, instruction/skills and environment behavior. Slash work remains deferred. Package/signer retained; helper cache uses instructions-1473 without replacing saved instructions.
+- Limits: the developer confirms Send alignment but still reports error5 in test37. Its cause remains unknown. Actual microphone/provider behavior and system-window success await phone acceptance; model checks do not establish them. Stable publication with voice input is held pending that check.
+
+[Validation](docs/fork/VALIDATION-test38-voice-diagnostics.md)
+
+# 2026-11-03 — 2.1.1-test37 (versionCode 1472)
+
+- Keep Send at the bottom right beside the message field, independently of the floating Codex microphone. Disable chat-row baseline alignment and restore the original setting for ordinary terminals.
+- Codex voice input: continue once after microphone permission grant and foreground resume, coalesce repeat taps during the permission prompt, recheck permission and original chat, and preserve drafts on cancellation/errors. Distinguish Android client error5 from local startup exceptions in RU/EN and safe diagnostics.
+- Retain test36 composer, attachments, four-agent indicators, stop confirmation and previous instruction/skills features. Slash changes remain deferred. Package/signer retained; helper cache uses instructions-1472 without replacing user instructions.
+- Limits: original device error5 cause remains unconfirmed; actual Ask-every-time permission/provider flow, microphone and IME appearance need phone acceptance. No automatic environment conversion, CLI update or migration is included.
+
+[Validation](docs/fork/VALIDATION-test37-voice-permission.md)
+
+# 2026-11-02 — 2.1.1-test36 (versionCode 1471)
+
+- Agent composer: remove the separate Command without model field and return its height to the transcript; keep the existing attachment picker on a vector paperclip beside the star, in one outlined group with separate48dp targets and stronger press feedback.
+- Codex-only voice input: a filled microphone floats above Send without a border, permanent panel or full-width row. Explicit Android microphone permission, listening/error status, final-only draft insertion, cancellation and original-chat isolation preserve text and never auto-send. Scroll clearance keeps the final message reachable above the icon.
+- Disable the existing direct-interactive header button in agent chat while retaining native agent terminal access and ordinary terminal/desktop input. RU/EN updated. Slash-message changes remain deferred.
+- Attachment removal stays outside the microphone target; the48dp action area and56dp end-of-scroll clearance remain fixed across chat zoom. Successful dictation clears its status row. Ordinary terminal and desktop controls retain their layout and behavior.
+- Retain all test35 instruction/skill-manager features, prior agent indicators, native-terminal access and stop confirmation. No automatic instruction replacement, environment conversion, CLI update, helper experiment or robot mockup.
+- Compatibility: com.termux and previous signer retained; Android microphone permission is requested only on explicit Codex voice input. Microphone hardware remains optional. The instruction helper cache uses instructions-1471 without migrating user files.
+- Limits: actual speech provider, permission dialog, microphone, IME/touch and appearance require phone acceptance. The system provider may require network access; offline recognition is not promised.
+
+[Validation](docs/fork/VALIDATION-test36-agent-composer.md)
+
+# 2026-11-02 — 2.1.1-test35 (versionCode 1470)
+
+- Agent resources: Codex and Claude session gears open AGENTS.md & SKILL.md / CLAUDE.md & SKILL.md immediately after Restart. A pinned session-context window opens the existing instruction editor on Project and the existing full skills manager; chat switching never retargets its source. Unsupported agents do not expose another agent's files.
+- Instructions: move selected-file reload to an accessible vector Refresh button in the fixed title, retaining draft confirmation; remove Reload file and Addition from the menu. Missing project files are identified and point to Create project instructions. RU/EN updated.
+- Keep all test34 project-instruction creation, explicit general-template application, authored skills and higher-contrast four-agent icons. Existing manager actions, storage formats, environment bindings and stop protections remain.
+- Compatibility: package and signing certificate retained; no automatic instruction replacement, environment conversion or CLI update. The helper cache uses instructions-1470, independently of user files. No assistant experiment or robot mockup is included.
+- Limitations: real-device touch, keyboard, narrow/large-font appearance, file-picker interaction and animation acceptance remain separate from model checks. The user-confirmed Claude success with the GitHub Ubuntu AI image does not establish the cause of the former Docker Hub refusal.
+
+[Validation](docs/fork/VALIDATION-test35-agent-resources.md)
+
+# 2026-11-02 — 2.1.1-test34 (versionCode 1469)
+
+- Instructions: move the existing explicit Apply template action into View app template, below the scrolling text. Remove the duplicate menu entry; preserve history, revision conflicts and drafts. View/apply are available only on General; Project/Diagnostics do not redirect to a general file.
+- Project instructions: optional purpose, paths, constraints, verification and documentation/memory fields build only project-specific text, with exact AGENTS.md/CLAUDE.md preview and explicit atomic/CAS save. Existing files open in the editor; opening never creates files or extra documents.
+- Skills: Add → Create skill accepts a validated name, description and instructions for Codex/Claude, previews the exact selected-scope/environment path and SKILL.md, and uses staged atomic installation without silent overwrite. Errors retain form text; successful creation refreshes the list without claiming discovery by a running agent.
+- Agent stop icons: brighter working highlights and deeper smooth dim phases for all four existing glyphs; unchanged cadence, states, hit area, stop protection and reduced-motion behavior. Robot mockups remain separate.
+- Device evidence: the user confirmed Claude working on the other phone after switching to the GitHub-hosted Ubuntu AI image. This does not establish the cause of the prior Docker Hub refusal or cover the other agents.
+- Compatibility: previous package/signer retained; no instruction replacement, environment migration or automatic CLI update. Touch, keyboard and visual smoothness remain separate phone checks.
+
+[Validation](docs/fork/VALIDATION-test34-agent-managers.md)
+
+# 2026-11-02 — 2.1.1-test33 (versionCode 1468)
+
+- Agent instructions: “View app template” replaces environment selection and opens the selected agent’s RU/EN template without writing or replacing the draft. Explicit application remains separately in the menu, with history and conflict protection.
+- Instructions and skills default to Ubuntu AI while retaining the actual environment of legacy sessions. Read/save requests, diagnostics and project browsing use that same displayed environment; ordinary Ubuntu instructions are not copied into Ubuntu AI. Native Termux Codex uses its native file helper; unsupported Claude-in-Termux instruction editing reports the limit.
+- Compatibility: previous package and signing certificate retained; no settings/history migration or automatic replacement of user instructions. The included instruction/skill helpers use a new versioned asset folder. Existing Ubuntu AI preparation behavior from test32 is retained.
+- Limitations: layout, keyboard and native legacy-environment acceptance remain phone checks. Existing remote-network and clean-install limitations are unchanged.
+
+[Validation](docs/fork/VALIDATION-test33-agent-managers.md)
+
+# 2026-11-02 — 2.1.1-test32 (versionCode 1467)
+
+- Ubuntu AI: new installations download the fixed clean Ubuntu 26.04.1 LTS ARM64 OCI base from Termux Job’s Components, with SHA-256, byte progress and resumable downloads. A separate bundled proot-distro 5.9.0 installs the local archive without Docker Hub. System proot-distro is not downgraded.
+- Codex, Claude Code, Gemini and OpenCode share one Ubuntu AI. Existing environments are reused; missing components use the existing versioned recipes. Incomplete environments are refused without automatic removal. Existing incompatible OpenCode binaries are preserved instead of automatically replaced.
+- AI Agents forms use a fixed Ubuntu AI default for new sessions and show a plain runtime explanation instead of an environment selector. Existing ordinary-Ubuntu and direct-Termux Codex bindings survive editing and saving.
+- “Launch environment check” can prepare missing components in a shared serialized operation, with inline stages, measured image progress and a redacted expandable log. Reopening joins the active operation; closing its window does not cancel preparation. This action never starts a model conversation. Vertex component preparation does not start Google sign-in.
+- Preparation states replace the generic unavailable-control-channel notice while preparing an agent. CLI startup is checked before normal launch; account sign-in and model connectivity remain separate.
+- Compatibility: package, signer, sessions/presets and user-data formats retained; no environment rebase or data migration. Pinning 5.9.0 is a selected distribution policy, not a proven fix for the reported remote network failure.
+- Limits: native Termux clean installation and four-agent acceptance on the other phone remain unverified; real 5.9.0 local-install API extraction and model/control-flow checks are reported separately. UI and background behavior need phone acceptance.
+
+[Validation](docs/fork/VALIDATION-test32-ubuntu-ai.md)
+
+# 2026-11-02 — 2.1.1-test31 (versionCode 1466)
+
+- Give Agent instructions and Agent skills the same library-style dialog: fixed title/tabs, one vertical content viewport, and a compact fixed footer. Use the available window/IME space, with wrapping action labels and no fixed screen-height percentage.
+- Let the instruction editor expand into available space and grow with long text; remove the nested 14-line scroll limit. Preserve draft guards, atomic saving, imports, history, conflict handling, diagnostics and feedback visibility.
+- Rename skill scopes to General / Project (Общие / Проектные). Only Project shows the project-folder selector; General displays actual shared roots from the selected agent's Ubuntu AI and no longer searches project/ancestor skill directories. Installation destinations and existing skill files stay unchanged.
+- Keep data/session formats, rights, working chats, CLI versions and all test30 local-file viewing behavior. No robot mockups, helper or user-facing agent migration included.
+- Limits: keyboard/IME, touch, selection and narrow/large-font acceptance on a real phone remain separate from modelled layout checks.
+
+[Validation](docs/fork/VALIDATION-test31-agent-managers.md)
+
+# 2026-11-02 — 2.1.1-test30 (versionCode 1465)
+
+- Fix absolute local file links in Codex, Claude Code, Gemini and OpenCode messages. Links and cards use one viewer, bound to the originating chat's Ubuntu/environment even after switching chats or while reading finishes.
+- Render self-contained HTML/HTM with JavaScript controls and animated GIF through isolated Android System WebView. No app bridge, command access, arbitrary file/content access, network, file chooser or external resource loading.
+- Keep original-file saving; show missing/access, unsupported preview, size-limit and WebView errors instead of silent rejection. Preserve HTTP/HTTPS link actions and text selection.
+- Compatibility: com.termux, same signer, ARM64; no session/history/settings migration or instruction replacement. No helper or user-facing agent migration restored.
+- Limits: HTML previews up to 4 MiB; GIF up to 16 MiB/16 million pixels. Self-contained resources only. Real Android WebView animation, controls, zoom/taps and narrow/large-font acceptance require phone verification.
+
+[Validation](docs/fork/VALIDATION-test30-local-files.md)
+
+# 2026-11-02 — 2.1.1-test29 (versionCode 1464)
+
+- Replace agents' flying point and inner bounces with app-designed individual glyph animations: rotating short Codex arc and soft >_ glow, sequential Claude rays, Gemini ray shimmer/soft scaling, and sequential OpenCode pixel illumination. Central glyphs stay upright; no layout/hit-area changes.
+- Retain real request/wait/reconnect/error/idle states, amber reconnect details, calm user-wait pulse, static reduced-motion states and the existing shared frame clock. No new polling, transport changes or official-brand animation claims.
+- Preserve request-scoped stop confirmation, chat execution dots, native-terminal attention and active Server + Agent transfer borders, ordinary terminal/SSH activity line, all test28 skills/instructions features and existing data formats.
+- Limits: real-device smoothness, contrast and touch/TalkBack acceptance remain separate from model tests. No helper or user-facing agent migration restored.
+
+[Validation](docs/fork/VALIDATION-test29-agent-icons.md)
+
+# 2026-11-02 — 2.1.1-test28 (versionCode 1463)
+
+- Add Agent skills beside Agent instructions: Codex/Claude Code, Ubuntu AI, personal/project scope, exact paths and installed-skill details.
+- Add public GitHub commit-pinned, local-folder and ZIP preparation; candidate selection and explicit per-skill previews with SKILL.md, declarations, file hashes and destination. Imported scripts/dependencies never run automatically.
+- App-managed packages support explicit diff/update, local-change conflicts, one outside-scan rollback, interrupted-transaction recovery and confirmed safe removal. External/bundled/plugin packages remain read-only.
+- Preserve all existing user instructions, chats, presets, rights and auth. Discovery/functionality remain explicitly unconfirmed for working sessions. Claude 2.1.296 supports native /reload-skills; versions and custom launchers may differ. No helper feature or user-facing agent migration is restored.
+- Limits: Ubuntu AI only; conservative YAML subset and bounded archives; no private GitHub/auth; local sources must be accessible inside the selected Ubuntu. Phone acceptance remains separate.
+
+[Guide](docs/fork/AGENT-SKILLS.md) · [Validation](docs/fork/VALIDATION-test28-agent-skills.md)
+
+# 2026-11-02 — 2.1.1-test27 (versionCode 1462)
+
+- Add Codex / Claude Code selection to Agent instructions. Claude supports explicit Ubuntu AI / Ubuntu selection, actual CLAUDE_CONFIG_DIR sources, CLAUDE.md, additive CLAUDE.local.md, .claude/CLAUDE.md and shared LEARNING.md.
+- Reuse atomic saves, conflict checks, import through the built-in picker, history/recovery, localized previews and guarded switching. Preserve existing Codex targets and the shared per-environment project-memory path; no user-file replacement at launch.
+- Add latest-equivalent RU/EN Claude templates and agent-specific explanations/diagnostics. Mark AGENTS.md fallback/settings dependence and absence of AGENTS.override.md support. Keep native auto memory distinct from LEARNING.md.
+- Native Claude 2.1.296 loopback tests confirm new instructions after save/restart-resume/new chat, retained history, no ordinary next-request reload, additive local rules and AGENTS fallback. These do not prove real model obedience or all CLI versions.
+- Preserve package, signer, data formats, agent launch/permissions/connections and working sessions. Real phone keyboard/touch acceptance remains separate.
+
+[Validation](docs/fork/VALIDATION-test27-claude-instructions.md)
+
+---
+
+# 2026-11-02 — 2.1.1-test26 (versionCode 1461)
+
+- Update only the RU/EN project-memory Updating subsection: require a pre-completion lesson assessment and save confirmed lessons that prevent recurrence or materially help future project work, across code, documents, 3D, data, tools and workflows.
+- Specify recording grounds, evidence/date/applicability, topic deduplication and excluded trivial/external/general observations. Preserve secrecy, accuracy, freshness, permissions and no-background-training restrictions without repeated guidance.
+- Keep other template sections and saved user instructions unchanged. Preserve explicit preview/apply, history/conflict safeguards, package, signer and data formats.
+- Real phone IME/touch acceptance remains separate.
+
+[Validation](docs/fork/VALIDATION-test26-memory-update.md)
+
+---
+
+# 2026-11-02 — 2.1.1-test25 (versionCode 1460)
+
+- Replace the complete RU/EN documentation-organization section with the approved text: above 20,480 bytes, reorganize toward no more than 15,360 bytes while retaining project purpose, current paths, LEARNING.md location, mandatory restrictions and required-reading navigation.
+- Require topic-document reading before corresponding work, keep new details in topical docs and confirmed lessons in project memory, and avoid returning moved sections unnecessarily.
+- Preserve requirements and their visibility regardless of target size; report before/after size and preservation/link checks, with explanations only for obstacles or unsafe target attainment.
+- No automatic replacement of saved user instructions; keep explicit preview/apply, history, conflict safeguards, package, signer and data formats. Real phone keyboard/touch acceptance remains separate.
+
+[Validation](docs/fork/VALIDATION-test25-template-target.md)
+
+---
+
+# 2026-11-02 — 2.1.1-test24 (versionCode 1459)
+
+- Update RU/EN templates to require project AGENTS.md reorganization above 20,480 bytes, reconciling unique safety requirements and preserving mandatory entry-point constraints and applicability conditions.
+- Replace optional assessment/deferral with five required steps, specific blocking conditions and before/after size/document/check reporting. Retain below-threshold discretion and all other general rules.
+- Preserve explicit template preview/apply, history/conflicts, user files, package, signer and data formats. No background reorganization or automatic replacement of saved instructions is implemented.
+- Actual phone keyboard/touch acceptance remains separate.
+
+[Validation](docs/fork/VALIDATION-test24-mandatory-reorganization.md)
+
+---
+
+# 2026-11-02 — 2.1.1-test23 (versionCode 1458)
+
+- Replace the RU/EN documentation-organization section with the approved revision: separate byte measurement from mandatory four-step structural assessment above 20,480 bytes.
+- Require a concrete split/deferral decision, preserve explicit prohibitions and prohibit claiming assessment from measurement alone. Remove repeated guidance and keep correct Markdown list spacing.
+- Preserve every other template section, user instructions, package/signature, data formats and explicit preview/apply/history/conflict safeguards. No project AGENTS.md reorganization.
+- Real phone keyboard/touch acceptance remains separate from model preview tests.
+
+[Validation](docs/fork/VALIDATION-test23-template-assessment.md)
+
+---
+
+# 2026-11-02 — 2.1.1-test22 (versionCode 1457)
+
+- Clarify RU/EN general templates: measure project AGENTS.md bytes on first access per task; reassess splitting above 20,480 bytes, without repeat measurement while unchanged.
+- Split only for demonstrated benefit; briefly explain deferral in the result. Preserve every other rule and explicit template-apply/history/conflict behavior.
+- No automatic user-instruction replacement or project documentation reorganization. Keep package, signer and data formats.
+
+[Validation](docs/fork/VALIDATION-test22-template-size-rule.md)
+
+---
+
+# 2026-11-02 — 2.1.1-test21 (versionCode 1456)
+
+- Replace RU general template with the complete newly agreed attachment; align EN with all rules, including the 20 KiB (20,480-byte) structural review threshold and permitted documentation reorganization without changing requirement meaning.
+- Preserve existing user instructions. Applying a template still requires preview and explicit confirmation, with history and conflict protection.
+- Verify that RU/EN storage-addition previews exclude memory and documentation sections. Retain the LEARNING.md editor from test20; no project-instruction splitting is performed.
+- Keep package/signature and data formats. Device keyboard/touch checks remain separate.
+
+[Validation](docs/fork/VALIDATION-test21-general-template.md)
+
+---
+
+# 2026-11-02 — 2.1.1-test20 (versionCode 1455)
+
+- Refresh built-in RU/EN general templates from the reviewed instructions, including project memory and project-documentation organization; preserve user text until explicit application.
+- Add LEARNING.md editing, import, history and recovery, with missing-file template creation, exact paths and conflict/draft protection.
+- Support literal project memory references and explicit existing-file selection without duplicating shared memory. Keep instruction priority separate from memory.
+- Preserve package, signer and existing data formats. No automatic learning, cleanup, session restart or user-file replacement.
+- Real phone keyboard, touch and large-font usability need device acceptance.
+
+[Validation](docs/fork/VALIDATION-test20-instructions-learning.md)
+
+---
 
 # 2026-11-02 — 2.1.1 (versionCode 1454)
 

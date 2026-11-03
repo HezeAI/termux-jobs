@@ -23,10 +23,10 @@ final class ChatAttachmentUi implements AutoCloseable {
     private void discard(JSONObject a){if(!submitted.contains(a.optString("id")))ChatAttachments.discard(activity,a);}
     private volatile boolean closed;private String owner="";private WorkspaceStore.Session profile;private boolean supported;
     private AlertDialog viewer;
-    ChatAttachmentUi(TermuxActivity activity,AgentChatView view){this.activity=activity;this.view=view;picker=new WorkspaceLocalFilePicker(activity);view.folder.setOnClickListener(v->choose());view.apkDetails=this::apkDetails;}
+    ChatAttachmentUi(TermuxActivity activity,AgentChatView view){this.activity=activity;this.view=view;picker=new WorkspaceLocalFilePicker(activity);view.folder.setOnClickListener(v->choose());view.apkDetails=this::apkDetails;view.localFileAction=this::capturePath;view.fileCardAction=this::captureAttachment;}
     private String t(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
     void sync(String next,WorkspaceStore.Session p,boolean available){
-        boolean changed=!owner.equals(next);if(changed){picker.cancelSelection();if(viewer!=null)viewer.dismiss();}
+        boolean changed=!owner.equals(next);if(changed){picker.cancelSelection();}
         owner=next;profile=p;supported=available;view.attachmentPicker(ChatAttachments.supported(p));
         if(changed)render();
     }
@@ -93,8 +93,25 @@ final class ChatAttachmentUi implements AutoCloseable {
         work.execute(()->{String info;try{File file=ChatAttachments.materialize(activity,p,a);String hash=ChatAttachments.fileSha256(file);info=android.text.format.Formatter.formatFileSize(activity,file.length())+"\nSHA-256: "+hash;}catch(Exception e){info=t("Файл недоступен","File unavailable");}
             final String text=info;main.post(()->{if(!closed&&run.equals(owner)&&target.getTag()==token&&target.getParent()!=null)target.setText(text);});});
     }
-    void open(JSONObject a){
-        if(closed||profile==null)return;if(viewer!=null)viewer.dismiss();final String run=owner;final WorkspaceStore.Session p=profile;
+    static WorkspaceStore.Session source(WorkspaceStore.Session p){
+        if(p==null)return null;WorkspaceStore.Session copy=p.copy();copy.id=p.id;copy.handle=p.handle;copy.codexSocketId=p.codexSocketId;return copy;
+    }
+    io.noties.markwon.Markwon markdown(){final WorkspaceStore.Session captured=source(profile);return AgentMarkdown.create(activity,path->()->openPath(captured,path));}
+    Runnable capturePath(String url){final WorkspaceStore.Session captured=source(profile);return ()->openPath(captured,url);}
+    Runnable captureAttachment(JSONObject attachment){final WorkspaceStore.Session captured=source(profile);final JSONObject copy;try{copy=new JSONObject(attachment.toString());}catch(JSONException error){return null;}return ()->openFor(captured,copy);}
+    static String localPath(String url){
+        if(url==null||!url.startsWith("/")||url.startsWith("//"))throw new IllegalArgumentException("INVALID_PATH");
+        String path=android.net.Uri.decode(url);for(int i=0;i<path.length();i++)if(Character.isISOControl(path.charAt(i)))throw new IllegalArgumentException("INVALID_PATH");
+        return java.nio.file.Paths.get(path).normalize().toString();
+    }
+    private void openPath(WorkspaceStore.Session source,String url){
+        try{String path=localPath(url),name=new File(path).getName();JSONObject a=new JSONObject().put("path",path).put("name",name).put("type",ChatAttachments.type(name)).put("localFileLink",true);openFor(source,a);}
+        catch(Exception error){Toast.makeText(activity,t("Не удалось открыть файл: некорректный путь.","Cannot open file: invalid path."),Toast.LENGTH_LONG).show();}
+    }
+    void open(JSONObject a){openFor(source(profile),a);}
+    private void openFor(WorkspaceStore.Session p,JSONObject input){
+        final JSONObject a;try{a=new JSONObject(input.toString());}catch(Exception invalid){Toast.makeText(activity,t("Не удалось открыть файл: некорректные сведения.","Cannot open file: invalid file details."),Toast.LENGTH_LONG).show();return;}
+        if(closed)return;if(p==null){Toast.makeText(activity,t("Среда исходного чата недоступна.","The originating chat environment is unavailable."),Toast.LENGTH_LONG).show();return;}if(viewer!=null)viewer.dismiss();
         LinearLayout box=new LinearLayout(activity);box.setOrientation(LinearLayout.VERTICAL);TextView loading=view.label(t("Загрузка…","Loading…"),13);box.addView(loading);
         final boolean apk=a.optString("type").equals("apk"),binary=a.optString("type").equals("binary");
         AlertDialog.Builder builder=WorkspaceDialogs.builder(activity).setTitle(a.optString("name",t("Вложение","Attachment"))).setView(box);
@@ -104,24 +121,35 @@ final class ChatAttachmentUi implements AutoCloseable {
         final int saveButton=apk?AlertDialog.BUTTON_NEUTRAL:AlertDialog.BUTTON_POSITIVE;
         dialog.getButton(saveButton).setEnabled(false);if(apk)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
         work.execute(()->{File file=null;Bitmap bitmap=null;String text="";int mediaWidth=0,mediaHeight=0;Exception failure=null;try{
+            if(a.optBoolean("localFileLink")&&!a.optString("path").startsWith(ChatAttachments.prefix(p))){try(ProjectFiles files=new ProjectFiles(activity,p)){a.put("cacheKey",files.fingerprint(a.getString("path")));}}
+            if(ChatFileViewer.handles(a.optString("name")))a.put("originalPreview",true);
             file=ChatAttachments.materialize(activity,p,a);String type=a.optString("type");
-            if(type.equals("image")){bitmap=ChatAttachments.bitmap(file,2048);mediaWidth=bitmap.getWidth();mediaHeight=bitmap.getHeight();}
+            if(ChatFileViewer.handles(a.optString("name"))){new ChatFileViewer.Document(file,ChatFileViewer.html(a.optString("name")));}
+            else if(type.equals("image")){bitmap=ChatAttachments.bitmap(file,2048);mediaWidth=bitmap.getWidth();mediaHeight=bitmap.getHeight();}
             else if(type.equals("video")){android.media.MediaMetadataRetriever metadata=new android.media.MediaMetadataRetriever();try{metadata.setDataSource(file.getPath());mediaWidth=Integer.parseInt(metadata.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH));mediaHeight=Integer.parseInt(metadata.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT));String rotation=metadata.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION);if("90".equals(rotation)||"270".equals(rotation)){int swap=mediaWidth;mediaWidth=mediaHeight;mediaHeight=swap;}}finally{metadata.release();}}
             else if(type.equals("apk"))text=android.text.format.Formatter.formatFileSize(activity,file.length())+"\nSHA-256: "+ChatAttachments.fileSha256(file)+t("\n\nХеш описывает этот файл, но не подтверждает доверие к его автору. Установку подтверждает Android.","\n\nThe hash identifies this file; it does not establish publisher trust. Android confirms installation.");
             else if(type.equals("binary"))text=ChatAttachments.badge(a.optString("name"))+" · "+android.text.format.Formatter.formatFileSize(activity,file.length());
             else if(type.equals("file"))text=ChatAttachments.textPreview(file,65536)+(file.length()>65536?t("\n\nПоказаны первые 64 КБ. Полный файл сохранён во вложении.","\n\nShowing the first 64 KB. The complete file remains attached."):"");
         }catch(Exception e){failure=e;}final File ready=file;final Bitmap image=bitmap;final String content=text;final Exception error=failure;final int originalWidth=mediaWidth,originalHeight=mediaHeight;
-            main.post(()->{if(closed||!run.equals(owner)||!dialog.isShowing())return;box.removeAllViews();if(error!=null){
+            main.post(()->{if(closed||!dialog.isShowing())return;box.removeAllViews();if(error!=null){
                     if(ready!=null&&ready.isFile()){
-                        box.addView(view.label(t("Предпросмотр недоступен: формат не декодируется на этом устройстве или файл повреждён. Оригинал можно сохранить.","Preview unavailable: this device cannot decode the format, or the file is damaged. You can save the original."),14));
+                        box.addView(view.label("PREVIEW_LIMIT".equals(error.getMessage())?t("Предпросмотр ограничен: HTML до 4 МиБ, GIF до 16 МиБ. Оригинал можно сохранить.","Preview limits: HTML up to 4 MiB, GIF up to 16 MiB. You can save the original."):t("Предпросмотр недоступен: формат не поддерживается или файл повреждён. Оригинал можно сохранить.","Preview unavailable: unsupported format or damaged file. You can save the original."),14));
                         dialog.getButton(saveButton).setEnabled(true);dialog.getButton(saveButton).setOnClickListener(v->activity.requestWorkspaceStorageAccess(()->save(ready,a.optString("name","attachment"),dialog,saveButton)));
                     }else box.addView(view.label(t("Вложение недоступно: исходный файл удалён или нет доступа.","Attachment unavailable: the source was removed or access is missing."),14));return;
                 }
-                if(image!=null){ZoomImage img=new ZoomImage(activity);img.setImageBitmap(image);box.addView(img,compactMedia(dialog,originalWidth,originalHeight));}
+                if(ChatFileViewer.handles(a.optString("name"))){
+                    try{
+                        ChatFileViewer.Document document=new ChatFileViewer.Document(ready,ChatFileViewer.html(a.optString("name")));
+                        final boolean[] viewerError={false};android.webkit.WebView web=ChatFileViewer.create(activity,document,code->{if(!dialog.isShowing())return;if(!code.equals("LINK_BLOCKED")&&!viewerError[0]){viewerError[0]=true;box.addView(view.label(t("Просмотрщик не смог открыть файл. Оригинал можно сохранить.","The viewer could not open the file. You can save the original."),14));}Toast.makeText(activity,code.equals("LINK_BLOCKED")?t("Внешние ссылки и доступ к другим файлам в этом предпросмотре отключены.","External links and access to other files are disabled in this preview."):t("Просмотрщик не смог открыть файл. Оригинал можно сохранить.","The viewer could not open the file. You can save the original."),Toast.LENGTH_LONG).show();});
+                        box.addView(web,new LinearLayout.LayoutParams(-1,Math.max(view.dp(120),Math.min(view.dp(420),Math.round(activity.getResources().getDisplayMetrics().heightPixels*.55f)))));
+                        dialog.setOnDismissListener(d->ChatFileViewer.release(web));
+                    }catch(Exception unavailable){box.addView(view.label(t("HTML/GIF-просмотрщик недоступен. Проверьте Android System WebView. Оригинал можно сохранить.","HTML/GIF viewer unavailable. Check Android System WebView. You can save the original."),14));}
+                }
+                else if(image!=null){ZoomImage img=new ZoomImage(activity);img.setImageBitmap(image);box.addView(img,compactMedia(dialog,originalWidth,originalHeight));}
                 else if(a.optString("type").equals("video")){VideoView video=new VideoView(activity);MediaController controls=new MediaController(activity);controls.setAnchorView(video);video.setMediaController(controls);video.setVideoPath(ready.getPath());box.addView(video,compactMedia(dialog,originalWidth,originalHeight));box.addView(view.label(t("Агенту передаются выбранные кадры с временными метками, без звука.","The agent receives sampled timestamped frames, without audio."),12));dialog.setOnDismissListener(d->video.stopPlayback());video.start();}
                 else if(apk){TextView details=view.label(content,12);details.setTextIsSelectable(true);box.addView(details);
                     dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->install(ready));}
-                else if(binary){if(a.optBoolean("imagePreviewUnavailable"))box.addView(view.label(t("Изображение не декодируется на этом устройстве. Отправляется исходный файл; просмотр моделью не гарантирован.","This device cannot decode the image. The original is sent as a file; model viewing is not guaranteed."),12));TextView body=view.label(content,13);body.setTextIsSelectable(true);box.addView(body);}
+                else if(binary){box.addView(view.label(t("Для этого формата доступно сохранение оригинала.","You can save the original; this format has no preview."),12));if(a.optBoolean("imagePreviewUnavailable"))box.addView(view.label(t("Изображение не декодируется на этом устройстве. Отправляется исходный файл; просмотр моделью не гарантирован.","This device cannot decode the image. The original is sent as a file; model viewing is not guaranteed."),12));TextView body=view.label(content,13);body.setTextIsSelectable(true);box.addView(body);}
                 else {ScrollView scroll=new ScrollView(activity);TextView body=view.label(content,13);body.setTextIsSelectable(true);scroll.addView(body);box.addView(scroll,new LinearLayout.LayoutParams(-1,Math.min(view.dp(420),Math.round(activity.getResources().getDisplayMetrics().heightPixels*.60f))));}
                 dialog.getButton(saveButton).setEnabled(true);dialog.getButton(saveButton).setOnClickListener(v->activity.requestWorkspaceStorageAccess(()->save(ready,a.optString("name","attachment"),dialog,saveButton)));
             });

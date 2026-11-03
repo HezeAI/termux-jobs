@@ -1,5 +1,21 @@
 # Участие в Termux Job’s
 
+## Security reports
+
+See [SECURITY.md](SECURITY.md) for the confirmed reporting channel and its public/
+private limits. Do not attach keys, private logs or sensitive exploit details to Issues.
+
+## Agent instructions, skills and preparation
+
+For v2.1.2 reports, include the agent/CLI version, displayed environment, project
+scope, operation and safe error text. Distinguish files present from confirmed
+agent discovery, and components ready from account/model access. For history,
+report paging/full-text/scroll behavior without attaching private JSONL. For new
+Ubuntu AI, distinguish missing from existing/incomplete installations. Never
+attach credentials, full checkpoints, skill secrets or unredacted preparation logs.
+See [instructions](docs/fork/AGENT-INSTRUCTIONS.md), [skills](docs/fork/AGENT-SKILLS.md)
+and [validation](docs/fork/VALIDATION-v2.1.2.md).
+
 ## Пополнение справочника
 
 Предлагайте новые карточки «Ошибки и решения» через Issues: точный симптом,
@@ -10,7 +26,7 @@
 
 ## Ошибки и предложения
 
-For v2.1.0 environment-update issues, include the target, native proot-distro
+For environment-update issues, include the target, native proot-distro
 version, operation (package upgrade / Components restore / official image),
 source/checkpoint identity and safe error text. Distinguish first installation
 from replacement, cancellation, retry and rollback. Never attach checkpoint

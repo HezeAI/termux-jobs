@@ -17,13 +17,74 @@ public class AgentInstructionsUiTest {
   if(op.equals("history"))return new JSONObject().put("history",emptyHistory?new JSONArray():new JSONArray().put(new JSONObject().put("id","00000000000000000000000000000001").put("time",1700000000).put("sha256","aabbccdd")));
   if(op.equals("previous"))return new JSONObject().put("text",historyText);
   if(op.equals("diagnostics"))return new JSONObject().put("codexHome","/custom/codex").put("sources",new JSONArray()).put("cli",new JSONObject().put("version",verifiedCli?"0.164.0":"99.0.0").put("behaviorVerified",verifiedCli));
-  return new JSONObject().put("projectSource",projectSource==null?JSONObject.NULL:projectSource).put("storageAddition",storageOffer?"## Storage addition\nRules\n":"").put("storageAdditionAvailable",storageOffer).put("path",q.optString("scope").equals("project")?q.optString("project")+"/"+q.optString("name"):"/custom/codex/AGENTS.override.md").put("maskedBy",q.optString("scope").equals("project")&&q.optString("name").equals("AGENTS.md")&&"/project/AGENTS.override.md".equals(projectSource)?"/project/AGENTS.override.md":JSONObject.NULL).put("exists",!q.optString("scope").equals("project")||projectExists).put("text",q.optString("scope").equals("project")?projectText:sourceText).put("revision","fixture-revision").put("template","template text\n").put("templateAvailable",true);
+  return new JSONObject().put("projectBaseExists",projectExists).put("projectSource",projectSource==null?JSONObject.NULL:projectSource).put("storageAddition",storageOffer?"## Storage addition\nRules\n":"").put("storageAdditionAvailable",storageOffer).put("path",q.optString("scope").equals("project")?(q.optString("name").equals("LEARNING.md")&&!q.optString("memoryPath").isEmpty()?q.optString("memoryPath"):q.optString("project")+"/"+q.optString("name")):(q.optString("agent").equals("claude")?"/custom/claude/CLAUDE.md":"/custom/codex/AGENTS.override.md")).put("maskedBy",q.optString("scope").equals("project")&&q.optString("name").equals("AGENTS.md")&&"/project/AGENTS.override.md".equals(projectSource)?"/project/AGENTS.override.md":JSONObject.NULL).put("exists",!q.optString("scope").equals("project")||projectExists).put("text",q.optString("scope").equals("project")?projectText:sourceText).put("revision","fixture-revision").put("template","template text\n").put("templateAvailable",true);
  }
  void show()throws Exception{ui=new AgentInstructionsUi.Editor(activity,"/project",this::backend);ui.show();waitIdle();}
  void waitIdle()throws Exception{for(int n=0;n<150;n++){Shadows.shadowOf(Looper.getMainLooper()).idle();if(!ui.busy)return;Thread.sleep(10);}fail("UI operation did not finish");}
  View find(String tag){return ui.root.findViewWithTag(tag);}
  void measured(View view,int width,int height){view.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));view.layout(0,0,width,height);}
  android.graphics.Rect bounds(View parent,View child){android.graphics.Rect r=new android.graphics.Rect();child.getDrawingRect(r);((ViewGroup)parent).offsetDescendantRectToMyCoords(child,r);return r;}
+ @Test public void claudeNarrowLargeFontFilesAndEnvironmentStayUsable()throws Exception{
+  for(String lang:new String[]{"ru","en"}){
+   if(ui!=null)ui.dialog.dismiss();WorkspaceLanguage.select(activity,lang);android.content.res.Resources res=activity.getResources();android.content.res.Configuration c=new android.content.res.Configuration(res.getConfiguration());c.fontScale=1.5f;res.updateConfiguration(c,res.getDisplayMetrics());res.getDisplayMetrics().scaledDensity=res.getDisplayMetrics().density*1.5f;
+   show();ui.switchAgent("claude");waitIdle();find("instructions-tab-project").performClick();waitIdle();
+   for(String file:new String[]{"CLAUDE.md","CLAUDE.local.md",".claude/CLAUDE.md","LEARNING.md"}){find("instructions-file-"+file).performClick();waitIdle();measured(ui.root,ui.dp(280),ui.dp(360));TextView active=(TextView)find("instructions-file-"+file);assertTrue(active.isSelected());assertEquals(1,active.getLineCount());assertTrue(ui.save.getHeight()>0);assertTrue(bounds(ui.root,ui.close).bottom<=ui.dp(360));}
+  }
+ }
+ @Test public void staleTemplatePreviewCannotWriteIntoAnotherAgent()throws Exception{
+  show();ui.template();AlertDialog p=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();ui.switchAgent("claude");waitIdle();p.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals(0,writes);assertEquals("claude",ui.agent);
+ }
+ @Test public void claudeHistoryRestoreUsesClaudeBackendAndKeepsDraftOnCancel()throws Exception{
+  show();ui.switchAgent("claude");waitIdle();ui.history(true);waitIdle();AlertDialog p=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();p.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals(0,writes);ui.history(true);waitIdle();p=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();p.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals("older revision",lastText);assertEquals("claude",last.getString("agent"));assertEquals("/custom/claude/CLAUDE.md",last.getString("path"));
+ }
+ @Test public void claudeSelectorUsesAdditiveFilesAndKeepsMemoryBinding()throws Exception{
+  show();ui.activity.getSharedPreferences("agent-instructions-memory-paths",0).edit().putString("/project","/shared/LEARNING.md").commit();
+  find("instructions-agent-claude").performClick();waitIdle();assertTrue(find("instructions-agent-claude").isSelected());assertEquals("/custom/claude/CLAUDE.md",ui.document.getString("path"));assertEquals("/shared/LEARNING.md",ui.memoryPath());
+  find("instructions-tab-project").performClick();waitIdle();assertNotNull(find("instructions-file-CLAUDE.md"));assertNotNull(find("instructions-file-CLAUDE.local.md"));assertNull(find("instructions-file-AGENTS.override.md"));
+  find("instructions-file-CLAUDE.local.md").performClick();waitIdle();assertTrue(((TextView)find("instructions-project-explanation")).getText().toString().contains("Дополняют CLAUDE.md"));assertEquals("claude",last.getString("agent"));assertEquals("ubuntu-ai",last.getString("environment"));
+  find("instructions-file-LEARNING.md").performClick();waitIdle();assertEquals("/shared/LEARNING.md",ui.document.getString("path"));
+  find("instructions-agent-codex").performClick();waitIdle();assertEquals("/shared/LEARNING.md",ui.memoryPath());assertNotNull(find("instructions-file-AGENTS.override.md"));
+ }
+ @Test public void agentSwitchRequiresExplicitDiscardAndNeverSavesToOtherAgent()throws Exception{
+  show();ui.editor.setText("retained draft");find("instructions-agent-claude").performClick();AlertDialog d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();d.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals("codex",ui.agent);assertEquals("retained draft",ui.editor.getText().toString());assertEquals(0,writes);
+  find("instructions-agent-claude").performClick();d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();d.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals("claude",ui.agent);assertEquals(0,writes);
+ }
+ @Test public void claudeTemplatePreviewLanguageApplyAndConflict()throws Exception{
+  WorkspaceLanguage.select(activity,"en");show();ui.switchAgent("claude");waitIdle();ui.template();AlertDialog d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();String text=((TextView)d.getWindow().getDecorView().findViewWithTag("instructions-preview-text")).getText().toString();assertTrue(text.contains("CLAUDE.md"));assertFalse(text.contains("AGENTS.md"));assertEquals(0,writes);d.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals("claude",last.getString("agent"));assertEquals(AgentInstructions.builtInTemplate(activity,"en","claude"),lastText);
+  ui.editor.setText("keep on conflict");conflict=true;find("instructions-save").performClick();waitIdle();assertEquals("keep on conflict",ui.editor.getText().toString());
+ }
+ @Test public void claudeProjectImportTargetsBaseAndEnvironmentIsReadOnly()throws Exception{
+  show();ui.switchAgent("claude");waitIdle();find("instructions-tab-project").performClick();waitIdle();find("instructions-file-CLAUDE.local.md").performClick();waitIdle();assertEquals("CLAUDE.md",ui.importTarget("read").getString("name"));
+  assertFalse(find("instructions-environment").isClickable());assertEquals("ubuntu-ai",ui.environment());assertEquals("ubuntu-ai",last.getString("environment"));
+ }
+ @Test public void explicitMemorySelectionPersistsPathAndRejectsOtherEnvironment()throws Exception{
+  show();find("instructions-tab-project").performClick();waitIdle();find("instructions-file-LEARNING.md").performClick();waitIdle();
+  WorkspaceStore.Session source=new WorkspaceStore.Session();source.environment="termux";ui.selectMemoryFile(source,new ProjectFiles.Entry("/shared","LEARNING.md",false,2));assertEquals("",ui.memoryPath());
+  source.environment="proot:ubuntu-ai";ui.selectMemoryFile(source,new ProjectFiles.Entry("/shared","LEARNING.md",false,2));waitIdle();
+  assertEquals("/shared/LEARNING.md",ui.memoryPath());assertEquals("/shared/LEARNING.md",ui.document.getString("path"));ui.load();waitIdle();assertEquals("/shared/LEARNING.md",ui.document.getString("path"));assertEquals(0,writes);
+ }
+ @Test public void learningIsSeparateSelectedAndDoesNotCreateOnOpen()throws Exception{
+  show();find("instructions-tab-project").performClick();waitIdle();projectExists=false;projectText="";
+  find("instructions-file-LEARNING.md").performClick();waitIdle();assertTrue(find("instructions-file-LEARNING.md").isSelected());assertEquals(0,writes);
+  assertNotNull(find("instructions-memory-path"));assertNotNull(find("instructions-memory-template"));
+  assertTrue(((TextView)find("instructions-project-explanation")).getText().toString().contains("не автоматическое обучение"));
+  find("instructions-memory-template").performClick();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+  assertTrue(((TextView)preview.getWindow().getDecorView().findViewWithTag("instructions-preview-text")).getText().toString().contains("Подтверждённые уроки"));preview.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals(0,writes);
+ }
+ @Test public void learningImportCancelConflictAndTarget()throws Exception{
+  show();find("instructions-tab-project").performClick();waitIdle();find("instructions-file-LEARNING.md").performClick();waitIdle();
+  importedPreview("lessons");AlertDialog p=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+  assertTrue(((TextView)p.getWindow().getDecorView().findViewWithTag("instructions-import-target")).getText().toString().endsWith("/project/LEARNING.md"));
+  p.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals(0,writes);
+  importedPreview("lessons");p=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();conflict=true;p.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();
+  assertEquals("current\r\n",ui.editor.getText().toString());assertEquals("LEARNING.md",last.getString("name"));
+ }
+ @Test public void learningSwitchProtectsDraftAndKeepsThreeNamesUnwrapped()throws Exception{
+  show();find("instructions-tab-project").performClick();waitIdle();ui.editor.setText("draft AGENTS");find("instructions-file-LEARNING.md").performClick();
+  AlertDialog guard=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();guard.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals("draft AGENTS",ui.editor.getText().toString());assertEquals("AGENTS.md",ui.name);
+  find("instructions-file-LEARNING.md").performClick();guard=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();guard.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals("current\r\n",ui.editor.getText().toString());
+  measured(ui.root,280,500);for(String n:new String[]{"AGENTS.md","AGENTS.override.md","LEARNING.md"})assertEquals(1,((TextView)find("instructions-file-"+n)).getMaxLines());
+ }
  @Test public void narrowLargeFontTabsDoNotWrapAndEditingControlsSurviveReducedImeViewport()throws Exception{
   for(String language:new String[]{"ru","en"})for(float font:new float[]{1f,1.3f,1.5f})for(int width:new int[]{280,320,360}){
    if(ui!=null)ui.dialog.dismiss();WorkspaceLanguage.select(activity,language);android.content.res.Resources res=activity.getResources();android.content.res.Configuration config=new android.content.res.Configuration(res.getConfiguration());config.fontScale=font;res.updateConfiguration(config,res.getDisplayMetrics());res.getDisplayMetrics().scaledDensity=res.getDisplayMetrics().density*font;
@@ -33,8 +94,8 @@ public class AgentInstructionsUiTest {
     TextView active=(TextView)find("instructions-tab-"+tab);assertTrue(active.isSelected());assertEquals(1,active.getLineCount());assertTrue("unclipped label: "+active.getText(),active.getMeasuredWidth()>=Math.ceil(active.getPaint().measureText(active.getText().toString()))+active.getPaddingLeft()+active.getPaddingRight()-1);
     assertTrue(find("instructions-tabs-scroll") instanceof HorizontalScrollView);assertTrue(bounds(ui.root,ui.close).bottom<=h);assertTrue(ui.close.getHeight()>0);
     if(!tab.equals("diagnostics")){
-     assertTrue(ui.editor.getHeight()>0);assertTrue(find("instructions-content-scroll") instanceof ScrollView);assertTrue(bounds(ui.root,ui.save).bottom<=bounds(ui.root,ui.close).top);assertTrue(ui.save.getHeight()>0);
-     if(tab.equals("project")){assertTrue(find("instructions-files-scroll") instanceof HorizontalScrollView);assertEquals(1,((TextView)find("instructions-file-AGENTS.override.md")).getLineCount());find("instructions-file-AGENTS.override.md").performClick();waitIdle();measured(ui.root,w,h);HorizontalScrollView files=(HorizontalScrollView)find("instructions-files-scroll");View selectedFile=find("instructions-file-AGENTS.override.md");assertTrue(selectedFile.isSelected());assertTrue("selected file intersects viewport",selectedFile.getRight()>files.getScrollX()&&selectedFile.getLeft()<files.getScrollX()+files.getWidth());}
+     assertTrue(ui.editor.getHeight()>0);assertTrue(find("instructions-content-scroll") instanceof ScrollView);assertFalse("footer actions must not overlap",android.graphics.Rect.intersects(bounds(ui.root,ui.save),bounds(ui.root,ui.close)));assertTrue(ui.save.getHeight()>0);
+     if(tab.equals("project"))for(String file:new String[]{"AGENTS.md","AGENTS.override.md","LEARNING.md"}){find("instructions-file-"+file).performClick();waitIdle();measured(ui.root,w,h);HorizontalScrollView files=(HorizontalScrollView)find("instructions-files-scroll");TextView selectedFile=(TextView)find("instructions-file-"+file);assertTrue(selectedFile.isSelected());assertEquals(1,selectedFile.getLineCount());assertTrue(selectedFile.getMeasuredWidth()>=Math.ceil(selectedFile.getPaint().measureText(file))+selectedFile.getPaddingLeft()+selectedFile.getPaddingRight()-1);assertTrue("selected file intersects viewport",selectedFile.getRight()>files.getScrollX()&&selectedFile.getLeft()<files.getScrollX()+files.getWidth());}
     }
    }
   }
@@ -55,9 +116,9 @@ public class AgentInstructionsUiTest {
   show();assertEquals("current\r\n",ui.editor.getText().toString());assertTrue(((TextView)find("instructions-source")).getText().toString().contains("/custom/codex/AGENTS.override.md"));
   String text="\ufeffТочный\r\nтекст  \r\n";ui.editor.setText(text);find("instructions-save").performClick();waitIdle();assertEquals(text,lastText);assertEquals(1,writes);assertEquals("/custom/codex/AGENTS.override.md",last.getString("path"));assertEquals("fixture-revision",last.getString("revision"));assertTrue(ui.status.getText().toString().contains("Выполняющийся запрос не изменяется"));
  }
- @Test public void closeWithUnsavedDraftDoesNotSave()throws Exception{show();ui.editor.setText("draft");find("instructions-close").performClick();Shadows.shadowOf(Looper.getMainLooper()).idle();assertEquals(0,writes);assertEquals("current\r\n",sourceText);assertTrue(ui.closed);}
- @Test public void templatePreviewCancelDoesNotChangeFileOrDraft()throws Exception{show();ui.editor.setText("draft");find("instructions-template-offer").performClick();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();preview.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals(0,writes);assertEquals("draft",ui.editor.getText().toString());}
- @Test public void templateIsVisibleBeforeExplicitApplyAndSave()throws Exception{show();find("instructions-template-offer").performClick();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(preview);assertEquals(0,writes);preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals(AgentInstructions.builtInTemplate(activity,"ru"),lastText);assertEquals(1,writes);assertTrue(ui.status.getText().toString().startsWith("Сохранено."));}
+ @Test public void closeWithUnsavedDraftDoesNotSave()throws Exception{show();ui.editor.setText("draft");find("instructions-close").performClick();Shadows.shadowOf(Looper.getMainLooper()).idle();assertEquals(0,writes);assertEquals("current\r\n",sourceText);assertFalse(ui.closed);AlertDialog confirmation=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();confirmation.getButton(AlertDialog.BUTTON_POSITIVE).performClick();Shadows.shadowOf(Looper.getMainLooper()).idle();assertTrue(ui.closed);assertEquals(0,writes);}
+ @Test public void templatePreviewCancelDoesNotChangeFileOrDraft()throws Exception{show();ui.editor.setText("draft");ui.template();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();preview.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals(0,writes);assertEquals("draft",ui.editor.getText().toString());}
+ @Test public void templateIsVisibleBeforeExplicitApplyAndSave()throws Exception{show();ui.template();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(preview);assertEquals(0,writes);preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals(AgentInstructions.builtInTemplate(activity,"ru"),lastText);assertEquals(1,writes);assertTrue(ui.status.getText().toString().startsWith("Сохранено."));}
  @Test public void parallelConflictKeepsDraftAndDoesNotClaimSaved()throws Exception{show();conflict=true;ui.editor.setText("my draft");find("instructions-save").performClick();waitIdle();assertEquals("my draft",ui.editor.getText().toString());assertTrue(ui.status.getText().toString().contains("не перезаписана"));assertFalse(ui.status.getText().toString().startsWith("Сохранено"));assertEquals("current\r\n",sourceText);}
  @Test public void previousRevisionRequiresPreviewAndExplicitRestore()throws Exception{show();ui.history(true);waitIdle();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertEquals(0,writes);preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals("older revision",lastText);}
  @Test public void projectFilesAndDiagnosticsAreSeparateTabsAndDetailsCollapse()throws Exception{show();find("instructions-tab-project").performClick();waitIdle();assertEquals("/project/AGENTS.md",ui.document.getString("path"));find("instructions-file-AGENTS.override.md").performClick();waitIdle();assertEquals("/project/AGENTS.override.md",ui.document.getString("path"));find("instructions-tab-diagnostics").performClick();waitIdle();View toggle=find("instructions-details-toggle");assertNotNull(toggle);assertEquals(0,writes);assertNull(ui.editor);}
@@ -76,7 +137,7 @@ public class AgentInstructionsUiTest {
 
  @Test public void projectExplanationAndActualSourceStayIndependentOfEditingInBothLanguages()throws Exception{
   show();find("instructions-tab-project").performClick();waitIdle();
-  assertTrue(((TextView)find("instructions-project-explanation")).getText().toString().contains("Общие инструкции продолжают действовать"));
+  assertTrue(((TextView)find("instructions-project-explanation")).getText().toString().contains("Дополняют общие правила"));
   assertEquals("Codex читает в этой папке: AGENTS.md",((TextView)find("instructions-project-active")).getText().toString());
   find("instructions-file-AGENTS.override.md").performClick();waitIdle();
   assertEquals("Codex читает в этой папке: AGENTS.md",((TextView)find("instructions-project-active")).getText().toString());
@@ -84,7 +145,7 @@ public class AgentInstructionsUiTest {
   projectSource="/project/AGENTS.override.md";ui.load();waitIdle();assertTrue(((TextView)find("instructions-project-active")).getText().toString().endsWith("AGENTS.override.md"));
   projectSource=null;ui.load();waitIdle();assertEquals("В этой папке проектные инструкции отсутствуют.",((TextView)find("instructions-project-active")).getText().toString());
   WorkspaceLanguage.select(activity,"en");projectSource="/project/AGENTS.md";ui.load();waitIdle();
-  assertTrue(((TextView)find("instructions-project-explanation")).getText().toString().contains("Shared instructions continue to apply"));
+  assertTrue(((TextView)find("instructions-project-explanation")).getText().toString().contains("Shared rules remain in effect"));
   assertEquals("Codex reads in this folder: AGENTS.md",((TextView)find("instructions-project-active")).getText().toString());
   projectSource=null;ui.load();waitIdle();assertEquals("No project instructions in this folder.",((TextView)find("instructions-project-active")).getText().toString());
  }
@@ -110,7 +171,7 @@ public class AgentInstructionsUiTest {
  }
  @Test @Config(qualifiers="w360dp-h640dp") public void longTemplateKeepsButtonsBelowScrollInPortraitAndLandscape()throws Exception{
   show();String longText=AgentInstructions.builtInTemplate(activity,"ru");
-  find("instructions-template-offer").performClick();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+  ui.template();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
   Shadows.shadowOf(Looper.getMainLooper()).idle();assertTrue(preview.getWindow().getAttributes().height>0);assertTrue(preview.getWindow().getAttributes().height<=activity.getResources().getDisplayMetrics().heightPixels);
   checkPreviewBounds(preview,360,576);checkPreviewBounds(preview,640,288);
   preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals(longText,lastText);assertTrue(ui.status.getText().toString().startsWith("Сохранено."));
@@ -123,7 +184,7 @@ public class AgentInstructionsUiTest {
  }
 
  @Test public void languageSwitchOnlyChangesPreviewAndCancelKeepsDraftLocaleAndSource()throws Exception{
-  show();ui.editor.setText("my unsaved text");find("instructions-template-offer").performClick();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();View decor=preview.getWindow().getDecorView();
+  show();ui.editor.setText("my unsaved text");ui.template();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();View decor=preview.getWindow().getDecorView();
   assertEquals(AgentInstructions.builtInTemplate(activity,"ru"),((TextView)decor.findViewWithTag("instructions-preview-text")).getText().toString());assertTrue(decor.findViewWithTag("instructions-preview-ru").isSelected());
   assertTrue(((TextView)decor.findViewWithTag("instructions-preview-target")).getText().toString().contains("/custom/codex/AGENTS.override.md"));
   decor.findViewWithTag("instructions-preview-en").performClick();assertEquals(AgentInstructions.builtInTemplate(activity,"en"),((TextView)decor.findViewWithTag("instructions-preview-text")).getText().toString());assertTrue(((TextView)decor.findViewWithTag("instructions-preview-language")).getText().toString().endsWith("EN"));
@@ -131,7 +192,7 @@ public class AgentInstructionsUiTest {
   preview.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals("my unsaved text",ui.editor.getText().toString());assertEquals(0,writes);
  }
  @Test public void englishDefaultCanExplicitlyApplyRussianAssetWithoutChangingAppLanguage()throws Exception{
-  WorkspaceLanguage.select(activity,"en");show();find("instructions-template-offer").performClick();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();View decor=preview.getWindow().getDecorView();
+  WorkspaceLanguage.select(activity,"en");show();ui.template();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();View decor=preview.getWindow().getDecorView();
   assertTrue(decor.findViewWithTag("instructions-preview-en").isSelected());assertEquals(AgentInstructions.builtInTemplate(activity,"en"),((TextView)decor.findViewWithTag("instructions-preview-text")).getText().toString());
   decor.findViewWithTag("instructions-preview-ru").performClick();assertEquals(0,writes);preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals(AgentInstructions.builtInTemplate(activity,"ru"),lastText);assertEquals("en",WorkspaceLanguage.code(activity));assertEquals("/custom/codex/AGENTS.override.md",last.getString("path"));assertTrue(ui.status.getText().toString().startsWith("Saved."));
  }
@@ -144,7 +205,7 @@ public class AgentInstructionsUiTest {
   sourceText="User prefix\n"+AgentInstructions.storageAddition(AgentInstructions.builtInTemplate(activity,"ru"));WorkspaceLanguage.select(activity,"en");show();ui.storageAddition();assertEquals(0,writes);assertTrue(ui.status.getText().toString().contains("RU or EN"));assertEquals(sourceText,ui.editor.getText().toString());
  }
  @Test public void applyingSelectedTemplateStillRefusesConflictAndRetainsDraft()throws Exception{
-  show();ui.editor.setText("my draft");find("instructions-template-offer").performClick();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();preview.getWindow().getDecorView().findViewWithTag("instructions-preview-en").performClick();conflict=true;preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals("my draft",ui.editor.getText().toString());assertEquals("current\r\n",sourceText);assertFalse(ui.status.getText().toString().startsWith("Сохранено"));
+  show();ui.editor.setText("my draft");ui.template();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();preview.getWindow().getDecorView().findViewWithTag("instructions-preview-en").performClick();conflict=true;preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals("my draft",ui.editor.getText().toString());assertEquals("current\r\n",sourceText);assertFalse(ui.status.getText().toString().startsWith("Сохранено"));
  }
 
  void reopenIn(String language)throws Exception{if(ui!=null){ui.dialog.dismiss();Shadows.shadowOf(Looper.getMainLooper()).idle();}WorkspaceLanguage.select(activity,language);WorkspaceLanguage.apply(activity);show();}
@@ -152,8 +213,8 @@ public class AgentInstructionsUiTest {
  @Test public void instructionMenusHistoryAndDiscardConfirmationsAreLocalized()throws Exception{
   for(String language:new String[]{"ru","en"}){
    reopenIn(language);boolean ru=language.equals("ru");assertEquals(ru?"Отмена / Закрыть":"Cancel / Close",((TextView)find("instructions-close")).getText().toString());
-   find("instructions-menu").performClick();AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(hasText(menu.getWindow().getDecorView(),ru?"Редакции и шаблон":"Revisions and template"));
-   String[] expected=ru?new String[]{"История редакций","Восстановить предыдущую версию","Просмотреть встроенный шаблон","Дополнение: хранение файлов","Открыть файл заново","Импортировать инструкции"}:new String[]{"Revision history","Restore previous version","View built-in template","Addition: file storage","Reload file","Import instructions"};
+   find("instructions-menu").performClick();AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(hasText(menu.getWindow().getDecorView(),ru?"Редакции и импорт":"Revisions and import"));
+   String[] expected=ru?new String[]{"История редакций","Восстановить предыдущую версию","Импортировать инструкции"}:new String[]{"Revision history","Restore previous version","Import instructions"};
    for(int n=0;n<expected.length;n++)assertEquals(expected[n],menu.getListView().getItemAtPosition(n));menu.dismiss();
    ui.history(false);waitIdle();AlertDialog history=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(hasText(history.getWindow().getDecorView(),ru?"История редакций":"Revision history"));assertEquals(ru?"Закрыть":"Close",history.getButton(AlertDialog.BUTTON_NEGATIVE).getText().toString());history.dismiss();
    ui.history(true);waitIdle();AlertDialog previous=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(hasText(previous.getWindow().getDecorView(),ru?"Предыдущая редакция":"Previous revision"));assertEquals(ru?"Восстановить и сохранить":"Restore and save",previous.getButton(AlertDialog.BUTTON_POSITIVE).getText().toString());assertEquals(ru?"Отмена":"Cancel",previous.getButton(AlertDialog.BUTTON_NEGATIVE).getText().toString());previous.dismiss();
@@ -203,11 +264,11 @@ public class AgentInstructionsUiTest {
  ProjectFiles.Entry importFile(){return new ProjectFiles.Entry("/sdcard/Download","rules.md",false,32);}
  WorkspaceStore.Session importSource(){WorkspaceStore.Session source=new WorkspaceStore.Session();source.environment="termux";return source;}
  void importedPreview(String value)throws Exception{ui.importReader=(source,file)->value;ui.importSelected(importSource(),importFile());waitIdle();}
- @Test public void storageAdditionOnlyAppearsInGeneralMenuAndImportEntriesAreLocalized()throws Exception{
+ @Test public void menusOmitReloadAndAdditionAndRetainLocalizedImports()throws Exception{
   storageOffer=true;
   for(String language:new String[]{"ru","en"}){
-   reopenIn(language);boolean ru=language.equals("ru");assertNull(find("instructions-storage-offer"));find("instructions-menu").performClick();AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertEquals(ru?"Импортировать инструкции":"Import instructions",menu.getListView().getItemAtPosition(5));menu.getListView().performItemClick(null,3,3);AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(preview.getWindow().getDecorView().findViewWithTag("instructions-preview-ru"));preview.dismiss();
-   find("instructions-tab-project").performClick();waitIdle();find("instructions-menu").performClick();menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertEquals(ru?"Импортировать AGENTS.md":"Import AGENTS.md",menu.getListView().getItemAtPosition(3));menu.dismiss();assertEquals(0,writes);
+   reopenIn(language);boolean ru=language.equals("ru");assertNull(find("instructions-storage-offer"));find("instructions-menu").performClick();AlertDialog menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertEquals(3,menu.getListView().getCount());assertEquals(ru?"Импортировать инструкции":"Import instructions",menu.getListView().getItemAtPosition(2));menu.dismiss();
+   find("instructions-tab-project").performClick();waitIdle();find("instructions-menu").performClick();menu=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertEquals(3,menu.getListView().getCount());assertEquals(ru?"Импортировать AGENTS.md":"Import AGENTS.md",menu.getListView().getItemAtPosition(2));menu.dismiss();assertEquals(0,writes);
   }
  }
  @Test public void importUsesBuiltInChooserAndDirtyDraftRequiresExplicitDecision()throws Exception{
@@ -275,4 +336,138 @@ public class AgentInstructionsUiTest {
    }
   }finally{activity.getResources().getDisplayMetrics().scaledDensity=old;}
  }
+ @Test public void openingTemplatePreservesDraftUntilExplicitApply()throws Exception{
+  for(String lang:new String[]{"ru","en"})for(String agent:new String[]{"codex","claude"}){
+   WorkspaceLanguage.select(activity,lang);if(ui!=null)ui.dialog.dismiss();show();ui.switchAgent(agent);waitIdle();ui.editor.setText("UNSAVED exact text\r\n");int before=writes;String path=ui.document.getString("path");find("instructions-template-view").performClick();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(preview.isShowing());assertEquals(View.VISIBLE,preview.getButton(AlertDialog.BUTTON_POSITIVE).getVisibility());
+   TextView text=preview.getWindow().getDecorView().findViewWithTag("instructions-preview-text");assertEquals(AgentInstructions.builtInTemplate(activity,lang,agent),text.getText().toString());preview.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals(before,writes);assertEquals("UNSAVED exact text\r\n",ui.editor.getText().toString());assertEquals(path,ui.document.getString("path"));
+  }
+ }
+ @Test public void retainedEnvironmentIsUsedForBothAgentsAndWrites()throws Exception{
+  show();ui.selectedEnvironment="ubuntu";ui.load();waitIdle();assertEquals("ubuntu",last.getString("environment"));assertFalse(find("instructions-environment").isClickable());assertTrue(((TextView)find("instructions-environment")).getText().toString().contains("Ubuntu"));
+  for(String agent:new String[]{"codex","claude"}){ui.switchAgent(agent);waitIdle();assertEquals("ubuntu",last.getString("environment"));ui.editor.setText("same environment rules");find("instructions-save").performClick();waitIdle();assertEquals("ubuntu",last.getString("environment"));}
+ }
+
+ @Test public void templateOnlyAvailableInGeneralWithoutProjectOrDiagnosticsRouting()throws Exception{
+  for(String agent:new String[]{"codex","claude"}){
+   if(ui!=null)ui.dialog.dismiss();show();ui.switchAgent(agent);waitIdle();assertEquals(View.VISIBLE,find("instructions-template-view").getVisibility());
+   find("instructions-tab-project").performClick();waitIdle();assertEquals(View.GONE,find("instructions-template-view").getVisibility());ui.editor.setText("project draft");JSONObject prior=last;ui.viewTemplate();ui.template();assertSame(prior,last);assertEquals("project draft",ui.editor.getText().toString());assertEquals(0,writes);
+   ui.editor.setText(ui.document.optString("text"));find("instructions-tab-diagnostics").performClick();waitIdle();assertEquals(View.GONE,find("instructions-template-view").getVisibility());prior=last;ui.viewTemplate();assertSame(prior,last);find("instructions-tab-general").performClick();waitIdle();assertEquals(View.VISIBLE,find("instructions-template-view").getVisibility());
+  }
+ }
+ @Test public void templateViewExplicitApplyRetainsDraftOnConflict()throws Exception{
+  show();ui.editor.setText("preserve on failure");conflict=true;ui.viewTemplate();AlertDialog p=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertEquals(0,writes);p.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals("preserve on failure",ui.editor.getText().toString());assertEquals(1,writes);
+ }
+
+ @Test public void projectActionDistinguishesExistingBaseFromMissingFileForBothAgentsAndEntries()throws Exception{
+  for(String language:new String[]{"ru","en"})for(String agent:new String[]{"codex","claude"})for(boolean session:new boolean[]{false,true}){
+   if(ui!=null)ui.dialog.dismiss();WorkspaceLanguage.select(activity,language);projectExists=true;projectText="existing project instructions";
+   if(session){WorkspaceStore.Session source=new WorkspaceStore.Session();source.environment=agent.equals("codex")?"codex":"ubuntu";source.claudeAgent=agent.equals("claude");source.codexEnvironment="ubuntu-ai";source.directory="/project";ui=AgentInstructionsUi.sessionEditor(activity,source,this::backend);ui.show();waitIdle();}
+   else{show();if(agent.equals("claude")){ui.switchAgent(agent);waitIdle();}find("instructions-tab-project").performClick();waitIdle();}
+   String edit=(language.equals("ru")?"Редактировать ":"Edit ")+ui.baseName();assertEquals(edit,ui.projectCreate.getText().toString());ui.editor.setText("preserved draft");ui.editor.setSelection(3);JSONObject before=last;int heightBefore=ui.status.getVisibility();ui.projectCreate.performClick();assertNull(ui.creationDialog);assertSame(before,last);assertEquals("preserved draft",ui.editor.getText().toString());assertEquals(3,ui.editor.getSelectionStart());assertTrue(ui.editor.hasFocus());assertEquals(heightBefore,ui.status.getVisibility());assertTrue(Shadows.shadowOf((android.view.inputmethod.InputMethodManager)activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)).isSoftInputVisible());assertEquals(0,writes);
+   // The same action reads the base when another project file is selected.
+   ui.editor.setText(ui.document.optString("text"));String other=agent.equals("codex")?"AGENTS.override.md":"CLAUDE.local.md";find("instructions-file-"+other).performClick();waitIdle();assertEquals(edit,ui.projectCreate.getText().toString());ui.projectCreate.performClick();waitIdle();assertEquals(ui.baseName(),ui.name);assertNull(ui.creationDialog);
+   projectExists=false;projectText="";ui.load();waitIdle();assertEquals(language.equals("ru")?"Создание инструкций проекта":"Create project instructions",ui.projectCreate.getText().toString());ui.projectCreate.performClick();waitIdle();assertNotNull(ui.creationDialog);assertTrue(ui.creationDialog.isShowing());assertEquals(0,writes);ui.creationDialog.dismiss();Shadows.shadowOf(Looper.getMainLooper()).idle();
+  }
+ }
+ @Test public void creationFormRemainsOpenAcrossParentRefreshAndRetainsItsDraft()throws Exception{
+  for(String agent:new String[]{"codex","claude"})for(boolean fromSession:new boolean[]{false,true}){
+   if(ui!=null)ui.dialog.dismiss();projectExists=false;projectText="";sourceText="SECRET_GENERAL_INSTRUCTIONS";
+   if(fromSession){WorkspaceStore.Session profile=new WorkspaceStore.Session();profile.environment=agent.equals("codex")?"codex":"ubuntu";profile.claudeAgent=agent.equals("claude");profile.codexEnvironment="ubuntu-ai";profile.directory="/project";ui=AgentInstructionsUi.sessionEditor(activity,profile,this::backend);ui.show();waitIdle();}
+   else{show();if(agent.equals("claude")){ui.switchAgent(agent);waitIdle();}find("instructions-tab-project").performClick();waitIdle();}
+   ui.createProjectInstructions();waitIdle();AlertDialog form=ui.creationDialog;assertNotNull(form);assertTrue(form.isShowing());EditText input=form.getWindow().getDecorView().findViewWithTag("instructions-create-field-0");input.setText("SECRET_FORM_DRAFT");View formBody=(View)input.getParent().getParent().getParent();View decor=form.getWindow().getDecorView();decor.measure(View.MeasureSpec.makeMeasureSpec(280,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.AT_MOST));decor.layout(0,0,decor.getMeasuredWidth(),decor.getMeasuredHeight());assertTrue(formBody.getWidth()>0);assertTrue(formBody.getHeight()>0);
+   // Parent rendering and asynchronous reload must not dismiss or replace the child.
+   ui.render(new JSONObject(ui.document.toString()));assertSame(form,ui.creationDialog);assertTrue(form.isShowing());assertEquals("SECRET_FORM_DRAFT",input.getText().toString());ui.load();waitIdle();assertSame(form,ui.creationDialog);assertTrue(form.isShowing());assertEquals("SECRET_FORM_DRAFT",input.getText().toString());
+   // An unexpected child dismissal preserves fields when reopened in this editor.
+   form.dismiss();Shadows.shadowOf(Looper.getMainLooper()).idle();ui.createProjectInstructions();waitIdle();AlertDialog reopened=ui.creationDialog;assertNotSame(form,reopened);assertEquals("SECRET_FORM_DRAFT",((EditText)reopened.getWindow().getDecorView().findViewWithTag("instructions-create-field-0")).getText().toString());
+   ui.dialog.dismiss();Shadows.shadowOf(Looper.getMainLooper()).idle();assertFalse(reopened.isShowing());
+  }
+ }
+ @Test public void creationSaveKeepsOriginalRevisionAfterParentRefreshAndCloseButtonProtectsDraft()throws Exception{
+  projectExists=false;projectText="";show();find("instructions-tab-project").performClick();waitIdle();ui.createProjectInstructions();AlertDialog form=ui.creationDialog;EditText purpose=form.getWindow().getDecorView().findViewWithTag("instructions-create-field-0");purpose.setText("keep");AgentManagerLayout box=(AgentManagerLayout)purpose.getParent().getParent().getParent();ui.render(new JSONObject(ui.document.toString()).put("revision","new-parent-revision"));((TextView)box.footer.getChildAt(0)).performClick();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();conflict=true;preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals("fixture-revision",last.optString("revision"));assertTrue(form.isShowing());assertEquals("keep",purpose.getText().toString());preview.dismiss();form.dismiss();Shadows.shadowOf(Looper.getMainLooper()).idle();ui.editor.setText("keep parent draft");find("instructions-close").performClick();AlertDialog guard=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();guard.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();Shadows.shadowOf(Looper.getMainLooper()).idle();assertTrue(ui.dialog.isShowing());assertEquals("keep parent draft",ui.editor.getText().toString());
+ }
+ @Test public void projectCreationQueuesEarlyTapAndCoalescesRepeatedOpensFromBothEntries()throws Exception{
+  for(String agent:new String[]{"codex","claude"})for(boolean session:new boolean[]{false,true}){
+   if(ui!=null)ui.dialog.dismiss();projectExists=false;projectText="";java.util.concurrent.CountDownLatch entered=new java.util.concurrent.CountDownLatch(1),release=new java.util.concurrent.CountDownLatch(1);java.util.concurrent.atomic.AtomicInteger reads=new java.util.concurrent.atomic.AtomicInteger();
+   AgentInstructions.Backend delayed=q->{if(q.optString("scope").equals("project")&&q.optString("operation").equals("read")){reads.incrementAndGet();entered.countDown();if(!release.await(5,java.util.concurrent.TimeUnit.SECONDS))throw new java.io.IOException("TEST_TIMEOUT");}return backend(q);};
+   if(session){WorkspaceStore.Session source=new WorkspaceStore.Session();source.environment=agent.equals("codex")?"codex":"ubuntu";source.claudeAgent=agent.equals("claude");source.codexEnvironment=agent.equals("claude")?"ubuntu":"ubuntu-ai";source.directory="/project";ui=AgentInstructionsUi.sessionEditor(activity,source,delayed);ui.show();}
+   else{ui=new AgentInstructionsUi.Editor(activity,"/project",delayed);ui.agent=agent;ui.name=ui.baseName();ui.show();waitIdle();find("instructions-tab-project").performClick();}
+   assertTrue(entered.await(2,java.util.concurrent.TimeUnit.SECONDS));assertTrue(ui.busy);find("instructions-project-create").performClick();find("instructions-project-create").performClick();assertTrue(ui.status.length()>0);release.countDown();waitIdle();
+   AlertDialog form=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();EditText field=form.getWindow().getDecorView().findViewWithTag("instructions-create-field-0");assertNotNull("An early tap must open the form after the read",field);assertTrue(form.isShowing());assertEquals(1,reads.get());field.setText("keep entered purpose");
+   ui.createProjectInstructions();waitIdle();assertSame("Repeated open must reuse the same form",form,org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog());assertEquals("keep entered purpose",field.getText().toString());assertEquals(1,reads.get());assertEquals("/project/"+ui.baseName(),ui.document.optString("path"));assertEquals(session&&agent.equals("claude")?"ubuntu":"ubuntu-ai",last.optString("environment"));assertEquals(0,writes);form.dismiss();
+  }
+ }
+ @Test public void projectCreationReadErrorCanRetryAndMissingFileDraftNeedsConfirmation()throws Exception{
+  projectExists=false;
+projectText="";
+java.util.concurrent.CountDownLatch entered=new java.util.concurrent.CountDownLatch(1),release=new java.util.concurrent.CountDownLatch(1);
+java.util.concurrent.atomic.AtomicInteger reads=new java.util.concurrent.atomic.AtomicInteger();
+
+  ui=new AgentInstructionsUi.Editor(activity,"/project",q->{if(q.optString("operation").equals("read")&&reads.incrementAndGet()==1){entered.countDown();
+release.await(5,java.util.concurrent.TimeUnit.SECONDS);
+throw new java.io.IOException("PROJECT_CHECK_FAILED");
+}return backend(q);
+});
+ui.scope="project";
+ui.show();
+assertTrue(entered.await(2,java.util.concurrent.TimeUnit.SECONDS));
+ui.createProjectInstructions();
+release.countDown();
+waitIdle();
+assertTrue(ui.status.getText().toString().contains("PROJECT_CHECK_FAILED"));
+ui.createProjectInstructions();
+waitIdle();
+
+  AlertDialog form=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+assertNotNull("Retry must open a form",form.getWindow().getDecorView().findViewWithTag("instructions-create-field-0"));
+form.dismiss();
+ui.editor.setText("unsaved project draft");
+ui.createProjectInstructions();
+ui.createProjectInstructions();
+AlertDialog guard=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+guard.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();
+Shadows.shadowOf(Looper.getMainLooper()).idle();
+assertEquals("unsaved project draft",ui.editor.getText().toString());
+ui.createProjectInstructions();
+guard=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+guard.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+Shadows.shadowOf(Looper.getMainLooper()).idle();
+assertNotNull("Confirmed draft guard must open the form",org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog().getWindow().getDecorView().findViewWithTag("instructions-create-field-0"));
+assertEquals("unsaved project draft",ui.editor.getText().toString());
+assertEquals(0,writes);
+
+ }
+ @Test public void projectCreationForBothAgentsPreviewsOnlyKnownFieldsAndUsesCas()throws Exception{
+  for(String lang:new String[]{"ru","en"})for(String agent:new String[]{"codex","claude"}){
+   if(ui!=null)ui.dialog.dismiss();WorkspaceLanguage.select(activity,lang);show();ui.switchAgent(agent);waitIdle();projectExists=false;projectText="";find("instructions-tab-project").performClick();waitIdle();assertEquals(View.VISIBLE,find("instructions-project-create").getVisibility());int before=writes;ui.createProjectInstructions();waitIdle();AlertDialog form=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();EditText purpose=form.findViewById(android.R.id.content).findViewWithTag("instructions-create-field-0");assertNotNull(purpose);purpose.setText("Confirmed purpose");assertEquals(before,writes);
+   AgentManagerLayout box=(AgentManagerLayout)purpose.getParent().getParent().getParent();TextView review=(TextView)box.footer.getChildAt(0);review.performClick();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();String text=((TextView)preview.getWindow().getDecorView().findViewWithTag("instructions-preview-text")).getText().toString();assertTrue(text.contains("Confirmed purpose"));assertFalse(text.contains("LEARNING.md"));String expected="/project/"+(agent.equals("codex")?"AGENTS.md":"CLAUDE.md");assertTrue(allText(preview.getWindow().getDecorView()).contains(expected));assertEquals(before,writes);
+   conflict=true;preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertTrue(form.isShowing());assertTrue(((TextView)form.findViewById(android.R.id.content).findViewWithTag("instructions-create-status")).length()>0);assertEquals("Confirmed purpose",purpose.getText().toString());assertEquals(expected,last.optString("path"));assertEquals("fixture-revision",last.optString("revision"));assertEquals("project",last.optString("scope"));conflict=false;review.performClick();preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();Shadows.shadowOf(Looper.getMainLooper()).idle();assertFalse(form.isShowing());assertEquals(text,lastText);assertTrue(ui.document.optBoolean("exists"));
+  }
+ }
+ @Test public void existingProjectInstructionsKeepDraftAndNeverOpenCreationForm()throws Exception{
+  show();find("instructions-tab-project").performClick();waitIdle();ui.editor.setText("retained project draft");JSONObject before=last;ui.createProjectInstructions();assertSame(before,last);assertEquals("retained project draft",ui.editor.getText().toString());assertEquals(0,writes);
+ }
+ @Test public void projectCreationCanSaveEmptyOptionalSectionsAndCancelProtectsForm()throws Exception{
+  show();projectExists=false;projectText="";find("instructions-tab-project").performClick();waitIdle();ui.createProjectInstructions();waitIdle();AlertDialog form=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();EditText input=form.findViewById(android.R.id.content).findViewWithTag("instructions-create-field-0");AgentManagerLayout box=(AgentManagerLayout)input.getParent().getParent().getParent();((TextView)box.footer.getChildAt(0)).performClick();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertEquals("# Инструкции проекта\n",((TextView)preview.getWindow().getDecorView().findViewWithTag("instructions-preview-text")).getText().toString());preview.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();input.setText("keep");form.cancel();AlertDialog guard=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();guard.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertTrue(form.isShowing());assertEquals("keep",input.getText().toString());assertEquals(0,writes);form.dismiss();
+ }
+
+ @Test public void titleRefreshRetainsSelectedFileAndProtectsDraftInBothScopes()throws Exception{
+  for(String lang:new String[]{"ru","en"})for(String agent:new String[]{"codex","claude"}){
+   if(ui!=null)ui.dialog.dismiss();WorkspaceLanguage.select(activity,lang);show();ui.switchAgent(agent);waitIdle();assertEquals(lang.equals("ru")?"Обновить":"Refresh",ui.refresh.getContentDescription());assertEquals(ui.refresh.getContentDescription(),ui.refresh.getTooltipText());assertNotNull(ui.refresh.getDrawable());assertEquals(View.VISIBLE,ui.refresh.getVisibility());
+   sourceText="updated general";ui.refresh.performClick();waitIdle();assertEquals(sourceText,ui.editor.getText().toString());
+   find("instructions-tab-project").performClick();waitIdle();String selected=agent.equals("codex")?"AGENTS.override.md":"CLAUDE.local.md";find("instructions-file-"+selected).performClick();waitIdle();String path=ui.document.optString("path");ui.editor.setText("keep this draft");JSONObject prior=last;ui.refresh.performClick();AlertDialog prompt=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();prompt.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertSame(prior,last);assertEquals("keep this draft",ui.editor.getText().toString());projectText="disk changed";ui.refresh.performClick();prompt=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();prompt.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals("disk changed",ui.editor.getText().toString());assertEquals(path,ui.document.optString("path"));assertEquals(selected,last.optString("name"));assertEquals("project",last.optString("scope"));assertEquals(0,writes);
+   find("instructions-tab-diagnostics").performClick();waitIdle();assertEquals(View.GONE,ui.refresh.getVisibility());
+  }
+ }
+ @Test public void sessionEntryRetainsOriginWhileAllowingGeneralSaveAndCopy()throws Exception{
+  for(String agent:new String[]{"codex","claude"})for(String env:new String[]{"ubuntu-ai","ubuntu"}){
+   if(ui!=null)ui.dialog.dismiss();WorkspaceStore.Session origin=new WorkspaceStore.Session();origin.environment=agent.equals("codex")?"codex":"ubuntu";origin.claudeAgent=agent.equals("claude");origin.codexEnvironment=env;origin.directory="/project/кириллица with spaces";
+   ui=AgentInstructionsUi.sessionEditor(activity,origin,this::backend);assertNotNull(ui);origin.directory="/other";origin.codexEnvironment="ubuntu-ai";ui.show();waitIdle();assertEquals("project",ui.scope);assertEquals(agent,ui.agent);assertEquals(env,last.optString("environment"));assertEquals("/project/кириллица with spaces",last.optString("project"));assertEquals(ui.project+"/"+ui.baseName(),ui.document.optString("path"));
+   ui.editor.setText("copy and save");ui.editor.selectAll();assertTrue(ui.editor.onTextContextMenuItem(android.R.id.copy));android.content.ClipboardManager clipboard=(android.content.ClipboardManager)activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);assertEquals("copy and save",clipboard.getPrimaryClip().getItemAt(0).getText().toString());ui.save.performClick();waitIdle();assertEquals("copy and save",lastText);assertEquals(env,last.optString("environment"));
+   find("instructions-tab-general").performClick();waitIdle();assertEquals("general",last.optString("scope"));assertEquals(env,last.optString("environment"));
+  }
+ }
+ @Test public void sessionEntryMissingFileOffersCreationAndLegacyTermuxIsNotRedirected()throws Exception{
+  show();ui.dialog.dismiss();WorkspaceStore.Session p=new WorkspaceStore.Session();p.environment="codex";p.codexEnvironment="termux";p.directory="/legacy/project";projectExists=false;projectText="";ui=AgentInstructionsUi.sessionEditor(activity,p,this::backend);ui.show();waitIdle();assertEquals("termux",last.optString("environment"));assertNotNull(find("instructions-project-missing"));assertEquals(View.VISIBLE,find("instructions-project-create").getVisibility());assertEquals(0,writes);
+ }
+
 }

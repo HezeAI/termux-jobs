@@ -1,3 +1,45 @@
+# v2.1.2 current agent architecture
+
+Instruction/skill managers share AgentManagerLayout, ProjectFiles and captured
+session context. General template application remains explicit; project creation
+uses original revision/path and atomic conflict checks. Claude instructions have
+agent-specific semantics; both agents share the project memory binding.
+
+AgentPreparationOperation serializes environment work independently of dialogs.
+Missing Ubuntu AI uses environment-image.py plus the reviewed local proot-distro
+source ZIP; existing aliases pass readiness checks before any download. The
+archive is committed as an application source asset with its upstream LICENSE.
+System proot-distro and existing user environments remain outside this installer.
+
+ClaudeHistory reads native JSONL in bounded pages; AgentChatUi merges partial
+snapshots, preserves earlier rows and reuses common scroll/detail/cache components.
+ChatFileViewer captures original session transport and exposes one virtual file
+for HTML/GIF, without a command bridge or arbitrary environment-file access.
+The composer reparents existing attachment/star controls vertically and retains
+the input object. See [release validation](VALIDATION-v2.1.2.md).
+
+Earlier dated implementation sections below retain their historical context.
+
+# Private test29 — individual agent glyph animation
+
+The circular stop target keeps its size and existing frame clock. App-designed
+motion replaces the flying point/bounces: Codex uses a short rotating arc with
+an upright glowing >_; Claude rays brighten in sequence with gentle scale;
+Gemini's fixed four-ray spark shimmers/scales; OpenCode pixels brighten while
+the complete OC stays visible. These are custom app animations, not official ones.
+User-wait uses only a calm pulse; reconnect remains amber with existing details;
+error and idle are static. System animation-off uses static state cues.
+No extra polling or network calls. Hidden views cancel the existing frame loop.
+Stop ownership/tokens, request dots and terminal/transfer attention borders stay.
+[Validation and phone acceptance](VALIDATION-test29-agent-icons.md).
+
+RU: Это анимации приложения в стиле агентов. Центральные значки не вращаются.
+Требование ответа/разрешения отображается спокойной пульсацией; реконект —
+янтарным оформлением. Обводки терминала и передач сохранены. Плавность требует
+отдельной проверки на телефоне.
+
+---
+
 > v2.1.1 stable candidate, compared with public v2.1.0. See the release summary
 > and validation in docs/fork (or this directory). Existing dated test records
 > describe historical development, not separate public features.

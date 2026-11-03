@@ -1,0 +1,32 @@
+{
+  "ru": [
+    "Инструкции Codex и Claude Code: общая память LEARNING.md, создание проектного файла и доступ из меню сессии.",
+    "Навыки агентов: общие/проектные, импорт GitHub/папки/ZIP, создание SKILL.md, явное обновление и откат.",
+    "Новая Ubuntu AI устанавливается из закреплённого образа GitHub; готовая среда используется без замены. Подготовка показывает этапы, объём и журнал.",
+    "История Claude загружается порциями; старые сообщения сохраняются при обновлении, длинные ответы открываются полностью.",
+    "Локальные HTML/GIF-ссылки и карточки открываются общим изолированным просмотрщиком из среды исходного чата.",
+    "Обновлены окна инструкций/навыков, анимации значков и панель чата: скрепка над звездой, отправка справа внизу."
+  ],
+  "en": [
+    "Codex and Claude Code instructions: shared LEARNING.md, project-file creation and session-menu access.",
+    "Agent skills: general/project scopes, GitHub/folder/ZIP import, SKILL.md creation, explicit updates and rollback.",
+    "Missing Ubuntu AI installs from a pinned GitHub image; existing environments are reused. Preparation shows stages, measured progress and a log.",
+    "Claude history loads in bounded pages; refresh retains older messages and long answers open fully.",
+    "Local HTML/GIF links and cards use one isolated animated viewer bound to the originating chat environment.",
+    "Improved instruction/skill windows, individual icon animations and chat composer: paperclip above star, Send at bottom right."
+  ],
+  "compatibility": {
+    "ru": [
+      "Обновление с предыдущих Termux Job’s: тот же com.termux и сертификат, выше versionCode; схема8, ARM64, Android8+, X11 Android11+. Сброс и переустановка сред не требуются; несовместимой миграции нет.",
+      "Пользовательские инструкции и старые привязки сред не заменяются автоматически. Для новых адаптеров нужен явный перезапуск свободного агента с продолжением истории.",
+      "Готовность компонентов и наличие навыка не доказывают авторизацию или загрузку работающим агентом. Ограничение Claude:32МиБ на запись и неразрешимые межфайловые связи. Причина прежнего отказа Docker Hub не установлена.",
+      "Установка поверх официального Termux не подтверждена: одного com.termux недостаточно. Удаление приложения может стереть данные и не является обычным обновлением."
+    ],
+    "en": [
+      "Update from previous Termux Job’s: matching com.termux/certificate, higher versionCode; schema8, ARM64, Android8+, X11 Android11+. No reset, environment reinstallation or incompatible migration required.",
+      "Custom instructions and legacy environment bindings are not replaced automatically. Changed adapters require an explicit idle agent restart with conversation continuation.",
+      "Component readiness and skill files do not prove account access or loading by a running agent. Claude retains a32MiB per-record bound and unresolved cross-file-link limits. The earlier Docker Hub failure cause remains unknown.",
+      "Installing over official Termux is not verified: com.termux alone is insufficient. Uninstalling can delete data and is not a normal update step."
+    ]
+  }
+}

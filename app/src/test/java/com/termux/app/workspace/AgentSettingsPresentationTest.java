@@ -54,4 +54,18 @@ public class AgentSettingsPresentationTest {
  @Test public void locationReflectsEditedFolderAndLegacyTermuxInsteadOfAssumingUbuntu()throws Exception{
   WorkspaceStore.Session p=profile("codex");p.codexEnvironment="termux";p.directory="/data/data/com.termux/files/home/project";open(p,false);TextView location=(TextView)tag("agent-location-summary");assertTrue(location.getText().toString().contains("Termux"));assertFalse(location.getText().toString().contains("Ubuntu AI"));((EditText)tag("session-working-directory")).setText("/new/path");assertTrue(location.getText().toString().contains("/new/path"));assertEquals("/data/data/com.termux/files/home/project",p.directory);
  }
+ @Test public void runtimeHintIsNotASelectorAndLegacyBindingsSurviveSaving()throws Exception{
+  for(String language:new String[]{"ru","en"})for(String agent:new String[]{"codex","gemini","claude","opencode"})for(String env:new String[]{"ubuntu-ai","ubuntu","termux"}){
+   if(env.equals("termux")&&!agent.equals("codex"))continue;
+   WorkspaceLanguage.select(activity,language);WorkspaceLanguage.apply(activity);WorkspaceStore.Session p=profile(agent);p.codexEnvironment=env;open(p,false);
+   TextView hint=(TextView)tag("agent-runtime-explanation");assertNotNull(hint);assertFalse(hint.isClickable());String text=hint.getText().toString();
+   if(env.equals("ubuntu-ai")){assertTrue(text.contains("Ubuntu AI"));assertTrue(text.contains("Termux"));}
+   else{assertFalse(text.contains("Ubuntu AI"));assertTrue(text.contains(env.equals("termux")?"Termux":"Ubuntu"));}
+   editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();idle();assertEquals(env,p.codexEnvironment);assertNull(activity.getCurrentSession());
+  }
+ }
+ @Test public void newAiEditorDefaultsToAiWithoutEnvironmentSelector()throws Exception{
+  open(null,false);tag("session-launch-environment").performClick();AlertDialog kinds=ShadowAlertDialog.getLatestAlertDialog();kinds.getListView().performItemClick(null,2,2);idle();TextView hint=(TextView)tag("agent-runtime-explanation");assertEquals(View.VISIBLE,hint.getVisibility());assertTrue(hint.getText().toString().contains("Ubuntu AI"));assertFalse(hint.isClickable());
+ }
+
 }

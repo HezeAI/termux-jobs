@@ -9,7 +9,7 @@ public class KaliManjaroServiceTest {
     Method method=X11Service.class.getDeclaredMethod("command",Bundle.class);method.setAccessible(true);
     for(String other:new String[]{"ubuntu","debian",target.equals("kali")?"manjaro":"kali"}){Bundle b=X11Remote.command("state");b.putString("target",other);try{method.invoke(s,b);fail(other);}catch(InvocationTargetException e){assertTrue(e.getCause() instanceof IllegalArgumentException);}}
     Bundle b=X11Remote.command("state");b.putString("target",target);assertFalse(((Bundle)method.invoke(s,b)).getBoolean("started"));
-    if(target.equals("manjaro"))for(String mode:new String[]{"turnip","bionic-glibc","wrapper"}){b=X11Remote.command("check");b.putString("target",target);b.putString("renderer",mode);try{method.invoke(s,b);fail(mode);}catch(InvocationTargetException e){assertTrue(e.getCause() instanceof IllegalArgumentException);}assertEquals("",s.snapshot().getString("target"));}
+    if(target.equals("manjaro"))for(String mode:new String[]{"wrapper","unknown-renderer","../escape"}){b=X11Remote.command("check");b.putString("target",target);b.putString("renderer",mode);try{method.invoke(s,b);fail(mode);}catch(InvocationTargetException e){assertTrue(e.getCause() instanceof IllegalArgumentException);}assertEquals("",s.snapshot().getString("target"));}
    }finally{Field f=X11Service.class.getDeclaredField("worker");f.setAccessible(true);((java.util.concurrent.ExecutorService)f.get(s)).shutdown();}
   }
  }

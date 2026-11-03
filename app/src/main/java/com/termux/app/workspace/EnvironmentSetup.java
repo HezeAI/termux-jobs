@@ -171,7 +171,7 @@ final class EnvironmentSetup implements AutoCloseable {
         try{
         File script=new File(directory,"runtime.sh");try(InputStream in=activity.getAssets().open("environment-runtime.sh");OutputStream out=new FileOutputStream(script)){byte[] bytes=new byte[8192];int count;while((count=in.read(bytes))!=-1)out.write(bytes,0,count);}
         if(!script.setReadable(false,false)||!script.setWritable(false,false)||!script.setReadable(true,true)||!script.setWritable(true,true))throw new IOException("SETUP_PERMISSIONS");
-        for(String name:new String[]{"environment-image.py","environment-images.json"}){
+        for(String name:new String[]{"environment-image.py","environment-images.json","ubuntu-ai-installer.py","ubuntu-ai-proot-distro-5.9.0.zip"}){
             File file=new File(directory,name);try(InputStream in=activity.getAssets().open(name);OutputStream out=new FileOutputStream(file)){byte[] bytes=new byte[8192];int count;while((count=in.read(bytes))!=-1)out.write(bytes,0,count);}
             if(!file.setReadable(false,false)||!file.setWritable(false,false)||!file.setReadable(true,true)||!file.setWritable(true,true))throw new IOException("SETUP_PERMISSIONS");
         }

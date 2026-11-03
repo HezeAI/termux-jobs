@@ -23,6 +23,7 @@ public final class SessionShell {
         File rc = new File(dir, "bashrc");
         File cancel = new File(dir, "cancel-startup");
         if (cancel.exists() && !cancel.delete()) throw new IOException("Cannot reset startup cancellation");
+        if(AgentPreparation.supports(session))write(new File(dir,"agent-preparation-status"),"checking-ubuntu\n".getBytes(StandardCharsets.UTF_8));
         String script;
         java.util.List<String> startup = session.startupCommands();
         if(!session.packageRuntimeStartup.isEmpty())startup=java.util.Collections.singletonList(session.packageRuntimeStartup);

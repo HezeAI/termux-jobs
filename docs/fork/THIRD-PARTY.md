@@ -1,3 +1,14 @@
+# Current notices and source coverage — 2026-11-03
+
+See [THIRD_PARTY_NOTICES](../../THIRD_PARTY_NOTICES.md) for exact release dependency
+versions and retained texts, and the [dated review](LICENSE-REVIEW-2026-11-03.md)
+for APK/Components source access, corrections and remaining component-specific work.
+Original Termux/third-party authorship is retained; HezeAI maintains fork changes.
+This independent unofficial fork is not endorsed by the Termux team or other
+upstream projects. Earlier dated sections below retain their historical scope;
+generic source homepages in those sections are not proof of exact corresponding
+sources or a blanket compliance statement.
+
 # v2.1.0 environment integration sources
 
 Official metadata/images remain the work of their respective distributions;

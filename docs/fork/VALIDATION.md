@@ -1,4 +1,16 @@
-# Current public release validation — v2.1.1
+# Current release validation — v2.1.2
+
+See [VALIDATION-v2.1.2.md](VALIDATION-v2.1.2.md) for final APK identity, automated
+checks, developer phone observations, native/source evidence, source/notice scope
+and remaining limits. SHA-256 certificate and APK-file digest are separate values.
+No independent security/legal audit is claimed. Publication download/updater proof
+is recorded in the GitHub release body without moving the source tag or replacing
+published binary assets. [Security/data](../../SECURITY.md) ·
+[License/source review](LICENSE-REVIEW-2026-11-03.md).
+
+---
+
+# Historical public release validation — v2.1.1
 
 See [VALIDATION-v2.1.1.md](VALIDATION-v2.1.1.md) for the exact final artifact, fresh checks, reused inputs and device limits. Published v2.1.1: anonymous downloads of APK, update.json, SHA256SUMS and validation.json matched the prepared files byte for byte. APK SHA-256 and updater versionCode1454 were verified. The release is stable, not a draft/prerelease. Tagged candidate evidence remains unchanged. Its “not published” wording and the validation.json `prepared-not-published` field describe the pre-publication snapshot; see the publication clarification in the current report.
 

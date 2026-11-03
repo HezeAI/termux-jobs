@@ -91,3 +91,11 @@ codex(){ printf '%s\n' 'codex-cli 99.0.0'; }
 curl(){ printf bad > existing-cli-download;return 99; }
 source "'''+str(assets/'codex-bootstrap.sh')+'"\n');assert not (fixture/'existing-cli-download').exists()
 print('PASS isolated agent setup: read-only inventory, component-only/key privacy, consent guards, missing-only APT, APT failure abort, corrupt archive abort before extraction, existing ADC retained, host preparation consent/no rootfs deletion')
+
+# Component-only Vertex preparation never invokes an interactive sign-in.
+cloud=fixture/'existing-gcloud';cloud.write_text('#!/bin/sh\nprintf forbidden > "'+str(fixture/'components-only-auth-called')+'"\n');cloud.chmod(0o700)
+run('vertex-components-only',r'''
+jobs_agent_cloud_credentials(){ return 1; }
+jobs_agent_cloud_path(){ printf '%s\n' "'''+str(cloud)+'''"; }
+export JOBS_AGENT_COMPONENTS_ONLY=1 JOBS_AGENT_SETUP_ALLOWED=1
+source "'''+str(assets/'vertex-bootstrap.sh')+'"\n');assert not (fixture/'components-only-auth-called').exists()

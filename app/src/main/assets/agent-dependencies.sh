@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Only called by a user-launched Ubuntu agent. check never installs or authenticates.
+source "${BASH_SOURCE[0]%/*}/agent-preparation-status.sh"
 jobs_agent_valid() { [[ ${1:-} == codex || ${1:-} == claude || ${1:-} == gemini || ${1:-} == opencode ]]; }
 jobs_agent_say() { if [[ ${JOBS_AGENT_LANGUAGE:-en} == ru ]]; then printf '%s\n' "$1"; else printf '%s\n' "$2"; fi; }
 jobs_agent_base_tools() { printf '%s\n' curl tar sha256sum flock xz find sort xargs; }
@@ -55,6 +56,7 @@ jobs_agent_base_prepare() (
     if [[ $agent == gemini && $auth == vertex ]] && ! jobs_agent_cloud_credentials && ! command -v python3 >/dev/null; then packages+=(python3);fi
     if [[ $agent == codex && ${JOBS_AGENT_UBUNTU:-} == ubuntu-ai ]] && ! command -v python3 >/dev/null; then packages+=(python3);fi
     if ((${#packages[@]})); then
+        jobs_agent_stage installing-components
         jobs_agent_say 'Установка недостающих пакетов Ubuntu…' 'Installing missing Ubuntu packages…'
         command -v apt-get >/dev/null || { jobs_agent_say 'В этой среде нет APT. Пакеты не изменены.' 'APT is unavailable in this environment. No packages changed.' >&2;return 1; }
         # Native APT locking only. No lock deletion, upgrades or changes to configured agents.
@@ -65,6 +67,7 @@ jobs_agent_base_prepare() (
 jobs_agent_prepare() {
     local agent=${1:-} auth=${2:-api} report source=${BASH_SOURCE[0]%/*}
     jobs_agent_valid "$agent" || return 2
+    jobs_agent_stage checking-components
     jobs_agent_say 'Проверка компонентов выбранного агента…' 'Checking the selected agent components…'
     report=$(jobs_agent_check "$agent" "$auth") || return
     if [[ $report == *MISSING:* && ${JOBS_AGENT_SETUP_ALLOWED:-0} != 1 ]]; then

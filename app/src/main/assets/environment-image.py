@@ -4,6 +4,7 @@ import http.client
 import fcntl,hashlib,json,os,re,stat,sys,time,urllib.error,urllib.request
 from pathlib import Path
 RELEASE='rootfs-arm64-20261028'
+RELEASES={'ubuntu-ai':'ubuntu-ai-base-arm64-20261102'}
 ALIASES={'jobs-x11-ubuntu':'ubuntu'}
 class HttpsOnly(urllib.request.HTTPRedirectHandler):
  def redirect_request(self,req,fp,code,msg,headers,newurl):
@@ -31,7 +32,7 @@ def specs():
  result={}
  for item in j['images']:
   name=item['alias'];filename=item['filename'];sha=item['sha256'];size=item['size']
-  if name not in {'ubuntu','debian','alpine','archlinux','fedora','opensuse','void','kali','manjaro'} or name in result:raise ValueError('IMAGE_CATALOG_TARGET')
+  if name not in {'ubuntu-ai','ubuntu','debian','alpine','archlinux','fedora','opensuse','void','kali','manjaro'} or name in result:raise ValueError('IMAGE_CATALOG_TARGET')
   if not re.fullmatch(r'[a-z0-9.-]{1,100}',filename) or not re.fullmatch('[a-f0-9]{64}',sha) or type(size) is not int or not 0<size<=2*1024**3:raise ValueError('IMAGE_CATALOG_PIN')
   result[name]=(filename,sha,size)
  return result
@@ -104,7 +105,8 @@ def main():
  base=directory(parent,'.environment-control')
  requested=os.environ.get('JOBS_ENVIRONMENT_DOWNLOAD_DIR')
  if requested and not Path(requested).samefile(base):raise ValueError('IMAGE_CACHE_CONTROL')
- base=directory(directory(directory(base,'images'),RELEASE),name)
+ release=RELEASES.get(name,RELEASE)
+ base=directory(directory(directory(base,'images'),release),name)
  lock=os.open(base/'download.lock',os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
  try:
   info=os.fstat(lock)
@@ -112,7 +114,7 @@ def main():
   try:fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
   except BlockingIOError:raise ValueError('IMAGE_DOWNLOAD_BUSY') from None
   filename,sha,size=items[name]
-  url='https://github.com/HezeAI/termux-jobs-components/releases/download/'+RELEASE+'/'+filename
+  url='https://github.com/HezeAI/termux-jobs-components/releases/download/'+release+'/'+filename
   print('STAGE:download-pinned-'+name,file=sys.stderr,flush=True)
   path=download(base/filename,url,sha,size)
   print('STAGE:verified-rootfs-sha256',file=sys.stderr,flush=True)

@@ -1,0 +1,32 @@
+# Agent composer — source validation after test35
+
+Historical source-check report; the changes were later packaged in [test36](VALIDATION-test36-agent-composer.md).
+
+Date:2026-11-02. Source-only task; no APK built and no version increase. The delivered test35 APK is unchanged. The user explicitly deferred slash-message work; codex-chat.cjs matches its test35 SHA-256.
+
+## Final behavior
+
+- Remove the separate Command without model field and its shell submission/draft path from the Android chat UI. The transcript takes that height; no empty replacement row remains. The native terminal and existing backend protocols remain.
+- Reuse the star and actual attachment-picker button at the bottom, star first and vector paperclip second, in one outline with independent48dp actions and stronger press feedback. Ordinary terminal layout/actions return when chat releases the shared composer. The same EditText survives transitions, retaining text and selection. Only the field scales with chat zoom, keeping action hit targets fixed.
+- Codex alone has a filled microphone glyph on a transparent48dp overlay target at the lower right of the transcript, above Send. It has no permanent border/panel and does not enlarge the input row. The chat remains visible to its left. A56dp end-of-scroll clearance allows the final message to move above the overlay and stays fixed at50–150% zoom; the clearance is attached only when needed, with no placeholder in other chats. Listening uses a selected amber glyph and a separate compact live status. Attachment rows reserve60dp at the right so their removal actions cannot be covered. Successful dictation clears the status row and announces completion for accessibility.
+- Use Android SpeechRecognizer after an explicit tap and RECORD_AUDIO permission. A microphone hardware feature is optional, and the recognition-service visibility query is declared. The platform checks permission again immediately before starting. Starting/listening/processing/error states follow callbacks. Partial hypotheses replace a preview, never the draft; final text is inserted once without sending. Existing selected text and manual edits are retained. The application does not log audio or add a recognition transcript to message history automatically.
+- Context/generation checks reject stale callbacks. A repeated tap, chat change, hidden screen, manual send or close cancels/destroys the recognizer. Permission denial and absent/busy/network/audio/no-speech errors retain text and have RU/EN explanations. Permission granted for a stale context never starts recording in another chat.
+- The inspected upper Interactive input control (`⌖`, left of extra keys) toggled TerminalView input and the former shell field. It is now disabled/dimmed while agent chat owns the composer, with an independent callback guard. Native terminal access through the agent button remains. Ordinary terminal and desktop input are preserved.
+
+## Checked anew
+
+**133 unique JVM checks passed.** Seventeen transcript/layout/controller cases were rerun after the initial overlay corrections, followed by19 transcript/attachment/controller checks for attachment-removal clearance and7 final speech-state checks. Other same-task passing results retain their relevant unchanged paths. Coverage includes final/partial/duplicate speech callbacks, cancellation, no service, denied/granted/stale permission, network/audio errors, context switch/close, manual edits and RU/EN; all four agent header states and terminal restoration; paperclip/star actions and fixed targets; narrow/large-font layout without an extra mic row; scroll clearance at50–150%; draft focus, history/streaming, attachment selection/storage and existing keyboard/desktop-header behavior. A fake platform/backend is used: no microphone, model request, working terminal or user authorization data was used.
+
+Compilation passed. Full modern Lint7.4.2 analyzed all five modules: **0 errors, 234 warnings**. Existing toolchain warnings remain, with no new blanket suppression. Final production bytes in the JVM and Lint stages match source. Documentation links and diff/whitespace checks passed.
+
+## Review, reuse and limits
+
+The shared desktop path was traced: it controls the input container's visibility, not child indices. Desktop guards retain its keyboard route; no geometry, driver, native server or installer code changed, so desktop/keyboard model checks were selected rather than launching X11 or installing guests. Existing SDK/JDK/Gradle caches were reused. Unchanged transport/assets retain their prior evidence; slash handling is specifically unchanged, not newly enabled. No APK/runtime audit is claimed for this source-only task.
+
+Phone acceptance remains for actual microphone permission/system service behavior, dictation language/provider quality, touch/ripple contrast, keyboard resize, narrow/large-font appearance and overlay placement. Model tests do not prove those interactions. The system speech provider may use its network service; offline recognition is not guaranteed. Android requires main-thread calls, microphone permission and recognizer destruction: [SpeechRecognizer documentation](https://developer.android.com/reference/android/speech/SpeechRecognizer). Partial-result delivery is provider-dependent: [RecognizerIntent documentation](https://developer.android.com/reference/android/speech/RecognizerIntent).
+
+## Initial failures and evidence
+
+The first132-case overlay run exposed two issues: an unconditionally attached hidden clearance view changed the ordinary transcript child count, and a layout assertion assumed a fixed52px total row height. The clearance now exists only for the visible Codex overlay; the fixture compares Codex/non-Codex row heights under increased font size and verifies fixed48dp targets. All17 affected checks passed afterward. A later source review identified possible attachment-removal overlap; fixed right clearance was added and19 cases passed. Final voice success clears the status without a persistent row, covered by7 rerun speech cases. Original failed logs remain, separately from the passing results.
+
+Evidence: `.verification/agent-composer/` contains scope, source identities, initial and final JVM summaries/logs, modern Lint logs/summary and consolidated summary. The earlier130-case pre-overlay pass is historical; it does not verify the final floating layout. Version-labelled older documentation remains historical.

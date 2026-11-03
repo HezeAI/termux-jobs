@@ -65,6 +65,8 @@ final class ProjectFiles implements AutoCloseable {
     }
     static boolean visible(Entry e,String filter) {return e.directory || filter.equals(WorkspaceText.tr("Все")) || filter.equals(WorkspaceText.tr("Текст"))&&mime(e.name).equals("text/plain") || filter.equals(WorkspaceText.tr("Изображения"))&&mime(e.name).startsWith("image/") || filter.equals("APK")&&e.name.toLowerCase(Locale.ROOT).endsWith(".apk");}
     static String portableListScript(String path){return "cd -- "+target(path)+" || exit 2; printf 'JOBS_FILES_2\\0%s\\0' \"$(pwd -P)\"; for p in ./* ./.[!.]* ./..?*; do if [ -d \"$p\" ]; then kind=d; metadata=$(stat -L -c '%Y' -- \"$p\") || exit 2; size=0; modified=$metadata; elif [ -f \"$p\" ]; then kind=f; metadata=$(stat -L -c '%s %Y' -- \"$p\") || exit 2; size=${metadata%% *}; modified=${metadata##* }; else continue; fi; printf '%s\\0%s\\0%s\\0%s\\0' \"$kind\" \"${p#./}\" \"$size\" \"$modified\"; done";}
+    static String fingerprintScript(String path){String target=target(path);return "test -f "+target+" && test -r "+target+" && stat -L -c '%s:%y:%i' -- "+target;}
+    String fingerprint(String path)throws Exception{return new String(bytes(fingerprintScript(path),1024),StandardCharsets.UTF_8).trim();}
     Listing list(String path) throws Exception {return parse(bytes(environment(profile).startsWith("proot:")?portableListScript(path):listScript(path),MAX_LIST));}
     Listing createDirectory(String parent,String name) throws Exception {
         if(name.trim().isEmpty()||name.equals(".")||name.equals("..")||name.contains("/")||name.contains("\n")||name.contains("\r")||name.indexOf('\0')>=0)throw new IOException(WorkspaceText.tr("Введите имя одной папки без / и переносов"));

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Private runtimes only. Invoked in the selected Ubuntu when the user launches OpenCode.
 set -euo pipefail
+    if declare -F jobs_agent_stage >/dev/null;then jobs_agent_stage installing-components;fi
 jobs_ai_prepare() {
     local jobs_agents_root="${1:-$HOME/.local/share/termux-jobs/agents}"
     local jobs_node_name=node-v22.22.1-linux-arm64
@@ -21,6 +22,10 @@ jobs_ai_prepare() {
     local jobs_need_node=0 jobs_need_oc=0
     node -e 'if(Number(process.versions.node.split(".")[0])<20)process.exit(1)' >/dev/null 2>&1 || jobs_need_node=1
     [[ "$(opencode --version 2>/dev/null || true)" == 'opencode v2.0.28' ]] || jobs_need_oc=1
+    if ((jobs_need_oc)) && { [[ -e "$jobs_agents_root/bin/opencode" || -L "$jobs_agents_root/bin/opencode" ]] || command -v opencode >/dev/null; }; then
+        printf '%s\n' 'Existing OpenCode version is incompatible with the configured integration. It was preserved; no automatic update was performed.' >&2
+        return 1
+    fi
     if ((jobs_need_node || jobs_need_oc)); then
         jobs_missing=()
         command -v curl >/dev/null || jobs_missing+=(curl ca-certificates)
@@ -54,9 +59,11 @@ jobs_ai_prepare() {
         rm -rf -- "$jobs_download_dir"
         trap - EXIT
     fi
+    if declare -F jobs_agent_stage >/dev/null;then jobs_agent_stage checking-cli;fi
     node -e 'if(Number(process.versions.node.split(".")[0])<20)process.exit(1)'
     [[ "$(opencode --version)" == 'opencode v2.0.28' ]]
+    if declare -F jobs_agent_stage >/dev/null;then jobs_agent_stage ready;fi
     flock -u 9;exec 9>&-
-    jobs_ai_status 'Компоненты готовы. Запуск OpenCode…' 'Components ready. Starting OpenCode…'
+    if [[ ${JOBS_AGENT_COMPONENTS_ONLY:-0} == 1 ]];then jobs_ai_status 'Компоненты OpenCode готовы.' 'OpenCode components ready.';else jobs_ai_status 'Компоненты готовы. Запуск OpenCode…' 'Components ready. Starting OpenCode…';fi
 }
 jobs_ai_prepare "$@"

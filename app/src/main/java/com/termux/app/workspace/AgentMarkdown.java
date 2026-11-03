@@ -19,14 +19,30 @@ import java.util.regex.*;
 
 /** Native CommonMark rendering; no WebView, remote image loading or command execution. */
 final class AgentMarkdown {
-    static Markwon create(Context c){return Markwon.builder(c).usePlugin(StrikethroughPlugin.create()).usePlugin(LinkifyPlugin.create()).usePlugin(new AbstractMarkwonPlugin(){
+    static Markwon create(Context c){return create(c,null);}
+    static final class LocalLink extends android.text.style.URLSpan {
+        private final Runnable action;
+        LocalLink(String url,Runnable action){super(url);this.action=action;}
+        @Override public void onClick(View widget){action.run();}
+    }
+    static Markwon create(Context c,java.util.function.Function<String,Runnable> local){return Markwon.builder(c).usePlugin(StrikethroughPlugin.create()).usePlugin(LinkifyPlugin.create()).usePlugin(new AbstractMarkwonPlugin(){
+        @Override public void afterSetText(TextView text){
+            if(local==null||!(text.getText() instanceof Spannable))return;
+            Spannable spans=(Spannable)text.getText();
+            for(android.text.style.URLSpan span:spans.getSpans(0,spans.length(),android.text.style.URLSpan.class)){
+                if(!span.getURL().startsWith("/")||span.getURL().startsWith("//"))continue;
+                Runnable action=local.apply(span.getURL());if(action==null)continue;
+                int start=spans.getSpanStart(span),end=spans.getSpanEnd(span),flags=spans.getSpanFlags(span);
+                spans.removeSpan(span);spans.setSpan(new LocalLink(span.getURL(),action),start,end,flags);
+            }
+        }
         @Override public void beforeRender(Node node){node.accept(new AbstractVisitor(){@Override public void visit(Text text){if(text.getParent() instanceof Paragraph&&text.getParent().getParent() instanceof ListItem&&text.getParent().getFirstChild()==text){String value=text.getLiteral();if(value.startsWith("[x] ")||value.startsWith("[X] "))text.setLiteral("☑ "+value.substring(4));else if(value.startsWith("[ ] "))text.setLiteral("☐ "+value.substring(4));}}});}
         @Override public void configureParser(Parser.Builder builder){builder.extensions(Collections.singletonList(TablesExtension.create()));}
         @Override public void configureTheme(MarkwonTheme.Builder b){b.linkColor(0xff79dfcd).blockQuoteColor(0xff79dfcd).blockQuoteWidth(3).codeTextColor(0xffbdddd2).codeBackgroundColor(0xff14252b).codeBlockBackgroundColor(0xff0b131a).headingBreakHeight(0).headingTextSizeMultipliers(new float[]{1.5f,1.35f,1.2f,1.1f,1.05f,1f});}
         @Override public void configureConfiguration(MarkwonConfiguration.Builder b){b.linkResolver((view,url)->openLink(view,url));}
     }).build();}
     static void openLink(View view,String url){
-        Uri uri=webUri(url);if(uri==null)return;Context c=view.getContext();
+        Uri uri=webUri(url);if(uri==null){android.widget.Toast.makeText(view.getContext(),WorkspaceLanguage.code(view.getContext()).equals("ru")?"Не удалось открыть ссылку: неподдерживаемый адрес или среда файла недоступна.":"Cannot open link: unsupported address or file environment unavailable.",android.widget.Toast.LENGTH_LONG).show();return;}Context c=view.getContext();
         android.app.Activity host=activity(c);if(host==null||host.isFinishing()||host.isDestroyed())return;
         boolean ru=WorkspaceLanguage.code(c).equals("ru");
         TextView address=new TextView(c);address.setTag("agent-link-address");address.setText(url);address.setTextColor(WorkspaceDialogs.TEXT);address.setTextSize(14);address.setTextIsSelectable(true);address.setPadding(WorkspaceDialogs.dp(c,20),WorkspaceDialogs.dp(c,12),WorkspaceDialogs.dp(c,20),WorkspaceDialogs.dp(c,12));

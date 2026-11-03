@@ -21,7 +21,7 @@ public class AgentConnectionUiTest {
  @Test public void existingSessionAndPresetSaveConnectionWithoutStartingAProcess()throws Exception{
   for(boolean preset:new boolean[]{false,true}){
    WorkspaceStore.Session p=new WorkspaceStore.Session();p.name="Agent";p.environment="codex";p.codexEnvironment="ubuntu-ai";p.directory="/root";p.saved=preset;
-   AlertDialog dialog=open(p,!preset);EditText input=dialog.getWindow().getDecorView().findViewWithTag("agent-connection-command");input.setText("/root/private/launcher");dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();assertEquals("/root/private/launcher",p.agentConnectionCommand);assertNull(a.getCurrentSession());assertFalse(dialog.isShowing());
+   AlertDialog dialog=open(p,!preset);EditText input=dialog.getWindow().getDecorView().findViewWithTag("agent-connection-command");input.setText("/root/private/launcher");dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();for(int i=0;i<150&&dialog.isShowing();i++){Thread.sleep(20);Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();}assertEquals("/root/private/launcher",p.agentConnectionCommand);assertNull(a.getCurrentSession());assertFalse(dialog.isShowing());
   }
  }
  @Test public void optionalFieldRoundTripsAndOldProfilesDefaultToNormal()throws Exception{

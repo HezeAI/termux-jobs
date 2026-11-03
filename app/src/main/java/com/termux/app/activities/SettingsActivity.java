@@ -118,6 +118,16 @@ public class SettingsActivity extends AppCompatActivity {
                             String title = "About";
 
                             StringBuilder aboutString = new StringBuilder();
+                            aboutString.append("# Termux Job’s\n\n"
+                                + "Независимый неофициальный форк, поддерживаемый HezeAI. Не связан с командой Termux и не одобрен ею.\n\n"
+                                + "Independent unofficial fork maintained by HezeAI. Not affiliated with or endorsed by the Termux team.\n\n"
+                                + "Original Termux: Termux contributors, GPL-3.0-only with retained license exceptions. Fork changes: HezeAI.\n\n"
+                                + "[Fork source / Исходники](https://github.com/HezeAI/termux-jobs/tree/fork/base) · "
+                                + "[Releases / Релизы](https://github.com/HezeAI/termux-jobs/releases) · "
+                                + "[Security and data / Безопасность](https://github.com/HezeAI/termux-jobs/blob/fork/base/SECURITY.md)\n\n"
+                                + "[Fork contact / Связь с разработчиком форка](https://github.com/HezeAI/termux-jobs/issues). "
+                                + "Do not post keys or private logs / Не публикуйте ключи или приватные журналы.\n\n"
+                                + "AI development assistance: OpenAI Codex\n\n");
                             aboutString.append(TermuxUtils.getAppInfoMarkdownString(context, false));
 
                             String termuxPluginAppsInfo =  TermuxUtils.getTermuxPluginAppsInfoMarkdownString(context);
@@ -125,7 +135,17 @@ public class SettingsActivity extends AppCompatActivity {
                                 aboutString.append("\n\n").append(termuxPluginAppsInfo);
 
                             aboutString.append("\n\n").append(AndroidUtils.getDeviceInfoMarkdownString(context));
-                            aboutString.append("\n\n").append(TermuxUtils.getImportantLinksMarkdownString(context));
+                            aboutString.append("\n\n## Original Termux references / Ссылки исходного проекта\n\n"
+                                + "These upstream contacts are not Termux Job’s support / Эти контакты upstream не являются поддержкой форка.\n");
+                            aboutString.append(TermuxUtils.getImportantLinksMarkdownString(context));
+                            aboutString.append("\n\n## Licenses and credits / Лицензии и благодарности\n\n");
+                            try (java.io.BufferedReader notices = new java.io.BufferedReader(new java.io.InputStreamReader(
+                                    context.getAssets().open("THIRD_PARTY_NOTICES.md"), java.nio.charset.StandardCharsets.UTF_8))) {
+                                String line;
+                                while ((line = notices.readLine()) != null) aboutString.append(line).append('\n');
+                            } catch (java.io.IOException unavailable) {
+                                aboutString.append("[Third-party notices / Уведомления](https://github.com/HezeAI/termux-jobs/blob/fork/base/THIRD_PARTY_NOTICES.md)");
+                            }
 
                             String userActionName = UserAction.ABOUT.getName();
                             ReportActivity.startReportActivity(context, new ReportInfo(userActionName,
