@@ -82,12 +82,15 @@ android {
             storePassword System.getenv('TERMUX_FORK_KEYSTORE_PASSWORD') ?: 'termux-fork-debug'
             keyPassword System.getenv('TERMUX_FORK_KEYSTORE_PASSWORD') ?: 'termux-fork-debug'
         }
+        release {
+            initWith signingConfigs.debug
+        }
     }
 
     buildTypes {
         release {
             // Preserve the existing install certificate and the tested, unminified code.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
             minifyEnabled false
             shrinkResources false // Reproducible builds
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -262,3 +265,18 @@ tasks.register("verifyGuavaRuntime") {
     }
 }
 tasks.named("preBuild").configure { dependsOn("verifyGuavaRuntime") }
+
+
+apply from: rootProject.file('gradle/verify-release-signer.gradle')
+task verifyReleaseSigner {
+    doLast {
+        def signer = android.signingConfigs.release
+        project.ext.verifyPinnedReleaseSigner(signer.storeFile, signer.keyAlias,
+            signer.storePassword == null ? null : signer.storePassword.toCharArray(),
+            rootProject.file('gradle/release-certificate.sha256'))
+    }
+}
+// No output/cache marker: check the actual public certificate on every packaging attempt.
+tasks.matching { it.name in ['validateSigningRelease', 'packageRelease', 'assembleRelease', 'bundleRelease', 'signReleaseBundle'] }.all {
+    dependsOn verifyReleaseSigner
+}

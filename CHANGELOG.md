@@ -1,5 +1,8 @@
 # Unreleased
 
+- Release signing: require the existing keystore and pinned public certificate
+  before release packaging; refuse missing/mismatched signer without generation.
+
 - Environment setup: retain/export only bounded structured status and safe errors;
   remove full-output capture and legacy-log loading/writing/deletion. Preserve
   stream draining, measured progress, owned-child waiting, cancel and retry.

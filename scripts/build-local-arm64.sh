@@ -6,7 +6,8 @@ cd "$FORK_ROOT"
 : "${FORK_NATIVE_SYSROOT:?Set FORK_NATIVE_SYSROOT to an existing NDK sysroot (read only)}"
 FORK_CLANG="${FORK_NATIVE_CLANG:-clang}"
 FORK_LLD="${FORK_NATIVE_LLD:-ld.lld}"
-./scripts/create-debug-key.sh
+# Release never generates a replacement key, including on a clean checkout.
+[[ -f "$FORK_ROOT/.signing/fork-debug.jks" ]] || { echo 'RELEASE_KEY_MISSING' >&2; exit 1; }
 python3 scripts/prepare-x11.py
 python3 scripts/prepare-java-verification.py --arm64
 FORK_STAGE="$FORK_ROOT/.verification/arm64"

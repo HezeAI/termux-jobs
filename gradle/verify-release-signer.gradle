@@ -1,0 +1,29 @@
+import java.security.KeyStore
+import java.security.MessageDigest
+import java.util.Arrays
+
+// Public-certificate check only. Never export/read a private-key entry or print credentials.
+ext.verifyPinnedReleaseSigner = { File store, String alias, char[] password, File pin ->
+    try {
+        if (store == null || !store.isFile()) throw new GradleException('RELEASE_KEY_MISSING')
+        if (!pin.isFile()) throw new GradleException('RELEASE_CERTIFICATE_PIN_MISSING')
+        String expected = pin.getText('UTF-8').trim().toLowerCase(Locale.ROOT)
+        if (!(expected ==~ /[0-9a-f]{64}/)) throw new GradleException('RELEASE_CERTIFICATE_PIN_INVALID')
+        byte[] encoded
+        try {
+            KeyStore publicStore = KeyStore.getInstance('JKS')
+            store.withInputStream { input -> publicStore.load(input, password) }
+            def certificate = publicStore.getCertificate(alias)
+            if (certificate == null) throw new Exception()
+            encoded = certificate.getEncoded()
+        } catch (Exception ignored) {
+            throw new GradleException('RELEASE_CERTIFICATE_UNAVAILABLE')
+        }
+        String actual = MessageDigest.getInstance('SHA-256').digest(encoded).encodeHex().toString()
+        if (actual != expected) throw new GradleException('RELEASE_SIGNER_MISMATCH')
+        logger.lifecycle('Release public certificate verified: ' + actual)
+        return actual
+    } finally {
+        if (password != null) Arrays.fill(password, (char) 0)
+    }
+}
