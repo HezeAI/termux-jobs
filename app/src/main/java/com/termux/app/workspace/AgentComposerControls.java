@@ -23,6 +23,7 @@ final class AgentComposerControls {
     AgentComposerControls(Context c,LinearLayout row,EditText input,TextView star,TextView send,View attachment){
         context=c;this.row=row;this.input=input;this.star=star;this.send=send;this.attachment=attachment;starBackground=star.getBackground();rowBackground=row.getBackground();baselineAligned=row.isBaselineAligned();
         pair=new LinearLayout(c);pair.setTag("agent-composer-tools");pair.setOrientation(LinearLayout.HORIZONTAL);pair.setGravity(Gravity.CENTER_VERTICAL);pair.setBackground(shape(0xff0b1319,0xff365b52));
+        input.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(agent)toolsHeight();});
         labels();
     }
     void overlay(View host,java.util.function.IntConsumer update){
@@ -44,22 +45,28 @@ final class AgentComposerControls {
     private GradientDrawable shape(int fill,int border){GradientDrawable bg=new GradientDrawable();bg.setColor(fill);bg.setCornerRadius(dp(12));bg.setStroke(dp(1),border);return bg;}
     private Drawable feedback(){return new RippleDrawable(ColorStateList.valueOf(0x9979dfcd),null,shape(0xffffffff,0xffffffff));}
     private static void remove(View view){if(view.getParent()!=null)((ViewGroup)view.getParent()).removeView(view);}
+    private int singleLineHeight(){
+        android.graphics.Paint.FontMetricsInt metrics=input.getPaint().getFontMetricsInt();
+        int text=input.getIncludeFontPadding()?metrics.bottom-metrics.top:metrics.descent-metrics.ascent;
+        return Math.max(dp(48),Math.max(input.getMinimumHeight(),Math.max(input.getMinHeight(),text+input.getCompoundPaddingTop()+input.getCompoundPaddingBottom())));
+    }
+    private void toolsHeight(){if(pair.getLayoutParams()!=null&&pair.getLayoutParams().height!=singleLineHeight()){ViewGroup.LayoutParams p=pair.getLayoutParams();p.height=singleLineHeight();pair.setLayoutParams(p);}}
     void present(boolean nextAgent){
         if(agent!=nextAgent){
             remove(star);remove(send);remove(attachment);remove(pair);pair.removeAllViews();
             agent=nextAgent;
             if(agent){
-                star.setBackground(feedback());attachment.setBackground(feedback());pair.addView(star,new LinearLayout.LayoutParams(dp(48),dp(48)));
-                TextView slash=new TextView(context);slash.setText("/");slash.setTextColor(WorkspaceDialogs.MUTED);slash.setGravity(Gravity.CENTER);slash.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);slash.setClickable(false);slash.setFocusable(false);pair.addView(slash,new LinearLayout.LayoutParams(dp(12),dp(48)));
-                pair.addView(attachment,new LinearLayout.LayoutParams(dp(48),dp(48)));
-                LinearLayout.LayoutParams tools=new LinearLayout.LayoutParams(-2,-2);tools.setMarginEnd(dp(6));row.addView(pair,0,tools);
+                star.setBackground(feedback());attachment.setBackground(feedback());pair.addView(star,new LinearLayout.LayoutParams(dp(48),-1));
+                TextView slash=new TextView(context);slash.setText("/");slash.setTextColor(WorkspaceDialogs.MUTED);slash.setGravity(Gravity.CENTER);slash.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);slash.setClickable(false);slash.setFocusable(false);pair.addView(slash,new LinearLayout.LayoutParams(dp(12),-1));
+                pair.addView(attachment,new LinearLayout.LayoutParams(dp(48),-1));
+                LinearLayout.LayoutParams tools=new LinearLayout.LayoutParams(-2,singleLineHeight());tools.gravity=Gravity.BOTTOM;tools.setMarginEnd(dp(6));row.addView(pair,0,tools);
                 LinearLayout.LayoutParams actions=new LinearLayout.LayoutParams(dp(48),dp(48));actions.setMarginStart(dp(6));row.addView(send,actions);row.setBaselineAligned(false);row.setGravity(Gravity.BOTTOM);
             }else{
                 star.setBackground(starBackground);LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(dp(48),dp(48));left.setMarginEnd(dp(8));row.addView(star,0,left);LinearLayout.LayoutParams actions=new LinearLayout.LayoutParams(dp(48),dp(48));actions.setMarginStart(dp(8));row.addView(send,actions);row.setBaselineAligned(baselineAligned);row.setGravity(Gravity.CENTER_VERTICAL);
             }
             geometry();
         }
-        inset.accept(agent?row.getHeight():0);labels();
+        if(agent)toolsHeight();inset.accept(agent?row.getHeight():0);labels();
     }
     void labels(){star.setContentDescription(t("Вставить сохранённую команду","Insert saved command"));attachment.setContentDescription(t("Прикрепить файл","Attach file"));attachment.setTooltipText(t("Прикрепить файл","Attach file"));send.setContentDescription(agent?t("Отправить сообщение","Send message"):t("Отправить в активный терминал","Send to active terminal"));}
 }
