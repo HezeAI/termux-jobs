@@ -47,7 +47,10 @@ artifact; no .git directory, credentials or signing material is uploaded.
 
 The normal Gradle build still uses the tested source's build files and dependency
 versions. CI's debug APK is a build check, not a replacement of the signed stable
-APK. Modern release Lint and final signed APK verification remain separate gates.
+APK. Modern release Lint and final signed release APK verification remain separate
+release gates. The debug APK is only an internal Actions artifact, not a stable
+release asset or a requirement to issue a debug APK with every release. See the
+[release procedure](RELEASING.md#debug-в-ci-и-проверка-release).
 No application source change or new stable release is implied by this CI fix.
 
 ## Run identities

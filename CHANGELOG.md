@@ -1,5 +1,8 @@
 # Unreleased
 
+- Docs: distinguish internal debug CI/tests from the release build and final
+  signed APK verification; no debug APK is required as a release asset.
+
 - CI: prepare verified pinned X11 inputs on clean GitHub runners; preserve the
   mandatory hash guard and allow explicit checks of older source commits with
   separately recorded workflow identity. See [CI inputs](docs/fork/CI-X11.md).
