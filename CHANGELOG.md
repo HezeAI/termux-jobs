@@ -39,8 +39,11 @@
 - Private release test APK, same com.termux package/public certificate and storage
   schema. Existing environments, credentials, history and agent permission settings
   are not migrated or reset. No automatic session restart or old-log cleanup.
-- Limits: real installation, Android UI/IME/transparent drawing and production-length
-  mobile-network timers remain separate phone checks. No independent audit claimed.
+- User-reported phone acceptance: chat layout, keyboard, buttons, scrolling and
+  checking the existing Ubuntu AI work in 2.1.3-test1.
+- Limits: clean installation, missing-component installation, network failures and
+  production-length mobile-network timers remain unverified on the phone. Detailed
+  unreported UI edge cases remain separate checks. No independent audit claimed.
 
 [Validation and phone plan](docs/fork/VALIDATION-2.1.3-test1.md)
 

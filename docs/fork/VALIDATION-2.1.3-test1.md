@@ -89,7 +89,22 @@ and `.verification/chat-composer-overlay/`. The audit matrix and historical sour
 snapshots remain in `.verification/security-v2.1.2-c0073b46/`; published-source findings
 are distinguished from locally fixed code. No independent external audit is claimed.
 
-## Phone check plan — not yet performed for this APK
+## User-reported phone acceptance — 2026-11-03
+
+The developer/user confirmed acceptance of **2.1.3-test1 on a phone**:
+chat layout, keyboard, buttons, scrolling and the check of an **existing Ubuntu AI**
+work. This is the user's device report, not a device check independently performed
+by the assistant or an independent audit. The report does not specify individual
+agent/device configurations or every edge case below.
+
+This acceptance does **not** verify a clean Ubuntu AI installation, missing-component
+installation, interruption/recovery, network failures or production-duration network
+timeouts. It does not change the historical results for published v2.1.2.
+
+## Remaining detailed phone check plan
+
+The general UI and existing-environment check above are accepted. The following
+list remains a detailed checklist; unreported edge cases are not counted as PASS.
 
 1. Update the existing compatible Termux Job’s installation manually; do not uninstall
    as an update step. Confirm existing profiles, history, projects and authorization remain.
@@ -113,4 +128,5 @@ are distinguished from locally fixed code. No independent external audit is clai
 Remaining architecture risks are unchanged: shared Android UID/proot boundary,
 explicit agent file/command privileges, Gemini crash handoff residue uncertainty,
 trust in native drivers, sensitive user-selected backups and unknown past key custody.
-No real credentials, working sessions or existing environments were used as test data.
+The automated audit used artificial data and did not access real credentials or working
+sessions. The separate user-reported check used the existing Ubuntu AI as described above.

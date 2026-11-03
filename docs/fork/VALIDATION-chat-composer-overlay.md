@@ -27,3 +27,9 @@ compile is reported as PASS. Evidence: .verification/chat-composer-overlay/.
 These are JVM/Robolectric geometry checks, not actual phone rendering, IME or
 scroll smoothness acceptance. The test APK phone plan includes those cases.
 No robot, voice input, slash-message change or process-stop change is included.
+
+
+User-reported acceptance, 2026-11-03: the developer confirmed chat layout, keyboard,
+buttons and scrolling on a phone with 2.1.3-test1. This is separate from the JVM
+checks above; detailed unreported device/font/agent combinations are not inferred.
+See [test APK validation](VALIDATION-2.1.3-test1.md) for scope and remaining checks.
