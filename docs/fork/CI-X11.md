@@ -33,6 +33,10 @@ with the current CI driver; this does not change that source commit or its old r
 - Existing tracked VirGL/bridge archives retain their source runtime pins and
   exclusion from APK payloads. No published Components asset changes.
 
+CI additionally selects build-tools 35.0.0 AAPT2 through repository-local Gradle
+properties: the AGP4.2.2 default AAPT2 cannot parse platform35 android.jar.
+NDK22.1.7171670 and build-tools30.0.3 remain installed as required by the source.
+
 The normal Gradle build still uses the tested source's build files and dependency
 versions. CI's debug APK is a build check, not a replacement of the signed stable
 APK. Modern release Lint and final signed APK verification remain separate gates.
