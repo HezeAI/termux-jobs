@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """Fetch pinned X11 build inputs into repo-local caches; never install packages."""
 from pathlib import Path, PurePosixPath
-import hashlib, io, json, re, subprocess, tarfile, urllib.request, zipfile
-ROOT=Path(__file__).resolve().parents[1]
+import argparse, hashlib, io, json, os, re, subprocess, tarfile, urllib.request, zipfile
+DRIVER_ROOT=Path(__file__).resolve().parents[1]
+ROOT=DRIVER_ROOT
+BUILD_INPUTS=json.loads((DRIVER_ROOT/'scripts/x11-build-inputs.json').read_text())
 COMPONENTS=ROOT/'.tools/x11-components'
 def verified_file(name,record):
     cache=ROOT/'.tools/termux-x11-downloads';cache.mkdir(parents=True,exist_ok=True)
     file=cache/name
     if not file.exists():
+        print('Fetching verified X11 input: '+name,flush=True)
         temp=file.with_suffix('.partial')
         try:
             with urllib.request.urlopen(record['url'],timeout=60) as src,temp.open('wb') as dst:
                 while chunk:=src.read(1024*1024):dst.write(chunk)
-            if hashlib.sha256(temp.read_bytes()).hexdigest()!=record['sha256']:raise ValueError('Pinned '+name+' checksum mismatch; upstream nightly may have changed')
+            if temp.stat().st_size!=record['size'] or hashlib.sha256(temp.read_bytes()).hexdigest()!=record['sha256']:raise ValueError('Pinned '+name+' checksum mismatch; upstream nightly may have changed')
             temp.replace(file)
         finally:temp.unlink(missing_ok=True)
     if file.stat().st_size!=record['size'] or hashlib.sha256(file.read_bytes()).hexdigest()!=record['sha256']:raise ValueError('Pinned '+name+' integrity failure')
@@ -29,7 +32,7 @@ def alpine_compat(assets):
             if member.isfile() and str(path).startswith('usr/include/'):
                 if path.is_absolute() or '..' in path.parts:raise ValueError('Unsafe musl header path')
                 out=headers/str(path);out.parent.mkdir(parents=True,exist_ok=True);out.write_bytes(tar.extractfile(member).read())
-    subprocess.run(['clang','--target=aarch64-linux-musl','-fPIC','-shared','-nostdlib','-O2','-Wall','-Wextra','-Werror','-I',str(headers/'usr/include'),'-Wl,-z,now,-z,relro,-z,noexecstack','-Wl,-soname,x11-alpine-compat.so',str(ROOT/'x11/src/main/cpp/x11-alpine-compat.c'),'-o',str(assets/'x11-alpine-compat.so')],check=True)
+    subprocess.run([os.environ.get('FORK_X11_CLANG','clang'),'--target=aarch64-linux-musl','-fuse-ld=lld','-fPIC','-shared','-nostdlib','-O2','-Wall','-Wextra','-Werror','-I',str(headers/'usr/include'),'-Wl,-z,now,-z,relro,-z,noexecstack','-Wl,-soname,x11-alpine-compat.so',str(ROOT/'x11/src/main/cpp/x11-alpine-compat.c'),'-o',str(assets/'x11-alpine-compat.so')],check=True)
     data=(assets/'x11-alpine-compat.so').read_bytes()
     if data[:4]!=b'\x7fELF' or int.from_bytes(data[18:20],'little')!=183:raise ValueError('Alpine compatibility is not ARM64')
 
@@ -61,40 +64,58 @@ def gst_openh264(assets):
     (assets/'x11-gst-openh264.so').write_bytes(plugin)
     licenses=assets/'licenses';licenses.mkdir(exist_ok=True);(licenses/'GStreamer-OpenH264-copyright.txt').write_bytes(copyright)
 
+def glibc_headers():
+    headers=ROOT/'.tools/x11-glibc'
+    for name,record in BUILD_INPUTS['glibcHeaders'].items():
+        deb=verified_file(name,record)
+        part=next(p for p in subprocess.check_output(['ar','t',str(deb)],text=True).splitlines() if p.startswith('data.tar.'))
+        with tarfile.open(fileobj=io.BytesIO(subprocess.check_output(['ar','p',str(deb),part]))) as archive:
+            for member in archive:
+                path=PurePosixPath(member.name.removeprefix('./'))
+                if member.isfile() and str(path).startswith('usr/aarch64-linux-gnu/include/'):
+                    if path.is_absolute() or '..' in path.parts:raise ValueError('Unsafe glibc header path')
+                    out=headers/str(path);out.parent.mkdir(parents=True,exist_ok=True)
+                    out.write_bytes(archive.extractfile(member).read())
+    return headers/'usr/aarch64-linux-gnu/include'
+
 def main():
     pins=json.loads((ROOT/'third-party/termux-x11/provenance.json').read_text())
-    apk=verified_file('termux-x11-universal-debug.apk',pins['apk']);deb=verified_file('xkeyboard-config.deb',pins['xkb'])
+    apk_record=dict(pins['apk'])
+    mirror=BUILD_INPUTS['apkMirror']
+    if any(mirror[k]!=apk_record[k] for k in ('sha256','size')):
+        raise ValueError('X11 mirror differs from source provenance')
+    apk_record['url']=mirror['url']
+    apk=verified_file('termux-x11-universal-debug.apk',apk_record)
     out=ROOT/'.tools/x11-runtime';lib=out/'jniLibs/arm64-v8a';assets=out/'assets';lib.mkdir(parents=True,exist_ok=True);assets.mkdir(parents=True,exist_ok=True)
     with zipfile.ZipFile(apk) as z:
         if pins['commit'].encode() not in z.read('classes.dex'):raise ValueError('Java/native provenance mismatch')
         native=z.read('lib/arm64-v8a/libXlorie.so')
         if native[:4]!=b'\x7fELF' or int.from_bytes(native[18:20],'little')!=183:raise ValueError('Not ARM64 ELF')
         (lib/'libXlorie.so').write_bytes(native)
-    parts=subprocess.check_output(['ar','t',str(deb)],text=True).splitlines()
-    part=next(p for p in parts if p.startswith('data.tar.'))
-    tar=tarfile.open(fileobj=io.BytesIO(subprocess.check_output(['ar','p',str(deb),part])))
-    base='data/data/com.termux/files/usr/share/xkeyboard-config-2/'
-    entries={}
-    for m in tar:
-        name=m.name.removeprefix('./')
-        if name.startswith(base) and m.isfile():
-            rel=name[len(base):]
-            if PurePosixPath(rel).is_absolute() or '..' in PurePosixPath(rel).parts:raise ValueError('Unsafe keyboard path')
-            entries[rel]=tar.extractfile(m).read()
-        if name.endswith('/share/doc/xkeyboard-config/copyright') and m.isfile():entries['COPYRIGHT']=tar.extractfile(m).read()
-    if not all(n in entries for n in ['rules/base','keycodes/evdev','symbols/us']):raise ValueError('Incomplete keyboard data')
-    with zipfile.ZipFile(assets/'x11-keyboard.zip','w',compression=zipfile.ZIP_DEFLATED,compresslevel=6) as z:
-        for name,data in sorted(entries.items()):
-            info=zipfile.ZipInfo(name,date_time=(2026,1,1,0,0,0));info.compress_type=zipfile.ZIP_DEFLATED;info.external_attr=0o100644<<16;z.writestr(info,data)
+    # The original Termux xkb DEB URL is gone (404). Recover the exact reviewed
+    # keyboard ZIP, including COPYRIGHT, from the immutable published Jobs APK.
+    # Both the APK and extracted ZIP are verified, never regenerated from new xkb.
+    keyboard_source=verified_file('jobs-v2.1.2-keyboard-source.apk',BUILD_INPUTS['keyboardApk'])
+    with zipfile.ZipFile(keyboard_source) as z:
+        keyboard=z.read('assets/x11-keyboard.zip')
+    if hashlib.sha256(keyboard).hexdigest()!=BUILD_INPUTS['keyboardSha256']:
+        raise ValueError('Published keyboard integrity failure')
+    (assets/'x11-keyboard.zip').write_bytes(keyboard)
+    with zipfile.ZipFile(io.BytesIO(keyboard)) as z:
+        entries=z.namelist()
+        if not all(n in entries for n in ('rules/base','keycodes/evdev','symbols/us','COPYRIGHT')):
+            raise ValueError('Incomplete keyboard data or copyright')
     # Failed trial is kept in source but must not ship executable guest code.
     (assets/'libgarcon-1.so.0').unlink(missing_ok=True)
 
-    subprocess.run(["python3","-B",str(ROOT/"scripts/prepare-x11-style.py")],check=True,env=dict(__import__("os").environ,XDG_CACHE_HOME=str(ROOT/".tools/font-cache")))
+    # Consume the existing immutable component instead of host-dependent Cairo output.
+    # Art regeneration remains an explicit separate prepare-x11-style.py operation.
     style_pin=re.search(r"^PIN='([a-f0-9]{64})'$",(ROOT/'x11/src/main/assets/x11-style.py').read_text(),re.M)
-    if not style_pin or hashlib.sha256((assets/'x11-style.zip').read_bytes()).hexdigest()!=style_pin[1]:
-        raise ValueError('Generated style differs from its reviewed runtime pin')
+    style=BUILD_INPUTS['style']
+    if not style_pin or style_pin[1]!=style['sha256']:
+        raise ValueError('Style component differs from reviewed runtime pin')
     COMPONENTS.mkdir(parents=True,exist_ok=True)
-    (assets/'x11-style.zip').replace(COMPONENTS/'x11-style.zip')
+    (COMPONENTS/'x11-style.zip').write_bytes(verified_file('x11-style.zip',style).read_bytes())
     # Retired resources must also disappear from an existing build cache.
     for retired in ('x11-touch-style.zip','x11-touch-workspace'):
         (assets/retired).unlink(missing_ok=True)
@@ -109,7 +130,10 @@ def main():
     openh264(assets)
     gst_openh264(assets)
     # A separate glibc module: never load Alpine's musl shim in Fedora.
-    subprocess.run(['cc','-fPIC','-shared','-nostdlib','-O2','-Wall','-Wextra','-Werror',
+    headers=glibc_headers()
+    compiler=os.environ.get('FORK_X11_CLANG','clang')
+    builtin=Path(subprocess.check_output([compiler,'-print-resource-dir'],text=True).strip())/'include'
+    subprocess.run([os.environ.get('FORK_X11_CLANG','clang'),'--target=aarch64-linux-gnu','-fuse-ld=lld','-nostdinc','-isystem',str(builtin),'-isystem',str(headers),'-fPIC','-shared','-nostdlib','-O2','-Wall','-Wextra','-Werror',
         '-Wl,-z,now,-z,relro,-z,noexecstack','-Wl,-soname,x11-fedora-glycin.so',
         str(ROOT/'x11/src/main/cpp/x11-fedora-glycin.c'),'-o',str(assets/'x11-fedora-glycin.so')],check=True)
     data=(assets/'x11-fedora-glycin.so').read_bytes()
@@ -132,5 +156,15 @@ def main():
     # Finished diagnostics/failed trial: never ship or compile the guest modules.
     for name in ['x11-gtk-observe.so','x11-garcon-source.zip']:(assets/name).unlink(missing_ok=True)
     report=dict(commit=pins['commit'],nativeSha256=hashlib.sha256(native).hexdigest(),keyboardSha256=hashlib.sha256((assets/'x11-keyboard.zip').read_bytes()).hexdigest(),keyboardFiles=len(entries))
+    report['downloadedInputs']={p.name:dict(size=p.stat().st_size,sha256=hashlib.sha256(p.read_bytes()).hexdigest()) for p in sorted((ROOT/'.tools/termux-x11-downloads').iterdir()) if p.is_file() and not p.name.endswith('.partial')}
+    report['compiledInputs']={name:dict(sourceSha256=hashlib.sha256((ROOT/'x11/src/main/cpp'/name).read_bytes()).hexdigest(),outputSha256=hashlib.sha256((assets/name.replace('.c','.so')).read_bytes()).hexdigest()) for name in ('x11-alpine-compat.c','x11-fedora-glycin.c')}
+    report['compiler']=subprocess.check_output([compiler,'--version'],text=True).splitlines()[0]
+    report['compileFlags']='--target=aarch64-linux-{musl,gnu} -fuse-ld=lld -fPIC -shared -nostdlib -O2 -Wall -Wextra -Werror -Wl,-z,now,-z,relro,-z,noexecstack; soname=output basename; pinned target headers'
     (out/'verified.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report))
-if __name__=='__main__':main()
+if __name__=='__main__':
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--root',type=Path,default=ROOT,help='Target source checkout (CI may verify an older source commit)')
+    args=parser.parse_args()
+    ROOT=args.root.resolve()
+    COMPONENTS=ROOT/'.tools/x11-components'
+    main()

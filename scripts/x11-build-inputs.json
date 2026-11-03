@@ -1,0 +1,30 @@
+{
+  "apkMirror": {
+    "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/x11-core-fa3a8b430e28/termux-x11-universal-debug-fa3a8b430e28.apk",
+    "size": 14693944,
+    "sha256": "64995746d1887a0e70bc8977d4a9c5ea56e3e00eadd4a6eeab32ae6048ba733a"
+  },
+  "style": {
+    "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/x11-extras-20261025/x11-style.zip",
+    "size": 1830990,
+    "sha256": "6bc19721d09cb5d16b5ee5df6f2758da9653a88e0211dd81ef5fcb408386aec0"
+  },
+  "glibcHeaders": {
+    "libc6-dev-arm64-cross_2.36-8cross1_all.deb": {
+      "url": "https://deb.debian.org/debian/pool/main/c/cross-toolchain-base/libc6-dev-arm64-cross_2.36-8cross1_all.deb",
+      "size": 1423640,
+      "sha256": "5e4cf6abf0e89e89c4b3006bb8b7dc47aa831df25d94df9134929b8b968cacb4"
+    },
+    "linux-libc-dev-arm64-cross_6.1.4-1cross1_all.deb": {
+      "url": "https://deb.debian.org/debian/pool/main/c/cross-toolchain-base/linux-libc-dev-arm64-cross_6.1.4-1cross1_all.deb",
+      "size": 1815380,
+      "sha256": "66457f015d16b7d372db6591cff38db0da928362ff2ea1fa75491e28f6904d81"
+    }
+  },
+  "keyboardApk": {
+    "url": "https://github.com/HezeAI/termux-jobs/releases/download/v2.1.2/Termux-Jobs-v2.1.2-arm64.apk",
+    "size": 40452595,
+    "sha256": "2f8b97b2d9083a5b7dcc3966eca54ea6d843fec3e253ba6e279c123921eeddab"
+  },
+  "keyboardSha256": "d88d8879538a5e8370977f20411043598b0e4f784a718e38a87d91b33b99c140"
+}

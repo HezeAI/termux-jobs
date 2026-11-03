@@ -1,3 +1,9 @@
+# Unreleased
+
+- CI: prepare verified pinned X11 inputs on clean GitHub runners; preserve the
+  mandatory hash guard and allow explicit checks of older source commits with
+  separately recorded workflow identity. See [CI inputs](docs/fork/CI-X11.md).
+
 # 2026-11-03 — v2.1.2 (versionCode 1476)
 
 Changes since stable v2.1.1:

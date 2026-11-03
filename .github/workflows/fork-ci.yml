@@ -4,14 +4,43 @@ on:
     branches: ['fork/**']
   pull_request:
   workflow_dispatch:
+    inputs:
+      source_ref:
+        description: 'Source commit to verify with this workflow (empty = workflow commit)'
+        required: false
+        default: ''
 permissions:
   contents: read
 jobs:
   verify:
     runs-on: ubuntu-22.04
-    timeout-minutes: 45
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: source
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout CI driver
+        uses: actions/checkout@v4
+        with:
+          path: ci-driver
+      - name: Checkout sources under test
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
+          path: source
+      - name: Record identities and require fresh X11 caches
+        run: |
+          mkdir -p .verification/ci
+          python3 - <<'PYTHON'
+          import json, pathlib, subprocess
+          root=pathlib.Path.cwd()
+          for name in ('.tools/termux-x11-downloads','.tools/x11-runtime','.tools/x11-components'):
+              if (root/name).exists(): raise SystemExit('Unexpected pre-existing cache: '+name)
+          sha=lambda path: subprocess.check_output(['git','-C',str(path),'rev-parse','HEAD'],text=True).strip()
+          result=dict(sourceCommit=sha(root),workflowCommit=sha(root.parent/'ci-driver'),x11CachesInitiallyAbsent=True)
+          (root/'.verification/ci/identities.json').write_text(json.dumps(result,indent=2)+'\n')
+          print(json.dumps(result))
+          PYTHON
       - name: Java 17 for Android SDK tools
         uses: actions/setup-java@v4
         with:
@@ -25,12 +54,20 @@ jobs:
         run: |
           mkdir -p .tools/sdk
           cp -R "$ANDROID_HOME/licenses" .tools/sdk/licenses
-          sdkmanager --sdk_root="$GITHUB_WORKSPACE/.tools/sdk" "platforms;android-30" "build-tools;30.0.3" "ndk;22.1.7171670"
+          sdkmanager --sdk_root="$PWD/.tools/sdk" "platforms;android-35" "build-tools;30.0.3" "ndk;22.1.7171670"
+      - name: Prepare verified ARM64 X11 inputs
+        run: |
+          export FORK_X11_CLANG="$PWD/.tools/sdk/ndk/22.1.7171670/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+          python3 ../ci-driver/scripts/prepare-x11.py --root "$PWD" | tee .verification/ci/x11-preparation.log
       - name: Java 11 for Gradle and Android project
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '11'
+      - name: Verify pinned X11 inputs
+        run: |
+          source scripts/build-env.sh
+          ./gradlew --no-daemon :x11:verifyX11Inputs
       - name: Check locale resources
         run: python3 scripts/check-localization.py
       - name: Unit tests
@@ -40,12 +77,15 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: termux-fork-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: source/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-      - name: Test reports
+      - name: Test reports and preparation identities
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-reports
-          path: '**/build/reports/tests/'
-          if-no-files-found: ignore
+          name: verification-reports
+          path: |
+            source/**/build/reports/tests/
+            source/.verification/ci/
+            source/.tools/x11-runtime/verified.json
+          if-no-files-found: warn
