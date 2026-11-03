@@ -1,16 +1,5 @@
 # Unreleased
 
-- Backup: explicitly warn in Russian and English that full and selected backups
-  are not encrypted and can contain secrets; preserve the existing consent flow.
-
-- Security: replace the Gemini API-key plaintext handoff file with a one-shot
-  local broker bound to the launch ID and verified process ancestry/start time.
-  Decrypt only for the matching consumer; retain old profiles and existing files.
-
-- Security: new Codex profiles request approval for untrusted commands using the
-  native `untrusted` policy. Preserve saved profiles and their effective policy.
-  This is an approval policy, not project isolation; no APK contains this change yet.
-
 - Docs: put release highlights and Download APK first, followed by requirements
   and compatibility; fold CI history and technical evidence into details.
 
@@ -20,6 +9,26 @@
 - CI: prepare verified pinned X11 inputs on clean GitHub runners; preserve the
   mandatory hash guard and allow explicit checks of older source commits with
   separately recorded workflow identity. See [CI inputs](docs/fork/CI-X11.md).
+
+# 2026-11-04 — 2.1.3-test4 (versionCode 1480)
+
+- Backup: explicitly warn in Russian and English that full and selected backups
+  are not encrypted and can contain secrets; preserve the existing consent flow.
+
+- Security: replace the Gemini API-key plaintext handoff file with a one-shot
+  local broker bound to the launch ID and verified process ancestry/start time.
+  Decrypt only for the matching consumer; retain old profiles and existing files.
+
+- Security: new Codex profiles request approval for untrusted commands using the
+  native `untrusted` policy. Preserve saved profiles and their effective policy.
+  This is an approval policy, not project isolation.
+
+- Private test release; real Android/proot key transport, process recovery and
+  permission cards require separate phone acceptance. Old profiles, authorization,
+  environment images and component versions are not migrated.
+- Image/tool-result accumulation and chat disconnects remain a separate open task.
+
+[Validation and phone plan](docs/fork/VALIDATION-2.1.3-test4.md)
 
 # 2026-11-03 — 2.1.3-test3 (versionCode 1479)
 
