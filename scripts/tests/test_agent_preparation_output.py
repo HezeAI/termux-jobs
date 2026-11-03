@@ -53,7 +53,7 @@ proot=prefix/'bin/proot-distro';proot.write_text('#!/bin/sh\n# Synthetic boundar
 android=REPO/'.tools/sdk/platforms/android-35/android.jar'
 assert android.exists(),android
 original=REPO/'app/src/main/java/com/termux/app/workspace'
-cmd=['javac','-J-Djava.io.tmpdir='+str(tmp),'-cp',str(android),'-d',str(classes),*(str(p) for p in src.rglob('*.java')),*(str(original/n) for n in ('AgentPreparationOperation.java','AgentPreparationOutput.java','EnvironmentInstallProgress.java'))]
+cmd=['javac','-J-Djava.io.tmpdir='+str(tmp),'-cp',str(android),'-d',str(classes),*(str(p) for p in src.rglob('*.java')),*(str(original/n) for n in ('AgentPreparationOperation.java','AgentPreparationOutput.java','EnvironmentInstallProgress.java','EnvironmentSetupStatus.java'))]
 subprocess.run(cmd,check=True,capture_output=True,text=True)
 results=[]
 scenarios=[

@@ -10,7 +10,7 @@ public class EnvironmentInstallLogUiTest {
     @Rule public TemporaryFolder temp=new TemporaryFolder();
     private TermuxActivity activity;private AlertDialog dialog;private String report;
     private View tag(String value){return dialog.getWindow().getDecorView().findViewWithTag(value);}
-    @Before public void before(){activity=Robolectric.buildActivity(TermuxActivity.class).get();WorkspaceLanguage.select(activity,"en");ShadowEnvironment.setExternalStorageDirectory(temp.getRoot().toPath());report=EnvironmentInstallLog.report("fedora",1,"Failed to install: unexpected end of file");EnvironmentInstallLogUi.show(activity,"Fedora",report);dialog=ShadowAlertDialog.getLatestAlertDialog();}
+    @Before public void before(){activity=Robolectric.buildActivity(TermuxActivity.class).get();WorkspaceLanguage.select(activity,"en");ShadowEnvironment.setExternalStorageDirectory(temp.getRoot().toPath());report=EnvironmentInstallLog.report("fedora",1,"ERROR:SETUP_FAILED\nSYNTHETIC_SECRET");EnvironmentInstallLogUi.show(activity,"Fedora","fedora",1,"ERROR:SETUP_FAILED\nSYNTHETIC_SECRET");dialog=ShadowAlertDialog.getLatestAlertDialog();}
     @After public void after(){dialog.dismiss();}
     @Test public void downloadRequiresStoragePermissionAndWritesExactSnapshot()throws Exception{
         Shadows.shadowOf(RuntimeEnvironment.application).denyPermissions(android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -19,7 +19,7 @@ public class EnvironmentInstallLogUiTest {
         Shadows.shadowOf(RuntimeEnvironment.application).grantPermissions(android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
         activity.onRequestPermissionsResult(WorkspaceStorageAccess.REQUEST,new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE},new int[]{android.content.pm.PackageManager.PERMISSION_GRANTED});
         for(int i=0;i<100;i++){Thread.sleep(10);Shadows.shadowOf(Looper.getMainLooper()).idle();if(((TextView)tag("environment-install-log-status")).getText().toString().startsWith("Saved:"))break;}
-        assertTrue(((TextView)tag("environment-install-log-status")).getText().toString().startsWith("Saved:"));File[] saved=folder.listFiles();assertNotNull(saved);assertEquals(1,saved.length);assertEquals(report,new String(java.nio.file.Files.readAllBytes(saved[0].toPath()),StandardCharsets.UTF_8));assertTrue(dialog.isShowing());
+        assertTrue(((TextView)tag("environment-install-log-status")).getText().toString().startsWith("Saved:"));File[] saved=folder.listFiles();assertNotNull(saved);assertEquals(1,saved.length);assertEquals(report,new String(java.nio.file.Files.readAllBytes(saved[0].toPath()),StandardCharsets.UTF_8));assertTrue(dialog.isShowing());assertFalse(report.contains("SYNTHETIC"));
     }
     @Test public void failedExportLeavesWindowOpenForRetry()throws Exception{
         Shadows.shadowOf(RuntimeEnvironment.application).grantPermissions(android.Manifest.permission.WRITE_EXTERNAL_STORAGE);

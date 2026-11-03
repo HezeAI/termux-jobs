@@ -1,5 +1,9 @@
 # Unreleased
 
+- Environment setup: retain/export only bounded structured status and safe errors;
+  remove full-output capture and legacy-log loading/writing/deletion. Preserve
+  stream draining, measured progress, owned-child waiting, cancel and retry.
+
 - Bound managed agent CLI/Node/Cloud archive downloads: 45-second connect and
   180-second low-speed checks, two-hour attempt ceiling, at most three attempts
   and fixed backoff. Preserve URLs/SHA checks and wait for owned-child exit before

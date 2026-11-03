@@ -85,7 +85,7 @@ try:
  }catch(Throwable e){e.printStackTrace();System.exit(1);}}}'''
  (src/'com/termux/app/workspace/QueueDownloadProbe.java').write_text(java)
  production_java=REPO/'app/src/main/java/com/termux/app/workspace'
- subprocess.run(['javac','-J-Djava.io.tmpdir='+str(tmp),'-cp',str(android),'-d',str(classes),*(str(p) for p in src.rglob('*.java')),*(str(production_java/n) for n in ['AgentPreparationOperation.java','AgentPreparationOutput.java','EnvironmentInstallProgress.java'])],check=True,capture_output=True,text=True)
+ subprocess.run(['javac','-J-Djava.io.tmpdir='+str(tmp),'-cp',str(android),'-d',str(classes),*(str(p) for p in src.rglob('*.java')),*(str(production_java/n) for n in ['AgentPreparationOperation.java','AgentPreparationOutput.java','EnvironmentInstallProgress.java','EnvironmentSetupStatus.java'])],check=True,capture_output=True,text=True)
  q=subprocess.run(['java','-Djava.io.tmpdir='+str(tmp),'-Daudit.files='+str(files),'-cp',str(classes)+':'+str(android),'com.termux.app.workspace.QueueDownloadProbe',str(ROOT)],capture_output=True,text=True,timeout=40);assert q.returncode==0,(q.stdout,q.stderr)
  results.append(dict(name='production queue and reader',ownedChildExitChecked=True,**json.loads((ROOT/'queue-result.json').read_text())))
 finally:release.set();server.shutdown();server.server_close();plain.shutdown();plain.server_close()

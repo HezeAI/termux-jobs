@@ -20,8 +20,8 @@ import java.util.function.Consumer;
 final class EnvironmentSetup implements AutoCloseable {
     static final class Result {
         final String report;final int code;
-        Result(String text,int status){report=text;code=status;}
-        boolean ready(){return code==0&&report.contains("CHECK:done")&&report.contains("READY:environment")&&report.contains("READY:shell")&&!report.contains("MISSING:");}
+        Result(String text,int status){report=EnvironmentSetupStatus.parse(text).snapshot();code=status;}
+        boolean ready(){return code==0&&report.contains("CHECK:done")&&report.contains("READY:environment")&&report.contains("READY:shell")&&!report.contains("MISSING:")&&!report.contains("ERROR:");}
     }
     private final TermuxActivity activity;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
@@ -39,7 +39,7 @@ final class EnvironmentSetup implements AutoCloseable {
     private static final class InstallJob {
         final String alias;final File cancel;
         final EnvironmentInstallProgress progress=new EnvironmentInstallProgress();
-        boolean active=true,stopping,success,resuming;String report="",log="";
+        boolean active=true,stopping,success,resuming;String report="";int code;
         InstallJob(String alias,File cancel){this.alias=alias;this.cancel=cancel;}
     }
     private final Map<String,InstallJob> installations=new HashMap<>();
@@ -53,11 +53,6 @@ final class EnvironmentSetup implements AutoCloseable {
         try{if(!job.cancel.createNewFile()&&!job.cancel.isFile())throw new IOException();job.stopping=true;refreshCard(job.alias);}
         catch(IOException error){activity.showToast(t("Не удалось запросить остановку","Could not request stop"),true);}
     }
-    private String storeInstallLog(String alias,Result answer){
-        String log=answer.ready()?"":EnvironmentInstallLog.report(alias,answer.code,answer.report);
-        try{if(answer.ready())EnvironmentInstallLog.clear(activity.getFilesDir(),alias);else EnvironmentInstallLog.save(activity.getFilesDir(),alias,log);}catch(IOException ignored){/* The current report remains available in memory. */}
-        return log;
-    }
     private void startInstall(WorkspaceEnvironments.Choice choice){
         if(closed)return;
         if(running){activity.showToast(t("Дождитесь текущей операции","Wait for the current operation"),true);return;}
@@ -68,11 +63,11 @@ final class EnvironmentSetup implements AutoCloseable {
         InstallJob job=new InstallJob(choice.alias,new File(jobDirectory,"cancel-"+UUID.randomUUID()));job.resuming=resumable(choice.alias);recordAttempt(choice.alias,false);installations.put(choice.alias,job);running=true;refreshCard(choice.alias);
         worker.execute(()->{
             Result result;
-            try{Consumer<String> update=report->main.post(()->{job.report=report;job.progress.update(report,android.os.SystemClock.elapsedRealtime());if(!closed)refreshCard(choice.alias);});result=installationRunner==null?execute(choice.alias,true,update,job):installationRunner.run(choice.alias,update,job.cancel);}
+            try{Consumer<String> update=raw->{String report=EnvironmentSetupStatus.parse(raw).snapshot();main.post(()->{job.report=report;job.progress.update(report,android.os.SystemClock.elapsedRealtime());if(!closed)refreshCard(choice.alias);});};result=installationRunner==null?execute(choice.alias,true,update,job):installationRunner.run(choice.alias,update,job.cancel);}
             catch(Exception error){result=new Result("ERROR:SETUP_FAILED",1);}
             finally{cleanExecution(job.cancel.getParentFile(),job.cancel);}
-            Result answer=result;String log=storeInstallLog(choice.alias,answer);
-            main.post(()->{job.active=false;job.cancel.delete();job.success=answer.ready();recordAttempt(choice.alias,job.success);job.report=EnvironmentInstallLog.clean(answer.report);job.log=log;running=false;if(!closed)refreshCard(choice.alias);});
+            Result answer=result;
+            main.post(()->{job.active=false;job.cancel.delete();job.success=answer.ready();recordAttempt(choice.alias,job.success);job.report=answer.report;job.code=answer.code;running=false;if(!closed)refreshCard(choice.alias);});
         });
     }
     private void offerInstall(WorkspaceEnvironments.Choice choice){
@@ -83,9 +78,10 @@ final class EnvironmentSetup implements AutoCloseable {
     }
     private void showInstallLog(WorkspaceEnvironments.Choice choice){
         InstallJob job=installations.get(choice.alias);if(closed||job!=null&&job.active)return;
-        if(job!=null&&!job.log.isEmpty()){EnvironmentInstallLogUi.show(activity,choice.label,job.log);return;}
-        worker.execute(()->{String report;try{report=EnvironmentInstallLog.read(activity.getFilesDir(),choice.alias);}catch(IOException e){report="";}String snapshot=report;main.post(()->{if(closed)return;if(snapshot.isEmpty())activity.showToast(t("Журнал недоступен","Log unavailable"),true);else EnvironmentInstallLogUi.show(activity,choice.label,snapshot);});});
+        if(job!=null&&!job.report.isEmpty())EnvironmentInstallLogUi.show(activity,choice.label,choice.alias,job.code,job.report);
+        else activity.showToast(t("Нет текущего отчёта. Повторите проверку; старые журналы не открываются.","No current report. Retry the check; legacy logs are not opened."),true);
     }
+
     void choose(Consumer<WorkspaceEnvironments.Choice> selected){
         List<WorkspaceEnvironments.Choice> choices=new ArrayList<>(inventory.get());
         Map<String,List<Runnable>> bindings=new HashMap<>();
@@ -113,18 +109,15 @@ final class EnvironmentSetup implements AutoCloseable {
                 TextView line=new TextView(activity);line.setTextSize(11);line.setTextColor(WorkspaceDialogs.MUTED);line.setSingleLine(true);line.setEllipsize(android.text.TextUtils.TruncateAt.MARQUEE);line.setMarqueeRepeatLimit(-1);detail.addView(line);card.addView(detail);
                 Runnable update=()->{
                     InstallJob job=installations.get(choice.alias);boolean active=job!=null&&job.active,ready=installed(choice);
-                    more.setVisibility(!active&&!ready&&(job!=null&&!job.log.isEmpty()||EnvironmentInstallLog.exists(activity.getFilesDir(),choice.alias))?View.VISIBLE:View.GONE);
+                    more.setVisibility(!active&&!ready&&(job!=null&&!job.report.isEmpty())?View.VISIBLE:View.GONE);
                     badge.setText(active?(job.stopping?t("Остановка…","Stopping…"):t("Стоп","Stop")):ready?t("Установлено","Installed"):resumable(choice.alias)?t("Продолжить","Resume"):t("Установить","Install"));badge.setEnabled(!ready&&(!active||!job.stopping));badge.setTextColor(ready?WorkspaceDialogs.MUTED:WorkspaceDialogs.ACCENT);badge.setAlpha(ready?.6f:1f);
                     trash.setVisibility((ready||choice.installed)&&!active&&!choice.alias.isEmpty()&&removal!=null?View.VISIBLE:View.GONE);
                     detail.setVisibility(job!=null&&!job.success?View.VISIBLE:View.GONE);bar.setVisibility(active?View.VISIBLE:View.GONE);line.setSelected(active);
                     if(job!=null){int percent=job.progress.percent;bar.setIndeterminate(percent<0);if(percent>=0)bar.setProgress(percent);
                         remaining.setText(active?(job.stopping?t("Остановка установщика…","Stopping installer…"):t("Осталось на этапе: ","Remaining in this phase: ")+(job.progress.eta<0?t("рассчитывается","calculating"):"≈ "+job.progress.eta+t(" с"," s"))):job.report.contains("INSTALL_CANCELLED")?t("Установка остановлена","Installation stopped"):t("Установка не завершена","Installation did not finish"));
-                        String failure=EnvironmentInstallProgress.failureLine(job.report);
-                        if(failure.equals("ERROR:INCOMPLETE_ROOTFS_REQUIRES_REMOVAL"))failure=t("Осталась незавершённая распаковка. Удалите это неполное окружение перед продолжением; скачанные данные сохранятся.","An incomplete extraction remains. Remove this incomplete environment before resuming; downloaded data will be retained.");
-                        else if(failure.equals("MISSING:shell"))failure=t("Папка системы найдена, но её оболочка отсутствует. Возможно, установка была прервана.","System directory found, but its shell is missing. Installation may have been interrupted.");
-                        else if(failure.equals("MISSING:environment"))failure=t("Папка установленной системы не найдена.","Installed system directory not found.");
-                        else if(failure.equals("MISSING:proot-distro"))failure=t("Не найден proot-distro.","proot-distro not found.");
-                        line.setText(active?job.progress.displayLine(WorkspaceLanguage.code(activity).equals("ru")):failure.isEmpty()?t("Причина не указана установщиком","Installer did not report the cause"):failure);}
+                        String failure=EnvironmentSetupStatus.description(job.report,WorkspaceLanguage.code(activity).equals("ru"));
+                        line.setText(active?job.progress.displayLine(WorkspaceLanguage.code(activity).equals("ru")):failure);}
+
                 };
                 // ListView also asks for unattached rows during measurement. Those must
                 // never steal the subscription from a card actually visible on screen.
@@ -158,9 +151,9 @@ final class EnvironmentSetup implements AutoCloseable {
         ProgressBar spinner=new ProgressBar(activity,null,android.R.attr.progressBarStyleHorizontal);spinner.setIndeterminate(true);box.addView(spinner);
         TextView text=new TextView(activity);text.setTextColor(0xffd5e4e0);text.setTextSize(13);text.setText(t("Проверка компонентов…","Checking components…"));box.addView(text);
         AlertDialog wait=WorkspaceDialogs.builder(activity).setTitle((install?t("Установка · ","Installing · "):t("Проверка среды запуска · ","Launch environment check · "))+(alias.equals("agent-operation-tools")?t("Компоненты операций с окружением","Environment operation components"):WorkspaceEnvironments.label(alias))).setView(box).setPositiveButton(t("Назад","Back"),null).create();progress=wait;wait.setCancelable(false);wait.setCanceledOnTouchOutside(false);wait.show();wait.getButton(-1).setEnabled(false);
-        worker.execute(()->{Result result;try{result=execute(alias,install,line->main.post(()->{if(!closed&&progress==wait&&wait.isShowing())text.setText(line);}));}catch(Exception failure){result=new Result("ERROR:SETUP_FAILED",1);}Result answer=result;
-            boolean environmentInstall=install&&!alias.equals("agent-operation-tools");if(environmentInstall)storeInstallLog(alias,answer);
-            main.post(()->{running=false;if(environmentInstall){installations.remove(alias);recordAttempt(alias,answer.ready());if(!closed)refreshCard(alias);}if(closed)return;spinner.setVisibility(View.GONE);text.setText(answer.ready()?t("Окружение и оболочка найдены. Это не проверка всех пакетов или доступа к моделям.","Environment and shell found. This does not verify every package or model access."):t("Проверка или установка не завершена. Существующие системы не заменялись.\n","Check or installation did not finish. Existing systems were not replaced.\n")+answer.report.substring(Math.max(0,answer.report.length()-12000)));wait.getButton(-1).setEnabled(true);completed.accept(answer);});});
+        worker.execute(()->{Result result;try{result=execute(alias,install,line->main.post(()->{if(!closed&&progress==wait&&wait.isShowing()){EnvironmentInstallProgress phase=new EnvironmentInstallProgress();phase.update(line,android.os.SystemClock.elapsedRealtime());text.setText(phase.line.isEmpty()?t("Проверка компонентов…","Checking components…"):phase.displayLine(WorkspaceLanguage.code(activity).equals("ru")));}}));}catch(Exception failure){result=new Result("ERROR:SETUP_FAILED",1);}Result answer=result;
+            boolean environmentInstall=install&&!alias.equals("agent-operation-tools");
+            main.post(()->{running=false;if(environmentInstall){installations.remove(alias);recordAttempt(alias,answer.ready());if(!closed)refreshCard(alias);}if(closed)return;spinner.setVisibility(View.GONE);text.setText(answer.ready()?t("Окружение и оболочка найдены. Это не проверка всех пакетов или доступа к моделям.","Environment and shell found. This does not verify every package or model access."):t("Проверка или установка не завершена. Существующие системы не заменялись.\n","Check or installation did not finish. Existing systems were not replaced.\n")+EnvironmentSetupStatus.description(answer.report,WorkspaceLanguage.code(activity).equals("ru")));wait.getButton(-1).setEnabled(true);completed.accept(answer);});});
     }
     private Result execute(String alias,boolean install,Consumer<String> update)throws Exception{return execute(alias,install,update,null);}
     private Result execute(String alias,boolean install,Consumer<String> update,InstallJob job)throws Exception{
@@ -199,13 +192,13 @@ final class EnvironmentSetup implements AutoCloseable {
         boolean exited=false,interrupted=false;
         try{
             process.getOutputStream().close();
-            EnvironmentInstallLog.Capture report=new EnvironmentInstallLog.Capture();char[] bytes=new char[1024];long last=0;
+            EnvironmentSetupStatus report=new EnvironmentSetupStatus();long[] last={0};
             try(Reader reader=new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8)){
-                int count;while((count=reader.read(bytes))!=-1){report.append(bytes,count);long now=android.os.SystemClock.elapsedRealtime();if(now-last>200){last=now;update.accept(EnvironmentInstallLog.clean(report.recent()));}}
+                AgentPreparationOutput.drain(reader,line->{report.record(line);long now=android.os.SystemClock.elapsedRealtime();if(now-last[0]>200){last[0]=now;update.accept(report.snapshot());}});
             }
-            update.accept(EnvironmentInstallLog.clean(report.recent()));
+            update.accept(report.snapshot());
             int code=process.waitFor();exited=true;
-            return new Result(EnvironmentInstallLog.clean(report.snapshot()),code);
+            return new Result(report.snapshot(),code);
         }catch(InterruptedException error){interrupted=true;throw error;}
         finally{
             if(!exited){

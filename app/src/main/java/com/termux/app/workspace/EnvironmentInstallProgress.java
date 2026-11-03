@@ -11,7 +11,12 @@ final class EnvironmentInstallProgress {
     private static final Pattern IMAGE=Pattern.compile("IMAGE_PROGRESS: [0-9]{1,3}% \\(([0-9]+)/([0-9]+) bytes\\)");
     String displayLine(boolean ru){
         String stage=line.startsWith("STAGE:")?line.substring(6):"";
+        if(stage.startsWith("download-pinned-"))return ru?"Загрузка закреплённого образа":"Downloading pinned image";
         switch(stage){
+            case "install-python":return ru?"Подготовка Python":"Preparing Python";
+            case "install-proot-distro":return ru?"Подготовка proot-distro":"Preparing proot-distro";
+            case "prepare-operation-tools":return ru?"Подготовка инструментов окружения":"Preparing environment tools";
+            case "verify":return ru?"Проверка установленной системы":"Checking installed environment";
             case "ubuntu-ai-installer-5.9.0":return ru?"Установщик Ubuntu AI 5.9.0":"Ubuntu AI installer 5.9.0";
             case "download-pinned-ubuntu-ai":return ru?"Скачивание закреплённой Ubuntu AI":"Downloading pinned Ubuntu AI";
             case "check-environment-installer":return ru?"Проверка установщика окружения":"Checking environment installer";
@@ -33,14 +38,13 @@ final class EnvironmentInstallProgress {
         return line;
     }
     static String failureLine(String report){
-        String[] lines=report.split("[\\r\\n]+");
-        for(String value:lines){String line=value.trim();if(line.startsWith("ERROR:")||line.matches("(?i).*(?:error:|failed to install:|no match for argument|timed? out|connection reset|could not resolve|cannot download).*"))return line;}
-        for(String value:lines){String line=value.trim();if(line.startsWith("MISSING:"))return line;}
-        for(int i=lines.length-1;i>=0;i--){String line=lines[i].trim();if(!line.isEmpty()&&!line.equals("CHECK:done")&&!line.startsWith("READY:")&&!line.startsWith("STAGE:"))return line;}
+        EnvironmentSetupStatus s=EnvironmentSetupStatus.parse(report);if(!s.error.isEmpty())return s.error;
+        for(String id:s.missing)return "MISSING:"+id;
         return "";
     }
+
     void update(String report,long now){
-        line=DesktopProgramProgress.lastLine(report);
+        line=EnvironmentSetupStatus.parse(report).progress();
         Matcher m=PERCENT.matcher(line);int measured=-1;
         while(m.find()){int n=Integer.parseInt(m.group(1));if(n<=100)measured=n;}
         if(measured<0){percent=-1;eta=-1;firstTime=-1;return;}

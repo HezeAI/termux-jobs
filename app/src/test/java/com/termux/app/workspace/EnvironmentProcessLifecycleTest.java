@@ -60,6 +60,15 @@ public class EnvironmentProcessLifecycleTest {
         long until=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);while(!marker.exists()&&!result.isDone()&&System.nanoTime()<until)Thread.sleep(5);
         assertTrue(marker.exists());assertFalse(result.isDone());child.finish.countDown();assertTrue(result.get(5,TimeUnit.SECONDS));assertEquals(0,child.signals);
     }
+
+    @Test public void rawChunksAndUnfinishedSecretsNeverSurviveCollectionOrExport()throws Exception{
+        String raw="-----BEGIN PRIVATE KEY-----\nSYNTHETIC_SECRET\n"+new String(new char[300000]).replace('\0','x')+"\n-----END PRIVATE KEY-----\nSTAGE:install-environment\nIMAGE_PROGRESS: 50% (50/100 bytes)\nREADY:environment\nREADY:shell\nCHECK:done\nSYNTHETIC_UNFINISHED";
+        child.input=new ByteArrayInputStream(raw.getBytes(java.nio.charset.StandardCharsets.UTF_8));child.finish.countDown();
+        java.util.List<String> updates=new java.util.ArrayList<>();EnvironmentSetup.Result r=EnvironmentSetup.collectProcess(child,updates::add,marker);
+        assertTrue(r.ready());assertTrue(r.report.length()<1024);assertFalse(r.report.contains("SYNTHETIC"));for(String u:updates){assertFalse(u.contains("SYNTHETIC"));assertTrue(u.length()<1024);}
+        assertFalse(EnvironmentInstallLog.report("ubuntu",r.code,r.report).contains("SYNTHETIC"));
+        Child next=new Child();next.input=new ByteArrayInputStream("READY:environment\nREADY:shell\nCHECK:done".getBytes(java.nio.charset.StandardCharsets.UTF_8));next.finish.countDown();assertFalse(EnvironmentSetup.collectProcess(next,s->{},null).ready());
+    }
     @Test public void successfulReadWaitsForExitWithoutRequestingCancel()throws Exception{
         Future<EnvironmentSetup.Result> result=executor.submit(()->EnvironmentSetup.collectProcess(child,s->{},marker));
         assertTrue(child.waiting.await(2,TimeUnit.SECONDS));assertFalse(result.isDone());assertFalse(marker.exists());
