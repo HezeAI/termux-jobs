@@ -18,8 +18,12 @@ function display(value,depth=0,budget={left:200000,nodes:10000}){
 class GeminiChat {
  constructor(api){this.api=api;this.attachments=new Attachments(api.attachmentRoot||__dirname);this.binding=null;this.shell=null;this.groups=[];this.full=new Map();this.sent=new Map();this.thoughts=new Map();this.revision=0;this.native=false;}
  observe(config,data,submit,shellMode,setShellMode){
-  const session=this.api.session();if(this.sessionKey!==session){this.sessionKey=session;this.thoughts.clear();this.completions=new CompletionTimes(this.api.attachmentRoot,'gemini',session);this.seenText=new Set();this.pendingTimes=new Set();this.timeBaseline=false;this.responseObserved=false;}
+  const session=this.api.session();if(this.sessionKey!==session){this.sessionKey=session;this.actionBaseline=null;this.actionReady=false;this.thoughts.clear();this.completions=new CompletionTimes(this.api.attachmentRoot,'gemini',session);this.seenText=new Set();this.pendingTimes=new Set();this.timeBaseline=false;this.responseObserved=false;}
   const binding={config,submit,shellMode,setShellMode,cancel:data.cancel,ready:data.ready===true,native:data.native===true};this.binding=binding;this.revision++;
+  // The initial snapshot is historical: never timestamp it with the time the UI opened.
+  const actionIDs=new Set((data.history||[]).slice(-500).filter(m=>m.type==='tool_group').flatMap(m=>(m.tools||[]).map(t=>hash(m.id+':'+m.type)+':'+t.callId)));
+  if(this.actionBaseline&&this.actionReady&&binding.ready&&['responding','waiting_for_confirmation'].includes(this.api.status().state))for(const id of actionIDs)if(!this.actionBaseline.has(id))this.completions.rememberAction(id);
+  this.actionBaseline=actionIDs;this.actionReady=binding.ready;
   this.source=data;for(const item of data.history||[])if(item.jobsInputSession===session)for(const id of item.jobsClientIds||[]){const record=this.sent.get(id);if(record?.session===session){record.bound=true;if(record.receipt?.delivery==='queued')record.receipt=deliveryStatus.receipt({...record.receipt,delivery:'submitted',ack:'native-history-item'},id);}}this.observeCompletionState(this.api.status().state);this.dirty=true;
   return ()=>{if(this.binding===binding)this.binding=null;};
  }
@@ -53,7 +57,7 @@ class GeminiChat {
    else if(item.type==='thinking')row('thought','reasoning',[text(item.thought?.subject),text(item.thought?.description)].filter(Boolean).join('\n'));
    else if(item.type==='tool_group')for(const tool of (item.tools||[]).slice(0,100)){
     const id=typeof tool.callId==='string'?tool.callId.slice(0,160):'';if(!id)continue;const receipt=this.api.receipt(id);if(receipt)row('receipt:'+id,'receipt',receipt.body,receipt.label);
-    const output=display(tool.resultDisplay),description=text(tool.description);row('tool:'+id,'tool',[description,output].filter(Boolean).join('\n\n'),text(tool.name)+' · '+text(tool.status),{toolName:text(tool.name),toolType:text(tool.name),toolOutputLength:output.length,outputTail:outputTail(output),toolOutputOffset:output&&description?description.length+2:0,actionPreview:actionPreview(null,tool.name,tool.args||tool.request?.args),status:text(tool.status)});
+    const output=display(tool.resultDisplay),description=text(tool.description);row('tool:'+id,'tool',[description,output].filter(Boolean).join('\n\n'),text(tool.name)+' · '+text(tool.status),{eventTime:this.completions?.action(message+':'+id)||0,toolName:text(tool.name),toolType:text(tool.name),toolOutputLength:output.length,outputTail:outputTail(output),toolOutputOffset:output&&description?description.length+2:0,actionPreview:actionPreview(null,tool.name,tool.args||tool.request?.args),status:text(tool.status)});
    }
    else if(['info','error','warning','hint'].includes(item.type))row(item.type,item.type==='error'?'error':'info',item.text);
    if(!live&&this.thoughts.has(message))row('summary','reasoning',this.thoughts.get(message));

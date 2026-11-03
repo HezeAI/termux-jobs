@@ -124,6 +124,7 @@ final class AgentChatView extends LinearLayout {
                 views.put(key,caption);if(caption.getParent()==null){changed=true;timeline.addView(caption,index);}else if(timeline.indexOfChild(caption)!=index){changed=true;timeline.removeView(caption);timeline.addView(caption,index);}index++;continue;
             }
             if(r.optString("kind").equals("actionGroup")){
+                value+=java.util.TimeZone.getDefault().getID();
                 View existing=views.get(key);CodexActionsView card=existing instanceof CodexActionsView?(CodexActionsView)existing:new CodexActionsView(this,open);
                 views.put(key,card);
                 if(!value.equals(values.get(key))){changed=true;values.put(key,value);AgentChatScale.prepare(card);card.update(r);}

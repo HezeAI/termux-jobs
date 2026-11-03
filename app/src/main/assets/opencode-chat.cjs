@@ -60,7 +60,7 @@ class OpenCodeChat {
      }else if(part.type==='tool'){
       const receipt=receipts.get(part.id);
       if(receipt){used.add(receipt.key);push('receipt:'+part.id,'receipt',receipt.body,receipts.label(receipt,false));}
-      push('tool:'+part.id,'tool',toolBody(part),part.name+' · '+(part.state?.status||''),{toolName:text(part.name),toolType:text(part.name),toolOutputLength:text(part.state?.output).length,outputTail:outputTail(text(part.state?.output)),actionPreview:actionPreview(null,part.name,part.state?.input),status:text(part.state?.status),toolPath:text(part.state?.input?.filePath||part.state?.input?.file_path||part.state?.input?.path).slice(0,2048),...(['bash','run_shell_command'].includes(part.name)&&typeof part.state?.input?.command==='string'?{actionType:'shell',command:text(part.state.input.command).slice(0,2000)}:{})});
+      push('tool:'+part.id,'tool',toolBody(part),part.name+' · '+(part.state?.status||''),{eventTime:instant(part.state?.time?.start)||instant(m.time?.created),toolName:text(part.name),toolType:text(part.name),toolOutputLength:text(part.state?.output).length,outputTail:outputTail(text(part.state?.output)),actionPreview:actionPreview(null,part.name,part.state?.input),status:text(part.state?.status),toolPath:text(part.state?.input?.filePath||part.state?.input?.file_path||part.state?.input?.path).slice(0,2048),...(['bash','run_shell_command'].includes(part.name)&&typeof part.state?.input?.command==='string'?{actionType:'shell',command:text(part.state.input.command).slice(0,2000)}:{})});
      }
     }
     if(m.error)push('error','error',JSON.stringify(m.error,null,2));

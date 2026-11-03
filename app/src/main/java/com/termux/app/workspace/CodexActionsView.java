@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 
 /** One stable, expandable card for a consecutive run of structured agent actions. */
 final class CodexActionsView extends LinearLayout {
-    final TextView heading,summary;
+    final TextView heading,summary,time;
     final LinearLayout steps;
     private final AgentChatView owner;
     private final Consumer<JSONObject> open;
@@ -33,7 +33,10 @@ final class CodexActionsView extends LinearLayout {
         GradientDrawable background=new GradientDrawable();background.setColor(0xff0b1319);
         background.setCornerRadius(owner.dp(12));background.setStroke(owner.dp(1),0xff28433d);setBackground(background);
         heading=owner.label("",13);heading.setMinHeight(owner.dp(36));heading.setPadding(owner.dp(10),owner.dp(5),owner.dp(10),owner.dp(5));heading.setGravity(Gravity.CENTER_VERTICAL);
-        heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);heading.setOnClickListener(v->{userToggled=true;expanded=!expanded;refreshHeading();});addView(heading,new LayoutParams(-1,-2));
+        heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);heading.setOnClickListener(v->{userToggled=true;expanded=!expanded;refreshHeading();});
+        LinearLayout header=new LinearLayout(getContext());header.setOrientation(HORIZONTAL);header.setGravity(Gravity.CENTER_VERTICAL);
+        header.addView(heading,new LayoutParams(0,-2,1));
+        time=owner.label("",12);time.setTag("action-group-time");time.setTextColor(0xffa9b9c0);time.setSingleLine(true);time.setPadding(0,owner.dp(5),owner.dp(10),owner.dp(5));time.setOnClickListener(v->heading.performClick());header.addView(time,new LayoutParams(-2,-2));addView(header,new LayoutParams(-1,-2));
         summary=owner.label("",12);summary.setTextColor(0xff91a6af);summary.setMaxLines(2);summary.setPadding(owner.dp(10),0,owner.dp(10),owner.dp(4));summary.setOnClickListener(v->heading.performClick());addView(summary,new LayoutParams(-1,-2));
         steps=new LinearLayout(getContext());steps.setOrientation(VERTICAL);steps.setVisibility(GONE);addView(steps,new LayoutParams(-1,-2));
         LinearLayout.LayoutParams layout=new LinearLayout.LayoutParams(-1,-2);layout.setMargins(0,owner.dp(4),0,owner.dp(6));setLayoutParams(layout);
@@ -41,6 +44,7 @@ final class CodexActionsView extends LinearLayout {
 
     void update(JSONObject group) {
         JSONArray rows=group.optJSONArray("steps");if(rows==null)return;skillName=group.optString("skillName");
+        long eventTime=group.optLong("eventTime");time.setVisibility(eventTime>0?VISIBLE:GONE);time.setText(eventTime>0?AgentMessageTime.timelineTime(eventTime):"");time.setContentDescription(eventTime>0?AgentMessageTime.full(getContext(),eventTime):"");
         count=rows.length();onlyShell=true;active=0;errors=0;failures=0;declined=0;interrupted=0;String current="";Set<String> present=new HashSet<>();
         for(int i=0;i<rows.length();i++) {
             JSONObject row=rows.optJSONObject(i);if(row==null)continue;onlyShell&=CodexActionTimeline.shell(row);
@@ -93,7 +97,7 @@ final class CodexActionsView extends LinearLayout {
     private void refreshHeading() {
         String caption=(!skillName.isEmpty()?owner.tr("Навык: ","Skill: ")+skillName:active>0?owner.tr("В работе","Running"):owner.tr("Хронология","Timeline"))+" · "+count+actionWord()+(expanded?" ▴":" ▾");
         if(!heading.getText().toString().equals(caption))heading.setText(caption);
-        LinearLayout.LayoutParams layout=(LinearLayout.LayoutParams)getLayoutParams();int width=!skillName.isEmpty()&&!expanded?LayoutParams.WRAP_CONTENT:LayoutParams.MATCH_PARENT;if(layout.width!=width){layout.width=width;setLayoutParams(layout);}
+        LinearLayout.LayoutParams layout=(LinearLayout.LayoutParams)getLayoutParams();int width=!skillName.isEmpty()&&!expanded&&time.getVisibility()==GONE?LayoutParams.WRAP_CONTENT:LayoutParams.MATCH_PARENT;if(layout.width!=width){layout.width=width;setLayoutParams(layout);}
         heading.setTextColor(errors>0?0xffffb08f:0xff79dfcd);steps.setVisibility(expanded?VISIBLE:GONE);
         heading.setContentDescription(caption+". "+owner.tr(expanded?"Свернуть":"Развернуть",expanded?"Collapse":"Expand"));
     }

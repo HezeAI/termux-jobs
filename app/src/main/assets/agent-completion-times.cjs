@@ -13,6 +13,8 @@ class CompletionTimes {
  }
  start(request){if(request&&!this.starts.has(request)){this.starts.set(request,process.hrtime.bigint());while(this.starts.size>64)this.starts.delete(this.starts.keys().next().value);}}
  elapsed(request){const start=this.starts.get(request);return start===undefined?null:Number((process.hrtime.bigint()-start)/1000000n);}
+ action(message){return this.summary('action:'+message)?.completedAt||0;}
+ rememberAction(message,native=0,receivedAt=Date.now()){return this.finish('action:'+message,'action:'+message,{completedAt:native},true,receivedAt);}
  summary(message){return this.messages.get(message)||null;}
  finish(request,message,{completedAt=0,durationMs=null,startedAt=0}={},received=false,receivedAt=Date.now()){
   if(this.values.has(request))return this.values.get(request);if(this.messages.has(message))return this.messages.get(message);

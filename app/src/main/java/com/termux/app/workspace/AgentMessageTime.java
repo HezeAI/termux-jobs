@@ -9,6 +9,7 @@ import java.util.*;
 
 /** One immutable completion summary, never a timer started by opening history. */
 final class AgentMessageTime {
+    static String timelineTime(long ms){return new SimpleDateFormat("HH:mm",Locale.ROOT).format(new Date(ms));}
     static String shortTime(Context c,long ms){
         Locale locale=new Locale(WorkspaceLanguage.code(c));
         String pattern=android.text.format.DateFormat.getBestDateTimePattern(locale,android.text.format.DateFormat.is24HourFormat(c)?"Hm":"hma");

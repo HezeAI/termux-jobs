@@ -66,7 +66,7 @@ final class CodexActionTimeline {
                 steps.put(next);i++;
             }
             try {result.add(new JSONObject().put("key","codex-actions:"+first.optString("key"))
-                .put("kind","actionGroup").put("skillName",skillGroup?skill:"").put("steps",steps));}
+                .put("kind","actionGroup").put("skillName",skillGroup?skill:"").put("steps",steps).put("eventTime",first.optLong("eventTime")));}
             catch(JSONException impossible){throw new IllegalStateException(impossible);}
         }
         return result;
