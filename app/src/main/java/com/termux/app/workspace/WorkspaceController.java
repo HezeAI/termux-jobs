@@ -217,6 +217,7 @@ public final class WorkspaceController {
         geminiLiveUi.chatPresentation(this::previewChatScale,store::save);claudeLiveUi.chatPresentation(this::previewChatScale,store::save);
         geminiLiveUi.permissionVisibility(()->!agentChatUi.showing());agentChatUi.composer(terminalInput,terminalInput);
         composerControls=new AgentComposerControls(activity,inputRow,terminalInput,commands,send,agentChatUi.attachmentButton());
+        composerControls.overlay(activity.findViewById(R.id.drawer_layout),pixels->{if(agentChatUi!=null)agentChatUi.composerInset(pixels);});
         agentChatUi.onVisibilityChanged(()->{updateAgentComposer();boolean chat=agentChatUi.showing();boolean focus=chat&&!wasAgentChat;wasAgentChat=chat;terminalInput.setHint(chat?tr("Сообщение ","Message ")+agentChatUi.name()+"…":WorkspaceText.tr("Введите команду…"));activity.getTerminalToolbarViewPager().setVisibility(screen==Screen.TERMINAL&&!activityStopped&&!chat?toolbarVisibility:View.GONE);if(focus)leaveAgentInputIdle();renderHeader();renderTabs();});
         desktopUi=new WorkspaceDesktops(activity,()->{TerminalSession t=activity.getCurrentSession();return t!=null&&t.isRunning()?store.findByHandle(t.mHandle):null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL,inputRow,this::renderCodexStatus,()->{
             boolean terminal=screen==Screen.TERMINAL&&!activityStopped;

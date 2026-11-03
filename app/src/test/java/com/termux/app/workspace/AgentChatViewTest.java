@@ -30,7 +30,7 @@ public class AgentChatViewTest {
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);
   java.util.List<JSONObject> rows=new java.util.ArrayList<>();for(int i=0;i<30;i++)rows.add(row("r"+i,"text","line "+i+"\nmore text"));v.rows(rows,false);layout(v);v.scroll.scrollTo(0,0);
   rows.get(29).put("body","changed");v.rows(rows,false);layout(v);assertEquals(0,v.scroll.getScrollY());
-  v.followAfterSend();rows.add(row("sent","user","new message"));v.rows(rows,false);layout(v);assertTrue(v.scroll.getScrollY()>0);assertEquals(v.timeline.getHeight()-v.scroll.getHeight(),v.scroll.getScrollY());assertEquals(View.GONE,v.status.getVisibility());assertSame(v.scroll,v.getChildAt(1));
+  v.followAfterSend();rows.add(row("sent","user","new message"));v.rows(rows,false);layout(v);assertTrue(v.scroll.getScrollY()>0);assertEquals(v.timeline.getHeight()-v.scroll.getHeight(),v.scroll.getScrollY());assertEquals(View.GONE,v.status.getVisibility());assertSame(v.getChildAt(1),v.scroll.getParent());
  }
  private void layout(AgentChatView v){for(int i=0;i<3;i++){v.measure(View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(700,View.MeasureSpec.EXACTLY));v.layout(0,0,600,700);Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();}}
 
@@ -116,5 +116,12 @@ public class AgentChatViewTest {
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);TextView file=new TextView(a);file.setText("attachment.txt");v.attachmentDrafts.addView(file);v.attachmentDrafts.setVisibility(View.VISIBLE);
   for(int scale:new int[]{50,100,150}){v.scale(scale);layout(v);assertEquals(0,v.attachmentDrafts.getPaddingRight());assertNull(v.findViewWithTag("agent-voice-status"));assertNull(v.findViewWithTag("agent-voice-scroll-clearance"));v.clear();assertEquals(3,v.timeline.getChildCount());}
   a.finish();
+ }
+ @Test public void composerInsetKeepsAnchorAndAllowsFullLastMessageAboveOverlay()throws Exception{
+  Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);
+  List<JSONObject> rows=new ArrayList<>();for(int i=0;i<45;i++)rows.add(row("inset-"+i,"text","message "+i+"\nsecond\nthird"));v.rows(rows,false);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();v.scroll.scrollTo(0,700);AgentChatView.Position before=v.position();assertFalse(before.bottom);
+  v.composerInset(150);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();assertEquals(before.anchor,v.position().anchor);assertEquals(before.offset,v.position().offset);
+  TextView draft=v.label("attachment fixture",14);v.attachmentDrafts.addView(draft);v.attachmentDrafts.setVisibility(View.VISIBLE);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();assertSame(draft,v.attachmentDrafts.getChildAt(0));
+  v.bottomAfterLayout();layout(v);v.getViewTreeObserver().dispatchOnPreDraw();View last=v.timeline.getChildAt(45);assertTrue(last.getBottom()-v.scroll.getScrollY()<=v.scroll.getHeight()-150);assertTrue(v.timeline.getPaddingBottom()>=166);a.finish();
  }
 }

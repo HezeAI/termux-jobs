@@ -61,6 +61,7 @@ final class AgentChatUi {
     }
     private EditText composer;
     private View composerArea;
+    void composerInset(int pixels){view.composerInset(pixels);}
     void composer(EditText input){composer(input,input);}
     void composer(EditText input,View area){composer=input;composerArea=area;}
     private com.termux.shared.terminal.io.extrakeys.ExtraKeysView chatKeys;

@@ -1,5 +1,10 @@
 # Unreleased
 
+- Agent chat: extend messages behind a transparent composer row; arrange the
+  existing star / paperclip buttons horizontally with independent ripple targets.
+  Keep the field background, Send on the right, dynamic bottom scroll clearance,
+  draft/attachments/anchors, and restore ordinary-terminal geometry on exit.
+
 - Release signing: require the existing keystore and pinned public certificate
   before release packaging; refuse missing/mismatched signer without generation.
 

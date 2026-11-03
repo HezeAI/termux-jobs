@@ -13,6 +13,8 @@ import java.util.function.Consumer;
 /** Agent-neutral Android transcript. Updates rows by stable identity, never rebuilds the terminal. */
 final class AgentChatView extends LinearLayout {
     final ScrollView scroll;
+    private final LinearLayout footer;
+    private int composerInset;
     final LinearLayout timeline,requests,keysHost,attachmentDrafts;
     final WorkspaceIconButton folder;
     java.util.function.BiConsumer<JSONObject,ImageView> thumbnail=(a,v)->{};
@@ -83,12 +85,20 @@ final class AgentChatView extends LinearLayout {
         scroll.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(restoring==null&&followLayout)bottomAfterLayout();});scroll.setSmoothScrollingEnabled(false);
         timeline=new LinearLayout(c);timeline.setOrientation(VERTICAL);timeline.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(followLayout){followLayout=false;if(restoring==null)bottomAfterLayout();}});timeline.setPadding(dp(12),dp(4),dp(12),dp(16));scroll.addView(timeline);
         older=pill(tr("Предыдущие сообщения","Earlier messages"),loadOlder);timeline.addView(older);
-        addView(scroll,new LayoutParams(-1,0,1));requests=new LinearLayout(c);requests.setOrientation(VERTICAL);requests.setPadding(dp(12),0,dp(12),0);timeline.addView(requests,new LayoutParams(-1,-2));connection=label("",13);connection.setVisibility(GONE);requests.addView(connection);execution=new AgentProgressView(c);timeline.addView(execution,new LayoutParams(-1,-2));
-        attachmentDrafts=new LinearLayout(c);attachmentDrafts.setOrientation(VERTICAL);attachmentDrafts.setVisibility(GONE);addView(attachmentDrafts,new LayoutParams(-1,-2));
+        FrameLayout body=new FrameLayout(c);body.addView(scroll,new FrameLayout.LayoutParams(-1,-1));addView(body,new LayoutParams(-1,0,1));footer=new LinearLayout(c);footer.setOrientation(VERTICAL);body.addView(footer,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));footer.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->updateComposerInset());requests=new LinearLayout(c);requests.setOrientation(VERTICAL);requests.setPadding(dp(12),0,dp(12),0);timeline.addView(requests,new LayoutParams(-1,-2));connection=label("",13);connection.setVisibility(GONE);requests.addView(connection);execution=new AgentProgressView(c);timeline.addView(execution,new LayoutParams(-1,-2));
+        attachmentDrafts=new LinearLayout(c);attachmentDrafts.setOrientation(VERTICAL);attachmentDrafts.setVisibility(GONE);footer.addView(attachmentDrafts,new LayoutParams(-1,-2));
         folder=new WorkspaceIconButton(c);folder.setIcon(c.getDrawable(com.termux.R.drawable.workspace_paperclip),dp(24));folder.setTextColor(WorkspaceDialogs.ACCENT);folder.setContentDescription(tr("Прикрепить файл","Attach file"));folder.setTooltipText(tr("Прикрепить файл","Attach file"));folder.setVisibility(GONE);
 
-        keysHost=new LinearLayout(c);keysHost.setOrientation(VERTICAL);keysHost.setVisibility(GONE);addView(keysHost,new LayoutParams(-1,-2));
+        keysHost=new LinearLayout(c);keysHost.setOrientation(VERTICAL);keysHost.setVisibility(GONE);footer.addView(keysHost,new LayoutParams(-1,-2));
 
+    }
+    void composerInset(int pixels){composerInset=Math.max(0,pixels);updateComposerInset();}
+    private void updateComposerInset(){
+        int padding=dp(16)+composerInset+footer.getHeight();
+        FrameLayout.LayoutParams f=(FrameLayout.LayoutParams)footer.getLayoutParams();
+        if(f.bottomMargin!=composerInset){f.bottomMargin=composerInset;footer.setLayoutParams(f);}
+        if(timeline.getPaddingBottom()==padding)return;
+        Position held=position();timeline.setPadding(timeline.getPaddingLeft(),timeline.getPaddingTop(),timeline.getPaddingRight(),padding);queuePosition(held);
     }
     void attachmentPicker(boolean enabled){folder.setVisibility(enabled?VISIBLE:GONE);}
     void connection(String message){connection(message,null);}
