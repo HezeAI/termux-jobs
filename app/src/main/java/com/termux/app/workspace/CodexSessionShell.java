@@ -13,7 +13,7 @@ public final class CodexSessionShell {
         if (access.equals("full")) return "danger-full-access";
         return access.equals("read") ? "read-only" : "workspace-write";
     }
-    public static String approval(WorkspaceStore.Session s){return (s.codexConfirmActions==null?!s.codexAccess.equals("full"):s.codexConfirmActions)?"on-request":"never";}
+    public static String approval(WorkspaceStore.Session s){return (s.codexConfirmActions==null?!s.codexAccess.equals("full"):s.codexConfirmActions)?(s.codexUntrustedApproval?"untrusted":"on-request"):"never";}
     public static boolean validThread(String id) { return id.matches("[A-Za-z0-9][A-Za-z0-9_-]{0,127}"); }
     public static String invocation(WorkspaceStore.Session s, String endpoint) {
         StringBuilder c = new StringBuilder("codex --remote ").append(SessionShell.quote("unix://" + endpoint));

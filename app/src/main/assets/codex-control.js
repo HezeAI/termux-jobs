@@ -175,7 +175,7 @@ async function main() {
     if(!id || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(id))throw new Error('No saved chat in this directory. Select a chat ID.');
     if(!['full','project','read'].includes(access))throw new Error('Invalid access mode');
     const approvalPolicy=requestedApproval ?? (access==='full'?'never':'on-request');
-    if(!['never','on-request'].includes(approvalPolicy))throw new Error('Invalid approval policy');
+    if(!['never','on-request','untrusted'].includes(approvalPolicy))throw new Error('Invalid approval policy');
     const sandbox=access==='full'?'danger-full-access':access==='read'?'read-only':'workspace-write';
     const metadata=await connection.call('thread/read',{threadId:id,includeTurns:false});
     const normalize=p=>require('path').posix.normalize(String(p || '')).replace(/\/$/,'') || '/';

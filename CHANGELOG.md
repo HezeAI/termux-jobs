@@ -1,5 +1,9 @@
 # Unreleased
 
+- Security: new Codex profiles request approval for untrusted commands using the
+  native `untrusted` policy. Preserve saved profiles and their effective policy.
+  This is an approval policy, not project isolation; no APK contains this change yet.
+
 - Docs: put release highlights and Download APK first, followed by requirements
   and compatibility; fold CI history and technical evidence into details.
 

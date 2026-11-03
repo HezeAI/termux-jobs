@@ -24,6 +24,31 @@ public class WorkspaceStoreTest {
         new File(context.getFilesDir(), "workspace-v1.json").delete();
         new File(context.getFilesDir(), "workspace-v1.json.bak").delete();
     }
+    @Test public void newProfileUsesVerifiedUntrustedPolicyWithoutChangingLegacyProfiles()throws Exception{
+        WorkspaceStore store=new WorkspaceStore(context,errors::add);
+        WorkspaceStore.Session fresh=WorkspaceStore.newProfile();fresh.environment="codex";fresh.codexEnvironment="ubuntu-ai";fresh.saved=true;
+        assertEquals("untrusted",CodexSessionShell.approval(fresh));assertEquals("untrusted",CodexSessionShell.approval(fresh.copy()));
+        WorkspaceStore.Session legacy=new WorkspaceStore.Session();legacy.environment="codex";legacy.saved=true;assertEquals("never",CodexSessionShell.approval(legacy));
+        WorkspaceStore.Session priorConfirm=legacy.copy();priorConfirm.id=java.util.UUID.randomUUID().toString();priorConfirm.codexConfirmActions=true;assertEquals("on-request",CodexSessionShell.approval(priorConfirm));
+        store.sessions.add(fresh);store.sessions.add(legacy);store.sessions.add(priorConfirm);store.save();store.close();
+        WorkspaceStore reloaded=new WorkspaceStore(context,errors::add);
+        for(WorkspaceStore.Session loaded:reloaded.sessions){if(loaded.id.equals(fresh.id))assertEquals("untrusted",CodexSessionShell.approval(loaded));if(loaded.id.equals(legacy.id))assertEquals("never",CodexSessionShell.approval(loaded));if(loaded.id.equals(priorConfirm.id))assertEquals("on-request",CodexSessionShell.approval(loaded));}assertTrue(errors.toString(),errors.isEmpty());reloaded.close();
+    }
+    @Test public void otherAgentPoliciesSurviveSaveReopenAndSecondSave()throws Exception{
+        WorkspaceStore store=new WorkspaceStore(context,errors::add);
+        WorkspaceStore.Session claude=WorkspaceStore.newProfile();claude.environment="ubuntu";claude.codexEnvironment="ubuntu-ai";claude.claudeAgent=true;
+        WorkspaceStore.Session gemini=WorkspaceStore.newProfile();gemini.environment="ubuntu";gemini.codexEnvironment="ubuntu-ai";gemini.geminiAgent=true;
+        WorkspaceStore.Session open=WorkspaceStore.newProfile();open.environment="ubuntu";open.codexEnvironment="ubuntu-ai";open.aiAgent="opencode";
+        assertEquals("manual",claude.claudeMode);assertEquals("default",gemini.geminiMode);assertEquals("ask",open.aiAccess);assertFalse(open.aiProjectOnly);
+        store.sessions.add(claude);store.sessions.add(gemini);store.sessions.add(open);store.save();store.close();
+        for(int pass=0;pass<2;pass++){
+            WorkspaceStore loaded=new WorkspaceStore(context,errors::add);assertEquals(3,loaded.sessions.size());
+            assertEquals("manual",loaded.sessions.get(0).claudeMode);assertEquals("default",loaded.sessions.get(1).geminiMode);
+            assertEquals("ask",loaded.sessions.get(2).aiAccess);assertFalse(loaded.sessions.get(2).aiProjectOnly);
+            loaded.save();loaded.close();
+        }
+        assertTrue(errors.toString(),errors.isEmpty());
+    }
     @Test public void v153LibraryWithoutNewAgentFieldsReopensWithoutReset() throws Exception {
         WorkspaceStore original=new WorkspaceStore(context,errors::add);
         WorkspaceStore.Command cmd=new WorkspaceStore.Command();cmd.name="Legacy command";cmd.command="pwd";original.commands.add(cmd);

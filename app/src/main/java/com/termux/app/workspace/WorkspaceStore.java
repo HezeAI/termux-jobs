@@ -37,6 +37,7 @@ public final class WorkspaceStore {
         public boolean favorite;
         public Alias copy() { Alias a=new Alias();a.id=id;a.name=name;a.command=command;a.environment=environment;a.category=category;a.favorite=favorite;return a; }
     }
+    static Session newProfile(){Session s=new Session();s.codexUntrustedApproval=true;s.codexConfirmActions=true;return s;}
     public static final class Session {
         public String id = UUID.randomUUID().toString();
         public String name = "Bash", directory = "", startup = "", handle = "";
@@ -55,6 +56,7 @@ public final class WorkspaceStore {
         public String codexSourceDirectory = "";
         /** Old live run must not overwrite an explicitly edited next-launch chat. */
         public String codexBindingBlockedRun = "";
+        public boolean codexUntrustedApproval; // Only explicitly created new profiles; absent legacy field stays false.
         public Boolean codexConfirmActions; // null preserves legacy approval mapping
         public boolean aiProjectOnly;
         public String aiAgent = "", aiConnection = "00000000-0000-4000-8000-000000000002", aiModel = "", aiVariant = "", aiMode = "build", aiAccess = "ask", aiChat = "new", aiThread = "ses" + UUID.randomUUID().toString().replace("-", "");
@@ -87,7 +89,7 @@ public final class WorkspaceStore {
             Session s = new Session();s.restoreReview=restoreReview;s.keepHistory=keepHistory;s.chatScale=chatScale;
             s.extendedDebug=extendedDebugEnabled();s.agentConnectionCommand=agentConnectionCommand; s.name = name + WorkspaceText.tr(" — копия"); s.directory = directory; s.startup = startup; s.startup2 = startup2; s.startup3 = startup3; s.environment = environment;s.prootAlias=prootAlias;s.prootIsolated=prootIsolated;
             s.sshHost = sshHost; s.sshUser = sshUser; s.sshPort = sshPort; s.sshKeepOpen = sshKeepOpen; s.sshAuth = sshAuth; s.sshIdentity = sshIdentity; // Password is bound to the original profile ID.
-            s.codexConfirmActions=codexConfirmActions; s.aiProjectOnly=aiProjectOnly; s.codexEnvironment = codexEnvironment; s.codexAccess = codexAccess; s.codexChat = codexChat; s.codexThread = codexThread; s.codexThreadName = codexThreadName; s.codexSourceDirectory=codexSourceDirectory;
+            s.codexUntrustedApproval=codexUntrustedApproval;s.codexConfirmActions=codexConfirmActions; s.aiProjectOnly=aiProjectOnly; s.codexEnvironment = codexEnvironment; s.codexAccess = codexAccess; s.codexChat = codexChat; s.codexThread = codexThread; s.codexThreadName = codexThreadName; s.codexSourceDirectory=codexSourceDirectory;
             s.aiAgent=aiAgent; s.aiConnection=aiConnection; s.aiModel=aiModel; s.aiVariant=aiVariant; s.aiMode=aiMode; s.aiAccess=aiAccess;
             s.claudeEffort=claudeEffort;s.claudeAgent=claudeAgent; s.claudeModel=claudeModel; s.claudeMode=claudeMode;
             s.geminiCloudProject=geminiCloudProject;s.geminiCloudLocation=geminiCloudLocation;s.geminiThinking=geminiThinking;s.geminiAgent=geminiAgent; s.geminiAuth=geminiAuth; s.geminiModel=geminiModel; s.geminiMode=geminiMode;
@@ -169,7 +171,7 @@ public final class WorkspaceStore {
         return new JSONObject().put("id", s.id).put("name", s.name)
             .put("chatScale",s.chatScale)
             .put("directory", s.directory).put("prootAlias",s.prootAlias).put("prootIsolated",s.prootIsolated).put("prootStartup",s.prootAlias.isEmpty()?JSONObject.NULL:new JSONArray(Arrays.asList(s.startup,s.startup2,s.startup3))).put("startup", s.prootAlias.isEmpty()?s.startup:WorkspaceEnvironments.OLD_READER_GUARD).put("startup2", s.prootAlias.isEmpty()?s.startup2:"").put("startup3", s.prootAlias.isEmpty()?s.startup3:"").put("sshAuth", s.sshAuth).put("sshIdentity", s.sshIdentity).put("sshEncryptedPassword", s.sshEncryptedPassword).put("sshHost", s.sshHost).put("sshUser", s.sshUser).put("sshPort", s.sshPort).put("sshKeepOpen", s.sshKeepOpen).put("environment", s.environment).put("handle", s.handle)
-            .put("codexConfirmActions",s.codexConfirmActions==null?JSONObject.NULL:s.codexConfirmActions).put("aiProjectOnly",s.aiProjectOnly)
+            .put("codexUntrustedApproval",s.codexUntrustedApproval).put("codexConfirmActions",s.codexConfirmActions==null?JSONObject.NULL:s.codexConfirmActions).put("aiProjectOnly",s.aiProjectOnly)
             .put("codexEnvironment", s.codexEnvironment).put("codexAccess", s.codexAccess).put("codexChat", s.codexChat).put("codexThread", s.codexThread).put("codexThreadName", s.codexThreadName).put("codexSocketId", s.codexSocketId).put("codexSourceDirectory",s.codexSourceDirectory).put("codexBindingBlockedRun",s.codexBindingBlockedRun)
             .put("aiAgent",s.aiAgent).put("aiConnection",s.aiConnection).put("aiSocketId",s.aiSocketId).put("aiModel",s.aiModel).put("aiVariant",s.aiVariant).put("aiMode",s.aiMode).put("aiAccess",s.aiAccess).put("aiChat",s.aiChat).put("aiThread",s.aiThread).put("aiSavedThread",s.aiSavedThread)
             .put("claudeEffort",s.claudeEffort).put("claudeAgent",s.claudeAgent).put("claudeModel",s.claudeModel).put("claudeMode",s.claudeMode).put("claudeChat",s.claudeChat).put("claudeThread",s.claudeThread).put("claudeSocketId",s.claudeSocketId)
@@ -245,7 +247,8 @@ public final class WorkspaceStore {
                 || !SshSessionShell.validUser(s.sshUser) || !SshSessionShell.validPort(s.sshPort))) throw new JSONException("Invalid SSH settings");
             if(o.has("codexConfirmActions")&&!o.isNull("codexConfirmActions")&&!(o.get("codexConfirmActions") instanceof Boolean))throw new JSONException("Invalid Codex approval policy");
             if(o.has("aiProjectOnly")&&!(o.get("aiProjectOnly") instanceof Boolean))throw new JSONException("Invalid agent project scope");
-            s.codexConfirmActions=o.has("codexConfirmActions")&&!o.isNull("codexConfirmActions")?o.getBoolean("codexConfirmActions"):null; s.aiProjectOnly=o.optBoolean("aiProjectOnly",false);
+            if(o.has("codexUntrustedApproval")&&!(o.get("codexUntrustedApproval") instanceof Boolean))throw new JSONException("Invalid Codex approval policy");
+            s.codexUntrustedApproval=o.optBoolean("codexUntrustedApproval",false);s.codexConfirmActions=o.has("codexConfirmActions")&&!o.isNull("codexConfirmActions")?o.getBoolean("codexConfirmActions"):null; s.aiProjectOnly=o.optBoolean("aiProjectOnly",false);
             s.codexEnvironment = o.optString("codexEnvironment", "ubuntu"); if(!AgentEnvironments.ubuntu(s.codexEnvironment)&&!s.codexEnvironment.equals("termux"))throw new JSONException("Invalid agent environment"); s.codexAccess = o.optString("codexAccess", "full");
             s.codexBindingBlockedRun=o.optString("codexBindingBlockedRun", "");
             s.codexChat = o.optString("codexChat", "new"); s.codexThread = o.optString("codexThread", ""); s.codexThreadName = o.optString("codexThreadName", ""); s.codexSocketId = validId(o.optString("codexSocketId", s.codexSocketId));

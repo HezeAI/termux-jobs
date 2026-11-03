@@ -34,7 +34,7 @@ public class AgentSettingsPresentationTest {
  }
  @Test public void codexDetailsTrackScopeAndApprovalWithoutConflatingThem()throws Exception{
   WorkspaceStore.Session p=profile("codex");p.codexAccess="project";p.codexConfirmActions=false;open(p,false);TextView details=(TextView)tag("codex-launch-details");assertEquals(View.GONE,details.getVisibility());assertTrue(details.getText().toString().contains("workspace-write"));assertTrue(details.getText().toString().contains("never"));tag("codex-launch-details-toggle").performClick();assertEquals(View.VISIBLE,details.getVisibility());
-  CheckBox confirm=findCheck(editor.getWindow().getDecorView(),"Codex action confirmations");confirm.setChecked(true);assertTrue(details.getText().toString().contains("on-request"));assertTrue(details.getText().toString().contains("workspace-write"));
+  CheckBox confirm=(CheckBox)tag("codex-command-confirmations");confirm.setChecked(true);assertTrue(details.getText().toString().contains("on-request"));assertTrue(details.getText().toString().contains("workspace-write"));
   findCheck(editor.getWindow().getDecorView(),"Codex project write scope").setChecked(false);assertTrue(details.getText().toString().contains("danger-full-access"));assertTrue(details.getText().toString().contains("on-request"));assertEquals("project",p.codexAccess);assertEquals(Boolean.FALSE,p.codexConfirmActions);
  }
  CheckBox findCheck(View view,String label){if(view instanceof CheckBox&&label.equals(view.getContentDescription()))return (CheckBox)view;if(view instanceof ViewGroup)for(int n=0;n<((ViewGroup)view).getChildCount();n++){CheckBox result=findCheck(((ViewGroup)view).getChildAt(n),label);if(result!=null)return result;}return null;}
@@ -75,6 +75,12 @@ public class AgentSettingsPresentationTest {
    try{open(p,false);AgentPreparationCard card=(AgentPreparationCard)tag("agent-preparation-card");assertNotNull(card);assertTrue(card.phase.getText().toString().contains("Распаковка"));card.performClick();idle();AlertDialog details=ShadowAlertDialog.getLatestAlertDialog();assertNotSame(editor,details);assertTrue(details.isShowing());assertSame(job,AgentPreparationOperation.current(p));details.dismiss();job.output("PREPARATION:verifying-components");idle();assertTrue(card.phase.getText().toString().contains("проверка"));editor.dismiss();idle();open(p,false);card=(AgentPreparationCard)tag("agent-preparation-card");assertTrue(card.phase.getText().toString().contains("проверка"));editor.dismiss();idle();}
    finally{job.active=false;AgentPreparationOperation.jobs.remove(AgentPreparationOperation.key(p));}
   }
+ }
+
+ @Test public void newCodexPolicySurvivesUiCreateSaveAndReopen()throws Exception{
+  WorkspaceLanguage.select(activity,"ru");WorkspaceLanguage.apply(activity);open(null,false);tag("session-launch-environment").performClick();AlertDialog kinds=ShadowAlertDialog.getLatestAlertDialog();kinds.getListView().performItemClick(null,2,2);idle();CheckBox confirm=(CheckBox)tag("codex-command-confirmations");assertTrue(confirm.isChecked());assertEquals("Подтверждать недоверенные команды",confirm.getText().toString());editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();idle();
+  Field f=WorkspaceController.class.getDeclaredField("store");f.setAccessible(true);WorkspaceStore store=(WorkspaceStore)f.get(controller);WorkspaceStore.Session fresh=store.sessions.stream().filter(p->p.environment.equals("codex")&&p.codexUntrustedApproval).findFirst().orElseThrow(AssertionError::new);String id=fresh.id;assertEquals("untrusted",CodexSessionShell.approval(fresh));store.awaitWrites();
+  open(fresh,false);assertTrue(((CheckBox)tag("codex-command-confirmations")).isChecked());editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();idle();store.awaitWrites();WorkspaceStore reloaded=new WorkspaceStore(activity,x->{throw new AssertionError(x);});try{WorkspaceStore.Session saved=reloaded.sessions.stream().filter(p->p.id.equals(id)).findFirst().orElseThrow(AssertionError::new);assertEquals("untrusted",CodexSessionShell.approval(saved));assertTrue(CodexSessionShell.invocation(saved,"/fixture.sock").contains("--ask-for-approval untrusted"));}finally{reloaded.close();}
  }
 
 }

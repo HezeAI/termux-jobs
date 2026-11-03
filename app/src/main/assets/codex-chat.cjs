@@ -356,7 +356,7 @@ class CodexChat {
 }
 async function run(){
  const [endpoint,access,chat,thread,cwd,confirmed,approval,language]=process.argv.slice(3);
- if(!endpoint||!path.isAbsolute(endpoint)||!['full','project','read'].includes(access)||!['new','id'].includes(chat)||!['never','on-request'].includes(approval)||!path.isAbsolute(cwd))throw Error('Invalid Codex chat launch');
+ if(!endpoint||!path.isAbsolute(endpoint)||!['full','project','read'].includes(access)||!['new','id'].includes(chat)||!['never','on-request','untrusted'].includes(approval)||!path.isAbsolute(cwd))throw Error('Invalid Codex chat launch');
  const rpc=new Connection(endpoint,{largeHistory:true}),controller=new CodexChat(rpc,{endpoint,access,chat,thread,cwd,confirmed,approval,language});const socket=endpoint+'.chat';
  const peers=new Set();const server=net.createServer(peer=>{peers.add(peer);peer.on('error',()=>{});peer.once('close',()=>peers.delete(peer));peer.setTimeout(15000,()=>peer.destroy());let buffer='',done=false;peer.setEncoding('utf8');peer.on('data',data=>{if(done)return;buffer+=data;if(Buffer.byteLength(buffer)>65536){done=true;peer.destroy();return;}if(!buffer.includes('\n'))return;done=true;let q;try{q=JSON.parse(buffer.slice(0,buffer.indexOf('\n')));}catch{peer.end('{"ok":false}\n');return;}Promise.resolve(controller.handle(q)).catch(()=>({ok:false,error:'CONTROL_FAILED'})).then(r=>{if(!peer.destroyed)peer.end(JSON.stringify(r)+'\n');});});});
  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(socket,()=>{fs.chmodSync(socket,0o600);resolve();});});
