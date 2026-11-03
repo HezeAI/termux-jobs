@@ -45,9 +45,8 @@ final class GeminiCli {
     }
     static String command(File files,WorkspaceStore.Session s) {
         if(!valid(s))throw new IllegalArgumentException("Invalid Gemini profile");
-        String keyFile=GUEST+"/keys/"+s.id+".key";
-        return "( set -e; trap "+SessionShell.quote("rm -f -- "+SessionShell.quote(keyFile))+" EXIT; "
-            +(s.geminiAuth.equals("api")&&!s.geminiEncryptedKey.isEmpty()?"export JOBS_GEMINI_KEY_FILE="+SessionShell.quote(keyFile)+"; ":"")
+        return "( set -e; "
+            +(s.geminiAuth.equals("api")&&!s.geminiEncryptedKey.isEmpty()?"export JOBS_GEMINI_KEY_SOCKET="+SessionShell.quote(GeminiKeyBroker.address(s.geminiSocketId))+"; ":"")
             +"export JOBS_GEMINI_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")
             +(s.geminiAuth.equals("vertex")&&!s.geminiCloudProject.isEmpty()?"; export JOBS_GEMINI_VERTEX_PROJECT="+SessionShell.quote(s.geminiCloudProject)+"; export JOBS_GEMINI_VERTEX_LOCATION="+SessionShell.quote(s.geminiCloudLocation):"")
             +"; export JOBS_GEMINI_THINKING="+SessionShell.quote(s.geminiThinking)

@@ -1,5 +1,9 @@
 # Unreleased
 
+- Security: replace the Gemini API-key plaintext handoff file with a one-shot
+  local broker bound to the launch ID and verified process ancestry/start time.
+  Decrypt only for the matching consumer; retain old profiles and existing files.
+
 - Security: new Codex profiles request approval for untrusted commands using the
   native `untrusted` policy. Preserve saved profiles and their effective policy.
   This is an approval policy, not project isolation; no APK contains this change yet.

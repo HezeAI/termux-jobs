@@ -58,6 +58,26 @@ function takeApiKey(file,socket){
   const stat=fs.lstatSync(file);if(!stat.isFile()||stat.isSymbolicLink()||stat.mode&0o077||stat.size<=0||stat.size>4096)throw Error('Invalid API handoff');
   try{const key=fs.readFileSync(file,'utf8');if(!/^[\x21-\x7e]{1,4096}$/.test(key))throw Error('Invalid API handoff');return key;}finally{fs.unlinkSync(file);}
 }
+function takeApiKeySocket(address,socket){
+  const run=path.basename(socket,'.sock');
+  if(!uuid.test(run)||address!=='termux-jobs-gemini-key-'+run)throw Error('Invalid API handoff owner');
+  return new Promise((resolve,reject)=>{
+    const peer=net.createConnection({path:'\0'+address});let data=Buffer.alloc(0),done=false;
+    const finish=(error,value)=>{if(done)return;done=true;clearTimeout(timer);data.fill(0);peer.destroy();error?reject(Error(error==='key'?'The saved Gemini API key is unavailable. Enter it again in session settings.':'Gemini API handoff unavailable')):resolve(value);};
+    const timer=setTimeout(()=>finish(true),10000);
+    peer.on('connect',()=>{const request=Buffer.alloc(38);request.writeUInt16BE(36);request.write(run,2,'ascii');peer.end(request);});
+    peer.on('error',()=>finish(true));peer.on('end',()=>{if(!done)finish(true);});
+    peer.on('data',part=>{
+      if(done)return;
+      if(data.length+part.length>4100){part.fill(0);finish(true);return;}
+      const next=Buffer.concat([data,part]);data.fill(0);part.fill(0);data=next;
+      if(data.length<4)return;const size=data.readInt32BE();
+      if(size===-1){finish('key');return;}
+      if(size<1||size>4096||data.length>size+4){finish(true);return;}
+      if(data.length===size+4){const value=data.toString('latin1',4);if(!/^[\x21-\x7e]{1,4096}$/.test(value)){finish(true);return;}finish(false,value);}
+    });
+  });
+}
 // Permission text is never included in the status writer or logs.
 function permissionReply(value,request){
   if(!value||value.ok!==true)return {ok:false,error:['STALE_PERMISSION','PERMISSION_FAILED'].includes(value?.error)?value.error:'CONTROL_FAILED'};
@@ -84,8 +104,9 @@ async function run(socket, model, mode, chat, thread, auth = 'auto') {
   const authRoot = process.env.JOBS_GEMINI_AUTH_DIR
     || path.join(os.homedir(), '.local/share/termux-jobs/gemini-cli/auth');
   if (!path.isAbsolute(authRoot)) throw new Error('Invalid Gemini authentication directory');
-  const selectedKey=auth==='api'?takeApiKey(process.env.JOBS_GEMINI_KEY_FILE,socket):'';
+  const selectedKey=auth==='api'?(process.env.JOBS_GEMINI_KEY_SOCKET?await takeApiKeySocket(process.env.JOBS_GEMINI_KEY_SOCKET,socket):takeApiKey(process.env.JOBS_GEMINI_KEY_FILE,socket)):'';
   delete process.env.JOBS_GEMINI_KEY_FILE;
+  delete process.env.JOBS_GEMINI_KEY_SOCKET;
   const authConfig = authEnvironment(auth, path.join(authRoot, path.basename(socket, '.sock') + '.json'),{...process.env,...(selectedKey?{GEMINI_API_KEY:selectedKey}:{})});
   let child, finished = false, stopping = false, timer, watch;
   const peers = new Set(), commands=new Map();let serial=0,childEpoch=0;
@@ -210,7 +231,7 @@ function stopProxy(socket) {
     client.on('end', () => {try {if (!JSON.parse(response).ok) throw new Error('Stop failed'); resolve();} catch(e) {reject(e);}});
   });
 }
-module.exports = {takeApiKey,argsFor, run, stopProxy, authEnvironment, permissionReply};
+module.exports = {takeApiKey,takeApiKeySocket,argsFor, run, stopProxy, authEnvironment, permissionReply};
 if (require.main === module) {
   const [op, socket, ...args] = process.argv.slice(2);
   (op === 'run' ? run(socket, ...args) : op === 'stop' ? stopProxy(socket) : Promise.reject(new Error('Unknown operation')))

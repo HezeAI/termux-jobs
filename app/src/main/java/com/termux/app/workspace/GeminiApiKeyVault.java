@@ -4,14 +4,11 @@ import android.content.Context;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
-import java.util.Arrays;
 import javax.crypto.*;
 
-/** Per-profile ciphertext in the library; one private handoff file consumed by the owned CLI. */
+/** Profile-bound ciphertext; plaintext is handed off through a run-owned one-shot broker. */
 final class GeminiApiKeyVault {
     private static final String ALIAS="termux.jobs.gemini.api.v1";
     private static SecretKey key(boolean create)throws GeneralSecurityException{
@@ -26,17 +23,9 @@ final class GeminiApiKeyVault {
     static String encrypt(WorkspaceStore.Session p,char[] value)throws GeneralSecurityException{return encrypt(key(true),p,value);}
     static String encrypt(SecretKey key,WorkspaceStore.Session p,char[] value)throws GeneralSecurityException{if(!valid(value))throw new GeneralSecurityException("Invalid API key");return SshPasswordVault.encrypt(key,binding(p),value);}
     static char[] decrypt(SecretKey key,WorkspaceStore.Session p)throws GeneralSecurityException{return SshPasswordVault.decrypt(key,binding(p),p.geminiEncryptedKey);}
-    static File runtimePath(File files,WorkspaceStore.Session p){java.util.UUID.fromString(p.id);return new File(new File(GeminiCli.directory(files),"keys"),p.id+".key");}
-    static File runtime(Context c,WorkspaceStore.Session p)throws IOException{return runtimePath(c.getFilesDir(),p);}
-    static void prepare(Context c,WorkspaceStore.Session p)throws IOException,GeneralSecurityException{
-        File target=runtime(c,p);if(target.exists()&&!target.delete())throw new IOException("Cannot clear API handoff");
-        if(!p.geminiAuth.equals("api")||p.geminiEncryptedKey.isEmpty())return;
-        char[] value=decrypt(key(false),p);try{write(target,value);}finally{Arrays.fill(value,'\0');}
+    static GeminiKeyBroker prepare(Context c,WorkspaceStore.Session p)throws IOException,GeneralSecurityException{
+        if(!p.geminiAuth.equals("api")||p.geminiEncryptedKey.isEmpty())return null;
+        WorkspaceStore.Session captured=new WorkspaceStore.Session();captured.id=p.id;captured.geminiEncryptedKey=p.geminiEncryptedKey;
+        return new GeminiKeyBroker(p.geminiSocketId,()->decrypt(key(false),captured));
     }
-    static void write(File target,char[] value)throws IOException{
-        if(!valid(value))throw new IOException("Invalid API key");File directory=target.getParentFile();if(!directory.isDirectory()&&!directory.mkdirs())throw new IOException("Cannot create API handoff");CodexChatControl.protect(directory);if(!directory.setExecutable(false,false)||!directory.setExecutable(true,true))throw new IOException("Cannot protect API handoff");
-        File temp=File.createTempFile("api-",".tmp",directory);ByteBuffer encoded=StandardCharsets.UTF_8.encode(CharBuffer.wrap(value));byte[] bytes=new byte[encoded.remaining()];encoded.get(bytes);
-        try{CodexChatControl.protect(temp);try(OutputStream out=new FileOutputStream(temp)){out.write(bytes);}if(!temp.renameTo(target))throw new IOException("Cannot publish API handoff");}finally{temp.delete();Arrays.fill(bytes,(byte)0);if(encoded.hasArray())Arrays.fill(encoded.array(),(byte)0);}
-    }
-    static void discard(Context c,WorkspaceStore.Session p){try{runtime(c,p).delete();}catch(Exception ignored){}}
 }

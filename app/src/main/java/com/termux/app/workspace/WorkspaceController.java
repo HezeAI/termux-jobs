@@ -2390,6 +2390,7 @@ public final class WorkspaceController {
             activity.showToast(WorkspaceText.tr("Каталог недоступен: ") + directory, true); return null;
         }
         SshPasswordBroker broker = null;
+        GeminiKeyBroker geminiKeyBroker = null;
         boolean registeredNew=false;
         try {
             String askpass = null, socket = null;
@@ -2403,7 +2404,7 @@ public final class WorkspaceController {
                 } finally { java.util.Arrays.fill(secret, '\0'); }
             }
             if(AgentPreparation.supports(profile))AgentPreparation.prepare(activity);
-            if(profile.geminiAgent){GeminiCli.prepare(activity);profile.geminiSocketId=java.util.UUID.randomUUID().toString();if(profile.geminiChat.equals("new"))profile.geminiThread=java.util.UUID.randomUUID().toString();GeminiApiKeyVault.prepare(activity,profile);}
+            if(profile.geminiAgent){GeminiCli.prepare(activity);profile.geminiSocketId=java.util.UUID.randomUUID().toString();if(profile.geminiChat.equals("new"))profile.geminiThread=java.util.UUID.randomUUID().toString();geminiKeyBroker=GeminiApiKeyVault.prepare(activity,profile);}
             if(profile.claudeAgent){ClaudeCode.prepare(activity);profile.claudeSocketId=java.util.UUID.randomUUID().toString();if(profile.claudeChat.equals("new"))profile.claudeThread=java.util.UUID.randomUUID().toString();}
             if(profile.aiAgent.equals("opencode")){AiAgents.prepare(activity);AiAgents.prepareLaunch(profile);}
             if (profile.environment.equals("codex")) { profile.codexSocketId = java.util.UUID.randomUUID().toString(); CodexSessionShell.prepareBridge(activity);CodexChatControl.prepare(activity,profile); }
@@ -2417,8 +2418,9 @@ public final class WorkspaceController {
             try { created = service.createTermuxSession(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH + "/bash",
                 new String[]{"--rcfile", rc.getAbsolutePath(), "-i"}, null, directory, false, profile.name);
             } finally { creating = false; }
-            if (created == null) { if (broker != null) broker.close(); rollbackUnstarted(profile,registeredNew); activity.showToast(WorkspaceText.tr("Не удалось создать терминал"), true); return null; }
+            if (created == null) { if(geminiKeyBroker!=null)geminiKeyBroker.close(); if (broker != null) broker.close(); rollbackUnstarted(profile,registeredNew); activity.showToast(WorkspaceText.tr("Не удалось создать терминал"), true); return null; }
             TerminalSession session = created.getTerminalSession();
+            if(geminiKeyBroker!=null)geminiKeyBroker.attach(session::getPid);
             // The synchronous callback may have adopted it; discard that temporary record.
             WorkspaceStore.Session adopted = store.findByHandle(session.mHandle);
             if (adopted != null && adopted != profile) store.sessions.remove(adopted);
@@ -2431,16 +2433,17 @@ public final class WorkspaceController {
             if (profile.environment.equals("codex")) codexHandler.postDelayed(() -> { if (!closed) loadCodexStatus(profile, null); }, 1500);
             return session;
         } catch (java.security.GeneralSecurityException e) {
+            if(geminiKeyBroker!=null)geminiKeyBroker.close();
             rollbackUnstarted(profile,registeredNew);
             if (broker != null) broker.close(); activity.showToast(profile.geminiAgent?tr("Сохранённый API-ключ недоступен. Введите его заново в настройках сессии.","The saved API key is unavailable. Enter it again in session settings."):WorkspaceText.tr("Сохранённый пароль недоступен. Введите его заново в настройках сессии."), true); return null;
         } catch (IOException | RuntimeException e) {
+            if(geminiKeyBroker!=null)geminiKeyBroker.close();
             rollbackUnstarted(profile,registeredNew);
             WorkspaceDiagnostics.failure(profile,e);
             if (broker != null) broker.close(); activity.showToast(WorkspaceText.tr("Не удалось подготовить сессию"), true); return null;
         }
     }
     private void rollbackUnstarted(WorkspaceStore.Session profile,boolean registeredNew) {
-        if(profile.geminiAgent)GeminiApiKeyVault.discard(activity,profile);
         if(registeredNew&&!profile.saved&&profile.handle.isEmpty()&&store.sessions.remove(profile))store.save();
     }
     public void refresh() {
