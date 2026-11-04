@@ -15,7 +15,7 @@ import os,subprocess,sys,tempfile,json
 repo=Path.cwd();out=Path(sys.argv[1]);guard=out/'local-network-only'
 run=Path(tempfile.mkdtemp(prefix='checks-',dir=out));home=run/'synthetic-home';home.mkdir(mode=0o700)
 results=[]
-for filename in ['../check-gemini-auth.js','test_gemini_managed_updates.cjs','test_gemini_handler_guard.cjs','test_gemini_vertex_auth.cjs','test_gemini_key_broker.cjs','test_gemini_chat_socket.cjs','test_gemini_chat_recovery.cjs','test_gemini_permissions.cjs','test_gemini_live_modes.cjs','test_gemini_chat_hooks.cjs']:
+for filename in ['../check-gemini-auth.js','test_gemini_managed_updates.cjs','test_gemini_handler_guard.cjs','test_gemini_vertex_auth.cjs','test_gemini_key_broker.cjs','test_gemini_key_broker_interrupted.cjs','test_gemini_chat_socket.cjs','test_gemini_chat_recovery.cjs','test_gemini_permissions.cjs','test_gemini_live_modes.cjs','test_gemini_chat_hooks.cjs']:
  fixture=Path(tempfile.mkdtemp(prefix='gm-',dir='/root/termux-fork/.verification/t'))
  env={'PATH':os.environ['PATH'],'HOME':str(home),'TERMUX_FORK_TEST_UNIX_ROOT':str(fixture)}
  # The existing fixture helper receives the exact fresh Unix root allowed by guard.
