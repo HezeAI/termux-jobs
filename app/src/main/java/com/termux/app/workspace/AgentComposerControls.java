@@ -46,8 +46,11 @@ final class AgentComposerControls {
     private Drawable feedback(){return new RippleDrawable(ColorStateList.valueOf(0x9979dfcd),null,shape(0xffffffff,0xffffffff));}
     private static void remove(View view){if(view.getParent()!=null)((ViewGroup)view.getParent()).removeView(view);}
     private int singleLineHeight(){
-        android.graphics.Paint.FontMetricsInt metrics=input.getPaint().getFontMetricsInt();
-        int text=input.getIncludeFontPadding()?metrics.bottom-metrics.top:metrics.descent-metrics.ascent;
+        // Match Android's rounded one-line layout, including font padding and spacing.
+        android.text.StaticLayout line=new android.text.StaticLayout(" ",input.getPaint(),
+            dp(1000),android.text.Layout.Alignment.ALIGN_NORMAL,input.getLineSpacingMultiplier(),
+            input.getLineSpacingExtra(),input.getIncludeFontPadding());
+        int text=line.getHeight();
         return Math.max(dp(48),Math.max(input.getMinimumHeight(),Math.max(input.getMinHeight(),text+input.getCompoundPaddingTop()+input.getCompoundPaddingBottom())));
     }
     private void toolsHeight(){if(pair.getLayoutParams()!=null&&pair.getLayoutParams().height!=singleLineHeight()){ViewGroup.LayoutParams p=pair.getLayoutParams();p.height=singleLineHeight();pair.setLayoutParams(p);}}
