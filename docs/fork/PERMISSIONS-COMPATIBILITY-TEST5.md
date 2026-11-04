@@ -153,3 +153,72 @@ Other agents, full profile lifecycle, Keystore/key broker, authorization and
 recovery remain open. Test4 acceptance was blocked by startup and is not
 retroactively marked successful. Attachment accumulation/disconnections
 remain separate and are not fixed by this change or closed by this report.
+
+
+## 2026-11-04 — Prepared phone fixture: Gemini permission buttons
+
+This is an explicit local test connection, not a shipped provider or real Google
+login. It uses Gemini 0.64.0 / Node 22.22.1 and the existing application's optional
+connection executable. The pinned production Gemini assets match test7 source
+`0a51e24c`. A new HOME, settings, project, history and synthetic environment are
+created under `.verification/phone-permissions/`. No application profile/store is
+imported or edited by setup. Runtime symlinks reuse installed binaries read-only;
+446 bundle files pass their existing integrity manifest. This is configuration
+separation, **not an OS filesystem sandbox** or a complete file-open trace.
+
+Each launch starts a loopback-only deterministic provider inside the existing
+kernel network guard. Only listeners registered by that process tree are allowed;
+external and unrelated local connections are blocked. Fresh negative guard tests
+passed. The provider emits only fixed shell/write calls against its own marker
+files, has no forwarding route, caps requests at 2 MiB and retains at most 512
+structured metadata events. It does not save HTTP bodies, audio, keys or prompts.
+The real CLI may save its own artificial chat history in the private fixture HOME.
+
+Checked anew: native preparation → bootstrap → production controller → main CLI
+→ permission answer → actual file bytes. Shell No/Allow once and Write No/Allow
+once all pass. Controlled stop is acknowledged, owned processes exit and the
+provider closes. This is not Android UI acceptance. Initial fixture failures
+(full-message parsing, selecting an earlier command and expecting an absolute
+path in the edit-card body) are preserved with final successful evidence under
+`.verification/phone-permissions/`. No production app change is claimed.
+
+On this device the fresh phone fixture is linked at
+`/root/termux-fork/.verification/audit-gemini-phone`. It starts with four
+`AUDIT_BEFORE` files. These paths are local test artifacts, not release resources.
+For another environment explicitly run
+`scripts/tests/phone-permissions/gemini_fixture.py prepare`; do not replace an
+already active fixture or reuse a working profile.
+
+1. Create a **new**, separate Gemini profile (do not copy test7). Ubuntu AI;
+   API-key mode; leave the API-key field empty; model `gemini-2.5-flash`;
+   **Подтверждать действия / default**. The launcher supplies a synthetic key.
+   This intentionally does not exercise Android key-broker/Keystore handoff.
+2. Project: `/root/termux-fork/.verification/audit-gemini-phone/project`.
+   Connection executable, without arguments:
+   `/root/termux-fork/.verification/audit-gemini-phone/launch-gemini`.
+   Save, reopen and verify these settings, then launch only this test profile.
+3. Send the four messages below sequentially. Wait for each operation to finish
+   and inspect the file before sending the next message.
+
+| Message | UI answer | Expected file |
+| --- | --- | --- |
+| `AUDIT SHELL INSIDE 1` | Deny | `project/shell.txt` remains `AUDIT_BEFORE` |
+| `AUDIT SHELL INSIDE 2` | Allow once | `project/shell.txt` becomes `AUDIT_SHELL_2` |
+| `AUDIT WRITE INSIDE 3` | Deny | `project/write.txt` remains `AUDIT_BEFORE` |
+| `AUDIT WRITE INSIDE 4` | Allow once | `project/write.txt` becomes `AUDIT_WRITE_4` |
+
+Check independently in a separate ordinary **Ubuntu AI terminal**, not the Gemini
+chat or its interactive CLI input:
+`/root/termux-fork/.verification/audit-gemini-phone/check-markers`.
+It reads only the four known synthetic files. Outside markers must remain
+`AUDIT_BEFORE`. No card, an unexpected marker/value, or a network/auth error is
+not PASS: stop and report message number, visible safe error and marker result;
+do not remove the launcher or switch to an unrestricted policy to continue.
+
+After the last operation, use only this test session's gear → **Закрыть сессию**
+and confirm. Wait for closure; the owned provider ends with its controller.
+Do not force-stop the application or stop other sessions. Closing the dialog alone
+is not session stop. Outside-project behavior, other agents, repeat/crash recovery,
+real login and backup/restore remain open. Android lifecycle/Keystore and clean
+restore require a separate Android instance/device without working sessions;
+no destructive test is prepared against the active instance.
