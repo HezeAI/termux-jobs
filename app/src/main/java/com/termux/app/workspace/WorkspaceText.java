@@ -334,7 +334,7 @@ final class WorkspaceText {
         ids.put("(\ncommand -v codex >/dev/null 2>&1 || { printf '%s\\n' 'Codex не установлен в выбранной среде.' >&2; exit 127; }\n", R.string.workspace_text_316);
         ids.put("command -v node >/dev/null 2>&1 || { printf '%s\\n' 'Для локального управления Codex нужен Node.js в выбранной среде.' >&2; exit 127; }\n", R.string.workspace_text_317);
         ids.put(" ] || { printf '%s\\n' 'Подключение Codex уже занято.' >&2; exit 1; }\n", R.string.workspace_text_318);
-        ids.put("kill -0 \"$_jobs_codex_pid\" 2>/dev/null || { printf '%s\\n' 'Не удалось запустить app-server. Проверьте версию Codex.' >&2; exit 1; }\n", R.string.workspace_text_319);
+        ids.put("kill -0 \"$_jobs_codex_pid\" 2>/dev/null || { _jobs_codex_exit=0; wait \"$_jobs_codex_pid\" || _jobs_codex_exit=$?; _jobs_codex_pid=; printf '%s %s\\n' 'Не удалось запустить app-server; код завершения:' \"$_jobs_codex_exit\" >&2; exit 1; }\n", R.string.workspace_text_319);
         ids.put("_jobs_codex_wait=$((_jobs_codex_wait+1)); [ \"$_jobs_codex_wait\" -lt 100 ] || { printf '%s\\n' 'Истекло ожидание Codex.' >&2; exit 1; }; sleep 0.1\ndone\n", R.string.workspace_text_320);
         ids.put(") || { printf '%s\\n' 'Не удалось продолжить чат с выбранными правами.' >&2; exit 1; }\n", R.string.workspace_text_321);
         ids.put("Не удалось прочитать статус Codex (", R.string.workspace_text_322);
@@ -599,6 +599,8 @@ final class WorkspaceText {
         ids.put("Нажми на карточку, чтобы прочитать полностью", R.string.workspace_input_preview_hint);
         ids.put("Вставить в сессию", R.string.workspace_insert_session);
         IDS = Collections.unmodifiableMap(ids);
+        ids.put("printf '%s\\n' 'Для выбранной политики нужен канал чата Codex. Подтверждения не отключены.' >&2; exit 1;\n", R.string.workspace_text_585);
+        ids.put("Выбранный режим разрешений не поддерживается. Запуск остановлен; полный доступ не включён.", R.string.workspace_text_586);
     }
     /** App helper errors may have been cached in another UI language. */
     static String statusError(String value) {

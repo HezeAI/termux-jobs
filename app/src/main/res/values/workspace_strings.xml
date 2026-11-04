@@ -319,7 +319,7 @@
     <string name="workspace_text_316" formatted="false">"(\ncommand -v codex &gt;/dev/null 2&gt;&amp;1 || { printf \'%s\\n\' \'Codex is not installed in the selected environment.\' &gt;&amp;2; exit 127; }\n"</string>
     <string name="workspace_text_317" formatted="false">"command -v node &gt;/dev/null 2&gt;&amp;1 || { printf \'%s\\n\' \'Local Codex control requires Node.js in the selected environment.\' &gt;&amp;2; exit 127; }\n"</string>
     <string name="workspace_text_318" formatted="false">" ] || { printf \'%s\\n\' \'Codex connection is already in use.\' &gt;&amp;2; exit 1; }\n"</string>
-    <string name="workspace_text_319" formatted="false">"kill -0 \"$_jobs_codex_pid\" 2&gt;/dev/null || { printf \'%s\\n\' \'Could not start app-server. Check your Codex version.\' &gt;&amp;2; exit 1; }\n"</string>
+    <string name="workspace_text_319" formatted="false">"kill -0 \"$_jobs_codex_pid\" 2&gt;/dev/null || { _jobs_codex_exit=0; wait \"$_jobs_codex_pid\" || _jobs_codex_exit=$?; _jobs_codex_pid=; printf \'%s %s\\n\' \'Could not start app-server; exit code:\' \"$_jobs_codex_exit\" &gt;&amp;2; exit 1; }\n"</string>
     <string name="workspace_text_320" formatted="false">"_jobs_codex_wait=$((_jobs_codex_wait+1)); [ \"$_jobs_codex_wait\" -lt 100 ] || { printf \'%s\\n\' \'Timed out waiting for Codex.\' &gt;&amp;2; exit 1; }; sleep 0.1\ndone\n"</string>
     <string name="workspace_text_321" formatted="false">") || { printf \'%s\\n\' \'Could not resume chat with the selected permissions.\' &gt;&amp;2; exit 1; }\n"</string>
     <string name="workspace_text_322" formatted="false">"Could not read Codex status ("</string>
@@ -584,4 +584,6 @@
     <string name="workspace_input_preview_hint">Tap a card to read the full text</string>
     <string name="workspace_insert_session">Insert into session</string>
     <string name="workspace_preview_back">Back</string>
+    <string name="workspace_text_585" formatted="false">"printf \'%s\\n\' \'The selected policy requires the Codex chat connection. Approvals were not disabled.\' &gt;&amp;2; exit 1;\n"</string>
+    <string name="workspace_text_586" formatted="false">The selected permission policy is unsupported. Startup stopped; full access was not enabled.</string>
 </resources>

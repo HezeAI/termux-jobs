@@ -44,6 +44,7 @@ final class GeminiCli {
             ||!f.setReadable(true,true)||!f.setWritable(true,true)||(f.isDirectory()&&!f.setExecutable(true,true)))throw new IOException("Cannot protect Gemini controls");
     }
     static String command(File files,WorkspaceStore.Session s) {
+        if(!java.util.Arrays.asList("default","auto_edit","plan").contains(s.geminiMode))throw new IllegalArgumentException(WorkspaceText.tr("Выбранный режим разрешений не поддерживается. Запуск остановлен; полный доступ не включён."));
         if(!valid(s))throw new IllegalArgumentException("Invalid Gemini profile");
         return "( set -e; "
             +(s.geminiAuth.equals("api")&&!s.geminiEncryptedKey.isEmpty()?"export JOBS_GEMINI_KEY_SOCKET="+SessionShell.quote(GeminiKeyBroker.address(s.geminiSocketId))+"; ":"")

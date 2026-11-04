@@ -319,7 +319,7 @@
     <string name="workspace_text_316" formatted="false">"(\ncommand -v codex &gt;/dev/null 2&gt;&amp;1 || { printf \'%s\\n\' \'Codex не установлен в выбранной среде.\' &gt;&amp;2; exit 127; }\n"</string>
     <string name="workspace_text_317" formatted="false">"command -v node &gt;/dev/null 2&gt;&amp;1 || { printf \'%s\\n\' \'Для локального управления Codex нужен Node.js в выбранной среде.\' &gt;&amp;2; exit 127; }\n"</string>
     <string name="workspace_text_318" formatted="false">" ] || { printf \'%s\\n\' \'Подключение Codex уже занято.\' &gt;&amp;2; exit 1; }\n"</string>
-    <string name="workspace_text_319" formatted="false">"kill -0 \"$_jobs_codex_pid\" 2&gt;/dev/null || { printf \'%s\\n\' \'Не удалось запустить app-server. Проверьте версию Codex.\' &gt;&amp;2; exit 1; }\n"</string>
+    <string name="workspace_text_319" formatted="false">"kill -0 \"$_jobs_codex_pid\" 2&gt;/dev/null || { _jobs_codex_exit=0; wait \"$_jobs_codex_pid\" || _jobs_codex_exit=$?; _jobs_codex_pid=; printf \'%s %s\\n\' \'Не удалось запустить app-server; код завершения:\' \"$_jobs_codex_exit\" &gt;&amp;2; exit 1; }\n"</string>
     <string name="workspace_text_320" formatted="false">"_jobs_codex_wait=$((_jobs_codex_wait+1)); [ \"$_jobs_codex_wait\" -lt 100 ] || { printf \'%s\\n\' \'Истекло ожидание Codex.\' &gt;&amp;2; exit 1; }; sleep 0.1\ndone\n"</string>
     <string name="workspace_text_321" formatted="false">") || { printf \'%s\\n\' \'Не удалось продолжить чат с выбранными правами.\' &gt;&amp;2; exit 1; }\n"</string>
     <string name="workspace_text_322" formatted="false">"Не удалось прочитать статус Codex ("</string>
@@ -584,4 +584,6 @@
     <string name="workspace_input_preview_hint">Нажми на карточку, чтобы прочитать полностью</string>
     <string name="workspace_insert_session">Вставить в сессию</string>
     <string name="workspace_preview_back">Назад</string>
+    <string name="workspace_text_585" formatted="false">"printf \'%s\\n\' \'Для выбранной политики нужен канал чата Codex. Подтверждения не отключены.\' &gt;&amp;2; exit 1;\n"</string>
+    <string name="workspace_text_586" formatted="false">Выбранный режим разрешений не поддерживается. Запуск остановлен; полный доступ не включён.</string>
 </resources>

@@ -37,6 +37,7 @@ public final class AiAgents {
         }
     }
     static String command(File files,WorkspaceStore.Session s) {
+        if(!java.util.Arrays.asList("full","ask","read").contains(s.aiAccess)||!java.util.Arrays.asList("build","plan").contains(s.aiMode))throw new IllegalArgumentException(WorkspaceText.tr("Выбранный режим разрешений не поддерживается. Запуск остановлен; полный доступ не включён."));
         if(!s.aiAgent.equals("opencode")||!s.environment.equals("ubuntu")||!AgentEnvironments.ubuntu(s.codexEnvironment)||!validThread(s.aiThread)||!validModel(s.aiModel))throw new IllegalArgumentException("Invalid AI profile");
         return "( set -e; export JOBS_AI_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")+"; source "+SessionShell.quote(GUEST+"/bootstrap-v1.sh")+"; exec node "+SessionShell.quote(GUEST+"/bridge-v1.js")+" run-chat "+SessionShell.quote(GUEST+"/connections/"+s.aiConnection)+" "+SessionShell.quote(GUEST+"/"+socket(files,s).getName())+" "+SessionShell.quote(s.aiThread)+" "+SessionShell.quote(s.aiModel)+" "+SessionShell.quote(s.aiMode)+" "+SessionShell.quote(s.aiChat)+" "+SessionShell.quote(s.aiVariant)+" "+SessionShell.quote(s.aiAccess)+" "+SessionShell.quote(s.aiProjectOnly?"project":"unrestricted")+" )";
     }

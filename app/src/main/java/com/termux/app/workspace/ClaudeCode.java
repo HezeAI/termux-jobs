@@ -40,6 +40,7 @@ final class ClaudeCode {
             ||!f.setReadable(true,true)||!f.setWritable(true,true)||(f.isDirectory()&&!f.setExecutable(true,true)))throw new IOException("Cannot protect Claude controls");
     }
     static String command(File files,WorkspaceStore.Session s) {
+        if(!java.util.Arrays.asList("manual","acceptEdits","plan").contains(s.claudeMode))throw new IllegalArgumentException(WorkspaceText.tr("Выбранный режим разрешений не поддерживается. Запуск остановлен; полный доступ не включён."));
         if(!valid(s))throw new IllegalArgumentException("Invalid Claude profile");
         return "( set -e; export JOBS_CLAUDE_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")
             +"; export JOBS_CLAUDE_EFFORT="+SessionShell.quote(s.claudeEffort)
