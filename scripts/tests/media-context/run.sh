@@ -5,9 +5,9 @@ umask 077
 unset SYNTHETIC_TOOLS_ONLY SYNTHETIC_LATEST_ONLY SYNTHETIC_IMAGE_BUDGET SYNTHETIC_PROMPT_VARIANT SYNTHETIC_COMPACT_ONLY SYNTHETIC_RELEASE_NARROW
 cd "$(dirname "$0")/../../.."
 case "${1:-}" in
- codex|codex-latest|codex-prompts|codex-compact|codex-chain|codex-websocket|codex-versions|codex-version-boundary|codex-limits) task_media_agent=codex ;;
+ codex|codex-latest|codex-prompts|codex-compact|codex-chain|codex-websocket|codex-versions|codex-version-boundary|codex-limits|codex-local-history) task_media_agent=codex ;;
  claude|gemini|opencode) task_media_agent=$1 ;;
- *) echo 'Usage: run.sh codex|codex-latest|codex-prompts|codex-compact|codex-chain|codex-websocket|codex-versions|codex-version-boundary|codex-limits|claude|gemini|opencode' >&2; exit 2 ;;
+ *) echo 'Usage: run.sh codex|codex-latest|codex-prompts|codex-compact|codex-chain|codex-websocket|codex-versions|codex-version-boundary|codex-limits|codex-local-history|claude|gemini|opencode' >&2; exit 2 ;;
 esac
 mkdir -p .verification/media-context
 export TERMUX_MEDIA_OUTPUT
@@ -27,13 +27,14 @@ if [[ "$1" == codex-latest ]]; then export SYNTHETIC_LATEST_ONLY=1; fi
 if [[ "$1" == codex-compact ]]; then export SYNTHETIC_COMPACT_ONLY=1; fi
 if [[ "$1" == codex-websocket ]]; then
  "$TERMUX_MEDIA_OUTPUT/local-network-only" "$TERMUX_MEDIA_OUTPUT/network.jsonl" -- python3 "$TERMUX_MEDIA_OUTPUT/probe-codex-websocket.py" > "$TERMUX_MEDIA_OUTPUT/run.log" 2>&1
-elif [[ "$1" == codex-chain || "$1" == codex-versions || "$1" == codex-version-boundary || "$1" == codex-limits ]]; then
+elif [[ "$1" == codex-chain || "$1" == codex-versions || "$1" == codex-version-boundary || "$1" == codex-limits || "$1" == codex-local-history ]]; then
  export TERMUX_MEDIA_REPO="$PWD"
  export TERMUX_FORK_TEST_UNIX_ROOT
  TERMUX_FORK_TEST_UNIX_ROOT=$(node -e "process.stdout.write(require('./scripts/tests/fixture-paths.cjs').fixture('mchain'))")
  export TERMUX_FORK_TEST_CODEX_SOCKET_HASH
  TERMUX_FORK_TEST_CODEX_SOCKET_HASH=$(python3 -c 'import os,hashlib; print(hashlib.sha256((os.environ["TERMUX_FORK_TEST_UNIX_ROOT"]+"/chain.sock").encode()).hexdigest())')
  task_media_probe=probe-codex-chain.py
+ if [[ "$1" == codex-local-history ]]; then task_media_probe=probe-codex-local-history.py; fi
  if [[ "$1" == codex-limits ]]; then task_media_probe=probe-codex-limits.py; fi
  if [[ "$1" == codex-versions || "$1" == codex-version-boundary ]]; then task_media_probe=probe-codex-versions.py; fi
  if [[ "$1" == codex-version-boundary ]]; then export SYNTHETIC_RELEASE_NARROW=1; fi

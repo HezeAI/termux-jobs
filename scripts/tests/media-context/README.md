@@ -11,6 +11,7 @@ bash scripts/tests/media-context/run.sh codex-websocket
 bash scripts/tests/media-context/run.sh codex-versions
 bash scripts/tests/media-context/run.sh codex-version-boundary
 bash scripts/tests/media-context/run.sh codex-limits
+bash scripts/tests/media-context/run.sh codex-local-history
 bash scripts/tests/media-context/run.sh codex
 bash scripts/tests/media-context/run.sh claude
 bash scripts/tests/media-context/run.sh gemini
@@ -84,6 +85,12 @@ compaction-threshold, vision-quality or real-provider latency tests**.
   over-limit old files are not force-fed. The 300-MiB sparse binary tests metadata
   card submission only, without a tool reading its contents. Originals are hashed,
   owned process PID/start identities checked before signals; no real profiles used.
+- `codex-local-history`: 24 actual native view_image results in one turn, followed
+  by two production Node/native Unix-WS reopenings. A fixture-only hook records
+  local decoded WS message sizes without changing the 32-MiB cap or pagination.
+  Compares these sizes with the >32-MiB request actually received by the local
+  provider. This separates API history projection from model-context serialization;
+  it is not an authenticated WS/HTTPS A/B or Android UI acceptance.
 - Claude: production SDK adapter + real CLI, a new/resumed native session and
   the actual Anthropic HTTP client. The separate controller socket is bypassed
   because this fence intentionally denies filesystem Unix listeners. That control
@@ -128,3 +135,18 @@ and extracts only request counts/size/image metadata into the run's summary.
 Recorded JSON can represent logical prompts or warmup and is not proof of physical
 WS deltas, encrypted wire bytes or receipt by the real provider. This command does
 not launch an external experiment or authorize any use of working chats.
+
+Validate a completed, explicitly authorized real-route size-sweep's **saved**
+evidence without accessing real logs/authentication or sending network requests:
+
+```sh
+python3 scripts/tests/media-context/summarize-size-sweep.py SAVED_SIZE_SWEEP_ROOT
+```
+
+The real sweep remains separate from run.sh. Its preserved safe snapshot contains
+only instrumentation classifications for its exact artificial threads. Validation
+requires fifteen completed observations, matching repeated initial histories,
+original hashes, no compaction, expected image counts and exited owned processes.
+A 240-second censored attempt is retained as unsuccessful within the observation
+window, never silently converted into a pass. Recorded native JSON bytes are not
+compressed transport bytes or actual receipts at the authenticated provider.

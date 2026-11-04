@@ -5,6 +5,201 @@ The [test APK](VALIDATION-2.1.3-test4.md) contains the separate audit changes.
 No working history, authorization or session was edited. No native history was
 manually stripped. No APK/component was installed, replaced or published here.
 
+## 2026-11-04 — Repeated size sweep and the separate local history limit
+
+**Current result:** the 32 MiB adapter limit did not trigger in the new native-image
+history reproduction. External large-request failures also reproduced without any
+Node adapter. The live working chat uses WebSocket, so WebSocket is not universally
+broken. The repeated cold-image workload shows a marked transport dependence,
+but does not establish a universal hard byte cutoff or identify the remote closer.
+No application/provider limit, working setting, prompt or authorization changed.
+
+### Repeated external measurements — checked anew
+
+Pinned Codex 0.166.0, native SHA-256 `f2e6c980c937e734644bed1b4a9a018d3e63a0ccbe71aafc85c86a8c6e4b462a`,
+gpt-6.1-sol / low effort / built-in openai / existing native ChatGPT login.
+Existing per-agent Hysteria → Selectel relay → GeoHide configuration is unchanged.
+This is the available device, **not the wife's phone**. Individual upstream pool
+choices, provider load and physical network conditions were not pinned.
+
+A single artificial seed uses 24 actual view_image calls on synthetic PNGs.
+Supported `thread/fork` with `lastTurnId` produces prefixes with 7, 14, 17, 21 and
+24 images. Full initial API turn hashes match across the three repetitions at each
+point; old journal contents are never edited. Every measurement starts a new native
+process/connection and a separate fork. No images/tools/compaction are added during
+the measured turn. The prompt asks only for SIZE_TEST_OK, not image interpretation.
+Image count covaries with byte size: this tests a growing PNG-history workload,
+not bytes isolated from image count/content in every possible provider input.
+
+Orders: 10/20/25/30/35; 35/25/10/30/20; 20/30/35/10/25 MB. Only one synthetic
+inference runs at a time. Existing working sessions are not stopped. Times below
+start after turn admission; process/startup time is separately preserved. The
+240-second bound is a **research observation deadline**, not a configured application
+or provider timeout and not proof that another retry could never succeed.
+
+Sizes are **recorded native request JSON**, decimal MB (1,000,000 bytes), including
+cold logical/warmup representations. They are not compressed WebSocket frames,
+TLS bytes or plaintext byte receipts at the real provider. Exact provider receipts
+cannot be measured here without adding an authenticated interception point, which
+was not done. Image hashes/originals/history and trace representations are retained.
+
+| Approximate target / recorded JSON | Answers within 240 s | Time in repetitions 1 / 2 / 3 | Native retry notifications | Successful completion transport |
+| --- | --- | --- | --- | --- |
+| 10 MB / 10,221,465 bytes | 3/3 | 66.72 / 16.18 / 19.14 s | 0 / 0 / 0 | WebSocket |
+| 20 MB / 20,329,448 bytes | 1/3 | >240 (240.18) / >240 (240.09) / 52.58 s | 2 / 4 / 4 | Third attempt after HTTP fallback; first two did not reach fallback before cancellation |
+| 25 MB / 24,661,914 bytes | 3/3 | 63.17 / 60.24 / 77.11 s | 4 / 4 / 4 | After HTTP fallback in all three |
+| 30 MB / 30,437,462–30,437,463 bytes | 3/3 | 73.83 / 181.95 / 171.63 s | 4 / 4 / 4 | After HTTP fallback in all three |
+| 35 MB / 34,769,925–34,770,231 bytes | 3/3 | 235.92 / 98.72 / 88.58 s | 4 / 4 / 5 | After HTTP fallback in all three |
+
+Errors are distinct from final answer success. At approximately 20 MB the native
+error includes **websocket closed by server before response.completed**. At the
+larger points, **Connection reset by peer** is repeatedly present. Additional
+connection/timeout/request-send failures occur at 35 MB. Native retry notification
+counts are not a count of unique TCP connections: warmup and layered logs differ.
+The ordinary stream path discards the received Close frame details and emits its
+generic close-before-completed error; a close code or a claimed server-size policy
+cannot be reconstructed from that message alone. No external 16 MiB/32 MiB cap is
+asserted from the words close/reset, or from a generic log field containing "size".
+
+All 12 measured large-workload attempts experienced retries. Ten ultimately
+completed after the CLI's explicit HTTP-fallback warning; two were censored before
+that fallback. The 25–35 MB answers show that "all requests above 20 MB are rejected"
+is false for this route. A higher size did not monotonically imply longer latency:
+transport fallback timing and network variation materially affect the result.
+Three repetitions per point do not establish population reliability or a precise
+threshold between the tested points.
+
+### Active working transport and explicit A/B limitation
+
+At the user's request, safe read-only instrumentation for **the exact current
+thread** reports `transport=responses_websocket`, including events at
+2026-11-04 19:35–19:36 UTC. The native process PID/start identity is unchanged after
+the tests. No restart, rollout-content reading, working-history compaction, or
+manual authentication-file access was used. Only fixed transport labels, timestamps
+and module metadata were exported; private chat text/account contents were not.
+The current working request's byte size is unknown. Its successful live WebSocket
+state must not be equated with a cold 20–35 MB replay.
+
+A clean **explicit WebSocket-only versus HTTPS-only A/B on the built-in provider
+was not performed**, because this pinned CLI does not expose a supported equivalent
+switch. Exact pinned source `merge_configured_model_providers` ignores built-in
+openai inference overrides except permitted model_catalog_url. In particular,
+`model_providers.openai.supports_websockets=false` is ignored; responses_websockets
+and responses_websockets_v2 feature switches are removed. The custom-provider flag
+is not a transparent workaround for existing openai histories: provider identity
+and resume compatibility change. No custom provider or replacement login was added.
+
+The measured comparison is the same CLI's **automatic** WS → HTTP fallback while
+retaining the same artificial image history, model and route configuration.
+Explicit native fallback logs and subsequent completion support the transport
+association; this is not a randomized forced-transport experiment and does not
+establish that transport alone, independent of route/backend variation, explains
+every failure. An independently selectable transport requires verified CLI support
+or a separate CLI change, then the same preserved histories can be reused.
+
+### v1.6.2-test / v1.6.5 local large-history fix
+
+The [historical report](VALIDATION-v1.6.2-test.md) describes a different failure:
+Codex 0.163.0 returned 2,898,482 bytes for eight turns, exceeding the old 2,097,152
+local bound; a one-turn reply was 142,233 bytes. The stable v1.6.5 source
+`e8bdf258` retains one-turn pagination and raises only the chat connection to
+**33,554,432 bytes (32 MiB) per local WS message**, including accumulated fragments.
+Default control/status clients retain 2 MiB. It is not a total-session or model
+context budget.
+
+Current and installed helper source hashes match on the available device:
+`codex-chat-v1.cjs` / source codex-chat.cjs SHA-256
+`2e315883b562a5643c42caded14bccefd32b58b7791ae7b4fdb812c9b5272f2c`;
+`codex-wire-v0.2.22.js` / source codex-control.js SHA-256
+`62d2b3b952d4a1bf1bee900f7221a6206b24b2a2f38e8ec3dc579477b674303b`.
+The chat still constructs Connection with largeHistory:true, reads metadata with
+includeTurns:false, resumes with excludeTurns:true and requests
+thread/turns/list with limit:1 / itemsView:full. It has not regressed to bulk history
+hydration. Source/frame tests were checked anew: split 3 MiB is admitted for chat,
+33 MiB is rejected before body allocation, and a local disconnect cannot become
+false ready. This is not phone UI acceptance.
+
+After the external series finished, a separate **guarded local fake-provider** run
+used actual production Node/native Unix WS code, with **24 real view_image results
+in one turn** (20 originals plus four repeated views). This deliberately tests the
+single-turn case that pagination alone does not bound. A metric hook in a private
+fixture copy records decoded local WS message length/method, without changing the
+cap or paging. The production and installed scripts are untouched.
+
+| Independent size | Measured bytes |
+| --- | ---: |
+| Native model request received by local provider, 24 inline images | 34,696,986 |
+| Largest local app-server → adapter message | 7,508 |
+| Largest thread/turns/list reply | 7,508 |
+| thread/resume reply | 2,818 |
+| thread/read reply | 1,734 |
+| Local limit | 33,554,432 |
+
+Both reopenings succeeded. No history message reached the local cap; reading the
+history did not trigger another inference. The native history API exposes these
+views as projected image items/paths, not the full old inline model payload.
+A >32 MiB **external request** therefore does not imply a >32 MiB local history
+message. In addition, the authenticated 15-trial sweep bypasses Node entirely;
+its external failures cannot have originated in this Node guard.
+
+Distinct failure signatures remain:
+
+- Local: Connection fails with **Message too large**, sets disconnected/not-ready,
+  and the adapter reports a local history/event size diagnostic.
+- External: native model-stream close/reset/retry errors; the local app-server
+  connection need not close. A later HTTP fallback can still complete the turn.
+
+This excludes the local limit for the reproduced native-image scenarios, not every
+possible single huge tool-output history page, older CLI projection or inaccessible
+phone state. The wife's phone and its current installed helper bytes were not
+checked. **No limit was raised.**
+
+### Proposed solution — not implemented or enabled
+
+1. Address large **cold/full replay** at the native provider-transport boundary:
+   preserve the openai provider identity and login, expose a supported HTTPS choice,
+   and test HTTPS-first for those replays instead of repeatedly uploading the same
+   large body through failing WS attempts. A verified CLI change/version is needed;
+   an ignored config override or renamed provider is not the fix. Live incremental
+   WS may remain where it works. This avoids using manual compaction as network repair.
+2. HTTPS alone does not stop unbounded replay growth. For a durable image-context
+   solution, bound **request-only image representations in CLI**, for both user
+   images and tool view_image results: keep recent/explicitly needed detail, replace
+   older full payloads with bounded previews/labels/original paths, and re-open the
+   untouched original on demand. Retained history/logs must remain complete. Needed
+   detail must be processed in explicit batches rather than silently discarded.
+   This requires native request projection support; changing the attachment picker
+   alone cannot cover agent-opened images. No experimental image-budget switch is
+   enabled as an assumed implementation.
+
+Before calling either candidate fixed, reuse these exact artificial histories with
+verified transport selection/request bounds, continuation, cold reopen, old-image
+review, requirement retention and the same external route. Then verify the affected
+phone separately when available. The current data justify these candidates, not a
+claim that disconnections or all context-growth paths are fixed. Automatic
+compaction and all working settings remain unchanged.
+
+### Evidence and checks
+
+Authenticated artifacts:
+`.verification/media-context/external-current-device/size-sweep-4ade3cfb/`.
+`result.json` SHA-256 `6a8d9a8a6bec9d967e7b9f986b7f1623ccf208ce7b7e38e64f539499a3e05af8`;
+`size-sweep-summary.json` SHA-256 `c4047c9d78ac8011ea3e946905af2c571735cab12d2f9f684bd28f5137f49cce`.
+The saved launcher/environment/experiment sources remain beside the evidence;
+no authenticated run is wired into the ordinary guarded test runner.
+The independent observer confirmed every observed descendant exited; all native
+Popen handles exited and all 24 original file hashes match. Working native process
+identity is unchanged. Validation checks all fifteen outcomes, equal repeated
+history hashes, exact image counts, original hashes and absence of compaction.
+
+Local artifacts: `replay-cX3PdI/codex-22936fca/local-history-result.json`, SHA-256
+`7b6b2ddbff331bba1082f89623cb09e9d28a11cd4cac674fdd84712275f59468`;
+metric rows, kernel-fence negative tests and exact-fixture process check retained.
+No process remains with that private fixture cwd inode. Node history wire/chat
+suites, Python/shell syntax, original/helper hashes and source/link checks passed.
+No APK, install, push, publication, global configuration edit or working-session
+restart was performed. MCP/plugins remain excluded.
+
 ## 2026-11-04 — Native compaction, transport boundaries and request replay
 
 **Current checkpoint, not a fix:** manual native compaction reduces image-bearing
