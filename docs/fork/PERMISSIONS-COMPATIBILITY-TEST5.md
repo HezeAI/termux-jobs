@@ -656,3 +656,87 @@ Read/Write проверяют **технический отказ пути**, н
 ошибки и сверку. Не завершать приложение целиком и не трогать рабочие чаты.
 Этот сценарий не проверяет настоящий API/Vertex вход, handoff/crash или
 восстановление Android.
+
+
+## Developer phone acceptance: Gemini outside-project access — 2026-11-04
+
+Accepted from the developer's report, checker output and screenshots after the
+explicit-model repeat. The displayed/native model is gemini-2.5-flash-lite.
+Read/Write failed with Path not in workspace, independently confirmed by the
+assistant reading only this synthetic native history. Shell read/write No and
+Allow once were accepted by the developer. Read-41 was not transmitted,
+read-42 was; new-33/new-51 are absent and new-52 is AUDIT_WRITE_52.
+The final supplied event is tool-result / WRITE / 33, 57049 bytes.
+These are phone results supplied by the developer, separate from assistant tests.
+
+The earlier auto/default attempt is not accepted: an auxiliary routing request
+without tools consumed the legacy fixture operation before the main tool-enabled
+request. No native tool ran then. A separate assistant probe reproduced that
+fixture defect. Explicit 3.1 and auto-routing differ; do not infer that the whole
+3.1 model lacks tools. See the current stage-two plan for evidence and the open
+fixture limitation. Do not extend the successful explicit-model phone result to
+auto/default, real API/Vertex sign-in, Android crash/handoff or a project sandbox.
+The next phone agent is OpenCode; do not repeat accepted cases without changed
+inputs. Earlier Gemini setup instructions above are now historical.
+
+
+## Следующий сценарий телефона: OpenCode вне проекта — 2026-11-04
+
+Подготовлена новая искусственная фикстура с прежним установленным OpenCode
+2.0.28, отдельными HOME/XDG/bridge/history и локальным провайдером под kernel
+guard. Рабочие подключения и авторизация не читаются. Ранее принятый OpenCode
+inside fixture не изменён. Компоненты не устанавливались, guard готовности
+приложения не ослаблен. Стендовые проверки не повторялись.
+
+1. Новый профиль `AUDIT BOUNDARY OPENCODE`: OpenCode, Ubuntu AI, новый чат,
+   Build, «С подтверждениями», флажок ограничения внешних путей **выключен**.
+   Это проверка управляемого внешнего доступа, не режима запрета путей.
+2. Создать новое именованное подключение `AUDIT BOUNDARY OpenCode` без ключа.
+   Не выбирать основное/рабочее подключение. До guarded запуска не открывать
+   самостоятельный каталог моделей через настройки подключения.
+3. «Команда подключения»: `/root/termux-fork/.verification/audit-boundary-opencode-phone/launch-boundary`.
+4. Рабочая папка: `/root/termux-fork/.verification/rollback-live-actions/source/.verification/phone-permissions/opencode-u0rr7sn1/project`.
+5. Сохранить, повторно открыть настройки, сверить значения и запустить.
+6. Уже после запуска открыть плашку состояния **этого агента** над чатом →
+   Модель → Synthetic audit / audit → вариант default. Это локальный каталог
+   работающего guarded сервера. Реального ключа/входа не требуется.
+
+Сначала проверяются два native directory No, до любого разрешения каталога.
+Затем проверяются конкретные инструменты. Сообщения отправлять по одному.
+
+| № | Сообщение | Выбор | Сверка |
+| --- | --- | --- | --- |
+| 1 | `AUDIT READ OUTSIDE 31` | В native terminal отклонить external directory | read-31 false |
+| 2 | `AUDIT WRITE OUTSIDE 33` | Отклонить external directory | new-33 absent |
+| 3 | `AUDIT READ OUTSIDE 31` | Directory Allow once, затем read Отклонить в чате | read-31 false |
+| 4 | `AUDIT READ OUTSIDE 32` | Directory Allow once, если спрашивает; read Разрешить разово | read-32 true |
+| 5 | `AUDIT WRITE OUTSIDE 33` | Directory Allow once, если спрашивает; edit Отклонить | new-33 absent |
+| 6 | `AUDIT WRITE OUTSIDE 34` | Directory Allow once, если спрашивает; edit Разрешить разово | new-34 AUDIT_WRITE_34 |
+| 7 | `AUDIT SHELL_READ OUTSIDE 41` | shell Отклонить | read-41 false |
+| 8 | `AUDIT SHELL_READ OUTSIDE 42` | shell Разрешить разово | read-42 true |
+| 9 | `AUDIT SHELL_WRITE OUTSIDE 51` | shell Отклонить | new-51 absent |
+| 10 | `AUDIT SHELL_WRITE OUTSIDE 52` | shell Разрешить разово | new-52 AUDIT_WRITE_52 |
+
+Native directory prompt открывается **кнопкой агента в терминал**, а не отдельным
+ручным CLI. Проверять точный путь `/root/termux-fork/.verification/rollback-live-actions/source/.verification/phone-permissions/opencode-u0rr7sn1/outside`. Для отказа выбрать Reject;
+если откроется пояснение, отправить пустое пояснение для завершения отказа.
+Для разрешения выбрать только Allow once, **не Always allow**. Затем нажать
+«Вернуться в чат OpenCode»; read/edit подтверждать в чате отдельно. Если возврат
+недоступен или вместо ожидаемого запроса другая ошибка — остановиться и сообщить
+номер шага. Если следующий directory prompt не повторяется, отметить это отдельно;
+не считать отсутствие карточки действия успешным отказом.
+
+После каждого завершённого шага выполнить в обычном терминале Ubuntu AI:
+
+```sh
+/root/termux-fork/.verification/audit-boundary-opencode-phone/check-boundary
+```
+
+После всех шагов штатно закрыть только эту тестовую сессию через её шестерёнку,
+затем снова выполнить checker. Не применять pkill/force-stop. Прислать сверку
+и отдельно результаты native directory No и последующего read/edit No.
+Текущая test7 может показывать отказ красной карточкой; исправление корреляции
+отказа остаётся локальным и не заменяет проверку эффекта. Не повторять команды
+из-за цвета карточки. Этот сценарий не подтверждает общий native TUI/ручной CLI
+или OS-песочницу; он проверяет именно directory gate управляемой сессии и
+конкретные действия через чат.
