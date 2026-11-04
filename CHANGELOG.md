@@ -1,12 +1,5 @@
 # Unreleased
 
-- Backup: include connection-scoped OpenCode settings, authorization, native history,
-  logs, project snapshots and receipts through a separate, default-off option when
-  exporting the app library. Explain incomplete recovery when excluded. Restore
-  into a fresh connection UUID without replacing existing credentials; retain
-  v1/v2 archive reading. Archives with connection data use manifest v3 and require
-  an updated reader. Clarify plaintext-secret warnings in RU/EN. Local code only;
-  delivered test5 is unchanged. See [audit](docs/fork/SECURITY-AUDIT-STAGE2.md).
 
 - Docs: put release highlights and Download APK first, followed by requirements
   and compatibility; fold CI history and technical evidence into details.
@@ -17,6 +10,25 @@
 - CI: prepare verified pinned X11 inputs on clean GitHub runners; preserve the
   mandatory hash guard and allow explicit checks of older source commits with
   separately recorded workflow identity. See [CI inputs](docs/fork/CI-X11.md).
+
+# 2026-11-04 — 2.1.3-test6 (versionCode 1482)
+
+- Backup: add a separate, default-off choice for OpenCode connection settings,
+  authorization, native history, logs, internal project snapshots and receipts.
+  Show RU/EN plaintext-secret and incomplete-recovery warnings before export.
+- Restore selected OpenCode state to a fresh connection UUID; preserve existing
+  connections. Continue reading v1/v2 archives. Connection exports use manifest
+  v3 and require the updated reader. Restored receipts do not execute actions
+  or carry one-time approvals in the checked native fixtures.
+- Include the previous audit fixes: run-bound Gemini key handoff, confirmed new
+  Codex profile policy and safe environment preparation output/download limits.
+  Old profiles and installed Ubuntu AI remain unchanged.
+- Gemini saved-profile recovery, cancellation, API/Vertex mode and process-owned
+  key transport are checked with artificial data; Android/Keystore, real account
+  access and phone recovery still require device acceptance.
+- Attachment accumulation/disconnections are **not fixed in this build**.
+  Images, video, documents and tool results across all four agents remain a
+  separate investigation. See [validation](docs/fork/VALIDATION-2.1.3-test6.md).
 
 # 2026-11-04 — 2.1.3-test5 (versionCode 1481)
 
