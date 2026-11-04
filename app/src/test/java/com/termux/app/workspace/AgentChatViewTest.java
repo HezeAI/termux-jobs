@@ -124,4 +124,12 @@ public class AgentChatViewTest {
   TextView draft=v.label("attachment fixture",14);v.attachmentDrafts.addView(draft);v.attachmentDrafts.setVisibility(View.VISIBLE);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();assertSame(draft,v.attachmentDrafts.getChildAt(0));
   v.bottomAfterLayout();layout(v);v.getViewTreeObserver().dispatchOnPreDraw();View last=v.timeline.getChildAt(45);assertTrue(last.getBottom()-v.scroll.getScrollY()<=v.scroll.getHeight()-150);assertTrue(v.timeline.getPaddingBottom()>=166);a.finish();
  }
+
+ @Test public void provenDeclineIsNeutralAndLocalizedWhileOtherAbortsRemainErrors()throws Exception{
+  Activity a=Robolectric.buildActivity(Activity.class).setup().get();
+  for(String language:new String[]{"ru","en"}){WorkspaceLanguage.select(a,language);AgentChatView view=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(view);
+   JSONObject info=row("declined","info","Action declined").put("actionOutcome","user_declined");view.rows(Arrays.asList(info),false);TextView text=(TextView)view.timeline.getChildAt(1);assertEquals(language.equals("ru")?"Действие отклонено":"Action declined",text.getText().toString());
+   JSONObject error=row("declined","error","{\"type\":\"aborted\",\"message\":\"Step interrupted\"}");view.rows(Arrays.asList(error),false);assertTrue(((TextView)view.timeline.getChildAt(1)).getText().toString().startsWith(language.equals("ru")?"Ошибка":"Error"));
+  }
+ }
 }

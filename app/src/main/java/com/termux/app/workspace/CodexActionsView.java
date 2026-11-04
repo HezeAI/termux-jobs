@@ -58,10 +58,10 @@ final class CodexActionsView extends LinearLayout {
                 LinearLayout.LayoutParams itemLayout=new LinearLayout.LayoutParams(-1,-2);itemLayout.setMargins(owner.dp(6),owner.dp(3),owner.dp(6),owner.dp(3));item.setLayoutParams(itemLayout);
                 final String id=key;item.setOnClickListener(v->{JSONObject original=data.get(id);if(original!=null)open.accept(original);});}
             String state=state(row),command=caption(row);boolean liveOutput=CodexActionTimeline.running(row)&&!row.optString("outputTail").isEmpty();String shownCommand=liveOutput?compactLine(item,command):command;
-            String caption=(CodexActionTimeline.failed(row)?"! ":CodexActionTimeline.running(row)?"● ":CodexActionTimeline.status(row).equals("completed")?"✓ ":"○ ")+shownCommand+"\n    "+state;
+            String caption=(AgentActionPresentation.userDeclined(row)?"○ ":CodexActionTimeline.failed(row)?"! ":CodexActionTimeline.running(row)?"● ":CodexActionTimeline.status(row).equals("completed")?"✓ ":"○ ")+shownCommand+"\n    "+state;
             if(liveOutput)caption+="\n    ↳ "+compactLine(item,row.optString("outputTail"));
             if(!item.getText().toString().equals(caption))item.setText(caption);
-            item.setTextColor(CodexActionTimeline.failed(row)?0xffffb08f:0xffd5e4e0);
+            item.setTextColor(CodexActionTimeline.failed(row)&&!AgentActionPresentation.userDeclined(row)?0xffffb08f:0xffd5e4e0);
             item.setContentDescription(command+". "+state+". "+owner.tr("Открыть действие и подробности","Open action and details"));
             if(item.getParent()==null)steps.addView(item,i);else if(steps.indexOfChild(item)!=i){steps.removeView(item);steps.addView(item,i);}
         }

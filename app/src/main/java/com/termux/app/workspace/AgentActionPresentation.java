@@ -36,10 +36,11 @@ final class AgentActionPresentation {
         }
         return "";
     }
+    static boolean userDeclined(JSONObject row){return row.optString("actionOutcome").equals("user_declined")&&CodexActionTimeline.status(row).equals("declined");}
     static String state(JSONObject row,boolean ru){
         String s=CodexActionTimeline.status(row),value;
         if(s.equals("attached"))value=ru?"Инструкции переданы агенту":"Instructions supplied to the agent";
-        else if(s.equals("declined"))value=ru?"Отклонено":"Declined";
+        else if(s.equals("declined"))value=userDeclined(row)?(ru?"Действие отклонено":"Action declined"):(ru?"Отклонено":"Declined");
         else if(s.equals("aborted")||s.equals("cancelled")||s.equals("canceled"))value=ru?"Прервано":"Interrupted";
         else if(CodexActionTimeline.failed(row))value=ru?"Ошибка":"Failed";
         else if(CodexActionTimeline.running(row))value=ru?"Выполняется…":"Running…";

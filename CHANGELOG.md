@@ -1,5 +1,10 @@
 # Unreleased
 
+- OpenCode: render a verified same-action user denial as neutral “Action declined”
+  instead of a failed tool/session error. Keep unrelated aborts and provider errors
+  visible. Persisted-history reopen and the next request are covered locally;
+  phone verification of the new presentation is pending.
+
 - Instructions: add the full supplied project template for Codex (AGENTS.md) and
   Claude Code (CLAUDE.md), with explicit project selection, editable preview,
   reviewed save/replacement and revision-conflict protection. Local only;

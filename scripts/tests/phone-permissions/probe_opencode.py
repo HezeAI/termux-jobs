@@ -52,7 +52,11 @@ try:
   assert (str(target)if kind=='SHELL'else target.name)in perm['body'];reply=rpc({'op':'answer','id':perm['id'],'outcome':outcome});assert reply.get('ok'),reply
   until(lambda:not rpc({'op':'chat-snapshot'}).get('busy'))
   after=target.read_bytes();assert (after==before)if outcome=='cancel'else after==('AUDIT_'+kind+'_'+str(number)).encode(),(kind,outcome,after)
-  results.append({'tool':kind,'answer':outcome,'fileCorrect':True,'permissionType':perm['type']});snap=rpc({'op':'chat-snapshot'})
+  if outcome=='cancel':
+   count=number//2+1
+   neutral=until(lambda:(lambda r:r if not r.get('agentError')and len([v for v in r.get('rows',[])if v.get('part')=='error'and v.get('actionOutcome')=='user_declined'])>=count else None)(rpc({'op':'chat-snapshot'})))
+   assert not any(v.get('kind')=='error'for v in neutral['rows']);assert any(v.get('status')=='declined'for v in neutral['rows'])
+  results.append({'tool':kind,'answer':outcome,'fileCorrect':True,'permissionType':perm['type'],'declinedProjectionChecked':outcome=='cancel'});snap=rpc({'op':'chat-snapshot'})
  assert sentinel.read_text()=='KEEP ORIGINAL CONNECTION'and sentinel.stat().st_mtime_ns==originalTime;assert sorted(p.name for p in connection.iterdir())==['artificial-original.txt']
  assert(root/'outside/shell.txt').read_text()=='AUDIT_BEFORE';assert(root/'outside/write.txt').read_text()=='AUDIT_BEFORE'
  print(json.dumps(results))
@@ -73,7 +77,7 @@ child=subprocess.Popen([str(root/'local-network-only'),str(root/'restart.network
 reopened=False;restartStop=False
 try:
  view=until(lambda:(lambda v:v if v.get('connected')and not v.get('needsTerminal')else None)(rpc({'op':'chat-snapshot'}))if sock.exists()else None)
- assert not view.get('permission');assert not view.get('busy');assert view['session']==snap['session'];assert view['model']['providerID']=='audit'and view['model']['id']=='audit'
+ assert not view.get('permission');assert not view.get('busy');assert not view.get('agentError');assert len([r for r in view['rows']if r.get('part')=='error'and r.get('actionOutcome')=='user_declined'])==2;assert not any(r.get('kind')=='error'for r in view['rows']);assert view['session']==snap['session'];assert view['model']['providerID']=='audit'and view['model']['id']=='audit'
  assert (root/'project/shell.txt').read_text()=='AUDIT_SHELL_2';assert (root/'project/write.txt').read_text()=='AUDIT_WRITE_4';assert sentinel.read_text()=='KEEP ORIGINAL CONNECTION'and sentinel.stat().st_mtime_ns==originalTime
  assert rpc({'op':'settings-read'})['access']=='ask';reopened=True
 finally:

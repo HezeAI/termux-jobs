@@ -48,7 +48,7 @@ final class AgentActionDetailsView extends LinearLayout {
     void update(JSONObject next){
         boolean following=followsOutput();
         int y=scroll.getScrollY(),heldInteraction=interaction;String previous=row==null?"":row.optString("body")+row.optLong("bodyLength");row=next;
-        String state=AgentActionPresentation.state(row,ru());if(!status.getText().toString().equals(state))status.setText(state);status.setTextColor(CodexActionTimeline.failed(row)?0xffffb08f:0xff79dfcd);
+        String state=AgentActionPresentation.state(row,ru());if(!status.getText().toString().equals(state))status.setText(state);status.setTextColor(AgentActionPresentation.userDeclined(row)?0xff91a6af:CodexActionTimeline.failed(row)?0xffffb08f:0xff79dfcd);
         JSONObject p=AgentActionPresentation.preview(row);String stamp=String.valueOf(p);if(!previewStamp.equals(stamp)){previewStamp=stamp;renderPreview(p);}
         LayoutParams viewport=(LayoutParams)scroll.getLayoutParams();int height=compactPreview()?LayoutParams.WRAP_CONTENT:0;float weight=compactPreview()?0:1;
         if(viewport.height!=height||viewport.weight!=weight){viewport.height=height;viewport.weight=weight;scroll.setLayoutParams(viewport);}

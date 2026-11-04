@@ -509,3 +509,36 @@ tool/message/session, and an assistant-level step-aborted error. It did not read
 working credentials or alter native history. Permission enforcement itself passed.
 Only that proven same-action rejection should become neutral; unrelated aborts,
 network/auth errors and cases without matching evidence must remain visible.
+
+
+## Local OpenCode refusal presentation fix — 2026-11-04
+
+The projection now checks native tool status `error`, structured error type
+`aborted`, and a stored **cancel** receipt whose session ID, source tool ID and
+source assistant-message ID match this exact action. No error-message substring
+is used as proof. The assistant-level abort becomes neutral only when every tool
+in that same message has the matching denial proof. Missing/foreign/stale/malformed
+receipts, text-only aborts, mixed failures and API/network errors remain errors.
+A missing/trimmed old receipt causes conservative fallback to the native error.
+
+Proven cases project status `declined` and `actionOutcome=user_declined`; the UI
+shows **Действие отклонено / Action declined** with neutral action styling. The
+same stable history keys are retained. Native error details remain accessible
+through tool details; full native error records are not edited or deleted. No
+permission rule, confirmation action, authorization or existing profile is changed.
+
+Checked anew by the assistant: 29 JVM tests (AgentChatViewTest 18,
+CodexActionTimelineTest 11), four Node scripts including 15 negative correlation
+variants, native OpenCode No/Allow once with new projection assertions, next
+requests after refusal and cold reopen with both prior refusals neutral. Both
+stops are acknowledged and owned launches exit. Read-only SQLite verification
+confirms the two original assistant abort records still exist. Modern Lint:
+0 errors, 236 warnings, all five modules analyzed. Existing unrelated Node chat,
+recovery and receipt tests also pass. The native checks were repeated because
+this projection changed; accepted phone permission-enforcement cases are not reset.
+
+Evidence: `.verification/opencode-declined/summary.json`, `native.log`,
+`native-originals.json`, Node/JVM/Lint reports. All are assistant results; the
+corrected presentation is **not yet checked on the phone** and not in test7.
+Include with the project templates in the next test APK after final APK checks;
+no APK build/install, push or publication was performed for this change.

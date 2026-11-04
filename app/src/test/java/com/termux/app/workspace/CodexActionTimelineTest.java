@@ -82,4 +82,13 @@ public class CodexActionTimelineTest {
         assertTrue(((TextView)card.steps.getChildAt(0)).getText().toString().contains("compiling module"));running.put("outputTail","packaging module");v.rows(java.util.Collections.singletonList(running),false);assertTrue(((TextView)card.steps.getChildAt(0)).getText().toString().contains("packaging module"));card.heading.performClick();assertEquals(View.GONE,card.steps.getVisibility());running.put("body","new output");v.rows(java.util.Collections.singletonList(running),false);assertEquals(View.GONE,card.steps.getVisibility());running.put("status","completed");v.rows(java.util.Collections.singletonList(running),false);assertEquals(View.GONE,card.steps.getVisibility());
     }
 
+
+ @Test public void provenUserDeclineUsesNeutralActionPresentationOnly()throws Exception{
+  Activity a=Robolectric.buildActivity(Activity.class).setup().get();
+  for(String language:new String[]{"ru","en"}){WorkspaceLanguage.select(a,language);AgentChatView v=view(a,new AtomicReference<>());JSONObject denied=shell("denied","turn","synthetic","declined").put("actionOutcome","user_declined");v.rows(Arrays.asList(denied),false);
+   CodexActionsView card=(CodexActionsView)v.timeline.getChildAt(1);TextView step=(TextView)card.steps.getChildAt(0);assertEquals(0xffd5e4e0,step.getCurrentTextColor());assertTrue(step.getText().toString().contains(language.equals("ru")?"Действие отклонено":"Action declined"));assertFalse(card.summary.getText().toString().contains(language.equals("ru")?"ошибкой":"failed"));
+   AgentActionDetailsView detail=new AgentActionDetailsView(v,denied,(r,i)->{},r->{});assertEquals(0xff91a6af,detail.status.getCurrentTextColor());
+   denied.remove("actionOutcome");v.rows(Arrays.asList(denied),false);assertEquals(0xffffb08f,((TextView)card.steps.getChildAt(0)).getCurrentTextColor());
+  }
+ }
 }

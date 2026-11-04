@@ -42,8 +42,20 @@ class OpenCodeChat {
   const data=await this.request('GET','/api/session/'+this.session+'/message?limit=20'+(cursor?'&cursor='+encodeURIComponent(cursor):'&order=desc'));
   return {messages:(data.data||[]).slice().reverse(),older:data.cursor?.next||''};
  }
- rows(messages){
-  const receipts=new ReceiptStore(this.file,'O');const rows=[];const unlinked=receipts.rows.map(r=>{try{return {row:r,anchor:JSON.parse(r.body).anchorMessage};}catch{return {row:r};}});const used=new Set();
+ userDeclinedTool(message,part,receipts){
+  if(message?.type!=='assistant'||part?.type!=='tool'||part.state?.status!=='error'||part.state?.error?.type!=='aborted')return false;
+  const receipt=receipts.get(part.id);if(!receipt||receipt.outcome!=='cancel')return false;
+  try{const proof=JSON.parse(receipt.body);return proof.sessionID===this.session&&proof.source?.type==='tool'&&proof.source.messageID===message.id&&proof.source.id===part.id&&receipt.key===part.id;}catch{return false;}
+ }
+ userDeclinedError(message,receipts){
+  if(message?.error?.type!=='aborted')return false;
+  const tools=(message.content||[]).filter(p=>p.type==='tool');
+  // Be conservative for parallel/independent failures: every tool in this
+  // message must carry the same-action cancellation proof, never text matching.
+  return tools.length>0&&tools.every(p=>this.userDeclinedTool(message,p,receipts));
+ }
+ rows(messages,receipts=new ReceiptStore(this.file,'O')){
+  const rows=[];const unlinked=receipts.rows.map(r=>{try{return {row:r,anchor:JSON.parse(r.body).anchorMessage};}catch{return {row:r};}});const used=new Set();
   for(const m of messages){
    if(!id(m.id))continue;
    const push=(key,kind,body,title='',meta={})=>rows.push({...meta,key:m.id+':'+key,message:m.id,part:key,kind,title:text(title),body:text(body).slice(0,12000),bodyLength:text(body).length,more:text(body).length>12000});
@@ -58,12 +70,12 @@ class OpenCodeChat {
       const body=live&&live.text.length>(part.text||'').length?live.text:part.text;
       if(body){push(key,part.type,body, '',part.type==='text'&&this.completions.summary(m.id)?{requestSummary:this.completions.summary(m.id)}:{});if(part.type==='text')rows.push(...attachmentRows(m.id,this.attachments.output(body),'output:'+key));}
      }else if(part.type==='tool'){
-      const receipt=receipts.get(part.id);
+      const receipt=receipts.get(part.id),declined=this.userDeclinedTool(m,part,receipts),status=declined?'declined':part.state?.status||'';
       if(receipt){used.add(receipt.key);push('receipt:'+part.id,'receipt',receipt.body,receipts.label(receipt,false));}
-      push('tool:'+part.id,'tool',toolBody(part),part.name+' · '+(part.state?.status||''),{eventTime:instant(part.state?.time?.start)||instant(m.time?.created),toolName:text(part.name),toolType:text(part.name),toolOutputLength:text(part.state?.output).length,outputTail:outputTail(text(part.state?.output)),actionPreview:actionPreview(null,part.name,part.state?.input),status:text(part.state?.status),toolPath:text(part.state?.input?.filePath||part.state?.input?.file_path||part.state?.input?.path).slice(0,2048),...(['bash','run_shell_command'].includes(part.name)&&typeof part.state?.input?.command==='string'?{actionType:'shell',command:text(part.state.input.command).slice(0,2000)}:{})});
+      push('tool:'+part.id,'tool',toolBody(part),part.name+' · '+status,{...(declined?{actionOutcome:'user_declined'}:{}),eventTime:instant(part.state?.time?.start)||instant(m.time?.created),toolName:text(part.name),toolType:text(part.name),toolOutputLength:text(part.state?.output).length,outputTail:outputTail(text(part.state?.output)),actionPreview:actionPreview(null,part.name,part.state?.input),status:text(status),toolPath:text(part.state?.input?.filePath||part.state?.input?.file_path||part.state?.input?.path).slice(0,2048),...(['bash','run_shell_command'].includes(part.name)&&typeof part.state?.input?.command==='string'?{actionType:'shell',command:text(part.state.input.command).slice(0,2000)}:{})});
      }
     }
-    if(m.error)push('error','error',JSON.stringify(m.error,null,2));
+    if(m.error){const declined=this.userDeclinedError(m,receipts);push('error',declined?'info':'error',declined?'Action declined':JSON.stringify(m.error,null,2),'',declined?{actionOutcome:'user_declined'}:{});}
    }else if(m.type==='shell')push('shell','tool',JSON.stringify(m,null,2),'Shell');
    else if(m.type==='synthetic'||m.type==='system'){
     const body=m.description||m.text||'';
@@ -88,8 +100,8 @@ class OpenCodeChat {
   const pending=(forms.data||[]).filter(f=>f.sessionID===this.session&&(!f.state||f.state.status==='pending'));
   this.forms=new Map(pending.map(f=>[f.id,{raw:canonical(f),nonce:crypto.createHash('sha256').update(canonical(f)).digest('hex')} ]));
   for(const m of page.messages)if(m.type==='shell'&&m.status==='running'&&!this.endedShells.has(m.shellID)&&/^sh_[A-Za-z0-9_-]+$/.test(m.shellID||''))this.shells.add(m.shellID);
-  this.inboxIDs=new Set((inbox.data||[]).map(item=>item.id));for(const item of inbox.data||[]){const admission=this.pending.get(item.id);if(admission&&['api','queued'].includes(admission.receipt?.delivery)){admission.nativeDelivery=item.delivery;admission.receipt=deliveryStatus.receipt({ok:true,accepted:true,delivery:'queued',ack:'native-inbox-snapshot'},item.id);}}const rows=this.rows(page.messages);if(!q.cursor)for(const pending of inbox.data||[])if(pending.type==='user'&&id(pending.id)&&!rows.some(r=>r.message===pending.id)){const projected=this.attachments.project(pending.payload?.text,this.session);if(projected.text)rows.push({key:pending.id+':user',message:pending.id,part:'user',kind:'user',body:text(projected.text).slice(0,12000),queued:true});rows.push(...attachmentRows(pending.id,projected.files).map(r=>({...r,queued:true})));}for(const item of inbox.data||[])deliveryStatus.attach(rows.filter(r=>r.message===item.id),[this.pending.get(item.id)?.receipt]);let budget=60000;for(const r of rows){const max=Math.max(100,Math.floor(budget/Math.max(1,rows.length)));if(r.body.length>max){r.body=r.body.slice(0,max);r.more=true;}}
-  return {nativeChat:true,attachmentsSupported:true,agentError:!active.data?.[this.session]&&!!page.messages.at(-1)?.error,session:this.session,stopToken:this.stopToken(),model:{providerID:text(model.providerID).slice(0,256),id:text(model.id).slice(0,256),variant:text(model.variant).slice(0,80)},rows:trimPreviews(rows),older:page.older,needsTerminal:pending.some(f=>(f.fields||[]).some(field=>field.when||field.hidden||!['string','boolean','number','integer','multiselect'].includes(field.type)||(field.type==='multiselect'&&field.custom)))||(permissions.data||[]).some(p=>!['shell','edit','read','list','glob','grep','webfetch','websearch'].includes(p.action)),directShell:this.shells.size>0,busy:this.shells.size>0||!!active.data?.[this.session]||(inbox.data||[]).some(item=>item.type!=='synthetic'),connected:this.connected,forms:pending.map(f=>({id:f.id,title:text(f.title),fields:f.fields,nonce:this.forms.get(f.id).nonce}))};
+  this.inboxIDs=new Set((inbox.data||[]).map(item=>item.id));for(const item of inbox.data||[]){const admission=this.pending.get(item.id);if(admission&&['api','queued'].includes(admission.receipt?.delivery)){admission.nativeDelivery=item.delivery;admission.receipt=deliveryStatus.receipt({ok:true,accepted:true,delivery:'queued',ack:'native-inbox-snapshot'},item.id);}}const receipts=new ReceiptStore(this.file,'O'),rows=this.rows(page.messages,receipts);if(!q.cursor)for(const pending of inbox.data||[])if(pending.type==='user'&&id(pending.id)&&!rows.some(r=>r.message===pending.id)){const projected=this.attachments.project(pending.payload?.text,this.session);if(projected.text)rows.push({key:pending.id+':user',message:pending.id,part:'user',kind:'user',body:text(projected.text).slice(0,12000),queued:true});rows.push(...attachmentRows(pending.id,projected.files).map(r=>({...r,queued:true})));}for(const item of inbox.data||[])deliveryStatus.attach(rows.filter(r=>r.message===item.id),[this.pending.get(item.id)?.receipt]);let budget=60000;for(const r of rows){const max=Math.max(100,Math.floor(budget/Math.max(1,rows.length)));if(r.body.length>max){r.body=r.body.slice(0,max);r.more=true;}}
+  return {nativeChat:true,attachmentsSupported:true,agentError:!active.data?.[this.session]&&!!page.messages.at(-1)?.error&&!this.userDeclinedError(page.messages.at(-1),receipts),session:this.session,stopToken:this.stopToken(),model:{providerID:text(model.providerID).slice(0,256),id:text(model.id).slice(0,256),variant:text(model.variant).slice(0,80)},rows:trimPreviews(rows),older:page.older,needsTerminal:pending.some(f=>(f.fields||[]).some(field=>field.when||field.hidden||!['string','boolean','number','integer','multiselect'].includes(field.type)||(field.type==='multiselect'&&field.custom)))||(permissions.data||[]).some(p=>!['shell','edit','read','list','glob','grep','webfetch','websearch'].includes(p.action)),directShell:this.shells.size>0,busy:this.shells.size>0||!!active.data?.[this.session]||(inbox.data||[]).some(item=>item.type!=='synthetic'),connected:this.connected,forms:pending.map(f=>({id:f.id,title:text(f.title),fields:f.fields,nonce:this.forms.get(f.id).nonce}))};
  }
  async command(q){
   if(this.closed)throw Error('Closed chat');
