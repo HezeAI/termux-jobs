@@ -1,7 +1,7 @@
 # Security, data and trust / Безопасность, данные и границы доверия
 
-Applies to Termux Job’s v2.1.2. Reviewed on 2026-11-03 against the release source
-and APK checks. This describes implementation and known limits, not a security
+Applies to Termux Job’s v2.1.3. Updated on 2026-11-04 against the release source
+and APK checks; current first-party audit scope is [recorded separately](docs/fork/SECURITY-AUDIT-STAGE2.md). This describes implementation and known limits, not a security
 certification. Earlier dated validation reports describe their named versions.
 
 ## Русский
@@ -74,8 +74,10 @@ CLAUDE_CONFIG_DIR/`.claude`, `.gemini`, конфигурация OpenCode или
 диагностики и не копируют авторизацию между средами.
 
 Введённый в приложение API-ключ Gemini сохраняется как шифротекст, привязанный к
-профилю, с ключом Android Keystore (AES-GCM). Для запуска создаётся временный
-файл передачи выбранному CLI. Это не защищает от всех действий процесса того же
+профилю, с ключом Android Keystore (AES-GCM). Для запуска используется одноразовый broker-канал с проверкой принадлежности
+запуску. Новый plaintext-файл передачи не создаётся; старые файлы автоматически
+не удаляются. Функциональный путь с искусственным ключом принят на телефоне,
+но низкоуровневые Android handoff/Keystore/crash проверки не выполнены. Это не защищает от всех действий процесса того же
 UID, повреждённой ОС, инструментов агента или утечки через пользовательские команды.
 Пароли SSH имеют отдельный механизм Keystore/передачи. Перенос архива не переносит
 автоматически ключи Android Keystore на другой телефон.
@@ -112,7 +114,9 @@ UID, повреждённой ОС, инструментов агента или
 ### Диагностика и резервные копии
 
 Структурированная диагностика включает версии, среду/идентификаторы сессий,
-события/этапы, коды ошибок, время и сведения запуска. Отчёты X11/подготовки могут
+события/этапы, коды ошибок, время и сведения запуска. Подготовка окружений сохраняет только ограниченные этапы/компоненты/измеренный
+прогресс/коды и безопасные описания ошибок; полный stdout/stderr не накапливается
+и не экспортируется. Старые журналы не удалены. Другие отчёты, например X11, могут
 содержать очищенные сообщения загрузчика, пути и адреса. Очистка эвристическая:
 проверяйте текст перед передачей. Это не полный сетевой trace и не доказательство
 отсутствия секретов во всех native логах. Копирование/экспорт — отдельное действие;
@@ -121,7 +125,9 @@ UID, повреждённой ОС, инструментов агента или
 Базовый экспорт настроек покрывает только заявленные данные. Полный/выборочный
 backup HOME или окружения может включать CLI-авторизацию, SSH-ключи, проекты,
 историю, инструкции и секреты. Он не считается автоматически зашифрованным или
-безопасным для публикации. Android `allowBackup=false` не отменяет ручной экспорт.
+безопасным для публикации. Данные подключения OpenCode выбираются отдельно и могут содержать авторизацию,
+историю, журналы и внутренние снимки проектов. Исключение проектной папки
+не исключает её копии из native истории. Android `allowBackup=false` не отменяет ручной экспорт.
 См. [объём и ограничения копирования](docs/fork/BACKUP-RESTORE.md).
 
 ### Проверки и сообщение об уязвимости
@@ -192,7 +198,10 @@ CLAUDE_CONFIG_DIR/`.claude`, `.gemini`, OpenCode or Google Cloud configuration.
 Paths depend on CLI settings. These files are not all claimed to be encrypted.
 Instruction/skill diagnostics do not read authorization files or migrate accounts.
 App-entered Gemini keys use profile-bound Android Keystore AES-GCM ciphertext,
-with a temporary plaintext handoff to the selected CLI. SSH passwords use a separate
+with a run-owned one-shot broker handoff. No new plaintext handoff file is created;
+old files are not deleted automatically. The artificial-key/API-refusal/normal-retry
+path was accepted on the phone; low-level Android handoff/Keystore/crash remains
+unverified. SSH passwords use a separate
 Keystore/handoff mechanism. This does not cover compromised OS/same-UID processes,
 agent tools or user command leaks; copying a backup does not transfer Keystore keys.
 
@@ -221,14 +230,18 @@ traffic/dependency/native-CLI audit was not performed. No blanket “nothing is 
 account policies are outside this app's control.
 
 Structured diagnostics include versions, environment/session identifiers, stages,
-events, times and error codes. X11/preparation reports can contain redacted downloader
-messages, paths and addresses. Redaction is heuristic; review before sharing. Reports
+events, times and error codes. Environment preparation retains only bounded stages/components/measured progress,
+exit codes and safe error descriptions; raw stdout/stderr is not accumulated or
+exported. Old logs are not deleted. Other reports, including X11, can contain
+redacted downloader messages, paths and addresses. Redaction is heuristic; review before sharing. Reports
 are not complete HTTP traces or guarantees that native logs contain no secrets.
 The reviewed report collectors do not automatically upload diagnostic reports.
 Copy/export is explicit. Basic settings export has limited coverage; full/custom
 HOME/environment backups can contain CLI credentials, SSH keys, history, projects,
 instructions and secrets. Do not assume encryption or publish them. Android
-`allowBackup=false` does not disable manual export. See
+`allowBackup=false` does not disable manual export. Optional OpenCode connection
+data can include credentials, history/logs and internal project snapshots; excluding
+a project folder does not remove its copies from native history. See
 [backup scope](docs/fork/BACKUP-RESTORE.md).
 
 ### Evidence and reporting

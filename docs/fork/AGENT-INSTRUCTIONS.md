@@ -1,4 +1,4 @@
-# Project template — local change after test7
+# Project instructions template
 
 Во вкладке **Проектные** Codex и Claude Code появилась плашка
 **Шаблон проектных инструкций**, непосредственно над **Открыть инструкцию проекта**.
@@ -28,7 +28,7 @@ confirmation. Cancellation, failed writes and revision conflicts preserve the
 original file and edited draft. General rules and other projects are untouched.
 The English interface explains that the supplied template itself is in Russian.
 
-## Verification scope
+## Verification scope (historical implementation checks)
 
 Проверено заново на искусственных проектах отдельно для обоих агентов:
 расположение плашки RU/EN, просмотр/отмена, создание, открытие существующего файла,
@@ -40,7 +40,7 @@ The English interface explains that the supplied template itself is in Russian.
 Тесты: `AgentInstructionsUiTest`, `AgentInstructionsTest`,
 `AgentSessionResourcesUiTest`, `scripts/tests/test_project_instruction_template.py`.
 Современный Lint: 0 ошибок, 236 предупреждений. APK не собирался.
-Телефон ещё не проверен: для каждого агента выбрать отдельную тестовую папку,
+На дату исходных проверок телефон ещё не проверен: для каждого агента выбрать отдельную тестовую папку,
 открыть плашку, отменить, сохранить изменённый текст и проверить соответствующий
 файл; затем отказаться от замены существующего файла и проверить его сохранность.
 Доказательства: локальная `.verification/project-instructions-template/`.
@@ -704,3 +704,15 @@ is used. [Read-only reproduction](DIAGNOSTICS.md#открытие-проектн
 - Подтверждение: самостоятельно выполненные AgentManagerLayoutTest (длинный/короткий редактор, native AlertDialog, footer, feedback) и существующие UI-регрессии. Отчёт `docs/fork/VALIDATION-test31-agent-managers.md` в актуальном checkout.
 
 - Дополнение: подпись среды должна совпадать с транспортом чтения/сохранения и профилем файлового диалога. В текущей доработке удалены переключатели; по умолчанию Ubuntu AI, старая агентская сессия сохраняет среду, включая прямой Codex в Termux. Просмотр шаблона — отдельное действие без записи; в test33 применение оставалось явным меню с историей/CAS. В test34 по прямому запросу пользователя действие перенесено в предпросмотр; открытие по-прежнему ничего не записывает, просмотр и применение общего шаблона доступны только во вкладке «Общие», без перенаправления действий проекта в общий файл. Подтверждение:73JVM/92Python проверки и дополнительный прогон5тестов команд; `docs/fork/VALIDATION-agent-manager-environment.md`. Это последующая правка исходников, не содержимое выданного test32; проверка на телефоне ещё нужна.
+
+
+## Common templates — v2.1.3
+
+Codex and Claude common templates now share RU/EN rules for bounded project
+context: task-specific document sections, brief confirmed LEARNING entries,
+continuation state and current plan status, with detailed history linked separately.
+Mandatory memory reading and the 20,480/15,360-byte project-instruction thresholds
+remain. No automatic import-all or token/time-saving claim is introduced.
+Existing custom or empty files are preserved; preview and explicit save retain
+revision/draft protection. HezeAI accepted the candidate overall on the phone;
+[validation](VALIDATION-v2.1.3.md) separates that report from fixture checks.

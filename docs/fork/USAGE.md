@@ -1957,3 +1957,18 @@ General settings → **Agent skills** / **Навыки агентов**, beside 
 Choose Codex/Claude Code, Ubuntu AI and personal/project scope. See the
 [skill management guide](AGENT-SKILLS.md) for preview/install, conflicts, update,
 rollback, discovery limits and safety. Saved instructions are not replaced.
+
+
+## v2.1.3 agent preparation and backups
+
+Preparation cards show queue state, actual phase/component, completed plan stages
+and measured download bytes when available. Stage counts are not remaining-time
+estimates. Closing the dialog keeps the same operation running; reopening does
+not start a second install. Raw process-output logs are no longer retained.
+Existing Ubuntu AI is reused and only missing components are prepared.
+
+OpenCode connection data is a separate, initially unchecked backup option; it can
+contain credentials, native histories/logs and internal project snapshots. Archives
+are unencrypted. Review the [exact scope and restore behavior](BACKUP-RESTORE.md)
+before export; excluding data can leave restoration incomplete. This is not a
+promise of Android Keystore portability or device-tested crash recovery.

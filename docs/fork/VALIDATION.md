@@ -1,6 +1,6 @@
-# Current release validation — v2.1.2
+# Current release validation — v2.1.3
 
-See [VALIDATION-v2.1.2.md](VALIDATION-v2.1.2.md) for final APK identity, automated
+See [VALIDATION-v2.1.3.md](VALIDATION-v2.1.3.md) for final APK identity, automated
 checks, developer phone observations, native/source evidence, source/notice scope
 and remaining limits. SHA-256 certificate and APK-file digest are separate values.
 No independent security/legal audit is claimed. Publication download/updater proof

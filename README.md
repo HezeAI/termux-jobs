@@ -14,27 +14,28 @@ A terminal workspace for saved commands/notes, aliases, presets, files, Linux
 environments, agent chats and server tools. Commands execute in the selected real
 environment. [Security, data flows and reporting / Безопасность и данные](SECURITY.md).
 
-## v2.1.2
+## v2.1.3
 
-Changes since stable v2.1.1. See the [release](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.2)
-and [validation](docs/fork/VALIDATION-v2.1.2.md).
+Changes since the last published stable release, v2.1.2.
+[Download APK](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.3/Termux-Jobs-v2.1.3-arm64.apk)
+· [Release](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.3)
+· [Validation](docs/fork/VALIDATION-v2.1.3.md).
 
-- Manage Codex and Claude Code instructions, shared project memory and optional
-  project-file creation with previews, revision history and conflict-safe saves.
-- Browse, import and create agent skills; review exact destinations and source
-  commits, update managed skills explicitly and restore their previous version.
-- Prepare missing components in the shared Ubuntu AI with inline progress.
-  New environments use a pinned GitHub Components image and private local-archive
-  installer; existing environments and the system manager remain in place.
-- Read older Claude messages in pages, retain the reading position and open full
-  long answers without loading the entire native history at once.
-- Open local HTML/GIF links and cards through the same isolated animated viewer
-  using the original chat's environment. Download the original when needed.
-- Use taller instruction/skill managers, direct session access, a vertical
-  paperclip/star stack and clearer individual agent status animations.
+- Clear shared Ubuntu AI preparation phases and plan/download progress, with bounded
+  structured status and finite download waits instead of retained raw process logs.
+- Native approvals for new Codex profiles; managed Gemini updates and run-owned
+  key handoff. Existing profiles and installed environments remain in place.
+- Explicit unencrypted-backup warnings and opt-in OpenCode connection backups,
+  with legacy readers and passive historical action receipts.
+- Editable project templates for Codex/Claude, context-management rules in common
+  RU/EN templates and conflict-safe explicit saving.
+- Transparent chat control surroundings, horizontal star / paperclip controls,
+  action-group event clocks and neutral display of proven OpenCode user denials.
 
-[Release notes](docs/fork/RELEASE-v2.1.2.md) ·
-[Validation and limits](docs/fork/VALIDATION-v2.1.2.md) · [CHANGELOG](CHANGELOG.md)
+**Limits:** attachment accumulation/disconnections remain unfixed. Low-level
+Android handoff/crash and device backup export/restore are unverified; MCP/plugins
+are excluded. [Audit evidence and scope](docs/fork/SECURITY-AUDIT-STAGE2.md).
+[Release notes](docs/fork/RELEASE-v2.1.3.md) · [CHANGELOG](CHANGELOG.md)
 
 ## Installation and compatibility
 
@@ -81,7 +82,9 @@ No claim is made that another phone's transport interruptions are fixed.
   [testing policy](docs/fork/TESTING.md) and [release procedure](docs/fork/RELEASING.md).
 
 Instruction text, chats and presets belong to the user. Basic-settings backups have
-limited coverage; optional timing/admission metadata does not expand their format.
+limited coverage; OpenCode connection data is a separate optional component. Archives are unencrypted;
+connection data can include credentials, native history/logs and project snapshots.
+See [exact scope and restore limits](docs/fork/BACKUP-RESTORE.md).
 Phone checks for execution dots, answer timing and website cards were confirmed by
 HezeAI. Other automated or modeled checks are identified separately in validation.
 No independent security audit of this version is confirmed. Source availability and

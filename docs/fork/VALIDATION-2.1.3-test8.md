@@ -175,3 +175,13 @@ AGENTS 19 535→15 214 байт; память 92 904→25 144; основной 
 
 После приёмки разработчиком разрешён обычный stable по RELEASING с commit/push/tag;
 до неё публикация и установка не выполняются.
+
+
+## Developer phone acceptance — 2026-11-04
+
+HezeAI reported that test8 works on the phone, explicitly accepted its transparency
+and accepted the build for stable publication. This is the developer's report,
+not assistant device testing or a new instrumented trace of every individual case.
+It does not close the agreed low-level Android handoff/crash/backup exclusions,
+real Gemini login or attachment accumulation. Stable preparation/publication,
+commit/push/tag and upload are authorized; no installation or working-session restart.

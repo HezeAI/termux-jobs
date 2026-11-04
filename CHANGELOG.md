@@ -1,14 +1,31 @@
 # Unreleased
 
-- Docs: put release highlights and Download APK first, followed by requirements
-  and compatibility; fold CI history and technical evidence into details.
+No additional changes queued for publication.
 
-- Docs: distinguish internal debug CI/tests from the release build and final
-  signed APK verification; no debug APK is required as a release asset.
+# 2026-11-04 — 2.1.3 (versionCode 1485)
 
-- CI: prepare verified pinned X11 inputs on clean GitHub runners; preserve the
-  mandatory hash guard and allow explicit checks of older source commits with
-  separately recorded workflow identity. See [CI inputs](docs/fork/CI-X11.md).
+Changes since the last published stable release, **v2.1.2**.
+
+- Environment preparation now shows the actual phase, completed plan stages and measured download progress. Existing Ubuntu AI is reused; missing agent components are added through the shared queue.
+- Preparation retains bounded structured status instead of accumulating/exporting raw process output. Component downloads have connection, stalled-transfer and finite retry limits.
+- New Codex profiles request approval for untrusted commands and direct edits using the supported native policy. Existing saved profiles keep their policy; unsupported launch settings fail explicitly.
+- Gemini no longer installs its own updates automatically; update checks remain informational. API-key handoff uses a run-owned one-shot broker instead of a new plaintext handoff file.
+- Backups warn explicitly that archives are unencrypted. OpenCode connection data has a separate opt-in, exact scope and clean restoration; old archives remain readable and action receipts do not replay commands or transfer one-time grants.
+- Codex and Claude gain the full editable project-instruction template, exact destination preview, explicit replacement confirmation and revision-conflict protection. Common RU/EN templates add context-organization rules without replacing saved user instructions.
+- Agent chats use transparent status/composer surroundings, a horizontal filled star / paperclip pair and stable Send alignment. Action/command group headers show known event time in the phone timezone; unknown times stay hidden.
+- Proven same-action OpenCode denials appear neutrally and retain separate directory/action decisions after reopen; unrelated errors remain visible.
+
+Compatibility: same com.termux/certificate, higher code, ARM64, Android 8+ app /
+Android 11+ X11, workspace schema 8. No data reset or environment replacement.
+Backups containing OpenCode connections use manifest v3 and need the new reader;
+v1/v2 archives remain readable. Existing processes retain loaded adapters until an
+explicit idle restart; publication never restarts them automatically.
+
+Known limits: attachment accumulation/disconnections remain unfixed. Low-level
+Android handoff/Keystore/crash and device backup export/restore are not checked;
+MCP/plugins are excluded. No project sandbox or universal security claim is made.
+See [release](docs/fork/RELEASE-v2.1.3.md), [validation](docs/fork/VALIDATION-v2.1.3.md)
+and [audit scope](docs/fork/SECURITY-AUDIT-STAGE2.md).
 
 # 2026-11-04 — 2.1.3-test8 (versionCode 1484)
 

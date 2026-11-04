@@ -1,0 +1,38 @@
+{
+  "ru": [
+    "Подготовка Ubuntu AI: фактические этапы, общий план и измеренный прогресс; готовая среда используется повторно.",
+    "Подготовка больше не накапливает полный stdout/stderr; загрузки имеют ограничение соединения, отсутствия прогресса и числа попыток.",
+    "Новые профили Codex подтверждают недоверенные команды и прямые изменения; старые профили сохраняют политику.",
+    "Gemini не устанавливает обновления автоматически; уведомления информационные, передача ключа использует одноразовый канал запуска.",
+    "Незашифрованные копии: явные предупреждения и отдельный выбор данных подключения OpenCode; восстановленные квитанции не исполняют команды.",
+    "Полный проектный шаблон Codex/Claude, общие RU/EN правила управления контекстом, явное сохранение и защита от чужих изменений.",
+    "Прозрачные области панели чата, горизонтальные звезда / скрепка, время групп действий и нейтральные подтверждённые отказы OpenCode.",
+    "Накопление вложений и обрывы не исправлены. Android crash/handoff и восстановление копий на устройстве не проверены; MCP/плагины исключены."
+  ],
+  "en": [
+    "Ubuntu AI preparation shows actual phases, plan completion and measured downloads; existing environments are reused.",
+    "Preparation no longer accumulates full stdout/stderr; downloads have connection, stalled-transfer and finite retry limits.",
+    "New Codex profiles confirm untrusted commands and direct edits; existing profiles retain their saved policy.",
+    "Gemini does not install updates automatically; notices remain informational and key handoff uses a one-shot run-owned broker.",
+    "Unencrypted-backup warnings and separate opt-in OpenCode connection data; restored receipts do not execute commands.",
+    "Full Codex/Claude project template, common RU/EN context-management rules, explicit saves and revision-conflict protection.",
+    "Transparent chat control surroundings, horizontal star / paperclip, action-group event times and neutral proven OpenCode denials.",
+    "Attachment accumulation/disconnections remain unfixed. Device crash/handoff and backup restore are unverified; MCP/plugins are excluded."
+  ],
+  "compatibility": {
+    "ru": [
+      "Тот же com.termux и сертификат Termux Job’s, выше versionCode; ARM64, Android 8+, X11 Android 11+, схема 8. Сброс или переустановка сред не требуются.",
+      "Копии с данными подключения OpenCode используют manifest v3 и требуют нового reader; старые v1/v2 читаются. Архивы не зашифрованы и могут содержать ключи, историю и снимки проектов.",
+      "Старые профили, авторизация и пользовательские инструкции автоматически не меняются. Работающие агенты сохраняют старые адаптеры до явного перезапуска свободной сессии с продолжением истории.",
+      "Рабочая папка не является песочницей; разрешённый shell может читать вне проекта. Низкоуровневые Android проверки согласованно отложены, реальный вход Gemini API/Vertex не подтверждён.",
+      "Установка поверх официального Termux не подтверждена: совпадения com.termux недостаточно. Удаление может стереть данные и не является обычным обновлением."
+    ],
+    "en": [
+      "Same Termux Job’s com.termux/certificate, higher versionCode; ARM64, Android 8+, X11 Android 11+, schema 8. No reset or environment reinstallation required.",
+      "Backups containing OpenCode connection data use manifest v3 and need the new reader; old v1/v2 remain readable. Archives are unencrypted and can include keys, history and project snapshots.",
+      "Saved profiles, accounts and custom instructions are not changed automatically. Running agents retain old adapters until an explicit idle-session restart with conversation continuation.",
+      "A working directory is not a sandbox; permitted shell tools can read outside the project. Low-level Android checks are deferred by agreement; real Gemini API/Vertex login is unverified.",
+      "Installing over official Termux is unverified: com.termux alone is insufficient. Uninstalling can delete data and is not a normal update step."
+    ]
+  }
+}

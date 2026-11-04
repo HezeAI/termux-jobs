@@ -582,3 +582,15 @@ This feature excludes Ubuntu AI and does not alter running sessions.
 - Вывод: bbox уже обрезанного кадра не доказывает отсутствие выхода за границы. Растеризовать исходные фигуры на расширенном прозрачном холсте и проверять крайние фазы поз. Так обнаружена антенна выше исходного viewBox в позе ожидания; подъём головы скорректирован.
 - Применимость: SVG-макеты и будущая адаптация рисунка; проверка геометрии не подтверждает читаемость или плавность на телефоне.
 - Подтверждение: самостоятельно выполнены35 expanded-canvas проб и рендер100 кадров, `.verification/codex-lap-robot/render.py`, `render-validation.json` и README в актуальном checkout.
+
+
+## Agent chat control overlays — v2.1.3
+
+Only agent chats extend the scroll viewport beneath status controls and the composer.
+Control surrounds are transparent; session selection and individual button/field
+fills are retained. Scroll-content padding clears the first/last messages without
+shrinking the viewport. Header controls consume their own taps. The horizontal
+star / paperclip pair has one-line native field height and stays bottom-aligned as
+the draft grows. Ordinary terminal geometry is restored outside agent chat.
+[Release validation](VALIDATION-v2.1.3.md) distinguishes modeled geometry/touch tests
+from the developer's accepted phone candidate.
