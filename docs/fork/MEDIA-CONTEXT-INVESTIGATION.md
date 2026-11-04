@@ -19,6 +19,13 @@ here are research harnesses/documentation. Automatic compaction is not enabled.
 No working chat is compacted. No native journal is manually edited. The separate
 README change belongs to HezeAI and is excluded from research commits.
 
+Latest available-device result: explicit foreground first-party compaction with
+20 real view_image results completed; cold resume reduced recorded native JSON
+from about 28.79 MB / 20 images to 132,270 bytes / 0 images. Four later reviews
+regrow it to 5,111,491 bytes / 4 images. This is not a permanent cap or a verified
+wife-phone fix. The raised-limit comparison below found unchanged received image
+hashes for the tested files admitted by both old and new application versions.
+
 ### Supported mechanism and actual limits
 
 The pinned 0.166.0 binary declares `thread/compact/start`, also described in the
@@ -359,6 +366,97 @@ Next: retain this as a manually requested, pre-break candidate with visible loss
 warnings, preservation checks and on-demand old-file access. Do not enable an
 automatic threshold without broader tests. The separately requested raised-limit
 regression comparison must distinguish admission/storage from actual model bytes.
+
+### Raised attachment limits — checked anew, admission versus model bytes
+
+The increase is in `5a1fa804d5caf77b60bcba28a9f99280e72f045a` (v2.0.6).
+Exact inclusive bounds in ChatAttachments.java:
+
+| Bound | v2.0.5 | v2.0.6 and v2.1.3 | Meaning |
+| --- | --- | --- | --- |
+| Image original | 20,971,520 bytes (20 MiB) | 104,857,600 bytes (100 MiB) | Picker import / retained original admission, not model request size |
+| Other original | 268,435,456 bytes (256 MiB) | 5,368,709,120 bytes (5 GiB) | File/video/APK/binary import and materialization, not automatic upload |
+| Selected attachments per message | 4 | 4 | No total retained-history image budget |
+| Image decoder pixel bound | 64,000,000 pixels | 64,000,000 pixels | Separate from encoded-file bytes |
+| Video sampling | Up to 12 frames, 1280-pixel bound, JPEG85 | Unchanged | The video original's larger storage allowance does not send its entire bytes |
+
+For the Codex **project file picker** in v2.0.5, supported images admitted within
+20 MiB select the original path. v2.0.6 keeps that behavior within 20 MiB and adds
+preparation for larger admitted images. `bitmap(file,1280)` uses a power-of-two
+sample; it is not an exact 1280-pixel final edge. Canvas composites onto white
+RGB565, then Android encodes JPEG quality 85. The adapter requires modelPath for
+an image original larger than 20 MiB, validates the prepared file within 20 MiB,
+and sends `modelPath || path`. Thus raising retained-original admission did not
+raise the allowed processed-model-file bound to 100 MiB.
+
+Non-Codex picker paths already prepared JPEG1280/JPEG85 before this increase.
+v2.1.1 additionally prepares gallery imports and formats outside PNG/JPEG/WebP/GIF;
+that is a separate condition from the v2.0.6 size change. A small Codex project-
+picker PNG is not the same preparation path as the same image imported from the
+gallery. Native view_image results bypass this Android picker preparation. The
+adapter's savedToolImage preview bound (20 MiB decoded / 28 MiB base64 check) is
+a display-cache guard, not a bound on native model history or subsequent requests.
+
+A fresh guarded test uses the same original hashes, same pinned CLI 0.166.0,
+model/effort/provider and identical short native-fork history across v2.0.5,
+v2.0.6 and v2.1.3 adapters. Actual HTTP collector receipts:
+
+| Artificial file | Original bytes | v2.0.5 request | v2.0.6 request | v2.1.3 request |
+| --- | ---: | ---: | ---: | ---: |
+| PNG 600 × 600 | 1,082,113 | 1,502,272 | 1,501,951 | 1,501,951 |
+| PNG 2400 × 2400, below 20 MiB | 17,297,406 | 12,589,183 | 12,589,183 | 12,589,183 |
+| PNG 3000 × 3000, above 20 MiB | 27,021,285 | Source admission rejects; no request attempted | 291,220 | 290,899 |
+| Sparse artificial binary, 300 MiB | 314,572,800 | Source admission rejects; no request attempted | 58,955 | 58,955 |
+
+**Measurement boundaries:** Android admission in this table is derived from exact
+asserted source guards, not executed on an old APK. For the above-20-MiB image,
+the test supplies a real Pillow JPEG prepared according to the selected sampling
+and quality branch: 750 × 750 / 173,824 bytes. This isolates actual adapter/CLI
+serialization, but does not emulate Android Bitmap sampling, RGB565 rounding or
+JPEG encoder byte-for-byte. Its request sizes must not be called measured Android
+preparation sizes. No over-limit old file is force-fed to bypass old admission.
+
+For both images admitted before and after the change, received image hashes are
+identical across all three adapters. The 600-pixel PNG reaches the provider
+unchanged: 1,082,113 image bytes. The 2400-pixel PNG reaches it as **PNG 1600 × 1600,
+9,397,296 bytes**. This is an additional native CLI preparation stage, not newly
+added application compression. The pinned upstream image helper defines high-detail
+limits of 2048 edge / 2500 patches at 32 pixels per patch, consistent with this
+measured square 1600-pixel output. It can preserve PNG rather than turn every large
+original into JPEG. Explicit original detail and other model modes require their
+own verification; no blanket "all originals always sent" or "always JPEG" claim.
+The small 321-byte request differences are control/retry text; they do not change
+received image hashes. Base64, JSON scaffolding, file size and decoded image bytes
+are all recorded separately.
+
+The sparse binary is an opaque artificial file, not a real ZIP/STL parser test.
+The received requests contain zero inline images, and adapter source adds its
+name/size/path and the explicit binary notice. The scripted model does not read
+it with a tool. This tests card submission only: a later agent file read is a
+separate context-growth path. A 5 GiB admission bound must not be described as a
+5 GiB model upload, and this check does not establish safe processing of all files
+near that upper limit.
+
+**Result:** no increased image payload was reproduced for files admitted on both
+sides of the limit change. The increase admits formerly rejected originals and
+adds a prepared-image path for large Codex selections. Many small original PNGs
+and repeated tool results can still accumulate; the existing twenty-small-PNG
+break is not explained by a newly raised 100 MiB per-image upload limit. This is
+not proof of absence of every size-related memory/disk/runtime regression.
+No production limit was changed.
+
+Evidence: `.verification/media-context/replay-boT4al/codex-dad3fda5/limits-result.json`,
+SHA-256 `69fe34ccedc66cf91950607953ec42a482a013a717d366dd8f50a417ba0f06f3`;
+first successful receipts `replay-bEqJoJ`; both kernel-fence suites passed and all
+owned children exited, original hashes unchanged. The earlier `replay-h7KmFB`
+fixture attempted to reopen newly created empty threads and failed initialization;
+it is not a successful request comparison. The replacement uses persisted native
+forks of the same short control. PID/start checks precede signals in the new probe;
+mocked owned/timeout/reused-PID/already-exited checks are retained separately as
+`.verification/media-context/limits-owned-process-fixture.json`.
+Pinned native image source and provenance: `request-boundaries-source/codex-rs/utils/image/src/`
+(revision `6ff1e1ca3b30fc8b914720681fcf5fe62e95f856`, source SHA-256
+`e0b791b2c834ec8407e9ce59bffdf047e0b1310a29b2339ff4e037cad4bd280a`).
 
 ## 2026-11-04 — Prompt instructions versus native image replay
 

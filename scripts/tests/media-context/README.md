@@ -10,6 +10,7 @@ bash scripts/tests/media-context/run.sh codex-chain
 bash scripts/tests/media-context/run.sh codex-websocket
 bash scripts/tests/media-context/run.sh codex-versions
 bash scripts/tests/media-context/run.sh codex-version-boundary
+bash scripts/tests/media-context/run.sh codex-limits
 bash scripts/tests/media-context/run.sh codex
 bash scripts/tests/media-context/run.sh claude
 bash scripts/tests/media-context/run.sh gemini
@@ -76,6 +77,13 @@ compaction-threshold, vision-quality or real-provider latency tests**.
   narrows the observed preparation difference to v2.0.5/v2.0.6. An artificial
   common modelPath manifest isolates the adapter; it does not reproduce old Android
   Bitmap preparation or establish a real-provider/old-CLI regression.
+- `codex-limits`: same artificial files through v2.0.5/v2.0.6/v2.1.3 adapters,
+  separate source-asserted Android admission and actual HTTP receipts. Measures
+  decoded image format/dimensions/bytes to separate native resizing from app
+  preparation. The above-20-MiB JPEG is a Pillow proxy, not Android Bitmap output;
+  over-limit old files are not force-fed. The 300-MiB sparse binary tests metadata
+  card submission only, without a tool reading its contents. Originals are hashed,
+  owned process PID/start identities checked before signals; no real profiles used.
 - Claude: production SDK adapter + real CLI, a new/resumed native session and
   the actual Anthropic HTTP client. The separate controller socket is bypassed
   because this fence intentionally denies filesystem Unix listeners. That control
