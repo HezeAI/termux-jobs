@@ -19,6 +19,7 @@ final class AgentComposerControls {
     private java.util.function.IntConsumer inset=value->{};
     private final boolean baselineAligned;
     private boolean agent;
+    private int measuredOneLine,measuredStyle;
     private final Context context;
     AgentComposerControls(Context c,LinearLayout row,EditText input,TextView star,TextView send,View attachment){
         context=c;this.row=row;this.input=input;this.star=star;this.send=send;this.attachment=attachment;starBackground=star.getBackground();rowBackground=row.getBackground();baselineAligned=row.isBaselineAligned();
@@ -46,11 +47,22 @@ final class AgentComposerControls {
     private Drawable feedback(){return new RippleDrawable(ColorStateList.valueOf(0x9979dfcd),null,shape(0xffffffff,0xffffffff));}
     private static void remove(View view){if(view.getParent()!=null)((ViewGroup)view.getParent()).removeView(view);}
     private int singleLineHeight(){
-        // Match Android's rounded one-line layout, including font padding and spacing.
-        android.text.StaticLayout line=new android.text.StaticLayout(" ",input.getPaint(),
-            dp(1000),android.text.Layout.Alignment.ALIGN_NORMAL,input.getLineSpacingMultiplier(),
-            input.getLineSpacingExtra(),input.getIncludeFontPadding());
-        int text=line.getHeight();
+        int style=java.util.Objects.hash(input.getTextSize(),input.getTypeface(),
+            input.getIncludeFontPadding(),input.getLineSpacingExtra(),input.getLineSpacingMultiplier(),
+            input.getCompoundPaddingTop(),input.getCompoundPaddingBottom(),input.getMinHeight(),input.getMinimumHeight());
+        android.text.Layout measured=input.getLayout();
+        // Use the actual editable one-line layout, and retain it for multiline drafts.
+        // Recomputing a StaticLayout after each edit can change rounding by two pixels.
+        if(measured!=null&&measured.getLineCount()==1){
+            measuredOneLine=measured.getHeight();measuredStyle=style;
+        }
+        int text;
+        if(measuredOneLine>0&&measuredStyle==style)text=measuredOneLine;
+        else if(measured!=null&&measured.getLineCount()>0)
+            text=measured.getHeight()-(measured.getLineCount()-1)*input.getLineHeight();
+        else text=new android.text.StaticLayout(" ",input.getPaint(),dp(1000),
+            android.text.Layout.Alignment.ALIGN_NORMAL,input.getLineSpacingMultiplier(),
+            input.getLineSpacingExtra(),input.getIncludeFontPadding()).getHeight();
         return Math.max(dp(48),Math.max(input.getMinimumHeight(),Math.max(input.getMinHeight(),text+input.getCompoundPaddingTop()+input.getCompoundPaddingBottom())));
     }
     private void toolsHeight(){if(pair.getLayoutParams()!=null&&pair.getLayoutParams().height!=singleLineHeight()){ViewGroup.LayoutParams p=pair.getLayoutParams();p.height=singleLineHeight();pair.setLayoutParams(p);}}
