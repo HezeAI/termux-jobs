@@ -334,3 +334,17 @@ before/after comparison, broader file preservation or filesystem isolation.
 Profile save/reopen, shutdown, outside-project operations, actual authorization,
 Android recovery and backup/restore remain outside this evidence. No APK identity
 was newly measured in the message.
+
+
+## Developer-confirmed Claude and Gemini four-step phone acceptance — 2026-11-04
+
+Source: explicit developer phone report after the marker outputs: «На телефоне
+проверил все четыре сценария Claude и Gemini: отказ и разовое разрешение для Bash
+и прямого Write. После каждого отказа файл оставался неизменным, после разрешения
+— получал ожидаемое содержимое». This clarification completes the earlier partial
+Claude record; its previous uncertainty remains historical, not a current blocker.
+Both agents' four inside-project Deny/Allow once cases are accepted as developer
+checks. Assistant native fixtures remain a separate source. No repeat is needed
+without a relevant change or failure. Outside operations/preservation beyond the
+shown artificial marker values, saved-profile policy reopening, real login,
+shutdown, abnormal Android lifecycle and backup/restore are not inferred.
