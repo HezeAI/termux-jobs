@@ -1,11 +1,5 @@
 # Unreleased
 
-- Gemini: disable native automatic installation while keeping version-check
-  notifications enabled through supported per-run system settings. Classify
-  updater notifications separately from session errors. Canonicalize the CLI
-  path for the pinned loader, including symlinked runtime/HOME paths. Keep
-  CLI 0.64.0, authorization and existing profiles; phone handoff remains open.
-
 
 - Docs: put release highlights and Download APK first, followed by requirements
   and compatibility; fold CI history and technical evidence into details.
@@ -16,6 +10,22 @@
 - CI: prepare verified pinned X11 inputs on clean GitHub runners; preserve the
   mandatory hash guard and allow explicit checks of older source commits with
   separately recorded workflow identity. See [CI inputs](docs/fork/CI-X11.md).
+
+# 2026-11-04 — 2.1.3-test7 (versionCode 1483)
+
+- Gemini: disable native automatic installation through supported per-run system
+  settings; retain version checks and update notifications. CLI remains 0.64.0.
+  Update notices use a separate source tag and do not become session errors;
+  real API/auth/tool errors remain visible.
+- Resolve the runtime's canonical path for both child argv and the pinned loader.
+  A symlink in runtime/HOME must not silently disconnect application handlers.
+  Missing UI handlers explicitly refuse chat submission.
+- Retain test6 backup/audit fixes and old profiles, permissions, authorization and
+  installed Ubuntu AI. External system policy is never silently overwritten.
+- Synthetic-key HTTP 401 and normal/symlink first/repeat launches pass locally;
+  Android/proot/Keystore and phone handoff remain unverified. Attachment
+  accumulation/disconnections remain **unfixed** in this APK.
+- See [validation and phone checks](docs/fork/VALIDATION-2.1.3-test7.md).
 
 # 2026-11-04 — 2.1.3-test6 (versionCode 1482)
 
