@@ -31,3 +31,16 @@ certificate proves secure past key custody, absence of private-key compromise,
 code safety, independent audit or compatibility with official Termux builds.
 The published v2.1.2 APK/tag/Components remain unchanged. Device installation and
 UI tests are separate; no APK was installed by this task.
+
+
+## Урок: 2026-11-03 — Release signer проверяется до упаковки, а не подменяется
+
+Перенесено 2026-11-04 без изменения исторических результатов. Это доказательства
+на дату проверки; актуальный статус — в [основном плане](SECURITY-AUDIT-STAGE2.md).
+
+### 2026-11-03 — Release signer проверяется до упаковки, а не подменяется
+
+- Контекст: локальное исправление F-SIGN-01 после аудита опубликованного v2.1.2.
+- Вывод: `scripts/build-local-arm64.sh` больше не создаёт отсутствующий ключ. Release packaging требует существующий ключ и публичный SHA-256 из `gradle/release-certificate.sha256`; отсутствие/несовпадение прекращает сборку. Проверка публичного сертификата не доказывает прошлую сохранность закрытого ключа.
+- Применимость: локальные release entry points и задачи AGP packaging/signing. Lint/анализ исходников не должны требовать ключ лишь из-за preReleaseBuild; обязательная зависимость стоит на release signing/packaging/assemble/bundle.
+- Подтверждение: отдельный коммит `d3ea24ae`, 8 Gradle-случаев с искусственным JKS, проверка missing-key entry point и финального APK 2.1.3-test1 с прежним публичным сертификатом. См. docs/fork/VALIDATION-release-signer-gate.md актуального checkout. APK не установлен и не опубликован.

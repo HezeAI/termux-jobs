@@ -1,24 +1,54 @@
-# Current release — v2.1.2 / code1476
+# Продолжение работы — 2026-11-04
 
-Publication authorized by HezeAI on2026-11-03. Release preparation compares with
-stable v2.1.1, not intermediate private builds. The final feature set is unchanged
-from the accepted candidate: Claude instructions/history, shared project memory,
-skills, GitHub Ubuntu AI setup, local HTML/GIF viewing, manager/composer layout
-and individual agent animations. Voice input is absent.
+Рабочий checkout: `/root/termux-fork/.verification/rollback-live-actions/source`.
+Ветка: `work/opencode-declined-status`. Готовится **2.1.3-test8 / 1484**.
+Последний опубликованный stable — v2.1.2; его APK/тег/Components неизменны.
+Единственная память: `/root/termux-fork/LEARNING.md`; читать при начале работы.
 
-See [release notes](docs/fork/RELEASE-v2.1.2.md) and
-[validation](docs/fork/VALIDATION-v2.1.2.md) for artifact identity, fresh/reused
-checks, compatibility and limits. No app-data reset or environment migration.
-Existing sessions/CLI accounts are not replaced or restarted automatically.
-Device acceptance of keyboard/layout, history anchors and animation remains
-separate from automated checks. HezeAI confirmed Claude on another phone after
-GitHub image installation; the earlier Docker Hub cause remains unknown.
+## Текущая цель и ближайший шаг
 
-The stable release uses fork/base and tag v2.1.2; final source/tag/APK identity is
-checked before publication. Public download/update verification is recorded in the
-release body and local release evidence without moving the tag. Components source
-supplement and review are published on its main branch;129existing assets remain
-unchanged. Ubuntu source coverage is87packages/58sources/127verified files; other
-component-specific checks remain open in the dated license review. The final APK
-includes required notices and clarified About attribution. No independent audit
-or blanket licensing/security guarantee is claimed.
+Завершить частную test8 с раздельными отказами OpenCode, проектными шаблонами
+Codex/Claude, обновлёнными общими шаблонами RU/EN и прозрачной верхней областью
+чата агентов. Проверить финальный APK и передать разработчику на приёмку.
+Обновление только документации само по себе не требует пересборки.
+
+Основной [план аудита](docs/fork/SECURITY-AUDIT-STAGE2.md) содержит текущую матрицу,
+версии, источник доказательств, ограничения и условия завершения. Читать перед
+продолжением аудита; старые проходы читать только по затронутому направлению.
+
+## Принято и не требует повторения без причины
+
+- Разработчик на телефоне принял shell/file No/Allow для всех четырёх агентов,
+  отдельно результаты доступа вне проекта. Детальные различия инструментов — в плане.
+- Gemini test7: передача искусственного ключа, HTTP 400/API_KEY_INVALID, штатный
+  повтор приняты. Это не настоящий успешный API/Vertex вход.
+- Backups: скриншоты подтверждают только часть русской выборочной формы.
+- OpenCode: действие после отказа блокируется; красная карточка — отдельная
+  локально исправленная проблема. Новое отображение требует test8.
+
+## Оставшееся и ограничения
+
+1. Помощник: завершить целевые тесты, Lint, сборку/аудит финального test8,
+   CHANGELOG и [отчёт test8](docs/fork/VALIDATION-2.1.3-test8.md).
+2. Разработчик: test8 — OpenCode directory/action отказ и reopen/следующий запрос;
+   оба проектных шаблона, новые общие шаблоны через явное сохранение;
+   прозрачный верх чата, первое сообщение, касания, лимиты/стоп, клавиатура.
+3. Android handoff/Keystore/crash и device export/restore **не проверены**:
+   нет отдельного Android экземпляра. Их сейчас не выполнять; согласованное
+   завершение этапа сохраняет этот пробел. Стенд не заменяет устройство.
+4. Legacy-профили, все TUI/ручные пути и переключение чата при prompt не закрыты
+   целиком на телефоне. Новый Claude sandbox — отдельная задача; нет socat
+   означает отсутствующую зависимость, а не доказанную несовместимость.
+5. Накопление вложений/обрывы остаются открытыми на следующий цикл **после релиза**.
+   Исходные файлы и отображаемую историю не удалять. MCP/плагины исключены.
+
+До приёмки: без установки APK, push, тегов и публикации. После приёмки разрешён
+обычный stable с commit/push/tag по [RELEASING](docs/fork/RELEASING.md), обязательному
+перед подготовкой выпуска. Сравнить с последним опубликованным стабильным релизом;
+сохранить ограничения аудита/вложений. Старые ресурсы не заменять.
+
+Перед проверками/сборкой читать относящиеся разделы [TESTING](docs/fork/TESTING.md),
+[FORK](FORK.md) и [Lint](docs/fork/LINT.md). Перед редактором —
+[инструкции](docs/fork/AGENT-INSTRUCTIONS.md); backups —
+[состав и восстановление](docs/fork/BACKUP-RESTORE.md). Не перечитывать все отчёты
+для каждой задачи. История v2.1.2: [проверки](docs/fork/VALIDATION-v2.1.2.md).

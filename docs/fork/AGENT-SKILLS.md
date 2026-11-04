@@ -193,3 +193,16 @@ The selected agent, displayed environment, General/Project scope and project
 choose the destination. Creation reuses staged, atomic installation and refreshes
 the list. Source is `created-in-app`, with no invented version or commit. Files
 alone do not confirm agent discovery; creation never executes a skill or model call.
+
+
+## Урок: 2026-11-02 — Обнаружение навыков отличается у Codex и Claude
+
+Перенесено 2026-11-04 без изменения исторических результатов. Это доказательства
+на дату проверки; актуальный статус — в [основном плане](SECURITY-AUDIT-STAGE2.md).
+
+### 2026-11-02 — Обнаружение навыков отличается у Codex и Claude
+
+- Контекст: менеджер навыков в Ubuntu AI, изолированные профили без рабочих чатов.
+- Вывод: Codex 0.166.0 обнаруживает `.agents/skills` пользователя и проекта и старый `$CODEX_HOME/skills`; `skills/list` с `forceReload` видит добавленный навык. В Claude 2.1.296 новый навык в уже существующем проектном каталоге появился после `/reload-skills`, а не просто после записи файла. Совпадающие имена Codex показывает отдельно; у Claude личный навык получил приоритет над проектным.
+- Применимость: проверенные версии и стандартные каталоги; другие версии, плагины и управляемые политики требуют отдельной проверки. Установленные файлы не доказывают обнаружение конкретным рабочим процессом или качество выполнения навыка.
+- Подтверждение: самостоятельно выполнены `scripts/tests/probe_agent_skills_native.py` и `scripts/tests/test_claude_skills_native.cjs` в актуальном checkout. Claude использовал только безвредные фикстуры и локальный синтетический провайдер; Codex — каталог app-server без запроса к модели. Отчёт: `docs/fork/VALIDATION-test28-agent-skills.md`.

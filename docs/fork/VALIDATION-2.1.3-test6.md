@@ -20,7 +20,7 @@ Old v1/v2 archives remain readable; selected connection exports use v3 and requi
 the new reader. Restoring a receipt does not itself grant permission or execute
 its command. See [backup contents](BACKUP-RESTORE.md) and the [audit](SECURITY-AUDIT-STAGE2.md).
 
-Основной [актуальный план аудита](SECURITY-AUDIT-STAGE2.md#единый-актуальный-план-аудита--2026-11-04)
+Основной [актуальный план аудита](SECURITY-AUDIT-STAGE2.md#актуальная-матрица-исправлений-и-оставшихся-действий)
 содержит статусы, доказательства, ответственных, исключения и условия завершения.
 Дополнительные тесты и исправления фикстур: локальный коммит `687674b2`.
 
