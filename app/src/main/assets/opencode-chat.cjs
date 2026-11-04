@@ -25,7 +25,9 @@ class OpenCodeChat {
   if(e.type==='permission.asked')this.asked.set(d.id,{...d,anchorMessage:this.lastMessage});
   if(e.type==='permission.replied'){
    const p=this.asked.get(d.requestID);this.asked.delete(d.requestID);
-   if(p)try{new ReceiptStore(this.file,'O').add(p.source?.id||p.id,d.reply==='once'?'proceed_once':d.reply==='always'?'proceed_always':'cancel',p.action,JSON.stringify(p));}catch{}
+   // One tool can ask for directory consent and then action consent. Preserve
+   // both native permission IDs; the tool ID is only their correlation target.
+   if(p&&/^per[A-Za-z0-9_-]{1,124}$/.test(p.id||'')&&['once','always','reject'].includes(d.reply))try{new ReceiptStore(this.file,'O').add(p.id,d.reply==='once'?'proceed_once':d.reply==='always'?'proceed_always':'cancel',p.action,JSON.stringify(p));}catch{}
   }
   if(e.type==='session.shell.started'&&/^sh_[A-Za-z0-9_-]+$/.test(d.shell?.id||'')){this.shells.add(d.shell.id);this.admissions.get(String(e.id||'').replace(/^evt_/, 'msg_'))?.();}
   if(e.type==='session.shell.ended'){this.shells.delete(d.shell?.id);this.endedShells.add(d.shell?.id);while(this.endedShells.size>2000)this.endedShells.delete(this.endedShells.values().next().value);}
@@ -42,10 +44,20 @@ class OpenCodeChat {
   const data=await this.request('GET','/api/session/'+this.session+'/message?limit=20'+(cursor?'&cursor='+encodeURIComponent(cursor):'&order=desc'));
   return {messages:(data.data||[]).slice().reverse(),older:data.cursor?.next||''};
  }
+ toolReceipts(message,part,receipts){
+  if(!id(message?.id)||typeof part?.id!=='string'||!part.id||part.id.length>256)return [];
+  return receipts.rows.filter(receipt=>{
+   // Older files used the tool ID. Keep their display and exact-proof checks.
+   if(receipt.key===part.id)return true;
+   try{const proof=JSON.parse(receipt.body);return /^per[A-Za-z0-9_-]{1,124}$/.test(proof.id||'')&&receipt.key===proof.id&&proof.sessionID===this.session&&proof.source?.messageID===message.id&&proof.source.id===part.id;}catch{return false;}
+  });
+ }
  userDeclinedTool(message,part,receipts){
   if(message?.type!=='assistant'||part?.type!=='tool'||part.state?.status!=='error'||part.state?.error?.type!=='aborted')return false;
-  const receipt=receipts.get(part.id);if(!receipt||receipt.outcome!=='cancel')return false;
-  try{const proof=JSON.parse(receipt.body);return proof.sessionID===this.session&&proof.source?.type==='tool'&&proof.source.messageID===message.id&&proof.source.id===part.id&&receipt.key===part.id;}catch{return false;}
+  return this.toolReceipts(message,part,receipts).some(receipt=>{
+   if(receipt.outcome!=='cancel')return false;
+   try{const proof=JSON.parse(receipt.body);return proof.sessionID===this.session&&proof.source?.type==='tool'&&proof.source.messageID===message.id&&proof.source.id===part.id&&(receipt.key===part.id||receipt.key===proof.id);}catch{return false;}
+  });
  }
  userDeclinedError(message,receipts){
   if(message?.error?.type!=='aborted')return false;
@@ -70,8 +82,8 @@ class OpenCodeChat {
       const body=live&&live.text.length>(part.text||'').length?live.text:part.text;
       if(body){push(key,part.type,body, '',part.type==='text'&&this.completions.summary(m.id)?{requestSummary:this.completions.summary(m.id)}:{});if(part.type==='text')rows.push(...attachmentRows(m.id,this.attachments.output(body),'output:'+key));}
      }else if(part.type==='tool'){
-      const receipt=receipts.get(part.id),declined=this.userDeclinedTool(m,part,receipts),status=declined?'declined':part.state?.status||'';
-      if(receipt){used.add(receipt.key);push('receipt:'+part.id,'receipt',receipt.body,receipts.label(receipt,false));}
+      const linked=this.toolReceipts(m,part,receipts),declined=this.userDeclinedTool(m,part,receipts),status=declined?'declined':part.state?.status||'';
+      for(const receipt of linked){used.add(receipt.key);push('receipt:'+receipt.key,'receipt',receipt.body,receipts.label(receipt,false));}
       push('tool:'+part.id,'tool',toolBody(part),part.name+' · '+status,{...(declined?{actionOutcome:'user_declined'}:{}),eventTime:instant(part.state?.time?.start)||instant(m.time?.created),toolName:text(part.name),toolType:text(part.name),toolOutputLength:text(part.state?.output).length,outputTail:outputTail(text(part.state?.output)),actionPreview:actionPreview(null,part.name,part.state?.input),status:text(status),toolPath:text(part.state?.input?.filePath||part.state?.input?.file_path||part.state?.input?.path).slice(0,2048),...(['bash','run_shell_command'].includes(part.name)&&typeof part.state?.input?.command==='string'?{actionType:'shell',command:text(part.state.input.command).slice(0,2000)}:{})});
      }
     }

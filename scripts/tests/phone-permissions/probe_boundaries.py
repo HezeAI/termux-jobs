@@ -134,6 +134,17 @@ try:
   if answered and outcome=='cancel':assert not seen and not created,'Effect or contents after UI denial'
   results.append({'agent':agent,'operation':op,'number':n,'prompted':prompted,'answer':outcome if answered else None,'nativeTerminalGate':gate,'nativeGateLabels':gateLabels,'gateDecision':sys.argv[3]if len(sys.argv)>3 else None,'pendingFormCount':len(final.get('forms',[])),'markerReachedProvider':seen,'fileCreated':created,'lastEvent':obs['events'][-1]if obs['events']else None});snap=final
   if gate:break # unsupported native gate is not silently granted by this probe
+ if len(sys.argv)>4 and sys.argv[4]=='reopen':
+  assert agent=='opencode'and len(results)==1,'Reopen assertion is scoped to one owned OpenCode denial'
+  target=str(root/'outside'/('read-'+str(n)+'.txt'if op=='READ'else'new-'+str(n)+'.txt'))
+  def neutral_projection():
+   view=rpc({'op':'chat-snapshot'})
+   tools=[r for r in view.get('rows',[])if r.get('kind')=='tool'and r.get('toolPath')==target]
+   if not tools:return None
+   tool=tools[-1];linked=[r for r in view.get('rows',[])if r.get('kind')=='receipt'and r.get('message')==tool['message']]
+   expected=2 if sys.argv[3]=='allow-gate'else 1
+   return view if not view.get('agentError')and tool.get('status')=='declined'and tool.get('actionOutcome')=='user_declined'and len(linked)==expected else None
+  projected=wait(neutral_projection);projectionKeys=[r['key']for r in projected['rows']];results[-1]['neutralProjection']=True;results[-1]['receiptCount']=2 if sys.argv[3]=='allow-gate'else 1
  print(json.dumps(results),flush=True)
 finally:
  if agent=='codex':
@@ -165,3 +176,29 @@ finally:
  out=REPO/'.verification/phone-boundaries';out.mkdir(exist_ok=True);(out/(agent+('-'+sys.argv[2]if len(sys.argv)>2 else'')+'-root.txt')).write_text(str(root)+'\n')
 
  assert descendantsExited,'Owned descendants did not finish; do not claim safe cleanup'
+
+if len(sys.argv)>4 and sys.argv[4]=='reopen':
+ (root/'before-reopen-observations.json').write_text(json.dumps(finalObserved,indent=2)+'\n')
+ # Same persisted native session, controls, provider and exact launch command.
+ # Only this test's process tree was stopped. No model request on cold reopen.
+ master,slave=pty.openpty();fcntl.ioctl(slave,termios.TIOCSWINSZ,__import__('struct').pack('HHHH',28,100,0,0))
+ terminal=bytearray();owned={}
+ child=subprocess.Popen([str(root/'local-network-only'),str(root/'reopen-network.jsonl'),'--',sys.executable,str(REPO/'scripts/tests/phone-permissions/boundary_fixture.py'),'launch',agent,str(root),'/bin/bash','--noprofile','--norc','-c',command],cwd=root/'project',env=env,stdin=slave,stdout=slave,stderr=slave,close_fds=True);os.close(slave)
+ threading.Thread(target=drain,daemon=True).start();reopened=False;secondStop=False
+ try:
+  restored=wait(lambda:neutral_projection()if sock.exists()else None)
+  assert restored['session']==snap['session']
+  assert [r['key']for r in restored['rows']]==projectionKeys
+  assert not restored.get('busy')and not restored.get('permission')and not restored.get('needsTerminal')
+  reopened=True
+ finally:
+  try:secondStop=rpc({'op':'stop'}).get('ok')is True
+  except(OSError,ValueError):pass
+  try:child.wait(timeout=15)
+  except subprocess.TimeoutExpired:child.terminate();child.wait(timeout=8)
+  os.close(master);deadline=time.monotonic()+8
+  while still_owned()and time.monotonic()<deadline:time.sleep(.1)
+  proof={'scope':'assistant native fixture, not phone','reopenedSameSession':reopened,'stableRows':reopened,'stopAcknowledged':secondStop,'ownedLaunchExited':child.poll()is not None,'allTrackedDescendantsExited':not still_owned()}
+  (root/'reopen-proof.json').write_text(json.dumps(proof,indent=2)+'\n')
+ assert reopened and secondStop and child.poll()is not None and not still_owned()
+ assert json.loads((root/'boundary-observations.json').read_text())['events']==[],'Reopening must not send an old operation to the model'

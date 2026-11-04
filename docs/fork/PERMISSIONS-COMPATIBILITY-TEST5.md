@@ -740,3 +740,42 @@ Native directory prompt открывается **кнопкой агента в 
 из-за цвета карточки. Этот сценарий не подтверждает общий native TUI/ручной CLI
 или OS-песочницу; он проверяет именно directory gate управляемой сессии и
 конкретные действия через чат.
+
+
+## Local two-stage denial projection fix — 2026-11-04
+
+The developer accepted all ten OpenCode outside-project phone scenarios and
+provided the final expected markers. Red error presentation is a separate issue.
+Inspection of a copy of that synthetic history found a remaining local defect:
+ReceiptStore is deliberately first-write-wins per key. OpenCode used the tool
+call ID as the receipt key for both external_directory and read/edit permission.
+Directory Allow once therefore occupied the key and the later action No was lost.
+No action was executed after denial in the accepted phone scenarios.
+
+The OpenCode event projection now keys each new receipt by native permission ID,
+correlates both receipts to the same session/message/tool, displays both decisions
+and uses an exact matching cancel proof for neutral “Action declined”. Legacy
+receipts keyed by tool ID remain readable. The shared ReceiptStore and other
+agents are unchanged. Unknown reply kinds are not treated as user rejection.
+Native history, saved rights, existing authorization and CLI versions are untouched.
+Old histories that already lost the second decision are not guessed from aborted
+text: without a retained cancellation proof their error remains visible. No native
+log is rewritten. This limitation needs a new post-update test for UI acceptance.
+
+Checked anew because receipt projection changed: the baseline failed the new
+regression (one receipt instead of two); the corrected test covers read/write,
+directory No, directory Allow followed by action No, both allowed, cold reopen,
+next request, legacy missing proof and eight foreign/invalid-event cases. Existing
+same-action tests retain 15 unproven/unrelated/provider errors as errors. The
+existing OpenCode chat, recovery and shared receipt suites also pass.
+Four real installed OpenCode 2.0.28 runs cover read/write × directory No/action No
+after directory Allow; each cold-reopens the same persisted native session, keeps
+stable receipt rows and neutral error status, and sends no model request on reopen.
+All owned launches and tracked descendants exit after acknowledged stops.
+Fifteen backup-reader/legacy tests pass; these are not Android export/restore.
+
+Evidence: `.verification/opencode-two-stage/summary.json`, baseline/unit/native
+logs, per-root result.json/reopen-proof.json. Only fake data and a local provider
+under the existing kernel guard were used. The copied phone history was read-only
+and not modified. The new UI is not yet accepted on a phone. Include this fix and
+both project templates in the next private test release APK; no publication.

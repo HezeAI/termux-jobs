@@ -2,7 +2,10 @@
 
 - OpenCode: render a verified same-action user denial as neutral “Action declined”
   instead of a failed tool/session error. Keep unrelated aborts and provider errors
-  visible. Persisted-history reopen and the next request are covered locally;
+  visible. Store directory and action decisions separately, including directory
+  Allow once followed by Read/Edit denial. Preserve both decisions on reopen.
+  Already lost historical decisions are not guessed from error text.
+  Persisted-history reopen and the next request are covered locally;
   phone verification of the new presentation is pending.
 
 - Instructions: add the full supplied project template for Codex (AGENTS.md) and
