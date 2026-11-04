@@ -1,5 +1,13 @@
 # Unreleased
 
+- Backup: include connection-scoped OpenCode settings, authorization, native history,
+  logs, project snapshots and receipts through a separate, default-off option when
+  exporting the app library. Explain incomplete recovery when excluded. Restore
+  into a fresh connection UUID without replacing existing credentials; retain
+  v1/v2 archive reading. Archives with connection data use manifest v3 and require
+  an updated reader. Clarify plaintext-secret warnings in RU/EN. Local code only;
+  delivered test5 is unchanged. See [audit](docs/fork/SECURITY-AUDIT-STAGE2.md).
+
 - Docs: put release highlights and Download APK first, followed by requirements
   and compatibility; fold CI history and technical evidence into details.
 

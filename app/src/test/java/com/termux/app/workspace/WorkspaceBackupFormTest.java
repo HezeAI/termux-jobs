@@ -39,7 +39,13 @@ public class WorkspaceBackupFormTest {
     static boolean contains(View v,String text){if(v instanceof TextView&&((TextView)v).getText().toString().contains(text))return true;if(v instanceof ViewGroup)for(int n=0;n<((ViewGroup)v).getChildCount();n++)if(contains(((ViewGroup)v).getChildAt(n),text))return true;return false;}
     @Test public void bothBackupModesExplicitlyWarnAboutUnencryptedSecretsInBothLanguages()throws Exception{
         for(String language:new String[]{"ru","en"}){WorkspaceLanguage.select(a,language);for(boolean selective:new boolean[]{false,true}){
-            AlertDialog dialog=openCached(selective);View root=dialog.getWindow().getDecorView();assertTrue(contains(root,language.equals("ru")?"Резервная копия не зашифрована":"The backup is not encrypted"));assertTrue(contains(root,language.equals("ru")?"секреты":"secrets"));dialog.dismiss();
+            AlertDialog dialog=openCached(selective);View root=dialog.getWindow().getDecorView();assertTrue(contains(root,language.equals("ru")?"Резервная копия не зашифрована":"The backup is not encrypted"));assertTrue(contains(root,language.equals("ru")?"секреты":"secrets"));assertTrue(contains(root,language.equals("ru")?"приватные подключения OpenCode":"private OpenCode connections"));assertTrue(contains(root,language.equals("ru")?"внутренние снимки файлов проектов":"internal project-file snapshots"));assertTrue(contains(root,language.equals("ru")?"плагины и команды":"plugins and configured commands"));dialog.dismiss();
+        }}
+    }
+    @Test public void privateConnectionBackupIsExplicitDefaultOffAndExplainsExclusion()throws Exception{
+        for(String language:new String[]{"ru","en"}){WorkspaceLanguage.select(a,language);for(boolean selective:new boolean[]{false,true}){
+            AlertDialog dialog=openCached(selective);View root=dialog.getWindow().getDecorView();CheckBox option=root.findViewWithTag("backup-opencode-connections"),library=root.findViewWithTag("backup-library");View excluded=root.findViewWithTag("backup-opencode-excluded");assertNotNull(option);assertFalse(option.isChecked());assertTrue(option.isEnabled());assertEquals(View.VISIBLE,excluded.getVisibility());assertTrue(contains(excluded,language.equals("ru")?"восстановление будет неполным":"recovery will be incomplete"));
+            option.performClick();assertTrue(option.isChecked());assertEquals(View.GONE,excluded.getVisibility());library.setChecked(false);assertFalse(option.isChecked());assertFalse(option.isEnabled());assertEquals(View.VISIBLE,excluded.getVisibility());library.setChecked(true);assertTrue(option.isEnabled());assertFalse(option.isChecked());dialog.dismiss();
         }}
     }
     @Test public void compressionMethodAndLevelHaveIndependentMenus()throws Exception{

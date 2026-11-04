@@ -9,15 +9,17 @@ import java.util.*;
 /** Validates complete library before mutation; imports only chosen data, never live handles. */
 final class WorkspaceBackupImport {
     static final class Choice {boolean commands,notes,presets,history,settings,replace;Set<Integer> candidates=new HashSet<>();}
-    static final class Prepared {
+    static final class Prepared implements AutoCloseable {
+        final OpenCodeBackupRestore opencode=new OpenCodeBackupRestore();
+        @Override public void close(){opencode.close();}
         final List<WorkspaceStore.Command> commands=new ArrayList<>();final List<WorkspaceStore.Note> notes=new ArrayList<>();final List<WorkspaceStore.Session> presets=new ArrayList<>();
     }
     static Prepared prepare(Activity a,JSONObject report,JSONObject restored,Choice choice)throws Exception{
-        Prepared out=new Prepared();JSONObject library=report.optJSONObject("workspace");
+        Prepared out=new Prepared();try{JSONObject library=report.optJSONObject("workspace");
         if(library!=null){WorkspaceStore incoming=new WorkspaceStore(a,e->{});try{incoming.decode(library.toString());
             if(choice.commands)for(WorkspaceStore.Command c:incoming.commands){c.id=UUID.randomUUID().toString();out.commands.add(c);}
             if(choice.notes)for(WorkspaceStore.Note n:incoming.notes){n.id=UUID.randomUUID().toString();out.notes.add(n);}
-            if(choice.presets)for(WorkspaceStore.Session s:incoming.sessions){if(WorkspaceStore.isBase(s)||!s.saved)continue;String oldId=s.id;s.id=UUID.randomUUID().toString();s.restoreReview=true;s.handle="";s.sshEncryptedPassword="";s.geminiEncryptedKey="";s.codexSocketId=UUID.randomUUID().toString();s.claudeSocketId=UUID.randomUUID().toString();s.geminiSocketId=UUID.randomUUID().toString();s.aiConnection=UUID.randomUUID().toString();s.aiSocketId="";s.saved=true;rebind(s,restored);if(choice.history)history(a,report,restored,oldId,s.id);out.presets.add(s);}
+            if(choice.presets)for(WorkspaceStore.Session s:incoming.sessions){if(WorkspaceStore.isBase(s)||!s.saved)continue;String oldId=s.id;s.id=UUID.randomUUID().toString();s.restoreReview=true;s.handle="";s.sshEncryptedPassword="";s.geminiEncryptedKey="";s.codexSocketId=UUID.randomUUID().toString();s.claudeSocketId=UUID.randomUUID().toString();s.geminiSocketId=UUID.randomUUID().toString();s.aiConnection=s.aiAgent.equals("opencode")?out.opencode.stage(a,restored,s.aiConnection):UUID.randomUUID().toString();s.aiSocketId="";s.saved=true;rebind(s,restored);if(choice.history)history(a,report,restored,oldId,s.id);out.presets.add(s);}
         }finally{incoming.close();}}
         JSONArray candidates=report.optJSONArray("candidates");JSONObject paths=restored.optJSONObject("paths");
         if(candidates!=null)for(Integer index:choice.candidates){JSONObject c=candidates.getJSONObject(index);WorkspaceStore.Command command=new WorkspaceStore.Command();command.name=c.getString("name");command.category="Imported";
@@ -30,6 +32,7 @@ final class WorkspaceBackupImport {
         }
         JSONArray envs=restored.optJSONArray("environments");if(envs!=null)for(int i=0;i<envs.length();i++){String alias=envs.getString(i);if(!alias.matches("jobs-[a-f0-9]{12}"))throw new IllegalArgumentException("Invalid environment");WorkspaceStore.Session s=new WorkspaceStore.Session();s.name="Linux · "+alias;s.environment="termux";s.prootAlias=alias;s.prootIsolated=true;s.directory="/";s.startup="";s.saved=true;s.restoreReview=true;out.presets.add(s);}
         return out;
+        }catch(Exception error){out.close();throw error;}
     }
     private static void rebind(WorkspaceStore.Session s,JSONObject restored)throws JSONException{
         // Restored agents keep their existing, explicit review path; do not migrate the shared Ubuntu.
@@ -49,16 +52,19 @@ final class WorkspaceBackupImport {
         }throw new IllegalArgumentException("APP_DATA_REQUIRED");
     }
     static void apply(Activity activity,WorkspaceStore store,Prepared data,Choice choice)throws Exception{
+        try{
         if(!store.isWritable())throw new IllegalStateException("LIBRARY_READ_ONLY");
         File recovery=new File(activity.getFilesDir(),"workspace-import-recovery");if(!recovery.isDirectory()&&!recovery.mkdirs())throw new java.io.IOException("Recovery directory");
         File snapshot=new File(recovery,"before-"+UUID.randomUUID()+".json");try(java.io.OutputStream out=new java.io.FileOutputStream(snapshot)){out.write(store.encode().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));}
+        data.opencode.publish();
         if(choice.replace){if(choice.commands)store.commands.clear();if(choice.notes)store.notes.clear();if(choice.presets)store.sessions.removeIf(s->s.saved&&s.handle.isEmpty()&&!WorkspaceStore.isBase(s));}
         for(WorkspaceStore.Command c:data.commands){WorkspaceStore.Command existing=store.commands.stream().filter(x->x.name.equals(c.name)&&x.command.equals(c.command)&&x.directory.equals(c.directory)).findFirst().orElse(null);if(existing==null)store.commands.add(c);else c.id=existing.id;}
         for(WorkspaceStore.Note n:data.notes){WorkspaceStore.Note existing=store.notes.stream().filter(x->x.name.equals(n.name)&&x.text.equals(n.text)).findFirst().orElse(null);if(existing==null)store.notes.add(n);else n.id=existing.id;}
         // Each restored preset retains its freshly allocated ID and history directory.
         // Names are not identities: even otherwise identical copies can own different histories.
         for(WorkspaceStore.Session s:data.presets)store.sessions.add(s);
-        store.save();
+        store.save();data.opencode.commit();
+        }finally{data.close();}
     }
     static boolean persisted(JSONObject saved,Prepared data){
         for(String kind:new String[]{"commands","notes","sessions"}){

@@ -436,6 +436,8 @@ def scan_tar(path):
         roots.append(('data','payload','','selected-data'))
     if not roots and workspace:
         roots.append(('library', '', '', 'workspace-v8'))
+    if not roots and any(n.startswith('opencode-connections/') for n in all_names):
+        roots.append(('opencode', 'opencode-connections', '', 'jobs-opencode-v1'))
     if not roots and any(n.startswith('workspace-sessions/') for n in all_names):
         roots.append(('app-data', '', '', 'jobs-app-data'))
     for kind, root, alias, fmt in sorted(set(roots)):
@@ -508,7 +510,9 @@ def environment_info(request):
     envs = environments(prefix)
     return dict(arch=current_arch(), environments=envs, modern=proot_modern(prefix),
                 homeBytes=tree_bytes(home), prefixBytes=tree_bytes(prefix, (prefix / 'var/lib/proot-distro',)),
-                ubuntuBytes={e['name']: tree_bytes(Path(e['root'])) for e in envs})
+                ubuntuBytes={e['name']: tree_bytes(Path(e['root'])) for e in envs},
+                libraryBytes=tree_bytes(Path(request['files'])/'workspace-sessions') if request.get('files') else 0,
+                **opencode_inventory(request))
 
 
 def protected_write(path, data):
@@ -907,7 +911,8 @@ def selection_inventory(request):
         if scan is not None: scope['scan']=scan
         result.append(scope)
     # This small history tree is always fresh, independently of environment estimates.
-    return dict(scopes=result,reusedEstimate=reused,libraryBytes=tree_bytes(Path(request['files'])/'workspace-sessions') if request.get('files') else 0)
+    return dict(scopes=result,reusedEstimate=reused,libraryBytes=tree_bytes(Path(request['files'])/'workspace-sessions') if request.get('files') else 0,
+                **opencode_inventory(request))
 
 
 def selected_plan(request):
@@ -1003,6 +1008,166 @@ def selection_requirements(selection, request):
                 agentsRequireReview='agents' in selection.get('items',[]), stagingOnly=not(selection.get('environment')=='ubuntu' and selection.get('system')))
 
 
+# Connection state is a separate private component, never inferred from HOME.
+OPENCODE_PARTS = {'config', 'data', 'state', 'session-links', 'receipts'}
+OPENCODE_ID = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+
+
+def opencode_sources(request):
+    if 'library' not in request.get('components', []) or request.get('includeOpenCodeConnections') is not True:
+        return []
+    ids = set()
+    for profile in libraries(request['workspace'])['sessions']:
+        if profile.get('aiAgent') == 'opencode':
+            value = profile.get('aiConnection', '')
+            if not isinstance(value, str) or not OPENCODE_ID.fullmatch(value):
+                raise BackupError('INVALID_OPENCODE_CONNECTION')
+            ids.add(value)
+    root = Path(request['files']) / '.ai-control' / 'connections'
+    if not ids or not root.exists():
+        return []
+    check = directory_fd(Path(request['files']), ['.ai-control', 'connections'])
+    os.close(check)
+    result = []
+    for value in sorted(ids):
+        path = root / value
+        if not path.exists():
+            continue  # A profile may not have been configured/launched yet.
+        check = directory_fd(root, [value])
+        os.close(check)
+        result.append((value, path))
+    return result
+
+
+def opencode_files(root):
+    count = 0
+    for part in sorted(OPENCODE_PARTS):
+        start = root / part
+        if start.is_symlink():
+            raise BackupError('SOURCE_UNREADABLE')
+        if not start.exists():
+            continue
+        if not start.is_dir():
+            raise BackupError('SOURCE_UNREADABLE')
+        for folder, dirs, names in os.walk(start, followlinks=False):
+            dirs.sort()
+            for name in dirs:
+                if (Path(folder) / name).is_symlink():
+                    raise BackupError('SOURCE_UNREADABLE')
+            for name in sorted(names):
+                path = Path(folder) / name
+                info = path.lstat()
+                if not stat.S_ISREG(info.st_mode):
+                    raise BackupError('SOURCE_UNREADABLE')
+                count += 1
+                if count > MAX_FILES:
+                    raise BackupError('TOO_MANY_FILES')
+                yield path, path.relative_to(root).as_posix(), info
+
+
+def opencode_bytes(request):
+    return sum(info.st_size for _, root in opencode_sources(request) for _, _, info in opencode_files(root))
+
+
+def opencode_inventory(request):
+    try:
+        return dict(opencodeBytes=opencode_bytes(dict(request, includeOpenCodeConnections=True)), opencodeUnreadable=False)
+    except (OSError, BackupError):
+        # An unselected private component must not prevent backing up other data.
+        return dict(opencodeBytes=0, opencodeUnreadable=True)
+
+
+def create_opencode_tar(file, sources, work, compression):
+    import sqlite3
+    from contextlib import closing
+    wrapper = 'opencode-connections'
+    progress('ARCHIVE', current='OpenCode connections', force=True)
+    with compressed_output(file, compression) as output, tarfile.open(fileobj=output, mode='w|') as tar:
+        index = json.dumps(dict(version=1, connections=[value for value, _ in sources])).encode()
+        meta = tarfile.TarInfo(wrapper + '/index.json')
+        meta.mode = 0o600
+        meta.size = len(index)
+        tar.addfile(meta, io.BytesIO(index))
+        for value, root in sources:
+            entries = list(opencode_files(root))
+            databases = set()
+            for path, relative, _ in entries:
+                fd, _ = selection_open(root, relative)
+                try:
+                    if os.read(fd, 16) == b'SQLite format 3\0':
+                        databases.add(relative)
+                finally:
+                    os.close(fd)
+            for path, relative, original in entries:
+                if any(relative == database + suffix for database in databases for suffix in ('-wal', '-shm', '-journal')):
+                    continue
+                fd, before = selection_open(root, relative)
+                snapshot = None
+                try:
+                    if (before.st_dev, before.st_ino) != (original.st_dev, original.st_ino):
+                        raise BackupError('SOURCE_CHANGED_RETRY')
+                    info = tarfile.TarInfo(wrapper + '/' + value + '/' + relative)
+                    info.mode = 0o700 if before.st_mode & 0o111 else 0o600
+                    info.mtime = before.st_mtime
+                    if relative in databases:
+                        snapshot = Path(work) / (uuid.uuid4().hex + '.sqlite')
+                        deadline = time.monotonic() + 60
+                        def db_progress(_status, remaining, total):
+                            progress('DATABASE', total - remaining, total, current='OpenCode', unit='pages')
+                            if time.monotonic() > deadline:
+                                raise BackupError('DATABASE_BUSY_RETRY')
+                        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True, timeout=5)) as src, closing(sqlite3.connect(snapshot)) as dst:
+                            src.backup(dst, pages=256, progress=db_progress, sleep=0.05)
+                            dst.commit()
+                            dst.execute('PRAGMA journal_mode=DELETE')
+                            if dst.execute('PRAGMA quick_check').fetchone()[0] != 'ok':
+                                raise BackupError('DATABASE_CHECK_FAILED')
+                        after = path.stat()
+                        if (after.st_dev, after.st_ino) != (before.st_dev, before.st_ino):
+                            raise BackupError('SOURCE_CHANGED_RETRY')
+                        info.size = snapshot.stat().st_size
+                        with snapshot.open('rb') as stream:
+                            tar.addfile(info, stream)
+                    else:
+                        info.size = before.st_size
+                        with os.fdopen(fd, 'rb', closefd=False) as stream:
+                            tar.addfile(info, stream)
+                        after = os.fstat(fd)
+                        if (after.st_size, after.st_mtime_ns) != (before.st_size, before.st_mtime_ns):
+                            raise BackupError('SOURCE_CHANGED_RETRY')
+                finally:
+                    os.close(fd)
+                    if snapshot is not None and snapshot.exists():
+                        snapshot.unlink()
+
+
+def inspect_opencode_tar(path):
+    ids, names = None, []
+    with archive(path) as tar:
+        for member in tar:
+            name = clean(member.name)
+            if not (member.isfile() or member.isdir()):
+                raise BackupError('INVALID_OPENCODE_ARCHIVE')
+            names.append(name)
+            if name == 'opencode-connections/index.json':
+                try:
+                    value = json.loads(content(tar, member, MAX_JSON))
+                    ids = value['connections']
+                    if value.get('version') != 1 or not isinstance(ids, list) or len(ids) > 20000 or len(set(ids)) != len(ids) or any(not isinstance(i, str) or not OPENCODE_ID.fullmatch(i) for i in ids):
+                        raise ValueError()
+                except (ValueError, KeyError, TypeError):
+                    raise BackupError('INVALID_OPENCODE_ARCHIVE')
+    if ids is None:
+        raise BackupError('INVALID_OPENCODE_ARCHIVE')
+    for name in names:
+        if name in ('opencode-connections', 'opencode-connections/index.json'):
+            continue
+        parts = name.split('/')
+        if len(parts) < 2 or parts[0] != 'opencode-connections' or parts[1] not in ids or (len(parts) > 2 and parts[2] not in OPENCODE_PARTS):
+            raise BackupError('INVALID_OPENCODE_ARCHIVE')
+    return ids
+
+
 def create(request):
     compression=compression_options(request)
     prefix, home = Path(request['prefix']), Path(request['home'])
@@ -1014,7 +1179,10 @@ def create(request):
     wanted = request['components']
     needs_full = 'home' in wanted or 'prefix' in wanted or bool(request.get('environments'))
     info = environment_info(request) if needs_full else dict(arch=current_arch(),environments=[],homeBytes=0,prefixBytes=0,ubuntuBytes={})
-    library_bytes = tree_bytes(Path(request['files'])/'workspace-sessions') if 'library' in wanted else 0
+    history_bytes = tree_bytes(Path(request['files'])/'workspace-sessions') if 'library' in wanted else 0
+    library_bytes = history_bytes
+    opencode = opencode_sources(request)
+    library_bytes += sum(info.st_size for _, root in opencode for _, _, info in opencode_files(root))
     estimate = library_bytes + (info['homeBytes'] if 'home' in wanted else 0) + (info['prefixBytes'] if 'prefix' in wanted else 0)
     if any(name not in {e['name'] for e in info['environments']} for name in request.get('environments', [])):
         raise BackupError('SOURCE_CHANGED_RETRY')
@@ -1038,7 +1206,9 @@ def create(request):
             with os.fdopen(record,'wb') as stream:stream.write(json.dumps(dict(path=str(out),identity=[st.st_dev,st.st_ino])).encode())
         finally:os.close(receipt_fd)
     protected_write(out / 'INCOMPLETE', b'Not verified. Do not use as a complete backup.\n')
-    meta = dict(format='termux-jobs-backup', version=2 if plans else 1, created=time.time(), live=True,
+    meta = dict(format='termux-jobs-backup', version=3 if opencode else 2 if plans else 1, created=time.time(), live=True,
+                opencodeConnectionsSelected=request.get('includeOpenCodeConnections') is True,
+                opencodeConnectionsIncluded=bool(opencode),
                 consistency='Best effort live copy; user must finish writers before backup. No process memory.',
                 compression=dict(engine=compression['engine'],level=compression['level'],threads=compression['threads']),
                 source=dict(arch=info['arch'], packageId=request.get('packageId'), prefix=str(prefix), home=str(home), appVersion=request.get('appVersion')), components=[])
@@ -1055,8 +1225,11 @@ def create(request):
         # Per-tab shell history survives separately; launch helper files are retained but not executed on import.
         sessions = Path(request['files']) / 'workspace-sessions'
         if sessions.is_dir():
-            create_tar(out / 'app-data.tar.gz', sessions, 'workspace-sessions',total=library_bytes,compression=compression)
+            create_tar(out / 'app-data.tar.gz', sessions, 'workspace-sessions',total=history_bytes,compression=compression)
             add('app-data.tar.gz', 'app-data')
+    if opencode:
+        create_opencode_tar(out / 'opencode-connections.tar.gz', opencode, request['work'], compression)
+        add('opencode-connections.tar.gz', 'opencode')
     if 'home' in wanted:
         create_tar(out / 'home.tar.gz', home, 'home',total=info['homeBytes'],compression=compression)
         add('home.tar.gz', 'home')
@@ -1100,6 +1273,9 @@ HOME/PREFIX are not automatically activated. Review restored scripts/config befo
 Install packages individually from packages.txt; package versions may be unavailable. Do not blindly execute package names from a foreign list.
 Android UID is not restored; extracted files belong to the current UID. Permissions/mtime/links are preserved where possible.
 Android Keystore keys, permissions and live processes cannot be restored. Re-enter remembered SSH passwords.
+OpenCode connection config/data/state/session-links/receipts may include keys, tokens, chats and tool results. When the OpenCode component is selected, logs and internal project-file snapshots within data are included too. Otherwise profile-only recovery is incomplete and requires separate connection setup. They are not encrypted.
+Use a supporting app to import the connection component AND presets into a fresh connection ID. Standalone restore only stages these files.
+The top-level cache directory, live processes, external credential files, project folders and attachments outside those directories are not included by this component.
 Live copying is not an atomic snapshot. Finish jobs/writers before backing up. External symlink targets and Android shared storage are NOT archived.
 Selective manifest v2 needs app v1.1.1+ or this trusted helper. Keep the WHOLE directory.
 Data-only payloads are staged, not activated. Prepare the environment/runtimes first; review README-SELECTED.txt after extraction.
@@ -1127,7 +1303,7 @@ def inspect(request):
     if path.name.endswith('.json'):
         value = read_json(path)
         if value.get('format') == 'termux-jobs-backup':
-            if value.get('version') not in (1,2) or (path.parent / 'INCOMPLETE').exists():
+            if value.get('version') not in (1,2,3) or (path.parent / 'INCOMPLETE').exists():
                 raise BackupError('INCOMPLETE_OR_UNSUPPORTED_BACKUP')
             source = value.get('source', {})
             if len(value.get('components', [])) > 100:
@@ -1177,6 +1353,10 @@ def inspect(request):
         scan = scan_tar(f)
         if str(f) in selections and (len(scan['components'])!=1 or scan['components'][0]['kind']!=declared):
             raise BackupError('INVALID_SELECTION_ARCHIVE')
+        if declared=='opencode':
+            if len(scan['components']) != 1 or scan['components'][0]['kind'] != 'opencode':
+                raise BackupError('INVALID_OPENCODE_ARCHIVE')
+            inspect_opencode_tar(f)
         if declared=='data' and (len(scan['components'])!=1 or scan['components'][0]['kind']!='data'):
             raise BackupError('INVALID_SELECTION_ARCHIVE')
         if any(c['kind']=='prefix' for c in scan['components']): package_versions.update(scan['packages'])
@@ -1184,7 +1364,9 @@ def inspect(request):
             workspace = scan['workspace']
         for c in scan['components']:
             # PREFIX is always staged; never applied to the running runtime.
-            c.update(file=str(f), unpacked=scan['unpacked'], status='portable' if c['kind'] in ('home', 'library', 'app-data','data') else 'review')
+            c.update(file=str(f), unpacked=scan['unpacked'], status='portable' if c['kind'] in ('home', 'library', 'app-data','data','opencode') else 'review')
+            if c['kind'] == 'opencode':
+                inspect_opencode_tar(f)
             if c['kind'] == 'ubuntu':
                 if str(f) in aliases: c['environmentAlias']=aliases[str(f)]
                 c['status'] = 'compatible' if c['arch'] == current_arch() and proot_modern(Path(request['prefix'])) else 'blocked'
@@ -1406,6 +1588,7 @@ def restore(request):
     environments_created = []
     environment_bindings = {}
     paths = {}
+    opencode_connections = {}
     for i, c in zip(choices, selected):
         path = copies[c['file']]
         if c['kind'] == 'ubuntu':
@@ -1421,14 +1604,22 @@ def restore(request):
             shutil.copyfile(path, target)
             paths[str(i)] = str(target)
         else:
+            connection_ids = inspect_opencode_tar(path) if c['kind'] == 'opencode' else []
             target = destination / (c['kind'] + '-' + str(i))
             extract_new(path, c['root'], target)
             paths[str(i)] = str(target)
+            for old in connection_ids:
+                if old in opencode_connections:
+                    raise BackupError('INVALID_OPENCODE_ARCHIVE')
+                source = target / old
+                if not source.exists():
+                    source.mkdir(mode=0o700)
+                opencode_connections[old] = str(source)
     if any('selection' in c or c['kind']=='data' for c in selected):
         protected_write(destination/'README-SELECTED.txt', b'Selected data is STAGED only. Existing files were NOT replaced.\nFor Ubuntu data, paths in payload are relative to the guest root (/); for Termux, relative to files/ (home/ and usr/).\nPrepare a compatible environment and runtime first. Review paths, scripts and authorization before manually copying files.\nDo not replace an active .codex directory. Stop the TARGET assistant first, retaining the original data.\nChat history does not include project files unless selected. Processes and Android Keystore cannot be restored.\n')
     (destination / 'INCOMPLETE').unlink()
-    protected_write(destination / 'RESTORE-RESULT.json', json.dumps(dict(paths=paths, environments=environments_created, environmentBindings=environment_bindings)).encode())
-    return dict(path=str(destination), paths=paths, environments=environments_created, environmentBindings=environment_bindings)
+    protected_write(destination / 'RESTORE-RESULT.json', json.dumps(dict(paths=paths, environments=environments_created, environmentBindings=environment_bindings, opencodeConnections=opencode_connections)).encode())
+    return dict(path=str(destination), paths=paths, environments=environments_created, environmentBindings=environment_bindings, opencodeConnections=opencode_connections)
 
 
 
