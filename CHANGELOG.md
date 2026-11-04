@@ -30,8 +30,11 @@
 - Synthetic-key HTTP 401 and normal/symlink first/repeat launches pass locally;
   Android/Keystore internals remain unverified. Developer phone acceptance on
   test7 confirms API test-profile startup, HTTP 400 / API_KEY_INVALID, normal
-  stop/relaunch and no update-error interference. Real login, crash recovery and
-  Gemini permissions are not covered. Attachment accumulation/disconnections
+  stop/relaunch and no update-error interference. Subsequent developer phone
+  messages report Gemini shell/direct Write Deny and Allow once inside the
+  artificial project. Outside-project actions, broader file preservation, real
+  login and crash recovery remain unverified on the phone. Assistant fixture
+  results are recorded separately. Attachment accumulation/disconnections
   remain **unfixed** in this APK.
 - See [validation and phone checks](docs/fork/VALIDATION-2.1.3-test7.md).
 

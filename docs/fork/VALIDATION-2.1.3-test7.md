@@ -133,8 +133,10 @@ new-version notice persistence or the phone's normal/symlink path.
   lower-level broker ownership/Keystore behavior and mid-handoff cancellation.
 - Abnormal app/process termination and recovery on an isolated instance without
   working sessions. Normal session stop/relaunch is not a crash-recovery test.
-- Gemini shell and direct-file permission rejection/allowance, inside/outside the
-  project. Codex's earlier acceptance and this invalid-key check do not cover it.
+- Gemini outside-project actions and separate outside-file preservation checks.
+  Subsequent developer messages accept inside-project shell/direct Write Deny and
+  Allow once; see the dated acceptance below. The invalid-key check alone does not
+  cover permissions.
 - New-version notification stays informational across history reopen; the current
   report confirms absence of interference, not that specific presentation check.
 - SAF/export/clean backup restore and other open items in the unified plan.
@@ -144,3 +146,17 @@ change or new failure. Keep real authorizations and working profiles unchanged.
 No independent audit or private-key custody verification is established.
 The assistant's preceding CLI tests used local providers and blocked external
 connections; they do not describe the developer's untraced phone network route.
+
+
+## Subsequent developer phone permission acceptance — 2026-11-04
+
+Source: the developer's phone messages, «все прошло» after the four AUDIT steps,
+and pasted final marker values. Shell and direct Write Deny/Allow once inside the
+artificial project are accepted in that scope. Intermediate denial states are
+reported by the developer, not independently observed by the assistant. This
+continues test7 testing; no new APK identity was measured in that message.
+[Exact evidence and limits](PERMISSIONS-COMPATIBILITY-TEST5.md#developer-reported-gemini-phone-acceptance--2026-11-04).
+The two outside marker values are recorded as displayed; broader preservation,
+outside-project actions, Google login, broker/Keystore, abnormal recovery and
+backups remain unverified on the phone. Native fixtures remain separate assistant
+results and are not attributed to the developer. No APK was rebuilt for this note.

@@ -222,3 +222,38 @@ is not session stop. Outside-project behavior, other agents, repeat/crash recove
 real login and backup/restore remain open. Android lifecycle/Keystore and clean
 restore require a separate Android instance/device without working sessions;
 no destructive test is prepared against the active instance.
+
+
+## Developer-reported Gemini phone acceptance — 2026-11-04
+
+**Source: developer messages about the phone**, not the assistant's native fixture.
+After the four documented messages, the developer reported «все прошло» and pasted
+this result from `check-markers`:
+
+```text
+project/shell.txt: AUDIT_SHELL_2
+project/write.txt: AUDIT_WRITE_4
+outside/shell.txt: AUDIT_BEFORE
+outside/write.txt: AUDIT_BEFORE
+```
+
+Accepted scope: the developer reports completing shell Deny/Allow once and direct
+Write Deny/Allow once **inside the artificial project**, using the prepared Gemini
+connection. This continues the test7 verification; no new APK/version measurement
+was supplied in this message. The pasted final values support the final successful
+writes. The intermediate denied states are supported by the developer's statement
+that the sequence passed; the assistant did not observe those phone button presses
+or independently capture each intermediate file state.
+
+The outside lines record only the two displayed synthetic marker values at the
+reported check. No separate phone comparison of outside files' identities/bytes
+was reported; general outside-file preservation remains unverified. This is not
+an attempted outside-project read/write or an OS-isolation test. The assistant's
+separate native checks of outside markers remain attributed to the assistant.
+
+Do not repeat these accepted inside-project phone permission cases without a new
+failure or relevant input change. Not covered: saved-profile policy reopen,
+permission persistence beyond this sequence, outside-project operations, actual
+Google login, Android key handoff/Keystore, crash recovery, backup/restore, Claude
+or OpenCode. The final report did not separately confirm session shutdown; do not
+attribute the assistant's native stop/exit evidence to the developer.
