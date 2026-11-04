@@ -257,3 +257,56 @@ permission persistence beyond this sequence, outside-project operations, actual
 Google login, Android key handoff/Keystore, crash recovery, backup/restore, Claude
 or OpenCode. The final report did not separately confirm session shutdown; do not
 attribute the assistant's native stop/exit evidence to the developer.
+
+
+## 2026-11-04 — Prepared phone fixture: Claude permission buttons
+
+Source: **assistant native checks**, not developer phone acceptance. Claude
+2.1.296 (`f1f6e96e0d8342b9dbf41d7e88255397a6a52ce3d8736ad6a4c6b59c9b62fefa`),
+Node 22.22.1, production preparation/bootstrap/controller/main CLI, mode `manual`.
+The relevant launch/Claude assets still match test7 source `0a51e24c`.
+Four new Bash/Write Deny/Allow once cases pass through native control to actual
+file bytes; stop is acknowledged and owned processes exit. The existing kernel
+network guard is retained and fresh negative checks pass for this prepared fixture.
+Only its owned loopback provider is available; no forwarding or real account.
+Write first reads the same artificial file using native Read, then requests Write.
+That preliminary inside-project Read is not presented as a denied-read test.
+
+A fresh phone fixture has separate HOME, CLAUDE_CONFIG_DIR, history, git project,
+synthetic key and fixed markers. It does not import or edit working app profiles.
+The installed CLI binary is reused through a version symlink and its hash verified;
+no new CLI/Ubuntu installation or update occurs. This is configuration separation,
+not an OS filesystem sandbox or a complete file-open trace. The provider is capped
+at 2 MiB per request/512 metadata events, records no HTTP bodies/keys/prompts, and
+can request only predefined actions against its own marker files. MCP/plugins are
+outside this work and are not configured. No working authorizations are supplied.
+
+Create a **new Claude Code** profile, Ubuntu AI, Sonnet, **Подтверждать действия**
+(`manual`), new chat. Save/reopen settings and launch only this profile.
+Connection command, no arguments:
+`/root/termux-fork/.verification/audit-claude-phone/launch-claude`.
+Project: `/root/termux-fork/.verification/audit-claude-phone/project`.
+No real login/API key is needed: the launcher supplies a synthetic key solely to
+its local provider; this does not establish Anthropic authentication.
+
+| Message | UI answer | Expected file |
+| --- | --- | --- |
+| `AUDIT SHELL INSIDE 1` | Deny | `project/shell.txt` remains `AUDIT_BEFORE` |
+| `AUDIT SHELL INSIDE 2` | Allow once | `project/shell.txt` becomes `AUDIT_SHELL_2` |
+| `AUDIT WRITE INSIDE 3` | Deny | `project/write.txt` remains `AUDIT_BEFORE` |
+| `AUDIT WRITE INSIDE 4` | Allow once | `project/write.txt` becomes `AUDIT_WRITE_4` |
+
+After each action, check independently in an ordinary **Ubuntu AI terminal**:
+`/root/termux-fork/.verification/audit-claude-phone/check-markers`.
+For phone acceptance report each intermediate result; final values alone cannot
+prove both denied states. The two outside values are shown separately; they do
+not establish preservation of other files or outside-project access restrictions.
+If no permission card appears or an unexpected path/value is shown, stop and report
+the message number and safe error; do not switch permissions or remove the launcher.
+Then this test session's gear → **Закрыть сессию** → confirm; wait for closure.
+No force-stop of the app or other sessions is needed. The provider stops with its
+controller. Phone UI, outside-project actions, crash/restore and real login remain
+open. Evidence: `.verification/phone-permissions/claude-probe.log`, native proof
+referenced by `latest-claude-verified-root.txt`, fresh fixture root referenced by
+`claude-phone-root.txt`, and `claude-phone-enforcement.log`. The existing Gemini
+fixture and its developer acceptance remain separate and unchanged.

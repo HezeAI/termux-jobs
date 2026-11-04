@@ -115,6 +115,15 @@ SAF и восстановление fake архивов v1/v2/v3. На акти�
 Keystore, аварийное восстановление, backup/restore и остальные агенты не закрыты.
 [Подробный источник и границы](PERMISSIONS-COMPATIBILITY-TEST5.md#developer-reported-gemini-phone-acceptance--2026-11-04).
 
+### Следующая проверка телефона: Claude, затем OpenCode
+
+Для Claude 2.1.296 подготовлено отдельное локальное подключение. Помощник проверил
+четыре новых native Bash/Write No/Allow once сценария, конечные байты и штатный
+stop/exit. Подготовлена свежая папка для телефона; **пользователь её ещё не проверял**.
+[Поля и четыре сообщения](PERMISSIONS-COMPATIBILITY-TEST5.md#2026-11-04--prepared-phone-fixture-claude-permission-buttons).
+Следующим будет OpenCode. Рабочие профили/авторизации и готовый Gemini fixture
+не меняются. Внепроектные действия, Android/Keystore/crash/restore остаются открытыми.
+
 ### Текущий порядок и проверка телефона — 2026-11-04
 
 1. **Самостоятельно выполнено, новое покрытие A-AUTH-01:** зависший ответ брокера
