@@ -113,3 +113,17 @@ Evidence: `.verification/composer-no-voice-test40/` contains source identities,
 commands/scope, build/test logs, JVM summary, Python/history/localization results,
 Lint summary, final manifest/resources/signature/runtime and artifact audits.
 Read-only video/backend comparison: `.verification/instruction-window-trace/`.
+
+
+## Историческое уточнение порядка выпуска — 2026-11-04
+
+Из RELEASING.md перенесён исторический контекст: после test39 разработчик
+поручил полностью удалить голосовой ввод. В этом указании «следующая сборка»
+относилась к test40; микрофон, распознавание, обработчики, диагностика и разрешение
+были удалены. Прежнее ожидание проверки голосового ввода на телефоне не означало
+разрешение вернуть функцию. Проверки истории Claude и открытия окна на телефоне
+оставались отдельными, а публикация stable требовала отдельной авторизации.
+
+Исходные результаты test39/test40, APK и их идентичности этой справкой не меняются.
+Действующий запрет на возвращение функции хранится в начале
+[порядка выпуска](RELEASING.md), а не определяется исторической формулировкой.
