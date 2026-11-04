@@ -388,6 +388,11 @@ or a full file-open trace. Provider requests are capped at 2 MiB and 512 scalar
 metadata events, without saving HTTP bodies, prompts or keys. No cloud route,
 MCP or plugin setup is included. Those areas remain excluded/unverified.
 
+**Historical fixture revision:** the first preflight rejected all existing
+connection directories. The subsequent phone screenshots exposed that limitation;
+see the private-bridge correction below. Use the corrected launcher with the same
+paths; do not delete or recreate the selected connection directory.
+
 ### Phone setup, in order
 
 1. Create a **new OpenCode profile**, Ubuntu AI, Build, **С подтверждениями**.
@@ -431,3 +436,54 @@ Evidence: `.verification/phone-permissions/opencode-host-inventory*.log`,
 `opencode-installed-probe.log`, `opencode-installed-safety.log`,
 `latest-opencode-verified-root.txt`, `opencode-phone-final-root.txt`,
 `opencode-phone-final-enforcement.log`. Claude/Gemini fixtures remain unchanged.
+
+
+## 2026-11-04 — OpenCode phone preflight corrected: private bridge state
+
+Source of phone failure: developer screenshots `1001642848.jpg` /
+`1001642849.jpg` (attachments `00ea8c3cb4c24bbab7a5441f1cdeda09` and
+`06dfc9acd94748608c719721a5ca7b1e`). Settings visibly select AUDIT OpenCode, Build,
+confirmations and the prepared project/launcher. The fixture raised
+`Connection already exists: do not reuse a working connection` **before any agent
+launch**. This is not a component-version, model or permission-test failure.
+
+Confirmed cause: the fixture equated directory existence with a working connection.
+Production `AiAgentsUi.query → AiAgents.call → ai-agents-control.js start` can create
+a directory for an ordinary model-catalogue/configuration request, before inference.
+The exact phone operation which created this particular directory is **unknown**;
+its private files and credentials were not read. The standard app-name metadata
+file was not visible from this environment; no broader private-data search followed.
+
+Fix, **test infrastructure only**: keep the source connection ID, but redirect
+only the production bridge's connection-directory argument into
+`<fixture>/bridge/connections/<same ID>`. Compare parsed arguments to ensure that
+session ID, model, mode, chat selection, variant, permission policy and scope remain
+unchanged. Existing selected connection files are never inspected, adopted,
+replaced or removed. CLI XDG and HOME remain private as before. This explicit
+fixture argument redirection is not a change to the shipped app/storage protocol;
+app profile context and the normal live control socket remain intact. Main
+connection, a different fixture owner, full access and parallel launch remain
+refused. Component checks are unchanged; no fallback or installation is introduced.
+
+Checked anew **by the assistant**: five preflight tests, including original-file
+bytes/mtime and argument-preservation assertions. The native probe now begins
+with an existing source connection containing an artificial sentinel, reproducing
+the condition rejected by the initial fixture. Four real shell/Write No/Allow once
+cases pass; original source directory/sentinel remain unchanged. Same-fixture
+reopen retains the native session/model, effective `ask`, marker values and no
+pending/replayed action. Both stops are acknowledged; owned processes exit.
+Evidence: `.verification/phone-permissions/opencode-private-state-safety.log`,
+`opencode-private-state-restart.log`, and the native/restart proofs referenced by
+`latest-opencode-verified-root.txt`. These are assistant results, not developer
+phone acceptance. The earlier phone failure is retained, not counted as PASS.
+
+The **same** phone launcher/project paths were refreshed in place after verifying
+there is no claimed operation and all four markers still equal AUDIT_BEFORE.
+Previous fixture identity is retained separately. No marker reset, app-profile
+edit, original connection-file change or APK installation/build took place.
+Keep the current TEST OPENCODE profile and AUDIT OpenCode connection. Close only
+that failed test session through its gear, launch it again, then choose
+`audit/audit` from the **running OpenCode status** model selector. Continue the
+four documented messages with an independent marker check after each action.
+Do not create another connection or delete the existing directory for this fix.
+Phone startup/permission checks are still pending.

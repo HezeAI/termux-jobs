@@ -9,7 +9,7 @@ DEFAULT='00000000-0000-4000-8000-000000000002'
 def prepare():
  assert hashlib.sha256(BINARY.read_bytes()).hexdigest()==HASH
  root=Path(tempfile.mkdtemp(prefix='opencode-',dir=REPO/'.verification/phone-permissions'));root.chmod(0o700)
- for name in ['home','project','outside','tmp','runs','xdg/config/opencode','xdg/data','xdg/cache','xdg/state','home/.local/share/termux-jobs/agents/bin']:(root/name).mkdir(parents=True,mode=0o700,exist_ok=True)
+ for name in ['home','project','outside','tmp','runs','bridge/connections','xdg/config/opencode','xdg/data','xdg/cache','xdg/state','home/.local/share/termux-jobs/agents/bin']:(root/name).mkdir(parents=True,mode=0o700,exist_ok=True)
  for scope in ['project','outside']:
   for kind in ['shell','write']:(root/scope/(kind+'.txt')).write_text('AUDIT_BEFORE')
  subprocess.run(['git','init','--quiet',str(root/'project')],env={'PATH':os.environ['PATH'],'HOME':str(root/'home'),'GIT_CONFIG_GLOBAL':'/dev/null','GIT_CONFIG_NOSYSTEM':'1'},check=True)
@@ -34,20 +34,26 @@ def launch(root,command):
   owner=root/'claimed-connection.json'
   if owner.exists():assert json.loads(owner.read_text())=={'id':ident,'path':str(connection)},'A different connection already owns this fixture'
   else:
-   assert not connection.exists()and not connection.is_symlink(),'Connection already exists: do not reuse a working connection'
    owner.write_text(json.dumps({'id':ident,'path':str(connection)}))
+  # The selected app connection is an identity only. Never inspect, read, or
+  # write its existing files. Redirect only this bridge argument to private
+  # state; retain every session/model/permission argument unchanged.
+  private=root/'bridge/connections'/ident;private.parent.mkdir(parents=True,exist_ok=True,mode=0o700)
+  prefix="run-chat '"+str(connection)+"'";assert command[4].count(prefix)==1,'Ambiguous connection argument'
+  isolated=command[:4]+[command[4].replace(prefix,"run-chat '"+str(private)+"'",1)]
+  routed=shlex.split(isolated[4]);start=routed.index('run-chat');assert routed[start+1]==str(private)and routed[start+2:start+10]==args[1:],'Unexpected argument change'
   provider=Provider(root);provider.start();child=None
   try:
    config={'providers':{'audit':{'canonical':'openai','name':'Synthetic audit','env':['AUDIT_API_KEY'],'package':'@opencode/ai/providers/openai-compatible','settings':{'baseURL':provider.url+'/v1','apiKey':'SYNTHETIC_PHONE_AUDIT_ONLY','transport':'http'},'models':{'audit':{'name':'Synthetic audit','limit':{'context':16384,'output':2048}}}}}}
    (root/'xdg/config/opencode/opencode.json').write_text(json.dumps(config))
    env={'PATH':os.environ['PATH'],'HOME':str(root/'home'),'TMPDIR':str(root/'tmp'),'TERM':'xterm-256color','COLORTERM':'truecolor','LANG':'C.UTF-8','GIT_CONFIG_GLOBAL':'/dev/null','GIT_CONFIG_NOSYSTEM':'1','GIT_CEILING_DIRECTORIES':str(root),'AUDIT_API_KEY':'SYNTHETIC_PHONE_AUDIT_ONLY'}
-   child=subprocess.Popen(command,env=env,cwd=root/'project');return child.wait()
+   child=subprocess.Popen(isolated,env=env,cwd=root/'project');return child.wait()
   finally:
    if child is not None and child.poll()is None:
     child.terminate()
     try:child.wait(timeout=8)
     except subprocess.TimeoutExpired:child.kill();child.wait(timeout=8)
-   provider.stop();(root/'runs'/('provider-'+str(os.getpid())+'.json')).write_text(json.dumps({'requests':provider.events,'childExited':child is not None and child.poll()is not None},indent=2)+'\n')
+   provider.stop();(root/'runs'/('provider-'+str(os.getpid())+'.json')).write_text(json.dumps({'requests':provider.events,'childExited':child is not None and child.poll()is not None,'privateBridgeState':True},indent=2)+'\n')
 def markers(root):
  root=root.resolve();assert root.is_relative_to(WORKSPACE)and(root/'identity.json').is_file()
  for scope in ['project','outside']:
