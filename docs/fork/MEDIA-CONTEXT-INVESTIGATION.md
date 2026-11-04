@@ -5,6 +5,209 @@ The [test APK](VALIDATION-2.1.3-test4.md) contains the separate audit changes.
 No working history, authorization or session was edited. No native history was
 manually stripped. No APK/component was installed, replaced or published here.
 
+## 2026-11-05 — Decision: retain the archive and control native request context
+
+**Decision checkpoint, not an implementation:** HTTPS-first is not accepted as the
+final accumulation solution. The required outcome remains continuation after cold
+opening and reconnection without repeated manual compaction, with complete retained
+history/originals, preserved task requirements and explicit recovery of visual detail.
+The user requested stopping exploration of the unsupported working mode. No such
+mode is enabled in a working profile, and no CLI fork is implemented here.
+
+**Selected next solution:** native request-context projection for Codex, preferably
+upstream if supported, otherwise a narrowly scoped maintained CLI fork. This choice
+addresses both picker images and native view_image results at their common request
+boundary. It is a design/prototype direction, not authorization to deploy or publish.
+Separating archive from active context alone does **not** require inventing another
+history store: stock CLI already demonstrates that separation. What remains missing
+is the required complete, safe automatic selection/retention policy.
+
+### Final comparison
+
+| Option | Availability for our pinned CLI/model | Requirements and images | Cold opening / reconnection | Maintenance cost and decision |
+| --- | --- | --- | --- | --- |
+| Ordinary native compaction | Actual first-party gpt-6.1-sol compaction was checked on the available device; experimental token-budget windows are a separate, unaccepted mode | Archive/originals can remain intact; a summary is not lossless task/visual retention. Three artificial requirements survived the earlier real compaction, not an arbitrary full task | Successful compaction survived reopening; later native views grew the next request again. A cold compaction also exceeded the 240 s research bound | Low CLI maintenance, but ongoing summarization/recovery behavior and tests. Not selected as the accumulation fix |
+| Change transport | Automatic WS → HTTP fallback works in our actual route. Pinned built-in openai does not honor a supports_websockets override as an explicit HTTPS switch | Does not deliberately discard the old image input or preserve extra requirements; the context problem stays the same | Cold replay still transfers a large context. The fifteen-trial series found retries and two censored attempts despite eventual HTTP successes | Low for retaining existing fallback; HTTPS-first would itself require verified CLI support/change. Auxiliary transport mitigation only, not the final solution |
+| Native request projection / CLI change | No supported per-request old-image selector was found in this pinned app-server API. The normal text/image model interface is usable; implementing local projection must not spoof experimental account/model capabilities | Keep archive untouched; preserve task text/constraints; send selected images plus explicit omitted-image references and retrieve originals/details when needed. This is proposed, not verified behavior | Apply the same deterministic policy on initial continuation, cold resume and every retry. Coordinate/reset WS prior-response state when the projection changes | Highest: Rust patch, builds, upstream rebases, protocol/permission/regression tests and release/source obligations. Selected next candidate; no fork code or rollout yet |
+
+No permanent byte threshold has been chosen from three samples per point. No
+upload/import size limit is changed. A transport-successful request is not proof
+that accumulated context is bounded or that all old image details remain available
+to the model without rereading.
+
+### What the stock CLI actually provides
+
+The inspected native is **Codex 0.166.0**, unchanged SHA-256
+`f2e6c980c937e734644bed1b4a9a018d3e63a0ccbe71aafc85c86a8c6e4b462a`.
+Corresponding upstream source review is pinned to
+`6ff1e1ca3b30fc8b914720681fcf5fe62e95f856`, not an assumed newer public API.
+
+- **Separate archive and prompt:** existing real/local compaction evidence already
+  preserves old API turns and file hashes while changing active model input. The
+  new stock-window fixture below verifies this again for a window transition.
+- **Current request preparation:** session/turn.rs calls clone_history().for_prompt()
+  for initial sampling and again after stream retries. History::for_prompt_annotated
+  normalizes pairs/modalities and handles unavailable file references; it does not
+  select only relevant old images. Modifying the Android picker cannot intercept
+  agent-opened images or this retry reconstruction.
+- **No selector in turn/start:** the pinned TurnStartParams contains new input and
+  execution/settings fields, not an allowlist of old image IDs or a replacement
+  context projection. thread/turns/list pagination controls display/API hydration,
+  not model input. Public [App Server documentation](https://learn.chatgpt.com/docs/app-server)
+  is corroborating documentation, not proof that unrelated public Responses API
+  controls are available under this CLI/login.
+- **File references are not automatic upload reuse:** the protocol accepts image
+  fileId and AttachmentStore can represent provider-owned IDs. But standard
+  app-server MessageProcessor constructs ThreadManager with passthrough_image_store;
+  its InlineAttachmentStore::upload returns Inline bytes. It is not a configured
+  upload-once backend in this setup. Preserved artificial first-party inputs contain
+  20 user images / 24 tool images as inline URLs and zero file IDs. A local path or
+  an application attachment UUID cannot simply be relabelled as a provider file ID.
+  The generic thread/attachment/add API persists typed JSON associations, not an
+  image-upload service or an old-context selection policy. Public Files API support
+  under some other authorization does not establish a usable current CLI path.
+
+### Experimental windows: present in the binary, incomplete for this goal
+
+Source contains new_context, token_budget and a history/notes recovery extension.
+These are not equivalent to a stable selective-image budget:
+
+1. ContextManagement and TokenBudget are UnderDevelopment/default-off. The
+   context-management activation route checks model support, ChatGPT auth/eligible
+   plans and backend compatibility. A separate model-owned activation path exists;
+   its mere metadata presence must not be confused with enabled=true.
+2. The read-only cached catalogue for **gpt-6.1-sol**, fetched
+   `2026-11-04T23:03:36.273148901Z`, reports text/image input, but
+   supports_experimental_context=false; model_messages.token_budget.enabled=false
+   and use_history_notes_extension=false. No context-management tool messages are
+   advertised. This describes the inspected catalogue, not a tested server denial
+   or a claim that all accounts/models permanently lack the feature.
+3. An explicit experimental token_budget opt-in can expose local new_context in a
+   private fixture even without those default activations. That does not prove the
+   full current-account recovery workflow is supported. No capability field, plan,
+   working flag or account was changed to force the gated server-backed route.
+4. new_context requests a new window **without summarization**. Session::start_new_context_window
+   rebuilds initial/world-state context and optionally bounded retained client
+   developer/tool items; it does not promise to carry every arbitrary user task
+   constraint or exact image detail. Client developer/tool retention features are
+   also default-off/UnderDevelopment.
+5. Built-in history/notes recovery calls backend alpha/history/v2 and alpha/notes/v2
+   endpoints. Source can return image attachments from history.read_item, but it
+   depends on an eligible/configured backend, eventually consistent normalized
+   history and network operations. Availability and visual recovery on our real
+   account were not checked. These endpoints were not invoked in this task.
+
+The unsupported working-mode investigation stops here as requested. It is neither
+silently enabled nor used as a shortcut around catalogue/account restrictions.
+
+### One stock-window characterization — checked anew, isolated only
+
+The existing guarded synthetic-provider runner used the exact stock binary, a new
+fake HOME/project and `features.token_budget={enabled=true,use_history_notes_extension=false}`
+**only in that fixture**. No real authorization or workspace profile was inherited.
+A scripted provider requested one actual new_context call. Kernel-level negative
+network tests passed; the only provider path used was /v1/responses. No alpha,
+MCP or plugin calls were made. This tests mechanism, not a real model's autonomous
+choice or real-account eligibility.
+
+| Measured stage | Actual local-provider request bytes / images |
+| --- | --- |
+| Initial artificial task with three requirement IDs and two PNGs | 2,945,815 / 2 |
+| Request immediately following native new_context | 59,114 / 0 |
+| Next continuation | 59,173 / 0 |
+| Native process restart/resume | 59,559 / 0 |
+| Actual view_image of an old original after reopening | 1,503,605 / 1 |
+
+The original API task-turn hash remains unchanged after transition and reopening;
+both originals retain their hashes. However **REQ_KEEP_ORIGINALS, REQ_NO_PUBLISH and
+REQ_VERIFY_RESULT are absent from the new request**. Thus the characterization
+passed, but automatic requirement carry did not. This is absence of the original
+rule text, not proof that a real model could never recover it. The test deliberately
+has no backend notes, and cannot establish semantic recovery or lossless vision.
+No solution acceptance follows from the small request alone. Later image reviews
+can again accumulate unless an additional policy controls them.
+
+Evidence: `.verification/media-context/replay-Sz0snO/codex-c609d493/stock-window-result.json`,
+SHA-256 `aa8fcb76c23f7a53e9871be8650f512747be1e651103e116c0450eb12013d88f`;
+companion stock-window-assessment.json explicitly marks requirement carry,
+automatic selection and real-account backend validation as unfulfilled. Native
+process exit and an independent exact-fixture cwd check found no leftover process.
+Raw history was not edited. A low request size is not labelled as the requested fix.
+
+### What the selected CLI change would have to do
+
+This is the scope to review **before implementation**, not code already present:
+
+- Reuse the persisted native transcript and existing attachment mechanisms. Build a
+  separate, non-destructive request view; do not create a second full chat database
+  or edit rollout JSONL outside native persistence APIs.
+- Cover user images and native view_image results at their common boundary. Give
+  archived image versions stable identities and provenance. Picker originals are
+  copied today; tool-opened project files can later be overwritten. Recovering only
+  by mutable filename, or relying on a downsampled model image as the full original,
+  would be inadequate. Any necessary original snapshot must precede preparation,
+  respect thread access, and must not silently delete old versions.
+- Preserve authoritative task/constraint text and source IDs. Start by changing
+  image representations only, not summarizing away arbitrary requirements. Any
+  later context-window handoff needs an explicit verifiable requirement ledger;
+  LLM-generated notes alone are not proof of completeness.
+- Represent omitted images visibly for both model and user: identity/source,
+  availability, and the fact that exact pixels are currently outside request
+  context. Retain useful bounded previews where appropriate. Never label a preview
+  or text summary as retaining all visual details. An answer requiring old detail
+  must reread the saved original/crop at supported resolution or report inability.
+- Use one policy for initial input, cold reopen and retry reconstruction. Preserve
+  tool call/output pairing and do not change execution, approval or receipt state.
+  New reads must use existing permission checks; no cross-chat snapshot access or
+  execution of archived actions is allowed.
+- Coordinate the projected input with native WS cached requests and previous_response_id.
+  Omitting old bytes from a delta alone can leave old images in server context.
+  A projection change must invalidate incompatible incremental state. Verify both
+  physical request contents and logical server-held context, not only small deltas.
+- Keep request-byte/image accounting and token estimates coherent with the projected
+  view. A token limit or pixel limit alone is not a serialized-byte guarantee.
+  Reopening should reproduce the policy deterministically from retained state;
+  interrupted writes/reads must not corrupt the archive or pretend a detail was read.
+
+A stock app-only window-rotation workflow could reuse some mechanisms, but it is
+not selected as the complete solution: it needs safe task handoff/recovery and
+cannot provide a host pre-request image filter inside a running CLI tool loop.
+Opaque provider summaries, new-context resets and reconstruction into new chats
+must not be substituted for the requested retention guarantees.
+
+### Fork ownership, support burden and risks
+
+| Area | Ongoing ownership / risk |
+| --- | --- |
+| Native Rust core | Maintain projection, archive-image identity/versioning, retry paths, WS state and accounting across upstream changes. This is several core subsystems, not a one-line Android adapter change |
+| Correctness and visible detail | Wrong selection can remove needed evidence; mutable originals, stale indexes and reduced-resolution previews can change answers. Requirement preservation needs explicit tests and transparent omissions |
+| Permissions and recovery | New archive reads must not bypass approvals, reuse another thread's artifacts, or resurrect one-time grants/actions. Resume/crash/rollback tests must cover the new metadata |
+| Protocol / upstream updates | Pin a distinct fork revision and capability; preserve app-server compatibility, old profiles and fallback behavior. Rebase/test security and upstream model/protocol changes; do not globally replace the existing codex command silently |
+| Build / distribution | Reproduce Ubuntu AI ARM64 builds with reviewed dependencies, identity/version/hash, source and build materials. Upstream Apache-2.0 and third-party notices remain applicable; no claim of complete new-binary license audit is made. Future release follows RELEASING.md with new resources, never replacing published binaries/URLs/hashes |
+| Verification | Local payload/logical-WS-state tests, real-route continuation/reopen/reconnect and supported-resolution old-image recovery; then Android/affected-phone checks. Current stock phone acceptance does not certify a new native binary |
+
+No measured maintenance-time estimate is available; the cost ranking is qualitative.
+A maintained fork creates continuing release/security obligations. Upstream support
+for the same policy could remove that fork burden, but it is not assumed available
+in this pinned version. No fork source modification, native rebuild, APK, installation,
+push or publication occurs in this step.
+
+**Next implementation gate:** an isolated request-projection prototype, with full
+history/original/constraint invariants, deterministic reopen/retry, explicit detail
+retrieval, and measured bounded subsequent growth. Stop on lost requirements,
+missing images or permission regression. Keep the working mode off until those
+checks and separately scoped device acceptance pass. Further exploration of the
+unaccepted experimental window mode is not the next task.
+
+Pinned source/capability/representation provenance is retained under
+`.verification/media-context/context-selection-source/manifest.json`,
+model-capability-snapshot.json and image-reference-observations.json. The manifest
+checks 32 original source files at the exact revision. Two failed 404 path guesses
+are recorded and resolved to real pinned paths, not treated as missing features.
+The normal/history compaction and transport numbers are **reused** from the earlier
+specified artifacts; the stock-window characterization is **checked anew**;
+real-account recovery, the proposed fork and device behavior remain **not checked**.
+
 ## 2026-11-04 — Repeated size sweep and the separate local history limit
 
 **Current result:** the 32 MiB adapter limit did not trigger in the new native-image
@@ -154,7 +357,10 @@ possible single huge tool-output history page, older CLI projection or inaccessi
 phone state. The wife's phone and its current installed helper bytes were not
 checked. **No limit was raised.**
 
-### Proposed solution — not implemented or enabled
+### Historical transport candidate — not implemented or enabled
+
+2026-11-05 update: HTTPS-first is rejected as the final accumulation solution.
+The current choice and stock-mode limitations are in the decision section above.
 
 1. Address large **cold/full replay** at the native provider-transport boundary:
    preserve the openai provider identity and login, expose a supported HTTPS choice,

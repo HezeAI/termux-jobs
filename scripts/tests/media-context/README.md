@@ -12,6 +12,7 @@ bash scripts/tests/media-context/run.sh codex-versions
 bash scripts/tests/media-context/run.sh codex-version-boundary
 bash scripts/tests/media-context/run.sh codex-limits
 bash scripts/tests/media-context/run.sh codex-local-history
+bash scripts/tests/media-context/run.sh codex-window
 bash scripts/tests/media-context/run.sh codex
 bash scripts/tests/media-context/run.sh claude
 bash scripts/tests/media-context/run.sh gemini
@@ -91,6 +92,14 @@ compaction-threshold, vision-quality or real-provider latency tests**.
   Compares these sizes with the >32-MiB request actually received by the local
   provider. This separates API history projection from model-context serialization;
   it is not an authenticated WS/HTTPS A/B or Android UI acceptance.
+- `codex-window`: characterizes the actual stock experimental new_context mechanism
+  with explicit token_budget opt-in only in fake HOME and no history-notes backend.
+  Checks archive/original preservation, cold resume and an actual old-file view.
+  It also records that original task markers disappear from request context: a
+  successful characterization is **not** acceptance of requirement retention or
+  automatic selective-image behavior. It makes no current-account eligibility claim
+  and does not enable the working mode. No further unsupported-mode exploration is
+  planned; this fixture is preserved evidence, not a suggested production switch.
 - Claude: production SDK adapter + real CLI, a new/resumed native session and
   the actual Anthropic HTTP client. The separate controller socket is bypassed
   because this fence intentionally denies filesystem Unix listeners. That control
