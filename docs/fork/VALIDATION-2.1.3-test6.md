@@ -107,6 +107,26 @@ Never send keys, backup archives or full private diagnostics.
 | Create disposable Claude/Gemini/OpenCode profiles. Reject shell and direct file changes; inspect markers, then allow once. | No leaves files unchanged; Allow changes them. Outside-project native gates may reject before our card. | Agent, tool, path inside/outside, choice and marker. |
 | With a separate test account only if available, check Gemini API and Vertex access. | Correct requested auth mode; successful test access or clear provider/IAM error, without fallback. | Mode and safe stage/error; no credentials. |
 
+### Безопасное завершение процесса для проверки
+
+1. В общем рабочем приложении создайте отдельную Gemini-сессию с искусственным
+   ключом и одноразовой папкой. Для обычной отмены используйте её штатную кнопку
+   остановки с подтверждением. Не применяйте «закрыть всё», killall/pkill или
+   принудительную остановку общего приложения. Остановка сессии проверяет
+   отмену/повтор, **не аварийное восстановление процесса Android**.
+2. Проверку аварии приложения выполняйте только на отдельном тестовом телефоне
+   или независимо изолированном экземпляре с собственными данными. Убедитесь,
+   что там нет рабочих сессий и авторизаций, а единственный запущенный профиль —
+   искусственный Gemini. Отдельный профиль внутри рабочего приложения недостаточен.
+3. Начните тестовый запуск, запишите показанный этап, затем в настройках Android
+   остановите именно этот тестовый экземпляр. Откройте его снова и повторите
+   запуск сохранённого профиля. Ожидаются прежний режим, отсутствие дубля/чужого
+   ключа и запуск либо понятная безопасная ошибка. Зафиксируйте, остался ли
+   прежний дочерний процесс; не считайте его завершившимся только по закрытому окну.
+4. Если изоляцию экземпляра или принадлежность процесса подтвердить нельзя,
+   **пропустите аварийную проверку** и сообщите это. Не подставляйте PID вручную
+   и не завершайте неизвестный процесс. Телефонная проверка остаётся незавершённой.
+
 Codex new-profile startup and shell/direct-edit No/Allow passed the developer's
 test5 phone acceptance. That result is retained, and does not close the remaining
 agents, authorization, process recovery or backup checks above.
