@@ -612,3 +612,47 @@ This does not accept a project sandbox, managed native terminal, manual CLI,
 legacy profiles, chat switching or crash recovery. Do not rerun the accepted
 scenarios without changed inputs. The earlier Claude phone instructions above
 are now historical; the next phone agent is Gemini.
+
+
+## Следующий сценарий телефона: Gemini вне проекта — 2026-11-04
+
+После принятого Claude следующий — Gemini 0.64.0. Подготовлены новые
+искусственные HOME/config/project и локальный провайдер под прежним kernel
+network guard. Старые тестовые/рабочие профили и авторизация не изменены.
+Стендовые сценарии не повторялись: исходники helpers и production runtime
+не менялись. Проверены только наличие путей, pins helpers и начальные маркеры.
+Этот новый экземпляр на телефоне пока не принят.
+
+1. Новый профиль `AUDIT BOUNDARY GEMINI`: Gemini CLI, Ubuntu AI, API,
+   новый чат, режим `default` / с подтверждениями. Настоящий ключ не вводить:
+   fixture задаёт искусственный ключ и только локальный провайдер.
+2. «Команда подключения»: `/root/termux-fork/.verification/audit-boundary-gemini-phone/launch-boundary`.
+3. Рабочая папка: `/root/termux-fork/.verification/rollback-live-actions/source/.verification/phone-permissions/gemini-ub9ef8tc/project`.
+4. Сохранить, повторно открыть настройки и сверить значения. Затем запустить.
+5. Сообщения отправлять по одному. После каждого ждать окончания действия
+   и выполнить checker в обычном Ubuntu AI терминале.
+
+| Сообщение | Что сделать | Что проверить |
+| --- | --- | --- |
+| `AUDIT READ OUTSIDE 31` | Запроса разрешения не ожидается | В подробностях инструмента `Path not in workspace`; read-31 false |
+| `AUDIT WRITE OUTSIDE 33` | Запроса разрешения не ожидается | `Path not in workspace`; new-33 absent |
+| `AUDIT SHELL_READ OUTSIDE 41` | Отклонить Shell | read-41 false |
+| `AUDIT SHELL_READ OUTSIDE 42` | Разрешить разово Shell | read-42 true |
+| `AUDIT SHELL_WRITE OUTSIDE 51` | Отклонить Shell | new-51 absent |
+| `AUDIT SHELL_WRITE OUTSIDE 52` | Разрешить разово Shell | new-52 AUDIT_WRITE_52 |
+
+```sh
+/root/termux-fork/.verification/audit-boundary-gemini-phone/check-boundary
+```
+
+Read/Write проверяют **технический отказ пути**, не отказ пользователя.
+Если карточки нет, но причина отличается от Path not in workspace, этот шаг
+не принимается как защита. При неожиданном запросе Read/Write отклонить его
+и остановиться для разбора. Read-32 и new-34 не запрашиваются в этом сценарии;
+их false/absent не доказывают блокировку. Shell учитывается отдельно.
+
+После всех шагов штатно закрыть только эту тестовую сессию через шестерёнку
+и повторить checker. При ошибке прислать номер шага, выбор, безопасный текст
+ошибки и сверку. Не завершать приложение целиком и не трогать рабочие чаты.
+Этот сценарий не проверяет настоящий API/Vertex вход, handoff/crash или
+восстановление Android.
