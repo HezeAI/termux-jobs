@@ -797,7 +797,7 @@ public class WorkspaceNavigationTest {
         shadowOf(Looper.getMainLooper()).idle();
         assertEquals(WorkspaceLanguage.code(activity).equals("ru")?"Права: Чтение":"Permissions: Read", ((TextView)findDescription(decor,"Доступ Codex")).getText().toString());
         assertNotNull(findDescription(decor,"Codex project write scope"));
-        assertNotNull(findDescription(decor,"Codex action confirmations"));
+        assertNotNull(decor.findViewWithTag("codex-command-confirmations"));assertEquals(WorkspaceLanguage.code(activity).equals("ru")?"Подтверждать недоверенные команды":"Confirm untrusted commands",((TextView)decor.findViewWithTag("codex-command-confirmations")).getText().toString());
         findDescription(decor,"Чат Codex").performClick(); AlertDialog chat=ShadowAlertDialog.getLatestAlertDialog();assertEquals(3,chat.getListView().getAdapter().getCount());chat.getListView().performItemClick(null,0,0);
         assertNotNull(findDescription(decor,"Выбрать рабочий каталог"));
         shadowOf(Looper.getMainLooper()).idle();
