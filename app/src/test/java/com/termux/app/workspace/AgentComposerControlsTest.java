@@ -31,17 +31,22 @@ public class AgentComposerControlsTest {
   for(int i=0;i<2;i++){row.measure(View.MeasureSpec.makeMeasureSpec(320,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(900,View.MeasureSpec.AT_MOST));row.layout(0,0,320,row.getMeasuredHeight());}
   int one=input.getHeight();assertTrue(one>input.getLayout().getHeight()+input.getCompoundPaddingTop()+input.getCompoundPaddingBottom());assertEquals(one,c.pair.getHeight());
   input.setText("one\ntwo\nthree\nfour");c.present(true);for(int i=0;i<2;i++){row.measure(View.MeasureSpec.makeMeasureSpec(320,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(900,View.MeasureSpec.AT_MOST));row.layout(0,0,320,row.getMeasuredHeight());}
-  assertTrue(input.getHeight()>one);assertEquals(one,c.pair.getHeight());assertEquals(input.getBottom(),c.pair.getBottom());a.finish();
+  assertTrue(input.getHeight()>one);assertEquals(one,c.pair.getHeight());assertEquals(input.getBottom(),c.pair.getBottom());
+  input.setText("one");c.present(true);for(int i=0;i<2;i++){row.measure(View.MeasureSpec.makeMeasureSpec(320,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(900,View.MeasureSpec.AT_MOST));row.layout(0,0,320,row.getMeasuredHeight());}assertEquals(one,input.getHeight());assertEquals(one,c.pair.getHeight());assertEquals(input.getBottom(),c.pair.getBottom());a.finish();
  }
  @Test public void restoredDraftBeyondMaxLinesKeepsMeasuredOneLineToolsAndText(){
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();LinearLayout row=new LinearLayout(a);row.setOrientation(LinearLayout.HORIZONTAL);
   EditText input=new EditText(a){@Override protected void onMeasure(int w,int h){super.onMeasure(w,h);setMeasuredDimension(getMeasuredWidth(),getMeasuredHeight()+2);}};
-  input.setLayoutParams(new LinearLayout.LayoutParams(0,-2,1));input.setPadding(12,10,12,10);input.setMinHeight(48);input.setMaxLines(6);input.setTextSize(12);input.setText("one");input.measure(View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));int one=input.getMeasuredHeight();
-  String draft="one";for(int i=0;i<20;i++)draft+="\nnext";input.setText(draft);input.setSelection(2);
-  WorkspaceIconButton star=new WorkspaceIconButton(a),send=new WorkspaceIconButton(a),clip=new WorkspaceIconButton(a);row.addView(star);row.addView(input,new LinearLayout.LayoutParams(0,-2,1));row.addView(send);AgentComposerControls c=new AgentComposerControls(a,row,input,star,send,clip);c.present(true);
-  for(int i=0;i<2;i++){row.measure(View.MeasureSpec.makeMeasureSpec(320,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(900,View.MeasureSpec.AT_MOST));row.layout(0,0,320,row.getMeasuredHeight());}
-  assertTrue(input.getLineCount()>input.getMaxLines());assertEquals(one,c.pair.getHeight());assertEquals(input.getBottom(),c.pair.getBottom());assertEquals(draft,input.getText().toString());assertEquals(2,input.getSelectionStart());a.finish();
+  input.setPadding(12,10,12,10);input.setMinHeight(48);input.setMaxLines(6);input.setTextSize(12);input.setText("one");
+  WorkspaceIconButton star=new WorkspaceIconButton(a),send=new WorkspaceIconButton(a),clip=new WorkspaceIconButton(a);row.addView(star);row.addView(input,new LinearLayout.LayoutParams(0,-2,1));row.addView(send);AgentComposerControls first=new AgentComposerControls(a,row,input,star,send,clip);first.present(true);measureComposer(row);
+  int one=input.getHeight();assertEquals(one,first.pair.getHeight());
+  String draft="one";for(int i=0;i<20;i++)draft+="\nnext";input.setText(draft);input.setSelection(2);first.present(true);measureComposer(row);assertTrue(input.getLineCount()>input.getMaxLines());assertEquals(one,first.pair.getHeight());assertEquals(input.getBottom(),first.pair.getBottom());
+  first.present(false);AgentComposerControls reopened=new AgentComposerControls(a,row,input,star,send,clip);reopened.present(true);measureComposer(row);
+  System.out.println("COMPOSER_REOPEN one="+one+" field="+input.getHeight()+" layout="+input.getLayout().getHeight()+" lines="+input.getLineCount()+" visible="+input.getMaxLines()+" bottomPadding="+input.getLayout().getBottomPadding()+" tools="+reopened.pair.getHeight());
+  assertEquals(one,reopened.pair.getHeight());assertEquals(input.getBottom(),reopened.pair.getBottom());assertEquals(draft,input.getText().toString());assertEquals(2,input.getSelectionStart());
+  input.setText("one");input.setSelection(2);reopened.present(true);measureComposer(row);assertEquals(one,input.getHeight());assertEquals(one,reopened.pair.getHeight());assertEquals(input.getBottom(),reopened.pair.getBottom());assertEquals(2,input.getSelectionStart());a.finish();
  }
+ private void measureComposer(LinearLayout row){for(int i=0;i<2;i++){row.measure(View.MeasureSpec.makeMeasureSpec(320,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(900,View.MeasureSpec.AT_MOST));row.layout(0,0,320,row.getMeasuredHeight());}}
  @Test public void overlayTracksMultilineHeightAndRestoresTerminalGeometryWithoutChangingDraft()throws Exception{
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();RelativeLayout root=new RelativeLayout(a);FrameLayout host=new FrameLayout(a);host.setId(9001);LinearLayout row=new LinearLayout(a);row.setId(9002);row.setOrientation(LinearLayout.HORIZONTAL);View toolbar=new View(a);toolbar.setId(9003);
   RelativeLayout.LayoutParams hostParams=new RelativeLayout.LayoutParams(-1,-1);hostParams.addRule(RelativeLayout.ABOVE,9003);root.addView(host,hostParams);

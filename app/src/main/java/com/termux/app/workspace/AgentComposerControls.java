@@ -52,12 +52,13 @@ final class AgentComposerControls {
     private int measuredBaseline(){
         android.text.Layout layout=input.getLayout();int lines=layout==null?1:layout.getLineCount();
         if(input.getMaxLines()>0)lines=Math.min(lines,input.getMaxLines());
-        return input.getMeasuredHeight()-Math.max(0,lines-1)*input.getLineHeight();
+        int bottom=layout!=null&&layout.getLineCount()>lines&&input.getIncludeFontPadding()?layout.getBottomPadding():0;
+        return input.getMeasuredHeight()-Math.max(0,lines-1)*input.getLineHeight()+bottom;
     }
     private int singleLineHeight(){
         int style=fieldStyle();android.text.Layout measured=input.getLayout();
         if(measured!=null&&input.getMeasuredHeight()>0&&
-            (measured.getLineCount()==1||measuredOneLine==0||measuredStyle!=style)){
+            (measuredOneLine==0||measuredStyle!=style)){
             // Complete View measurement includes decoration absent from text Layout.
             measuredOneLine=measuredBaseline();
             measuredStyle=style;

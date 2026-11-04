@@ -12,8 +12,8 @@ history and defects that existed only during that development.
 | --- | --- |
 | APK | Termux-Jobs-v2.1.3-arm64.apk |
 | Package / version | com.termux / 2.1.3 / 1485 |
-| Bytes | 40,481,508 |
-| APK SHA-256 | `c96127a70424936155ef8a76e8fdaf02b882dd98411ade1c4c3ecc18c1ad931c` |
+| Bytes | 40,481,588 |
+| APK SHA-256 | `787a4c5dbf162490891620bbb58e899f9ae3097d46889857b6237f27af75fa3d` |
 | Certificate SHA-256 | `dd37d983cd2496ebe49c7e88ddbc0088f311d38b8a8503e4392c81b48a11a644` |
 | ABI / signature / debug | ARM64 / APK Signature Scheme v2 verified / nondebuggable |
 | Runtime / assets | 14,214 defined DEX classes; 122 source-matched assets; 7 ARM64 ELF payloads |
@@ -208,3 +208,25 @@ Five composer cases and the controller/header consumer checks pass locally.
 An initial new-fixture NPE was caused by measuring an unparented EditText without
 LayoutParams before changing its text; assigning its real parent parameters fixed
 the fixture without weakening assertions. No production exception was suppressed.
+
+
+### Capped restored draft and complete transition
+
+The [second CI run](https://github.com/HezeAI/termux-jobs/actions/runs/41823554173)
+for `436c40f2abdf3b2d5390803100a820269b629a27` passed the original 61/59 case,
+but failed the new restored-draft case (63/61). It remains failed, with 8 skips
+and debug assembly skipped. The retained first failure and this failure are distinct.
+
+Android 9/API 28 TextView's getDesiredHeight caps DynamicLayout/BoringLayout by
+getLineTop(maxLines); that truncation omits the full layout's last-line bottom
+font padding. The baseline reconstruction must restore the actual reported bottom
+padding when capped, rather than assume zero. See [matching AOSP source](https://android.googlesource.com/platform/frameworks/base/+/android-9.0.0_r1/core/java/android/widget/TextView.java).
+Production uses Layout.getBottomPadding(), not a literal 2-pixel correction.
+
+The strict test now checks one line → 21-line draft → new controls reopened with
+that draft → one line, retaining the original measured baseline, text, selection
+and lower alignment. The cache remains immutable for unchanged style, avoiding a
+stale multiline measured height being recaptured during shrink. Local API 28
+metadata: one=61, capped field=236, Layout=739, 21 total/6 visible lines, bottom
+padding=0, reopened tools=61. CI records its actual metrics independently. This
+is a View/controller fixture, not Android process recovery or device acceptance.
