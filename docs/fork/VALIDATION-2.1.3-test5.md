@@ -135,3 +135,22 @@ policies, project isolation, legacy profile lifecycle, chat-switch races and
 recovery are not established by this acceptance. Attachment accumulation remains
 an independent unresolved task. No APK rebuild or binary change accompanies this
 acceptance record.
+
+## Remaining phone checks
+
+Use test5 and separate test profiles/folders. Keep working sessions/accounts intact.
+Do not force-stop the shared application while any working session exists. Never
+send keys, full authorization screens, private messages or raw backup archives.
+
+| Step / action | Expected result | If it fails, report |
+| --- | --- | --- |
+| 1. For Claude, Gemini and OpenCode, create a test profile in a new folder. Save, reopen and start it. Use existing authorized setup without logging out or replacing working credentials. | Agent/environment/folder/confirmation setting survives. Startup reaches chat or clearly requests authorization. | Agent, CLI version if known, selected policy, stage and redacted error. |
+| 2. Create shell.txt and edit.txt containing BEFORE in that folder. Request one shell write, then one direct file edit. Reject each, inspect independently, then repeat and allow once. | No preserves BEFORE; Allow changes it. Codex's reported checks already pass. Gemini external direct writes may be denied before a card; OpenCode outside paths have an additional scope gate. | Agent, exact tool, test path inside/outside, button pressed, actual file contents/marker; distinguish missing card from denial. |
+| 3. For a new Gemini API test profile, use only an artificial invalid key. Cancel startup and retry that profile. | Clear authorization error; draft/key transport does not become another profile's operation. Invalid key never produces successful model access. | Stage, safe error, cancel/retry order and whether another profile changed; no key text. |
+| 4. On a spare test device/instance only, test Gemini API and Vertex login with a test account. Restart that test profile. | Correct requested auth mode; either successful test access or explicit provider/IAM error, without fallback. | API/Vertex, stage, error code and observed mode. Existing working authorization must not be replaced. |
+| 5. On an isolated device with no working sessions, terminate the app process during a test Gemini launch, reopen and retry. | New attempt starts or gives an explicit error; no duplicate operation or cross-profile key use. Hiding a window is not this test. | Exact sequence, stage before termination, result after reopening; skip on the working phone. |
+| 6. Open full and selective backup forms in RU/EN, check the unencrypted/secrets warning and consent, then cancel. Actual export/restore belongs on an isolated instance containing only fake profiles/files. | Warning is visible; no creation before consent; restore creates a separate copy and preserves source markers. | Language, form, consent state, component selection, safe error and marker difference. Never send the archive. |
+
+OpenCode connection backup has the separately confirmed A-BACKUP-02 scope gap;
+test5 is not its fix. See [audit](SECURITY-AUDIT-STAGE2.md). These steps do not close
+unreported path/policy coverage, device Keystore internals or attachment failures.
