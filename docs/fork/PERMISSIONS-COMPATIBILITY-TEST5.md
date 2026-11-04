@@ -348,3 +348,86 @@ checks. Assistant native fixtures remain a separate source. No repeat is needed
 without a relevant change or failure. Outside operations/preservation beyond the
 shown artificial marker values, saved-profile policy reopening, real login,
 shutdown, abnormal Android lifecycle and backup/restore are not inferred.
+
+
+## 2026-11-04 — Prepared OpenCode phone fixture; component guard retained
+
+**Installed CLI confirmed independently by the assistant**, using the stock
+read-only `agent-dependencies.sh check opencode api ubuntu-ai` with a fresh shell.
+Result: READY:opencode-cli, READY:node, CHECK:done. The existing npm fallback is
+`/root/.local/share/termux-jobs/agents/node_modules/.bin/opencode`, resolving to
+`@opencode/cli/bin/opencode.exe`, version **2.0.28**, SHA-256
+`3549c97d73c8046fe06eecd35ce8c928fc8f45e1eae3e4bf017430c168ba04c9`.
+The absence of `agents/bin/opencode` alone was not absence of the installed CLI.
+No component installation/update was performed or requested; production component
+checks still match test7 source `0a51e24c`, with no skips or successful fake checks.
+
+New assistant checks use that exact installed executable, Node 22.22.1, ordinary
+production preparation/bootstrap/bridge, Build, effective `ask` policy readback,
+local model catalogue and supported model-change/readback for `audit/audit`.
+Shell and direct Write Deny/Allow once all pass against actual artificial files;
+owned controller stop is acknowledged and its launch exits. **Phone pending.**
+The preceding tool-cache binary had identical bytes; tests were rerun because the
+runtime path changed to the installed executable. Five new synthetic preflight
+tests refuse default/existing/foreign connections, full-access mode and a parallel
+launch before any provider/child starts. They are fixture tests, not phone results.
+Fresh kernel network guard negatives pass. Initial fixture/probe failures (shell
+quoting, missing write-half-close in the local RPC client, unset initial model,
+`default` variant normalization) remain in evidence, not claimed as app failures.
+
+The connection executable preserves the app's shell command/arguments and actual
+permission path. A **private fixture executable shim** forwards native arguments
+unchanged and sets the CLI's XDG config/data/cache/state to directories under the
+fixture: the production bridge otherwise overrides XDG with its connection path.
+Only the per-run control password is forwarded; synthetic provider config is local.
+HOME, git project and CLI history are separate; no existing connection is accepted.
+The app still creates its ordinary session-link/receipt files under the newly
+selected test connection. It is created through the UI by the developer; setup
+never reads or edits existing app connections. This is not filesystem isolation
+or a full file-open trace. Provider requests are capped at 2 MiB and 512 scalar
+metadata events, without saving HTTP bodies, prompts or keys. No cloud route,
+MCP or plugin setup is included. Those areas remain excluded/unverified.
+
+### Phone setup, in order
+
+1. Create a **new OpenCode profile**, Ubuntu AI, Build, **С подтверждениями**.
+   Leave **Ограничивать внешние пути · OpenCode** off for this test; the fixture
+   refuses any different permission policy rather than weakening it.
+2. Connection → Accounts and API keys → **+ Подключение**. Name it
+   **AUDIT OpenCode**. Create, then **close** the key editor with no key and no
+   model-catalogue request. Return to Connection and explicitly select that new
+   name. Do not use Main or any existing connection. Opening the ordinary key or
+   model setup before the guarded launch can create its connection directory;
+   an already-existing directory is intentionally refused, not overwritten.
+3. Keep model **По умолчанию** before first launch. Project:
+   `/root/termux-fork/.verification/audit-opencode-phone/project`.
+   Connection executable, no arguments:
+   `/root/termux-fork/.verification/audit-opencode-phone/launch-opencode`.
+   Save/reopen, check fields, then launch this test profile.
+4. In the **running chat's OpenCode status**, open Model. Search `audit`, select
+   **Synthetic audit / audit**, default variant, and confirm Apply. This uses the
+   existing live proxy/model route tested above, not an unguarded settings query.
+   Confirm the displayed provider/model is `audit/audit`. Do not send a test tool
+   request before that selection. If it is missing, stop and report the safe error.
+5. Send four messages, one at a time, checking the file after each:
+
+| Message | UI answer | Expected file |
+| --- | --- | --- |
+| `AUDIT SHELL INSIDE 1` | Deny | `project/shell.txt` remains `AUDIT_BEFORE` |
+| `AUDIT SHELL INSIDE 2` | Allow once | `project/shell.txt` becomes `AUDIT_SHELL_2` |
+| `AUDIT WRITE INSIDE 3` | Deny | `project/write.txt` remains `AUDIT_BEFORE` |
+| `AUDIT WRITE INSIDE 4` | Allow once | `project/write.txt` becomes `AUDIT_WRITE_4` |
+
+In a separate ordinary **Ubuntu AI terminal**, check with
+`/root/termux-fork/.verification/audit-opencode-phone/check-markers`.
+Report intermediate denial checks explicitly; final marker values alone do not
+prove them. Outside marker lines are only those files' displayed values, not
+proof of broader preservation or an outside-project permission check.
+Finish with the test session's gear → **Закрыть сессию** → confirm, wait for close.
+No force-stop of the application or other sessions is needed. If startup offers
+installation or any guard/model/approval check fails, go Back and report it;
+do not install, bypass the guard, select Main, or use Full access to continue.
+Evidence: `.verification/phone-permissions/opencode-host-inventory*.log`,
+`opencode-installed-probe.log`, `opencode-installed-safety.log`,
+`latest-opencode-verified-root.txt`, `opencode-phone-final-root.txt`,
+`opencode-phone-final-enforcement.log`. Claude/Gemini fixtures remain unchanged.
