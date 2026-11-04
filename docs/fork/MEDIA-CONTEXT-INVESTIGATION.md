@@ -170,9 +170,11 @@ HezeAI subsequently requested testing from the available device through the old
 server-side route. An existing launcher was found at
 `/root/termux-fork/.tools/codex-geohide-hysteria/agent-via-hysteria`. Its manager
 allocates per-agent instances and checks PID/start identity; no working tunnel
-should be stopped. That external test is **pending**, including account/model
-eligibility for remote-v2 compaction and a precise declaration of any route/device
-differences. No external before/after outcome is claimed yet.
+should be stopped. The first available-device external run is recorded below: a
+large cold continuation completed after WS failures and HTTPS fallback, but cold
+manual compaction did not complete within the research deadline. A complete real
+before/after reduction is not established. A live-connection, native-view candidate
+is a separate follow-up, not a relabelling of that failed run.
 
 Git comparison is also now requested: from first attachment support through
 published stable tags, compare image preparation, adapter/history/connection
@@ -181,9 +183,9 @@ changes and CLI selection. Initial inventory is preserved in
 v1.6.0–v2.1.3 tags retain fallback installer **0.163.0**; missing-only preparation
 prefers an existing PATH CLI. Thus the measured existing **0.166.0** must not be
 called an automatic APK-bundled upgrade without additional installation evidence.
-Next: compare unique stable adapter versions with a fixed native CLI/provider;
-only bisect an observed difference, and keep application, CLI and network causes
-separate. Old APK installation/data rollback are prohibited.
+The stable-adapter comparison and its observed modelPath boundary are recorded
+below. Keep application, CLI and network causes separate. Old APK installation
+and data rollback are prohibited.
 
 Consolidated validator passed for compaction/chain/WS roots; summary SHA-256
 `b969cb474192f5560d5a6e75b111d3a0b66aacaa72d4570a7057d27296ee48ea`.
@@ -191,6 +193,114 @@ Reproduce using codex-compact, codex-chain, codex-websocket modes and the
 [safe harness documentation](../../scripts/tests/media-context/README.md).
 MCP/plugins remain excluded. No app/CLI setting or common/project prompt is
 changed, no APK is built/installed, and nothing is pushed or published here.
+
+### Stable-version comparison — checked anew, synthetic local provider
+
+Sources were inventoried from 18 stable tags, v1.6.0–v2.1.3. The native chat
+foundation predates attachments: user attachment support first appears in v2.0.2,
+commit `7aecf5af812887533d214c6961555bc82f4fb6bf`. The 32 MiB large-history WS
+message setting already exists in v1.6.5; the 20-second handshake, 25-second RPC
+acknowledgement and private 15-second socket bounds did not newly increase image
+replay after attachments. v2.1.3's wire change admits the typed `untrusted` policy,
+not a larger inference body or different model-turn timeout.
+
+| Stable source | Relevant change, from Git | Limit of this evidence |
+| --- | --- | --- |
+| v2.0.2 | Chat attachment manifests and native Codex localImage inputs; Codex PNG/JPEG within the 20 MiB bound use the original | Static Java review plus actual Node/native replay; not an old APK/UI test |
+| v2.0.6 | Larger admitted originals; prepared image `modelPath` is validated, used for inference and accounted for in history cards | Preparation does not rewrite prior native tool results |
+| v2.0.8 / v2.1.0 | Connection/recovery presentation and retained helper history changed | No measured reduction of cold native image replay |
+| v2.1.1 | Gallery/unsupported-format preparation improvements | Ordinary Codex PNGs within the raw bound still use the original |
+| v2.1.2 → v2.1.3 | ChatAttachments.java is byte-identical; action clocks/approval adapter changes | No new Android image-preparation change in this interval |
+
+The fixed native input is Codex 0.166.0, SHA-256
+`f2e6c980c937e734644bed1b4a9a018d3e63a0ccbe71aafc85c86a8c6e4b462a`,
+model gpt-6.1-sol, low effort, the same guarded artificial HTTP provider and
+20 synthetic originals. Native `thread/fork` preserves identical initial turn
+arrays without editing journals. Each tag runs its own exact JS adapter and
+relative dependencies in the fixture: cold reopen, two added attachments, reopen
+with paged history, and an injected dropped response with retry.
+
+Six stable adapters (v2.0.2, v2.0.6, v2.0.8, v2.1.0, v2.1.1, v2.1.3) completed
+24 cases. A separate v2.0.5/v2.0.6 boundary run completed eight cases. Every tag
+retained all 20 original attachment paths across history pages and 22 paths after
+adding two attachments. All owned fixture children exited.
+
+The observed image difference narrows to
+`5a1fa804d5caf77b60bcba28a9f99280e72f045a`: `a.path` becomes
+`a.modelPath || a.path`. With a common manifest that supplies a prepared JPEG for
+one of the two new PNGs, the v2.0.5 boundary run sends 31,810,041 bytes and v2.0.6
+sends 30,732,370 bytes. Image counts stay 22; image hashes establish original PNG
+versus prepared JPEG. After reopening, the respective bodies are 31,810,077 and
+30,732,727 bytes. Control/retry messages occasionally add 321 bytes; whole-body
+hashes or a fixed 321-byte offset must not be confused with image-data changes.
+For example, the ordinary cold baseline is 28,922,695 bytes, while one six-tag
+case is 28,923,016. Their 20 image hashes match.
+
+This is a preparation-contract improvement, **not a regression explaining the
+reported break**: v2.0.2 did not ordinarily prepare modelPath for those small Codex
+PNGs. The deliberately common manifest isolates adapter behavior. Android Bitmap
+conversion, old Java execution, actual CLI 0.163.0 versus 0.166.0 behavior, and
+external network differences are not established by these JS tests. The fixed
+CLI comparison did not reproduce a new stable-version growth of the 20 old PNGs.
+Video's reviewed sampling remains bounded at 12 frames / 1280-pixel JPEG quality
+85; no runtime video-regression comparison is claimed in this pass.
+
+Evidence: `.verification/media-context/git-history/release-inputs.json` and source
+copies; `replay-1O4qrP/codex-c65343bd/versions-result.json` SHA-256
+`aa547ec3e321e8bd3ad8f58c23fbad9b57bb724b58615be40727ce2cf00e6ea0`;
+`replay-NMgLJZ/codex-638268cc/versions-result.json` SHA-256
+`39c588a09c535aa0bd84d4e5338340f6fd7c6e2fa38472d63c426d8b7c6027c8`.
+The earlier `replay-rgtum9` assertion expected identical image hashes even for
+modelPath; it failed and remains retained. The corrected classification explicitly
+asserts the old/new preparation boundary and equality among later adapters.
+
+### First real external run — completed baseline, incomplete candidate
+
+The available-device run uses the normal native ChatGPT login through the existing
+per-instance Hysteria launcher, then the existing Selectel/GeoHide server route.
+No authorization contents were read or copied. Only newly created artificial
+threads were loaded. MCP/plugins/skills were disabled for the test, shell was
+unavailable, interactive operations were rejected, and project-document input was
+disabled. This is not a kernel filesystem jail. The device/account, per-instance
+port and synthetic first image differ from the unavailable wife's phone; its
+numeric visual marker is deliberately added only to the new fixture copy.
+
+Read-only server metadata confirms the preferred relay source SHA-256
+`6d770234913a6c2e281fab38a2ccd1e4fbc56b51b8a81d7b818db7b7cf0542bb`,
+configured read-idle 600 seconds and the separate 15-second writer.drain bound.
+That confirms a potential route constraint, not which hop reset this model request.
+No relay, key, route, session or service setting was changed.
+
+| Artificial native case | Measured outcome |
+| --- | --- |
+| Short control | Completed in 12.50 s |
+| Five batches of four user localImage inputs | All completed; 71.12 / 72.75 / 68.86 / 55.67 / 49.00 s; no view_image calls |
+| Native process restart / cold continuation with 20 images | Completed in 146.26 s, after four retry events and explicit WS → HTTPS fallback |
+| Manual remote-v2 compaction after a separate cold resume | No completed compaction within 240.04 s; one stream-disconnected retry and explicit HTTPS fallback |
+
+The cold continuation recalled all three requirement IDs and their meanings and
+read the visual marker 73921 without another view. Trace request representations
+contain 20 inline images on each of five attempts: 28,793,396 / 28,793,598 /
+28,793,598 / 28,793,598 / 28,793,438 JSON bytes. The failed compaction's recorded
+logical request is 28,791,200 bytes. Native traces can include logical/warmup
+requests and do **not** establish compressed TLS bytes or exact provider receipts.
+No plaintext collector is inserted into this authenticated route. Which external
+hop reset the connection remains unknown; no presumed 16 MiB cap is asserted.
+
+This failure also occurs using native app-server without the Node/Android chat
+adapter. It therefore does not require that adapter; it does not rule out other
+application regressions. The failed candidate provides no after-compaction,
+reopen or old-image result and does not establish account/model ineligibility.
+240 seconds is the research comparison deadline, not a new application timeout.
+
+All fixture originals retain their hashes. The owned native processes exited;
+a separate PID/start-identity observer also found all 14 observed descendants
+exited, with no signals sent by that observer. Evidence:
+`.verification/media-context/external-current-device/experiment-ae116ce6/`
+(`result.json`, native traces, `dataset.json`, `owned-process-observation.json`),
+plus read-only `server-route-metadata.json`. The next candidate keeps the seed
+connection alive through explicit foreground compaction and uses actual native
+view_image outputs; it must be reported separately even if unsuccessful.
 
 ## 2026-11-04 — Prompt instructions versus native image replay
 

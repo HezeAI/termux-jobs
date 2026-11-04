@@ -8,6 +8,8 @@ bash scripts/tests/media-context/run.sh codex-prompts
 bash scripts/tests/media-context/run.sh codex-compact
 bash scripts/tests/media-context/run.sh codex-chain
 bash scripts/tests/media-context/run.sh codex-websocket
+bash scripts/tests/media-context/run.sh codex-versions
+bash scripts/tests/media-context/run.sh codex-version-boundary
 bash scripts/tests/media-context/run.sh codex
 bash scripts/tests/media-context/run.sh claude
 bash scripts/tests/media-context/run.sh gemini
@@ -67,6 +69,13 @@ compaction-threshold, vision-quality or real-provider latency tests**.
   The initial fixture used an invalid HTTP/1.0 upgrade and fell back to HTTP;
   that failed run is retained. The corrected fixture requires HTTP/1.1 and asserts
   every request uses WebSocket, so fallback cannot be misreported as success.
+- `codex-versions` / `codex-version-boundary`: exact stable-tag Node adapters
+  against the same pinned native CLI, forked artificial history and guarded HTTP
+  collector. Checks modelPath versus original input hashes, paged old attachment
+  visibility, cold reopen and injected response-drop retry. The boundary mode
+  narrows the observed preparation difference to v2.0.5/v2.0.6. An artificial
+  common modelPath manifest isolates the adapter; it does not reproduce old Android
+  Bitmap preparation or establish a real-provider/old-CLI regression.
 - Claude: production SDK adapter + real CLI, a new/resumed native session and
   the actual Anthropic HTTP client. The separate controller socket is bypassed
   because this fence intentionally denies filesystem Unix listeners. That control
@@ -98,3 +107,16 @@ python3 scripts/tests/media-context/summarize-context-probes.py COMPACT_ROOT CHA
 This asserts original hashes, retained requirements/history, matching explicit
 model settings and provider receipts, and the WebSocket delta/full-replay boundary.
 It does not convert a scripted local result into an external-route or phone pass.
+
+For an explicitly authorized **synthetic real-route** experiment only, summarize
+its preserved native trace without reading authentication or contacting a server:
+
+```sh
+python3 scripts/tests/media-context/summarize-native-trace.py SYNTHETIC_RUN
+```
+
+This requires the artificial dataset manifest and result, verifies original hashes,
+and extracts only request counts/size/image metadata into the run's summary.
+Recorded JSON can represent logical prompts or warmup and is not proof of physical
+WS deltas, encrypted wire bytes or receipt by the real provider. This command does
+not launch an external experiment or authorize any use of working chats.
