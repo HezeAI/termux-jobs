@@ -5,10 +5,198 @@ The [test APK](VALIDATION-2.1.3-test4.md) contains the separate audit changes.
 No working history, authorization or session was edited. No native history was
 manually stripped. No APK/component was installed, replaced or published here.
 
+## 2026-11-04 — Native compaction, transport boundaries and request replay
+
+**Current checkpoint, not a fix:** manual native compaction reduces image-bearing
+context in an isolated custom-provider fixture while retaining displayed-history
+APIs and originals. New image views make the context grow again. Native WebSocket
+continuations differ substantially from the earlier HTTP measurements: they can
+send only new items while retaining old images in server-side conversation state.
+Cold reopen and reconnection still produce large full-context transfers.
+
+Application/template baseline remains released v2.1.3 / `308c8895`; all changes
+here are research harnesses/documentation. Automatic compaction is not enabled.
+No working chat is compacted. No native journal is manually edited. The separate
+README change belongs to HezeAI and is excluded from research commits.
+
+### Supported mechanism and actual limits
+
+The pinned 0.166.0 binary declares `thread/compact/start`, also described in the
+[official app-server documentation](https://learn.chatgpt.com/docs/app-server#trigger-thread-compaction).
+The request acknowledges immediately; the fixture waits for contextCompaction
+completion **and** turn completion before continuing. This is not a model prompt
+containing `/compact`, a rollback, or a manual edit of session files.
+
+Provider behavior matters. The unauthenticated custom fixture uses native local
+compaction, whose replacement keeps bounded user text plus a scripted summary.
+First-party remote-v2 compaction is a different path: it sends a compaction trigger
+and retains selected messages/images under a token budget. Native source inspection
+at upstream tag revision `6ff1e1ca3b30fc8b914720681fcf5fe62e95f856` confirms
+this distinction; it is not an attestation that the binary was rebuilt here.
+Public API `/responses/compact` options do not establish availability or identical
+behavior in this CLI/account. `unified_image_budget` and `context_management` are
+under-development features, disabled by default; neither was enabled as a fix.
+`compaction_image_budget` and HTTP request compression are already enabled by
+default. They do not establish a serialized-byte ceiling for accumulated media.
+
+### Manual compaction — checked anew, synthetic provider
+
+Evidence `.verification/media-context/replay-YEfqyo/codex-5660046d/`:
+
+| Native operation | Actual HTTP body bytes | Images in body |
+| --- | ---: | ---: |
+| Cold reopen before compaction | 28,921,265 | 20 |
+| Native compaction request itself | 28,922,081 | 20 |
+| Continue after compaction | 58,544 | 0 |
+| Process restart/resume after compaction | 58,567 | 0 |
+| Requested old-image view result | 1,502,585 | 1 |
+| Four views of the same old PNG, then continuation | 5,833,718 | 4 |
+| Restart/resume after those four views | 5,834,062 | 4 |
+
+All three synthetic requirements (`REQ_KEEP_ORIGINALS`, `REQ_NO_PUBLISH`,
+`REQ_VERIFY_RESULT`) remain in every captured request, including after both
+restarts. The old image path remains available; native view_image output has the
+same image payload hash as its original admission. All eight original API turns
+remain accessible with identical complete contents. Before/after original-turn
+hash: `6e122229fdffc04930a42c7736b201cc34e06a9b9e78244ff039ba3a79032851`.
+The original 28,997,857-byte journal prefix retains SHA-256
+`d53023cc325f6a5484d350b8271f00db0823e6bb93ce89d77c71bb5981a002bc`;
+only native append operations grew that fixture journal. Dataset originals and
+project copies retain their manifest hashes.
+
+These are **input-retention and native-handler checks**, not proof that a real
+model correctly remembers arbitrary requirements. The summary is scripted and
+short. Visual details and previous assistant/tool reasoning are no longer directly
+present in the compacted model input; important details depend on the summary or
+must be read again. The current first-party account/model route, long requirement
+sets exceeding native retention budgets and actual vision quality remain to test.
+The compaction request itself can be large and can fail on the same slow route.
+Consequently this is a controlled mitigation candidate, not a permanent media cap.
+
+### Application adapter versus direct CLI — checked anew
+
+Evidence `.verification/media-context/replay-ToXiDt/codex-24d54628/`.
+Native `thread/fork` produced six **identical full history arrays** (hash
+`ef85748543907843ff19e558767ad73121d067e385b2bd398e2b191f1bbc1374`),
+without copying/editing journal contents. Both paths use the same 0.166.0 binary,
+model `gpt-6.1-sol`, low effort, cwd, fixture-only never/full-access policy and the
+same local HTTP provider. Actual captured model/effort values match. Fork IDs,
+caller metadata and the subsequent test turns differ; entire outgoing bodies are
+not claimed byte-identical.
+
+| Path | First cold reopen body received in full | Second reopen body received in full |
+| --- | ---: | ---: |
+| Production private chat socket → unchanged adapter → native Unix app-server | 28,922,695 bytes / 20 images | 28,923,052 bytes / 20 images |
+| Native `codex exec resume` | 28,922,721 bytes / 20 images | 28,923,078 bytes / 20 images |
+
+The chat admission control message is 176 bytes and its reply 68 bytes. Both
+large inference bodies reached the provider completely; no natural local failure
+occurred. Android Java/UI is bypassed by this native harness and is not a phone UI
+pass. The old external terminal/adapter comparisons remain historical evidence.
+
+Two deliberate failures exercise localization, not attribution of the original
+failure. On both paths the provider first closed after reading **1,048,576 bytes**
+of the advertised 28,922,695/28,922,721-byte body; native retry delivered the full
+body. In another pair the provider read the whole body, emitted response.created,
+then closed before response.completed; retry delivered a second full body.
+Eight path cases completed and every owned child was awaited at exit. A prefix
+counter means bytes read by the provider application, not additional bytes queued
+in the kernel. A response-phase close is distinct from upload truncation.
+
+### WebSocket physical transfer versus retained model context — checked anew
+
+Evidence `.verification/media-context/replay-nZ7JGC/codex-8a81d5d5/`:
+
+| Native WS operation | JSON payload bytes received | Images newly transferred | Images retained by synthetic provider |
+| --- | ---: | ---: | ---: |
+| Continue after 20 PNGs on a live connection | 1,834 | 0 | 20 |
+| Cold reopen | 28,921,267 | 20 | 20 |
+| Old-image view result | 1,445,014 | 1 | 21 |
+| Continue after view | 1,842 | 0 | 21 |
+| Request whose response is deliberately interrupted | 1,858 | 0 | 21 |
+| Native reconnect/retry of that request | 30,365,939 | 21 | 21 |
+
+The pinned native client actually uses previous_response_id for incremental
+continuations. A cold reopen may reference a **new empty warmup response** while
+still transmitting the whole old image set: the field's presence alone does not
+prove reuse of the previous visual context. Warmups (`generate=false`) are counted
+separately from inference. All 15 observed requests use WebSocket; HTTP fallback
+is forbidden by an assertion. Compression was deliberately not negotiated by the
+synthetic server, so these are uncompressed WS JSON payload sizes, not external
+compressed/TLS wire sizes. Server-held logical image counts are fixture state,
+not proof of real-model perception or service-side billing/token accounting.
+
+Initial WS fixture `replay-ixFg5K` incorrectly replied to upgrades with HTTP/1.0.
+Native error identified that invalid upgrade and fallback; the run failed and is
+preserved. Correcting the **fixture** to HTTP/1.1, then asserting actual transport,
+produced the successful runs. This is not a production transport fix.
+
+This qualifies the earlier HTTP-only prompt A/B conclusion: HTTP sends retained
+images repeatedly, whereas a functioning WS connection can reuse them remotely.
+No new viewing call is needed for the large resend after reopen/reconnect. New
+viewing results independently enlarge retained context. Prompt wording cannot
+remove either native restoration behavior or the already-retained visual state.
+
+### Size, buffer and timer map — source inspection
+
+| Segment | Confirmed limits / behavior | Scope |
+| --- | --- | --- |
+| Android CodexChatControl → private chat socket | Request 65,536 bytes; reply 524,288 bytes; read timeout 15 seconds | Text/references, not historical image body; image files are read by CLI |
+| Adapter private socket | 65,536-byte input, 15-second socket timeout | Admission/snapshot protocol; admission does not wait for model completion |
+| Adapter ↔ app-server, codex-control Connection | 32 MiB per WS message with largeHistory; legacy default 2 MiB; handshake 20 s; RPC acknowledgement 25 s | Per local message, not aggregate model context or whole model-turn deadline |
+| UI history projection | 800 entries / 2 MiB retained projection, paged older history | Display cache; does not reduce native model context |
+| Native provider defaults at pinned source | WS connect 15 s; stream send/idle wait 300 s; HTTP retry setting 4, stream reconnect setting 5 (configuration caps 100) | Defaults, not a measured external request's effective overrides or full-turn deadline |
+| Native request preparation | HTTP zstd on the matching first-party path; WS negotiates permessage-deflate and supports incremental state | Uncompressed JSON, encrypted transport counters and model tokens are different measures |
+| Preserved CONNECT relay source | 8 KiB / 8 s CONNECT header checks; 65,536-byte pipe chunks; configured read-idle timeout; drain wait 15 s | Headers/chunks are not inference-body size caps; live server source/config still needs equality verification |
+| Synthetic collector | Existing 160 MiB test-body guard and 90-second fixture turn deadline | Harness bounds, not application/provider production limits |
+
+No production limits were increased. Native source files, hashes and initial 404
+path lookups are retained under `.verification/media-context/request-boundaries-source/`;
+correct crate/module paths were resolved from the exact pinned upstream tree.
+The underlying WS library defaults and actual provider-side input/body limits were
+not exhaustively audited. A generic websocket-close message cannot identify which
+external hop closed, nor how much plaintext the real provider received.
+
+### External route and next work
+
+The wife-phone diagnostic tunnel is unavailable and was explicitly turned off by
+HezeAI. No further attempt to that phone is authorized until access is restored.
+A read-only attempt reached the server, but loopback diagnostic port 22443 refused;
+a separate allowlisted server check found two key-options rejection events.
+No key, expiry, service or network settings were changed. This is a diagnostic
+access failure, not the inference disconnection being investigated.
+
+HezeAI subsequently requested testing from the available device through the old
+server-side route. An existing launcher was found at
+`/root/termux-fork/.tools/codex-geohide-hysteria/agent-via-hysteria`. Its manager
+allocates per-agent instances and checks PID/start identity; no working tunnel
+should be stopped. That external test is **pending**, including account/model
+eligibility for remote-v2 compaction and a precise declaration of any route/device
+differences. No external before/after outcome is claimed yet.
+
+Git comparison is also now requested: from first attachment support through
+published stable tags, compare image preparation, adapter/history/connection
+changes and CLI selection. Initial inventory is preserved in
+`.verification/media-context/git-history/release-inputs.json`. All 18 inspected
+v1.6.0–v2.1.3 tags retain fallback installer **0.163.0**; missing-only preparation
+prefers an existing PATH CLI. Thus the measured existing **0.166.0** must not be
+called an automatic APK-bundled upgrade without additional installation evidence.
+Next: compare unique stable adapter versions with a fixed native CLI/provider;
+only bisect an observed difference, and keep application, CLI and network causes
+separate. Old APK installation/data rollback are prohibited.
+
+Consolidated validator passed for compaction/chain/WS roots; summary SHA-256
+`b969cb474192f5560d5a6e75b111d3a0b66aacaa72d4570a7057d27296ee48ea`.
+Reproduce using codex-compact, codex-chain, codex-websocket modes and the
+[safe harness documentation](../../scripts/tests/media-context/README.md).
+MCP/plugins remain excluded. No app/CLI setting or common/project prompt is
+changed, no APK is built/installed, and nothing is pushed or published here.
+
 ## 2026-11-04 — Prompt instructions versus native image replay
 
-**Current conclusion:** Codex 0.166.0 repeats historical image payloads while
-building the next request even when no new viewing call occurs. Removing our
+**HTTP-fixture conclusion (qualified by the newer WS measurements above):**
+Codex 0.166.0 repeats historical image payloads while building the next HTTP
+request even when no new viewing call occurs. Removing our
 common/project instructions does not remove that behavior. A separate new
 `view_image` call adds another historical image result. Neither observation proves
 the sole cause of the external disconnections or a completed fix.

@@ -49,7 +49,7 @@ def summarize(q,raw):
    if t.get('type')=='namespace':yield from toolnames(t.get('tools',[]),t.get('name'))
    elif t.get('name'):
     tool_namespace[t['name']]=namespace;yield t['name']
- return {'promptEvidence':prompt_evidence,'bodyBytes':len(raw),'inputJsonBytes':len(json.dumps(q.get('input',[]),ensure_ascii=False,separators=(',',':')).encode()),'inputStringBytes':strings,'images':images,'imageCount':len(images),'uniqueImageCount':len(set(i['sha256'] for i in images)),'inputTypes':sorted(set(i.get('type','message') for i in q.get('input',[]) if isinstance(i,dict))),'keys':list(q),'toolsType':type(q.get('tools')).__name__,'previousResponseId':q.get('previous_response_id'),'toolNames':list(toolnames((q.get('tools') or [])+[t for i in q.get('input',[]) if isinstance(i,dict) and i.get('type')=='additional_tools' for t in i.get('tools',[])]))}
+ return {'requiredMarkers':{marker:marker in json.dumps(q.get('input',[])) for marker in ('REQ_KEEP_ORIGINALS','REQ_NO_PUBLISH','REQ_VERIFY_RESULT')},'oldImagePathPresent':str(PROJECT/'png-600-0.png') in json.dumps(q.get('input',[])),'promptEvidence':prompt_evidence,'bodyBytes':len(raw),'inputJsonBytes':len(json.dumps(q.get('input',[]),ensure_ascii=False,separators=(',',':')).encode()),'inputStringBytes':strings,'images':images,'imageCount':len(images),'uniqueImageCount':len(set(i['sha256'] for i in images)),'inputTypes':sorted(set(i.get('type','message') for i in q.get('input',[]) if isinstance(i,dict))),'keys':list(q),'toolsType':type(q.get('tools')).__name__,'previousResponseId':q.get('previous_response_id'),'toolNames':list(toolnames((q.get('tools') or [])+[t for i in q.get('input',[]) if isinstance(i,dict) and i.get('type')=='additional_tools' for t in i.get('tools',[])]))}
 class Handler(http.server.BaseHTTPRequestHandler):
  def log_message(self,*a):pass
  def do_POST(self):
@@ -123,7 +123,7 @@ def persist():
  (RUN/'result.json').write_text(json.dumps({'scope':'Native Codex with artificial loopback provider. Serialization/replay only; not real provider success or Android UI.','binarySha256':hashlib.sha256(Path(exe).read_bytes()).hexdigest(),'promptVariant':prompt_variant,'thread':globals().get('thread'),'cases':results,'requests':records,'events':events},indent=2)+'\n')
 try:
  start();thread=rpc('thread/start',{'cwd':str(PROJECT),'approvalPolicy':'never','sandbox':'danger-full-access'})['thread']['id']
- turn('short-control',[text('SYNTHETIC short control')])
+ turn('short-control',[text('SYNTHETIC REQUIREMENTS: REQ_KEEP_ORIGINALS REQ_NO_PUBLISH REQ_VERIFY_RESULT. Original image: '+str(PROJECT/'png-600-0.png') if os.environ.get('SYNTHETIC_COMPACT_ONLY')=='1' else 'SYNTHETIC short control')])
  if prompt_variant:
   turn('two-images',[text('SYNTHETIC PNG batch'),image('png-600-0.png'),image('png-600-1.png')])
   turn('continue-no-view',[text('SYNTHETIC continue without new images')])
@@ -151,6 +151,36 @@ try:
  for i in range(0,20,4):turn('png-batch-'+str(i//4+1),[text('SYNTHETIC PNG batch')]+[image(f'png-600-{n}.png') for n in range(i,i+4)])
  turn('continue-20-png',[text('SYNTHETIC continue without new images')])
  stop();start();rpc('thread/resume',{'threadId':thread,'cwd':str(PROJECT),'approvalPolicy':'never','sandbox':'danger-full-access','excludeTurns':True});turn('cold-reopen-20-png',[text('SYNTHETIC reopen control')])
+ if os.environ.get('SYNTHETIC_COMPACT_ONLY')=='1':
+  before=rpc('thread/turns/list',{'threadId':thread,'limit':100,'itemsView':'full'})
+  before_ids=[t['id'] for t in before['data']]
+  original_files={str(p):(p.stat().st_size,hashlib.sha256(p.read_bytes()).hexdigest()) for p in (HOME/'sessions').rglob('*') if p.is_file()}
+  case={'name':'native-compact','requests':[],'tool':None,'issued':False,'drop':False}
+  rpc('thread/compact/start',{'threadId':thread});end=time.monotonic()+90;notifications=[];compacted=False
+  while time.monotonic()<end:
+   e=inbox.get(timeout=max(.1,end-time.monotonic()));method=e.get('method');p=e.get('params',{});notifications.append({'method':method,'itemType':p.get('item',{}).get('type')})
+   if method=='item/completed' and p.get('item',{}).get('type')=='contextCompaction':compacted=True
+   if method in ('thread/compacted','contextCompacted') or method=='turn/completed' and compacted:
+    assert p.get('turn',{}).get('status','completed')=='completed';break
+  else:raise TimeoutError('Native compaction')
+  turn('after-native-compact',[text('SYNTHETIC continue without new images')])
+  stop();start();rpc('thread/resume',{'threadId':thread,'cwd':str(PROJECT),'approvalPolicy':'never','sandbox':'danger-full-access','excludeTurns':True})
+  turn('reopen-after-native-compact',[text('SYNTHETIC reopen control')])
+  after=rpc('thread/turns/list',{'threadId':thread,'limit':100,'itemsView':'full'})
+  after_ids=[t['id'] for t in after['data']]
+  turn('review-old-image-after-compact',[text('SYNTHETIC view old original image')],{'name':'view_image','args':{'path':str(PROJECT/'png-600-0.png')},'requiresPath':str(PROJECT/'png-600-0.png')})
+  for number in range(3):turn('repeat-old-image-after-compact-'+str(number),[text('SYNTHETIC review old original again')],{'name':'view_image','args':{'path':str(PROJECT/'png-600-0.png')}})
+  turn('continue-after-four-reviews',[text('SYNTHETIC continue without new images')])
+  stop();start();rpc('thread/resume',{'threadId':thread,'cwd':str(PROJECT),'approvalPolicy':'never','sandbox':'danger-full-access','excludeTurns':True})
+  turn('reopen-after-four-reviews',[text('SYNTHETIC reopen control')])
+  after_by_id={t['id']:t for t in after['data']}
+  assert all(after_by_id[t['id']]==t for t in before['data']), 'Old API turn contents changed'
+  assert all(hashlib.sha256(Path(file).read_bytes()[:length]).hexdigest()==digest for file,(length,digest) in original_files.items()), 'Native journal prefix changed'
+  assert all(all(r['requiredMarkers'].values()) for r in records), 'Task requirements disappeared from a request'
+  assert [r for r in records if r['case']=='reopen-after-four-reviews'][0]['imageCount']==4
+  stop()
+  (RUN/'compaction-history.json').write_text(json.dumps({'beforeTurnIds':before_ids,'afterTurnIds':after_ids,'allBeforeTurnsStillAvailable':set(before_ids)<=set(after_ids),'allBeforeTurnContentsUnchanged':True,'beforeTurnsSha256':hashlib.sha256(json.dumps(before['data'],sort_keys=True).encode()).hexdigest(),'afterOriginalTurnsSha256':hashlib.sha256(json.dumps([after_by_id[t['id']] for t in before['data']],sort_keys=True).encode()).hexdigest(),'originalJournalPrefixes':{str(Path(file).relative_to(HOME)):{'bytes':length,'beforeSha256':digest,'afterPrefixSha256':hashlib.sha256(Path(file).read_bytes()[:length]).hexdigest(),'afterFileBytes':Path(file).stat().st_size} for file,(length,digest) in original_files.items()},'nativeJournalPrefixesUnchanged':True,'requirementsPresentInEveryRequest':True,'beforeImageItems':sum(sum(v.get('type')=='localImage' for v in i.get('content',[])) for t in before['data'] for i in t.get('items',[]) if i.get('type')=='userMessage'),'notifications':notifications},indent=2)+'\n')
+  raise SystemExit(0)
  turn('jpeg-large',[text('SYNTHETIC large JPEG'),image('jpg-2048-0.jpg')]);turn('webp-large',[text('SYNTHETIC large WebP'),image('webp-1280-0.webp')])
  for i in range(0,24,4):turn('small-png-'+str(i//4+1),[text('SYNTHETIC small PNG')]+[image(f'png-32-{n}.png') for n in range(i,i+4)])
  for i in range(3):turn('view-image-repeat-'+str(i),[text('SYNTHETIC use image tool once')],{'name':'view_image','args':{'path':str(PROJECT/'png-600-0.png')}})
