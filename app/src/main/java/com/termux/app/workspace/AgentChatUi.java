@@ -62,6 +62,7 @@ final class AgentChatUi {
     private EditText composer;
     private View composerArea;
     void composerInset(int pixels){view.composerInset(pixels);}
+    void headerInset(int pixels){view.headerInset(pixels);}
     void composer(EditText input){composer(input,input);}
     void composer(EditText input,View area){composer=input;composerArea=area;}
     private com.termux.shared.terminal.io.extrakeys.ExtraKeysView chatKeys;
@@ -190,7 +191,7 @@ final class AgentChatUi {
             });});
     }
     private void modelConnectionView(){
-        String label=AgentModelConnection.label(modelConnection,WorkspaceLanguage.code(activity).equals("ru"));view.status.setText(label);view.status.setVisibility(label.isEmpty()?View.GONE:View.VISIBLE);
+        String label=AgentModelConnection.label(modelConnection,WorkspaceLanguage.code(activity).equals("ru"));view.status.setText(label);view.status.setVisibility(label.isEmpty()?View.GONE:View.VISIBLE);view.updateHeaderInset();
         final JSONObject reported=modelConnection;view.status.setOnClickListener(reported==null?null:v->{
             if(details!=null)details.dismiss();ScrollView scroll=new ScrollView(activity);TextView text=view.label(AgentModelConnection.details(reported,WorkspaceLanguage.code(activity).equals("ru")),13);text.setTextIsSelectable(true);scroll.addView(text);
             details=WorkspaceDialogs.builder(activity).setTitle(label).setView(scroll).setPositiveButton(tr("Закрыть","Close"),null).show();

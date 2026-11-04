@@ -19,6 +19,15 @@ unchanged. No automatic data reset or migration is introduced.
 - Project instructions: full supplied editable template for Codex → AGENTS.md
   and Claude → CLAUDE.md. Opening does not write. Saving an existing file needs
   replacement confirmation; external revision conflicts preserve the draft.
+- Agent chats: the status area below session selection is transparent. Messages
+  scroll behind limits, stop and Server + Agent; button fills and session
+  selection remain unchanged. Content clearance lets the first message move
+  fully below the overlay. Button taps do not activate messages underneath.
+- Keep the bottom star / paperclip pair at the native one-line field height,
+  including font rounding; multiline drafts keep the pair at the field bottom.
+- Common Ubuntu AI instruction templates: coordinated RU/EN context organization
+  rules for Codex and Claude. Existing saved instructions remain unchanged;
+  preview and explicit save retain revision-conflict protection.
 - OpenCode: verified same-action user denial displays neutral “Action declined”.
   Directory and action decisions are stored separately, so directory Allow once
   followed by Read/Edit denial keeps both receipts after history reopen.
@@ -32,8 +41,8 @@ unchanged. No automatic data reset or migration is introduced.
 - Attachment/context accumulation and disconnections are **not fixed** in this
   APK. Work moves to the next cycle after the stable release. MCP/plugins remain
   excluded and unverified. Full security isolation/audit is not claimed.
-- Phone acceptance of the new OpenCode presentation and both project-template
-  flows is pending. Stable publication is authorized only after that acceptance;
+- Phone acceptance of the new OpenCode presentation, both template flows and
+  transparent status overlay/keyboard behavior is pending. Stable publication is authorized only after that acceptance;
   previous APKs, tags and binary Components remain immutable.
 
 See [test8 validation](docs/fork/VALIDATION-2.1.3-test8.md) and

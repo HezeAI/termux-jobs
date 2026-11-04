@@ -30,7 +30,7 @@ public class AgentChatViewTest {
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);
   java.util.List<JSONObject> rows=new java.util.ArrayList<>();for(int i=0;i<30;i++)rows.add(row("r"+i,"text","line "+i+"\nmore text"));v.rows(rows,false);layout(v);v.scroll.scrollTo(0,0);
   rows.get(29).put("body","changed");v.rows(rows,false);layout(v);assertEquals(0,v.scroll.getScrollY());
-  v.followAfterSend();rows.add(row("sent","user","new message"));v.rows(rows,false);layout(v);assertTrue(v.scroll.getScrollY()>0);assertEquals(v.timeline.getHeight()-v.scroll.getHeight(),v.scroll.getScrollY());assertEquals(View.GONE,v.status.getVisibility());assertSame(v.getChildAt(1),v.scroll.getParent());
+  v.followAfterSend();rows.add(row("sent","user","new message"));v.rows(rows,false);layout(v);assertTrue(v.scroll.getScrollY()>0);assertEquals(v.timeline.getHeight()-v.scroll.getHeight(),v.scroll.getScrollY());assertEquals(View.GONE,v.status.getVisibility());assertSame(v.getChildAt(0),v.scroll.getParent());
  }
  private void layout(AgentChatView v){for(int i=0;i<3;i++){v.measure(View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(700,View.MeasureSpec.EXACTLY));v.layout(0,0,600,700);Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();}}
 

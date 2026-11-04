@@ -117,6 +117,7 @@ public final class WorkspaceController {
     private ClaudeLiveUi claudeLiveUi;
     private AgentReceiptsUi agentReceiptsUi;
     private AgentChatUi agentChatUi;
+    private AgentChatHeaderOverlay agentHeaderOverlay;
     private WorkspaceDesktops desktopUi;
     private DesktopSessionBar desktopSessionBar;
     private void updateDesktopProgramsBorder(){if(desktopSessionBar!=null)desktopSessionBar.working(!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible()&&desktopUi!=null&&desktopUi.programsInstalling());}
@@ -218,6 +219,7 @@ public final class WorkspaceController {
         geminiLiveUi.permissionVisibility(()->!agentChatUi.showing());agentChatUi.composer(terminalInput,terminalInput);
         composerControls=new AgentComposerControls(activity,inputRow,terminalInput,commands,send,agentChatUi.attachmentButton());
         composerControls.overlay(activity.findViewById(R.id.drawer_layout),pixels->{if(agentChatUi!=null)agentChatUi.composerInset(pixels);});
+        agentHeaderOverlay=new AgentChatHeaderOverlay(activity.findViewById(R.id.drawer_layout),activity.findViewById(R.id.workspace_terminal_tools),activityLine,R.id.workspace_tab_scroll,pixels->{if(agentChatUi!=null)agentChatUi.headerInset(pixels);});
         agentChatUi.onVisibilityChanged(()->{updateAgentComposer();boolean chat=agentChatUi.showing();boolean focus=chat&&!wasAgentChat;wasAgentChat=chat;terminalInput.setHint(chat?tr("Сообщение ","Message ")+agentChatUi.name()+"…":WorkspaceText.tr("Введите команду…"));activity.getTerminalToolbarViewPager().setVisibility(screen==Screen.TERMINAL&&!activityStopped&&!chat?toolbarVisibility:View.GONE);if(focus)leaveAgentInputIdle();renderHeader();renderTabs();});
         desktopUi=new WorkspaceDesktops(activity,()->{TerminalSession t=activity.getCurrentSession();return t!=null&&t.isRunning()?store.findByHandle(t.mHandle):null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL,inputRow,this::renderCodexStatus,()->{
             boolean terminal=screen==Screen.TERMINAL&&!activityStopped;
@@ -2267,7 +2269,7 @@ public final class WorkspaceController {
             target.requestFocus(); target.post(()->keyboard.showSoftInput(target,0));
         }
     }
-    private void updateAgentComposer(){if(composerControls==null)return;boolean chat=agentChatUi!=null&&agentChatUi.handlesComposer()&&(desktopUi==null||!desktopUi.showing());composerControls.present(chat);}
+    private void updateAgentComposer(){if(composerControls==null)return;boolean chat=agentChatUi!=null&&agentChatUi.handlesComposer()&&(desktopUi==null||!desktopUi.showing());composerControls.present(chat);if(agentHeaderOverlay!=null)agentHeaderOverlay.present(chat);}
     private void setInteractiveInput(boolean enabled) {
         if(agentChatUi!=null&&agentChatUi.handlesComposer())return;
         prepareKeyboardWindow();
@@ -2514,7 +2516,7 @@ public final class WorkspaceController {
         WorkspaceDocumentationUi.dispose(activity);
         activity.getTerminalView().setWorkspaceTerminalVisible(false);
         if(transferBorder!=null)transferBorder.active(false);if(agentTerminalBorder!=null)agentTerminalBorder.active(false);if(desktopSessionBar!=null)desktopSessionBar.working(false);servers.close();if(activityLine!=null)activityLine.working(false);
-        if(desktopUi!=null)desktopUi.close();geminiInputDispatch.cancel();if(agentChatUi!=null)agentChatUi.close();if(geminiLiveUi!=null)geminiLiveUi.close();if(claudeLiveUi!=null)claudeLiveUi.close();if(agentReceiptsUi!=null)agentReceiptsUi.close();activity.getTerminalView().setTranscriptTapListener(null);
+        if(agentHeaderOverlay!=null)agentHeaderOverlay.close();if(desktopUi!=null)desktopUi.close();geminiInputDispatch.cancel();if(agentChatUi!=null)agentChatUi.close();if(geminiLiveUi!=null)geminiLiveUi.close();if(claudeLiveUi!=null)claudeLiveUi.close();if(agentReceiptsUi!=null)agentReceiptsUi.close();activity.getTerminalView().setTranscriptTapListener(null);
         terminalDrafts.clear();
         for(WorkspacePackages browser:new ArrayList<>(packageBrowsers))browser.close();packageBrowsers.clear();
         for(WorkspaceFileBrowser browser:new ArrayList<>(fileBrowsers))browser.close();fileBrowsers.clear();

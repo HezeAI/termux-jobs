@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 final class AgentChatView extends LinearLayout {
     final ScrollView scroll;
     private final LinearLayout footer;
-    private int composerInset;
+    private int composerInset,headerInset;
     final LinearLayout timeline,requests,keysHost,attachmentDrafts;
     final WorkspaceIconButton folder;
     java.util.function.BiConsumer<JSONObject,ImageView> thumbnail=(a,v)->{};
@@ -39,7 +39,7 @@ final class AgentChatView extends LinearLayout {
     private int scalePercent=100;
     int scalePercent(){return scalePercent;}
     void scale(int percent){percent=AgentChatScale.clamp(percent);if(scalePercent==percent)return;Position held=position();scalePercent=percent;scaleContent();queuePosition(held);}
-    void scaleContent(){AgentChatScale.apply(timeline,scalePercent);AgentChatScale.apply(attachmentDrafts,scalePercent);}
+    void scaleContent(){AgentChatScale.apply(timeline,scalePercent);AgentChatScale.apply(attachmentDrafts,scalePercent);updateHeaderInset();updateComposerInset();}
 
     private boolean followNextRows;
     private boolean followLayout;
@@ -72,7 +72,7 @@ final class AgentChatView extends LinearLayout {
     void followAfterSend(){followNextRows=true;followLayout=true;bottomAfterLayout();}
     AgentChatView(Context c,Consumer<JSONObject> open,Runnable loadOlder,Runnable sendShell,Runnable terminal,Runnable interrupt){
         super(c);this.open=open;setOrientation(VERTICAL);setBackgroundColor(Color.BLACK);
-        status=label("",12);status.setMaxLines(2);status.setEllipsize(android.text.TextUtils.TruncateAt.END);status.setTag("agent-model-connection");status.setVisibility(GONE);status.setBackground(WorkspaceDialogs.background(c,false));addView(status,new LayoutParams(-1,-2));
+        status=label("",12);status.setMaxLines(2);status.setEllipsize(android.text.TextUtils.TruncateAt.END);status.setTag("agent-model-connection");status.setVisibility(GONE);status.setBackground(WorkspaceDialogs.background(c,false));
         scroll=new ScrollView(c){
             @Override public boolean dispatchTouchEvent(MotionEvent e){
                 // Selectable TextViews may consume DOWN before a parent's OnTouchListener.
@@ -85,12 +85,22 @@ final class AgentChatView extends LinearLayout {
         scroll.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(restoring==null&&followLayout)bottomAfterLayout();});scroll.setSmoothScrollingEnabled(false);
         timeline=new LinearLayout(c);timeline.setOrientation(VERTICAL);timeline.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(followLayout){followLayout=false;if(restoring==null)bottomAfterLayout();}});timeline.setPadding(dp(12),dp(4),dp(12),dp(16));scroll.addView(timeline);
         older=pill(tr("Предыдущие сообщения","Earlier messages"),loadOlder);timeline.addView(older);
-        FrameLayout body=new FrameLayout(c);body.addView(scroll,new FrameLayout.LayoutParams(-1,-1));addView(body,new LayoutParams(-1,0,1));footer=new LinearLayout(c);footer.setOrientation(VERTICAL);body.addView(footer,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));footer.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->updateComposerInset());requests=new LinearLayout(c);requests.setOrientation(VERTICAL);requests.setPadding(dp(12),0,dp(12),0);timeline.addView(requests,new LayoutParams(-1,-2));connection=label("",13);connection.setVisibility(GONE);requests.addView(connection);execution=new AgentProgressView(c);timeline.addView(execution,new LayoutParams(-1,-2));
+        FrameLayout body=new FrameLayout(c);body.addView(scroll,new FrameLayout.LayoutParams(-1,-1));body.addView(status,new FrameLayout.LayoutParams(-1,-2,Gravity.TOP));status.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->updateHeaderInset());addView(body,new LayoutParams(-1,0,1));footer=new LinearLayout(c);footer.setOrientation(VERTICAL);body.addView(footer,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));footer.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->updateComposerInset());requests=new LinearLayout(c);requests.setOrientation(VERTICAL);requests.setPadding(dp(12),0,dp(12),0);timeline.addView(requests,new LayoutParams(-1,-2));connection=label("",13);connection.setVisibility(GONE);requests.addView(connection);execution=new AgentProgressView(c);timeline.addView(execution,new LayoutParams(-1,-2));
         attachmentDrafts=new LinearLayout(c);attachmentDrafts.setOrientation(VERTICAL);attachmentDrafts.setVisibility(GONE);footer.addView(attachmentDrafts,new LayoutParams(-1,-2));
         folder=new WorkspaceIconButton(c);folder.setIcon(c.getDrawable(com.termux.R.drawable.workspace_paperclip),dp(24));folder.setTextColor(WorkspaceDialogs.ACCENT);folder.setContentDescription(tr("Прикрепить файл","Attach file"));folder.setTooltipText(tr("Прикрепить файл","Attach file"));folder.setVisibility(GONE);
 
         keysHost=new LinearLayout(c);keysHost.setOrientation(VERTICAL);keysHost.setVisibility(GONE);footer.addView(keysHost,new LayoutParams(-1,-2));
 
+    }
+    void headerInset(int pixels){headerInset=Math.max(0,pixels);updateHeaderInset();}
+    void updateHeaderInset(){
+        FrameLayout.LayoutParams p=(FrameLayout.LayoutParams)status.getLayoutParams();
+        if(p.topMargin!=headerInset){p.topMargin=headerInset;status.setLayoutParams(p);}
+        int padding=dp(4)+headerInset+(status.getVisibility()==VISIBLE?status.getHeight():0);
+        if(timeline.getPaddingTop()==padding)return;
+        Position held=position();boolean top=held.y==0&&!held.bottom;
+        timeline.setPadding(timeline.getPaddingLeft(),padding,timeline.getPaddingRight(),timeline.getPaddingBottom());
+        queuePosition(top?new Position(null,0,0,false):held);
     }
     void composerInset(int pixels){composerInset=Math.max(0,pixels);updateComposerInset();}
     private void updateComposerInset(){
