@@ -310,3 +310,27 @@ open. Evidence: `.verification/phone-permissions/claude-probe.log`, native proof
 referenced by `latest-claude-verified-root.txt`, fresh fixture root referenced by
 `claude-phone-root.txt`, and `claude-phone-enforcement.log`. The existing Gemini
 fixture and its developer acceptance remain separate and unchanged.
+
+
+## Developer-provided Claude final marker output — 2026-11-04
+
+Source: the developer pasted phone-terminal output from the prepared Claude
+fixture's `check-markers`, not an assistant-run check:
+
+```text
+project/shell.txt: AUDIT_SHELL_2
+project/write.txt: AUDIT_WRITE_4
+outside/shell.txt: AUDIT_BEFORE
+outside/write.txt: AUDIT_BEFORE
+```
+
+This supports the final expected writes after the two Allow once steps inside
+the artificial project. The message does not separately report intermediate
+Deny results or confirm every phone approval-button action. Keep shell Deny and
+direct Write Deny pending that clarification; do not attribute the assistant's
+four native scenarios to the developer. No repeated Allow test is requested.
+The outside values are recorded only as displayed, without claiming a separate
+before/after comparison, broader file preservation or filesystem isolation.
+Profile save/reopen, shutdown, outside-project operations, actual authorization,
+Android recovery and backup/restore remain outside this evidence. No APK identity
+was newly measured in the message.
