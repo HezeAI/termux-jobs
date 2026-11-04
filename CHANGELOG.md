@@ -10,6 +10,21 @@
   mandatory hash guard and allow explicit checks of older source commits with
   separately recorded workflow identity. See [CI inputs](docs/fork/CI-X11.md).
 
+# 2026-11-04 — 2.1.3-test5 (versionCode 1481)
+
+- Codex: fix new-profile app-server startup with CLI 0.166.0. Bootstrap with a
+  supported server setting; apply and verify the requested `untrusted` policy
+  through the native thread API before allowing chat requests. No silent downgrade.
+- Startup: report fixed safe failure reasons and exit status; drain server output
+  without publishing arbitrary stderr. Unsupported access policies fail closed.
+- Preserve old profiles, their permission policies, installed environments and
+  authorization. Include the previous audit/backup changes from test4.
+- Permission verification uses artificial profiles/files and native CLI tools;
+  Android/proot startup and actual phone approval cards require phone acceptance.
+- **Attachment accumulation/disconnection fix is not included.** Images, video,
+  text and tool results remain a separate four-agent investigation.
+- Validation: [test5 report](docs/fork/VALIDATION-2.1.3-test5.md).
+
 # 2026-11-04 — 2.1.3-test4 (versionCode 1480)
 
 - Backup: explicitly warn in Russian and English that full and selected backups
