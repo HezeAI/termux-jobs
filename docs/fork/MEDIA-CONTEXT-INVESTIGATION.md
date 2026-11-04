@@ -302,6 +302,64 @@ plus read-only `server-route-metadata.json`. The next candidate keeps the seed
 connection alive through explicit foreground compaction and uses actual native
 view_image outputs; it must be reported separately even if unsuccessful.
 
+### Real native-view candidate — checked anew on the available device
+
+A separate first-party experiment kept the original native connection alive for
+foreground manual compaction. Five batches executed **20 actual view_image calls**;
+no paperclip/localImage substitution was used. The same initial full turn arrays
+were preserved in an untouched baseline fork, with the live seed as candidate.
+The model/provider/effort and existing server route matched within this experiment.
+Both native API history checks and all original file hashes passed.
+
+| Candidate step | Time | Recorded JSON / inline images |
+| --- | --- | --- |
+| Five native-view batches | 26.52 / 27.54 / 31.86 / 28.94 / 29.79 s | Four actual views per batch; live WS can send new items |
+| Explicit foreground remote-v2 compaction | 15.16 s | Logical compaction prompt 28,783,204 bytes / 20 images; physical transfer not measured |
+| Continue after compaction | 4.79 s | 128,494 bytes / 0 images |
+| Native process restart / resume after compaction | 7.38 s | 132,270 bytes / 0 images |
+| Four separate reviews of the first original | 17.10 / 16.78 / 16.78 / 17.50 s | Each executes view_image and confirms marker 73921 |
+| Continue after four reviews | 3.74 s | Live delta, no new image payload |
+| Restart / resume after four reviews | 30.20 s | 5,111,491 bytes / 4 images, one unique image hash |
+| Unsqueezed baseline fork / cold continuation | 87.73 s | About 28.79 MB / 20 images; four retry events and HTTPS fallback |
+
+The requirement IDs **and their meanings**, plus marker 73921, were recalled after
+compaction, after restart and after renewed growth. The 20 old turn hashes remained
+unchanged even after the subsequent reviews. Originals were never overwritten or
+deleted. The native history API preserved all old turns; Android rendering after
+this external compaction is not separately verified.
+
+The first request representation on the unsqueezed cold branch is 28,785,402 bytes;
+subsequent recorded attempts vary slightly with WS/warmup/fallback control fields.
+The cold candidate's 132,270-byte representation has no old inline image payloads.
+This validates a supported **explicit native-compaction candidate**, not a permanent
+request-size cap. Four later views cause four images to reappear on cold resume.
+A real model can retain selected facts in its summary, but full pixel data, exact
+old tool output and arbitrary unstated details are no longer guaranteed in model
+context. Those remain available in original files/history and require rereading
+when needed. Three retained artificial requirements are not proof of lossless
+retention of a real project's entire task.
+
+No candidate case had a retry event. The baseline had four; source trace warnings
+confirm HTTPS fallback. Both completed, so no absolute "large requests always fail"
+claim is warranted. The earlier cold localImage compaction still failed at 240 s;
+these experiments also differ in input source and live/cold connection state.
+They do not independently prove which difference enabled successful compaction.
+No automatic trigger or prompt change is enabled. No wife's-phone fix is claimed.
+
+Evidence: `.verification/media-context/external-current-device/experiment-live-a02cea06/`.
+`result.json` SHA-256 `cca95ac4621cf3a470d182514b6501d57b040548db4d29c73c002c8aaa96cb7d`;
+`trace-request-summary.json` SHA-256 `a1edd874fe956ca865635ae88805a6afe31100954575027407a19a8fe878bf45`.
+The independent PID/start-identity observer confirmed all observed descendants
+exited and sent no signals. The native launcher instances belonged to this test;
+working tunnels were not stopped. Normal native authentication was used without
+reading/copying credentials. Recorded JSON sizes remain distinct from compressed
+wire bytes and real-provider receipt counts, which are unknown.
+
+Next: retain this as a manually requested, pre-break candidate with visible loss
+warnings, preservation checks and on-demand old-file access. Do not enable an
+automatic threshold without broader tests. The separately requested raised-limit
+regression comparison must distinguish admission/storage from actual model bytes.
+
 ## 2026-11-04 — Prompt instructions versus native image replay
 
 **HTTP-fixture conclusion (qualified by the newer WS measurements above):**
