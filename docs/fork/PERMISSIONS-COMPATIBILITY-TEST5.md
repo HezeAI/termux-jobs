@@ -597,3 +597,18 @@ OS-песочница файлов. Нативная логика сценари
 Штатно закрыть только этот тестовый агент через его шестерёнку, затем повторить
 сверку. Не выполнять pkill/force-stop. Приёмка старых профилей и переключения
 чата при prompt в этот сценарий не включена.
+
+
+## Developer phone acceptance: Claude outside-project access — 2026-11-04
+
+The developer explicitly accepted all eight phone scenarios and supplied the
+checker output. Read-31/read-41 did not reach the local provider;
+read-32/read-42 did. New-33/new-51 are absent; new-34/new-52 contain the expected
+AUDIT_WRITE_34/AUDIT_WRITE_52 values. The final event is tool-result /
+SHELL_WRITE / 52, 106562 bytes. This accepts Read, Write and Bash read/write
+No/Allow once in the app chat. The assistant's separate read-only checker run
+matched, but is not the source of the developer's UI acceptance.
+This does not accept a project sandbox, managed native terminal, manual CLI,
+legacy profiles, chat switching or crash recovery. Do not rerun the accepted
+scenarios without changed inputs. The earlier Claude phone instructions above
+are now historical; the next phone agent is Gemini.
