@@ -23,8 +23,11 @@
 - Retain test6 backup/audit fixes and old profiles, permissions, authorization and
   installed Ubuntu AI. External system policy is never silently overwritten.
 - Synthetic-key HTTP 401 and normal/symlink first/repeat launches pass locally;
-  Android/proot/Keystore and phone handoff remain unverified. Attachment
-  accumulation/disconnections remain **unfixed** in this APK.
+  Android/Keystore internals remain unverified. Developer phone acceptance on
+  test7 confirms API test-profile startup, HTTP 400 / API_KEY_INVALID, normal
+  stop/relaunch and no update-error interference. Real login, crash recovery and
+  Gemini permissions are not covered. Attachment accumulation/disconnections
+  remain **unfixed** in this APK.
 - See [validation and phone checks](docs/fork/VALIDATION-2.1.3-test7.md).
 
 # 2026-11-04 — 2.1.3-test6 (versionCode 1482)

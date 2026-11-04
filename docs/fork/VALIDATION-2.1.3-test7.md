@@ -107,25 +107,40 @@ retained locally before the notification persistence correction; it was not issu
 - Sources/commit and Download copy are checked after the final local commit.
   SDK/Gradle/bootstrap caches reused. No GitHub CI or public channel change.
 
-## Phone check (not yet passed)
+## Developer phone acceptance — 2026-11-04
 
-Use a new Gemini API test profile and disposable project with an artificial key.
-Keep old profiles, working sessions and real authorization intact.
+Source: HezeAI's report in this conversation for **test7 / 1483**, built from
+`0a51e24cddbcc3e33de2a8869446111854552679`. This is developer-performed acceptance,
+not a new test independently run by the assistant.
 
-1. Save/reopen the test profile. Start, stop only this test session using its normal
-   confirmed stop action, and start it again. The CLI should remain 0.64.0; the
-   requested auth mode and permission policy should survive.
-2. If a newer-version notice appears, it must be information, not a red session
-   error. No automatic npm installation should start. Lack of a notice does not
-   itself prove network availability or disablement of version checks.
-3. Send a short artificial message. Expect an explicit provider rejection of the
-   invalid key (401 or another clear invalid-key status), separate from update
-   notices. Do not count a ready banner or disappearance of the update error as
-   handoff success. Report stage/code and sequence without sending the key.
-4. Full Android process-death/Keystore/SAF backup checks remain in the unified plan.
-   Never force-stop the shared working app. Use an isolated instance without
-   working sessions for that separate check; skipping it leaves it unverified.
+| Phone check | Reported result |
+| --- | --- |
+| Start a test Gemini API profile with an artificial key | Passed: profile starts. |
+| Send a message | API rejects it with **HTTP 400 / API_KEY_INVALID**. |
+| Stop that session normally and launch again | Passed: the same invalid-key response is received. |
+| Update error interference | The developer reports it no longer interferes. |
 
-No real provider login, Android peer credentials, phone path/handoff, private-key
-custody or independent audit is established here. Actual Google traffic was not
-used; external connections were blocked by the fixture kernel guard.
+The reported functional artificial-key path reaches an explicit API rejection
+on both launches. Phone HTTP 400 is distinct from the local fixture's HTTP 401;
+neither response is successful authentication. No packet/key-byte trace or
+independent socket/Keystore inspection is inferred from this report.
+The report does not establish profile editor save/reopen, mid-handoff cancellation,
+new-version notice persistence or the phone's normal/symlink path.
+
+## Remaining phone checks
+
+- Actual API/Vertex sign-in with a separate test account, Android peer credentials,
+  lower-level broker ownership/Keystore behavior and mid-handoff cancellation.
+- Abnormal app/process termination and recovery on an isolated instance without
+  working sessions. Normal session stop/relaunch is not a crash-recovery test.
+- Gemini shell and direct-file permission rejection/allowance, inside/outside the
+  project. Codex's earlier acceptance and this invalid-key check do not cover it.
+- New-version notification stays informational across history reopen; the current
+  report confirms absence of interference, not that specific presentation check.
+- SAF/export/clean backup restore and other open items in the unified plan.
+
+Do not repeat the accepted startup/normal-stop/relaunch checks without a relevant
+change or new failure. Keep real authorizations and working profiles unchanged.
+No independent audit or private-key custody verification is established.
+The assistant's preceding CLI tests used local providers and blocked external
+connections; they do not describe the developer's untraced phone network route.
