@@ -238,7 +238,7 @@ The observed image difference narrows to
 one of the two new PNGs, the v2.0.5 boundary run sends 31,810,041 bytes and v2.0.6
 sends 30,732,370 bytes. Image counts stay 22; image hashes establish original PNG
 versus prepared JPEG. After reopening, the respective bodies are 31,810,077 and
-30,732,727 bytes. Control/retry messages occasionally add 321 bytes; whole-body
+30,732,727 bytes. Non-image request data occasionally differs by 321 bytes; whole-body
 hashes or a fixed 321-byte offset must not be confused with image-data changes.
 For example, the ordinary cold baseline is 28,922,695 bytes, while one six-tag
 case is 28,923,016. Their 20 image hashes match.
@@ -425,8 +425,8 @@ limits of 2048 edge / 2500 patches at 32 pixels per patch, consistent with this
 measured square 1600-pixel output. It can preserve PNG rather than turn every large
 original into JPEG. Explicit original detail and other model modes require their
 own verification; no blanket "all originals always sent" or "always JPEG" claim.
-The small 321-byte request differences are control/retry text; they do not change
-received image hashes. Base64, JSON scaffolding, file size and decoded image bytes
+The small 321-byte request differences occur outside the measured image bytes;
+their exact cause was not isolated, and received image hashes match. Base64, JSON scaffolding, file size and decoded image bytes
 are all recorded separately.
 
 The sparse binary is an opaque artificial file, not a real ZIP/STL parser test.
