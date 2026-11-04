@@ -4,6 +4,17 @@ from pathlib import Path
 assert os.environ.get('TERMUX_MEDIA_GUARDED_RUN')=='1', 'Use the guarded media-context/run.sh runner'
 ROOT=Path(__file__).resolve().parents[2];OUT=Path(__file__).resolve().parent
 RUN=OUT/('codex-'+uuid.uuid4().hex[:8]);RUN.mkdir();HOME=RUN/'home';HOME.mkdir();PROJECT=RUN/'project';PROJECT.mkdir();(PROJECT/'.git').mkdir();(PROJECT/'AGENTS.md').write_text('Synthetic fixture project. Only its artificial files may be read.\n')
+prompt_variant=os.environ.get('SYNTHETIC_PROMPT_VARIANT','');prompt_inputs={}
+if prompt_variant:
+ assert prompt_variant in ('none','project','ru','en')
+ assets=Path(os.environ['TERMUX_MEDIA_ASSETS']).resolve()
+ if prompt_variant in ('ru','en'):
+  prompt_inputs['common']=(assets/('agent-instructions-ubuntu-ai'+('.en' if prompt_variant=='en' else '')+'.md')).read_text()
+  (HOME/'AGENTS.md').write_text(prompt_inputs['common'])
+ if prompt_variant!='none':
+  prompt_inputs['project']=(assets/'agent-instructions-project.md').read_text()
+  (PROJECT/'AGENTS.md').write_text(prompt_inputs['project'])
+ else:(PROJECT/'AGENTS.md').unlink()
 for p in (OUT/'data').iterdir():
  if p.is_file():shutil.copy2(p,PROJECT/p.name)
 exe='/usr/local/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/bin/codex'
@@ -22,13 +33,23 @@ def summarize(q,raw):
    for x in v:walk(x)
   elif isinstance(v,str):strings+=len(v.encode())
  walk(q.get('input',[]))
+ prompt_evidence={}
+ if prompt_variant:
+  def strings_in(v):
+   if isinstance(v,str):yield v
+   elif isinstance(v,list):
+    for x in v:yield from strings_in(x)
+   elif isinstance(v,dict):
+    for x in v.values():yield from strings_in(x)
+  values=list(strings_in(q.get('input',[])))
+  prompt_evidence={name:{'sha256':hashlib.sha256(value.encode()).hexdigest(),'bytes':len(value.encode()),'fullyPresent':any(value.strip() in value_in_request for value_in_request in values)} for name,value in prompt_inputs.items()}
  def toolnames(tools,namespace=None):
   for t in tools:
    if not isinstance(t,dict):continue
    if t.get('type')=='namespace':yield from toolnames(t.get('tools',[]),t.get('name'))
    elif t.get('name'):
     tool_namespace[t['name']]=namespace;yield t['name']
- return {'bodyBytes':len(raw),'inputJsonBytes':len(json.dumps(q.get('input',[]),ensure_ascii=False,separators=(',',':')).encode()),'inputStringBytes':strings,'images':images,'imageCount':len(images),'uniqueImageCount':len(set(i['sha256'] for i in images)),'inputTypes':sorted(set(i.get('type','message') for i in q.get('input',[]) if isinstance(i,dict))),'keys':list(q),'toolsType':type(q.get('tools')).__name__,'previousResponseId':q.get('previous_response_id'),'toolNames':list(toolnames((q.get('tools') or [])+[t for i in q.get('input',[]) if isinstance(i,dict) and i.get('type')=='additional_tools' for t in i.get('tools',[])]))}
+ return {'promptEvidence':prompt_evidence,'bodyBytes':len(raw),'inputJsonBytes':len(json.dumps(q.get('input',[]),ensure_ascii=False,separators=(',',':')).encode()),'inputStringBytes':strings,'images':images,'imageCount':len(images),'uniqueImageCount':len(set(i['sha256'] for i in images)),'inputTypes':sorted(set(i.get('type','message') for i in q.get('input',[]) if isinstance(i,dict))),'keys':list(q),'toolsType':type(q.get('tools')).__name__,'previousResponseId':q.get('previous_response_id'),'toolNames':list(toolnames((q.get('tools') or [])+[t for i in q.get('input',[]) if isinstance(i,dict) and i.get('type')=='additional_tools' for t in i.get('tools',[])]))}
 class Handler(http.server.BaseHTTPRequestHandler):
  def log_message(self,*a):pass
  def do_POST(self):
@@ -99,10 +120,21 @@ def text(v):return {'type':'text','text':v,'text_elements':[]}
 def image(file):return {'type':'localImage','path':str(PROJECT/file)}
 results=[]
 def persist():
- (RUN/'result.json').write_text(json.dumps({'scope':'Native Codex with artificial loopback provider. Serialization/replay only; not real provider success or Android UI.','binarySha256':hashlib.sha256(Path(exe).read_bytes()).hexdigest(),'thread':globals().get('thread'),'cases':results,'requests':records,'events':events},indent=2)+'\n')
+ (RUN/'result.json').write_text(json.dumps({'scope':'Native Codex with artificial loopback provider. Serialization/replay only; not real provider success or Android UI.','binarySha256':hashlib.sha256(Path(exe).read_bytes()).hexdigest(),'promptVariant':prompt_variant,'thread':globals().get('thread'),'cases':results,'requests':records,'events':events},indent=2)+'\n')
 try:
  start();thread=rpc('thread/start',{'cwd':str(PROJECT),'approvalPolicy':'never','sandbox':'danger-full-access'})['thread']['id']
  turn('short-control',[text('SYNTHETIC short control')])
+ if prompt_variant:
+  turn('two-images',[text('SYNTHETIC PNG batch'),image('png-600-0.png'),image('png-600-1.png')])
+  turn('continue-no-view',[text('SYNTHETIC continue without new images')])
+  stop();start();rpc('thread/resume',{'threadId':thread,'cwd':str(PROJECT),'approvalPolicy':'never','sandbox':'danger-full-access','excludeTurns':True})
+  turn('reopen-no-view',[text('SYNTHETIC reopen control')])
+  for i in range(2):turn('view-image-repeat-'+str(i),[text('SYNTHETIC use image tool once')],{'name':'view_image','args':{'path':str(PROJECT/'png-600-0.png')}})
+  turn('continue-after-view-no-view',[text('SYNTHETIC continue without new images')])
+  stop();start();rpc('thread/resume',{'threadId':thread,'cwd':str(PROJECT),'approvalPolicy':'never','sandbox':'danger-full-access','excludeTurns':True})
+  turn('reopen-after-view-no-view',[text('SYNTHETIC reopen control')])
+  assert all(v['fullyPresent'] for r in records for v in r['promptEvidence'].values()), 'A requested prompt was truncated or not discovered'
+  raise SystemExit(0)
  if os.environ.get('SYNTHETIC_TOOLS_ONLY')=='1':
   turn('view-image-forced',[text('SYNTHETIC view image')],{'name':'view_image','args':{'path':str(PROJECT/'png-600-0.png')}});raise SystemExit(0)
  if os.environ.get('SYNTHETIC_LATEST_ONLY')=='1':

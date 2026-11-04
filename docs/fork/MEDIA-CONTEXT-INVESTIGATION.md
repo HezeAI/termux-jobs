@@ -5,6 +5,145 @@ The [test APK](VALIDATION-2.1.3-test4.md) contains the separate audit changes.
 No working history, authorization or session was edited. No native history was
 manually stripped. No APK/component was installed, replaced or published here.
 
+## 2026-11-04 — Prompt instructions versus native image replay
+
+**Current conclusion:** Codex 0.166.0 repeats historical image payloads while
+building the next request even when no new viewing call occurs. Removing our
+common/project instructions does not remove that behavior. A separate new
+`view_image` call adds another historical image result. Neither observation proves
+the sole cause of the external disconnections or a completed fix.
+
+### Scope and instruction review — checked anew
+
+Application sources/templates: released `v2.1.3`, commit
+`308c88955fd3b0691ded560c78ee3f945538381e`; investigation branch
+`work/media-prompt-replay`. Production sources and templates remain unchanged.
+Reviewed all four built-in common templates (Codex/Claude, RU/EN), the full shared
+project template, and attachment-description generation in `codex-chat.cjs` and
+`agent-attachments.cjs`. Saved user instructions and working projects were not read.
+Consequently this review does not establish the contents of any user's actual prompt.
+
+- The common rule selects **one latest screenshot when requested**, or the exact
+  named file. It does not request opening all images or old attachments on every turn.
+- Memory is mandatory at project start when present; that is a text-document rule,
+  not an instruction to replay image payloads. The common templates explicitly
+  prohibit needless rereading of unchanged documents and loading every document
+  before every task. The project template requests relevant project documentation.
+- No reviewed template requires rereading conversation history or reopening every
+  attachment. Codex/Claude common bodies match after agent filename normalization
+  in each language. This static equality is not a Claude runtime experiment.
+- Attachment cards describe paths, sizes, samples and frames. They contain no
+  instruction to reopen all images. The text-sample suffix **does** say to read the
+  remainder in parts, without explicitly conditioning that on relevance. That is
+  a possible incentive for extra **text** reads, not evidence of image replay or an
+  observed real-model tool choice. A narrow optional wording is: “If the task
+  requires omitted details, read the relevant ranges from the original file.”
+  No wording or application behavior was changed during this investigation.
+
+Templates are identified by SHA-256 in the captured request evidence:
+RU common `38442641898429a370ce0cac7c2e04ec6545bad04f51a02c86423e9c7f5d7266`,
+EN common `925f87fb35098cfad3904513160f8d86b1ae8ccf3d2e8429570793d47bbda549`,
+project `3554f8178cfbc032b50bc07f3e937236a66a10dea420da84f3b1a6ed7c6a39e4`.
+Claude common hashes remain respectively
+`ef99e68d47ba84db9ab66150056de3f2e367ee17ddbaa29e97d3d86c830207bd` and
+`34cef6e84276e01dd033202f84fa23cf3ba59486fa571e32c1038d8ba17591bc`.
+
+### Controlled native A/B — checked anew
+
+Reused the existing native Codex harness, local scripted provider and kernel
+network guard. The guard was compiled and its negative probes passed before any
+CLI launch: external/foreign-localhost addresses, UDP/packet, raw-syscall and exec
+bypasses were denied. New HOME/CODEX_HOME/project roots, synthetic credentials and
+a project `.git` boundary were used. This is a network fence, not a filesystem jail.
+No working chats, authorizations, originals, published assets or global settings
+were changed. Only fixture-owned children were closed; existing `stop()` waits
+for their exit before resume/restart.
+
+Native binary SHA-256:
+`f2e6c980c937e734644bed1b4a9a018d3e63a0ccbe71aafc85c86a8c6e4b462a`,
+version **0.166.0**, model identifier **gpt-6.1-sol**. No real model or cloud account
+was called. Built-in CLI instructions remain in every condition; “none” means
+no supplied common/project AGENTS.md. CLI defaults/configuration were otherwise
+identical. All requested template text was confirmed **fully present** in every
+actual request; comparison did not silently omit or truncate a template.
+
+Each condition ran the same synthetic sequence: short control → two PNGs →
+text-only continuation → process stop/resume and text-only continuation → two
+scripted native `view_image` calls of the first PNG → text-only continuation →
+second process stop/resume and continuation. Full prompt text is copied only into
+fixture AGENTS.md files. Across four conditions: **32 completed turns, 40 captured
+HTTP requests, eight scripted viewing calls confirmed by native image results**.
+Every dataset original and project copy retained its manifest hash.
+The summary validator also rejected two artificial corruptions: a missing old
+image and an unexpected supplied prompt. Python/shell syntax and documentation
+links/diff checks passed; no APK or Lint run is needed for this test/report-only change.
+
+Actual serialized HTTP body sizes in bytes (not disk-history size or TCP wire bytes):
+
+| Supplied instructions | Text-only continuation, 2 old images | Reopen, 2 old images | After two new views, continuation, 4 images | Reopen, 4 images |
+| --- | ---: | ---: | ---: | ---: |
+| None | 2,942,904 | 2,943,256 | 5,830,999 | 5,831,343 |
+| Project only | 2,951,149 | 2,951,501 | 5,839,244 | 5,839,588 |
+| RU common + project | 2,978,231 | 2,978,583 | 5,866,326 | 5,866,670 |
+| EN common + project | 2,965,699 | 2,966,051 | 5,853,794 | 5,854,138 |
+
+Every no-view continuation/reopen uses one request and **zero new viewing calls**.
+The two original images have identical hashes across conditions and are retained
+without another file-view call. Each scripted viewing call causes two requests:
+2 → 3 images, then 3 → 4 images. Unique image payload hashes stay at **two**;
+the same first PNG appears three times after both calls. This confirms two distinct
+contributions: native historical replay without viewing, and growth caused by a
+new viewing result. The templates add text bytes but do not change these image
+counts. This experiment cannot measure whether a real model is more likely to
+choose viewing under one prompt: tool choices were scripted and identical.
+
+Evidence root: `.verification/media-context/replay-p1k6mG/`, including enforcement
+log, four `latest-*-run.txt` pointers, native per-request image hashes/prompt-presence
+metadata, and `prompt-replay-summary.json` (SHA-256
+`7be947ae8ae6f28c3c305cd41b6fffbdbaf9ecbe4c32c88aa02ce3e189a39fb1`).
+Four raw result hashes, ordered none/project/RU/EN:
+`62e544884577f989b6deea90802adce4e56aeb6c645c11227c71dbf20664bb54`,
+`e7ae6e8e0a889dff3953509eccfa935ae47688aa21ac144b3d20a425ec26dbc3`,
+`86bd75bb556168ed99d53a6f93448c9c3ef1cc3cc94d5ee889421d4b216b5041`,
+`58c39bf75c317af2f7e79984381f40b81f90b41cc6f5b7bbc5eae4bd98818417`.
+Reproduce with `bash scripts/tests/media-context/run.sh codex-prompts`;
+[runner limitations](../../scripts/tests/media-context/README.md) apply.
+
+### Earlier evidence — reused as historical observations
+
+Rechecked all four result SHA-256 values against `initial-summary.json`. The
+original Codex no-view continuation and cold reopen each contained the same 20
+image hashes: **28,920,368 / 28,920,720 bytes**, respectively. Three later native
+views added duplicate results, 46 → 47 → 48 → 49 images, with 46 unique hashes.
+Those outputs corroborate the new small controlled experiment; they are not new
+phone tests. The old Claude/Gemini/OpenCode values below remain historical local
+measurements, not new prompt A/B coverage or proof of identical internals.
+
+### Decision and remaining checks
+
+A prompt-only change cannot stop the native replay demonstrated here. No evidence
+justifies removing the existing memory/context rules or shortening the user's
+full project template as an image-disconnection fix. An optional anti-redundancy
+rule could reduce unnecessary model-selected new views, but its benefit is
+**unmeasured** and it would not prevent replay of already admitted image results.
+
+The candidate must act at native model-request construction: bound historical
+image payloads, retain durable file references/descriptions and restore relevant
+visual detail on explicit demand. Duplicate handling must preserve call/result
+relationships and text semantics; do not blindly strip tool events or edit native
+session journals. A supported CLI capability or a separately validated CLI change
+is required; the Android transcript/history renderer does not own this request.
+Server state, cached tokens or a server-side file handle must not be assumed from
+public API capabilities without verifying this CLI and login route.
+
+**Not checked:** real-model prompt A/B/tool-planning propensity; new prompt A/B
+for Claude, Gemini or OpenCode; the previous external route after a candidate;
+phone behavior, visual fidelity after bounded projection, and a completed native
+request-budget implementation. MCP/plugins remain excluded. The next step is to
+validate a supported Codex request-projection candidate without modifying history,
+then test continuation, reopen and requested old-image detail on the original
+external route. The disconnection issue stays open.
+
 ## Baseline and acceptance
 
 Historical phone evidence: Codex 0.166.0, Hysteria → Selectel → GeoHide,

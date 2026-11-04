@@ -2,12 +2,12 @@
 # Manual, isolated native serialization research. Not a phone or cloud success test.
 set -euo pipefail
 umask 077
-unset SYNTHETIC_TOOLS_ONLY SYNTHETIC_LATEST_ONLY SYNTHETIC_IMAGE_BUDGET
+unset SYNTHETIC_TOOLS_ONLY SYNTHETIC_LATEST_ONLY SYNTHETIC_IMAGE_BUDGET SYNTHETIC_PROMPT_VARIANT
 cd "$(dirname "$0")/../../.."
 case "${1:-}" in
- codex|codex-latest) task_media_agent=codex ;;
+ codex|codex-latest|codex-prompts) task_media_agent=codex ;;
  claude|gemini|opencode) task_media_agent=$1 ;;
- *) echo 'Usage: run.sh codex|codex-latest|claude|gemini|opencode' >&2; exit 2 ;;
+ *) echo 'Usage: run.sh codex|codex-latest|codex-prompts|claude|gemini|opencode' >&2; exit 2 ;;
 esac
 mkdir -p .verification/media-context
 export TERMUX_MEDIA_OUTPUT
@@ -24,7 +24,14 @@ python3 scripts/tests/media-context/generate.py "$TERMUX_MEDIA_OUTPUT/data" > "$
 export TERMUX_MEDIA_GUARDED_RUN=1
 cp scripts/tests/media-context/probe-* "$TERMUX_MEDIA_OUTPUT/"
 if [[ "$1" == codex-latest ]]; then export SYNTHETIC_LATEST_ONLY=1; fi
-if [[ "$task_media_agent" == codex ]]; then
+if [[ "$1" == codex-prompts ]]; then
+ export TERMUX_MEDIA_ASSETS="$PWD/app/src/main/assets"
+ for task_prompt_variant in none project ru en; do
+  SYNTHETIC_PROMPT_VARIANT="$task_prompt_variant" "$TERMUX_MEDIA_OUTPUT/local-network-only" "$TERMUX_MEDIA_OUTPUT/network-$task_prompt_variant.jsonl" -- python3 "$TERMUX_MEDIA_OUTPUT/probe-codex.py" > "$TERMUX_MEDIA_OUTPUT/run-$task_prompt_variant.log" 2>&1
+  cp "$TERMUX_MEDIA_OUTPUT/latest-codex-run.txt" "$TERMUX_MEDIA_OUTPUT/latest-$task_prompt_variant-run.txt"
+ done
+ python3 scripts/tests/media-context/summarize-prompt-replay.py "$TERMUX_MEDIA_OUTPUT"
+elif [[ "$task_media_agent" == codex ]]; then
  "$TERMUX_MEDIA_OUTPUT/local-network-only" "$TERMUX_MEDIA_OUTPUT/network.jsonl" -- python3 "$TERMUX_MEDIA_OUTPUT/probe-codex.py" > "$TERMUX_MEDIA_OUTPUT/run.log" 2>&1
 else
  "$TERMUX_MEDIA_OUTPUT/local-network-only" "$TERMUX_MEDIA_OUTPUT/network.jsonl" -- node "$TERMUX_MEDIA_OUTPUT/probe-$task_media_agent.cjs" > "$TERMUX_MEDIA_OUTPUT/run.log" 2>&1

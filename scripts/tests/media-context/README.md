@@ -4,6 +4,7 @@ Run from the active checkout with existing native CLI installations:
 
 ```sh
 bash scripts/tests/media-context/run.sh codex-latest
+bash scripts/tests/media-context/run.sh codex-prompts
 bash scripts/tests/media-context/run.sh codex
 bash scripts/tests/media-context/run.sh claude
 bash scripts/tests/media-context/run.sh gemini
@@ -35,6 +36,13 @@ compaction-threshold, vision-quality or real-provider latency tests**.
   Nested code-mode tools may not be top-level tool definitions. `codex-latest`
   checks actual command discovery, view_image and FFmpeg frame extraction. A
   scripted provider drives tool calls; it does not test a real model's planning.
+- `codex-prompts`: same two artificial images and scripted turns with no supplied
+  instructions, project template only, RU common + project, and EN common + project.
+  Checks full prompt discovery in actual requests, matching image hashes, no-view
+  continuation/reopen, and two native reads of the same image. The common and
+  project files are copied only into fresh fixtures. It does not measure a real
+  model's independent propensity to reopen files. The summary validator also checks
+  that every generated original and project copy retains its manifest hash.
 - Claude: production SDK adapter + real CLI, a new/resumed native session and
   the actual Anthropic HTTP client. The separate controller socket is bypassed
   because this fence intentionally denies filesystem Unix listeners. That control
