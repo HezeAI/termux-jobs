@@ -69,4 +69,23 @@ public class GeminiKeyBrokerTest {
   try{Peer p=submit(run,run,100,android.os.Process.myUid());assertTrue(entered.await(3,TimeUnit.SECONDS));broker.close();release.countDown();long end=System.nanoTime()+TimeUnit.SECONDS.toNanos(3);while(value[0]!='\0'&&System.nanoTime()<end)Thread.sleep(10);assertEquals(0,p.output.size());for(char c:value)assertEquals('\0',c);}finally{release.countDown();broker.close();}
  }
 
+ @Test public void savedProfileReopensAfterOwnerDeathAndOnlyFreshRunReceivesKey()throws Exception{
+  javax.crypto.KeyGenerator generator=javax.crypto.KeyGenerator.getInstance("AES");generator.init(256);javax.crypto.SecretKey key=generator.generateKey();
+  android.app.Application app=RuntimeEnvironment.application;android.util.AtomicFile file=new android.util.AtomicFile(new File(app.getFilesDir(),"synthetic-recovery.json"));
+  WorkspaceStore.Session original=WorkspaceStore.newProfile();original.geminiAgent=true;original.environment="ubuntu";original.codexEnvironment="ubuntu-ai";original.geminiAuth="api";original.saved=true;
+  original.geminiEncryptedKey=GeminiApiKeyVault.encrypt(key,original,"SYNTHETIC_RECOVERY_ONLY".toCharArray());String id=original.id,oldRun=original.geminiSocketId;
+  WorkspaceStore before=new WorkspaceStore(app,x->fail(x),file);before.sessions.clear();before.sessions.add(original);before.save();before.awaitWrites();before.close();
+  Map<Integer,GeminiKeyBroker.Identity> ids=new ConcurrentHashMap<>();ids.put(100,new GeminiKeyBroker.Identity(100,1,"10"));AtomicInteger reads=new AtomicInteger();
+  GeminiKeyBroker previous=new GeminiKeyBroker(oldRun,()->{reads.incrementAndGet();return GeminiApiKeyVault.decrypt(key,original);},ids::get);previous.attach(()->100);
+  try{ids.remove(100);long end=System.nanoTime()+TimeUnit.SECONDS.toNanos(4);while(Server.bound.containsKey(GeminiKeyBroker.address(oldRun))&&System.nanoTime()<end)Thread.sleep(10);assertFalse(Server.bound.containsKey(GeminiKeyBroker.address(oldRun)));assertEquals(0,reads.get());}finally{previous.close();}
+  WorkspaceStore reopened=new WorkspaceStore(app,x->fail(x),file);
+  try{WorkspaceStore.Session restored=reopened.sessions.stream().filter(p->p.id.equals(id)).findFirst().get();assertEquals(original.geminiEncryptedKey,restored.geminiEncryptedKey);restored.geminiSocketId=UUID.randomUUID().toString();String run=restored.geminiSocketId;
+   String command=GeminiCli.command(app.getFilesDir(),restored);assertTrue(command.contains(GeminiKeyBroker.address(run)));assertFalse(command.contains(GeminiKeyBroker.address(oldRun)));assertFalse(command.contains("SYNTHETIC_RECOVERY_ONLY"));
+   ids.put(200,new GeminiKeyBroker.Identity(200,1,"20"));ids.put(201,new GeminiKeyBroker.Identity(201,200,"21"));
+   GeminiKeyBroker next=new GeminiKeyBroker(run,()->{reads.incrementAndGet();return GeminiApiKeyVault.decrypt(key,restored);},ids::get);next.attach(()->200);
+   try{Peer stale=submit(run,oldRun,201,android.os.Process.myUid());finished(stale);assertEquals(0,stale.output.size());assertEquals(0,reads.get());Peer valid=submit(run,run,201,android.os.Process.myUid());finished(valid);DataInputStream data=new DataInputStream(new ByteArrayInputStream(valid.output.toByteArray()));byte[] delivered=new byte[data.readInt()];data.readFully(delivered);assertEquals("SYNTHETIC_RECOVERY_ONLY",new String(delivered,java.nio.charset.StandardCharsets.US_ASCII));assertEquals(1,reads.get());}finally{next.close();}
+   assertFalse(new File(GeminiCli.directory(app.getFilesDir()),"keys").exists());assertFalse(new String(java.nio.file.Files.readAllBytes(file.getBaseFile().toPath()),java.nio.charset.StandardCharsets.UTF_8).contains("SYNTHETIC_RECOVERY_ONLY"));
+  }finally{reopened.close();}
+ }
+
 }

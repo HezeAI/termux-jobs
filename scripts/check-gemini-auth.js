@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),{spawn}=require('node:child_process'),{once}=require('node:events');
 const bridge=path.resolve('app/src/main/assets/gemini-control.js'),{authEnvironment,stopProxy}=require(bridge);
-const root=fs.mkdtempSync(path.resolve('.verification/gemini-auth-v1.0.17/auth-'));
+const root=require('./tests/fixture-paths.cjs').fixture('auth');
 (async()=>{
  const original={GEMINI_CLI_AUTH_OVERRIDE:'gemini-api-key',EXAMPLE:'unchanged'};
  const file=path.join(root,'policy.json');const policy=authEnvironment('google',file,original);
