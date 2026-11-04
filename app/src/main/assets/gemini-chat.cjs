@@ -7,6 +7,7 @@ const crypto=require('node:crypto');
 const {clean}=require('./agent-receipts.cjs');
 const {Attachments,attachmentRows}=require('./agent-attachments.cjs');
 const text=v=>typeof v==='string'?clean(v.slice(0,200000)):'';
+const updateNotice=item=>item?.jobsNotice==='cli-update'&&['info','error','warning'].includes(item.type);
 const hash=v=>'msg_g'+crypto.createHash('sha256').update(String(v)).digest('hex').slice(0,24);
 function display(value,depth=0,budget={left:200000,nodes:10000}){
  if(depth>6||--budget.nodes<0||budget.left<=0)return '';if(typeof value==='string'){const s=text(value).slice(0,budget.left);budget.left-=s.length;return s;}
@@ -16,7 +17,7 @@ function display(value,depth=0,budget={left:200000,nodes:10000}){
 }
 
 class GeminiChat {
- constructor(api){this.api=api;this.attachments=new Attachments(api.attachmentRoot||__dirname);this.binding=null;this.shell=null;this.groups=[];this.full=new Map();this.sent=new Map();this.thoughts=new Map();this.revision=0;this.native=false;}
+ constructor(api){this.api=api;this.updateTitle=(api.language||process.env.JOBS_GEMINI_LANGUAGE)==='ru'?'Уведомление обновления Gemini CLI':'Gemini CLI update notice';this.attachments=new Attachments(api.attachmentRoot||__dirname);this.binding=null;this.shell=null;this.groups=[];this.full=new Map();this.sent=new Map();this.thoughts=new Map();this.revision=0;this.native=false;}
  observe(config,data,submit,shellMode,setShellMode){
   const session=this.api.session();if(this.sessionKey!==session){this.sessionKey=session;this.actionBaseline=null;this.actionReady=false;this.thoughts.clear();this.completions=new CompletionTimes(this.api.attachmentRoot,'gemini',session);this.seenText=new Set();this.pendingTimes=new Set();this.timeBaseline=false;this.responseObserved=false;}
   const binding={config,submit,shellMode,setShellMode,cancel:data.cancel,ready:data.ready===true,native:data.native===true};this.binding=binding;this.revision++;
@@ -37,7 +38,7 @@ class GeminiChat {
   if(state==='idle'&&this.responseObserved){this.endInfo={request:this.completionRequest,completedAt:Date.now(),durationMs:this.completions.elapsed(this.completionRequest)};this.responseObserved=false;}
   if(state==='idle'&&this.endInfo&&this.cancelledRequest!==this.endInfo.request&&this.source.ready&&!this.source.authError){
    const final=answers.filter(m=>!this.responseBaseline.has(hash(m.id+':'+m.type))&&typeof m.text==='string'&&m.text.trim()).at(-1);
-   const position=final?history.lastIndexOf(final):-1,error=position>=0&&history.slice(position).some(m=>m.type==='error');
+   const position=final?history.lastIndexOf(final):-1,error=position>=0&&history.slice(position).some(m=>m.type==='error'&&!updateNotice(m));
    if(final&&!error){this.completions.finish(this.endInfo.request,hash(final.id+':'+final.type),{durationMs:this.endInfo.durationMs},true,this.endInfo.completedAt);this.endInfo=null;this.dirty=true;}
   }
  }
@@ -59,6 +60,7 @@ class GeminiChat {
     const id=typeof tool.callId==='string'?tool.callId.slice(0,160):'';if(!id)continue;const receipt=this.api.receipt(id);if(receipt)row('receipt:'+id,'receipt',receipt.body,receipt.label);
     const output=display(tool.resultDisplay),description=text(tool.description);row('tool:'+id,'tool',[description,output].filter(Boolean).join('\n\n'),text(tool.name)+' · '+text(tool.status),{eventTime:this.completions?.action(message+':'+id)||0,toolName:text(tool.name),toolType:text(tool.name),toolOutputLength:output.length,outputTail:outputTail(output),toolOutputOffset:output&&description?description.length+2:0,actionPreview:actionPreview(null,tool.name,tool.args||tool.request?.args),status:text(tool.status)});
    }
+   else if(updateNotice(item))row('update','info',this.updateTitle+'\n'+text(item.text),'',{notice:'cli-update'});
    else if(['info','error','warning','hint'].includes(item.type))row(item.type,item.type==='error'?'error':'info',item.text);
    if(!live&&this.thoughts.has(message))row('summary','reasoning',this.thoughts.get(message));
    if(ids.length)deliveryStatus.attach(rows,ids.map(id=>this.sent.get(id)?.receipt));if(rows.length)this.groups.push({id:message,rows});
@@ -75,7 +77,7 @@ class GeminiChat {
   if(q.cursor){if(typeof q.cursor!=='string'||q.cursor.length>128)throw Error('Invalid cursor');end=this.groups.findIndex(g=>g.id===q.cursor);if(end<0)throw Error('Expired cursor');}
   const groups=this.groups.slice(Math.max(0,end-20),end);let rows=groups.flatMap(g=>g.rows);if(rows.length>200)rows=rows.slice(-200);
   let budget=60000;rows=rows.map((r,i)=>{const max=Math.min(12000,Math.max(100,Math.floor(budget/(rows.length-i))));budget-=Math.min(r.body.length,max);return {...r,body:r.body.slice(0,max),more:r.more||r.body.length>max};});
-  return {ok:true,nativeChat:true,attachmentsSupported:true,agentError:this.source?.authError===true||this.source?.history?.at(-1)?.type==='error',authError:this.source?.authError===true,session:this.api.session(),stopToken:this.stopOwner||"",nativeUiReady:!!this.binding,knownMessages:this.groups.map(g=>g.id),connected:!!this.binding&&s.available&&(this.binding.ready||this.binding.native),rows:trimPreviews(rows),older:end>20?groups[0]?.id||'':'',forms:[],permission:this.api.permission(),busy:s.state==='responding'||s.state==='waiting_for_confirmation',needsTerminal:!!this.binding?.native||!s.available||(s.state==='waiting_for_confirmation'&&!this.api.permission()),directShell:false,model:{providerID:'google',id:s.model||s.selectedModel||''}};
+  return {ok:true,nativeChat:true,attachmentsSupported:true,agentError:this.source?.authError===true||this.source?.history?.findLast(m=>!updateNotice(m))?.type==='error',authError:this.source?.authError===true,session:this.api.session(),stopToken:this.stopOwner||"",nativeUiReady:!!this.binding,knownMessages:this.groups.map(g=>g.id),connected:!!this.binding&&s.available&&(this.binding.ready||this.binding.native),rows:trimPreviews(rows),older:end>20?groups[0]?.id||'':'',forms:[],permission:this.api.permission(),busy:s.state==='responding'||s.state==='waiting_for_confirmation',needsTerminal:!!this.binding?.native||!s.available||(s.state==='waiting_for_confirmation'&&!this.api.permission()),directShell:false,model:{providerID:'google',id:s.model||s.selectedModel||''}};
  }
  async command(q){
   if(q.op==='chat-snapshot')return this.snapshot(q);

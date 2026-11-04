@@ -22,11 +22,10 @@ function argsFor(model, mode, chat, thread) {
 function authEnvironment(mode, file, original = process.env) {
   if (!['auto','google','api','vertex'].includes(mode)) throw new Error('Invalid Gemini auth mode');
   const env = {...original};
-  if (mode === 'auto') return {env, cleanup:()=>{}};
   // Preserve externally managed settings/policy discovery. Do not replace them.
   if (original.GEMINI_CLI_SYSTEM_SETTINGS_PATH || original.GEMINI_CLI_SYSTEM_DEFAULTS_PATH
       || fs.existsSync('/etc/gemini-cli')) {
-    throw new Error('External Gemini system settings detected. Select terminal authentication mode.');
+    throw new Error('External Gemini system settings detected. Managed CLI policy cannot be applied.');
   }
   const type = mode === 'google' ? 'oauth-personal' : mode === 'vertex' ? 'vertex-ai' : 'gemini-api-key';
   if(mode==='vertex'){
@@ -44,10 +43,12 @@ function authEnvironment(mode, file, original = process.env) {
   if (!info.isDirectory() || info.isSymbolicLink() || (info.mode & 0o077)) {
     throw new Error('Gemini authentication directory is not private');
   }
-  fs.writeFileSync(file, JSON.stringify({security:{auth:{selectedType:type,enforcedType:type}}}), {mode:0o600,flag:'wx'});
+  const policy={general:{enableAutoUpdate:false,enableAutoUpdateNotification:true}};
+  if(mode!=='auto')policy.security={auth:{selectedType:type,enforcedType:type}};
+  fs.writeFileSync(file, JSON.stringify(policy), {mode:0o600,flag:'wx'});
   env.GEMINI_CLI_SYSTEM_SETTINGS_PATH = file;
   env.GEMINI_CLI_SYSTEM_DEFAULTS_PATH = '/etc/gemini-cli/system-defaults.json';
-  delete env.GEMINI_CLI_AUTH_OVERRIDE;
+  if(mode!=='auto')delete env.GEMINI_CLI_AUTH_OVERRIDE;
   return {env, cleanup:()=>{try{fs.unlinkSync(file);}catch{}}};
 }
 function takeApiKey(file,socket){
@@ -99,8 +100,12 @@ async function run(socket, model, mode, chat, thread, auth = 'auto') {
   if (!uuid.test(require('node:path').basename(socket, '.sock'))) throw new Error('Invalid control socket');
   // Unique run sockets: refuse to overwrite a controller that might still be live.
   if (fs.existsSync(socket)) throw new Error('Gemini controller socket already exists');
-  const binary = process.env.JOBS_GEMINI_BINARY;
-  if (!binary || !require('node:path').isAbsolute(binary)) throw new Error('Missing Gemini runtime');
+  const requestedBinary = process.env.JOBS_GEMINI_BINARY;
+  if (!requestedBinary || !path.isAbsolute(requestedBinary)) throw new Error('Missing Gemini runtime');
+  // Node resolves module URLs through symlinks. Give the hash-pinned loader the
+  // same canonical runtime path, including when HOME/an ancestor is an alias.
+  const binary = fs.realpathSync(requestedBinary);
+  if (!fs.statSync(binary).isFile()) throw new Error('Missing Gemini runtime');
   const authRoot = process.env.JOBS_GEMINI_AUTH_DIR
     || path.join(os.homedir(), '.local/share/termux-jobs/gemini-cli/auth');
   if (!path.isAbsolute(authRoot)) throw new Error('Invalid Gemini authentication directory');
@@ -187,7 +192,7 @@ async function run(socket, model, mode, chat, thread, auth = 'auto') {
   for (const signal of ['SIGTERM','SIGHUP','SIGINT']) process.on(signal, stop);
   let restarts = 0, lastRestart = 0, authOverride = process.env.GEMINI_CLI_AUTH_OVERRIDE;
   const launch = () => {
-    const env = {...authConfig.env, GEMINI_CLI_NO_RELAUNCH:'1',JOBS_GEMINI_LIVE:'1'};
+    const env = {...authConfig.env, JOBS_GEMINI_BINARY:binary, GEMINI_CLI_NO_RELAUNCH:'1',JOBS_GEMINI_LIVE:'1'};
     childEpoch++;publish({...status,available:false,state:'starting'});
     delete env.GEMINI_CLI_AUTH_OVERRIDE;
     if (auth === 'auto' && authOverride) env.GEMINI_CLI_AUTH_OVERRIDE = authOverride;
@@ -235,5 +240,5 @@ module.exports = {takeApiKey,takeApiKeySocket,argsFor, run, stopProxy, authEnvir
 if (require.main === module) {
   const [op, socket, ...args] = process.argv.slice(2);
   (op === 'run' ? run(socket, ...args) : op === 'stop' ? stopProxy(socket) : Promise.reject(new Error('Unknown operation')))
-    .catch(error => {console.error(error.message === 'External Gemini system settings detected. Select terminal authentication mode.' ? error.message : 'Gemini session controller unavailable'); process.exitCode=1;});
+    .catch(error => {console.error(error.message === 'External Gemini system settings detected. Managed CLI policy cannot be applied.' ? error.message : 'Gemini session controller unavailable'); process.exitCode=1;});
 }

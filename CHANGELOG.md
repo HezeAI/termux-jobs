@@ -1,5 +1,11 @@
 # Unreleased
 
+- Gemini: disable native automatic installation while keeping version-check
+  notifications enabled through supported per-run system settings. Classify
+  updater notifications separately from session errors. Canonicalize the CLI
+  path for the pinned loader, including symlinked runtime/HOME paths. Keep
+  CLI 0.64.0, authorization and existing profiles; phone handoff remains open.
+
 
 - Docs: put release highlights and Download APK first, followed by requirements
   and compatibility; fold CI history and technical evidence into details.
