@@ -93,7 +93,7 @@ Reasons to record a lesson include a confirmed non-obvious cause of an error, a 
 
 When such a lesson exists, create or update LEARNING.md. Separate approval is not required if project rules permit it.
 
-Record the date, context, conclusion, applicability conditions and evidence. Update an existing entry on the same topic without duplication. Refer to detailed documentation and tests instead of copying their contents.
+Record a brief confirmed lesson: date, context, conclusion, applicability conditions and an evidence link. Reduce memory size instead of bypassing mandatory reading. Do not turn memory into an activity log. Update an existing entry on the same topic without duplication. Refer to detailed documentation and tests instead of copying their contents.
 
 Do not record ordinary typos, one-off external failures or common advice without project-specific details.
 
@@ -125,11 +125,21 @@ When explaining code, a plan, an error or changes, follow ASD-STE100 principles 
 
 For a small project, keep AGENTS.md simple. Do not create a set of documents in advance.
 
-Use AGENTS.md as a brief entry point to the project. Do not duplicate general Ubuntu AI instructions in it.
+The main instructions contain mandatory restrictions, the project's purpose, working paths and a navigation guide. Keep details in topical documents. Do not duplicate general Ubuntu AI instructions.
 
-Before work, select documents based on the affected functions and dependencies. When the task expands, read the corresponding additional requirements.
+For each link, state when the document must be read. Before topical reading, select sections relevant to the task. Read additional material when the scope expands. Do not require loading every document before every task.
+
+Do not reread unchanged documents without a reason. Check the file again if its currency is uncertain.
 
 Use existing documents. Do not duplicate rules across files or create long chains of references.
+
+If the project uses a continuation file, maintain its current goal, state, restrictions and next step. Do not create one for every small task.
+
+Keep current statuses in the main plan. Separate detailed history when needed, preserving evidence and links.
+
+Reorganize documentation when duplication accumulates or the current state becomes difficult to find. Do not rewrite it after every task. Shortening must not remove requirements, hide unfinished work or present assumptions as confirmed results.
+
+Do not automatically import all reference files for “optimization”.
 
 When the structure changes, update the relevant links and descriptions. Verify that paths exist.
 
