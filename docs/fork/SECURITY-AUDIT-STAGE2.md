@@ -45,6 +45,69 @@ OpenCode исправлен **только локально** в `e676dd425c5eab
 | A-UI-01 / P3 | OpenCode scope gate сохраняется отдельно; его native отказ проверен. | OpenCode 2.0.28; guarded native matrix. | Телефон: различить native external_directory и нашу карточку действия; не разрешать native gate автоматически. | Разработчик на телефоне. |
 | F-TEST-NET-01 и O-NET-01 | Ранняя проба не подтвердила изоляцию; её исторический запрос неизвестен. Поздний kernel guard проверен и блокирует дополнительные подключения. | Раздел ранней пробы ниже, `.verification/security-stage2-followup/network-guard/`, свежие negative/native tests test6. | Не переобъявлять раннюю пробу безопасной. Полный трафик CLI оставить отдельному направлению; не делать новых внешних запросов ради завершения этого этапа. | Помощник сохраняет ограничения; нового повторения ранней пробы нет. |
 
+### Штатные пути запуска и границы доказательств — 2026-11-04
+
+Проверено заново помощником по исходникам `aaeecc6d`: таблица описывает
+существующие пути, а не новые режимы. Рабочие CLI, настройки и авторизация
+не читались и не запускались. Нативные проверки и сообщения разработчика
+о телефоне учитываются отдельно; статический маршрут не является успешной
+проверкой отказа. Версии исследуемой интеграции: Codex 0.166.0,
+Claude Code 2.1.296, Gemini CLI 0.64.0, OpenCode 2.0.28.
+
+| Путь | Кто задаёт политику | Кто принимает ответ пользователя и исполняет решение | Подтверждённый охват |
+| --- | --- | --- | --- |
+| Чат приложения: Codex в Ubuntu AI / сохранённой Ubuntu | Поля профиля → `CodexSessionShell.approval/sandbox` → launcher. Для `untrusted` CLI bootstrap использует поддерживаемый `on-request`, затем `CodexChat.params/verify` задаёт и сверяет typed thread policy `untrusted`, cwd и sandbox. | Android-карточка → контроллер Codex → RPC ответа app-server; исполнение и запрет — в native app-server/tool. | Внутрипроектные shell и прямое редактирование No/Allow once приняты разработчиком на test5. Это не проверка изоляции или всех возможных инструментов. |
+| Чат приложения: Claude в Ubuntu AI / сохранённой Ubuntu | Профиль `claudeMode` (`manual`, `acceptEdits`, `plan`) → `--permission-mode` SDK-процесса. Дополнительно действуют native настройки CLI; поле интерфейса само по себе не доказывает запрет. | `can_use_tool` → Android-карточка → `control_response` allow/deny; Claude исполняет решение. Контроллер сверяет session, nonce и epoch. | Внутрипроектные Bash/Write No/Allow once приняты разработчиком на телефоне. |
+| Чат приложения: Gemini в Ubuntu AI / сохранённой Ubuntu | Профиль `geminiMode` → `--approval-mode default/auto_edit/plan`, native config/scheduler. API/Vertex — выбор авторизации, не отдельная политика файлов. | Hook native confirmation → Android-карточка → `answerPermission` → исходный callback scheduler. Неподдержанный native запрос не разрешается автоматически. | Внутрипроектные shell/Write No/Allow once приняты разработчиком на телефоне. Чтение и доступ вне проекта требуют отдельных результатов. |
+| Чат приложения: OpenCode в Ubuntu AI / сохранённой Ubuntu | Профиль Build/Plan, `aiAccess`, `aiProjectOnly` → `accessRules` → создание/PATCH native session permissions. | Native permission API → `OpenCodePermissions` → Android-карточка → reject/once в native API. `external_directory` учитывается отдельно от карточки инструмента. | Четыре внутрипроектных сценария приняты разработчиком. Нейтральное отображение связанного отказа исправлено локально в `aaeecc6d`; на телефоне новой сборки ещё не проверено. |
+| Кнопка агента → штатный терминал Codex | Существующий app-server и thread; `codex --remote … resume <thread>`. Это не независимый запуск с настройками по умолчанию. | Native TUI и app-server. Чат откладывает открытие при выполняющемся запросе/ожидающем подтверждении. | Путь открытия прослежен по коду; отдельные No/Allow и границы доступа через TUI на телефоне не засчитаны. |
+| Кнопка агента → штатный терминал Claude | Контроллер завершает свой SDK worker и открывает native TUI с тем же `--permission-mode`, моделью и выбранной историей. Возврат снова создаёт SDK worker. | Native Claude TUI; это другой обработчик подтверждений, чем Android-карточка. | Передача аргументов прослежена по коду; полный цикл TUI-отказа и возврата требует отдельной проверки. |
+| Кнопка агента → штатный терминал Gemini | Тот же принадлежащий контроллеру native процесс и его approval mode; `terminal-open` переключает представление. | Native интерфейс Gemini и scheduler; Android hook относится к этому процессу, а не к произвольному CLI из shell. | Код пути проверен; чатовая приёмка не доказывает нажатия native TUI. |
+| Кнопка агента → штатный терминал OpenCode | `mini --server … --session … --replay`, тот же сервер и session permissions. Закрытие frontend не создаёт другую сессию. | Native mini/server; отдельные native gates не заменяются общим разрешением Android. | По коду; отдельная телефонная проверка native gates остаётся открытой. |
+| Обычная оболочка Ubuntu AI → ручной запуск любого из четырёх CLI | Пользовательские аргументы запуска, native config, переменные среды и defaults конкретного CLI. Такой запуск не читает поля прав профиля чата автоматически. | Собственный TUI/interactive API CLI. Android-карточки чата к произвольному процессу не подключаются. Headless-вызов зависит от native режима; отсутствие prompt не означает отказ. | Штатная оболочка существует. Фактическая политика ручного вызова и No/Allow не проверены; рабочие конфиги ради карты не читались. |
+| Сохранённый профиль Codex непосредственно в Termux | Существующий dedicated launcher/app-server и сохранённые поля профиля; frontend `--remote`. Android chat bridge включается только для Ubuntu/Ubuntu AI. `untrusted` без chat bridge явно останавливает запуск. | Native Codex TUI/app-server; не Android-карточка Ubuntu-чата. | По коду. Старые профили не переключались. Совместимость/эффективная политика на телефоне требуют отдельного искусственного legacy-профиля. |
+| Обычный терминал Termux → ручной CLI | Аргументы, native настройки и окружение установленного пользователем CLI. Профиль чата права не навязывает. | Сам CLI. | Не равнозначно поддерживаемому AI-профилю. Для Claude/Gemini/OpenCode валидаторы профилей требуют Ubuntu/Ubuntu AI; штатного прямого профиля Termux для них нет. Ручную установку или новый режим ради аудита не добавляем. |
+
+**Источники карты:**
+[SessionShell](../../app/src/main/java/com/termux/app/workspace/SessionShell.java),
+[CodexSessionShell](../../app/src/main/java/com/termux/app/workspace/CodexSessionShell.java),
+[CodexChatControl](../../app/src/main/java/com/termux/app/workspace/CodexChatControl.java),
+[ClaudeCode](../../app/src/main/java/com/termux/app/workspace/ClaudeCode.java),
+[GeminiCli](../../app/src/main/java/com/termux/app/workspace/GeminiCli.java),
+[AiAgents](../../app/src/main/java/com/termux/app/workspace/AiAgents.java);
+[codex-launch](../../app/src/main/assets/codex-launch.cjs),
+[codex-chat](../../app/src/main/assets/codex-chat.cjs),
+[claude-chat](../../app/src/main/assets/claude-chat.cjs),
+[gemini-control](../../app/src/main/assets/gemini-control.js),
+[gemini-live](../../app/src/main/assets/gemini-live.cjs),
+[gemini-chat](../../app/src/main/assets/gemini-chat.cjs),
+[ai-agents-control](../../app/src/main/assets/ai-agents-control.js),
+[opencode-permissions](../../app/src/main/assets/opencode-permissions.cjs),
+[opencode-session-settings](../../app/src/main/assets/opencode-session-settings.cjs).
+
+Ручной запуск не обходит права ОС, но и не наследует обещания интерфейса чата.
+PRoot и выбранный cwd сами по себе не изолируют проект. Разрешённое чтение вне
+проекта фиксируется как ограничение режима; содержимое после явного отказа —
+отдельный возможный дефект. При чтении сверяется передача искусственного маркера
+в фактический запрос локальному провайдеру, а не только неизменность файла.
+
+### Следующие действия после карты путей
+
+1. Помощник: завершить раздельную матрицу внепроектных read/write через файловые
+   и shell-инструменты каждого CLI. Различать path rejection, prompt и доступ
+   без prompt. Свежий расширенный Gemini-стенд пока остановился по bounded wait
+   до готовности; это не успешная проверка приложения. Причину стенда установить
+   до выдачи новых команд телефона. Прежние результаты внутри проекта не повторять.
+2. Помощник: подготовить точные оставшиеся сценарии телефона для границ,
+   сохранения старого искусственного профиля и переключения чата при prompt.
+   Для native TUI и ручного CLI вести отдельные строки; не переносить приёмку
+   Android-карточек. Разработчик: выполнить только выданные безопасные сценарии.
+3. Отдельно организовать Android handoff/cancel/crash recovery и SAF export/clean
+   restore искусственных архивов. Рабочее приложение принудительно не завершать.
+4. Перед следующей тестовой сборкой проверить включение шаблонов обоих агентов
+   и локального исправления карточек OpenCode. Вложения остаются открытыми,
+   последними по приоритету; MCP и плагины исключены и не проверены.
+
 ### Исключённые области и отдельные направления
 
 - **A-DRIVER-01 / P2:** содержимое/исполнение драйверов и полный binary audit.
