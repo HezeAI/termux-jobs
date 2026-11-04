@@ -121,12 +121,24 @@ The final native matrix was repeated successfully on the final sources. The broa
 corrected and rerun successfully. All final selected methods pass. See the
 [test5 build report](VALIDATION-2.1.3-test5.md).
 
+## Developer-reported Codex phone acceptance — 2026-11-04
+
+HezeAI reports **test5 / 1481** passes new Codex profile startup, shell No/Allow
+once and direct-edit No/Allow once on the phone. These device checks are separate
+from the native fixture matrix. See the [acceptance record](VALIDATION-2.1.3-test5.md#developer-phone-acceptance--2026-11-04).
+The report does not establish exact inside/outside paths, every alternate policy,
+profile save/reopen, old-profile compatibility or recovery. No current CLI version
+was independently re-probed during this documentation update.
+
 ## Phone acceptance still required
+
+Codex startup and the four reported decisions above are complete. The following
+plan retains unreported coverage and the other agents; it is not wholly passed.
 
 1. Use separate artificial profiles/projects. Do not change working accounts or
    old profile permissions. Create, save, reopen and start each agent's new profile.
-2. Codex must reach chat readiness with the saved confirmation setting. A startup
-   error must show a safe cause/exit status and must not disable confirmations.
+2. Codex startup now passes on the developer phone. Still check startup-error
+   reasons, unsupported policies and preservation of confirmations on failure.
 3. Request shell and direct file modifications inside/outside the artificial
    project. Press No; independently inspect bytes/command marker. Repeat and Allow.
    Record tool name and actual card; missing card is not proof of a user refusal.
@@ -135,8 +147,9 @@ corrected and rerun successfully. All final selected methods pass. See the
 5. Reopen/save an old profile and confirm its actual environment/policy remain.
    Stop/retry only the artificial sessions. Confirm no second server survives stop.
 
-The physical phone's profile lifecycle, Android/proot binding/PATH, actual cards,
-Keystore/key broker and external provider authorization remain unverified by this
-matrix. Test4 phone confirmation acceptance was blocked by the startup failure;
-it is not retroactively marked successful. Attachment accumulation/disconnections
+The fixture matrix does not itself verify Android/proot or device cards. The
+separate developer report confirms Codex startup and the four reported decisions.
+Other agents, full profile lifecycle, Keystore/key broker, authorization and
+recovery remain open. Test4 acceptance was blocked by startup and is not
+retroactively marked successful. Attachment accumulation/disconnections
 remain separate and are not fixed by this change or closed by this report.

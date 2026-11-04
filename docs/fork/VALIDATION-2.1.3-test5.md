@@ -1,8 +1,9 @@
 # Private test APK 2.1.3-test5
 
 2026-11-04. VersionCode 1481. Signed release variant for phone acceptance.
-No push, publication or APK installation. Published v2.1.2, test4 and Components
-remain unchanged. Old profiles, permissions, authorization and Ubuntu AI remain.
+No push or publication. Developer-reported phone acceptance is recorded below.
+Published v2.1.2, test4 and Components remain unchanged. Old profiles, permissions,
+authorization and Ubuntu AI remain.
 
 **Attachment accumulation/disconnection fix is not included.** The images/video/
 large text/tool-result investigation remains separate for all four agents.
@@ -33,6 +34,8 @@ third-party dependency download is claimed.
 
 ## Phone plan
 
+Codex startup and shell/direct-edit No/Allow have now passed developer phone
+acceptance, as recorded below. The remaining steps are not closed by that result.
 Follow the [new-profile checks](PERMISSIONS-COMPATIBILITY-TEST5.md#phone-acceptance-still-required)
 for Codex, Claude, Gemini API/Vertex and OpenCode: save/reopen, actual launch,
 shell/direct file No then Allow, old-profile preservation and stop/retry.
@@ -87,9 +90,11 @@ source/config inputs, compile/link parameters and payload hashes. Existing SDK,
 Gradle, bootstrap and dependency caches are reused; Java/resources/assets are
 rebuilt. This is not a new native/GPU execution or clean-room dependency download.
 
-**Not checked:** actual Android/proot startup/cards on the phone, production
-account/model authorization, restricted sandbox isolation, device key-broker
-lifecycle and backup restore acceptance. No GitHub CI or publication was performed.
+**Not checked:** phone startup/cards for Claude, Gemini and OpenCode; production
+account/model authorization beyond the reported Codex operations; restricted
+sandbox isolation, device key-broker lifecycle, process recovery and backup restore
+acceptance. Codex phone startup and shell/direct-edit No/Allow are now separately
+confirmed by the developer below. No GitHub CI or publication was performed.
 The new-profile defaults matrix does not validate every alternate permission mode.
 See the phone plan above. Existing working sessions/profiles were not exercised.
 
@@ -102,3 +107,31 @@ a separate local commit. Final packaging source hashes are compared to that fina
 commit in `.verification/release-2.1.3-test5/commit-source-proof.json`.
 No remote branch/tag/channel is updated. Published v2.1.2 and delivered test4 APK
 hashes were compared again and remain unchanged.
+
+
+## Developer phone acceptance — 2026-11-04
+
+Source: HezeAI's report in this conversation for **2.1.3-test5 / 1481**.
+The developer confirms the following checks passed on the phone:
+
+| Check | Result | Evidence source |
+| --- | --- | --- |
+| Start a new Codex profile | Passed | Developer report |
+| Reject a shell command | Passed | Developer report |
+| Allow a shell command once | Passed | Developer report |
+| Reject direct file editing | Passed | Developer report |
+| Allow direct file editing once | Passed | Developer report |
+
+These are user-performed device checks, separate from the automated/native
+fixture results above. The report does not specify an inside/outside path matrix,
+independent file-byte inspection, profile save/reopen coverage or CLI re-probing;
+none of those details is inferred. The test4 startup failure remains historical;
+the new-profile startup regression is resolved for this tested test5 phone path.
+
+Still open on the phone: Claude/Gemini/OpenCode startup and permission decisions;
+Gemini API/Vertex authorization, key broker, cancel/retry and process recovery;
+restore and backup behavior, including RU/EN secret warnings. Codex alternate
+policies, project isolation, legacy profile lifecycle, chat-switch races and
+recovery are not established by this acceptance. Attachment accumulation remains
+an independent unresolved task. No APK rebuild or binary change accompanies this
+acceptance record.
