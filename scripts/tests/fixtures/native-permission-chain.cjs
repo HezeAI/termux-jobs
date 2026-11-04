@@ -1,7 +1,8 @@
 'use strict';
 // Isolated native tools + production approval adapters. No accounts, MCP or extensions.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),crypto=require('node:crypto'),assert=require('node:assert/strict'),{spawn,spawnSync}=require('node:child_process');
-const [agent,kind,where,root,repo,run]=process.argv.slice(2);
+const [agent,kind,where,root,repo,run,profileFile]=process.argv.slice(2);
+const profile=profileFile?JSON.parse(fs.readFileSync(profileFile,'utf8')):{};
 for(const d of ['home','tmp','config/opencode','data','cache','state','project','outside'])fs.mkdirSync(path.join(root,d),{recursive:true});
 const project=path.join(root,'project'),target=path.join(root,where==='inside'?'project':'outside',kind+'.txt');fs.writeFileSync(target,'SYNTHETIC_BEFORE');
 // Must precede native module imports. Never inherit a real CLI home or account.
@@ -10,12 +11,51 @@ Object.assign(process.env,{HOME:path.join(root,'home'),GEMINI_CLI_HOME:path.join
 assert.equal(spawnSync('git',['init','--quiet',project],{env:{PATH:process.env.PATH,HOME:process.env.HOME,GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null'}}).status,0);process.chdir(project);console.log=(...args)=>process.stderr.write(args.join(' ')+'\n');
 let nativeSession=null;let done=null,start,command,cleanup=async()=>{},abort=new AbortController(),inFlight;
 let scopeConsent=null;const scopeDecisions=[];const calls=[];const write=(file,value)=>fs.writeFileSync(path.join(root,file),JSON.stringify(value,null,2));
+async function codex(){
+ const net=require('node:net');const bin=path.join(root,'bin');fs.mkdirSync(bin);const exe='/usr/local/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/bin/codex';fs.symlinkSync(exe,path.join(bin,'codex'));process.env.PATH=bin+':'+process.env.PATH;
+ const endpoint=path.join(root,run+'.sock');let issued=false,callsCount=0;
+ const provider=http.createServer((req,res)=>{let raw='';req.on('data',b=>raw+=b);req.on('end',()=>{JSON.parse(raw);callsCount++;let item;
+  if(!issued){issued=true;item=kind==='write'?{type:'custom_tool_call',id:'patch',call_id:'call_patch',name:'apply_patch',input:'*** Begin Patch\n*** Update File: '+target+'\n@@\n-SYNTHETIC_BEFORE\n+SYNTHETIC_AFTER\n*** End Patch'}:{type:'function_call',id:'shell',call_id:'call_shell',name:'exec_command',arguments:JSON.stringify({cmd:`printf SYNTHETIC_AFTER > '${target}'`,yield_time_ms:1000,max_output_tokens:100})};}
+  else item={type:'message',id:'message_'+callsCount,status:'completed',role:'assistant',content:[{type:'output_text',text:'Artificial tool check finished',annotations:[]}]};res.writeHead(200,{'Content-Type':'text/event-stream'});for(const [type,value]of [['response.created',{response:{id:'response_'+callsCount,status:'in_progress'}}],['response.output_item.added',{output_index:0,item}],['response.output_item.done',{output_index:0,item}],['response.completed',{response:{id:'response_'+callsCount,status:'completed',output:[item],usage:{input_tokens:1000,output_tokens:10,total_tokens:1010}}}]])res.write('event: '+type+'\ndata: '+JSON.stringify({type,...value})+'\n\n');res.end();});});await new Promise(r=>provider.listen(0,'127.0.0.1',r));
+ fs.writeFileSync(path.join(root,'home/config.toml'),'model="gpt-6.1-sol"\nmodel_provider="fixture"\n[model_providers.fixture]\nname="Artificial local provider"\nbase_url="http://127.0.0.1:'+provider.address().port+'/v1"\nwire_api="responses"\nrequires_openai_auth=false\n');
+ const env={PATH:process.env.PATH,HOME:process.env.HOME,CODEX_HOME:process.env.HOME,TMPDIR:path.join(root,'tmp')};const children=[];
+ const startChild=(file,args)=>{const child=spawn(process.execPath,[file,...args],{cwd:project,env,stdio:['ignore','ignore',fs.openSync(path.join(root,'codex-launch.stderr'),'a')]});children.push(child);return child;};
+ for(const asset of ['codex-chat.cjs','agent-receipts.cjs','agent-action-preview.cjs','agent-completion-times.cjs'])fs.copyFileSync(path.join(repo,'app/src/main/assets',asset),path.join(root,asset));
+ fs.copyFileSync(path.join(repo,'app/src/main/assets/codex-control.js'),path.join(root,'codex-wire-v0.2.22.js'));
+ let child,chat;
+ if(profile.generatedLaunch){
+  const command=profile.generatedLaunch.replaceAll('/tmp/termux-jobs-codex',root);
+  assert(command.includes('codex-launch-v1.cjs')&&command.includes(endpoint));
+  fs.copyFileSync(path.join(repo,'app/src/main/assets/codex-launch.cjs'),path.join(root,'codex-launch-v1.cjs'));
+  fs.copyFileSync(path.join(repo,'app/src/main/assets/codex-chat.cjs'),path.join(root,'codex-chat-v1.cjs'));
+  fs.copyFileSync(path.join(repo,'app/src/main/assets/codex-control.js'),path.join(root,'bridge-v0.2.21.js'));
+  const version=/instructions-\d+/.exec(command)[0],instructions=path.join(root,version);fs.mkdirSync(instructions);
+  for(const asset of ['agent-instructions.py','agent-instructions-ubuntu-ai.md'])fs.copyFileSync(path.join(repo,'app/src/main/assets',asset),path.join(instructions,asset));
+  fs.writeFileSync(path.join(root,'executed-launch.sh'),command);
+  child=spawn('/bin/bash',['--noprofile','--norc','-c',command],{cwd:project,env,stdio:['ignore','ignore',fs.openSync(path.join(root,'codex-launch.stderr'),'a')]});children.push(child);chat=child;
+ }else child=startChild(path.join(repo,'app/src/main/assets/codex-launch.cjs'),[endpoint,'danger-full-access',profile.codexApproval||'untrusted','1','en']);
+ cleanup=async()=>{for(const c of children.reverse())if(c.exitCode===null&&c.signalCode===null){c.kill('SIGTERM');await new Promise(r=>c.once('exit',r));}provider.closeAllConnections();await new Promise(r=>provider.close(r));};
+ for(let n=0;!fs.existsSync(endpoint);n++){assert(n<500&&child.exitCode===null,'Native app-server startup failed');await new Promise(r=>setTimeout(r,20));}
+ if(!chat)chat=startChild(path.join(root,'codex-chat.cjs'),['run',endpoint,'full','new','',project,'',profile.codexApproval||'untrusted','en']);
+ const request=q=>new Promise((resolve,reject)=>{const socket=net.createConnection(endpoint+'.chat');let raw='';socket.setTimeout(15000,()=>socket.destroy(Error('Test control timeout')));socket.once('connect',()=>socket.write(JSON.stringify(q)+'\n'));socket.on('data',b=>raw+=b);socket.once('end',()=>{try{resolve(JSON.parse(raw));}catch(e){reject(e);}});socket.once('error',reject);});
+ let snapshot;for(let n=0;n<600;n++){try{snapshot=await request({op:'chat-snapshot'});if(snapshot.connected)break;}catch{}assert(chat.exitCode===null,'Chat startup exited');await new Promise(r=>setTimeout(r,20));}assert(snapshot?.connected,'Native initialization exchange did not finish');nativeSession=snapshot.session;
+ command=q=>{calls.push({op:q.op,outcome:q.outcome});return request(q);};
+ start=async()=>{const r=await request({op:'chat-send',id:'msg_'+crypto.randomBytes(16).toString('hex'),kind:'message',session:nativeSession,text:'Perform the artificial '+kind+' operation only.'});assert(r.ok);for(let n=0;n<1000;n++){const snap=await request({op:'chat-snapshot'});if(!snap.busy&&callsCount>=2)return {providerCalls:callsCount,nativePolicy:profile.codexApproval||'untrusted',connected:snap.connected};await new Promise(r=>setTimeout(r,20));}throw Error('Native tool timeout');};
+ write('native-identity.json',{version:'0.166.0',requested:profile.codexApproval||'untrusted',bootstrapPolicy:'on-request',transport:'actual Unix WebSocket app-server and production private chat socket',initialized:true,provider:'local artificial; no account'});
+}
+async function claude(){
+ const {ClaudeChat}=require(path.join(repo,'app/src/main/assets/claude-chat.cjs'));let issued=0,count=0;
+ const provider=http.createServer((req,res)=>{let raw='';req.on('data',b=>raw+=b);req.on('end',()=>{if(req.url.includes('count_tokens'))return res.end('{"input_tokens":1000}');if(!req.url.includes('/messages')){res.statusCode=404;return res.end('{}');}const q=JSON.parse(raw);count++;const tool=issued<(kind==='write'?2:1),reading=kind==='write'&&issued===0;issued++;const content=tool?{type:'tool_use',id:'call_'+count,name:reading?'Read':kind==='write'?'Write':'Bash',input:reading?{file_path:target}:kind==='write'?{file_path:target,content:'SYNTHETIC_AFTER'}:{command:`printf SYNTHETIC_AFTER > '${target}'`}}:{type:'text',text:'Artificial check finished'};res.writeHead(200,{'Content-Type':'text/event-stream'});const emit=(event,value)=>res.write('event: '+event+'\ndata: '+JSON.stringify(value)+'\n\n');emit('message_start',{type:'message_start',message:{id:'msg_'+count,type:'message',role:'assistant',model:q.model,content:[],stop_reason:null,stop_sequence:null,usage:{input_tokens:1000,output_tokens:1}}});emit('content_block_start',{type:'content_block_start',index:0,content_block:tool?{...content,input:{}}:{type:'text',text:''}});emit('content_block_delta',{type:'content_block_delta',index:0,delta:tool?{type:'input_json_delta',partial_json:JSON.stringify(content.input)}:{type:'text_delta',text:content.text}});emit('content_block_stop',{type:'content_block_stop',index:0});emit('message_delta',{type:'message_delta',delta:{stop_reason:tool?'tool_use':'end_turn',stop_sequence:null},usage:{output_tokens:10}});emit('message_stop',{type:'message_stop'});res.end();});});await new Promise(r=>provider.listen(0,'127.0.0.1',r));
+ Object.assign(process.env,{CLAUDE_CONFIG_DIR:path.join(root,'config/claude'),ANTHROPIC_API_KEY:'SYNTHETIC_KEY_ONLY',ANTHROPIC_BASE_URL:'http://127.0.0.1:'+provider.address().port,CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:'1',DISABLE_AUTOUPDATER:'1'});
+ const backend=new ClaudeChat({socket:path.join(root,run+'.sock'),binary:path.join(repo,'.tools/claude-code/claude'),model:'sonnet',mode:profile.claudeMode||'manual',chat:'new',thread:profile.claudeThread||run,language:'en'});cleanup=async()=>{await backend.stop();provider.closeAllConnections();await new Promise(r=>provider.close(r));};await backend.start();assert(backend.ready);nativeSession=backend.session;
+ command=async q=>{calls.push({op:q.op,outcome:q.outcome});return {ok:true,...await backend.command(q)};};start=async()=>{assert((await backend.command({op:'chat-send',session:nativeSession,kind:'message',id:'msg_'+crypto.randomBytes(16).toString('hex'),text:'Perform the artificial '+kind+' operation.'})).ok);for(let n=0;n<1000;n++){if(!backend.busy&&count>=(kind==='write'?3:2))return {providerCalls:count,nativePolicy:backend.mode};await new Promise(r=>setTimeout(r,20));}throw Error('Native Claude tool timeout');};write('native-identity.json',{version:'2.1.296',policy:backend.mode,provider:'local artificial; no account'});
+}
 async function gemini(){
  const core=await import('/root/.local/share/termux-jobs/gemini-cli/0.64.0/bundle/chunk-NR7L3FXV.js');
  const {createBridge}=require(path.join(repo,'app/src/main/assets/gemini-live.cjs'));
  const {permissionReply}=require(path.join(repo,'app/src/main/assets/gemini-control.js'));
- const policy=await core.createPolicyEngineConfig({},'default','/root/.local/share/termux-jobs/gemini-cli/0.64.0/bundle/policies',true);
- const config=new core.Config({sessionId:run,model:'gemini-2.5-flash',targetDir:project,cwd:project,interactive:true,approvalMode:'default',policyEngineConfig:policy,folderTrust:true,mcpEnabled:false,extensionsEnabled:false,enableHooks:false,usageStatisticsEnabled:false,telemetry:{enabled:false,traces:false,logPrompts:false},coreTools:['read_file','write_file','run_shell_command'],useRipgrep:false,checkpointing:false});
+ const policy=await core.createPolicyEngineConfig({},profile.geminiMode||'default','/root/.local/share/termux-jobs/gemini-cli/0.64.0/bundle/policies',true);
+ const config=new core.Config({sessionId:run,model:'gemini-2.5-flash',targetDir:project,cwd:project,interactive:true,approvalMode:profile.geminiMode||'default',policyEngineConfig:policy,folderTrust:true,mcpEnabled:false,extensionsEnabled:false,enableHooks:false,usageStatisticsEnabled:false,telemetry:{enabled:false,traces:false,logPrompts:false},coreTools:['read_file','write_file','run_shell_command'],useRipgrep:false,checkpointing:false});
  config.setExperiments({flags:{},experimentIds:[]});config.contentGeneratorConfig={authType:'gemini-api-key',apiKey:'SYNTHETIC_KEY_ONLY'};config.contentGenerator={generateContent:async()=>{throw Error("Unexpected inference in native tool fixture");}};
  await config.storage.initialize();const registry=await config.createToolRegistry(),bus=config.getMessageBus();config.toolRegistry=registry;
  // Real native chat/history object, containing only artificial user input; no inference.
@@ -57,7 +97,7 @@ async function opencode(){
  await new Promise((resolve,reject)=>{let data='';const timer=setTimeout(()=>reject(Error('OpenCode startup timeout')),20000);child.once('error',reject);child.once('exit',()=>reject(Error('OpenCode exited')));child.stdout.on('data',b=>{data=(data+b).slice(-8192);const m=data.match(/http:\/\/127\.0\.0\.1:\d+/);if(m){endpoint=m[0];clearTimeout(timer);resolve();}});});
  const request=(method,route,body)=>new Promise((resolve,reject)=>{const req=http.request(endpoint+route,{method,headers:{Authorization:'Basic '+Buffer.from('opencode:'+password).toString('base64'),'Content-Type':'application/json'}},res=>{let text='';res.on('data',b=>text+=b);res.on('end',()=>{try{if(res.statusCode>=400)throw Error('Native HTTP '+res.statusCode);resolve(JSON.parse(text||'{}'));}catch(e){reject(e);}});});req.setTimeout(10000,()=>req.destroy(Error('timeout')));req.on('error',reject);req.end(body?JSON.stringify(body):undefined);});
  await request('GET','/api/model');const providers=(await request('GET','/api/provider')).data;write('provider-info.json',providers);const providerInfo=providers.find(p=>p.id==='audit');assert.equal(providerInfo?.settings?.baseURL,baseURL,'Reject non-loopback provider before inference');
- assert.equal((await request('GET','/api/info')).version,'2.0.28');const created=(await request('POST','/api/session',{agent:'build',model:{providerID:'audit',id:'audit'},permissions:accessRules('ask')})).data;assert.deepEqual(created.permissions,accessRules('ask'));const session=created.id;nativeSession=session;
+ assert.equal((await request('GET','/api/info')).version,'2.0.28');const created=(await request('POST','/api/session',{agent:'build',model:{providerID:'audit',id:'audit'},permissions:accessRules(profile.aiAccess||'ask')})).data;assert.deepEqual(created.permissions,accessRules(profile.aiAccess||'ask'));const session=created.id;nativeSession=session;
  const approvals=new OpenCodePermissions(request,session,path.join(root,'receipts.json'));
  command=async q=>{calls.push({op:q.op,outcome:q.outcome});if(q.op==='permission'){
   const pending=(await request('GET','/api/session/'+session+'/permission')).data||[];
@@ -77,7 +117,7 @@ async function opencode(){
 process.on('SIGTERM',()=>{cleanup().finally(()=>process.exit(143));});
 (async()=>{
  try{
-  if(agent==='gemini')await gemini();else if(agent==='opencode')await opencode();else throw Error('Unknown agent');
+  if(agent==='codex')await codex();else if(agent==='claude')await claude();else if(agent==='gemini')await gemini();else if(agent==='opencode')await opencode();else throw Error('Unknown agent');
   const control=http.createServer((req,res)=>{let body='';req.on('data',b=>body+=b);req.on('end',async()=>{try{
    if(req.url==='/shutdown'){await cleanup();res.end('{}');control.close(()=>process.exit(0));return;}
    if(req.url==='/scope-consent'){const q=JSON.parse(body);assert(!inFlight&&where==='outside'&&agent==='opencode'&&['once','reject'].includes(q.decision));scopeConsent=q.decision;res.end('{}');return;}

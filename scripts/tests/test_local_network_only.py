@@ -15,6 +15,32 @@ if '--grandchild' in sys.argv:
     assert probe.connect_ex(('203.0.113.2', 443)) == errno.EPERM
     raise SystemExit(0)
 
+if '--unix-child' in sys.argv:
+    root, foreign = sys.argv[-2:]
+    owned = socket.socket(socket.AF_UNIX)
+    owned.bind(root + '/owned.sock')
+    owned.listen()
+    os.symlink(root + '/owned.sock', root + '/alias.sock')
+    client = socket.socket(socket.AF_UNIX)
+    client.connect(root + '/alias.sock')
+    accepted, _ = owned.accept()
+    client.sendall(b'SYNTHETIC')
+    assert accepted.recv(32) == b'SYNTHETIC'
+    for item in (client, accepted, owned): item.close()
+    for path in (foreign, root + '/../outside.sock', root + '/sub/socket'):
+        probe = socket.socket(socket.AF_UNIX)
+        assert probe.connect_ex(path) == errno.EPERM
+        probe.close()
+    probe = socket.socket(socket.AF_UNIX)
+    try:
+        probe.bind(root + '/../escaped.sock')
+        raise AssertionError('Traversal bind escaped')
+    except PermissionError:
+        pass
+    print(json.dumps({'private_unix_listener': 'allowed', 'owned_alias': 'allowed',
+                      'foreign_unix': 'EPERM', 'traversal': 'EPERM', 'nested_path': 'EPERM'}))
+    raise SystemExit(0)
+
 if '--child' in sys.argv:
     foreign = int(sys.argv[-1])
     result = {}
@@ -113,6 +139,39 @@ try:
     except TimeoutError:
         pass
     result = json.loads(complete.stdout)
+    (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix='ng', dir='/root/termux-fork/.verification/t') as scope:
+        foreign_unix = socket.socket(socket.AF_UNIX)
+        foreign_name = scope + '/foreign.sock'
+        foreign_unix.bind(foreign_name)
+        foreign_unix.listen()
+        foreign_unix.settimeout(0.1)
+        env['TERMUX_FORK_TEST_UNIX_ROOT'] = scope
+        extra = subprocess.run([str(guard), str(output / 'unix-events.jsonl'), '--', sys.executable,
+                                str(Path(__file__).resolve()), '--unix-child', scope, foreign_name],
+                               env=env, capture_output=True, text=True, timeout=15)
+        assert extra.returncode == 0, extra.stderr
+        result.update(json.loads(extra.stdout))
+        try:
+            foreign_unix.accept()
+            raise AssertionError('Touched a foreign Unix listener')
+        except TimeoutError:
+            pass
+        finally:
+            foreign_unix.close()
+        for invalid in ['bad', 'a' * 65]:
+            env['TERMUX_FORK_TEST_CODEX_SOCKET_HASH'] = invalid
+            denied = subprocess.run([str(guard), str(output / 'invalid-unix-events.jsonl'), '--', '/bin/true'],
+                                    env=env, capture_output=True, text=True, timeout=5)
+            assert denied.returncode == 125
+        env.pop('TERMUX_FORK_TEST_CODEX_SOCKET_HASH')
+        os.chmod(scope, 0o755)
+        denied = subprocess.run([str(guard), str(output / 'invalid-unix-events.jsonl'), '--', '/bin/true'],
+                                env=env, capture_output=True, text=True, timeout=5)
+        assert denied.returncode == 125
+        result['nonprivate_unix_scope'] = 'rejected'
+        result['invalid_codex_socket_hash'] = 'rejected'
     (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps(result))
 finally:

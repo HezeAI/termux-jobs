@@ -949,6 +949,15 @@ WebSocket. Приватная директория .codex-control имеет 070
 не передаются; Codex пользуется своей авторизацией среды. Старые обычные сессии
 не переподключаются и не изменяются.
 
+
+Local test5 (CLI 0.166.0): `codex-launch-v1.cjs` owns and drains one native
+app-server child. Public CLI config rejects `untrusted`, so server bootstrap uses
+supported `on-request`; the saved thread policy still travels through typed
+`thread/start` / `thread/resume`. `CodexChat.verify` must confirm cwd, sandbox and
+requested approval before readiness. Rejection/mismatch never falls back to
+`never` or full access. Old profile policies are retained. See the
+[compatibility matrix and phone limits](PERMISSIONS-COMPATIBILITY-TEST5.md).
+
 CodexRpc: JSONL/stdio для просмотра истории (отдельный собственный процесс с
 таймаутом), RFC6455 через Android LocalSocket для статуса активного сервера.
 Проверяются WebSocket accept, Android UID peer, размеры кадров, таймауты. Сетевой

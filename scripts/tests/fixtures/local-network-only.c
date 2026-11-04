@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
+#include <ctype.h>
 #include <errno.h>
 #include <dirent.h>
 #include <unistd.h>
@@ -39,6 +41,8 @@ struct listener {struct sockaddr_storage address;socklen_t length;};
 static struct entry sockets[8192];static size_t socket_count;
 static struct listener endpoints[1024];static size_t endpoint_count;
 static FILE *logfile;
+static char private_unix_root[PATH_MAX];
+static char codex_fixture_socket[sizeof(((struct sockaddr_un*)0)->sun_path)];
 static void event(const char *name,int number,int error){fprintf(logfile,"{\"event\":\"%s\",\"syscall\":%d,\"errno\":%d}\n",name,number,error);fflush(logfile);}
 static void address_event(const char *name,int number,const struct sockaddr_storage *a){
  char ip[INET6_ADDRSTRLEN]="unix";unsigned int port=0;
@@ -55,7 +59,15 @@ static int copy_address(struct seccomp_notif *q,struct sockaddr_storage *address
 static int loopback(const struct sockaddr_storage *a,socklen_t n){
  if(a->ss_family==AF_INET&&n>=sizeof(struct sockaddr_in))return ((const struct sockaddr_in*)a)->sin_addr.s_addr==htonl(INADDR_LOOPBACK);
  if(a->ss_family==AF_INET6&&n>=sizeof(struct sockaddr_in6))return IN6_IS_ADDR_LOOPBACK(&((const struct sockaddr_in6*)a)->sin6_addr);
- return a->ss_family==AF_UNIX&&n>offsetof(struct sockaddr_un,sun_path)+1&&((const struct sockaddr_un*)a)->sun_path[0]==0;
+ if(a->ss_family!=AF_UNIX||n<=offsetof(struct sockaddr_un,sun_path)+1)return 0;
+ const char *p=((const struct sockaddr_un*)a)->sun_path;
+ if(!p[0])return 1;
+ if(codex_fixture_socket[0]&&n==offsetof(struct sockaddr_un,sun_path)+strlen(codex_fixture_socket)+1&&!memcmp(p,codex_fixture_socket,strlen(codex_fixture_socket)+1))return 1;
+ size_t available=n-offsetof(struct sockaddr_un,sun_path),prefix=strlen(private_unix_root);
+ if(!prefix||prefix+2>available||available>sizeof(((struct sockaddr_un*)0)->sun_path)||!memchr(p,0,available)||strncmp(p,private_unix_root,prefix)||p[prefix]!='/')return 0;
+ const char *name=p+prefix+1;if(!*name||!strcmp(name,".")||!strcmp(name,".."))return 0;
+ for(;*name;name++)if(!isalnum((unsigned char)*name)&&*name!='.'&&*name!='-'&&*name!='_')return 0;
+ return 1;
 }
 static int equal_address(const struct listener *p,const struct sockaddr_storage *a,socklen_t n){
  if(p->address.ss_family!=a->ss_family)return 0;
@@ -105,6 +117,12 @@ static void handle(int listener,struct seccomp_notif *q){
    int result=bind(fd,(struct sockaddr*)&address,length);if(result<0){r.error=-errno;goto answer;}
    struct listener e={.length=sizeof(e.address)};if(getsockname(fd,(struct sockaddr*)&e.address,&e.length))goto answer;endpoints[endpoint_count++]=e;r.error=0;r.val=0;address_event("listener-registered",nr,&e.address);
   }else{
+   /* Resolve a private rendezvous alias, then connect the checked physical copy.
+      No continuation on mutable userspace addresses or symlink races. */
+   if(address.ss_family==AF_UNIX&&((struct sockaddr_un*)&address)->sun_path[0]){
+    char resolved[PATH_MAX];const char *original=((struct sockaddr_un*)&address)->sun_path;
+    if(realpath(original,resolved)){size_t n=strlen(resolved);if(n>=sizeof(((struct sockaddr_un*)0)->sun_path))goto answer;memset(&address,0,sizeof(address));address.ss_family=AF_UNIX;memcpy(((struct sockaddr_un*)&address)->sun_path,resolved,n+1);length=offsetof(struct sockaddr_un,sun_path)+n+1;}
+   }
    int allowed=0;for(size_t i=0;i<endpoint_count;i++)if(equal_address(&endpoints[i],&address,length)){allowed=1;break;}
    if(!allowed){address_event("unregistered-destination-denied",nr,&address);goto answer;}
    int result=connect(fd,(struct sockaddr*)&address,length);r.error=result<0?-errno:0;r.val=result;event("local-connect",nr,-r.error);
@@ -116,6 +134,13 @@ answer:
 }
 int main(int argc,char **argv){
  if(argc<4||strcmp(argv[2],"--")){fprintf(stderr,"usage: local-network-only LOG -- COMMAND [ARGS]\n");return 125;}
+ const char *requested_root=getenv("TERMUX_FORK_TEST_UNIX_ROOT");
+ if(requested_root){struct stat st;if(!realpath(requested_root,private_unix_root)||strlen(private_unix_root)<8||lstat(private_unix_root,&st)||!S_ISDIR(st.st_mode)||st.st_uid!=geteuid()||(st.st_mode&077)){fprintf(stderr,"invalid private Unix fixture root\n");return 125;}}
+ const char *codex_hash=getenv("TERMUX_FORK_TEST_CODEX_SOCKET_HASH");
+ if(codex_hash){
+  if(!private_unix_root[0]||strlen(codex_hash)!=64||strspn(codex_hash,"0123456789abcdef")!=64){fprintf(stderr,"invalid Codex fixture socket hash\n");return 125;}
+  snprintf(codex_fixture_socket,sizeof(codex_fixture_socket),"/tmp/codex-daemon-%u/%s",(unsigned int)geteuid(),codex_hash);
+ }
  /* Do not inherit preconnected sockets outside the controlled tree. */
  for(int fd=0;fd<3;fd++){struct stat st;if(!fstat(fd,&st)&&S_ISSOCK(st.st_mode)){fprintf(stderr,"refuse inherited network stdio\n");return 125;}}
  DIR *directory=opendir("/proc/self/fd");if(!directory){perror("owned descriptors");return 125;}int directory_fd=dirfd(directory);struct dirent *item;while((item=readdir(directory))){char *end;long fd=strtol(item->d_name,&end,10);if(!*end&&fd>=3&&fd!=directory_fd)close((int)fd);}closedir(directory);

@@ -83,4 +83,19 @@ public class AgentSettingsPresentationTest {
   open(fresh,false);assertTrue(((CheckBox)tag("codex-command-confirmations")).isChecked());editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();idle();store.awaitWrites();WorkspaceStore reloaded=new WorkspaceStore(activity,x->{throw new AssertionError(x);});try{WorkspaceStore.Session saved=reloaded.sessions.stream().filter(p->p.id.equals(id)).findFirst().orElseThrow(AssertionError::new);assertEquals("untrusted",CodexSessionShell.approval(saved));assertTrue(CodexSessionShell.invocation(saved,"/fixture.sock").contains("--ask-for-approval untrusted"));}finally{reloaded.close();}
  }
 
+ @Test public void allNewAgentPoliciesSurviveUiSaveReopenAndSave()throws Exception{
+  Field field=WorkspaceController.class.getDeclaredField("store");field.setAccessible(true);WorkspaceStore store=(WorkspaceStore)field.get(controller);
+  for(int choice=0;choice<4;choice++){
+   Set<String> before=new HashSet<>();for(WorkspaceStore.Session old:store.sessions)before.add(old.id);
+   open(null,false);tag("session-launch-environment").performClick();AlertDialog kinds=ShadowAlertDialog.getLatestAlertDialog();kinds.getListView().performItemClick(null,2,2);idle();
+   tag("agent-selector").performClick();AlertDialog agents=ShadowAlertDialog.getLatestAlertDialog();agents.getListView().performItemClick(null,choice,choice);idle();
+   editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();idle();store.awaitWrites();
+   WorkspaceStore.Session fresh=store.sessions.stream().filter(p->!before.contains(p.id)).findFirst().orElseThrow(AssertionError::new);String id=fresh.id;
+   assertEquals("ubuntu-ai",fresh.codexEnvironment);assertEquals("untrusted",CodexSessionShell.approval(fresh));assertEquals("manual",fresh.claudeMode);assertEquals("default",fresh.geminiMode);assertEquals("ask",fresh.aiAccess);
+   assertEquals(choice==0,fresh.environment.equals("codex"));assertEquals(choice==1,fresh.aiAgent.equals("opencode"));assertEquals(choice==2,fresh.claudeAgent);assertEquals(choice==3,fresh.geminiAgent);
+   open(fresh,false);editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();idle();store.awaitWrites();
+   WorkspaceStore loaded=new WorkspaceStore(activity,x->{throw new AssertionError(x);});try{WorkspaceStore.Session saved=loaded.sessions.stream().filter(p->p.id.equals(id)).findFirst().orElseThrow(AssertionError::new);assertEquals("untrusted",CodexSessionShell.approval(saved));assertEquals(fresh.codexEnvironment,saved.codexEnvironment);assertEquals(fresh.claudeMode,saved.claudeMode);assertEquals(fresh.geminiMode,saved.geminiMode);assertEquals(fresh.aiAccess,saved.aiAccess);}finally{loaded.close();}
+  }
+ }
+
 }
