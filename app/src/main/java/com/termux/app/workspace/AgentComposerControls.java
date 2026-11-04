@@ -46,27 +46,34 @@ final class AgentComposerControls {
     private GradientDrawable shape(int fill,int border){GradientDrawable bg=new GradientDrawable();bg.setColor(fill);bg.setCornerRadius(dp(12));bg.setStroke(dp(1),border);return bg;}
     private Drawable feedback(){return new RippleDrawable(ColorStateList.valueOf(0x9979dfcd),null,shape(0xffffffff,0xffffffff));}
     private static void remove(View view){if(view.getParent()!=null)((ViewGroup)view.getParent()).removeView(view);}
+    private int fieldStyle(){return java.util.Objects.hash(input.getTextSize(),input.getTypeface(),
+        input.getIncludeFontPadding(),input.getLineSpacingExtra(),input.getLineSpacingMultiplier(),
+        input.getCompoundPaddingTop(),input.getCompoundPaddingBottom(),input.getMinHeight(),input.getMinimumHeight());}
+    private int measuredBaseline(){
+        android.text.Layout layout=input.getLayout();int lines=layout==null?1:layout.getLineCount();
+        if(input.getMaxLines()>0)lines=Math.min(lines,input.getMaxLines());
+        return input.getMeasuredHeight()-Math.max(0,lines-1)*input.getLineHeight();
+    }
     private int singleLineHeight(){
-        int style=java.util.Objects.hash(input.getTextSize(),input.getTypeface(),
-            input.getIncludeFontPadding(),input.getLineSpacingExtra(),input.getLineSpacingMultiplier(),
-            input.getCompoundPaddingTop(),input.getCompoundPaddingBottom(),input.getMinHeight(),input.getMinimumHeight());
-        android.text.Layout measured=input.getLayout();
-        // Use the actual editable one-line layout, and retain it for multiline drafts.
-        // Recomputing a StaticLayout after each edit can change rounding by two pixels.
-        if(measured!=null&&measured.getLineCount()==1){
-            measuredOneLine=measured.getHeight();measuredStyle=style;
+        int style=fieldStyle();android.text.Layout measured=input.getLayout();
+        if(measured!=null&&input.getMeasuredHeight()>0&&
+            (measured.getLineCount()==1||measuredOneLine==0||measuredStyle!=style)){
+            // Complete View measurement includes decoration absent from text Layout.
+            measuredOneLine=measuredBaseline();
+            measuredStyle=style;
         }
-        int text;
-        if(measuredOneLine>0&&measuredStyle==style)text=measuredOneLine;
-        else if(measured!=null&&measured.getLineCount()>0)
-            text=measured.getHeight()-(measured.getLineCount()-1)*input.getLineHeight();
-        else text=new android.text.StaticLayout(" ",input.getPaint(),dp(1000),
-            android.text.Layout.Alignment.ALIGN_NORMAL,input.getLineSpacingMultiplier(),
-            input.getLineSpacingExtra(),input.getIncludeFontPadding()).getHeight();
-        return Math.max(dp(48),Math.max(input.getMinimumHeight(),Math.max(input.getMinHeight(),text+input.getCompoundPaddingTop()+input.getCompoundPaddingBottom())));
+        return Math.max(dp(48),Math.max(input.getMinimumHeight(),Math.max(input.getMinHeight(),measuredOneLine)));
     }
     private void toolsHeight(){if(pair.getLayoutParams()!=null&&pair.getLayoutParams().height!=singleLineHeight()){ViewGroup.LayoutParams p=pair.getLayoutParams();p.height=singleLineHeight();pair.setLayoutParams(p);}}
     void present(boolean nextAgent){
+        if(nextAgent&&(measuredOneLine==0||measuredStyle!=fieldStyle())){
+            // Resolve native View height before the row's first measure, without editing the draft.
+            // Updating only from an onLayout callback is too late for that measure pass.
+            input.measure(View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));
+            measuredOneLine=measuredBaseline();
+            measuredStyle=fieldStyle();
+        }
         if(agent!=nextAgent){
             remove(star);remove(send);remove(attachment);remove(pair);pair.removeAllViews();
             agent=nextAgent;

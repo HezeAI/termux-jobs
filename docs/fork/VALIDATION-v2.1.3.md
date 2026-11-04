@@ -12,8 +12,8 @@ history and defects that existed only during that development.
 | --- | --- |
 | APK | Termux-Jobs-v2.1.3-arm64.apk |
 | Package / version | com.termux / 2.1.3 / 1485 |
-| Bytes | 40,481,448 |
-| APK SHA-256 | `dec809f8a170d8662ca850386735cabad605d865f2e54490885cb942769626b4` |
+| Bytes | 40,481,508 |
+| APK SHA-256 | `c96127a70424936155ef8a76e8fdaf02b882dd98411ade1c4c3ecc18c1ad931c` |
 | Certificate SHA-256 | `dd37d983cd2496ebe49c7e88ddbc0088f311d38b8a8503e4392c81b48a11a644` |
 | ABI / signature / debug | ARM64 / APK Signature Scheme v2 verified / nondebuggable |
 | Runtime / assets | 14,214 defined DEX classes; 122 source-matched assets; 7 ARM64 ELF payloads |
@@ -55,8 +55,8 @@ messages, answers and attachments are outside that clock change.
   certificate; `verifyX11Inputs` remains enabled. No system package or working
   rootfs/session modification is performed.
 - Full relevant local JVM request: app and terminal-emulator, plus the other three
-  modules. Coverage after corrections: **1,664 distinct cases, 0 failures, 0 skipped**.
-  App: 1,510; terminal-emulator: 154. The latter task was UP-TO-DATE and is classified
+  modules. Coverage after corrections: **1,666 distinct cases, 0 failures, 0 skipped**.
+  App: 1,512 (including two new measured-view regressions); terminal-emulator: 154. The latter task was UP-TO-DATE and is classified
   as reused, not freshly executed. Other modules had NO-SOURCE and are not counted
   as passed test cases. Initial broad app run had **4 failures**: three stale
   launcher/approval-label expectations, plus a two-pixel composer-height discrepancy.
@@ -65,7 +65,7 @@ messages, answers and attachments are outside that clock change.
   rerun passed**, replacing cases by exact class/method identity in the result map.
   Unchanged passing cases are not counted a second time.
 - The actual editable one-line layout can differ from a fresh StaticLayout in this
-  Robolectric/API 28/font setup. The composer now retains measured one-line height
+  Robolectric/API 28/font setup. The initial text-layout-only correction passed locally but failed on the clean CI runner. The composer now retains the complete measured one-line View height
   across multiline drafts and invalidates it on style changes. Targeted checks
   cover narrow widths, fonts, draft preservation, alignment, header insets/touches,
   all four controller routes and reading anchors. This final small metric correction
@@ -178,3 +178,33 @@ publish a normal non-prerelease release as Latest. Anonymous downloads and hashe
 latest-channel metadata, source/tag refs, documentation URLs and old resource
 identities are checked afterward. Post-publication findings are recorded in the
 release body without moving the tag or replacing binary assets.
+
+
+### Exact 61/59 px regression and first CI failure
+
+The [first run](https://github.com/HezeAI/termux-jobs/actions/runs/41819215609) tested
+`ab82d3344f7cba282d09d16ea8c213a2331e3670`: one composer assertion failed,
+8 conditional cases were skipped, and debug APK assembly was skipped. This run
+remains failed; it is not reclassified by later results. No release/tag existed.
+
+Confirmed algorithm error: text Layout height plus compound padding is not the
+complete measured EditText height. An ordinary focused old-code run passed locally
+with 59/59, which did not reproduce the runner. A separate controlled View measurement
+adds two pixels absent from its text Layout: old `ab82d334` code records field and
+measured height 61, Layout 39, padding 20, and incorrectly gives tools height 59.
+The exact equality assertion fails. The fixed code caches actual one-line field
+height 61, not a text estimate, and retains it for multiline under matching style.
+The original strict font/size test is retained, with additional metadata in failure
+messages; no tolerance, skip or delay is added. Temporary metric traces exist only
+in an ignored staging copy of the old implementation, never in the APK.
+Evidence: `.verification/release-v2.1.3/font-cause/`.
+
+The complete correction resolves native intrinsic View measurement before the
+row's first measure pass, rather than relying on a late layout callback. It caches
+the whole one-line field height, includes decoration, and accounts for maxLines
+when a long draft is restored. Two controlled regressions retain exact equality:
+extra measured View height and an initial 21-line draft capped at 6 visible lines.
+Five composer cases and the controller/header consumer checks pass locally.
+An initial new-fixture NPE was caused by measuring an unparented EditText without
+LayoutParams before changing its text; assigning its real parent parameters fixed
+the fixture without weakening assertions. No production exception was suppressed.
