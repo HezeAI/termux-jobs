@@ -487,3 +487,25 @@ that failed test session through its gear, launch it again, then choose
 four documented messages with an independent marker check after each action.
 Do not create another connection or delete the existing directory for this fix.
 Phone startup/permission checks are still pending.
+
+
+## Developer OpenCode phone acceptance and refusal-card defect — 2026-11-04
+
+Source: developer phone messages after the corrected fixture: explicit confirmation
+of shell Deny (AUDIT_BEFORE) and Allow once (AUDIT_SHELL_2), then «все проверил
+работает» after the remaining Write sequence. Screenshots 1001642854/2855 show
+Write INSIDE 3 denied and Write INSIDE 4 allowed once with the final synthetic reply.
+Accept the four inside-project shell/Write Deny/Allow once checks as **developer
+phone results**. Intermediate Write marker states are reported by completion of
+the sequence, not independently captured by the assistant. No phone version
+identity was newly measured. Outside operations/preservation, actual login,
+Android/crash/Keystore and backup/restore remain open; shutdown is not inferred.
+
+A separate confirmed UI defect remains: a denied tool is also shown as a failed
+action and red session error, with native `aborted / Step interrupted`. Assistant
+read-only inspection of **only the artificial fixture's** receipts and SQLite
+message metadata found native tool error `aborted`, a cancel receipt for the same
+tool/message/session, and an assistant-level step-aborted error. It did not read
+working credentials or alter native history. Permission enforcement itself passed.
+Only that proven same-action rejection should become neutral; unrelated aborts,
+network/auth errors and cases without matching evidence must remain visible.
