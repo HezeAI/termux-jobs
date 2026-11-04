@@ -1,3 +1,52 @@
+# Project template — local change after test7
+
+Во вкладке **Проектные** Codex и Claude Code появилась плашка
+**Шаблон проектных инструкций**, непосредственно над **Открыть инструкцию проекта**.
+Она использует полный предоставленный разработчиком русский текст без маркеров:
+[встроенный шаблон](../../app/src/main/assets/agent-instructions-project.md).
+Codex сохраняет его в **AGENTS.md**, Claude — в **CLAUDE.md** выбранного проекта
+и показанной среды. Текст правил одинаковый. Шаблон сам по себе не разрешает
+push, публикацию или выполнение перечисленных в нём действий.
+
+Сначала выберите проект явно. Предложение из активного терминала не считается
+выбором. Просмотр показывает точный путь и ничего не записывает. «Редактировать
+шаблон» переносит его в существующий редактор как несохранённый черновик.
+«Сохранить» показывает итоговый текст и путь; существующий файл заменяется
+только отдельным подтверждением **Заменить AGENTS.md / CLAUDE.md**. Можно вместо
+этого открыть существующий файл. Отмена сохраняет прежний файл; отмена последнего
+подтверждения оставляет черновик. Ошибка записи сохраняет введённый текст.
+Изменение файла другим процессом вызывает конфликт редакции без перезаписи.
+Общие инструкции, другие проекты и LEARNING.md не меняются.
+
+Both Codex and Claude Code expose **Project instructions template** immediately
+above **Open project instruction** on Project. The supplied Russian rules are
+identical; destinations are the selected project's **AGENTS.md** and **CLAUDE.md**,
+respectively, in the displayed environment. Project selection is explicit.
+Preview writes nothing. Editing uses the existing editor and unsaved-draft guard.
+Saving reviews the exact path and edited text; replacement needs a separate
+confirmation. Cancellation, failed writes and revision conflicts preserve the
+original file and edited draft. General rules and other projects are untouched.
+The English interface explains that the supplied template itself is in Russian.
+
+## Verification scope
+
+Проверено заново на искусственных проектах отдельно для обоих агентов:
+расположение плашки RU/EN, просмотр/отмена, создание, открытие существующего файла,
+отказ/подтверждение замены, конфликт другой редакции, ошибка записи и сохранение
+черновика. UI: Robolectric, не телефон. Хранилище: настоящий Python helper с
+временными проектами и ошибкой atomic replace; CLI-диагностика подменена.
+Полный текст: 7 882 байта, SHA-256
+`3554f8178cfbc032b50bc07f3e937236a66a10dea420da84f3b1a6ed7c6a39e4`.
+Тесты: `AgentInstructionsUiTest`, `AgentInstructionsTest`,
+`AgentSessionResourcesUiTest`, `scripts/tests/test_project_instruction_template.py`.
+Современный Lint: 0 ошибок, 236 предупреждений. APK не собирался.
+Телефон ещё не проверен: для каждого агента выбрать отдельную тестовую папку,
+открыть плашку, отменить, сохранить изменённый текст и проверить соответствующий
+файл; затем отказаться от замены существующего файла и проверить его сохранность.
+Доказательства: локальная `.verification/project-instructions-template/`.
+
+---
+
 # Session access and file refresh
 
 В шестерёнке сессии сразу после перезапуска доступны **AGENTS.md & SKILL.md**
@@ -14,7 +63,8 @@
 явно отказаться от черновика; отмена сохраняет текст. В диагностике значок скрыт.
 Из меню удалены «Открыть файл заново» и «Дополнение»; остались история,
 восстановление предыдущей редакции и импорт. Если проектного файла нет,
-редактор сообщает об этом и предлагает **Создание инструкций проекта**.
+редактор сообщает об этом. **Открыть инструкцию проекта** предлагает существующую
+форму создания; новая плашка шаблона описана выше.
 Открытие ничего не создаёт и не перезапускает сессию. Наличие файла не означает,
 что работающий агент уже применил его; правила применения описаны ниже.
 
@@ -29,7 +79,7 @@ The vector **Refresh** action in the fixed title reloads the selected file on
 General or Project. Unsaved text requires explicit discard; cancelling retains it.
 Diagnostics hides Refresh. Reload file and Addition are removed from the menu;
 history, previous revision and import remain. Missing project files point to
-**Create project instructions**. Opening writes nothing and never restarts the
+**Open project instruction**, which offers the existing creation form. Opening writes nothing and never restarts the
 session. Files on disk do not confirm that the running agent applied them.
 
 Included in test35; the delivered test34 APK is unchanged. See [APK validation](VALIDATION-test35-agent-resources.md) and the [preceding source checks](VALIDATION-instruction-navigation.md).

@@ -1,5 +1,10 @@
 # Unreleased
 
+- Instructions: add the full supplied project template for Codex (AGENTS.md) and
+  Claude Code (CLAUDE.md), with explicit project selection, editable preview,
+  reviewed save/replacement and revision-conflict protection. Local only;
+  phone verification pending. See [editor](docs/fork/AGENT-INSTRUCTIONS.md).
+
 
 - Docs: put release highlights and Download APK first, followed by requirements
   and compatibility; fold CI history and technical evidence into details.

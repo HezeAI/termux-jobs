@@ -18,8 +18,10 @@ final class AgentInstructions {
     static String template(String language){return language.equals("ru")?"agent-instructions-ubuntu-ai.md":"agent-instructions-ubuntu-ai.en.md";}
     static String builtInTemplate(Context context,String language)throws IOException{return builtInTemplate(context,language,"codex");}
     static String template(String language,String agent){return agent.equals("claude")?(language.equals("ru")?"agent-instructions-claude.md":"agent-instructions-claude.en.md"):template(language);}
-    static String builtInTemplate(Context context,String language,String agent)throws IOException{
-        try(InputStream in=context.getAssets().open(template(language,agent));ByteArrayOutputStream bytes=new ByteArrayOutputStream()){
+    static String builtInTemplate(Context context,String language,String agent)throws IOException{return readTemplate(context,template(language,agent));}
+    static String projectTemplate(Context context)throws IOException{return readTemplate(context,"agent-instructions-project.md");}
+    private static String readTemplate(Context context,String asset)throws IOException{
+        try(InputStream in=context.getAssets().open(asset);ByteArrayOutputStream bytes=new ByteArrayOutputStream()){
             byte[] buffer=new byte[8192];int n;while((n=in.read(buffer))!=-1){if(bytes.size()+n>256*1024)throw new IOException("TEMPLATE_UNAVAILABLE");bytes.write(buffer,0,n);}
             return new String(bytes.toByteArray(),StandardCharsets.UTF_8);
         }

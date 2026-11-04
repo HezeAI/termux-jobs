@@ -22,7 +22,7 @@ final class AgentInstructionsUi {
     static WorkspaceStore.Session fileProfile(String env){WorkspaceStore.Session p=new WorkspaceStore.Session();p.environment=env.equals("termux")?"termux":"proot:"+env;p.codexEnvironment=env;return p;}
     static String runtimeNotice(android.content.Context c,String env){return tr(c,"Среда: ","Environment: ")+AgentEnvironments.label(env)+(env.equals("ubuntu-ai")?"":tr(c,". Сохранена среда старой сессии. Редактор работает с её файлами; инструкции Ubuntu AI не изменяются.",". The legacy session environment is retained. The editor uses its files; Ubuntu AI instructions are unchanged."));}
     static String suggested(WorkspaceStore.Session p){String env=runtime(p);String path=CodexProjects.directory(env,p!=null&&(!AgentPreparation.agent(p).isEmpty()||p.codexEnvironment.equals("ubuntu-ai")||WorkspaceEnvironments.alias(p).equals(env))?p.directory:env.equals("termux")?"~":"/root");return path.isEmpty()?"/root":path;}
-    static void show(TermuxActivity a,WorkspaceStore.Session profile){Editor e=new Editor(a,suggested(profile),q->AgentInstructions.request(a,q));e.selectedEnvironment=runtime(profile);if(profile!=null&&profile.claudeAgent){e.agent="claude";e.name="CLAUDE.md";}e.show();}
+    static void show(TermuxActivity a,WorkspaceStore.Session profile){Editor e=new Editor(a,suggested(profile),q->AgentInstructions.request(a,q));e.projectExplicit=false;e.selectedEnvironment=runtime(profile);if(profile!=null&&profile.claudeAgent){e.agent="claude";e.name="CLAUDE.md";}e.show();}
     static Editor sessionEditor(TermuxActivity a,WorkspaceStore.Session source,AgentInstructions.Backend backend){
         AgentSessionResourcesUi.Context context=AgentSessionResourcesUi.context(a,source);return context==null?null:context.editor(backend);
     }
@@ -30,7 +30,7 @@ final class AgentInstructionsUi {
         final TermuxActivity activity;final AgentInstructions.Backend backend;
         final ExecutorService worker=Executors.newSingleThreadExecutor();final Handler handler=new Handler(Looper.getMainLooper());
         final String initialProject;String project,scope="general",name="AGENTS.md",agent="codex",selectedEnvironment="ubuntu-ai";JSONObject document;
-        android.app.Dialog dialog;AgentManagerLayout frame;LinearLayout root,body,tabs,agents;TextView environmentLabel,runtimeLabel,projectCreate;ImageButton refresh;EditText editor;TextView status,save,close;boolean busy;volatile boolean closed;int epoch;
+        android.app.Dialog dialog;AgentManagerLayout frame;LinearLayout root,body,tabs,agents;TextView environmentLabel,runtimeLabel,projectCreate,projectTemplate;boolean projectExplicit,projectTemplateEditing;ImageButton refresh;EditText editor;TextView status,save,close;boolean busy;volatile boolean closed;int epoch;
         boolean createRequested,createReading,createGuard;String createContext="";AlertDialog creationDialog;String[] creationDraft;String creationDraftContext="";
         WorkspaceFileBrowser browser;WorkspaceLocalFilePicker importPicker;volatile ProjectFiles importFiles;
         interface ImportReader {String read(WorkspaceStore.Session source,ProjectFiles.Entry file)throws Exception;}
@@ -39,7 +39,7 @@ final class AgentInstructionsUi {
             ProjectFiles files=new ProjectFiles(activity,source);synchronized(this){if(closed){files.close();throw new java.io.IOException("INSTRUCTIONS_UNAVAILABLE");}importFiles=files;}
             try{return files.editRead(entry).text;}finally{files.close();synchronized(this){if(importFiles==files)importFiles=null;}}
         }
-        Editor(TermuxActivity a,String path,AgentInstructions.Backend b){activity=a;project=initialProject=path;backend=b;}
+        Editor(TermuxActivity a,String path,AgentInstructions.Backend b){activity=a;project=initialProject=path;projectExplicit=path!=null&&path.startsWith("/");backend=b;}
         String t(String ru,String en){return tr(activity,ru,en);}
         int dp(int n){return WorkspaceDialogs.dp(activity,n);}
         LinearLayout column(){LinearLayout b=new LinearLayout(activity);b.setOrientation(LinearLayout.VERTICAL);return b;}
@@ -77,7 +77,7 @@ final class AgentInstructionsUi {
         void show(){
             if(closed||dialog!=null&&dialog.isShowing())return;
             frame=new AgentManagerLayout(activity);root=frame;agents=new LinearLayout(activity);for(String a:new String[]{"codex","claude"}){TextView button=WorkspaceDialogs.action(activity,a.equals("codex")?"Codex":"Claude Code",0);button.setTag("instructions-agent-"+a);button.setOnClickListener(v->switchAgent(a));agents.addView(button,new LinearLayout.LayoutParams(-2,-2));}frame.content.addView(horizontal(agents,"instructions-agents-scroll"));
-            environmentLabel=WorkspaceDialogs.action(activity,"",0);environmentLabel.setTag("instructions-template-view");environmentLabel.setOnClickListener(v->viewTemplate());frame.content.addView(environmentLabel);projectCreate=WorkspaceDialogs.action(activity,t("Создание инструкций проекта","Create project instructions"),0);projectCreate.setTag("instructions-project-create");projectCreate.setOnClickListener(v->createProjectInstructions());frame.content.addView(projectCreate);runtimeLabel=text("");runtimeLabel.setTag("instructions-environment");frame.content.addView(runtimeLabel);selectAgents();
+            environmentLabel=WorkspaceDialogs.action(activity,"",0);environmentLabel.setTag("instructions-template-view");environmentLabel.setOnClickListener(v->viewTemplate());frame.content.addView(environmentLabel);projectTemplate=WorkspaceDialogs.action(activity,t("Шаблон проектных инструкций","Project instructions template"),0);projectTemplate.setTag("instructions-project-template");projectTemplate.setOnClickListener(v->viewProjectTemplate());frame.content.addView(projectTemplate);projectCreate=WorkspaceDialogs.action(activity,t("Создание инструкций проекта","Create project instructions"),0);projectCreate.setTag("instructions-project-create");projectCreate.setOnClickListener(v->createProjectInstructions());frame.content.addView(projectCreate);runtimeLabel=text("");runtimeLabel.setTag("instructions-environment");frame.content.addView(runtimeLabel);selectAgents();
             tabs=new LinearLayout(activity);
             for(String tab:new String[]{"general","project","diagnostics"}){
                 TextView v=WorkspaceDialogs.action(activity,tab.equals("general")?t("Общие","General"):tab.equals("project")?t("Проектные","Project"):t("Диагностика","Diagnostics"),0);
@@ -109,7 +109,7 @@ final class AgentInstructionsUi {
         }
         HorizontalScrollView horizontal(LinearLayout row,String tag){HorizontalScrollView scroll=new HorizontalScrollView(activity);scroll.setTag(tag);scroll.setFillViewport(true);scroll.addView(row,new ViewGroup.LayoutParams(-2,-2));
             scroll.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{for(int i=0;i<row.getChildCount();i++){View child=row.getChildAt(i);if(!child.isSelected())continue;int left=child.getLeft(),right=child.getRight(),x=scroll.getScrollX();if(left<x||child.getWidth()>scroll.getWidth())scroll.scrollTo(left,0);else if(right>x+scroll.getWidth())scroll.scrollTo(right-scroll.getWidth(),0);}});return scroll;}
-        void selectTabs(){if(refresh!=null)refresh.setVisibility(scope.equals("diagnostics")?View.GONE:View.VISIBLE);if(projectCreate!=null)projectCreate.setVisibility(scope.equals("project")?View.VISIBLE:View.GONE);if(environmentLabel!=null)environmentLabel.setVisibility(scope.equals("general")?View.VISIBLE:View.GONE);if(tabs==null)return;for(int i=0;i<tabs.getChildCount();i++){TextView v=(TextView)tabs.getChildAt(i);boolean active=("instructions-tab-"+scope).equals(v.getTag());selected(v,active);if(active)v.post(()->v.requestRectangleOnScreen(new android.graphics.Rect(0,0,v.getWidth(),v.getHeight()),true));}}
+        void selectTabs(){if(projectTemplate!=null)projectTemplate.setVisibility(scope.equals("project")?View.VISIBLE:View.GONE);if(refresh!=null)refresh.setVisibility(scope.equals("diagnostics")?View.GONE:View.VISIBLE);if(projectCreate!=null)projectCreate.setVisibility(scope.equals("project")?View.VISIBLE:View.GONE);if(environmentLabel!=null)environmentLabel.setVisibility(scope.equals("general")?View.VISIBLE:View.GONE);if(tabs==null)return;for(int i=0;i<tabs.getChildCount();i++){TextView v=(TextView)tabs.getChildAt(i);boolean active=("instructions-tab-"+scope).equals(v.getTag());selected(v,active);if(active)v.post(()->v.requestRectangleOnScreen(new android.graphics.Rect(0,0,v.getWidth(),v.getHeight()),true));}}
         boolean dirty(){return editor!=null&&document!=null&&!editor.getText().toString().equals(document.optString("text"));}
         boolean hideKeyboard(){
             if(android.os.Build.VERSION.SDK_INT>=30){
@@ -140,14 +140,14 @@ final class AgentInstructionsUi {
         void call(JSONObject q,java.util.function.Consumer<JSONObject> done){operation(()->backend.call(q),done);}
         void operation(java.util.concurrent.Callable<JSONObject> work,java.util.function.Consumer<JSONObject> done){
             if(closed||busy)return;busy=true;int ticket=++epoch;status.setText(t("Выполняется операция с файлом…","File operation running…"));
-            dialog.setCancelable(false);close.setEnabled(false);if(refresh!=null)refresh.setEnabled(false);
+            dialog.setCancelable(false);close.setEnabled(false);if(refresh!=null)refresh.setEnabled(false);if(projectTemplate!=null)projectTemplate.setEnabled(false);
             if(save!=null)save.setEnabled(false);if(editor!=null)editor.setEnabled(false);
             worker.execute(()->{
                 JSONObject result=null;String failure=null;try{result=work.call();}catch(Exception e){failure=e instanceof java.io.IOException?e.getMessage():"INSTRUCTIONS_UNAVAILABLE";}
                 final JSONObject value=result;final String error=failure;
                 handler.post(()->{
                     if(closed||epoch!=ticket||activity.isFinishing()||activity.isDestroyed())return;
-                    busy=false;dialog.setCancelable(true);close.setEnabled(true);if(refresh!=null)refresh.setEnabled(true);
+                    busy=false;dialog.setCancelable(true);close.setEnabled(true);if(refresh!=null)refresh.setEnabled(true);if(projectTemplate!=null)projectTemplate.setEnabled(true);
                     if(editor!=null)editor.setEnabled(true);if(save!=null)save.setEnabled(true);
                     if(error==null){status.setText("");done.accept(value);if(createRequested&&!createReading&&!createGuard&&!busy)continueProjectCreation();}else {createRequested=false;createReading=false;createGuard=false;status.setText(error(error));if(memory()&&editor==null)action(body,t("Выбрать существующий файл памяти","Choose existing memory file"),"instructions-memory-path",this::chooseMemory);}
                 });
@@ -163,7 +163,7 @@ final class AgentInstructionsUi {
         String safe(String value){return value!=null&&value.matches("[A-Z_]{1,80}")?value:"INSTRUCTIONS_UNAVAILABLE";}
         void load(){selectAgents();selectTabs();editor=null;document=null;save=null;updateProjectAction();body.removeAllViews();frame.actions(close);if(environment().equals("termux")&&agent.equals("claude")){status.setText(t("Claude Code в этой сохранённой среде не поддерживается редактором. Среда не переключалась; файлы Ubuntu AI не изменены.","The editor does not support Claude Code in this retained environment. The environment was not switched; Ubuntu AI files are unchanged."));return;}if(scope.equals("diagnostics"))call(request("diagnostics"),this::diagnostics);else call(request("read"),this::render);}
         void render(JSONObject d){
-            document=d;updateProjectAction();body.removeAllViews();
+            projectTemplateEditing=false;document=d;updateProjectAction();body.removeAllViews();
             LinearLayout fields=column();frame.scroll.setTag("instructions-content-scroll");body.addView(fields,new LinearLayout.LayoutParams(-1,-1));
             if(scope.equals("project")){
                 TextView location=text(t("Проект: ","Project: ")+project);location.setTag("instructions-project-path");fields.addView(location);
@@ -208,6 +208,10 @@ final class AgentInstructionsUi {
         }
         void save(String text){save(text,null);}
         void save(String text,Runnable after){
+            if(projectTemplateEditing){confirmProjectTemplateSave(text,after);return;}
+            write(text,after);
+        }
+        private void write(String text,Runnable after){
             JSONObject q=request("save");try{q.put("path",document.getString("path")).put("revision",document.getString("revision")).put("text",text);}catch(JSONException impossible){throw new IllegalStateException(impossible);}
             call(q,result->{render(result);status.setText(savedNotice());if(after!=null)after.run();});
         }
@@ -259,6 +263,7 @@ final class AgentInstructionsUi {
             if(projectCreate==null)return;
             boolean exists=document!=null&&document.optBoolean("projectBaseExists",name.equals(baseName())&&document.optBoolean("exists"));
             projectCreate.setText(document==null?t("Открыть инструкции проекта","Open project instructions"):exists?t("Редактировать ","Edit ")+baseName():t("Создание инструкций проекта","Create project instructions"));
+            projectCreate.setText(t("Открыть инструкцию проекта","Open project instruction"));
             projectCreate.setContentDescription(projectCreate.getText());
         }
         void focusProjectEditor(){
@@ -313,6 +318,33 @@ final class AgentInstructionsUi {
                 });});
             creationDialog=form;form.setOnDismissListener(d->{if(!discarded[0]){creationDraft=new String[inputs.length];for(int i=0;i<inputs.length;i++)creationDraft[i]=inputs[i].getText().toString();creationDraftContext=sourceContext;}else if(sourceContext.equals(creationDraftContext)){creationDraft=null;creationDraftContext="";}status.removeTextChangedListener(observer);if(creationDialog==form)creationDialog=null;});
             try{form.show();AgentManagerLayout.keyboard(form);}catch(RuntimeException e){status.removeTextChangedListener(observer);creationDialog=null;status.setText(t("Не удалось открыть окно. Код: ","Could not open window. Code: ")+e.getClass().getSimpleName());}
+        }
+        void viewProjectTemplate(){
+            if(closed||busy||!scope.equals("project"))return;
+            if(!projectExplicit||project==null||!project.startsWith("/")){guard(this::chooseProject);return;}
+            final String context=creationContext(),targetName=baseName();JSONObject q=request("read");try{q.put("name",targetName).put("memoryPath","");}catch(JSONException e){throw new IllegalStateException(e);}
+            call(q,snapshot->{
+                if(!context.equals(creationContext())){status.setText(error("SOURCE_CHANGED"));return;}
+                if(snapshot.optBoolean("exists"))WorkspaceDialogs.builder(activity).setTitle(targetName+t(" уже существует"," already exists"))
+                    .setMessage(t("Точный путь: ","Exact path: ")+snapshot.optString("path")+"\n\n"+t("Откройте существующий файл или отредактируйте шаблон. Замена потребует отдельного подтверждения при сохранении.","Open the existing file or edit the template. Replacement requires separate confirmation when saving."))
+                    .setPositiveButton(t("Открыть существующий файл","Open existing file"),(d,w)->guard(()->{if(context.equals(creationContext())){name=targetName;render(snapshot);}else status.setText(error("SOURCE_CHANGED"));}))
+                    .setNeutralButton(t("Посмотреть шаблон","View template"),(d,w)->projectTemplatePreview(snapshot,context)).setNegativeButton(t("Отмена","Cancel"),null).show();
+                else projectTemplatePreview(snapshot,context);
+            });
+        }
+        void projectTemplatePreview(JSONObject snapshot,String context){
+            if(closed||busy||!context.equals(creationContext()))return;
+            final String targetName=baseName();final String value;try{value=AgentInstructions.projectTemplate(activity);}catch(java.io.IOException e){status.setText(error("TEMPLATE_UNAVAILABLE"));return;}
+            showPreview(t("Шаблон проектных инструкций","Project instructions template"),value,
+                t("Точный путь: ","Exact path: ")+snapshot.optString("path")+"\n\n"+t("Шаблон на русском языке. Поля [в скобках] заполните в редакторе. Просмотр ничего не записывает. Общие инструкции и другие проекты не меняются.","This supplied template is in Russian. Fill [bracketed fields] in the editor. Viewing writes nothing. Shared rules and other projects stay unchanged."),
+                t("Редактировать шаблон","Edit template"),()->guard(()->{if(!context.equals(creationContext())){status.setText(error("SOURCE_CHANGED"));return;}name=targetName;render(snapshot);editor.setText(value);projectTemplateEditing=true;status.setText(t("Шаблон открыт как несохранённый черновик. Проверьте текст и путь перед сохранением.","Template opened as an unsaved draft. Review text and path before saving."));}));
+        }
+        void confirmProjectTemplateSave(String value,Runnable after){
+            if(closed||busy||!projectTemplateEditing||!scope.equals("project")||!name.equals(baseName()))return;
+            boolean exists=document.optBoolean("exists");
+            showPreview(t("Сохранить проектные инструкции","Save project instructions"),value,
+                t("Точный путь: ","Exact path: ")+document.optString("path")+"\n\n"+(exists?t("Подтверждение заменит существующий ","Confirmation replaces the existing ")+baseName()+t(" этим текстом. Предыдущая редакция останется в истории."," with this text. Its previous revision stays in history."):t("Будет создан новый файл ","A new file will be created: ")+baseName()+t(". До подтверждения файл не создаётся.",". Nothing is written before confirmation.")),
+                exists?t("Заменить ","Replace ")+baseName():t("Создать и сохранить","Create and save"),()->write(value,after));
         }
         void storageAddition(){languagePreview(true);}
         void template(){languagePreview(false);}
@@ -395,13 +427,13 @@ final class AgentInstructionsUi {
             });
         }
         void chooseProject(){
-            LinearLayout form=column();EditText path=new EditText(activity);path.setText(project);path.setSingleLine(true);path.setTextColor(WorkspaceDialogs.TEXT);path.setTag("instructions-project-input");form.addView(path);
+            LinearLayout form=column();EditText path=new EditText(activity);path.setText(projectExplicit?project:"");path.setHint(t("Абсолютный путь проекта","Absolute project path"));path.setSingleLine(true);path.setTextColor(WorkspaceDialogs.TEXT);path.setTag("instructions-project-input");form.addView(path);
             AlertDialog chooser=WorkspaceDialogs.builder(activity).setTitle(environment().equals("ubuntu-ai")?t("Проект Ubuntu AI","Ubuntu AI project"):t("Проект · ","Project · ")+AgentEnvironments.label(environment())).setView(form).setPositiveButton(t("Открыть","Open"),null)
                 .setNeutralButton(t("Папка","Folder"),(d,w)->{
                     WorkspaceStore.Session p=fileProfile(environment());
-                    browser=new WorkspaceFileBrowser(activity,p,project,picked->{if(!closed){project=picked;load();}});browser.show();
+                    browser=new WorkspaceFileBrowser(activity,p,project,picked->{if(!closed){project=picked;projectExplicit=true;load();}});browser.show();
                 }).setNegativeButton(t("Отмена","Cancel"),null).create();chooser.show();
-            chooser.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{String chosen=path.getText().toString();if(!chosen.startsWith("/")||chosen.indexOf('\0')>=0){path.setError(t("Нужен абсолютный путь","Absolute path required"));return;}chooser.dismiss();project=chosen;load();});
+            chooser.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{String chosen=path.getText().toString();if(!chosen.startsWith("/")||chosen.indexOf('\0')>=0){path.setError(t("Нужен абсолютный путь","Absolute path required"));return;}chooser.dismiss();project=chosen;projectExplicit=true;load();});
         }
         void claudeDiagnostics(JSONObject result){
             body.removeAllViews();LinearLayout rows=column();body.addView(rows,new LinearLayout.LayoutParams(-1,-2));
