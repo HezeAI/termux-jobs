@@ -542,3 +542,58 @@ Evidence: `.verification/opencode-declined/summary.json`, `native.log`,
 corrected presentation is **not yet checked on the phone** and not in test7.
 Include with the project templates in the next test APK after final APK checks;
 no APK build/install, push or publication was performed for this change.
+
+
+## Developer phone acceptance: Codex outside-project access — 2026-11-04
+
+Source: the developer's phone report and pasted `check-boundary` output, not an
+assistant-run fixture. All six documented outside-project shell read, direct
+write/apply_patch and shell write No/Allow-once scenarios were reported working.
+The supplied final check shows read-41 not transmitted, read-42 transmitted,
+new-33/new-51 absent and new-34/new-52 with the expected synthetic values.
+The final provider event is tool-result / SHELL_WRITE / 52, 88776 bytes.
+Read-31/read-32 were not requested. The APK version was not independently
+re-established by that message. Native TUI, legacy Termux Codex, manual CLI,
+old-profile persistence and chat switching during approval remain separate.
+This does not establish preservation of arbitrary outside files. See the
+[current audit plan](SECURITY-AUDIT-STAGE2.md#пользовательская-приёмка-codex-вне-проекта--2026-11-04).
+
+
+## Следующий сценарий телефона: Claude вне проекта — 2026-11-04
+
+Подготовлен новый искусственный HOME/config/project. Существующие профили,
+авторизация и прежний принятый Claude fixture не изменены. Провайдер локальный;
+существующий kernel guard блокирует внешнюю сеть и чужие listeners. Это не
+OS-песочница файлов. Нативная логика сценариев уже проверена помощником;
+этот новый экземпляр на телефоне ещё не проверен. Повтор стенда не требуется.
+
+1. Создать новый профиль `AUDIT BOUNDARY CLAUDE`: Claude Code, Ubuntu AI,
+   новый чат, права `manual` / с подтверждениями. Не использовать acceptEdits.
+2. Поле «Команда подключения»: `/root/termux-fork/.verification/audit-boundary-claude-phone/launch-boundary`.
+3. Рабочая папка: `/root/termux-fork/.verification/rollback-live-actions/source/.verification/phone-permissions/claude-lw7nf55o/project`.
+   Сохранить и повторно открыть настройки; агент, папка и права должны сохраниться.
+4. Запустить и отправлять по одному сообщению из таблицы. Дожидаться окончания
+   действия перед следующим. Подтверждать только точный искусственный путь.
+
+| Сообщение | Ответ | Сверка после действия |
+| --- | --- | --- |
+| `AUDIT READ OUTSIDE 31` | Отклонить | `read-31.txt` → `false` |
+| `AUDIT READ OUTSIDE 32` | Разрешить разово | `read-32.txt` → `true` |
+| `AUDIT SHELL_READ OUTSIDE 41` | Отклонить | `read-41.txt` → `false` |
+| `AUDIT SHELL_READ OUTSIDE 42` | Разрешить разово | `read-42.txt` → `true` |
+| `AUDIT WRITE OUTSIDE 33` | Отклонить | `new-33.txt: absent` |
+| `AUDIT WRITE OUTSIDE 34` | Разрешить разово | `new-34.txt: AUDIT_WRITE_34` |
+| `AUDIT SHELL_WRITE OUTSIDE 51` | Отклонить | `new-51.txt: absent` |
+| `AUDIT SHELL_WRITE OUTSIDE 52` | Разрешить разово | `new-52.txt: AUDIT_WRITE_52` |
+
+После каждого действия в обычном терминале Ubuntu AI:
+
+```sh
+/root/termux-fork/.verification/audit-boundary-claude-phone/check-boundary
+```
+
+При отсутствии ожидаемого запроса или несовпадении остановить проверку;
+сообщить номер шага, выбор и результат сверки, без секретов и рабочих журналов.
+Штатно закрыть только этот тестовый агент через его шестерёнку, затем повторить
+сверку. Не выполнять pkill/force-stop. Приёмка старых профилей и переключения
+чата при prompt в этот сценарий не включена.
