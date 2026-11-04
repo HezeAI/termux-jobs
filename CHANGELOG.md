@@ -1,19 +1,5 @@
 # Unreleased
 
-- OpenCode: render a verified same-action user denial as neutral “Action declined”
-  instead of a failed tool/session error. Keep unrelated aborts and provider errors
-  visible. Store directory and action decisions separately, including directory
-  Allow once followed by Read/Edit denial. Preserve both decisions on reopen.
-  Already lost historical decisions are not guessed from error text.
-  Persisted-history reopen and the next request are covered locally;
-  phone verification of the new presentation is pending.
-
-- Instructions: add the full supplied project template for Codex (AGENTS.md) and
-  Claude Code (CLAUDE.md), with explicit project selection, editable preview,
-  reviewed save/replacement and revision-conflict protection. Local only;
-  phone verification pending. See [editor](docs/fork/AGENT-INSTRUCTIONS.md).
-
-
 - Docs: put release highlights and Download APK first, followed by requirements
   and compatibility; fold CI history and technical evidence into details.
 
@@ -23,6 +9,35 @@
 - CI: prepare verified pinned X11 inputs on clean GitHub runners; preserve the
   mandatory hash guard and allow explicit checks of older source commits with
   separately recorded workflow identity. See [CI inputs](docs/fork/CI-X11.md).
+
+# 2026-11-04 — 2.1.3-test8 (versionCode 1484)
+
+Private test release APK; no push/publication. Same package and certificate,
+higher versionCode. Existing profiles, accounts, environments and CLI pins stay
+unchanged. No automatic data reset or migration is introduced.
+
+- Project instructions: full supplied editable template for Codex → AGENTS.md
+  and Claude → CLAUDE.md. Opening does not write. Saving an existing file needs
+  replacement confirmation; external revision conflicts preserve the draft.
+- OpenCode: verified same-action user denial displays neutral “Action declined”.
+  Directory and action decisions are stored separately, so directory Allow once
+  followed by Read/Edit denial keeps both receipts after history reopen.
+  Genuine/unproven aborts remain errors. Previously lost historical decisions
+  are not reconstructed from error text and can remain red.
+- Audit: developer phone acceptance of agent confirmations and tested external
+  access is recorded separately from assistant fixtures. Gemini fake-key handoff,
+  API rejection and normal repeat remain accepted. Low-level Android handoff,
+  application crash and device backup export/restore are **not checked**: no
+  isolated Android instance is available; completion with this scope is agreed.
+- Attachment/context accumulation and disconnections are **not fixed** in this
+  APK. Work moves to the next cycle after the stable release. MCP/plugins remain
+  excluded and unverified. Full security isolation/audit is not claimed.
+- Phone acceptance of the new OpenCode presentation and both project-template
+  flows is pending. Stable publication is authorized only after that acceptance;
+  previous APKs, tags and binary Components remain immutable.
+
+See [test8 validation](docs/fork/VALIDATION-2.1.3-test8.md) and
+[the audit outcome](docs/fork/SECURITY-AUDIT-STAGE2.md).
 
 # 2026-11-04 — 2.1.3-test7 (versionCode 1483)
 
