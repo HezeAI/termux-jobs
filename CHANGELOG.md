@@ -2,6 +2,20 @@
 
 No additional changes queued for publication.
 
+# 2026-11-05 — 2.1.4-test1 (versionCode 1486, private test release)
+
+Changes since the last published stable release, **v2.1.3**.
+
+- The file manager and chat attachment picker show each entry's modification date and time in the phone's time zone, with seconds. Unknown timestamps are labelled explicitly in RU/EN.
+- Refresh rereads file metadata and preserves sorting and selected paths, including updated size/time after overwriting a selected file.
+- Updated all four built-in Codex/Claude common instruction templates (RU/EN) to the exact supplied texts. Preview and explicit application remain required; saved instructions, including empty files, are not migrated automatically. The project instruction template is unchanged.
+
+Compatibility: `com.termux`, ARM64, Android 8.0+; same Termux Job’s certificate and increased versionCode. No profile/history/schema migration. This does not establish compatibility with independently signed Termux distributions.
+
+Limits: attachment accumulation/disconnections remain **unfixed**. No CLI fork, experimental context mode or automatic compaction is included. Android low-level key handoff/crash recovery and backup export/restore on a phone remain unverified in the agreed audit scope; MCP/plugins are excluded. No device installation or phone acceptance of this version is claimed.
+
+[Checks and phone scenario](docs/fork/VALIDATION-2.1.4-test1.md).
+
 # 2026-11-04 — 2.1.3 (versionCode 1485)
 
 Changes since the last published stable release, **v2.1.2**.
