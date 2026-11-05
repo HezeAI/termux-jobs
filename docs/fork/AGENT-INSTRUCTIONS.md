@@ -1,3 +1,23 @@
+# Common templates: private 2.1.4-test1
+
+Четыре общих шаблона Codex/Claude RU/EN обновлены точными файлами из
+согласованного набора `9fed99b2185d4bb8b03a2ec090d92882`.
+Codex использует AGENTS.md (существующий override имеет приоритет), Claude —
+CLAUDE.md. Правила RU/EN согласованы; для Claude изменены заголовок и имя файла.
+LEARNING.md и CONTINUE.md одинаковы. Это обновление встроенного предпросмотра,
+без миграции пользовательских файлов, включая пустые. Открытие/отмена ничего
+не записывают; применение требует явного действия, конфликт редакций блокирует
+перезапись. Отдельный проектный шаблон не меняется.
+
+The four Codex/Claude common templates (RU/EN) are the exact supplied assets.
+The preview uses the chosen agent and language. Existing user files, including
+empty files, are not migrated. Explicit application and revision-conflict checks
+remain required. This does not establish performance or attachment fixes.
+
+[Exact asset identities and verification](VALIDATION-2.1.4-test1.md).
+
+---
+
 # Project instructions template
 
 Во вкладке **Проектные** Codex и Claude Code появилась плашка

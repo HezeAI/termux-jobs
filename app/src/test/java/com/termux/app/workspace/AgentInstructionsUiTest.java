@@ -24,6 +24,16 @@ public class AgentInstructionsUiTest {
  View find(String tag){return ui.root.findViewWithTag(tag);}
  void measured(View view,int width,int height){view.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));view.layout(0,0,width,height);}
  android.graphics.Rect bounds(View parent,View child){android.graphics.Rect r=new android.graphics.Rect();child.getDrawingRect(r);((ViewGroup)parent).offsetDescendantRectToMyCoords(child,r);return r;}
+ @Test public void suppliedTemplatesAreExactAndOnlyExplicitlySavedForBothAgentsAndLanguages()throws Exception{
+  String[] hashes={"f0ee1dabfdd25388231f5a5b7c483259dd2fa2f6d6049b8539245128081df6d6","98af576b97c8b71865539ed30c8166be8e189a650cb9e5aaee4e5958430beb0b","56a96b8c94ab11eeb397cbb338d078aee9917810f48162dc1f598f7bd75d36ea","42ef6e255c619315c196a013e0208f0d29e9969b507b07eabc28a7c5fae1794b"};int index=0;
+  for(String agent:new String[]{"codex","claude"})for(String lang:new String[]{"ru","en"}){
+   if(ui!=null)ui.dialog.dismiss();sourceText="";conflict=false;writes=0;WorkspaceLanguage.select(activity,lang);WorkspaceLanguage.apply(activity);show();ui.switchAgent(agent);waitIdle();assertEquals(0,writes);assertEquals("",sourceText);
+   String expected=AgentInstructions.builtInTemplate(activity,lang,agent);byte[] digest=java.security.MessageDigest.getInstance("SHA-256").digest(expected.getBytes(java.nio.charset.StandardCharsets.UTF_8));StringBuilder hex=new StringBuilder();for(byte b:digest)hex.append(String.format(java.util.Locale.ROOT,"%02x",b&255));assertEquals(hashes[index++],hex.toString());
+   ui.template();AlertDialog preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertEquals(expected,((TextView)preview.getWindow().getDecorView().findViewWithTag("instructions-preview-text")).getText().toString());assertEquals(0,writes);preview.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();assertEquals("",sourceText);assertEquals(0,writes);
+   ui.editor.setText("draft retained on conflict");conflict=true;sourceText="external change";ui.template();preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals("external change",sourceText);assertEquals("draft retained on conflict",ui.editor.getText().toString());assertEquals(agent,last.getString("agent"));
+   conflict=false;ui.load();waitIdle();ui.template();preview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();waitIdle();assertEquals(expected,sourceText);assertEquals(agent,last.getString("agent"));assertTrue(last.getString("path").endsWith(agent.equals("claude")?"CLAUDE.md":"AGENTS.override.md"));
+  }
+ }
  @Test public void claudeNarrowLargeFontFilesAndEnvironmentStayUsable()throws Exception{
   for(String lang:new String[]{"ru","en"}){
    if(ui!=null)ui.dialog.dismiss();WorkspaceLanguage.select(activity,lang);android.content.res.Resources res=activity.getResources();android.content.res.Configuration c=new android.content.res.Configuration(res.getConfiguration());c.fontScale=1.5f;res.updateConfiguration(c,res.getDisplayMetrics());res.getDisplayMetrics().scaledDensity=res.getDisplayMetrics().density*1.5f;

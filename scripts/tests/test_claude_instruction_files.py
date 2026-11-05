@@ -11,6 +11,20 @@ class ClaudeFiles(unittest.TestCase):
  def q(self,name='CLAUDE.md',**kw):return dict(scope='project',project=str(self.project),name=name,**kw)
  def save(self,q,text):
   v=self.e.view(q);return self.e.save(dict(q,path=v['path'],revision=v['revision'],text=text))
+ def test_four_supplied_templates_preserve_existing_empty_files_and_reject_stale_save(self):
+  for agent in ['codex','claude']:
+   for language in ['ru','en']:
+    with self.subTest(agent=agent,language=language):
+     home=self.root/(agent+'-'+language);home.mkdir();config=home/('.codex' if agent=='codex' else '.claude');config.mkdir()
+     target=config/('AGENTS.md' if agent=='codex' else 'CLAUDE.md');target.write_bytes(b'')
+     asset='agent-instructions-'+('ubuntu-ai' if agent=='codex' else 'claude')+('.en' if language=='en' else '')+'.md'
+     cls=m.Editor if agent=='codex' else m.ClaudeEditor;e=cls(ROOT/'app/src/main/assets'/asset,home,{})
+     self.assertFalse(e.initialize()['created']);self.assertEqual(b'',target.read_bytes())
+     view=e.view({});self.assertEqual('',view['text']);self.assertEqual(str(target),view['path'])
+     text=(ROOT/'app/src/main/assets'/asset).read_text();target.write_text('external change')
+     with self.assertRaisesRegex(m.Refused,'EDIT_CONFLICT'):e.save(dict(path=view['path'],revision=view['revision'],text=text))
+     self.assertEqual('external change',target.read_text());current=e.view({})
+     e.save(dict(path=current['path'],revision=current['revision'],text=text));self.assertEqual(text.encode(),target.read_bytes())
  def test_project_base_presence_does_not_confuse_additive_local_file(self):
   (self.project/'CLAUDE.local.md').write_text('local')
   self.assertFalse(self.e.view(self.q('CLAUDE.local.md'))['projectBaseExists'])
