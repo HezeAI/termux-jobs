@@ -91,5 +91,5 @@ final class AgentComposerControls {
         }
         if(agent)toolsHeight();inset.accept(agent?row.getHeight():0);labels();
     }
-    void labels(){star.setContentDescription(t("Вставить сохранённую команду","Insert saved command"));attachment.setContentDescription(t("Прикрепить файл","Attach file"));attachment.setTooltipText(t("Прикрепить файл","Attach file"));send.setContentDescription(agent?t("Отправить сообщение","Send message"):t("Отправить в активный терминал","Send to active terminal"));}
+    void labels(){star.setContentDescription(agent?t("Заметки","Notes"):t("Вставить сохранённую команду","Insert saved command"));attachment.setContentDescription(t("Прикрепить файл","Attach file"));attachment.setTooltipText(t("Прикрепить файл","Attach file"));send.setContentDescription(agent?t("Отправить сообщение","Send message"):t("Отправить в активный терминал","Send to active terminal"));}
 }

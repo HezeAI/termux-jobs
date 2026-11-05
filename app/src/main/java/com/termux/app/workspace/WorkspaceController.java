@@ -960,9 +960,11 @@ public final class WorkspaceController {
             if(!closed&&dialog.isShowing())WorkspaceDialogs.builder(activity).setTitle(tr("Не сохранено","Not saved")).setMessage(tr("Запись не подтверждена. Черновик остался в форме. Проверьте свободное место и доступ к хранилищу; затем повторите сохранение. До подтверждения не закрывайте форму.","The write was not confirmed. Your draft remains in the form. Check free space and storage access, then retry saving. Keep the form open until confirmed.")).setPositiveButton("OK",null).show();
         });
     }
-    private void editNote(WorkspaceStore.Note existing) {
+    private void editNote(WorkspaceStore.Note existing) { editNote(existing, ""); }
+    private void editNote(WorkspaceStore.Note existing, String initialText) {
         if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Библиотека недоступна для записи"), true); return; }
         WorkspaceStore.Note draft = existing == null ? new WorkspaceStore.Note() : existing;
+        if (existing == null) draft.text = initialText;
         LinearLayout form = column(); EditText name = labeled(form, WorkspaceText.tr("Название"), draft.name, false);
         EditText text = labeled(form, WorkspaceText.tr("Текст заметки"), draft.text, true);
         EditText category = categoryField(form,draft.category,noteCategories());
@@ -2088,14 +2090,15 @@ public final class WorkspaceController {
     }
     private void chooseInputCommand() {
         hideDialogKeyboard();
-        List<WorkspaceStore.Command> commands = new ArrayList<>(store.commands);
+        final boolean notesOnly=agentChatUi!=null&&agentChatUi.handlesComposer();
+        List<WorkspaceStore.Command> commands = new ArrayList<>(notesOnly?Collections.emptyList():store.commands);
         Collections.sort(commands, (a, b) -> Boolean.compare(b.favorite, a.favorite));
         List<WorkspaceStore.Note> notes = new ArrayList<>(store.notes);
         Collections.sort(notes, (a, b) -> Boolean.compare(b.favorite, a.favorite));
-        int[] libraryTab = {0};
+        int[] libraryTab = {notesOnly?2:0};
         String[] queries = {"", "", ""};
-        List<WorkspaceStore.Alias> aliases = new ArrayList<>(store.aliases);aliases.sort((a,b)->Boolean.compare(b.favorite,a.favorite));
-        List<Object> visible = new ArrayList<>(commands);
+        List<WorkspaceStore.Alias> aliases = new ArrayList<>(notesOnly?Collections.emptyList():store.aliases);aliases.sort((a,b)->Boolean.compare(b.favorite,a.favorite));
+        List<Object> visible = new ArrayList<>(notesOnly?notes:commands);
         android.widget.BaseAdapter adapter = new android.widget.BaseAdapter() {
             public int getCount() { return visible.size(); }
             public Object getItem(int position) { return visible.get(position); }
@@ -2116,14 +2119,14 @@ public final class WorkspaceController {
         };
         LinearLayout heading = column(); heading.setPadding(dp(20), dp(18), dp(20), dp(12));
         heading.setFocusableInTouchMode(true);
-        LinearLayout tabs = row();
+        LinearLayout tabs = row();tabs.setTag("input-library-tabs");
         TextView commandTab = button(tr("Команды","Commands"), true, () -> {});
         TextView aliasTab=button("Alias",false,()->{});
         TextView notesTab = button(WorkspaceText.tr("Заметки"), false, () -> {});
         commandTab.setMaxLines(2); notesTab.setMaxLines(2);
         commandTab.setPadding(dp(6), dp(8), dp(6), dp(8));
         LinearLayout.LayoutParams tabParams = new LinearLayout.LayoutParams(0, -2, 1); tabParams.setMarginEnd(dp(8));
-        tabs.addView(commandTab, tabParams); LinearLayout.LayoutParams aliasParams=new LinearLayout.LayoutParams(0,-2,1);aliasParams.setMarginEnd(dp(8));tabs.addView(aliasTab,aliasParams); tabs.addView(notesTab, new LinearLayout.LayoutParams(0, -2, 1)); heading.addView(tabs);
+        tabs.addView(commandTab, tabParams); LinearLayout.LayoutParams aliasParams=new LinearLayout.LayoutParams(0,-2,1);aliasParams.setMarginEnd(dp(8));tabs.addView(aliasTab,aliasParams); tabs.addView(notesTab, new LinearLayout.LayoutParams(0, -2, 1)); if(!notesOnly)heading.addView(tabs);else heading.addView(text(WorkspaceText.tr("Заметки"),18,TEXT));
         TextView hint = text(WorkspaceText.tr("Нажми на карточку, чтобы прочитать полностью"), 12, MUTED); hint.setPadding(0, dp(8), 0, dp(12)); heading.addView(hint);
         EditText search = field(WorkspaceText.tr("Найти команду"), "", false); search.setContentDescription(WorkspaceText.tr("Поиск в меню звёздочки"));
         search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH | android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI);
@@ -2144,7 +2147,7 @@ public final class WorkspaceController {
             })
             .setNegativeButton(WorkspaceText.tr("Закрыть"), null);
         String input = terminalInput.getText().toString();
-        if (!input.trim().isEmpty() && store.isWritable()) builder.setNeutralButton(WorkspaceText.tr("Сохранить ввод"), (dialog, which) -> editCommand(null, input));
+        if (!input.trim().isEmpty() && store.isWritable()) builder.setNeutralButton(WorkspaceText.tr("Сохранить ввод"), (dialog, which) -> {if(notesOnly)editNote(null,input);else editCommand(null,input);});
         Runnable refresh = () -> {
             String key = search.getText().toString().toLowerCase(java.util.Locale.ROOT); visible.clear();
             if(libraryTab[0]==1){for(WorkspaceStore.Alias a:aliases)if((a.name+" "+a.command+" "+a.category+" "+WorkspaceAliases.label(a.environment)).toLowerCase(java.util.Locale.ROOT).contains(key))visible.add(a);
