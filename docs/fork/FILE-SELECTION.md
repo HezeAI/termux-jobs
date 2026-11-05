@@ -1,3 +1,19 @@
+# File metadata — private 2.1.4-test1
+
+В файловом менеджере и выборе вложений каждая запись показывает время изменения
+`04.11.2026 15:42:08` в часовом поясе телефона. Неизвестное время подписано
+«Дата неизвестна». Имя и размер сохранены; дата второстепенная, без ограничения
+длинного имени. Кнопка обновления заново получает список и метаданные, сохраняет
+сортировку, выбранные пути и позицию прокрутки. Размер/дата выбранного файла
+обновляются после перезаписи. Дата не заменяется временем открытия окна.
+
+Both file windows use the same metadata renderer and fresh directory listing.
+Unknown timestamps show “Date unknown”; a valid epoch timestamp is retained.
+Refresh keeps the sort order and selection and updates selected entries' metadata.
+[Verification and phone scenario](VALIDATION-2.1.4-test1.md).
+
+---
+
 # File selection and destination actions — v1.6.0
 
 In a session file browser, a normal tap still opens a folder or the usual file

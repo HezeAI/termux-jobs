@@ -14,6 +14,9 @@ import com.termux.app.TermuxActivity;
 import com.termux.R;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -30,6 +33,7 @@ final class WorkspaceFileBrowser {
     void setChatFileChoices(java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> value,int limit){fileChoices=value;chatChoices=true;selectionLimit=Math.max(1,Math.min(ChatAttachments.MAX_COUNT,limit));}
     private final LinkedHashMap<String,ProjectFiles.Entry> transferSelection=new LinkedHashMap<>();
     private TextView transferButton,clearTransferButton;
+    private WorkspaceIconButton refreshButton;
     private boolean transfersEnabled(){return choice==null&&fileChoice==null&&fileChoices==null;}
     private void updateTransfer(){if(transferButton==null)return;boolean selected=!transferSelection.isEmpty();transferButton.setEnabled(selected&&!busy&&listing!=null);transferButton.setAlpha(selected?1f:.4f);transferButton.setSelected(selected);transferButton.setBackground(WorkspaceDialogs.background(activity,selected));clearTransferButton.setVisibility(selected?View.VISIBLE:View.GONE);clearTransferButton.setText("× "+transferSelection.size());clearTransferButton.setEnabled(!busy);if(dialog!=null&&transfersEnabled()){Button all=dialog.getButton(AlertDialog.BUTTON_NEUTRAL);if(all!=null){all.setVisibility(selected?View.VISIBLE:View.GONE);all.setEnabled(selected&&!busy&&listing!=null);}}}
     private long transferEpoch;
@@ -105,6 +109,7 @@ final class WorkspaceFileBrowser {
         body.addView(text(ProjectFiles.environmentLabel(files.profile),12));
         LinearLayout navigation=row();navigation.addView(action("↑",()->load(parent(path))),new LinearLayout.LayoutParams(dp(48),-2));
         pathLabel=text(path,12);pathLabel.setMaxLines(2);pathLabel.setEllipsize(TextUtils.TruncateAt.MIDDLE);navigation.addView(pathLabel,new LinearLayout.LayoutParams(0,-2,1));
+        refreshButton=new WorkspaceIconButton(activity);refreshButton.setIcon(activity.getDrawable(R.drawable.workspace_server_refresh).mutate(),dp(22));refreshButton.setTextColor(WorkspaceDialogs.TEXT);refreshButton.setBackground(WorkspaceDialogs.background(activity,false));refreshButton.setTag("workspace-file-refresh");refreshButton.setContentDescription(t("Обновить список файлов","Refresh file list"));refreshButton.setOnClickListener(v->load(path,true));navigation.addView(refreshButton,new LinearLayout.LayoutParams(dp(48),dp(48)));
         navigation.addView(action("⌂",()->load("~")),new LinearLayout.LayoutParams(dp(48),-2));
         WorkspaceIconButton sort=new WorkspaceIconButton(activity);sort.setIcon(activity.getDrawable(R.drawable.workspace_sort).mutate(),dp(22));sort.setTextColor(WorkspaceDialogs.TEXT);sort.setBackground(WorkspaceDialogs.background(activity,false));sort.setTag("workspace-file-sort");sort.setContentDescription(t("Сортировка файлов","Sort files"));sort.setOnClickListener(v->sortMenu());navigation.addView(sort,new LinearLayout.LayoutParams(dp(48),dp(48)));body.addView(navigation);
         search=new EditText(activity);search.setTextColor(WorkspaceDialogs.TEXT);search.setHintTextColor(WorkspaceDialogs.MUTED);search.setTextSize(14);search.setSingleLine(true);search.setHint(choice==null?WorkspaceText.tr("Найти файл или папку"):WorkspaceText.tr("Найти папку"));LinearLayout searchBar=row();searchBar.addView(search,new LinearLayout.LayoutParams(0,-2,1));
@@ -127,20 +132,45 @@ final class WorkspaceFileBrowser {
     private void askPassword(){EditText input=new EditText(activity);input.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);input.setSaveEnabled(false);
         WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Пароль SSH для файлов")).setView(input).setPositiveButton(WorkspaceText.tr("Подключиться"),(d,w)->{char[] secret=new char[input.length()];TextUtils.getChars(input.getText(),0,input.length(),secret,0);files.setPassword(secret);Arrays.fill(secret,'\0');input.setText("");load(path);}).setNegativeButton(WorkspaceText.tr("Отмена"),(d,w)->dialog.dismiss()).show();}
     private interface Work {void run() throws Exception;}
-    private void execute(Work work){if(closed||busy)return;busy=true;updateSelection();updateTransfer();message.setText(transferring?t("Выполняется операция с файлами…","Processing files…"):WorkspaceText.tr("Загрузка…"));if(choice!=null)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
-        worker.execute(()->{try{work.run();}catch(Exception e){activity.runOnUiThread(()->{if(!closed)message.setText(e.getMessage()==null?WorkspaceText.tr("Не удалось открыть файлы"):e.getMessage());});}finally{activity.runOnUiThread(()->{busy=false;if(transferring){transferring=false;if(!closed){dialog.setCancelable(true);dialog.setCanceledOnTouchOutside(true);dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(true);}}if(!closed&&choice!=null)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(listing!=null);if(!closed){updateSelection();updateTransfer();}});}});}
-    private void load(String requested){if(closed||busy)return;invalidateTransferChoice();if(rootBoundary!=null){try{String root=new File(rootBoundary).getCanonicalPath();String candidate=new File(requested.equals("~")?rootBoundary:requested).getCanonicalPath();requested=candidate.equals(root)||candidate.startsWith(root+"/")?candidate:rootBoundary;}catch(IOException e){return;}}if(busy)return;thumbnails.reset();listing=null;rows.removeAllViews();final String targetPath=requested;execute(()->{ProjectFiles.Listing result=files.list(targetPath);activity.runOnUiThread(()->{if(closed)return;listing=result;path=result.path;pathLabel.setText(path);render();});});}
+    private void execute(Work work){if(closed||busy)return;busy=true;updateRefresh();updateSelection();updateTransfer();message.setText(transferring?t("Выполняется операция с файлами…","Processing files…"):WorkspaceText.tr("Загрузка…"));if(choice!=null)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+        worker.execute(()->{try{work.run();}catch(Exception e){activity.runOnUiThread(()->{if(!closed)message.setText(e.getMessage()==null?WorkspaceText.tr("Не удалось открыть файлы"):e.getMessage());});}finally{activity.runOnUiThread(()->{busy=false;if(transferring){transferring=false;if(!closed){dialog.setCancelable(true);dialog.setCanceledOnTouchOutside(true);dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(true);}}if(!closed&&choice!=null)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(listing!=null);if(!closed){updateRefresh();updateSelection();updateTransfer();}});}});}
+    private void updateRefresh(){if(refreshButton!=null){refreshButton.setEnabled(!busy);refreshButton.setAlpha(busy?.4f:1f);}}
+    private void load(String requested){load(requested,false);}
+    private void load(String requested,boolean preserveScroll){
+        if(closed||busy)return;invalidateTransferChoice();
+        if(rootBoundary!=null){try{String root=new File(rootBoundary).getCanonicalPath();String candidate=new File(requested.equals("~")?rootBoundary:requested).getCanonicalPath();requested=candidate.equals(root)||candidate.startsWith(root+"/")?candidate:rootBoundary;}catch(IOException e){return;}}
+        final int scrollY=preserveScroll&&viewport!=null?viewport.getScrollY():0;
+        thumbnails.reset();listing=null;rows.removeAllViews();final String targetPath=requested;
+        execute(()->{ProjectFiles.Listing result=files.list(targetPath);activity.runOnUiThread(()->{
+            if(closed)return;listing=result;path=result.path;pathLabel.setText(path);
+            // Retain selection by path while replacing its now stale size/time metadata.
+            for(ProjectFiles.Entry entry:result.entries){if(selectedFiles.containsKey(entry.path))selectedFiles.put(entry.path,entry);if(transferSelection.containsKey(entry.path))transferSelection.put(entry.path,entry);}
+            render();if(viewport!=null)viewport.post(()->{if(!closed)viewport.scrollTo(0,scrollY);});
+        });});
+    }
+    static String modifiedTime(long modified,String unknown){
+        if(modified<0)return unknown;
+        SimpleDateFormat format=new SimpleDateFormat("dd.MM.yyyy HH:mm:ss",Locale.ROOT);
+        format.setTimeZone(TimeZone.getDefault());return format.format(new Date(modified));
+    }
+    private CharSequence entryLabel(ProjectFiles.Entry entry,String prefix){
+        String name=prefix+entry.name;
+        String metadata=(entry.directory?"":android.text.format.Formatter.formatShortFileSize(activity,entry.size)+"\n")+modifiedTime(entry.modified,t("Дата неизвестна","Date unknown"));
+        SpannableString label=new SpannableString(name+"\n"+metadata);
+        label.setSpan(new ForegroundColorSpan(WorkspaceDialogs.MUTED),name.length()+1,label.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        label.setSpan(new RelativeSizeSpan(.85f),name.length()+1,label.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);return label;
+    }
     static String parent(String path){int slash=path.lastIndexOf('/');return slash<=0?"/":path.substring(0,slash);}
     private void render(){
         if(filters!=null)for(int i=0;i<filters.getChildCount();i++){TextView t=(TextView)filters.getChildAt(i);styleFilter(activity,t,t.getText().toString().equals(filter));}
         if(rows==null||listing==null)return;thumbnails.reset();rows.removeAllViews();int count=0;
         for(ProjectFiles.Entry e:FileSort.ordered(listing.entries,FileSort.read(activity))){if(!visibleEntry(e))continue;
-            TextView item=action((e.directory?"▸  ":"▤  ")+e.name+(e.directory?"":"\n"+android.text.format.Formatter.formatShortFileSize(activity,e.size)),()->{if(e.directory)load(e.path);else chooseFile(e);});
-            if(!e.directory&&fileChoices!=null&&(!chatChoices||choosingMultiple)){item.setText((selectedFiles.containsKey(e.path)?"☑  ":"☐  ")+e.name+"\n"+android.text.format.Formatter.formatShortFileSize(activity,e.size));item.setSelected(selectedFiles.containsKey(e.path));item.setBackground(WorkspaceDialogs.background(activity,item.isSelected()));}
-            item.setContentDescription((e.directory?WorkspaceText.tr("Папка "):WorkspaceText.tr("Файл "))+e.name);
+            TextView item=action("",()->{if(e.directory)load(e.path);else chooseFile(e);});item.setText(entryLabel(e,e.directory?"▸  ":"▤  "));item.setTag("workspace-file-entry:"+e.path);
+            if(!e.directory&&fileChoices!=null&&(!chatChoices||choosingMultiple)){item.setText(entryLabel(e,selectedFiles.containsKey(e.path)?"☑  ":"☐  "));item.setSelected(selectedFiles.containsKey(e.path));item.setBackground(WorkspaceDialogs.background(activity,item.isSelected()));}
+            item.setContentDescription((e.directory?WorkspaceText.tr("Папка "):WorkspaceText.tr("Файл "))+entryLabel(e,"").toString());
             LinearLayout line=row();line.setOnClickListener(v->{if(e.directory)load(e.path);else chooseFile(e);});
             if(chatChoices&&choosingMultiple&&!e.directory){
-                item.setText(e.name+"\n"+android.text.format.Formatter.formatShortFileSize(activity,e.size));CheckBox selected=new CheckBox(activity);selected.setChecked(selectedFiles.containsKey(e.path));selected.setContentDescription(t("Выбрать ","Select ")+e.name);selected.setOnClickListener(v->{chooseFile(e);selected.setChecked(selectedFiles.containsKey(e.path));});line.addView(selected,new LinearLayout.LayoutParams(dp(44),dp(48)));
+                item.setText(entryLabel(e,""));CheckBox selected=new CheckBox(activity);selected.setChecked(selectedFiles.containsKey(e.path));selected.setContentDescription(t("Выбрать ","Select ")+e.name);selected.setOnClickListener(v->{chooseFile(e);selected.setChecked(selectedFiles.containsKey(e.path));});line.addView(selected,new LinearLayout.LayoutParams(dp(44),dp(48)));
             }
             if(chatChoices&&!e.directory){
                 View.OnLongClickListener mark=v->{if(busy)return true;choosingMultiple=true;chooseFile(e);return true;};item.setOnLongClickListener(mark);line.setOnLongClickListener(mark);
