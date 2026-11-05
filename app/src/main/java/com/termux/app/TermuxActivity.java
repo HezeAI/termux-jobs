@@ -348,6 +348,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
         Logger.logDebug(LOG_TAG, "onDestroy");
         if(mWorkspaceStorageAccess!=null)mWorkspaceStorageAccess.close();
+        if(mWorkspaceImageSaveAccess!=null)mWorkspaceImageSaveAccess.close();
         if(mWorkspaceGalleryPicker!=null)mWorkspaceGalleryPicker.close();
         if (mWorkspace != null) mWorkspace.close();
 
@@ -746,6 +747,11 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
      */
     private com.termux.app.workspace.WorkspaceStorageAccess mWorkspaceStorageAccess;
     private com.termux.app.workspace.WorkspaceGalleryPicker mWorkspaceGalleryPicker;
+    private com.termux.app.workspace.WorkspaceImageSaveAccess mWorkspaceImageSaveAccess;
+    public void requestWorkspaceImageSave(Runnable ready,Runnable cancelled){
+        if(mWorkspaceImageSaveAccess==null)mWorkspaceImageSaveAccess=new com.termux.app.workspace.WorkspaceImageSaveAccess(this);
+        if(!mWorkspaceImageSaveAccess.request(ready,cancelled)&&cancelled!=null)cancelled.run();
+    }
     public void requestWorkspaceGallery(int limit,java.util.function.Consumer<java.util.List<android.net.Uri>> selected){
         if(mWorkspaceGalleryPicker==null)mWorkspaceGalleryPicker=new com.termux.app.workspace.WorkspaceGalleryPicker(this);
         mWorkspaceGalleryPicker.pick(limit,selected);
@@ -767,6 +773,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if(mWorkspaceImageSaveAccess!=null&&mWorkspaceImageSaveAccess.permissionResult(requestCode))return;
         if(mWorkspaceStorageAccess!=null&&mWorkspaceStorageAccess.permissionResult(requestCode))return;
         if (requestCode == PermissionUtils.REQUEST_GRANT_STORAGE_PERMISSION && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             Logger.logInfo(LOG_TAG, "Storage permission granted by user on request.");

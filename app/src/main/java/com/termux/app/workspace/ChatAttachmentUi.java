@@ -116,12 +116,13 @@ final class ChatAttachmentUi implements AutoCloseable {
         if(closed)return;if(p==null){Toast.makeText(activity,t("Среда исходного чата недоступна.","The originating chat environment is unavailable."),Toast.LENGTH_LONG).show();return;}if(viewer!=null)viewer.dismiss();
         LinearLayout box=new LinearLayout(activity);box.setOrientation(LinearLayout.VERTICAL);TextView loading=view.label(t("Загрузка…","Loading…"),13);box.addView(loading);
         final boolean apk=a.optString("type").equals("apk"),binary=a.optString("type").equals("binary");
+        final boolean gallery=!apk&&ImageGalleryExport.candidate(a.optString("name"),a.optString("type"));
         AlertDialog.Builder builder=WorkspaceDialogs.builder(activity).setTitle(a.optString("name",t("Вложение","Attachment"))).setView(box);
         if(apk)builder.setNeutralButton(t("В Download","To Download"),null).setPositiveButton(t("Установить","Install"),null);
-        else {builder.setPositiveButton(t("Сохранить в Download","Save to Download"),null);if(!binary&&!a.optString("type").equals("image"))builder.setNegativeButton(t("Закрыть","Close"),null);}
+        else {builder.setPositiveButton(t("Сохранить в Download","Save to Download"),null);if(gallery)builder.setNeutralButton(t("В галерею","To gallery"),null);else if(!binary&&!a.optString("type").equals("image"))builder.setNegativeButton(t("Закрыть","Close"),null);}
         AlertDialog dialog=builder.create();viewer=dialog;dialog.setCanceledOnTouchOutside(true);dialog.show();dialog.getWindow().setLayout(Math.round(activity.getResources().getDisplayMetrics().widthPixels*.94f),android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
         final int saveButton=apk?AlertDialog.BUTTON_NEUTRAL:AlertDialog.BUTTON_POSITIVE;
-        dialog.getButton(saveButton).setEnabled(false);if(apk)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+        dialog.getButton(saveButton).setEnabled(false);if(gallery){dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setEnabled(false);for(int which:new int[]{AlertDialog.BUTTON_NEUTRAL,AlertDialog.BUTTON_POSITIVE}){android.widget.Button imageAction=dialog.getButton(which);imageAction.setSingleLine(false);imageAction.setMaxLines(Integer.MAX_VALUE);imageAction.setEllipsize(null);imageAction.setAllCaps(false);imageAction.setMinWidth(view.dp(48));imageAction.setMinHeight(view.dp(48));imageAction.setPadding(view.dp(8),imageAction.getPaddingTop(),view.dp(8),imageAction.getPaddingBottom());}}if(apk)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
         work.execute(()->{File file=null;Bitmap bitmap=null;String text="";int mediaWidth=0,mediaHeight=0;Exception failure=null;try{
             if(a.optBoolean("localFileLink")&&!a.optString("path").startsWith(ChatAttachments.prefix(p))){try(ProjectFiles files=new ProjectFiles(activity,p)){a.put("cacheKey",files.fingerprint(a.getString("path")));}}
             if(ChatFileViewer.handles(a.optString("name")))a.put("originalPreview",true);
@@ -133,7 +134,7 @@ final class ChatAttachmentUi implements AutoCloseable {
             else if(type.equals("binary"))text=ChatAttachments.badge(a.optString("name"))+" · "+android.text.format.Formatter.formatFileSize(activity,file.length());
             else if(type.equals("file"))text=ChatAttachments.textPreview(file,65536)+(file.length()>65536?t("\n\nПоказаны первые 64 КБ. Полный файл сохранён во вложении.","\n\nShowing the first 64 KB. The complete file remains attached."):"");
         }catch(Exception e){failure=e;}final File ready=file;final Bitmap image=bitmap;final String content=text;final Exception error=failure;final int originalWidth=mediaWidth,originalHeight=mediaHeight;
-            main.post(()->{if(closed||!dialog.isShowing())return;box.removeAllViews();if(error!=null){
+            main.post(()->{if(closed||!dialog.isShowing())return;box.removeAllViews();if(gallery&&ready!=null&&ready.isFile())galleryAction(dialog,ready,a.optString("name","image"));if(error!=null){
                     if(ready!=null&&ready.isFile()){
                         box.addView(view.label("PREVIEW_LIMIT".equals(error.getMessage())?t("Предпросмотр ограничен: HTML до 32 МиБ, GIF до 64 МиБ. Оригинал можно сохранить.","Preview limits: HTML up to 32 MiB, GIF up to 64 MiB. You can save the original."):t("Предпросмотр недоступен: формат не поддерживается или файл повреждён. Оригинал можно сохранить.","Preview unavailable: unsupported format or damaged file. You can save the original."),14));
                         dialog.getButton(saveButton).setEnabled(true);dialog.getButton(saveButton).setOnClickListener(v->activity.requestWorkspaceStorageAccess(()->save(ready,a.optString("name","attachment"),dialog,saveButton)));
@@ -183,6 +184,19 @@ final class ChatAttachmentUi implements AutoCloseable {
         android.util.DisplayMetrics display=activity.getResources().getDisplayMetrics();int[] size=mediaBounds(display.widthPixels,display.heightPixels,width,height,display.density);
         int window=Math.min(Math.round(display.widthPixels*.94f),Math.max(view.dp(280),size[0]+view.dp(48)));dialog.getWindow().setLayout(window,android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
         LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(size[0],size[1]);params.gravity=Gravity.CENTER_HORIZONTAL;return params;
+    }
+    private void galleryAction(AlertDialog dialog,File original,String name){
+        android.widget.Button button=dialog.getButton(AlertDialog.BUTTON_NEUTRAL);button.setEnabled(true);
+        button.setOnClickListener(v->{if(closed||!dialog.isShowing()||!button.isEnabled())return;button.setEnabled(false);
+            activity.requestWorkspaceImageSave(()->{if(closed||!dialog.isShowing())return;button.setText(t("Сохранение…","Saving…"));work.execute(()->{
+                ImageGalleryExport.Result result=null;String code="SAVE_FAILED";
+                try{result=ImageGalleryExport.save(activity,original,name,()->closed);}catch(ImageGalleryExport.Failure failed){code=failed.code;}catch(Exception ignored){}
+                final ImageGalleryExport.Result saved=result;final String failure=code;
+                main.post(()->{if(closed)return;if(dialog.isShowing()){button.setEnabled(true);button.setText(t("В галерею","To gallery"));}
+                    String message=saved!=null?t("Сохранено: ","Saved: ")+ImageGalleryExport.ALBUM+saved.name:failure.equals("UNSUPPORTED_IMAGE")?t("Не удалось сохранить этот формат как изображение в медиатеку. Оригинал можно сохранить в Download.","This format could not be saved as an image in the media library. You can save the original to Download."):failure.equals("CLEANUP_FAILED")?t("Не удалось сохранить изображение и подтвердить удаление незавершённой записи.","Could not save the image or confirm removal of its unfinished media entry."):t("Не удалось сохранить изображение. Оригинал можно сохранить в Download.","Could not save the image. You can save the original to Download.");
+                    Toast.makeText(activity,message,Toast.LENGTH_LONG).show();});
+            });},()->{if(!closed&&dialog.isShowing()){button.setEnabled(true);Toast.makeText(activity,t("Доступ для сохранения изображения не предоставлен.","Permission to save the image was not granted."),Toast.LENGTH_LONG).show();}});
+        });
     }
     private void save(File source,String name,AlertDialog dialog,int saveButton){
         dialog.getButton(saveButton).setEnabled(false);work.execute(()->{boolean ok=false;try{
