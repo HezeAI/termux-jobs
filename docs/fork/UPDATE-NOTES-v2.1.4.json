@@ -1,0 +1,38 @@
+{
+  "ru": [
+    "Во всех четырёх чатах: Файлы и изменения, вложения по отправителю, локальный поиск и явная порционная загрузка; изменения всего Git-проекта относительно HEAD.",
+    "Компактное обновление рядом с поиском, карточки файлов с датами и отдельными действиями; поздний курсор возвращает доступ к предыдущим сообщениям.",
+    "Сохранение исходных JPG/PNG/WebP/GIF и других поддерживаемых изображений в Pictures/TermuxJobs без перекодирования и перезаписи совпадающих имён.",
+    "Индикаторы рабочего контекста Codex/Claude/Gemini по штатным данным CLI; ручное сокращение Codex с подтверждением и ожиданием завершения.",
+    "Таймер всего запроса во всех четырёх чатах, включая инструменты, подтверждения и повторы; звезда открывает только заметки.",
+    "Даты файлов в менеджере и выборе вложений; точные общие шаблоны Codex/Claude RU/EN с явным применением, также в AI-INSTRUCTIONS.zip.",
+    "Изолированный предпросмотр HTML до 32 МиБ и GIF до 64 МиБ; GIF по-прежнему до 16 миллионов пикселей.",
+    "Накопление вложений и обрывы не исправлены. Низкоуровневые Android handoff/crash и восстановление копий на устройстве не проверены; MCP/плагины исключены."
+  ],
+  "en": [
+    "All four chats gain Files and changes: sender-filtered attachments, local search and explicit bounded loading; whole-project Git changes against HEAD.",
+    "Compact refresh beside search, dated file cards and per-file actions; late history cursors keep earlier messages accessible.",
+    "Save original JPG/PNG/WebP/GIF and other supported images to Pictures/TermuxJobs without re-encoding or overwriting matching names.",
+    "Native working-context estimates for Codex/Claude/Gemini; confirmed manual Codex compaction waits for completion.",
+    "One whole-request timer in all four chats, including tools, approvals and retries; the star menu opens notes only.",
+    "File modification dates in both file windows; exact Codex/Claude RU/EN common templates with explicit application, also in AI-INSTRUCTIONS.zip.",
+    "Isolated HTML/GIF previews allow 32 MiB / 64 MiB; GIF remains limited to 16 million pixels.",
+    "Attachment accumulation/disconnections remain unfixed. Low-level Android handoff/crash and device backup restore remain unverified; MCP/plugins excluded."
+  ],
+  "compatibility": {
+    "ru": [
+      "Тот же com.termux и сертификат Termux Job’s; versionCode 1492, ARM64, Android 8+, X11 Android 11+, схема 8. Сброс и переустановка сред не требуются.",
+      "Профили, история и сохранённые инструкции автоматически не заменяются. Обновление новых адаптеров в уже работающем агенте требует явного перезапуска свободной сессии с продолжением истории.",
+      "Сокращение Codex сохраняет историю, но краткое содержание может потерять детали; автоматическое сокращение этой кнопкой не включается. Кешированные токены входят в контекст.",
+      "Рабочая папка не является песочницей. Копии не зашифрованы. Настоящий вход Gemini API/Vertex, Android аварийное восстановление и копии на устройстве не подтверждены.",
+      "Совместимость с официальным Termux не подтверждена; совпадения package ID недостаточно. Удаление может стереть данные и не является обычным обновлением."
+    ],
+    "en": [
+      "Same Termux Job’s com.termux/certificate; versionCode 1492, ARM64, Android 8+, X11 Android 11+, schema 8. No reset or environment reinstallation required.",
+      "Saved profiles, history and custom instructions are not replaced automatically. Already-running agents need an explicit idle-session restart with history continuation to load new adapters.",
+      "Codex compaction retains history but its summary may omit details; this control does not enable automatic compaction. Cached tokens remain part of context.",
+      "A working directory is not a sandbox. Backups are unencrypted. Real Gemini API/Vertex login, Android crash recovery and device backup restore remain unverified.",
+      "Installing over official Termux is unverified; a matching package alone is insufficient. Uninstalling can delete data and is not a normal update step."
+    ]
+  }
+}

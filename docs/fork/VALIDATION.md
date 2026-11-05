@@ -1,12 +1,9 @@
-# Current release validation — v2.1.3
+# Current release validation — v2.1.4
 
-See [VALIDATION-v2.1.3.md](VALIDATION-v2.1.3.md) for final APK identity, automated
-checks, developer phone observations, native/source evidence, source/notice scope
-and remaining limits. SHA-256 certificate and APK-file digest are separate values.
-No independent security/legal audit is claimed. Publication download/updater proof
-is recorded in the GitHub release body without moving the source tag or replacing
-published binary assets. [Security/data](../../SECURITY.md) ·
-[License/source review](LICENSE-REVIEW-2026-11-03.md).
+See [VALIDATION-v2.1.4.md](VALIDATION-v2.1.4.md) for final APK identity, checked/reused
+stand results, developer phone acceptance and remaining limits. CI and anonymous
+publication checks are recorded in the release technical details and validation.json.
+No independent security audit is claimed. Earlier dated reports remain historical.
 
 ---
 

@@ -1,3 +1,26 @@
+# Current v2.1.4 agent chat behavior
+
+All four chats use a horizontal star / paperclip control; star opens notes only.
+Folder opens Files and changes. Files retains its manager; Attachments has sender
+filters, local search, bounded explicit paging and original-message/file actions.
+Changes is the entire Git project against HEAD, including staged/unstaged/new/deleted
+files, with read-only diffs. No browsing operation starts an agent turn or adds model
+context. Window-owned reads stop on close/chat switch and reject late results.
+
+Codex/Claude/Gemini expanded status shows native current-context estimates with
+model/chat ownership and stale/unknown values. Only Codex has confirmed manual
+compaction; history remains, summary details can be lost. Four chats show one
+elapsed timer per user request across tools/approvals/retries. Cached tokens are
+included. No new automatic compaction or model polling is introduced.
+
+Image viewers copy original bytes to Pictures/TermuxJobs through MediaStore
+(legacy exclusive file + registration on Android 8–9), or retain Download.
+Formats and gallery rendering depend on the platform. HTML/GIF previews allow
+32/64 MiB with the existing network/file isolation and GIF pixel limit.
+Four common instruction templates apply only through preview and explicit save;
+user files are not automatically replaced. [Release validation](VALIDATION-v2.1.4.md).
+Earlier dated sections describe historical implementations, not the current layout.
+
 # v2.1.2 agent windows and composer
 
 Instructions and Skills share fixed headings/tabs/actions with one scrollable

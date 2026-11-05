@@ -7,14 +7,14 @@ private limits. Do not attach keys, private logs or sensitive exploit details to
 
 ## Agent instructions, skills and preparation
 
-For v2.1.3 reports, include the agent/CLI version, displayed environment, project
+For v2.1.4 reports, include the agent/CLI version, displayed environment, project
 scope, operation and safe error text. Distinguish files present from confirmed
 agent discovery, and components ready from account/model access. For history,
 report paging/full-text/scroll behavior without attaching private JSONL. For new
 Ubuntu AI, distinguish missing from existing/incomplete installations. Never
 attach credentials, full checkpoints, skill secrets or unredacted preparation logs.
 See [instructions](docs/fork/AGENT-INSTRUCTIONS.md), [skills](docs/fork/AGENT-SKILLS.md)
-and [validation](docs/fork/VALIDATION-v2.1.3.md).
+and [validation](docs/fork/VALIDATION-v2.1.4.md).
 
 ## Пополнение справочника
 

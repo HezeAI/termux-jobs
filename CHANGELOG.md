@@ -2,6 +2,26 @@
 
 No additional changes queued for publication.
 
+# 2026-11-05 — v2.1.4 (versionCode 1492, stable)
+
+Changes since the last published stable release, **v2.1.3**.
+
+- Files and changes in all four chats: retained file manager, explicit bounded attachment catalogue with sender filters/local search, per-file actions and whole-project read-only Git diffs against HEAD.
+- Compact refresh/search, vertical wrapped cards, actual available modification dates and restoration of late native earlier-message cursors. Local browsing does not start an agent turn or add model context.
+- Original image export to Pictures/TermuxJobs via MediaStore, including animated GIF, separate names on repeat and operation-owned error cleanup. Download remains available; platform/gallery format support varies.
+- Native current-context estimates for Codex/Claude/Gemini, model/chat-bound stale-data handling and explicit confirmed Codex compaction. Cached tokens stay included; no cumulative chat-spend substitution.
+- Whole-request timers for all four chats, notes-only star menus and cancellation-safe Save input.
+- File modification dates in both file windows, four exact Codex/Claude RU/EN common instruction templates and AI-INSTRUCTIONS.zip. Saved instructions require explicit application; project templates are separate.
+- Isolated HTML/GIF previews now allow 32/64 MiB; GIF remains limited to 16 million pixels. Sending/context limits are unchanged.
+
+Compatibility: same com.termux, certificate, ARM64, Android 8+ app / Android 11+ X11, schema 8; higher code1492. No required reset, environment reinstall or automatic custom-instruction migration. Already-running CLI adapters change only after an explicit idle-session restart; none is performed by this release task.
+
+Developer phone acceptance (2026-11-05, user report, **2.1.4-test6 /1491**): agreed history, file window, search, cards and JPG/GIF gallery saving work. Stand/CI checks are recorded separately; no claim that every agent/Android/format combination was independently tested on the phone.
+
+Limits: attachment accumulation/disconnections remain **unfixed**; no CLI fork, experimental context mode or new automatic-compaction policy. Low-level Android handoff/crash recovery, device backup export/restore and real Gemini API/Vertex login remain unverified. Heavy renderer/legacy Android and uncommon gallery formats remain device-specific checks. MCP/plugins excluded. No independent security audit is claimed.
+
+[Release](docs/fork/RELEASE-v2.1.4.md) · [Validation](docs/fork/VALIDATION-v2.1.4.md).
+
 # 2026-11-05 — 2.1.4-test6 (versionCode 1491, private test release)
 
 Changes since the last published stable release, **v2.1.3**, retain all test5 features listed below.
