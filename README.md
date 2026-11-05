@@ -1,18 +1,31 @@
 # Termux Job’s
 
-**RU:** Termux Job’s — независимый неофициальный форк Termux, который поддерживает
-[HezeAI](https://github.com/HezeAI). Проект не связан с командой Termux и не одобрен ею.
-[Исходники](https://github.com/HezeAI/termux-jobs/tree/fork/base) ·
-[Релизы](https://github.com/HezeAI/termux-jobs/releases).
+**RU:** Терминал с интерфейсом для повседневной работы: сохраняйте команды и
+заметки, организуйте проекты и файлы, запускайте Linux-окружения и общайтесь
+с AI-агентами. Команды выполняются в выбранном Termux, окружении или на сервере.
 
-**EN:** Termux Job’s is an independent unofficial Termux fork maintained by
-[HezeAI](https://github.com/HezeAI). It is not affiliated with or endorsed by the
-Termux team. [Source](https://github.com/HezeAI/termux-jobs/tree/fork/base) ·
-[Releases](https://github.com/HezeAI/termux-jobs/releases).
+**EN:** A terminal workspace for saved commands and notes, projects and files,
+Linux environments, agent chats and server tools. Commands execute in the selected
+Termux session, environment or server.
 
-A terminal workspace for saved commands/notes, aliases, presets, files, Linux
-environments, agent chats and server tools. Commands execute in the selected real
-environment. [Security, data flows and reporting / Безопасность и данные](SECURITY.md).
+**[Скачать APK / Download APK — v2.1.3](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.3/Termux-Jobs-v2.1.3-arm64.apk)**
+· [Установка / Installation](#installation-and-compatibility)
+· [Релизы / Releases](https://github.com/HezeAI/termux-jobs/releases)
+· [Безопасность и данные / Security and data](SECURITY.md)
+
+**О проекте / About:** независимый неофициальный форк Termux, разработчик —
+[HezeAI](https://github.com/HezeAI), ИИ-помощник при разработке — OpenAI Codex.
+Проект не связан с командой Termux и не одобрен ею.
+An independent unofficial fork maintained by HezeAI with development assistance
+from OpenAI Codex; not affiliated with or endorsed by the Termux team.
+
+## Возможности / Features
+
+- **Команды и заметки / Commands and notes:** saved commands, aliases and launch presets.
+- **Проекты и файлы / Projects and files:** files and project instructions alongside the terminal.
+- **Linux-окружения / Linux environments:** terminal and X11 desktop workflows.
+- **AI-чаты / Agent chats:** Codex, Claude Code, Gemini and OpenCode, with attachments and action approvals supported by each CLI.
+- **Серверы / Servers:** SSH connections and commands in the selected remote environment.
 
 ## v2.1.3
 
@@ -21,21 +34,42 @@ Changes since the last published stable release, v2.1.2.
 · [Release](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.3)
 · [Validation](docs/fork/VALIDATION-v2.1.3.md).
 
-- Clear shared Ubuntu AI preparation phases and plan/download progress, with bounded
-  structured status and finite download waits instead of retained raw process logs.
-- Native approvals for new Codex profiles; managed Gemini updates and run-owned
-  key handoff. Existing profiles and installed environments remain in place.
-- Explicit unencrypted-backup warnings and opt-in OpenCode connection backups,
-  with legacy readers and passive historical action receipts.
-- Editable project templates for Codex/Claude, context-management rules in common
-  RU/EN templates and conflict-safe explicit saving.
-- Transparent chat control surroundings, horizontal star / paperclip controls,
-  action-group event clocks and neutral display of proven OpenCode user denials.
+- Clearer preparation and download progress for Ubuntu AI.
+- Action approvals for new Codex profiles and improved Gemini startup/update handling.
+- Unencrypted-backup warnings and a separate choice to include OpenCode connection data.
+- Editable project templates for Codex/Claude and updated common RU/EN instructions.
+- Transparent chat controls, action times and neutral display of confirmed OpenCode denials.
 
-**Limits:** attachment accumulation/disconnections remain unfixed. Low-level
-Android handoff/crash and device backup export/restore are unverified; MCP/plugins
-are excluded. [Audit evidence and scope](docs/fork/SECURITY-AUDIT-STAGE2.md).
 [Release notes](docs/fork/RELEASE-v2.1.3.md) · [CHANGELOG](CHANGELOG.md)
+
+## Проверки и ограничения / Checks and limitations
+
+**RU:** Для v2.1.3 опубликованы результаты автоматических проверок, проверки
+подписанного APK и сценариев, принятых разработчиком на телефоне. Эти результаты
+разделены в [отчёте выпуска](docs/fork/VALIDATION-v2.1.3.md).
+Независимый аудит безопасности этой версии не подтверждён.
+
+- Накопление вложений и связанные обрывы чатов остаются неисправленными.
+- Низкоуровневые проверки передачи ключа и аварийного восстановления Gemini
+  на Android, а также экспорт/восстановление копий на устройстве не выполнены.
+  Точный непроверенный объём указан в [плане аудита](docs/fork/SECURITY-AUDIT-STAGE2.md).
+- MCP и плагины исключены из проведённого этапа аудита.
+- Рабочая папка, инструкции и подтверждения действий сами по себе не создают
+  файловую песочницу. Агент может передавать доступные ему данные своему провайдеру.
+- Архивы резервных копий не зашифрованы и могут содержать авторизацию,
+  историю и снимки проектов. [Состав и ограничения копий](docs/fork/BACKUP-RESTORE.md).
+
+**EN:** [Release validation](docs/fork/VALIDATION-v2.1.3.md) distinguishes automated
+checks, signed-APK verification and developer-reported phone acceptance. No
+independent security audit of this version is confirmed. Attachment accumulation
+and disconnections remain unfixed. Low-level Android key handoff/crash and device
+backup export/restore checks have not been performed; MCP/plugins are outside the audit.
+A working directory, instructions and approvals alone do not provide filesystem
+isolation. Agents can send accessible data to their providers. Backup archives are
+unencrypted and can include credentials, history and project snapshots.
+
+Source availability, test counts and a valid signature are not safety guarantees.
+[Data flows, permission limits and reporting / Данные, права и сообщения о проблемах](SECURITY.md).
 
 ## Installation and compatibility
 
@@ -67,7 +101,7 @@ Instruction changes do not rewrite an executing request or override service rule
 A native acknowledgement does not prove that a model has incorporated a message.
 No claim is made that another phone's transport interruptions are fixed.
 
-## Workspace and documentation
+## Пользователям / For users
 
 - [Usage](docs/fork/USAGE.md): terminals, presets, commands, files and agent controls.
 - [Agent instructions](docs/fork/AGENT-INSTRUCTIONS.md): actual sources, import,
@@ -78,18 +112,19 @@ No claim is made that another phone's transport interruptions are fixed.
 - [Environment updates](docs/fork/ENVIRONMENT-UPDATES.md) and
   [pinned initial environments](docs/fork/PINNED-ENVIRONMENTS.md): explicit upgrades,
   replacement and rollback. Installed distributions can still use their repositories.
-- [Architecture](docs/fork/ARCHITECTURE.md), [build notes](FORK.md),
-  [testing policy](docs/fork/TESTING.md) and [release procedure](docs/fork/RELEASING.md).
+- [Backups](docs/fork/BACKUP-RESTORE.md): selected data, unencrypted archives and restore limits.
+- [Report a problem / Сообщить о проблеме](https://github.com/HezeAI/termux-jobs/issues):
+  include the app version and steps to reproduce; do not attach credentials or private chat logs.
 
 Instruction text, chats and presets belong to the user. Basic-settings backups have
-limited coverage; OpenCode connection data is a separate optional component. Archives are unencrypted;
-connection data can include credentials, native history/logs and project snapshots.
-See [exact scope and restore limits](docs/fork/BACKUP-RESTORE.md).
-Phone checks for execution dots, answer timing and website cards were confirmed by
-HezeAI. Other automated or modeled checks are identified separately in validation.
-No independent security audit of this version is confirmed. Source availability and
-test counts are not safety guarantees. See [SECURITY.md](SECURITY.md) for data flows,
-permission limits, diagnostics/backups and the existing reporting channel.
+limited coverage; OpenCode connection data is a separate optional component.
+
+## Разработчикам / For developers
+
+- [Contributing](CONTRIBUTING.md) and [architecture](docs/fork/ARCHITECTURE.md).
+- [Build notes](FORK.md), [testing policy](docs/fork/TESTING.md) and [release procedure](docs/fork/RELEASING.md).
+- [Release evidence](docs/fork/VALIDATION-v2.1.3.md) and [audit scope/results](docs/fork/SECURITY-AUDIT-STAGE2.md).
+- [AGENTS.md](AGENTS.md): repository instructions for coding agents; not the user guide.
 
 ## Лицензия и благодарности / License and acknowledgements
 
