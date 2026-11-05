@@ -15,9 +15,11 @@ Changes since the last published stable release, **v2.1.3**.
 
 Compatibility: `com.termux`, ARM64, Android 8.0+, unchanged Termux Job’s certificate; versionCode increases to 1490. No profile/history migration or automatic instruction replacement. Issued APKs and published Components are preserved.
 
-Limits: accumulated-image disconnections remain **unfixed**. No CLI fork, experimental context policy or new automatic compaction. Android low-level key handoff/crash recovery and device backup export/restore remain unverified; MCP/plugins excluded. Heavy real WebGL/GIF rendering and phone acceptance of this build remain pending.
+Limits: accumulated-image disconnections remain **unfixed**. No CLI fork, experimental context policy or new automatic compaction. Android low-level key handoff/crash recovery and device backup export/restore remain unverified; MCP/plugins excluded. Heavy real WebGL/GIF rendering remains pending.
 
-[Read-only diagnosis, checks, final APK and phone scenario](docs/fork/VALIDATION-2.1.4-test5.md).
+Phone acceptance (2026-11-05, developer report): history/earlier-message loading, tabs, cards, search and refresh work as intended. This is separate from stand results and does not authorize publication.
+
+[Read-only diagnosis, checks, final APK and phone acceptance](docs/fork/VALIDATION-2.1.4-test5.md).
 
 # 2026-11-05 — 2.1.4-test4 (versionCode 1489, private test release)
 

@@ -77,7 +77,8 @@ older pages. Source/session generation guards remain.
 The first focused run passed **26 history/cache cases**, including late cursor
 appearance and actual button click for each of four adapters, original row
 merging, page failure/retry and no reopening of an exhausted cursor. These are
-Robolectric fixtures. Phone acceptance of the fix requires the next APK.
+Robolectric fixtures. Phone acceptance was pending at that stage; the later
+developer result is recorded separately below.
 
 Final measured-size update: `92e431b35bacf1f9164de2210306df0c3559b7a0`.
 
@@ -185,7 +186,27 @@ Source/fixture checks are separate from real Android acceptance.
 No CLI/context/network research is resumed by this task. Existing native CLI
 version/authorization investigations keep their original scope.
 
-## Phone scenario / Проверка телефона — pending
+## Phone acceptance / Пользовательская приёмка
+
+**2026-11-05 — source: the developer's message in this conversation**, not the
+assistant's stand or an automated test. Version **2.1.4-test5 / 1490**, issued
+APK SHA-256 `656cf9da76beda019eca5aba68d1d54f12fe08ad6965034a1453049dc8b0ca68`,
+built application source commit `afcc1de410a1ea1ad1150bd387e74ea6cfde6dbd`.
+
+The developer reports that these work as intended on the phone:
+
+- History display and loading earlier messages.
+- Tabs and file cards.
+- Search and refresh.
+
+This accepts the reported behavior and confirms the history fix on the phone.
+It does not attribute the assistant's fixtures to the developer or imply that
+all agent/language/theme combinations and error cases were individually checked.
+Those combinations were not enumerated in the acceptance message. Existing audit
+and media-context limitations below remain unchanged.
+**This is verification acceptance only; it does not authorize release publication.**
+
+## Original phone scenario / Исходный сценарий телефона
 
 1. After the user's own update, reopen CodexSupport without resetting data,
    clearing cache, compacting or restarting the CLI. Expect Earlier messages to
@@ -203,8 +224,9 @@ version/authorization investigations keep their original scope.
    opened diff; search stays and no write action appears. On a narrow screen and
    with the keyboard open, confirm readable tabs/search and usable close controls.
 
-The assistant does not install or restart working sessions. New UI/phone results
-remain unverified until reported by the developer.
+The assistant did not install the APK or restart working sessions. The phone
+evidence is the developer report above; the full scenario is retained as a
+reference, not a claim that each subcase was observed.
 
 ## Retained scope and limitations
 
