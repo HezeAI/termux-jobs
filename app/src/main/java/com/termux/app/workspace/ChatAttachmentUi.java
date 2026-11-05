@@ -135,7 +135,7 @@ final class ChatAttachmentUi implements AutoCloseable {
         }catch(Exception e){failure=e;}final File ready=file;final Bitmap image=bitmap;final String content=text;final Exception error=failure;final int originalWidth=mediaWidth,originalHeight=mediaHeight;
             main.post(()->{if(closed||!dialog.isShowing())return;box.removeAllViews();if(error!=null){
                     if(ready!=null&&ready.isFile()){
-                        box.addView(view.label("PREVIEW_LIMIT".equals(error.getMessage())?t("Предпросмотр ограничен: HTML до 4 МиБ, GIF до 16 МиБ. Оригинал можно сохранить.","Preview limits: HTML up to 4 MiB, GIF up to 16 MiB. You can save the original."):t("Предпросмотр недоступен: формат не поддерживается или файл повреждён. Оригинал можно сохранить.","Preview unavailable: unsupported format or damaged file. You can save the original."),14));
+                        box.addView(view.label("PREVIEW_LIMIT".equals(error.getMessage())?t("Предпросмотр ограничен: HTML до 32 МиБ, GIF до 64 МиБ. Оригинал можно сохранить.","Preview limits: HTML up to 32 MiB, GIF up to 64 MiB. You can save the original."):t("Предпросмотр недоступен: формат не поддерживается или файл повреждён. Оригинал можно сохранить.","Preview unavailable: unsupported format or damaged file. You can save the original."),14));
                         dialog.getButton(saveButton).setEnabled(true);dialog.getButton(saveButton).setOnClickListener(v->activity.requestWorkspaceStorageAccess(()->save(ready,a.optString("name","attachment"),dialog,saveButton)));
                     }else box.addView(view.label(t("Вложение недоступно: исходный файл удалён или нет доступа.","Attachment unavailable: the source was removed or access is missing."),14));return;
                 }

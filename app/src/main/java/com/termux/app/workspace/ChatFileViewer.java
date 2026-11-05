@@ -17,7 +17,7 @@ final class ChatFileViewer {
         final File file;final boolean html;final String url="https://preview-"+UUID.randomUUID()+".invalid/document";
         Document(File file,boolean html)throws IOException{
             this.file=file;this.html=html;
-            if(file.length()==0||file.length()>(html?4L:16L)*1024*1024)throw new IOException("PREVIEW_LIMIT");
+            if(file.length()==0||file.length()>(html?32L:64L)*1024*1024)throw new IOException("PREVIEW_LIMIT");
             if(!html){try(InputStream in=new FileInputStream(file)){byte[] header=new byte[10];if(in.read(header)!=10)throw new IOException("INVALID_GIF");String magic=new String(header,0,6,java.nio.charset.StandardCharsets.US_ASCII);int w=(header[6]&255)|((header[7]&255)<<8),h=(header[8]&255)|((header[9]&255)<<8);if(!(magic.equals("GIF87a")||magic.equals("GIF89a"))||w==0||h==0||(long)w*h>16000000)throw new IOException("INVALID_GIF");}}
         }
         boolean owns(String requested){return url.equals(requested)||requested!=null&&requested.startsWith(url+"#");}
