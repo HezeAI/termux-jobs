@@ -2,6 +2,23 @@
 
 No additional changes queued for publication.
 
+# 2026-11-05 — 2.1.4-test5 (versionCode 1490, private test release)
+
+Changes since the last published stable release, **v2.1.3**.
+
+- Restores discovery of older messages when an early empty native snapshot precedes the real history cursor. The Earlier messages button updates after the cursor arrives; no native history/cache reset or context compaction is used.
+- All four structured chats open Files and changes. Attachments and Changes each have a first Refresh button and local search with a clear cross. Queries/filters and earlier results survive refresh errors. Files retains its existing manager and refresh location.
+- Attachment search combines file name and sender filter over explicitly loaded history only. Load more continues the existing bounded cursor/detail reader, retains the query and deduplicates records. Empty partial results and completed search results are distinct. These actions do not start a model turn or add model context.
+- Attachments and Git changes use single-column cards with wrapped names and separate facts/actions. Attachment format icons require no original download. Git cards show relative path, status, real available file date, native additions/removals or Binary file. Deleted/unknown dates remain unknown. Git comparison is the whole project against HEAD, with no write actions.
+- All three active tabs have a contrasting fill, accent frame/marker and bold text. RU/EN and both application themes are covered by UI fixtures; phone acceptance remains separate.
+- Retains modification dates in both file windows, the exact four supplied common Codex/Claude RU/EN templates with explicit application, context meters, confirmed Codex manual compaction, four per-request timers, notes-only star and isolated HTML/GIF previews up to 32/64 MiB (GIF remains 16 million pixels).
+
+Compatibility: `com.termux`, ARM64, Android 8.0+, unchanged Termux Job’s certificate; versionCode increases to 1490. No profile/history migration or automatic instruction replacement. Issued APKs and published Components are preserved.
+
+Limits: accumulated-image disconnections remain **unfixed**. No CLI fork, experimental context policy or new automatic compaction. Android low-level key handoff/crash recovery and device backup export/restore remain unverified; MCP/plugins excluded. Heavy real WebGL/GIF rendering and phone acceptance of this build remain pending.
+
+[Read-only diagnosis, checks, final APK and phone scenario](docs/fork/VALIDATION-2.1.4-test5.md).
+
 # 2026-11-05 — 2.1.4-test4 (versionCode 1489, private test release)
 
 Changes since the last published stable release, **v2.1.3**.

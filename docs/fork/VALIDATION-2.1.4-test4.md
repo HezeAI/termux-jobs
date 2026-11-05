@@ -256,3 +256,14 @@ its original versions/sources. Low-level Android Gemini handoff/cancellation,
 crash restoration and Android backup export/restore remain unverified; functional
 artificial-key refusal and normal retry accepted on test7 are not erased. MCP
 and plugins are excluded. This private test build does not publish a stable release.
+
+## 2026-11-05 — subsequent phone report: missing history cursor
+
+After this report, the developer installed test4 and reported a missing Earlier
+messages button in an existing Codex chat, with only the latest pair visible.
+Read-only diagnostics found retained original records and functioning native
+history cursors. The unconditional head-snapshot exhaustion assignment in test4
+can suppress a later real cursor. The earlier fixture checks did not cover this
+startup transition; they do **not** establish absence of this regression.
+See [diagnosis, separate fix and pending phone acceptance](VALIDATION-2.1.4-test5.md).
+No native history, app data/cache or working session was reset to diagnose it.
