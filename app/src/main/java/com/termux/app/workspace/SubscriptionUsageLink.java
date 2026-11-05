@@ -54,11 +54,15 @@ final class SubscriptionUsageLink extends LinearLayout {
         super.onMeasure(widthSpec, heightSpec);
     }
 
-    static void add(LinearLayout parent, String label, boolean claude) {
-        parent.addView(new SubscriptionUsageLink(parent.getContext(), label, claude),
+    void subscription(String label) { subscription.setText(label); }
+
+    static SubscriptionUsageLink add(LinearLayout parent, String label, boolean claude) {
+        SubscriptionUsageLink row = new SubscriptionUsageLink(parent.getContext(), label, claude);
+        parent.addView(row,
                 new LayoutParams(-1, -2));
         AgentStatusUi.info(parent, AgentStatusUi.tr(parent.getContext(),
                 "Доступность и условия сброса указаны на сайте",
                 "Reset availability and conditions are shown on the website"));
+        return row;
     }
 }

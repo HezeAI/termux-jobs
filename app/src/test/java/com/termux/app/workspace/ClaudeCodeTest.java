@@ -30,7 +30,7 @@ public class ClaudeCodeTest {
         }
     }
     @Test public void bootstrapAndControlsAreSeparateFromOtherAgents() throws Exception {
-        WorkspaceStore.Session s=profile();ClaudeCode.prepare(context);File rc=SessionShell.prepare(context.getFilesDir(),s);
+        WorkspaceStore.Session s=profile();ClaudeCode.prepare(context);assertTrue(new File(ClaudeCode.directory(context.getFilesDir()),"claude-subscription.cjs").isFile());File rc=SessionShell.prepare(context.getFilesDir(),s);
         String text=new String(java.nio.file.Files.readAllBytes(rc.toPath()),java.nio.charset.StandardCharsets.UTF_8);
         assertTrue(text.contains("/tmp/termux-jobs-claude"));assertTrue(text.contains("--work-dir '/root/project'"));assertFalse(text.contains("termux-jobs-ai"));assertFalse(text.contains("termux-jobs-codex"));
         String command=ClaudeCode.command(context.getFilesDir(),s);assertTrue(command.contains("claude-control-v2.js"));assertTrue(command.contains(s.claudeSocketId));assertTrue(command.contains(s.claudeThread));assertFalse(command.contains(".codex"));assertFalse(command.contains("API_KEY"));
