@@ -2,6 +2,21 @@
 
 No additional changes queued for publication.
 
+# 2026-11-05 — 2.1.4-test6 (versionCode 1491, private test release)
+
+Changes since the last published stable release, **v2.1.3**, retain all test5 features listed below.
+
+- Attachments and Changes in all four agent chats now place a compact vector Refresh button next to the search field. The clear cross and separate Refresh row are removed. Search, filters, bounded loading and error retention remain; Files is unchanged.
+- Applicable attachment actions share a horizontal strip directly below their own information card. Each action has its own border, pressed/focus feedback and touch target; large text wraps. No actions are added to Git cards.
+- Image viewers offer **To gallery** on the left and retain Save to Download on the right. Original image bytes, extension and MIME are preserved, including animated GIF. New images go to Pictures/TermuxJobs via MediaStore, with exclusive files and registration on Android 8–9. Repeated names create new entries. Failures attempt removal of only this operation's incomplete row/file; failed cleanup is reported without success.
+- Gallery saving uses no all-files permission request: app-owned MediaStore insertion on Android 10+, only the legacy write permission on Android 8–9. Supported formats depend on the platform/provider; every gallery need not display every format. Original metadata is retained. Viewing/saving is local and does not send an image to the model.
+
+Compatibility: `com.termux`, ARM64, Android 8.0+, unchanged signing certificate; versionCode 1491. No profile/history migration or automatic instruction replacement. All previously issued APKs are preserved. The accepted test5 history/cursor fix, exact four common templates and earlier agreed features remain.
+
+Limits: attachment accumulation/disconnections remain **unfixed**. No new automatic compaction or experimental CLI mode. Low-level Android key handoff/crash recovery and device backup export/restore remain unverified; MCP/plugins excluded. New layout, real MediaStore permissions/cleanup and gallery playback await phone verification. A hard process kill during saving is outside the tested cleanup path; an unpublished pending row may remain for system cleanup.
+
+[Checks and phone scenario](docs/fork/VALIDATION-2.1.4-test6.md).
+
 # 2026-11-05 — 2.1.4-test5 (versionCode 1490, private test release)
 
 Changes since the last published stable release, **v2.1.3**.
