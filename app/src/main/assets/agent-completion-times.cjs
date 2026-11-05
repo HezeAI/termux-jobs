@@ -28,4 +28,12 @@ class CompletionTimes {
   }catch{this.failed=true;return null;}
  }
 }
-module.exports={CompletionTimes,instant,duration};
+// Live timing is volatile and starts only at a provider-owned request lifecycle event.
+class RequestClock {
+ constructor(now=()=>process.hrtime.bigint()){this.now=now;this.id='';this.started=null;this.ended=new Set();}
+ start(id){if(typeof id!=='string'||!id||id.length>240||this.id===id||this.ended.has(id))return;if(this.id)this.remember(this.id);this.id=id;this.started=this.now();}
+ remember(id){this.ended.add(id);while(this.ended.size>128)this.ended.delete(this.ended.values().next().value);}
+ stop(id){if(id&&id!==this.id)return;if(this.id)this.remember(this.id);this.id='';this.started=null;}
+ snapshot(){return this.started===null?null:{request:this.id,elapsedMs:Number((this.now()-this.started)/1000000n)};}
+}
+module.exports={CompletionTimes,RequestClock,instant,duration};

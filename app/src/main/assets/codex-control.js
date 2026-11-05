@@ -75,7 +75,7 @@ class Connection {
       if(first&0x80) {
         const message=JSON.parse(Buffer.concat(this.fragments,this.size).toString('utf8'));this.fragments=[];this.size=0;
         const pending=this.pending.get(message.id);
-        if(pending && !message.method) {this.pending.delete(message.id);clearTimeout(pending.timer);if(message.error)pending.reject(new Error('Codex rejected '+pending.method+' '+rpcError(message.error)));else pending.resolve(message.result);}
+        if(pending && !message.method) {this.pending.delete(message.id);clearTimeout(pending.timer);if(message.error)pending.reject(Object.assign(new Error('Codex rejected '+pending.method+' '+rpcError(message.error)),{rpcCode:message.error.code}));else pending.resolve(message.result);}
         if(this.onMessage)this.onMessage(message);
       }
     }
@@ -85,7 +85,7 @@ class Connection {
     const result=new Promise((resolve,reject)=> {const timer=setTimeout(()=>{this.pending.delete(id);reject(new Error('Codex request timeout'));},25000);this.pending.set(id,{resolve,reject,timer,method});});
     this.send({id,method,params});return result;
   }
-  async initialize() {await this.ready;await this.call('initialize',{clientInfo:{name:'termux_jobs_control',version:'0.2.21'},capabilities:{experimentalApi:true}});this.send({method:'initialized'});}
+  async initialize() {await this.ready;this.serverInfo=await this.call('initialize',{clientInfo:{name:'termux_jobs_control',version:'0.2.21'},capabilities:{experimentalApi:true}});this.send({method:'initialized'});return this.serverInfo;}
 }
 function writeStatus(path, value) {
   const temporary = path+'.state.json.tmp-'+process.pid;

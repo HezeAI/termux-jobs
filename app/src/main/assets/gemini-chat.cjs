@@ -1,6 +1,6 @@
 'use strict';
 const deliveryStatus=require('./agent-delivery-status.cjs');
-const {CompletionTimes}=require('./agent-completion-times.cjs');
+const {CompletionTimes,RequestClock}=require('./agent-completion-times.cjs');
 const {preview:actionPreview,trimPreviews,outputTail}=require('./agent-action-preview.cjs');
 // Structured projection of native committed React state. Never parses terminal output.
 const crypto=require('node:crypto');
@@ -17,7 +17,7 @@ function display(value,depth=0,budget={left:200000,nodes:10000}){
 }
 
 class GeminiChat {
- constructor(api){this.api=api;this.updateTitle=(api.language||process.env.JOBS_GEMINI_LANGUAGE)==='ru'?'Уведомление обновления Gemini CLI':'Gemini CLI update notice';this.attachments=new Attachments(api.attachmentRoot||__dirname);this.binding=null;this.shell=null;this.groups=[];this.full=new Map();this.sent=new Map();this.thoughts=new Map();this.revision=0;this.native=false;}
+ constructor(api){this.api=api;this.requestClock=new RequestClock();this.clockSession="";this.updateTitle=(api.language||process.env.JOBS_GEMINI_LANGUAGE)==='ru'?'Уведомление обновления Gemini CLI':'Gemini CLI update notice';this.attachments=new Attachments(api.attachmentRoot||__dirname);this.binding=null;this.shell=null;this.groups=[];this.full=new Map();this.sent=new Map();this.thoughts=new Map();this.revision=0;this.native=false;}
  observe(config,data,submit,shellMode,setShellMode){
   const session=this.api.session();if(this.sessionKey!==session){this.sessionKey=session;this.actionBaseline=null;this.actionReady=false;this.thoughts.clear();this.completions=new CompletionTimes(this.api.attachmentRoot,'gemini',session);this.seenText=new Set();this.pendingTimes=new Set();this.timeBaseline=false;this.responseObserved=false;}
   const binding={config,submit,shellMode,setShellMode,cancel:data.cancel,ready:data.ready===true,native:data.native===true};this.binding=binding;this.revision++;
@@ -28,6 +28,11 @@ class GeminiChat {
   this.source=data;for(const item of data.history||[])if(item.jobsInputSession===session)for(const id of item.jobsClientIds||[]){const record=this.sent.get(id);if(record?.session===session){record.bound=true;if(record.receipt?.delivery==='queued')record.receipt=deliveryStatus.receipt({...record.receipt,delivery:'submitted',ack:'native-history-item'},id);}}this.observeCompletionState(this.api.status().state);this.dirty=true;
   return ()=>{if(this.binding===binding)this.binding=null;};
  }
+ nativeRequestBegin(prompt,continuation){
+  const session=this.api.session();if(continuation||!session||typeof prompt!=='string'||!prompt||prompt.length>160)return;
+  this.clockSession=session;this.clockPrompt=prompt;this.requestClock.start(session+':'+prompt);
+ }
+ nativeRequestEnd(prompt){if(this.clockSession===this.api.session()&&this.clockPrompt===prompt)this.requestClock.stop();}
  observeCompletionState(state){
   if(!this.source||!this.completions)return;
   const history=this.source.history||[],answers=history.filter(m=>['gemini','gemini_content'].includes(m.type));
@@ -77,7 +82,7 @@ class GeminiChat {
   if(q.cursor){if(typeof q.cursor!=='string'||q.cursor.length>128)throw Error('Invalid cursor');end=this.groups.findIndex(g=>g.id===q.cursor);if(end<0)throw Error('Expired cursor');}
   const groups=this.groups.slice(Math.max(0,end-20),end);let rows=groups.flatMap(g=>g.rows);if(rows.length>200)rows=rows.slice(-200);
   let budget=60000;rows=rows.map((r,i)=>{const max=Math.min(12000,Math.max(100,Math.floor(budget/(rows.length-i))));budget-=Math.min(r.body.length,max);return {...r,body:r.body.slice(0,max),more:r.more||r.body.length>max};});
-  return {ok:true,nativeChat:true,attachmentsSupported:true,agentError:this.source?.authError===true||this.source?.history?.findLast(m=>!updateNotice(m))?.type==='error',authError:this.source?.authError===true,session:this.api.session(),stopToken:this.stopOwner||"",nativeUiReady:!!this.binding,knownMessages:this.groups.map(g=>g.id),connected:!!this.binding&&s.available&&(this.binding.ready||this.binding.native),rows:trimPreviews(rows),older:end>20?groups[0]?.id||'':'',forms:[],permission:this.api.permission(),busy:s.state==='responding'||s.state==='waiting_for_confirmation',needsTerminal:!!this.binding?.native||!s.available||(s.state==='waiting_for_confirmation'&&!this.api.permission()),directShell:false,model:{providerID:'google',id:s.model||s.selectedModel||''}};
+  return {ok:true,nativeChat:true,attachmentsSupported:true,agentError:this.source?.authError===true||this.source?.history?.findLast(m=>!updateNotice(m))?.type==='error',authError:this.source?.authError===true,session:this.api.session(),requestTiming:this.clockSession===this.api.session()?this.requestClock.snapshot():null,stopToken:this.stopOwner||"",nativeUiReady:!!this.binding,knownMessages:this.groups.map(g=>g.id),connected:!!this.binding&&s.available&&(this.binding.ready||this.binding.native),rows:trimPreviews(rows),older:end>20?groups[0]?.id||'':'',forms:[],permission:this.api.permission(),busy:s.state==='responding'||s.state==='waiting_for_confirmation',needsTerminal:!!this.binding?.native||!s.available||(s.state==='waiting_for_confirmation'&&!this.api.permission()),directShell:false,model:{providerID:'google',id:s.model||s.selectedModel||''}};
  }
  async command(q){
   if(q.op==='chat-snapshot')return this.snapshot(q);

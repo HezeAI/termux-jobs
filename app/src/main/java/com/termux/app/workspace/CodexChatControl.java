@@ -33,7 +33,7 @@ final class CodexChatControl {
         try(LocalSocket client=new LocalSocket()){
             client.connect(new LocalSocketAddress(socket.getAbsolutePath(),LocalSocketAddress.Namespace.FILESYSTEM));client.setSoTimeout(15000);
             byte[] bytes=(q.toString()+"\n").getBytes(StandardCharsets.UTF_8);if(bytes.length>65536)throw new IOException("REQUEST_TOO_LARGE");client.getOutputStream().write(bytes);client.getOutputStream().flush();
-            JSONObject r=new JSONObject(ClaudeLiveControl.readReply(client.getInputStream(),524288));if(q.optString("op").equals("chat-send")||q.optString("op").equals("chat-interrupt"))return r;if(!r.optBoolean("ok"))throw new IOException("Codex chat did not confirm action");return r;
+            JSONObject r=new JSONObject(ClaudeLiveControl.readReply(client.getInputStream(),524288));if(q.optString("op").equals("chat-send")||q.optString("op").equals("chat-interrupt")||q.optString("op").equals("chat-compact"))return r;if(!r.optBoolean("ok"))throw new IOException("Codex chat did not confirm action");return r;
         }
     }
 }

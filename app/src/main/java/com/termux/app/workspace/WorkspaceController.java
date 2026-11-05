@@ -1726,13 +1726,14 @@ public final class WorkspaceController {
                 (CodexChatControl.enabled(activity.getFilesDir(),profile)?tr("\nСтатус обновляется раз в 30 секунд. Выбранные модель и рассуждение передаются со следующим сообщением этой сессии. До отправки они помечены как следующий ответ. Поле Shell выполняет вашу команду напрямую с правами Ubuntu, без обращения к модели.","\nStatus refreshes every 30 seconds. Selected model and reasoning are sent with this session’s next message and marked as next response until then. The Shell field runs your command directly with Ubuntu privileges without model inference."):WorkspaceText.tr("\nСтатус обновляется раз в 30 секунд. Выбор модели и рассуждения применяется через штатное меню Codex только к этой сессии. Если Codex отвечает, приложение дождётся завершения. Поле ввода сохраняется.")), 12, MUTED));
         }
         AgentChatScale.controls(form,profile,()->!closed&&currentCodex()==profile,this::previewChatScale,store::save);
+        CodexContextUi context=new CodexContextUi(activity,profile);form.addView(context);
         AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Статус Codex")).setView(formScroll(form))
             .setPositiveButton(WorkspaceText.tr("Обновить"), null).setNegativeButton(WorkspaceText.tr("Закрыть"), null).create();
-        shown[0] = dialog;
+        shown[0] = dialog;dialog.setOnDismissListener(d->context.close());
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             if (codexLoading) return;
             loadingCodexDialog(profile, dialog);
-        })); dialog.show();
+        })); dialog.show();context.start();
         if (status == null && !codexLoading) loadingCodexDialog(profile, dialog);
     }
     private void loadingCodexDialog(WorkspaceStore.Session profile, AlertDialog dialog) {

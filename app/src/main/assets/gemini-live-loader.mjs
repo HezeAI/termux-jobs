@@ -41,6 +41,17 @@ export function instrument(source,name){
    // (e.g. ShowMoreLines) which can unmount before idle and leave stale state.
    const marker='  const streamingState = (0, import_react97.useMemo)(\n    () => calculateStreamingState(isResponding, toolCalls),\n    [isResponding, toolCalls]\n  );';
    replace(marker,marker+'\n  (0, import_react97.useEffect)(() => {globalThis.__jobsGeminiLive?.ui(streamingState);}, [streamingState]);');
+   // One user prompt spans tool continuations, confirmation waits and retries.
+   // streamingState can briefly be idle between tool rounds, so it is not a clock boundary.
+   replace('          setIsResponding(true);\n          setInitError(null);','          globalThis.__jobsGeminiLive?.requestBegin(config,prompt_id,!!options?.isContinuation);\n          setIsResponding(true);\n          setInitError(null);');
+   replace('          setThought(null);\n        }\n        switch (event.type) {','          setThought(null);\n        }\n        if (["user_cancelled","error","agent_execution_stopped","context_window_will_overflow","max_session_turns"].includes(event.type)) globalThis.__jobsGeminiLive?.requestEnd(config,prompt_id);\n        switch (event.type) {');
+   replace('            prompt_id\n          );\n        }\n      }\n      return 0 /* Completed */;', '            prompt_id\n          );\n        } else if (!loopDetectedRef.current) {globalThis.__jobsGeminiLive?.requestEnd(config,prompt_id);}\n      }\n      return 0 /* Completed */;');
+   replace('            spanMetadata.error = error;','            globalThis.__jobsGeminiLive?.requestEnd(config,prompt_id);\n            spanMetadata.error = error;');
+   replace('      if (turnCancelledRef.current) {\n        setIsResponding(false);\n        const geminiTools2 =','      if (turnCancelledRef.current) {\n        globalThis.__jobsGeminiLive?.requestEnd(config,lastPromptIdRef.current);\n        setIsResponding(false);\n        const geminiTools2 =');
+   replace('      if (stopExecutionTool && stopExecutionTool.response.error) {','      if (stopExecutionTool && stopExecutionTool.response.error) {\n        globalThis.__jobsGeminiLive?.requestEnd(config,lastPromptIdRef.current);');
+   replace('        geminiClient?.discardTrailingUnansweredToolCallTurn();','        globalThis.__jobsGeminiLive?.requestEnd(config,lastPromptIdRef.current);\n        geminiClient?.discardTrailingUnansweredToolCallTurn();');
+   const halted='                    addItem({\n                      type: "info",\n                      text: `A potential loop was detected. This can happen due to repetitive tool calls or other model behavior. The request has been halted.`';
+   replace(halted,'                    globalThis.__jobsGeminiLive?.requestEnd(config,lastPromptIdRef.current);\n'+halted);
    const permissionMarker='  const availableBodyContentHeight = (0, import_react35.useCallback)(() => {';
    replace(permissionMarker,'  (0, import_react35.useEffect)(() => globalThis.__jobsGeminiLive?.permission(callId,confirmationDetails,config,confirm,getOptions(),isFocused,toolName,!!deceptiveUrlWarningText), [callId,confirmationDetails,config,confirm,getOptions,isFocused,toolName,deceptiveUrlWarningText]);\n'+permissionMarker);
    replace('    async (callId, outcome, payload) => {','    async (callId, outcome, payload) => {\n      globalThis.__jobsGeminiLive?.consumePermission(callId);');
