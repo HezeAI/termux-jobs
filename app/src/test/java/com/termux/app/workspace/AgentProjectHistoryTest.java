@@ -36,4 +36,6 @@ public class AgentProjectHistoryTest {
  @Test public void geminiDenseReferencesAdvanceToEndWithoutLossDuplicatesOrModelCalls()throws Exception{denseRead("gemini");}
  @Test public void openCodeDenseReferencesAdvanceToEndWithoutLossDuplicatesOrModelCalls()throws Exception{denseRead("opencode");}
 
+ @Test public void refreshForEveryAgentReadsOneHeadPageKeepsCursorAndNeverStartsATurn()throws Exception{for(String agent:new String[]{"codex","claude","gemini","opencode"}){run(agent);AgentProjectPanel.Chat source=ui.projectSource();long before=calls.stream().filter(q->!q.has("cursor")).count();source.refresh();source.refresh();for(int n=0;n<20&&source.loadingOlder();n++)idle();assertEquals(before+1,calls.stream().filter(q->!q.has("cursor")).count());assertEquals(2,ChatFileReferences.collect(source.rows()).size());source.older();for(int n=0;n<20&&source.loadingOlder();n++)idle();JSONObject page=calls.stream().filter(q->q.has("cursor")).reduce((a,b)->b).orElseThrow(AssertionError::new);assertEquals("PAGE_TWO",page.getString("cursor"));source.close();ui.close();ui=null;if(marker!=null){marker.delete();marker=null;}calls.clear();}}
+
 }
