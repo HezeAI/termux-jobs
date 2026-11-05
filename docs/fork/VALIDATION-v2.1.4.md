@@ -114,3 +114,35 @@ Relevant executable/resource/test/fixture diff from accepted d8e0b07f is empty;
 only version metadata and documentation change for stable. No model/CLI limits,
 transport or working-session settings are changed. Previous issued APK hashes
 are checked unchanged. New templates are bundled assets, not saved-user migrations.
+
+## Publication completion — 2026-11-05
+
+Published ordinary stable [v2.1.4](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.4),
+Latest, draft=false/prerelease=false. Branch fork/base and annotated tag resolve to
+**384fd197ca30948164fbded3e465f15c2b9318bf**. Release assets and tag are unchanged
+after publication; only release text was updated to record completed public checks.
+
+[CI 42002718204](https://github.com/HezeAI/termux-jobs/actions/runs/42002718204)
+passed: **1,755 tests** (app 1,601; terminal-emulator 154), **8 skipped**; internal
+independently signed debug APK build passed. Skips are ServerSftpTest's explicit
+assumption of the Termux-specific sftp-server path, unavailable on Ubuntu CI.
+These are not passed CI cases. All eight separately **passed locally** using the
+existing real subsystem over pipes and artificial task files, without remote SSH,
+working profiles or authorization. Source/test code is unchanged from v2.1.3.
+Other test modules with NO-SOURCE are not counted as passed cases.
+
+All seven draft uploads first matched the local files. Then all seven public
+resources were downloaded anonymously and matched byte-for-byte. SHA256SUMS,
+update.json version/code/size/hash, ZIP members versus the public APK, source tag/
+branch and release documentation links passed. The downloaded public APK passed
+signature, version and DEX/runtime checks again. Public Latest and final release
+body were checked after adding the publication note. Old v2.1.3 asset identities,
+Components metadata and all issued local APK hashes remain unchanged.
+
+Evidence: `.verification/release-v2.1.4/public-verification.json`, `public/`,
+`public-signature.txt`, `public-runtime.json`, `ci-final.json`, `ci-reports/`,
+`sftp-jvm/` and `validation.json`. The uploaded validation.json records the verified
+pre-publication snapshot; the completed public-download record is in the release
+body and this local post-publication report. This documentation-only completion
+is saved locally for continuation; it does not move the published source tag,
+replace any resource or require an APK rebuild. No install or working-session stop.
