@@ -8,6 +8,7 @@ final class AgentChatCache {
     static final int MAX_ENTRIES=8, MAX_ENTRY_CHARS=512*1024, MAX_TOTAL_CHARS=2*1024*1024;
     static final class State {
         final LinkedHashMap<String,JSONObject> rows=new LinkedHashMap<>();
+        final LinkedHashMap<String,Boolean> timelineExpansion=new LinkedHashMap<>();
         String older="",model="",session="",notice="";
         boolean trimmed,historyExhausted,nativeChat,resolved,busy,directShell,needsTerminal,connected,failed;
         AgentChatView.Position position;
@@ -24,7 +25,9 @@ final class AgentChatCache {
         for(int i=list.size()-1;i>=0;i--){Map.Entry<String,JSONObject> row=list.get(i);int n=row.getKey().length()+row.getValue().toString().length();if(size+n>MAX_ENTRY_CHARS)break;reverse.put(row.getKey(),row.getValue());size+=n;}
         List<String> keys=new ArrayList<>(reverse.keySet());for(int i=keys.size()-1;i>=0;i--){String key=keys.get(i);state.rows.put(key,reverse.get(key));}
         state.trimmed=state.rows.size()<list.size();
-        state.chars=(state.requestTiming==null?0:state.requestTiming.toString().length())+size+state.older.length()+state.model.length()+state.session.length()+state.notice.length()+(state.modelConnection==null?0:state.modelConnection.toString().length());
+        while(state.timelineExpansion.size()>1024)state.timelineExpansion.remove(state.timelineExpansion.keySet().iterator().next());
+        int choices=0;for(String key:state.timelineExpansion.keySet())choices+=key.length()+8;
+        state.chars=choices+(state.requestTiming==null?0:state.requestTiming.toString().length())+size+state.older.length()+state.model.length()+state.session.length()+state.notice.length()+(state.modelConnection==null?0:state.modelConnection.toString().length());
         if(state.chars>MAX_TOTAL_CHARS)return;entries.put(owner,state);chars+=state.chars;
         while(entries.size()>MAX_ENTRIES||chars>MAX_TOTAL_CHARS)take(entries.keySet().iterator().next());
     }

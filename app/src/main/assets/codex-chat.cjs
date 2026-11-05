@@ -1,12 +1,12 @@
 'use strict';
 const {fileReferences}=require('./agent-attachments.cjs');
-const {CompletionTimes,RequestClock}=require('./agent-completion-times.cjs');
+const {CompletionTimes,RequestClock,instant}=require('./agent-completion-times.cjs');
 // Android presentation of the native app-server protocol. No auth-file reads or policy overrides.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),net=require('node:net');
 const {spawn}=require('node:child_process');
 const {Connection}=require('./codex-wire-v0.2.22.js');
 const {ReceiptStore,clean}=require('./agent-receipts.cjs');
-const {preview:actionPreview,trimPreviews,outputTail}=require('./agent-action-preview.cjs');
+const {preview:actionPreview,trimPreviews,outputTail,decision:actionDecision}=require('./agent-action-preview.cjs');
 const text=v=>typeof v==='string'?clean(v).slice(0,200000):'';
 const key=v=>'msg_x'+crypto.createHash('sha256').update(String(v)).digest('hex').slice(0,28);
 const valid=v=>typeof v==='string'&&/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(v);
@@ -274,7 +274,7 @@ class CodexChat {
    }
    else if(item.type==='contextCompaction')add('context','tool',this.language==='ru'?'Контекст чата сокращён штатным Codex.':'Chat context compacted by Codex.','Codex');
    else if(!['hookPrompt','sleep'].includes(item.type))add('event','tool',JSON.stringify(item,null,2),item.type||'Codex');
-   if(rows.length){if(item.type==='userMessage'&&item.clientId){const receipt=this.sent.get(item.clientId)?.result;const target=rows.find(r=>r.kind==='user')||rows.find(r=>r.kind==='attachment');if(receipt?.accepted&&target)target.deliveryReceipt={...receipt,clientId:item.clientId};}for(const row of rows)if(row.kind==='tool'){const at=this.completions?.action(message);if(at)row.eventTime=at;row.turn=turn;if(!row.toolType&&item.type!=='commandExecution')Object.assign(row,{toolType:item.type,toolName:text(item.tool||item.name).slice(0,160),status:actionStatus(item)});const preview=actionPreview(item);if(preview){row.actionPreview=preview;if(preview.kind==='files'&&(preview.files.some(f=>f.diffTruncated)||preview.filesTruncated))row.more=true;if(preview.kind==='image')preview.image.cacheKey=message+':view';}if(skillContext)row.skillContextName=skillContext;}groups.push({id:message,rows});}
+   if(rows.length){if(item.type==='userMessage'&&item.clientId){const receipt=this.sent.get(item.clientId)?.result;const target=rows.find(r=>r.kind==='user')||rows.find(r=>r.kind==='attachment');if(receipt?.accepted&&target)target.deliveryReceipt={...receipt,clientId:item.clientId};}for(const row of rows)if(row.kind==='tool'){const at=this.completions?.action(message);if(at)row.eventTime=at;row.turn=turn;if(!row.toolType&&item.type!=='commandExecution')Object.assign(row,{toolType:item.type,toolName:text(item.tool||item.name).slice(0,160),status:actionStatus(item)});Object.assign(row,actionDecision(row.status,this.receipts.rows.find(r=>r.key.startsWith(item.id+':')&&r.outcome==='cancel')));const start=instant(item.startedAt);if(start)row.startedAt=start;const preview=actionPreview(item);if(preview){row.actionPreview=preview;if(preview.kind==='files'&&(preview.files.some(f=>f.diffTruncated)||preview.filesTruncated))row.more=true;if(preview.kind==='image')preview.image.cacheKey=message+':view';}if(skillContext)row.skillContextName=skillContext;}groups.push({id:message,rows});}
   }}let chars=0;for(const body of this.full.values())chars+=body.length;for(const [k,body]of this.full){if(chars<=2*1024*1024&&this.full.size<=800)break;this.full.delete(k);chars-=body.length;}return groups;
  }
  historyWindow(groups,next){

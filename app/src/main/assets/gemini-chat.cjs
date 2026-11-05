@@ -2,7 +2,7 @@
 const {fileReferences}=require('./agent-attachments.cjs');
 const deliveryStatus=require('./agent-delivery-status.cjs');
 const {CompletionTimes,RequestClock}=require('./agent-completion-times.cjs');
-const {preview:actionPreview,trimPreviews,outputTail}=require('./agent-action-preview.cjs');
+const {preview:actionPreview,trimPreviews,outputTail,decision:actionDecision}=require('./agent-action-preview.cjs');
 // Structured projection of native committed React state. Never parses terminal output.
 const crypto=require('node:crypto');
 const {clean}=require('./agent-receipts.cjs');
@@ -64,7 +64,7 @@ class GeminiChat {
    else if(item.type==='thinking')row('thought','reasoning',[text(item.thought?.subject),text(item.thought?.description)].filter(Boolean).join('\n'));
    else if(item.type==='tool_group')for(const tool of (item.tools||[]).slice(0,100)){
     const id=typeof tool.callId==='string'?tool.callId.slice(0,160):'';if(!id)continue;const receipt=this.api.receipt(id);if(receipt)row('receipt:'+id,'receipt',receipt.body,receipt.label);
-    const output=display(tool.resultDisplay),description=text(tool.description);row('tool:'+id,'tool',[description,output].filter(Boolean).join('\n\n'),text(tool.name)+' · '+text(tool.status),{eventTime:this.completions?.action(message+':'+id)||0,toolName:text(tool.name),toolType:text(tool.name),toolOutputLength:output.length,outputTail:outputTail(output),toolOutputOffset:output&&description?description.length+2:0,actionPreview:actionPreview(null,tool.name,tool.args||tool.request?.args),status:text(tool.status)});
+    const output=display(tool.resultDisplay),description=text(tool.description),args=tool.args||tool.request?.args||{};row('tool:'+id,'tool',[description,output].filter(Boolean).join('\n\n'),text(tool.name)+' · '+text(tool.status),{eventTime:this.completions?.action(message+':'+id)||0,toolName:text(tool.name),toolType:text(tool.name),toolOutputLength:output.length,outputTail:outputTail(output),toolOutputOffset:output&&description?description.length+2:0,actionPreview:actionPreview(null,tool.name,tool.args||tool.request?.args),status:text(tool.status),...actionDecision(text(tool.status),receipt),...(tool.name==='run_shell_command'&&typeof args.command==='string'?{actionType:'shell',command:text(args.command).slice(0,2000)}:{})});
    }
    else if(updateNotice(item))row('update','info',this.updateTitle+'\n'+text(item.text),'',{notice:'cli-update'});
    else if(['info','error','warning','hint'].includes(item.type))row(item.type,item.type==='error'?'error':'info',item.text);

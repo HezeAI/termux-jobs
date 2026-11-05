@@ -34,6 +34,10 @@ final class AgentChatView extends LinearLayout {
     java.util.function.Function<String,Runnable> localFileAction=path->null;
     java.util.function.Function<JSONObject,Runnable> fileCardAction=attachment->null;
     io.noties.markwon.Markwon fileMarkdown(){return AgentMarkdown.create(getContext(),localFileAction);}
+    final LinkedHashMap<String,Boolean> timelineExpansion=new LinkedHashMap<>();
+    private String choiceKey(JSONObject row){return row.optString("actionId").isEmpty()?row.optString("key"):"action:"+row.optString("actionId");}
+    void rememberActions(Collection<JSONObject> rows,boolean expanded){for(JSONObject row:rows){String key=choiceKey(row);if(!key.isEmpty()){timelineExpansion.remove(key);timelineExpansion.put(key,expanded);}}while(timelineExpansion.size()>1024)timelineExpansion.remove(timelineExpansion.keySet().iterator().next());}
+    Boolean actionChoice(JSONArray rows){Set<String> keys=new HashSet<>();for(int i=0;i<rows.length();i++){JSONObject row=rows.optJSONObject(i);if(row!=null)keys.add(choiceKey(row));}Boolean choice=null;for(Map.Entry<String,Boolean> entry:timelineExpansion.entrySet())if(keys.contains(entry.getKey()))choice=entry.getValue();return choice;}
     private boolean touchingTimeline;
     final AgentProgressView execution;
     private int scalePercent=100;
@@ -43,7 +47,7 @@ final class AgentChatView extends LinearLayout {
 
     private boolean followNextRows;
     private boolean followLayout;
-    static final class Position {final String anchor;final int offset,y;final boolean bottom;Position(String anchor,int offset,int y,boolean bottom){this.anchor=anchor;this.offset=offset;this.y=y;this.bottom=bottom;}}
+    static final class Position {final String anchor,step;final int offset,y;final boolean bottom;Position(String anchor,int offset,int y,boolean bottom){this(anchor,offset,y,bottom,null);}Position(String anchor,int offset,int y,boolean bottom,String step){this.anchor=anchor;this.offset=offset;this.y=y;this.bottom=bottom;this.step=step;}}
     private Position restoring;
     private ViewTreeObserver restoreObserver;private ViewTreeObserver.OnPreDrawListener restoreListener;
     private void cancelRestore(){restoring=null;if(restoreObserver!=null&&restoreObserver.isAlive()&&restoreListener!=null)restoreObserver.removeOnPreDrawListener(restoreListener);restoreObserver=null;restoreListener=null;}
@@ -51,7 +55,8 @@ final class AgentChatView extends LinearLayout {
         if(restoring!=null)return restoring;
         String anchor=null;int offset=0;
         for(int i=1;i<timeline.getChildCount();i++){View v=timeline.getChildAt(i);if(v.getBottom()>scroll.getScrollY()){for(Map.Entry<String,View> e:views.entrySet())if(e.getValue()==v){anchor=e.getKey();offset=v.getTop()-scroll.getScrollY();break;}if(anchor!=null)break;}}
-        return new Position(anchor,offset,scroll.getScrollY(),timeline.getHeight()-scroll.getHeight()-scroll.getScrollY()<dp(48));
+        String step=null;View anchored=anchor==null?null:views.get(anchor);if(anchored instanceof CodexActionsView){CodexActionsView card=(CodexActionsView)anchored;String visible=card.readingStep(scroll.getScrollY()-card.getTop());if(visible!=null){step=visible;offset=card.getTop()+card.stepTop(visible)-scroll.getScrollY();}}
+        return new Position(anchor,offset,scroll.getScrollY(),timeline.getHeight()-scroll.getHeight()-scroll.getScrollY()<dp(48),step);
     }
     void restorePosition(Position p){followNextRows=false;followLayout=false;queuePosition(p);}
     private void queuePosition(Position p){
@@ -64,7 +69,8 @@ final class AgentChatView extends LinearLayout {
     private void restorePositionAfterLayout(){
         if(restoring==null||timeline.getWidth()==0||scroll.getHeight()==0||timeline.isLayoutRequested()||scroll.isLayoutRequested())return;
         Position p=restoring;cancelRestore();View anchor=p.anchor==null?null:views.get(p.anchor);
-        scroll.scrollTo(0,p.bottom?Math.max(0,timeline.getHeight()-scroll.getHeight()):anchor==null?p.y:anchor.getTop()-p.offset);
+        Integer actionTop=null;if(p.step!=null)for(View view:views.values())if(view instanceof CodexActionsView){int top=((CodexActionsView)view).stepTop(p.step);if(top>=0){actionTop=view.getTop()+top;break;}}
+        scroll.scrollTo(0,p.bottom?Math.max(0,timeline.getHeight()-scroll.getHeight()):actionTop!=null?actionTop-p.offset:anchor==null?p.y:anchor.getTop()-p.offset);
     }
     // ScrollView.fullScroll also moves keyboard focus to a transcript child.
     // Streaming must only move the viewport, leaving both composers and IME composition alone.
@@ -119,10 +125,10 @@ final class AgentChatView extends LinearLayout {
     TextView label(String s,int size){TextView t=new AgentLinkTextView(getContext());t.setText(s);t.setTextSize(size);t.setTextColor(0xffd5e4e0);t.setPadding(dp(10),dp(8),dp(10),dp(8));return t;}
     TextView pill(String s,Runnable action){TextView t=label(s,12);GradientDrawable bg=new GradientDrawable();bg.setColor(0xff0b1b19);bg.setCornerRadius(dp(22));bg.setStroke(dp(1),0xff28433d);t.setBackground(bg);t.setOnClickListener(v->action.run());LayoutParams lp=new LayoutParams(-2,-2);lp.setMargins(dp(3),dp(5),dp(3),dp(5));t.setLayoutParams(lp);t.setMinHeight(dp(36));return t;}
     void olderState(boolean loading,String error){older.setEnabled(!loading);older.setText(loading?tr("Загрузка сообщений…","Loading messages…"):error!=null?error:tr("Предыдущие сообщения","Earlier messages"));}
-    void olderRows(List<JSONObject> rows,boolean hasOlder){boolean fits=timeline.getHeight()<=scroll.getHeight();Position held=position();rows(rows,hasOlder);restorePosition(fits?new Position(null,0,0,false):new Position(held.anchor,held.offset,held.y,false));}
+    void olderRows(List<JSONObject> rows,boolean hasOlder){boolean fits=timeline.getHeight()<=scroll.getHeight();Position held=position();rows(rows,hasOlder);restorePosition(fits?new Position(null,0,0,false):new Position(held.anchor,held.offset,held.y,false,held.step));}
     boolean canReveal(String key){return views.containsKey(key);}
     boolean reveal(String key){if(!views.containsKey(key))return false;restorePosition(new Position(key,headerInset,0,false));return true;}
-    void clear(){olderState(false,null);cancelRestore();touchingTimeline=false;followNextRows=false;followLayout=false;views.clear();values.clear();data.clear();timeline.removeViews(1,timeline.getChildCount()-1);clearRequests();timeline.addView(requests);timeline.addView(execution);scroll.scrollTo(0,0);}
+    void clear(){timelineExpansion.clear();olderState(false,null);cancelRestore();touchingTimeline=false;followNextRows=false;followLayout=false;views.clear();values.clear();data.clear();timeline.removeViews(1,timeline.getChildCount()-1);clearRequests();timeline.addView(requests);timeline.addView(execution);scroll.scrollTo(0,0);}
     void rows(List<JSONObject> rows,boolean hasOlder){
         rows=AgentMessageTime.captions(rows);
         if(codexActions)rows=CodexActionTimeline.group(rows,groupAllTools);
@@ -194,7 +200,7 @@ final class AgentChatView extends LinearLayout {
         for(String key:new ArrayList<>(views.keySet()))if(!present.contains(key)){changed=true;timeline.removeView(views.remove(key));values.remove(key);data.remove(key);}
         older.setVisibility(hasOlder?VISIBLE:GONE);
         scaleContent();
-        if(changed){if(bottom)followLayout=true;followNextRows=false;queuePosition(bottom?new Position(null,0,0,true):new Position(held.anchor,held.offset,held.y,false));}
+        if(changed){if(bottom)followLayout=true;followNextRows=false;queuePosition(bottom?new Position(null,0,0,true):new Position(held.anchor,held.offset,held.y,false,held.step));}
     }
     private TextView deliveryCaption(JSONObject row){
         AgentMessageDelivery delivery=new AgentMessageDelivery(row.optJSONObject("deliveryReceipt"));TextView caption=label(delivery.caption(WorkspaceLanguage.code(getContext()).equals("ru")),11);caption.setTextColor(delivery.accepted?WorkspaceDialogs.ACCENT:delivery.state.equals("rejected")?0xffff8895:0xffffc168);caption.setTag("delivery-"+row.optString("key"));

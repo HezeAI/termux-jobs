@@ -10,6 +10,8 @@ import java.util.List;
 final class CodexActionTimeline {
     private CodexActionTimeline() {}
 
+    static boolean action(JSONObject row){return row.optString("kind").equals("tool")&&!row.optString("toolType").equals("contextCompaction")&&!row.optString("part").equals("context");}
+
     static boolean shell(JSONObject row) {
         return row.optString("kind").equals("tool") && (row.optString("actionType").equals("shell")
             || row.optString("title").startsWith("Shell · "));
@@ -48,19 +50,24 @@ final class CodexActionTimeline {
     static List<JSONObject> group(List<JSONObject> rows) {return group(rows,false);}
 
     static List<JSONObject> group(List<JSONObject> rows,boolean allTools) {
+        // A paired Claude tool_result is the outcome of a call already shown with its full details.
+        // Suppress only a proven pair among currently loaded events, never scan older history.
+        java.util.Set<String> calls=new java.util.HashSet<>();
+        for(JSONObject row:rows)if(row.optString("actionRole").equals("call")&&!row.optString("actionId").isEmpty())calls.add(row.optString("actionId"));
+        List<JSONObject> visible=new ArrayList<>();for(JSONObject row:rows)if(!(row.optString("actionRole").equals("result")&&calls.contains(row.optString("actionId"))))visible.add(row);rows=visible;
         if(allTools)rows=AgentActionMetadata.project(rows);
         List<JSONObject> result=new ArrayList<>();
         for(int i=0;i<rows.size();) {
             JSONObject first=rows.get(i);
             String skill=first.optString("skillContextName");
             if(skill.isEmpty())skill=first.optString("skillName");
-            boolean skillGroup=!skill.isEmpty()&&first.optString("kind").equals("tool");
-            if(!(allTools?first.optString("kind").equals("tool"):shell(first))&&!skillGroup){result.add(first);i++;continue;}
+            boolean skillGroup=!skill.isEmpty()&&action(first);
+            if(!(allTools?action(first):shell(first))&&!skillGroup){result.add(first);i++;continue;}
             JSONArray steps=new JSONArray();String turn=first.optString("turn");
             while(i<rows.size()) {
                 JSONObject next=rows.get(i);
                 String nextSkill=next.optString("skillContextName");if(nextSkill.isEmpty())nextSkill=next.optString("skillName");
-                if(skillGroup?!next.optString("kind").equals("tool")||!skill.equals(nextSkill):!(allTools?next.optString("kind").equals("tool"):shell(next))||!nextSkill.isEmpty())break;
+                if(skillGroup?!action(next)||!skill.equals(nextSkill):!(allTools?action(next):shell(next))||!nextSkill.isEmpty())break;
                 if(steps.length()>0&&!turn.isEmpty()&&!next.optString("turn").isEmpty()
                     &&!turn.equals(next.optString("turn")))break;
                 steps.put(next);i++;

@@ -41,7 +41,8 @@ final class AgentActionPresentation {
         String s=CodexActionTimeline.status(row),value;
         if(s.equals("attached"))value=ru?"Инструкции переданы агенту":"Instructions supplied to the agent";
         else if(s.equals("declined"))value=userDeclined(row)?(ru?"Действие отклонено":"Action declined"):(ru?"Отклонено":"Declined");
-        else if(s.equals("aborted")||s.equals("cancelled")||s.equals("canceled"))value=ru?"Прервано":"Interrupted";
+        else if(s.equals("cancelled")||s.equals("canceled"))value=ru?"Отменено":"Cancelled";
+        else if(s.equals("aborted"))value=ru?"Прервано":"Interrupted";
         else if(CodexActionTimeline.failed(row))value=ru?"Ошибка":"Failed";
         else if(CodexActionTimeline.running(row))value=ru?"Выполняется…":"Running…";
         else if(s.equals("awaiting_approval"))value=ru?"Ожидает разрешения":"Awaiting approval";
