@@ -2,6 +2,24 @@
 
 No additional changes queued for publication.
 
+# 2026-11-05 — 2.1.4-test3 (versionCode 1488, private test release)
+
+Changes since the last published stable release, **v2.1.3**.
+
+- Both file windows show modification timestamps and refresh metadata; the four supplied Codex/Claude RU/EN common templates remain packaged exactly, with explicit application and revision-conflict protection.
+- Expanded Codex status retains its native context meter and confirmed manual compaction control. All four chats retain one elapsed timer per user request across tools, permissions and retries.
+- Expanded **Claude** status now shows the latest native input-context estimate, including cache creation and reads. Its window comes from native metadata for the exact model; cumulative result usage and output tokens are not substituted for context.
+- Expanded **Gemini** status shows the last main-model prompt estimate and the actual routed model, including Auto. Cached tokens remain included once. The bar/percentage appears only for an explicit matching native window entry; unknown model windows show an estimate without a percentage.
+- Both new meters show missing data explicitly, mark cached/reopened or pending estimates stale, and clear mismatched model estimates. Existing collapsed status chips and polling frequency are unchanged. No additional model calls or manual-compaction buttons are added for Claude/Gemini.
+- In all four agent chats, the star opens notes directly without section tabs. Full preview, search, edit, insertion, confirmed deletion and explicit note saving remain. Cancelling Save input leaves both the note collection and the composer unchanged. Commands/aliases stay available in the main library and ordinary terminal menu; their data is retained.
+
+
+Compatibility: `com.termux`, ARM64, Android 8.0+, existing Termux Job’s certificate; versionCode increases to 1488. No profile/history migration or automatic replacement of saved instructions. A small private scalar context checkpoint is separate from CLI history/authorization.
+
+Limits: attachment accumulation/disconnections remain **unfixed**. No CLI fork, experimental context mode or new automatic-compaction policy is enabled. Android low-level key handoff/crash recovery and device backup export/restore remain unverified; MCP/plugins remain excluded. CLI probes use artificial data and a local provider; phone acceptance of this build is pending.
+
+[Final APK checks, data sources and phone scenario](docs/fork/VALIDATION-2.1.4-test3.md).
+
 # 2026-11-05 — 2.1.4-test2 (versionCode 1487, private test release)
 
 Changes since the last published stable release, **v2.1.3**.
