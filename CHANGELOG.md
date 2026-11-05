@@ -2,6 +2,22 @@
 
 No additional changes queued for publication.
 
+# 2026-11-05 — 2.1.4-test2 (versionCode 1487, private test release)
+
+Changes since the last published stable release, **v2.1.3**.
+
+- Both file windows show modification timestamps in the phone's time zone and reread metadata on refresh. Sorting and selection are retained.
+- Four supplied common Codex/Claude RU/EN templates are packaged exactly. Saved instructions are not migrated; explicit preview/application and revision-conflict checks remain.
+- Expanded Codex status shows native current-context usage, including cached tokens, separately from account limits. Missing data remains unavailable; cached estimates are marked stale. No automatic-compaction threshold is inferred.
+- An explicit confirmation can start native Codex `thread/compact/start` on a connected idle supported run. Command acceptance is separate from completion. Duplicate launches are blocked; unknown outcomes are not declared successful. Native compaction messages and chat history remain available.
+- All four structured agent chats show a request timer beside the existing progress dots when a genuine native request start is known. A user request keeps one clock across tools, approvals and retries. Session switching/hiding preserves monotonic elapsed time; invisible timers stop screen ticks. No additional CLI/model calls are made for timing.
+
+Compatibility: `com.termux`, ARM64, Android 8.0+, same Termux Job’s certificate; versionCode increases from 1485 (stable) / 1486 (private test1). No profile/history schema migration. The context action is confirmed for the Codex 0.166.0 protocol; unconfirmed CLI/helper versions keep it disabled.
+
+Limits: attachment accumulation/disconnections remain **unfixed**. Manual compaction may omit details from its summary; it is not a fix for unbounded replay. No CLI fork, experimental context mode or automatic compaction is enabled. Low-level Android handoff/crash recovery and device backup export/restore remain unverified; MCP/plugins remain excluded. Phone acceptance of this version remains pending; the assistant did not install it.
+
+[Final APK checks and phone scenario](docs/fork/VALIDATION-2.1.4-test2.md).
+
 # 2026-11-05 — 2.1.4-test1 (versionCode 1486, private test release)
 
 Changes since the last published stable release, **v2.1.3**.

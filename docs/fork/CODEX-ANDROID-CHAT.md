@@ -1,4 +1,51 @@
-# Agent composer — current source
+# Context status and request clocks — private 2.1.4-test2
+
+В свёрнутой плашке Codex ничего не меняется. Внизу раскрытого статуса находится
+оценка рабочего контекста из `thread/tokenUsage/updated`: `last.totalTokens` /
+`modelContextWindow`. Суммарный `total` не используется, кешированные токены
+не вычитаются. Это не лимиты подписки и не размер изображений. Без данных —
+«Нет данных»; сохранённая оценка после повторного открытия помечается устаревшей
+до нового события CLI. Смена модели не переносит старое окно на новую модель.
+Действующий порог автосокращения CLI не передаёт — приложение его не угадывает.
+
+«Сократить контекст» показывает предупреждение о возможной потере деталей
+в кратком содержании и вызывает только `thread/compact/start`. Кнопка доступна
+для подключённого свободного запуска с подтверждённым протоколом Codex 0.166.0.
+Ответ RPC — принятие команды, не завершение. Успех требует совпадающего нативного
+завершённого хода с contextCompaction. Ошибка/разрыв не превращаются в успех,
+автоматического повтора нет. При неизвестном исходе повтор блокируется до
+подтверждения состояния. Обычный чат после переподключения остаётся доступным;
+завершение следующего пользовательского хода может подтвердить освобождение
+этого запуска, сохранив предупреждение о неизвестном исходе прежнего сокращения.
+Подтверждение и операция привязаны к исходным ID запуска и чата, не текущему выбору.
+История отображения и исходные файлы не редактируются вручную.
+
+The collapsed Codex chip is unchanged. Expanded status uses the native last
+context usage and model window, keeps cached tokens included and labels unknown
+or stale data. Manual compaction requires confirmation; acknowledgement is not
+completion. No automatic compaction setting or threshold is inferred or changed.
+
+Таймер внизу всех четырёх чатов показывает общее время пользовательского запроса:
+`••• 00:37`, после часа `••• 1:02:15`. Он не измеряет CPU/вычисления модели.
+Начало берётся из штатного lifecycle Codex turn, Claude user command, OpenCode
+execution или Gemini user prompt; окончание — соответствующее завершение,
+ошибка или отмена. Инструменты, подтверждения и повторы не сбрасывают часы.
+У Gemini prompt_id сохраняется через isContinuation; промежуточный idle не
+считается концом пользовательского запроса. Неизвестное начало скрывает длительность.
+Часы монотонные: `process.hrtime.bigint()` в адаптере и `elapsedRealtime()` в Android.
+Существующие снимки передают только ID/elapsedMs; дополнительных обращений нет.
+Экранный тик работает раз в секунду только в видимом окне, независимо от анимаций.
+
+All four structured chats retain one monotonic clock per user request, including
+tools, approvals and retries. Hidden views stop UI ticks without resetting elapsed
+time. Unknown starts stay unknown. Existing dots and waiting/retry labels retain
+their layout and animation behavior.
+
+[Verification, scope and phone scenario](VALIDATION-2.1.4-test2.md).
+
+---
+
+# Historical composer snapshot — before v2.1.3
 
 RU: Голосовой ввод, кнопка микрофона, системное окно распознавания и его диагностика
 удалены по запросу разработчика. Слева — скрепка над звездой в общей обводке,
