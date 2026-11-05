@@ -1,11 +1,23 @@
 # Unreleased
 
-Private test preparation (2.1.5-test1 /1493; not yet built or issued):
+No other changes queued for publication.
 
-- Claude and Codex expanded status include an official subscription-usage website link, with reset availability explained. Browser navigation neither resets displayed limits nor sends credentials/model requests. Subscription-window discovery for Claude remains a separate investigation.
-- Four-agent action timeline work remains in progress. No new publication is authorized.
+# 2026-11-05 — 2.1.5-test1 (versionCode 1493, private test release)
 
-[Private preparation and verification status](docs/fork/VALIDATION-2.1.5-test1.md).
+Changes since the last published stable release, **v2.1.4**.
+
+- Four-agent timeline: local read/edit/command counts, separate current/error/declined/cancelled states, compact ordered action rows and existing full details. Unknown types and missing durations are not guessed. Expanded state and reading anchors survive updates, earlier pages and chat switches; follow applies only at the bottom.
+- Claude2.1.296 native `get_usage` supplies separate five-hour/weekly subscription meters when available. Remaining percentage, reset and update time are native-derived; missing values are No data, expired/old values stay stale until a fresh response. Unknown plan names do not hide valid windows. API limits and cumulative token spend are not substituted. This CLI contract is experimental; real subscription values remain unverified.
+- Codex/Claude status offers **Reset limit ↗** to fixed official usage pages, with availability explained. The browser handles sign-in/actions; app navigation never resets counters, purchases anything or passes credentials.
+- Claude busy queues explicitly say **Queued — after the current task** until later admission events. Native human queued_command records restore by source UUID/time without implying current-task delivery. Identical strings with distinct UUIDs remain separate after cold reopen. Native history is not rewritten.
+
+Retains stable history/earlier-page fixes, Files and changes/search/filter/refresh/cards, metadata dates, original gallery export, preview protections, four exact RU/EN common templates and separate explicit-save project templates, context meters/manual Codex compaction, timers/notes and transparent agent status area. Saved instructions, profiles and authorization are not migrated automatically.
+
+Compatibility: com.termux, same certificate, ARM64, min26/target28/compile35, schema8; higher code1493. CLI/Components and native inputs remain unchanged. New helper behavior requires a future explicitly initiated launch; preparation does not restart existing agents. No install, push or publication.
+
+Verification: local stand/native fixtures and Android-controller replay are separate from phone acceptance, which is pending. The original developer clarification episode is not conclusively linked to either reproduced case. Attachment accumulation/disconnections remain **unfixed**. Low-level Android handoff/crash/device-backup and real Gemini API/Vertex sign-in remain unverified; MCP/plugins excluded. No CLI fork, experimental context mode or automatic-compaction change is included.
+
+[Scope, checks and phone scenarios](docs/fork/VALIDATION-2.1.5-test1.md) · [Claude clarification evidence](docs/fork/CLAUDE-ANDROID-CHAT.md).
 
 # 2026-11-05 — v2.1.4 (versionCode 1492, stable)
 
