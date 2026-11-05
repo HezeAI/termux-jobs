@@ -1,6 +1,6 @@
-# 2.1.5-test1 /1493 — private preparation, not issued
+# 2.1.5-test1 /1493 — private test APK
 
-No APK has been issued for this version. No install, working restart, push or publication is authorized or performed.
+The signed private APK is built and checked. Phone acceptance is pending. No install, working restart, push or publication is authorized or performed.
 
 ## Agreed APK scope before assembly
 
@@ -12,7 +12,7 @@ Deferred/unverified: attachment accumulation/disconnections, CLI fork/experiment
 
 Phone work: four-agent timeline update/collapse/scroll/earlier-page/session switching; Claude queue/current-task inputs and cold reopen; native subscription values or No data; official usage links/return at narrow width/large font. Continue using isolated test chats. Complex Android/backup tests remain excluded from device work by agreement; their stand results are separate.
 
-Same com.termux/signer/ARM64, min26 target28 compile35, schema8, higher code1493. CLI and binary Components unchanged. New helpers become active on a future explicitly initiated agent launch; no working launch is restarted by preparation. Final signed APK checks are mandatory and pending until the final file exists. No install/push/publication.
+Same com.termux/signer/ARM64, min26 target28 compile35, schema8, higher code1493. CLI and binary Components unchanged. New helpers become active on a future explicitly initiated agent launch; no working launch is restarted by preparation. Final signed APK checks are mandatory; their completed results are recorded below. No install/push/publication.
 
 ## Subscription website links — Codex and Claude
 
@@ -31,23 +31,19 @@ This feature does **not** establish reset eligibility, subscription type, or ava
 
 Fresh JVM/UI checks cover both real expanded-menu entry points, fixed chooser destinations, unchanged synthetic current-request/status/limit values, RU/EN, 280dp with double font scale, wrapping full names, separate touch target, wider layout and reopened Claude menu. The existing documentation browser tests cover the shared browser path and rejected non-HTTPS addresses. Real browser/account actions are not performed.
 
-Evidence: `.verification/test-2.1.5-test1/subscription-links-tests.log`, `subscription-first-results/`, `subscription-links-recheck.log`; modern Lint results are recorded separately when complete. The first wrapping assertions failed because Robolectric 4.4's font advances do not reproduce physical glyph widths, even in REALISTIC line-layout mode. The final fixture deliberately uses an overlong name that overflows in either renderer, retaining the 280dp width and double font scale. It verifies button relocation, full TextView text, unlimited label lines, no ellipsis and touch bounds. ShadowPaint measures String.length(); the API28 shadow also returned a zero line end for the nonempty label. These native-font layout results cannot verify physical multiline typography. Production layout thresholds remain unchanged. Actual short-label typography remains a phone check; preserved failed runs are not counted as passes.
+Evidence: `.verification/test-2.1.5-test1/subscription-links-tests.log`, `subscription-first-results/`, `subscription-links-recheck.log`; modern Lint results are recorded separately below. The first wrapping assertions failed because Robolectric 4.4's font advances do not reproduce physical glyph widths, even in REALISTIC line-layout mode. The final fixture deliberately uses an overlong name that overflows in either renderer, retaining the 280dp width and double font scale. It verifies button relocation, full TextView text, unlimited label lines, no ellipsis and touch bounds. ShadowPaint measures String.length(); the API28 shadow also returned a zero line end for the nonempty label. These native-font layout results cannot verify physical multiline typography. Production layout thresholds remain unchanged. Actual short-label typography remains a phone check; preserved failed runs are not counted as passes.
 
-Fresh modern Lint: all five modules analyzed, 0 errors /247 warnings. One additional ViewConstructor warning concerns this programmatic-only row, which is never inflated from XML. Report: `.verification/modern-lint-report/summary.json`; no Lint suppression or gate relaxation.
+Initial link-only modern Lint: all five modules analyzed, 0 errors /247 warnings. The final combined source gate below supersedes this count. One additional ViewConstructor warning concerns this programmatic-only row, which is never inflated from XML. Report: `.verification/modern-lint-report/summary.json`; no Lint suppression or gate relaxation.
 
 Across the targeted runs, **48 unique JVM/UI scenarios passed**, including the final layout-bound test. Original failed attempts remain preserved and are not counted as passes. Unchanged context/limit/menu tests from earlier targeted runs are reused only for the same production source bytes; four affected Java hashes match the modern-Lint stage. Compact identities/results: `.verification/test-2.1.5-test1/subscription-source-hashes.json` and `subscription-verification-summary.json`. The final focused layout run is `subscription-layout-checked.log`. These results do not close the separate timeline/controller regression check or any device check.
 
 ### Phone scenario — not checked
 
-1. Open Codex status, then Claude status. Check the subscription line and explanation.
-2. At large system font size, confirm the name remains complete and the button wraps without clipping.
-3. Tap the link: verify the matching official host and usage page in the browser. No reset/purchase is required for this check.
-4. Return to the chat. Confirm the agent continues and counters were not immediately reset by navigation.
-5. Close and reopen the status. Missing data must remain missing until fresh native status arrives.
+Use the combined Short phone scenario below, including official sites, narrow width/large font, reopen and unchanged counters. No reset/purchase is required.
 
-## Other pending changes
+## Remaining acceptance
 
-The four-agent timeline controller scroll/session-switch check now passes in the targeted run; the final broad regression gate and APK checks remain pending. Claude clarification placement and subscription-window source verification remain independent. Final APK compilation/signature/package/version/runtime/native/template checks will apply to the actual new final file; old APK verification does not carry over.
+The timeline controller/session-switch tests and final APK checks have passed locally. Phone acceptance, positive real subscription values and diagnosis of the original user clarification episode remain separate and pending. No old APK result substitutes for the new final-file gate.
 
 Existing scope restrictions remain: attachment accumulation/disconnections are unresolved; low-level Android handoff/crash/device-backup checks and real Gemini API/Vertex login remain unverified; MCP/plugins excluded.
 
@@ -76,3 +72,30 @@ Node:27 baseline/current affected suites passed, plus new quota normalization an
 Final compatible Modern Lint: all five modules, **0 errors /250 warnings**. Existing warnings retained; the new programmatic view constructor warning and SetTextI18n warnings are disclosed rather than suppressed. Current source hashes will be compared with both Lint and APK stages. Previous temporary text-layout fixture failures, first timeline controller timing failures and superseded broad-test failures are retained; they are not counted as successful runs. Physical glyph metrics remain a phone check.
 
 No new third-party dependency or native component is added.95 source/config inputs match stable v2.1.4; three JNI payloads will be reused byte-for-byte and all seven outer APK ELF payloads compared with stable. X11 packaging and release signer guards remain enabled; no X11/server/GPU execution is performed for this chat UI task.
+
+## Final APK — checked anew
+
+- File: `.verification/test-2.1.5-test1/Termux-Jobs-v2.1.5-test1-arm64.apk` (checkout-relative).
+- Bytes: **40533338**; SHA256: `b841cf4cc8bb6ff6e392da2d714ffb5dfc13e5bf01b4ef81e072feea014e5778`.
+- Application source commit: `83c233ef7a16dc3d824d9c9b2123acc3c778eae6` on `work/action-timeline`. Subsequent documentation recording does not change compiled source bytes.
+- Package `com.termux`; versionName `2.1.5-test1`; code1493; ARM64 only; non-debuggable; min26/target28/compile35; schema8.
+- v2 signing verified; certificate SHA256 `dd37d983cd2496ebe49c7e88ddbc0088f311d38b8a8503e4392c81b48a11a644`, identical to stable.
+- ZIP/CRC and outer local-header integrity passed; no stale embedded outer ZIP entries. All124 assets equal source;588 production source/resource entries equal the APK stage. Final Java sources also equal the successful modern-Lint stage.
+- Runtime/DEX gate ran on this exact SHA: requiredMissing=[];14312 defined classes. Existing optional/platform unresolved references remain in runtime.json; this is a static packaged-runtime check, not device execution.
+- All seven ARM64 ELF payloads equal stable v2.1.4 exactly;95 native input hashes equal stable. Signer and X11 packaging guards ran. No graphics/environment launch was performed.
+- Four common Codex/Claude RU/EN texts match supplied ZIP, current source, stable and final APK byte-for-byte. Project template unchanged. Exactly nine expected helper assets changed; one new claude-subscription.cjs added. Test fixtures/marker keys and diagnostic classes are absent from the APK; no new authorization files or instruction migration.
+- Existing README.md/RELEASING.md user edits and prior stable APK hash are preserved. Stable update.json/old APKs/tags/Components are not changed.
+
+`artifact.json`, `runtime.json`, `extra-artifact-checks.json`, `template-identity.json`, `final-build-inputs.json`, `validation.json`, SHA256SUMS and certificate are in the private output directory. Fresh compatibility Lint passed with0 errors/250 warnings; legacy AGP4.2 packaging emitted the known Kotlin metadata diagnostics despite successful assembly. That legacy output is not counted as a Lint pass. No CI was invoked because no push/publication was authorized.
+
+## Short phone scenario — pending
+
+Use separate test profiles/chats; no working restart is needed. New adapter behavior takes effect on a newly initiated test launch, not by hot-replacing a working agent. Existing phone acceptance of stable/test6 is retained as history and does not cover this candidate.
+
+1. In each of the four test chats, run a harmless action against artificial files. Keep the timeline collapsed while events arrive; then open details. Check separate failure/No/cancel states, no guessed unknown type/duration, wrapped paths/commands.
+2. Scroll up, load earlier messages, switch to another test chat and back. Check reading position and independent expansion; new events should follow only when already at the bottom.
+3. In a test Claude chat, send a follow-up while busy. A proven busy queue says Queued — after the current task. If it enters a tool continuation, close/reopen after completion and verify its position and exactly one copy per UUID. Two deliberately identical messages remain two messages. A delivery caption is not proof of model understanding.
+4. Open Claude status: context is separate; subscription windows show actual native values or No data. If no subscription test connection exists, positive percentages/reset verification stays unverified. Verify update time and stale marking; never infer success merely because reset time passed.
+5. Open Codex and Claude Reset limit links. Check official host, explanation, wrapping at large font/narrow width; return without agent stop or artificial counter reset. No purchase/reset is required for testing.
+
+On error, report APK version, agent/test profile, exact step, screenshot and available details without credentials. Low-level crash/handoff/device-backup procedures remain outside current phone scope by agreement.
