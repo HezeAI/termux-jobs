@@ -35,6 +35,12 @@ final class WorkspaceDocumentationUi {
         Reader reader=READERS.get(activity);if(reader==null){reader=new Reader(activity);READERS.put(activity,reader);}reader.show(source,explicitUrl);
     }
     static void dispose(Activity activity){Reader r=READERS.remove(activity);if(r!=null)r.dispose();if(activity.isFinishing()){PAGES.clear();language=null;languagePicked=false;}}
+    static void openBrowser(Activity activity,String url){
+        if(activity.isFinishing()||activity.isDestroyed()||WorkspaceDocumentation.https(url)==null)return;
+        boolean russian=WorkspaceLanguage.code(activity).equals("ru");
+        try{activity.startActivity(Intent.createChooser(new Intent(Intent.ACTION_VIEW,Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE),russian?"Открыть в браузере":"Open in browser"));}
+        catch(ActivityNotFoundException|SecurityException unavailable){Toast.makeText(activity,russian?"Браузер не найден":"No browser available",Toast.LENGTH_LONG).show();}
+    }
     static void linkMenu(Activity activity,String url){
         if(WorkspaceDocumentation.https(url)==null)return;
         boolean russian=WorkspaceLanguage.code(activity).equals("ru");
@@ -42,7 +48,7 @@ final class WorkspaceDocumentationUi {
         TextView address=new TextView(activity);address.setText(url);address.setTextColor(WorkspaceDialogs.TEXT);address.setTextSize(13);address.setTextIsSelectable(true);address.setPadding(p,p,p,p);body.addView(address);
         AlertDialog[] menu={null};
         TextView copy=WorkspaceDialogs.action(activity,russian?"Скопировать ссылку":"Copy link",0);copy.setTag("docs-copy-link");copy.setOnClickListener(v->{((android.content.ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("URL",url));menu[0].dismiss();Toast.makeText(activity,russian?"Ссылка скопирована":"Link copied",Toast.LENGTH_SHORT).show();});body.addView(copy);
-        TextView browser=WorkspaceDialogs.action(activity,russian?"Открыть в браузере":"Open in browser",0);browser.setTag("docs-open-link-browser");browser.setOnClickListener(v->{menu[0].dismiss();try{activity.startActivity(Intent.createChooser(new Intent(Intent.ACTION_VIEW,Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE),russian?"Открыть в браузере":"Open in browser"));}catch(ActivityNotFoundException unavailable){Toast.makeText(activity,russian?"Браузер не найден":"No browser available",Toast.LENGTH_LONG).show();}});body.addView(browser);
+        TextView browser=WorkspaceDialogs.action(activity,russian?"Открыть в браузере":"Open in browser",0);browser.setTag("docs-open-link-browser");browser.setOnClickListener(v->{menu[0].dismiss();openBrowser(activity,url);});body.addView(browser);
         ScrollView scroll=new ScrollView(activity);scroll.addView(body);menu[0]=WorkspaceDialogs.builder(activity).setTitle(russian?"Ссылка":"Link").setView(scroll).create();menu[0].setCanceledOnTouchOutside(true);menu[0].show();
     }
     static final class Reader implements Application.ActivityLifecycleCallbacks {

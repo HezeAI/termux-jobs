@@ -9,4 +9,36 @@ public class AgentStatusUiTest {
  @Test public void claudeRowsUseNativeEffortCapabilitiesAndBusyGuard()throws Exception{com.termux.app.TermuxActivity a=activity();WorkspaceStore.Session p=new WorkspaceStore.Session();p.claudeAgent=true;ClaudeLiveUi ui=new ClaudeLiveUi(a,()->p,()->false,(profile,run,model,mode)->{});field(ui,"run",p.claudeSocketId);field(ui,"chip",new TextView(a));JSONObject s=new JSONObject().put("ready",true).put("state","idle").put("canChange",true).put("model","sonnet").put("mode","manual").put("effort","medium").put("effortOptions",new JSONArray().put("default").put("low").put("medium"));field(ui,"status",s);try{call(ui,"menu",p);AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();TextView row=dialog.getWindow().getDecorView().findViewWithTag("agent-status-reasoning");assertTrue(row.isEnabled());row.performClick();AlertDialog choices=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertEquals(3,choices.getListView().getCount());choices.dismiss();s.put("state","responding");Method update=ClaudeLiveUi.class.getDeclaredMethod("update");update.setAccessible(true);update.invoke(ui);assertFalse(row.isEnabled());assertFalse(dialog.getWindow().getDecorView().findViewWithTag("agent-status-permissions").isEnabled());}finally{ui.close();}}
  @Test public void geminiStatusSanitizesReasoningAndKeepsUnsupportedDisabled()throws Exception{JSONObject v=new JSONObject().put("schema",1).put("run","run").put("updated",10000).put("startedAt",9000).put("available",true).put("state","idle").put("model","gemini-3.1-pro-preview").put("thinking",new JSONObject().put("available",true).put("value","high").put("model","gemini-3.1-pro-preview").put("effective",true).put("options",new JSONArray().put("default").put("low").put("$(bad)").put("high")));GeminiLiveStatus s=GeminiLiveStatus.parse(v,"run",11000);assertEquals(java.util.Arrays.asList("default","low","high"),s.thinkingOptions);assertEquals("high",s.thinking);assertTrue(s.canChangeThinking&&s.thinkingEffective);v.remove("thinking");assertFalse(GeminiLiveStatus.parse(v,"run",11000).canChangeThinking);}
  @Test public void reasoningPersistsThroughSessionCopyAndLaunch()throws Exception{WorkspaceStore.Session p=new WorkspaceStore.Session();p.environment="ubuntu";p.claudeAgent=true;p.claudeEffort="high";WorkspaceStore.Session copy=p.copy();assertEquals("high",copy.claudeEffort);assertTrue(ClaudeCode.command(new java.io.File("/test"),copy).contains("JOBS_CLAUDE_EFFORT='high'"));p.claudeAgent=false;p.geminiAgent=true;p.geminiThinking="low";copy=p.copy();assertEquals("low",copy.geminiThinking);assertTrue(GeminiCli.command(new java.io.File("/test"),copy).contains("JOBS_GEMINI_THINKING='low'"));}
+ @org.robolectric.annotation.TextLayoutMode(org.robolectric.annotation.TextLayoutMode.Mode.REALISTIC)
+ @Test public void subscriptionLinksKeepFullNamesAndWrapAtNarrowWidthsInBothLanguages(){
+  com.termux.app.TermuxActivity a=activity();
+  float previousScale=a.getResources().getDisplayMetrics().scaledDensity;
+  try{for(String language:new String[]{"ru","en"})for(boolean claude:new boolean[]{true,false}){
+   WorkspaceLanguage.select(a,language);
+   a.getResources().getDisplayMetrics().scaledDensity=2*a.getResources().getDisplayMetrics().density;
+   // Robolectric 4.4 glyph advances do not model physical font metrics.
+   // Deliberately overflow with a long name in either renderer; device typography remains a phone check.
+   String unit=language.equals("ru")?"очень длинное название без сокращения ":"a very long name without truncation ";
+   String label=(language.equals("ru")?"Подписка: ":"Subscription: ")+String.join("",java.util.Collections.nCopies(12,unit));
+   SubscriptionUsageLink row=new SubscriptionUsageLink(a,label,claude);
+   int width=WorkspaceDialogs.dp(a,280);
+   row.measure(android.view.View.MeasureSpec.makeMeasureSpec(width,android.view.View.MeasureSpec.EXACTLY),android.view.View.MeasureSpec.makeMeasureSpec(0,android.view.View.MeasureSpec.UNSPECIFIED));row.layout(0,0,width,row.getMeasuredHeight());
+   assertEquals(LinearLayout.VERTICAL,row.getOrientation());TextView name=row.findViewWithTag("subscription-label"),button=row.findViewWithTag("subscription-usage-link");
+   assertEquals(label,name.getText().toString());assertNull(name.getEllipsize());
+   // ShadowPaint measures String.length(), and line count is not physical typography.
+   // Verify the full label and unrestricted lines here; visual wrapping remains a phone check.
+   assertEquals(Integer.MAX_VALUE,name.getMaxLines());
+   assertTrue("button top="+button.getTop()+" name bottom="+name.getBottom(),button.getTop()>=name.getBottom());
+   assertTrue("touch height="+button.getMeasuredHeight(),button.getMeasuredHeight()>=WorkspaceDialogs.dp(a,48));
+   assertTrue("button right="+button.getRight()+" parent="+width,button.getRight()<=width);
+   assertEquals(language.equals("ru")?"Сброс лимита ↗":"Reset limit ↗",button.getText().toString());
+   button.performClick();android.content.Intent chooser=Shadows.shadowOf(a).getNextStartedActivity();assertEquals(android.content.Intent.ACTION_CHOOSER,chooser.getAction());android.content.Intent browser=chooser.getParcelableExtra(android.content.Intent.EXTRA_INTENT);assertEquals(android.content.Intent.ACTION_VIEW,browser.getAction());assertEquals(claude?SubscriptionUsageLink.CLAUDE:SubscriptionUsageLink.CODEX,browser.getDataString());assertNull(browser.getExtras());assertTrue(browser.hasCategory(android.content.Intent.CATEGORY_BROWSABLE));assertEquals(label,name.getText().toString());assertNull(Shadows.shadowOf(a).getNextStartedActivity());
+   row.measure(android.view.View.MeasureSpec.makeMeasureSpec(WorkspaceDialogs.dp(a,1500),android.view.View.MeasureSpec.EXACTLY),android.view.View.MeasureSpec.makeMeasureSpec(0,android.view.View.MeasureSpec.UNSPECIFIED));assertEquals(LinearLayout.HORIZONTAL,row.getOrientation());
+  }}finally{a.getResources().getDisplayMetrics().scaledDensity=previousScale;}
+ }
+ @Test public void claudeBrowserNavigationLeavesCurrentStatusAndRequestUntouched()throws Exception{
+  com.termux.app.TermuxActivity a=activity();WorkspaceLanguage.select(a,"ru");WorkspaceStore.Session p=new WorkspaceStore.Session();p.claudeAgent=true;
+  ClaudeLiveUi ui=new ClaudeLiveUi(a,()->p,()->false,(x,y,z,w)->{throw new AssertionError("No settings changes");});field(ui,"run",p.claudeSocketId);field(ui,"chip",new TextView(a));JSONObject status=new JSONObject().put("ready",true).put("state","responding").put("model","synthetic-model").put("usage",new JSONObject().put("input",123).put("output",7));field(ui,"status",status);String before=status.toString();
+  try{call(ui,"menu",p);AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();android.view.View button=dialog.getWindow().getDecorView().findViewWithTag("subscription-usage-link");assertNotNull(button);button.performClick();android.content.Intent browser=Shadows.shadowOf(a).getNextStartedActivity().getParcelableExtra(android.content.Intent.EXTRA_INTENT);assertEquals(SubscriptionUsageLink.CLAUDE,browser.getDataString());assertTrue(dialog.isShowing());assertEquals(before,status.toString());dialog.dismiss();call(ui,"menu",p);assertEquals(before,status.toString());}finally{ui.close();}
+ }
 }

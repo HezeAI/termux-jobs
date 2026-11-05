@@ -1704,12 +1704,13 @@ public final class WorkspaceController {
         LinearLayout form = AgentStatusUi.body(activity);
         if (status == null || !status.error.isEmpty()) {
             form.addView(text(status == null ? WorkspaceText.tr("Получение статуса Codex…") : WorkspaceText.statusError(status.error), 14, MUTED));
+            SubscriptionUsageLink.add(form,tr("Подписка: нет данных","Subscription: unavailable"),false);
         } else {
             AgentStatusUi.row(form,WorkspaceText.tr("Модель: ")+(status.model.isEmpty()?WorkspaceText.tr("нет данных"):status.model)+" ›","model",()->{if(shown[0]!=null)shown[0].dismiss();chooseCodexModel(profile,status);});
             AgentStatusUi.row(form,WorkspaceText.tr("Рассуждение: ")+(status.effort.isEmpty()?WorkspaceText.tr("нет данных"):effortName(status.effort))+" ›","reasoning",()->{if(shown[0]!=null)shown[0].dismiss();chooseCodexEffort(profile,status);});
             if(status.modelPending)form.addView(text(tr("Выбранные модель и рассуждение будут переданы Codex со следующим сообщением.","The selected model and reasoning will be sent to Codex with your next message."),12,MUTED));
             form.addView(text("", 12, MUTED));
-            form.addView(text(status.planLabel(),14,TEXT));
+            SubscriptionUsageLink.add(form,status.planLabel(),false);
             if(status.windows().isEmpty())form.addView(text(tr("Сервер не передал окна лимитов.","The server did not provide rate-limit windows."),14,MUTED));
             for (String window : status.windows()) {
                 String title = CodexStatus.windowLabel(status.limits,window,false);

@@ -1,6 +1,11 @@
 # Unreleased
 
-No additional changes queued for publication.
+Private test preparation (2.1.5-test1 /1493; not yet built or issued):
+
+- Claude and Codex expanded status include an official subscription-usage website link, with reset availability explained. Browser navigation neither resets displayed limits nor sends credentials/model requests. Subscription-window discovery for Claude remains a separate investigation.
+- Four-agent action timeline work remains in progress. No new publication is authorized.
+
+[Private preparation and verification status](docs/fork/VALIDATION-2.1.5-test1.md).
 
 # 2026-11-05 — v2.1.4 (versionCode 1492, stable)
 

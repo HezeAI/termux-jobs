@@ -34,5 +34,9 @@ public class ActiveAgentSettingsTest extends AgentSettingsPresentationTest {
         assertTrue(text.contains("Следующий запуск · доступ: в пределах проекта"));
         assertTrue(text.contains("Следующий запуск · каталог: /root/next"));
         assertFalse(text.contains("Общий лимит аккаунта. Доступ: в пределах проекта"));
+        String limitsBefore=active.limits.toString();editor.getWindow().getDecorView().findViewWithTag("subscription-usage-link").performClick();
+        android.content.Intent browser=org.robolectric.Shadows.shadowOf(activity).getNextStartedActivity().getParcelableExtra(android.content.Intent.EXTRA_INTENT);
+        assertEquals(SubscriptionUsageLink.CODEX,browser.getDataString());assertTrue(editor.isShowing());assertTrue(terminal.isRunning());assertEquals(limitsBefore,active.limits.toString());
+        assertTrue(text.contains("Доступность и условия сброса указаны на сайте"));
     }
 }
