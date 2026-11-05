@@ -9,7 +9,7 @@ function run(script){fs.writeFileSync(path.join(bin,'codex'),'#!/bin/sh\n'+scrip
 (async()=>{
  // Runtime policy refusal/mismatch must stop before turn/start, without retrying never.
  const assets=path.resolve('app/src/main/assets');
- for(const name of ['codex-chat.cjs','agent-receipts.cjs','agent-action-preview.cjs','agent-completion-times.cjs'])fs.copyFileSync(path.join(assets,name),path.join(root,name));
+ for(const name of ['codex-chat.cjs','agent-receipts.cjs','agent-attachments.cjs','agent-action-preview.cjs','agent-completion-times.cjs'])fs.copyFileSync(path.join(assets,name),path.join(root,name));
  fs.copyFileSync(path.join(assets,'codex-control.js'),path.join(root,'codex-wire-v0.2.22.js'));
  const {CodexChat}=require(path.join(root,'codex-chat.cjs'));
  for(const fail of ['rejected','mismatch']){

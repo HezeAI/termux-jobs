@@ -491,6 +491,7 @@ public final class WorkspaceController {
         if(terminalInput.hasFocus())((InputMethodManager)activity.getSystemService(Context.INPUT_METHOD_SERVICE)).restartInput(terminalInput);
     }
     private void renderTabs() {
+        for(WorkspaceFileBrowser b:new ArrayList<>(fileBrowsers))if(b.projectPanel!=null&&!b.projectPanel.owns())b.close();
         syncTerminalInput();if(agentChatUi!=null)agentChatUi.sync();if(desktopUi!=null)desktopUi.sync(); updateActivityLine(); renderCodexStatus(); tabs.removeAllViews();
         tabs.setPadding(dp(10),dp(4),dp(10),dp(4));tabs.setGravity(Gravity.TOP);
         TerminalSession current=activity.getCurrentSession();
@@ -520,7 +521,7 @@ public final class WorkspaceController {
         TextView packages=button(chat?"":"📦",false,chat?()->agentChatUi.terminal():this::showCurrentPackages);packages.setTag("session-current-packages");packages.setContentDescription(chat?tr("Терминал ","Terminal ")+agentChatUi.name():WorkspaceText.tr("Пакеты"));
         if(chat){((WorkspaceIconButton)packages).setIcon(activity.getDrawable(R.drawable.workspace_ai_agent).mutate(),dp(22));agentTerminalBorder=new WorkspaceTransferBorder(activity.getResources().getDisplayMetrics().density);packages.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{packages.getBackground(),agentTerminalBorder}));agentTerminalBorder.active(agentChatUi.requiresTerminal());}
         toolIcons.addView(packages,new LinearLayout.LayoutParams(dp(48),dp(48)));
-        TextView files=button("▱",false,this::showProjectFiles);files.setTag("session-current-files");files.setContentDescription(WorkspaceText.tr("Файлы проекта"));LinearLayout.LayoutParams fileParams=new LinearLayout.LayoutParams(dp(48),dp(48));fileParams.setMarginStart(dp(4));toolIcons.addView(files,fileParams);
+        TextView files=button("▱",false,this::showProjectFiles);files.setTag("session-current-files");files.setContentDescription(agentChatUi!=null&&agentChatUi.showing()?tr("Файлы и изменения","Files and changes"):WorkspaceText.tr("Файлы проекта"));LinearLayout.LayoutParams fileParams=new LinearLayout.LayoutParams(dp(48),dp(48));fileParams.setMarginStart(dp(4));toolIcons.addView(files,fileParams);
         String serverLabel=WorkspaceLanguage.code(activity).equals("ru")?"Сервер + Agent":"Server + Agent";
         FrameLayout statusRow=activity.findViewById(R.id.workspace_terminal_tools);
         statusRow.setVisibility(screen==Screen.TERMINAL?View.VISIBLE:View.GONE);
@@ -594,7 +595,11 @@ public final class WorkspaceController {
             if(status!=null&&status.error.isEmpty()&&status.cwd.startsWith("/"))directory=status.cwd;
             else activity.showToast(tr("Каталог действующего процесса не подтверждён. Открывается каталог из настроек следующего запуска.","The running process directory is unconfirmed. Opening the next-launch directory."),true);
         }
-        showFileBrowser(profile,directory,null);
+        if(agentChatUi!=null&&agentChatUi.showing()){
+            WorkspaceFileBrowser browser=new WorkspaceFileBrowser(activity,profile,directory,null);
+            browser.projectPanel=new AgentProjectPanel(activity,profile,directory,agentChatUi.projectSource());
+            browser.setOnClosed(()->fileBrowsers.remove(browser));fileBrowsers.add(browser);browser.show();
+        }else showFileBrowser(profile,directory,null);
     }
     private void showFileBrowser(WorkspaceStore.Session profile,String path,WorkspaceFileBrowser.DirectoryChoice choice){
         WorkspaceFileBrowser browser=new WorkspaceFileBrowser(activity,profile,path,choice);browser.setOnClosed(()->fileBrowsers.remove(browser));fileBrowsers.add(browser);browser.show();

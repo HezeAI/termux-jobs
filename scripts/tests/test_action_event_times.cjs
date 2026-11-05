@@ -8,7 +8,7 @@ assert.equal(clock.action('unknown'),0);clock.rememberAction('one',0,native);
 clock.rememberAction('one',0,native+60000);assert.equal(clock.action('one'),native);
 assert.equal(new CompletionTimes(root,'codex','session').action('one'),native);
 assert.equal(new CompletionTimes(root,'codex','other').action('one'),0);
-for(const [from,to]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],...['agent-receipts.cjs','agent-action-preview.cjs','agent-completion-times.cjs'].map(n=>[n,n])])fs.copyFileSync(path.resolve('app/src/main/assets',from),path.join(root,to));
+for(const [from,to]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],...['agent-receipts.cjs','agent-attachments.cjs','agent-action-preview.cjs','agent-completion-times.cjs'].map(n=>[n,n])])fs.copyFileSync(path.resolve('app/src/main/assets',from),path.join(root,to));
 const {CodexChat}=require(path.join(root,'codex-chat.cjs'));
 const c=new CodexChat({}, {endpoint:path.join(root,'c.sock'),access:'full',approval:'never',cwd:root,chat:'new'});c.thread='thread';c.completions=new CompletionTimes(root,'codex','thread');
 c.put('old',{id:'old',type:'commandExecution',command:'pwd',status:'completed'});assert(!c.groups()[0].rows[0].eventTime);

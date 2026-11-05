@@ -1,4 +1,5 @@
 'use strict';
+const {fileReferences}=require('./agent-attachments.cjs');
 const deliveryStatus=require('./agent-delivery-status.cjs');
 const {CompletionTimes,RequestClock,instant}=require('./agent-completion-times.cjs');
 const {preview:actionPreview,trimPreviews,outputTail}=require('./agent-action-preview.cjs');
@@ -71,7 +72,7 @@ class OpenCodeChat {
   const rows=[];const unlinked=receipts.rows.map(r=>{try{return {row:r,anchor:JSON.parse(r.body).anchorMessage};}catch{return {row:r};}});const used=new Set();
   for(const m of messages){
    if(!id(m.id))continue;
-   const push=(key,kind,body,title='',meta={})=>rows.push({...meta,key:m.id+':'+key,message:m.id,part:key,kind,title:text(title),body:text(body).slice(0,12000),bodyLength:text(body).length,more:text(body).length>12000});
+   const push=(key,kind,body,title='',meta={})=>rows.push({messageSender:m.type==='user'?'user':'agent',fileReferences:['user','text'].includes(kind)?fileReferences(body,m.type==='user'?'user':'agent'):[],messageTime:instant(m.time?.created),...meta,key:m.id+':'+key,message:m.id,part:key,kind,title:text(title),body:text(body).slice(0,12000),bodyLength:text(body).length,more:text(body).length>12000});
    if(m.type==='user'){const admission=this.pending.get(m.id);if(admission?.receipt?.delivery==='api'||admission?.receipt?.delivery==='queued'&&this.inboxIDs&&!this.inboxIDs.has(m.id))admission.receipt=deliveryStatus.receipt({ok:true,accepted:true,delivery:'submitted',ack:'native-history-item'},m.id);const projected=this.attachments.project(m.text,this.session);if(projected.text)push('user','user',projected.text);rows.push(...attachmentRows(m.id,projected.files));}
    else if(m.type==='assistant'){
     const live=this.completedExecution;if(live?.message===m.id)this.completions.finish(live.request,m.id,{completedAt:m.time?.completed,durationMs:live.durationMs},true,live.completedAt);

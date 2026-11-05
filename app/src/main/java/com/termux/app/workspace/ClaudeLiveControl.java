@@ -23,6 +23,7 @@ final class ClaudeLiveControl {
         if(!ClaudeCode.validThread(run))throw new Failure("INVALID_RUN");
         File socket=new File(ClaudeCode.directory(files),run+".sock");String stage="CONNECT_FAILED";
         try(LocalSocket client=new LocalSocket()){
+            AgentHistoryRead.track(client);
             connect(client,socket.getAbsolutePath());stage="PROTOCOL_FAILED";
             boolean chat=value.optString("op").startsWith("chat-")||value.optString("op").startsWith("terminal-");
             byte[] data=(value.toString()+"\n").getBytes(StandardCharsets.UTF_8);if(data.length>(chat?65536:4096))throw new Failure("REQUEST_TOO_LARGE");

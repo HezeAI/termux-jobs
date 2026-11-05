@@ -1,0 +1,18 @@
+package com.termux.app.workspace;
+import android.app.*;import android.view.*;import android.widget.*;import com.termux.R;import com.termux.app.TermuxActivity;import com.termux.terminal.TerminalSession;import org.json.*;import org.junit.*;import org.junit.runner.RunWith;import org.robolectric.*;import org.robolectric.annotation.*;import java.lang.reflect.*;import java.util.*;import static org.junit.Assert.*;
+/** Exercise the real folder action's owner/route selection; skip display and all IO. */
+@RunWith(RobolectricTestRunner.class) @Config(sdk=28,application=Application.class,instrumentedPackages={"com.termux.app.workspace.AgentChatUi","com.termux.app.workspace.WorkspaceFileBrowser"},shadows={AgentProjectRouteTest.ChatState.class,AgentProjectRouteTest.NoFileIo.class})
+public class AgentProjectRouteTest {
+ static boolean chat;
+ @Implements(value=AgentChatUi.class,isInAndroidSdk=false) public static class ChatState{
+  @Implementation protected boolean showing(){return chat;}
+  @Implementation protected AgentProjectPanel.Chat projectSource(){return new AgentProjectPanel.Chat(){public boolean valid(){return chat;}public List<JSONObject> rows(){return Collections.emptyList();}public boolean hasOlder(){return false;}public void older(){fail("No history read on window creation");}public void open(JSONObject f){fail();}public boolean jump(String k){return false;}public void observe(Runnable r){}public void close(){}};}
+ }
+ @Implements(value=WorkspaceFileBrowser.class,isInAndroidSdk=false) public static class NoFileIo{@Implementation protected void show(){}}
+ static Object get(Object o,String n)throws Exception{Field f=o.getClass().getDeclaredField(n);f.setAccessible(true);return f.get(o);}
+ void check(String agent)throws Exception{TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.setContentView(R.layout.activity_termux);Field f=TermuxActivity.class.getDeclaredField("mTerminalView");f.setAccessible(true);f.set(a,a.findViewById(R.id.terminal_view));WorkspaceController c=new WorkspaceController(a);try{com.termux.view.TerminalView terminal=a.getTerminalView();terminal.mTermSession=new TerminalSession("unused","unused",new String[0],new String[0],1000,null);WorkspaceStore.Session p=new WorkspaceStore.Session();p.handle=terminal.mTermSession.mHandle;p.environment=agent.equals("codex")?"codex":"ubuntu";p.claudeAgent=agent.equals("claude");p.geminiAgent=agent.equals("gemini");p.aiAgent=agent.equals("opencode")?"opencode":"";p.directory="/artificial/project";((WorkspaceStore)get(c,"store")).sessions.add(p);Method open=WorkspaceController.class.getDeclaredMethod("showProjectFiles");open.setAccessible(true);chat=true;open.invoke(c);List<?> all=(List<?>)get(c,"fileBrowsers");WorkspaceFileBrowser browser=(WorkspaceFileBrowser)all.get(0);assertNotNull(browser.projectPanel);assertEquals(agent,AgentPreparation.agent(browser.projectPanel.profile));assertEquals("/artificial/project",browser.projectPanel.directory);chat=false;browser.close();open.invoke(c);browser=(WorkspaceFileBrowser)((List<?>)get(c,"fileBrowsers")).get(0);assertNull(browser.projectPanel);browser.close();}finally{c.close();a.finish();chat=false;}}
+ @Test public void codexFolderUsesPanelAndTerminalFallbackUsesExistingBrowser()throws Exception{check("codex");}
+ @Test public void claudeFolderUsesPanelAndTerminalFallbackUsesExistingBrowser()throws Exception{check("claude");}
+ @Test public void geminiFolderUsesPanelAndTerminalFallbackUsesExistingBrowser()throws Exception{check("gemini");}
+ @Test public void openCodeFolderUsesPanelAndTerminalFallbackUsesExistingBrowser()throws Exception{check("opencode");}
+}

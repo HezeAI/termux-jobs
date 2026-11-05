@@ -2,7 +2,7 @@
 // Actual installed CLI, isolated CODEX_HOME, loopback synthetic Responses provider; no cloud auth.
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),readline=require('node:readline'),assert=require('node:assert/strict'),{spawn}=require('node:child_process'),{once}=require('node:events');
 const root=require('./fixture-paths.cjs').fixture('cxq'),assets=path.resolve('app/src/main/assets');
-for(const f of ['codex-chat.cjs','agent-receipts.cjs','agent-action-preview.cjs','agent-completion-times.cjs'])fs.copyFileSync(path.join(assets,f),path.join(root,f));fs.copyFileSync(path.join(assets,'codex-control.js'),path.join(root,'codex-wire-v0.2.22.js'));
+for(const f of ['codex-chat.cjs','agent-receipts.cjs','agent-attachments.cjs','agent-action-preview.cjs','agent-completion-times.cjs'])fs.copyFileSync(path.join(assets,f),path.join(root,f));fs.copyFileSync(path.join(assets,'codex-control.js'),path.join(root,'codex-wire-v0.2.22.js'));
 const {CodexChat}=require(path.join(root,'codex-chat.cjs')),pause=ms=>new Promise(r=>setTimeout(r,ms));
 async function until(fn,label){for(let n=0;n<400;n++){const v=await fn();if(v)return v;await pause(25);}throw Error('Timeout: '+label);}
 const report=[];

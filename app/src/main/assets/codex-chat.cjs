@@ -1,4 +1,5 @@
 'use strict';
+const {fileReferences}=require('./agent-attachments.cjs');
 const {CompletionTimes,RequestClock}=require('./agent-completion-times.cjs');
 // Android presentation of the native app-server protocol. No auth-file reads or policy overrides.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),net=require('node:net');
@@ -214,7 +215,7 @@ class CodexChat {
   if(last)this.completions?.finish(turn.id,key(turn.id+':'+last.id),{completedAt:turn.completedAt,durationMs:turn.durationMs,startedAt:turn.startedAt},received);
  }
  groups(turns=this.turns){
-  const groups=[];for(const [turn,entries]of turns){let skillContext='';for(const [id,item]of entries){const message=key(turn+':'+id),rows=[];const add=(part,kind,body,title='')=>{body=text(body);if(!body)return;const k=message+':'+part;this.full.delete(k);this.full.set(k,body);rows.push({key:k,message,part,kind,title,body:body.slice(0,12000),bodyLength:body.length,more:body.length>12000});};
+  const groups=[];for(const [turn,entries]of turns){let skillContext='';for(const [id,item]of entries){const message=key(turn+':'+id),rows=[];const add=(part,kind,body,title='')=>{body=text(body);if(!body)return;const k=message+':'+part;this.full.delete(k);this.full.set(k,body);rows.push({messageSender:item.type==='userMessage'?'user':'agent',fileReferences:['user','text'].includes(kind)?fileReferences(body,item.type==='userMessage'?'user':'agent'):[],key:k,message,part,kind,title,body:body.slice(0,12000),bodyLength:body.length,more:body.length>12000});};
    for(const receipt of this.receipts.rows.filter(r=>r.key.startsWith(item.id+':')))add('receipt:'+receipt.token,'receipt',receipt.body,this.receipts.label(receipt,this.language==='ru'));
    if(item.type==='userMessage'){
     const skills=(item.content||[]).filter(input=>input.type==='skill'&&text(input.name));skillContext=skills.length===1?text(skills[0].name).slice(0,120):'';

@@ -70,4 +70,12 @@ class Attachments {
 function attachmentRows(message,files,prefix="attachment"){return files.map((a,i)=>({key:message+':'+prefix+':'+i,message,part:prefix+':'+i,kind:'attachment',body:a.name,attachment:a}));}
 // Do not retain base64 media in Android's transcript projection.
 function withoutImageData(m){if(!Array.isArray(m?.message?.content))return m;return {...m,message:{...m.message,content:m.message.content.map(b=>b.type==='image'?{type:'image'}:b)}};}
-module.exports={Attachments,attachmentRows,withoutImageData};
+
+// Metadata projected from the already loaded message, never file contents or model input.
+function fileReferences(body,sender){
+ const refs=[],seen=new Set();const add=(p,name,bytes)=>{if(refs.length>=100||seen.has(p)||!p.startsWith('/')||p.startsWith('//')||/[\x00-\x1f]/.test(p))return;seen.add(p);const ext=suffix(p),type=mime(p)?'image':/\.(mp4|mkv|webm|mov|m4v|3gp)$/.test(ext)?'video':ext==='.apk'?'apk':/\.(txt|log|md|json|xml|ya?ml|csv|ini|sh|py|js)$/.test(ext)?'file':'binary';refs.push({path:p,name:name||path.basename(p),type,...(bytes===undefined?{}:{bytes}),sender,localFileLink:true});};
+ if(sender==='user')for(const m of String(body||'').matchAll(/\[TermuxJobs attachment:([a-f0-9]{32})\]\r?\nName: ([^\r\n]{1,512})\r?\nFile: (\/[^\r\n]+)\r?\nSize: ([0-9]+) bytes\./g)){if(m[3].includes('/chat-attachments/'+m[1]+'/'))add(m[3],m[2],Number(m[4]));}
+ else if(sender==='agent')for(const m of String(body||'').matchAll(/!?\[[^\]\n]{0,200}\]\((?:<(\/[^<>\r\n]+)>|(\/[^\r\n)]+))\)/g))add(m[1]||m[2]);
+ return refs;
+}
+module.exports={Attachments,attachmentRows,withoutImageData,fileReferences};

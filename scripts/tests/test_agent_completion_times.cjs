@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const dir=require('./fixture-paths.cjs').fixture('atime');
 const {CompletionTimes}=require('../../app/src/main/assets/agent-completion-times.cjs');
-for(const [from,to]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],...['agent-receipts.cjs','agent-action-preview.cjs','agent-completion-times.cjs'].map(n=>[n,n])])fs.copyFileSync(path.resolve('app/src/main/assets',from),path.join(dir,to));
+for(const [from,to]of [['codex-chat.cjs','codex-chat.cjs'],['codex-control.js','codex-wire-v0.2.22.js'],...['agent-receipts.cjs','agent-attachments.cjs','agent-action-preview.cjs','agent-completion-times.cjs'].map(n=>[n,n])])fs.copyFileSync(path.resolve('app/src/main/assets',from),path.join(dir,to));
 const end=1793610000000;
 const a=new CompletionTimes(dir,'codex','journal');assert.equal(a.finish('old','old-message',{createdAt:end}),null);
 a.start('request');assert.equal(a.finish('request','answer',{completedAt:end,durationMs:16000}).durationMs,16000);assert.equal(a.finish('request','answer',{completedAt:end+10000}).completedAt,end);assert.equal(new CompletionTimes(dir,'codex','journal').summary('answer').completedAt,end);assert.equal(new CompletionTimes(dir,'claude','journal').summary('answer'),null);

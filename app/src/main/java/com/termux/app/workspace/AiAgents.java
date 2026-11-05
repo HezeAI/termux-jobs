@@ -44,6 +44,7 @@ public final class AiAgents {
     static JSONObject liveRequest(Context c,WorkspaceStore.Session s,JSONObject request)throws Exception {
         java.util.UUID.fromString(s.id);if(!s.aiAgent.equals("opencode"))throw new IOException("Not OpenCode");
         try(android.net.LocalSocket client=new android.net.LocalSocket()){
+            AgentHistoryRead.track(client);
             GeminiLiveControl.connect(client,socket(c.getFilesDir(),s).getAbsolutePath());client.setSoTimeout(35000);
             byte[] data=request.toString().getBytes(StandardCharsets.UTF_8);if(data.length>65536)throw new IOException("Request too large");
             client.getOutputStream().write(data);client.getOutputStream().flush();client.shutdownOutput();

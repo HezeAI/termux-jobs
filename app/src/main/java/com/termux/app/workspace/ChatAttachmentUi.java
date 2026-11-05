@@ -108,6 +108,8 @@ final class ChatAttachmentUi implements AutoCloseable {
         try{String path=localPath(url),name=new File(path).getName();JSONObject a=new JSONObject().put("path",path).put("name",name).put("type",ChatAttachments.type(name)).put("localFileLink",true);openFor(source,a);}
         catch(Exception error){Toast.makeText(activity,t("Не удалось открыть файл: некорректный путь.","Cannot open file: invalid path."),Toast.LENGTH_LONG).show();}
     }
+    void openProjectFile(WorkspaceStore.Session captured,JSONObject file){openFor(source(captured),file);}
+    AlertDialog projectViewer(){return viewer;}
     void open(JSONObject a){openFor(source(profile),a);}
     private void openFor(WorkspaceStore.Session p,JSONObject input){
         final JSONObject a;try{a=new JSONObject(input.toString());}catch(Exception invalid){Toast.makeText(activity,t("Не удалось открыть файл: некорректные сведения.","Cannot open file: invalid file details."),Toast.LENGTH_LONG).show();return;}

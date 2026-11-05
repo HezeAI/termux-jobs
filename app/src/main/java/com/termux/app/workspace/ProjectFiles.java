@@ -129,6 +129,7 @@ final class ProjectFiles implements AutoCloseable {
         try{run("exec sh -s",out,16384,script.getBytes(StandardCharsets.UTF_8));}catch(Exception error){String code=new String(out.toByteArray(),StandardCharsets.UTF_8).trim();if(code.matches("ALIAS_[A-Z_]+"))throw new IOException(code);throw error;}
         return new String(out.toByteArray(),StandardCharsets.UTF_8);
     }
+    byte[] readOnly(String script,int max)throws Exception{return bytes(script,max);}
     private byte[] bytes(String script,int max) throws Exception {ByteArrayOutputStream out=new ByteArrayOutputStream();run(script,out,max);return out.toByteArray();}
     static String command(WorkspaceStore.Session s,String script) {
         String e=environment(s);String bash="bash --noprofile --norc -c "+SessionShell.quote(script);

@@ -12,7 +12,7 @@ def prepare():
  (root/'project/AGENTS.md').write_text('Artificial boundary project only. No real credentials.\n')
  subprocess.run(['gcc','-O2','-Wall','-Wextra',str(REPO/'scripts/tests/fixtures/local-network-only.c'),'-o',str(root/'local-network-only')],check=True)
  tools=root/'tools';tools.mkdir()
- for name in ['codex-chat.cjs','codex-control.js','agent-receipts.cjs','agent-action-preview.cjs','agent-completion-times.cjs']:
+ for name in ['codex-chat.cjs','codex-control.js','agent-receipts.cjs','agent-action-preview.cjs','agent-attachments.cjs','agent-completion-times.cjs']:
   shutil.copy2(REPO/'app/src/main/assets'/name,tools/('codex-wire-v0.2.22.js'if name=='codex-control.js'else name))
  shutil.copy2(Path(__file__).with_name('codex_owned_runner.cjs'),tools/'codex_owned_runner.cjs')
  (root/'identity.json').write_text(json.dumps({'codex':'0.166.0','binary':str(BINARY),'binarySha256':HASH,'scripts':{},'project':str(root/'project')},indent=2)+'\n');return root

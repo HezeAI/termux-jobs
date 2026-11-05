@@ -1,0 +1,11 @@
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const {fileReferences}=require('../../app/src/main/assets/agent-attachments.cjs');
+const late='x'.repeat(25000)+'\n[model](</fake/3d model.blend>)\n[web](https://example.invalid/file.zip)\nplain /fake/not-attached.stl';
+const read=fs.readFileSync,stat=fs.lstatSync;try{fs.readFileSync=()=>{throw Error('File contents must not be read');};fs.lstatSync=()=>{throw Error('No filesystem probe needed for metadata');};const r=fileReferences(late,'agent');assert.equal(r.length,1);assert.equal(r[0].path,'/fake/3d model.blend');assert.equal(r[0].sender,'agent');const id='0123456789abcdef0123456789abcdef';const user='q'.repeat(25000)+'\n[TermuxJobs attachment:'+id+']\nName: gone.zip\nFile: /tmp/chat-attachments/'+id+'/original.zip\nSize: 123 bytes.\n';const u=fileReferences(user,'user');assert.equal(u[0].bytes,123);assert.equal(u[0].name,'gone.zip');assert.equal(fileReferences('unlinked /fake/file.zip','agent').length,0);assert.equal(fileReferences('[web](https://example.invalid/index.html)','agent').length,0);}finally{fs.readFileSync=read;fs.lstatSync=stat;}
+for(const n of ['codex-chat','claude-chat','gemini-chat','opencode-chat']){const source=fs.readFileSync('app/src/main/assets/'+n+'.cjs','utf8');assert(source.includes('fileReferences(body,'),n);assert(source.includes('messageSender:'),n);}
+console.log('PASS metadata beyond 12 KB, missing originals retained, explicit local links only, no file reads or model operations; all four native projections wired');
+
+const {trimPreviews}=require('../../app/src/main/assets/agent-action-preview.cjs');
+const many=Array.from({length:200},(_,i)=>({key:'message'+i,body:'unchanged',more:false,fileReferences:fileReferences(Array.from({length:100},(_,n)=>'[file](/fake/'+('x'.repeat(200))+i+'_'+n+'.zip)').join('\n'),'agent')}));
+const bounded=trimPreviews(many);assert(Buffer.byteLength(JSON.stringify(bounded.map(r=>r.fileReferences)))<62000);assert(bounded.some(r=>r.more&&r.fileReferences.length<100));assert(many.every(r=>!r.more&&r.fileReferences.length===100));console.log('PASS metadata has a global wire budget; omitted references keep explicit full-message reading available; canonical rows unchanged');

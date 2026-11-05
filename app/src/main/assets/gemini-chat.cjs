@@ -1,4 +1,5 @@
 'use strict';
+const {fileReferences}=require('./agent-attachments.cjs');
 const deliveryStatus=require('./agent-delivery-status.cjs');
 const {CompletionTimes,RequestClock}=require('./agent-completion-times.cjs');
 const {preview:actionPreview,trimPreviews,outputTail}=require('./agent-action-preview.cjs');
@@ -56,7 +57,7 @@ class GeminiChat {
   this.groups=[];this.full.clear();let remaining=2*1024*1024;
   const project=(item,index,live=false)=>{
    if(!item||typeof item!=='object')return;const message=live?hash('pending:'+item.type+':'+index):hash(item.id+':'+item.type);const rows=[];
-   const row=(part,kind,body,title='',meta={})=>{body=text(body).slice(0,Math.max(0,Math.min(200000,remaining)));remaining-=body.length;if(!body&&kind!=='tool')return;const key=message+':'+part;this.full.set(key,body);rows.push({key,message,part,kind,...meta,title:text(title).slice(0,160),body:body.slice(0,12000),bodyLength:body.length,more:body.length>12000,...(live?{queued:true}:{})});};
+   const row=(part,kind,body,title='',meta={})=>{body=text(body).slice(0,Math.max(0,Math.min(200000,remaining)));remaining-=body.length;if(!body&&kind!=='tool')return;const key=message+':'+part;this.full.set(key,body);rows.push({messageSender:item.type==='user'?'user':'agent',fileReferences:['user','text'].includes(kind)?fileReferences(body,item.type==='user'?'user':'agent'):[],key,message,part,kind,...meta,title:text(title).slice(0,160),body:body.slice(0,12000),bodyLength:body.length,more:body.length>12000,...(live?{queued:true}:{})});};
    const ids=item.jobsInputSession===this.api.session()&&Array.isArray(item.jobsClientIds)?item.jobsClientIds.filter(id=>this.sent.get(id)?.session===this.api.session()):[];
    if(item.type==='user'||item.type==='hint'&&ids.length){const projected=this.attachments.project(item.text,this.api.session());if(projected.text)row('user','user',projected.text);rows.push(...attachmentRows(message,projected.files));}else if(item.type==='user_shell')row('shell-input','user','Shell: '+text(item.text));
    else if(['gemini','gemini_content'].includes(item.type)){row('text','text',item.text);const summary=!live&&this.completions?.summary(message);if(summary&&rows.length)rows.at(-1).requestSummary=summary;rows.push(...attachmentRows(message,this.attachments.output(item.text)));}
