@@ -1,24 +1,60 @@
 # Подготовка релиза
 
+## Общие правила
+
 Этот порядок применяется к каждому новому выпуску Termux Job’s на GitHub.
 Авторизация определяется текущей задачей пользователя. Правила сами по себе
 не разрешают будущие commit/push/tag, установку APK или публикацию.
 Уже данное разрешение учитывай в его пределах и не запрашивай повторно без причины.
 
-Краткий порядок:
-
-1. [Состав изменений](#состав-изменений-и-документация) относительно последнего опубликованного стабильного релиза.
-2. [Проверки](#выбор-объёма-проверок) по изменениям и рискам.
-3. [Приёмка в согласованном объёме и результат аудита](#результат-аудита-и-приёмка).
-4. [Финальный подписанный APK](#финальный-подписанный-apk) и его контрольные суммы.
-5. [Commit / push / tag](#git-commit-push-и-тег) с соответствием исходников и APK.
-6. [Публикация](#публикация) в пределах текущего разрешения.
-7. [Проверка публичного скачивания и итог](#проверка-публичного-скачивания-и-итог).
-
 **Голосовой ввод остаётся удалённым.** Не возвращай микрофон, распознавание,
 связанные обработчики, диагностику или разрешение в сборки без отдельного
 поручения разработчика. Прежнее ожидание проверки на телефоне не отменяет запрет.
 История решения перенесена в [исторический отчёт test40](VALIDATION-test40-composer-instructions.md#историческое-уточнение-порядка-выпуска--2026-11-04).
+
+GitHub release titles/descriptions and new public release notes must be written
+in English unless the developer explicitly requests another language. Keep the
+in-app update highlights and compatibility notes localized in both Russian and
+English. This is the developer's standing preference for future updates.
+
+End every GitHub release description with this exact credit line, as requested
+by HezeAI: `AI development assistance: OpenAI Codex`. Keep HezeAI credited as the fork developer;
+this line identifies AI assistance.
+
+Сохраняй прежние APK, теги и бинарные Components. Для уже опубликованной версии
+ради оформления меняй только описание и относящуюся документацию: не заменяй APK,
+update.json или бинарные ресурсы, не передвигай тег. Последующее исправление
+документации в основной ветке не требует пересборки неизменённого APK.
+Условия отдельной публикации исходников Components приведены в разделе лицензий.
+
+## Порядок выпуска
+
+1. [Состав изменений и версия](#состав-изменений-и-документация) относительно последнего опубликованного стабильного релиза.
+2. [Лицензии и соответствующие исходники](#лицензии-авторство-и-соответствующие-исходники).
+3. [Объём проверок и Modern Lint](#выбор-объёма-проверок).
+4. [Результат аудита и приёмка](#результат-аудита-и-приёмка) в согласованном объёме.
+5. [Финальный подписанный APK](#финальный-подписанный-apk), контрольные суммы и [update.json](#in-app-updater-since-v1019).
+6. [Документация и описание релиза](#документация-перед-публикацией) по фактическому результату.
+7. [Commit, push и тег](#git-commit-push-и-тег), соответствующие проверенному APK.
+8. [Публикация](#публикация) в пределах текущего разрешения.
+9. [Публичное скачивание и итог](#проверка-публичного-скачивания-и-итог).
+
+## Краткий чек-лист
+
+Это навигатор по действующим требованиям, а не отдельный набор правил.
+Ограничения и условия каждого пункта определяются соответствующим разделом.
+Пункты выполняются на своём этапе; публичное скачивание проверяется после публикации.
+
+- [ ] [Состав и совместимость](#состав-изменений-и-документация): сравнение с последним stable, версии и условия обновления.
+- [ ] [Лицензии](#лицензии-авторство-и-соответствующие-исходники): уведомления, соответствующие исходники и открытые вопросы.
+- [ ] [Проверки](#выбор-объёма-проверок): применимый набор, Modern Lint, раздельные результаты debug/release и local/CI.
+- [ ] [Аудит и приёмка](#результат-аудита-и-приёмка): источники результатов, ограничения и отсутствие блокирующих дефектов.
+- [ ] [Финальный APK](#финальный-подписанный-apk): идентичность, подпись, целостность, runtime и SHA-256.
+- [ ] [update.json](#in-app-updater-since-v1019): тот же APK, совместимая схема и условия обновления RU/EN.
+- [ ] [Документация](#документация-перед-публикацией): фактический состав, ограничения, ссылки и формат описания.
+- [ ] [Git](#git-commit-push-и-тег): точный состав файлов и соответствие исходников проверенному APK.
+- [ ] [Публикация](#публикация): разрешение, ресурсы и правильный стабильный канал.
+- [ ] [Публичная проверка](#проверка-публичного-скачивания-и-итог): скачанные файлы, метаданные, ссылки и итоговый отчёт.
 
 ## Состав изменений и документация
 
@@ -42,88 +78,6 @@
 3. Не обещай сохранность данных или возможность отката без проверки. Резервный
    APK не является резервной копией пользовательских данных. Не очищай данные
    и не переустанавливай окружения автоматически ради обновления.
-
-### Документация перед публикацией
-
-GitHub release titles/descriptions and new public release notes must be written
-in English unless the developer explicitly requests another language. Keep the
-in-app update highlights and compatibility notes localized in both Russian and
-English. This is the developer's standing preference for future updates.
-
-End every GitHub release description with this exact credit line, as requested
-by HezeAI: `AI development assistance: OpenAI Codex`. Keep HezeAI credited as the fork developer;
-this line identifies AI assistance.
-
-For the separate `HezeAI/termux-jobs-components` repository, keep component details,
-compatibility, source credits and licenses in its English README and exact
-versions/sizes/hashes in `components.json`. Update that overview when components
-are added or revised. Component release descriptions may stay brief: the set
-identifier, a README link and the credit line above. Keep published tags and
-binary assets immutable. This does not shorten application release notes or
-replace the application's localized updater/compatibility requirements.
-
-Веди единый CHANGELOG.md, сохраняя старые записи. Обязательно проверить
-и обновить по фактическому состоянию:
-
-- `README.md`: текущая версия, возможности, установка, ссылки и ограничения.
-- `CHANGELOG.md`: изменения относительно последнего опубликованного стабильного релиза.
-- `docs/fork/RELEASE-<tag>.md`: самостоятельное описание нового релиза.
-- `docs/fork/VALIDATION.md`: итоговый APK, размер, SHA-256, сертификат,
-  выполненные проверки и непроверенные сценарии.
-- `FORK.md`: версия и актуальные требования сборки.
-- `docs/fork/USAGE.md`, `DESIGN.md`, `ARCHITECTURE.md`: изменившееся поведение,
-  интерфейс, хранение и выполнение команд.
-- `CONTINUE.md`: актуальный контекст продолжения работы.
-- Шаблоны Issues и `CONTRIBUTING.md`: актуальные вопросы и ссылки.
-
-Не переписывать историю прежних релизов как новые результаты. Старые отчёты
-помечать историческими. Если документ не требует изменений, проверить его
-соответствие релизу; бессодержательные правки не нужны.
-
-### Формат публичного описания релиза
-
-Пиши описание на английском: конкретными короткими пунктами о новых
-возможностях, изменённом поведении и исправлениях. Объединяй связанные изменения
-по пользовательским функциям. Используй следующий порядок:
-
-1. В начале дай короткое описание главных изменений и прямую ссылку
-   **Download APK** на подписанный release APK в assets этого релиза.
-2. Опиши новые возможности, изменения поведения и исправления относительно
-   последнего опубликованного стабильного релиза. Не перечисляй промежуточные test-сборки,
-   их номера, отменённые эксперименты и дефекты, возникшие только при их разработке.
-3. Затем укажи требования, совместимость обновления и важные ограничения.
-   Не прячь условия установки, риски потери данных или существенные ограничения
-   в технические подробности.
-4. Подробности CI, исходные отказы, повторные проверки, коммиты, хеши, размеры
-   и параметры инструментов помести в раскрываемый блок `<details>` с понятным
-   `<summary>`. Внутри оставь ссылки на отчёты и соответствующие запуски.
-   Сохраняй пустые строки между HTML-тегами и Markdown для корректного отображения.
-5. Внутри технического блока явно раздели debug CI и проверки опубликованного
-   подписанного release APK, а также локальные проверки и наблюдения на телефоне.
-   Укажи пропущенные тесты отдельно; не считай их успешными. Сохраняй исходные
-   неудачные результаты при добавлении новых успешных проверок.
-
-Используй читаемые пробелы между словами, числами и единицами: например,
-`proot-distro 5.9.0`, `NDK 22.1.7171670`, `32 MiB`, `40,452,595 bytes`,
-`versionCode 1476`. Не склеивай версии, размеры и названия инструментов.
-Последняя строка с указанием ИИ-помощника сохраняется после `</details>`.
-
-Роль debug остаётся внутренней, как описано в разделе «Debug в CI и проверка
-release»; этот формат не требует выдавать debug APK при каждом релизе.
-Для уже опубликованной версии меняй только описание и относящуюся документацию:
-не заменяй APK, `update.json`, тег или бинарные Components ради оформления.
-Правило оформления само по себе не разрешает публикацию будущих релизов.
-Подробные требования хранятся здесь; существующая ссылка из AGENTS.md остаётся
-точкой входа, без дублирования этих правил.
-
-
-В публикуемом release body используйте полные HTTPS-ссылки на документацию,
-например https://github.com/HezeAI/termux-jobs/blob/vVERSION/docs/fork/BACKUP-RESTORE.md.
-Относительный BACKUP-RESTORE.md из страницы releases/tag не ведёт в docs/fork.
-Перед публикацией проверьте наличие файлов в соответствующем теге, после неё —
-публичную доступность каждой ссылки и совпадение release body с подготовленным.
-Для исправления только текста/ссылок редактируйте release notes и документацию,
-не пересобирайте APK, не передвигайте опубликованный тег и не меняйте update.json.
 
 ## Лицензии, авторство и соответствующие исходники
 
@@ -193,6 +147,7 @@ APK явно обоснуйте объём компиляции, синтакс�
 APK. Не создавайте полные копии SDK/rootfs ради прогона, сохраняйте компактные
 доказательства и не удаляйте существующие данные без разрешения.
 
+### Modern Lint
 
 Перед публичным релизом выполни `bash scripts/verify-modern-lint.sh`:
 анализ всех пяти модулей, отсутствие ошибок загрузки правил и блокирующих находок.
@@ -289,6 +244,109 @@ ARM64 build запускает scripts/verify-apk-runtime.py на финальн
 Сверяйте определения DEX, а не только строки ссылок. Staging не должен содержать
 удалённых Java-исходников. Изменение minSDK указывать в RU/EN metadata до установки.
 
+## In-app updater (since v1.0.19)
+
+Alongside APK and SHA256SUMS, upload **update.json** to each stable release.
+Generate it from the final verified APK, not a preliminary build:
+
+```sh
+python3 scripts/create-update-manifest.py \
+  --apk .verification/release-vVERSION/Termux-Jobs-vVERSION-arm64.apk \
+  --aapt2 /path/to/existing/aapt2 \
+  --notes docs/fork/UPDATE-NOTES-vVERSION.json \
+  --output .verification/release-vVERSION/update.json
+```
+
+Notes contain `ru`/`en` change arrays and a required `compatibility` object with
+`ru`/`en` arrays. The generator appends compatibility to highlights, up to 20 total
+lines per language, so existing v1.0.19 clients display it before installation. Use the same
+APK/hash/version as the release assets. Upload metadata before publishing the
+release. Download all three assets back and verify consistency. The updater uses
+GitHub's latest stable release, requires increasing versionCode and exact current
+signer/package match, and never offers uninstall as an update workaround. Missing
+metadata produces an explicit unsupported-release message. A successful source
+build does not establish end-to-end Android installer or data-migration behavior.
+Do not publish an artificial higher-version release solely to test the updater.
+
+For every future stable release, explicitly document data compatibility in RU/EN
+update highlights as well as release notes. Include any required clearing of
+commands/presets, loss of data, incompatible formats or migrations and their
+reasons **before** installation. If no reset is required, say that explicitly.
+Keep the metadata schema readable by installed v1.0.19 clients. Never silently
+reset user data or publish without the updater assets.
+
+## Документация перед публикацией
+
+For the separate `HezeAI/termux-jobs-components` repository, keep component details,
+compatibility, source credits and licenses in its English README and exact
+versions/sizes/hashes in `components.json`. Update that overview when components
+are added or revised. Component release descriptions may stay brief: the set
+identifier, a README link and the credit line above. Keep published tags and
+binary assets immutable. This does not shorten application release notes or
+replace the application's localized updater/compatibility requirements.
+
+Веди единый CHANGELOG.md, сохраняя старые записи. Обязательно проверить
+и обновить по фактическому состоянию:
+
+- `README.md`: текущая версия, возможности, установка, ссылки и ограничения.
+- `CHANGELOG.md`: изменения относительно последнего опубликованного стабильного релиза.
+- `docs/fork/RELEASE-<tag>.md`: самостоятельное описание нового релиза.
+- `docs/fork/VALIDATION.md`: итоговый APK, размер, SHA-256, сертификат,
+  выполненные проверки и непроверенные сценарии.
+- `FORK.md`: версия и актуальные требования сборки.
+- `docs/fork/USAGE.md`, `DESIGN.md`, `ARCHITECTURE.md`: изменившееся поведение,
+  интерфейс, хранение и выполнение команд.
+- `CONTINUE.md`: актуальный контекст продолжения работы.
+- Шаблоны Issues и `CONTRIBUTING.md`: актуальные вопросы и ссылки.
+
+Не переписывать историю прежних релизов как новые результаты. Старые отчёты
+помечать историческими. Если документ не требует изменений, проверить его
+соответствие релизу; бессодержательные правки не нужны.
+
+### Формат публичного описания релиза
+
+Пиши описание на английском: конкретными короткими пунктами о новых
+возможностях, изменённом поведении и исправлениях. Объединяй связанные изменения
+по пользовательским функциям. Используй следующий порядок:
+
+1. В начале дай короткое описание главных изменений и прямую ссылку
+   **Download APK** на подписанный release APK в assets этого релиза.
+2. Опиши новые возможности, изменения поведения и исправления относительно
+   последнего опубликованного стабильного релиза. Не перечисляй промежуточные test-сборки,
+   их номера, отменённые эксперименты и дефекты, возникшие только при их разработке.
+3. Затем укажи требования, совместимость обновления и важные ограничения.
+   Не прячь условия установки, риски потери данных или существенные ограничения
+   в технические подробности.
+4. Подробности CI, исходные отказы, повторные проверки, коммиты, хеши, размеры
+   и параметры инструментов помести в раскрываемый блок `<details>` с понятным
+   `<summary>`. Внутри оставь ссылки на отчёты и соответствующие запуски.
+   Сохраняй пустые строки между HTML-тегами и Markdown для корректного отображения.
+5. Внутри технического блока явно раздели debug CI и проверки опубликованного
+   подписанного release APK, а также локальные проверки и наблюдения на телефоне.
+   Укажи пропущенные тесты отдельно; не считай их успешными. Сохраняй исходные
+   неудачные результаты при добавлении новых успешных проверок.
+
+Используй читаемые пробелы между словами, числами и единицами: например,
+`proot-distro 5.9.0`, `NDK 22.1.7171670`, `32 MiB`, `40,452,595 bytes`,
+`versionCode 1476`. Не склеивай версии, размеры и названия инструментов.
+Последняя строка с указанием ИИ-помощника сохраняется после `</details>`.
+
+В публикуемом release body используйте полные HTTPS-ссылки на документацию,
+например https://github.com/HezeAI/termux-jobs/blob/vVERSION/docs/fork/BACKUP-RESTORE.md.
+Относительный BACKUP-RESTORE.md из страницы releases/tag не ведёт в docs/fork.
+Перед публикацией проверьте наличие файлов в соответствующем теге, после неё —
+публичную доступность каждой ссылки и совпадение release body с подготовленным.
+Для исправления только текста/ссылок редактируйте release notes и документацию,
+не пересобирайте APK, не передвигайте опубликованный тег и не меняйте update.json.
+
+Роль debug остаётся внутренней, как описано в разделе «Debug в CI и проверка
+release»; этот формат не требует выдавать debug APK при каждом релизе.
+Для уже опубликованной версии меняй только описание и относящуюся документацию:
+не заменяй APK, `update.json`, тег или бинарные Components ради оформления.
+Правило оформления само по себе не разрешает публикацию будущих релизов.
+Подробные требования хранятся здесь; существующая ссылка из AGENTS.md остаётся
+точкой входа, без дублирования этих правил.
+
 ## Git: commit, push и тег
 
 1. До коммита проверь точный состав файлов и `git diff --check`: без секретов,
@@ -322,43 +380,6 @@ notes, состав исходников, список файлов и резу�
 публикации. Для обычного стабильного выпуска проверь draft=false/prerelease=false
 и правильный стабильный канал. Один push не обновляет его автоматически.
 Не публикуй искусственный релиз с повышенной версией только ради теста обновлятора.
-
-Сохраняй прежние APK, теги и бинарные Components. Для уже опубликованной версии
-ради оформления меняй только описание и относящуюся документацию: не заменяй APK,
-update.json или бинарные ресурсы, не передвигай тег. Последующее исправление
-документации в основной ветке не требует пересборки неизменённого APK.
-Условия отдельной публикации исходников Components приведены в разделе лицензий.
-
-## In-app updater (since v1.0.19)
-
-Alongside APK and SHA256SUMS, upload **update.json** to each stable release.
-Generate it from the final verified APK, not a preliminary build:
-
-```sh
-python3 scripts/create-update-manifest.py \
-  --apk .verification/release-vVERSION/Termux-Jobs-vVERSION-arm64.apk \
-  --aapt2 /path/to/existing/aapt2 \
-  --notes docs/fork/UPDATE-NOTES-vVERSION.json \
-  --output .verification/release-vVERSION/update.json
-```
-
-Notes contain `ru`/`en` change arrays and a required `compatibility` object with
-`ru`/`en` arrays. The generator appends compatibility to highlights, up to 20 total
-lines per language, so existing v1.0.19 clients display it before installation. Use the same
-APK/hash/version as the release assets. Upload metadata before publishing the
-release. Download all three assets back and verify consistency. The updater uses
-GitHub's latest stable release, requires increasing versionCode and exact current
-signer/package match, and never offers uninstall as an update workaround. Missing
-metadata produces an explicit unsupported-release message. A successful source
-build does not establish end-to-end Android installer or data-migration behavior.
-Do not publish an artificial higher-version release solely to test the updater.
-
-For every future stable release, explicitly document data compatibility in RU/EN
-update highlights as well as release notes. Include any required clearing of
-commands/presets, loss of data, incompatible formats or migrations and their
-reasons **before** installation. If no reset is required, say that explicitly.
-Keep the metadata schema readable by installed v1.0.19 clients. Never silently
-reset user data or publish without the updater assets.
 
 ## Проверка публичного скачивания и итог
 
