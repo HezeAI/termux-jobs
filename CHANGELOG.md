@@ -2,6 +2,23 @@
 
 No additional changes queued for publication.
 
+# 2026-11-05 — 2.1.4-test4 (versionCode 1489, private test release)
+
+Changes since the last published stable release, **v2.1.3**.
+
+- All four structured agent chats open **Files and changes** from the existing folder button. Files retains the existing manager, actions, modification dates and refresh. The ordinary terminal route is unchanged.
+- Attachments derives user uploads and explicit agent file links from the current chat's existing history. Filters, availability, original-message navigation and local file location are available. Missing files retain their records. Older pages and full long messages load explicitly in bounded portions; read errors offer Retry and never mean “No attachments”. Completion refers only to history available through the current adapter.
+- Changes shows the whole selected Git project against **HEAD**, including staged/unstaged, new/deleted and binary files. Text additions/deletions are coloured. External filters are disabled for raw comparison. No rollback, commit or other write operation is added.
+- Opening the window, reading history, previewing and viewing Git changes do not start an agent turn or add content to its model context. Window-owned reads are cancelled on close/chat switch; late results are rejected. Remote files are not downloaded automatically.
+- Built-in isolated HTML/GIF previews accept **32 MiB / 64 MiB**. The GIF limit remains **16,000,000 pixels**. Network/other-file blocking and WebView release remain. Attachment sending and model-context limits are unchanged.
+- Retains file modification timestamps in both file windows, the exact four supplied Codex/Claude RU/EN common templates with explicit application, Codex/Claude/Gemini context indicators, confirmed Codex manual compaction, per-request timers in all four chats and the notes-only star menu.
+
+Compatibility: `com.termux`, ARM64, Android 8.0+, existing Termux Job’s certificate; versionCode increases to 1489. No profile/history migration or automatic replacement of saved instructions. Issued private APKs are preserved.
+
+Limits: attachment accumulation/disconnections remain **unfixed**. No CLI fork, experimental context mode or new automatic-compaction policy. Historical dates remain unknown where adapters lack reliable timestamps; the file-link catalogue is deliberately conservative. Real large WebGL/GIF renderer responsiveness and phone acceptance of this build are pending. Android low-level key handoff/crash recovery and device backup export/restore remain unverified; MCP/plugins remain excluded.
+
+[Final APK checks, read-only contract, coverage and phone scenario](docs/fork/VALIDATION-2.1.4-test4.md).
+
 # 2026-11-05 — 2.1.4-test3 (versionCode 1488, private test release)
 
 Changes since the last published stable release, **v2.1.3**.
