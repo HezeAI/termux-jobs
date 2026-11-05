@@ -21,4 +21,10 @@ public class AgentMessageDeliveryTest {
   AgentMessageDelivery queued=new AgentMessageDelivery(new JSONObject().put("ok",true).put("accepted",true).put("delivery","queued"));assertTrue(queued.notice(false).contains("may not join the current"));
   AgentMessageDelivery current=new AgentMessageDelivery(new JSONObject().put("ok",true).put("accepted",true).put("delivery","current"));assertTrue(current.notice(false).contains("does not confirm"));assertTrue(current.notice(true).contains("не подтверждает"));
  }
+ @Test public void claudeNativeQueueIsExplicitWithoutChangingOtherAgents()throws Exception{
+  AgentMessageDelivery q=new AgentMessageDelivery(new JSONObject().put("ok",true).put("accepted",true).put("delivery","queued").put("ack","command-lifecycle:queued").put("queuedWhileBusy",true));assertEquals("В очереди — после текущей задачи ▾",q.caption(true));assertEquals("Queued — after the current task ▾",q.caption(false));assertTrue(q.notice(true).contains("Подтверждения включения"));
+  AgentMessageDelivery idle=new AgentMessageDelivery(new JSONObject().put("ok",true).put("accepted",true).put("delivery","queued").put("ack","command-lifecycle:queued"));assertEquals("In CLI queue ▾",idle.caption(false));
+  AgentMessageDelivery other=new AgentMessageDelivery(new JSONObject().put("ok",true).put("accepted",true).put("delivery","queued").put("ack","other-agent-queue"));assertEquals("In CLI queue ▾",other.caption(false));
+  AgentMessageDelivery current=new AgentMessageDelivery(new JSONObject().put("ok",true).put("accepted",true).put("delivery","current").put("ack","native-user-message-association"));assertEquals("CLI подтвердил приём ▾",current.caption(true));assertFalse(current.notice(true).contains("для текущего запроса"));
+ }
 }

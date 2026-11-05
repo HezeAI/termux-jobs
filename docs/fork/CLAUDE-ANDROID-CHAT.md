@@ -1,3 +1,45 @@
+# 2026-11-05 — clarification delivery/order, native reproduction and local fix
+
+Status: reproduced locally with **Claude Code2.1.296**, published adapter **v2.1.4/384fd197** before the fix, then current local adapter for **2.1.5-test1 /1493**. Android controller replay passed separately. This is not a phone/cloud-account check and does not prove which branch occurred in the developer's screenshot.
+
+## Confirmed cases
+
+| Scenario | First request containing clarification | Visible order | Cold reopen |
+| --- | --- | --- | --- |
+| First provider byte delayed10s; clarification submitted while original request runs; response then held5s | Next user turn, after original result/completed; original result associates only original UUID | During text: original user → clarification → first answer. After final/replay: original user → first answer → clarification → next answer. Reproduced in native snapshot and Android controller | Same native consumption order; exactly one clarification |
+| Native Write permission pending5s; clarification arrives before permission answer | Next tool-continuation request of **same original task**; result associates original and clarification UUIDs | Clarification precedes final answer | Baseline lost it; fixed reader restores its source UUID/time before final |
+| Two identical clarification texts, different UUIDs, during Write permission | Both occur in same continuation request | Two separate user messages before final | Exactly two records, one per source UUID; no invented delivery receipt |
+
+The first case is a confirmed ordering mechanism, **not** proof that all busy messages wait for the next task. The tool case proves mid-task inclusion is supported. Provider request membership is recorded separately from application admission, stdin write, queued/started lifecycle, user replay and final result association. No cloud inference was performed; the synthetic provider confirms request contents, not semantic model understanding.
+
+The queued case changes time when Claude writes/replays the user record after the preceding turn. The adapter sorts on native timestamp; the Android controller reflects that order. We keep that native order and label a proven Claude queue **“В очереди — после текущей задачи” / “Queued — after the current task”**. The details explain that later native events may confirm inclusion during continuation. Generic current admission no longer claims steering of the original task. The explicit next-task label additionally requires `queuedWhileBusy`, derived from the original admission state; the first idle input is not described as waiting for a nonexistent task.
+
+The absorbed case persists as native `attachment` / `queued_command`, not an ordinary user record. Baseline `ClaudeHistory.visible` excluded it. The local read-only projection accepts only human prompt records with a valid `source_uuid`, uses that UUID for UI identity and the original attachment timestamp for placement, and keeps raw record UUID/parent links for bounded ancestry traversal. It never rewrites the native JSONL or creates another history store. This record alone yields **no** delivery/current-task status.
+
+## Identifiers and evidence
+
+Final native repeat session: `33333333-3333-4333-8333-333333333333` (artificial only).
+
+| Client ID | Native user UUID | Initial receipt |
+| --- | --- | --- |
+| `msg_stream_first` | `3d17882d-d9fd-4d02-8886-ff5c240b03d8` | queued / command-lifecycle:queued |
+| `msg_stream_followup` | `451294e5-a385-439a-91ab-9c748c561f9c` | queued / command-lifecycle:queued |
+| `msg_tool_first` | `5c4c7190-cb3b-41a0-bb4d-d36b47343c29` | queued / command-lifecycle:queued |
+| `msg_tool_followup` | `2fdc97e6-e77e-4112-825e-ac258cd12675` | queued / command-lifecycle:queued |
+| `msg_tool_repeat` | `a6bc6521-e767-43be-9abd-92ff0cebc1ef` | queued / command-lifecycle:queued |
+
+Full ordered events, native timestamps, provider byte counts/marker membership, snapshots and native-parent IDs: `.verification/t/deliv-bkZEBB/result.json` under `/root/termux-fork`. Source/binary identities and guard events are alongside it. Earlier unfixed runs are retained in `.verification/claude-delivery-investigation/{first,second,third}-root.txt` (checkout-relative pointer files).
+
+Native executable SHA256: `f1f6e96e0d8342b9dbf41d7e88255397a6a52ce3d8736ad6a4c6b59c9b62fefa`. Exact production stream-json flags and actual Unix adapter requests were used. Test-only differences: fresh HOME/config/Git project, artificial API key, loopback provider, strict empty MCP config and user/project-only settings, kernel external-network denial. Only owned fixture processes were stopped after PID/start-time verification. Working sessions, messages, authorization and original history were untouched.
+
+Regression checks: `test_claude_clarification_history.cjs` (45 identical strings/distinct UUIDs across bounded pages, three cold readers, no duplicates/status inference, native SHA unchanged); `test_claude_history.cjs` (>8000 records/680tool results, large records/pages, append/resume/compaction ancestry and checksum); actual native fixture with two identical inputs; `ClaudeClarificationReplayTest` through real Android controller; `AgentMessageDeliveryTest`. Native snapshots used for replay are in test-only `claude-clarification-native.json`, excluded from APK assets. Targeted JVM result: `.verification/test-2.1.5-test1/clarification-ui.log`.
+
+## What remains unconfirmed
+
+The developer's actual clarification UUID, task boundary, runtime version/launch route and receive/replay timestamps were unavailable. No working message was resent or moved. The screenshot alone cannot select between the queued and absorbed cases; the long real task is not reproduced by a20s local fixture. Actual phone display/reopen and real subscription authentication remain separate checks. This finding is independent of timeline styling and quota/reset links.
+
+---
+
 # Private test15 — native active input
 
 The actual pinned Claude2.1.296 supports bidirectional streaming input and emits

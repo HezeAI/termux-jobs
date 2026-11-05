@@ -1,0 +1,960 @@
+{
+  "version": "2.1.296",
+  "source": "actual isolated stream-json CLI and app adapter; synthetic API/provider, external network denied",
+  "stages": [
+    {
+      "label": "stream-before-first-byte",
+      "snapshot": {
+        "ok": true,
+        "nativeChat": true,
+        "session": "33333333-3333-4333-8333-333333333333",
+        "rows": [
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c7efde3326071c4c2488a1ddfeddc:text:0",
+            "message": "msg_c7efde3326071c4c2488a1ddfeddc",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "current",
+            "body": "STREAM-FIRST long artificial task",
+            "bodyLength": 33,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_stream_first",
+              "delivery": "current",
+              "ack": "native-user-message-association"
+            },
+            "messageTime": 1793883078309
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c3d6368c5112c2f63db6111ca6783:text:0",
+            "message": "msg_c3d6368c5112c2f63db6111ca6783",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": true,
+            "delivery": "queued",
+            "body": "STREAM-FOLLOWUP additional artificial requirement",
+            "bodyLength": 49,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_stream_followup",
+              "delivery": "queued",
+              "queuedWhileBusy": true,
+              "ack": "command-lifecycle:queued"
+            },
+            "messageTime": 1793883088527
+          }
+        ],
+        "connected": true,
+        "knownMessages": [
+          "msg_c7efde3326071c4c2488a1ddfeddc",
+          "msg_c3d6368c5112c2f63db6111ca6783"
+        ],
+        "partialHistory": true,
+        "partialMessages": [],
+        "replacedMessages": [],
+        "busy": true,
+        "older": "",
+        "forms": [],
+        "attachmentsSupported": false
+      }
+    },
+    {
+      "label": "stream-during-text",
+      "snapshot": {
+        "ok": true,
+        "nativeChat": true,
+        "session": "33333333-3333-4333-8333-333333333333",
+        "rows": [
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c7efde3326071c4c2488a1ddfeddc:text:0",
+            "message": "msg_c7efde3326071c4c2488a1ddfeddc",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "current",
+            "body": "STREAM-FIRST long artificial task",
+            "bodyLength": 33,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_stream_first",
+              "delivery": "current",
+              "ack": "native-user-message-association"
+            },
+            "messageTime": 1793883078352
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c3d6368c5112c2f63db6111ca6783:text:0",
+            "message": "msg_c3d6368c5112c2f63db6111ca6783",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": true,
+            "delivery": "queued",
+            "body": "STREAM-FOLLOWUP additional artificial requirement",
+            "bodyLength": 49,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_stream_followup",
+              "delivery": "queued",
+              "queuedWhileBusy": true,
+              "ack": "command-lifecycle:queued"
+            },
+            "messageTime": 1793883088527
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_ceac6c0bd5e017a8502bdfd4f3c90:text:0",
+            "message": "msg_ceac6c0bd5e017a8502bdfd4f3c90",
+            "part": "text:0",
+            "kind": "text",
+            "title": "",
+            "body": "STREAM-ANSWER 1",
+            "bodyLength": 15,
+            "more": false,
+            "messageTime": 1793883088575
+          }
+        ],
+        "connected": true,
+        "knownMessages": [
+          "msg_c7efde3326071c4c2488a1ddfeddc",
+          "msg_c3d6368c5112c2f63db6111ca6783",
+          "msg_ceac6c0bd5e017a8502bdfd4f3c90"
+        ],
+        "partialHistory": true,
+        "partialMessages": [],
+        "replacedMessages": [],
+        "busy": true,
+        "older": "",
+        "forms": [],
+        "attachmentsSupported": false
+      }
+    },
+    {
+      "label": "stream-after-final",
+      "snapshot": {
+        "ok": true,
+        "nativeChat": true,
+        "session": "33333333-3333-4333-8333-333333333333",
+        "rows": [
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c7efde3326071c4c2488a1ddfeddc:text:0",
+            "message": "msg_c7efde3326071c4c2488a1ddfeddc",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "completed",
+            "body": "STREAM-FIRST long artificial task",
+            "bodyLength": 33,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_stream_first",
+              "delivery": "current",
+              "ack": "native-user-message-association"
+            },
+            "messageTime": 1793883078352
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_c330777f02a6eb3720f2804bbba97:text:0",
+            "message": "msg_c330777f02a6eb3720f2804bbba97",
+            "part": "text:0",
+            "kind": "text",
+            "title": "",
+            "body": "STREAM-ANSWER 1",
+            "bodyLength": 15,
+            "more": false,
+            "requestSummary": {
+              "request": "3d17882d-d9fd-4d02-8886-ff5c240b03d8",
+              "message": "msg_c330777f02a6eb3720f2804bbba97",
+              "completedAt": 1793883093909,
+              "durationMs": 15596,
+              "source": "received"
+            },
+            "messageTime": 1793883093886
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c3d6368c5112c2f63db6111ca6783:text:0",
+            "message": "msg_c3d6368c5112c2f63db6111ca6783",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "completed",
+            "body": "STREAM-FOLLOWUP additional artificial requirement",
+            "bodyLength": 49,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_stream_followup",
+              "delivery": "current",
+              "ack": "native-user-message-association"
+            },
+            "messageTime": 1793883093918
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_ca51126748cf0e2f8ac3e1d2a30ff:text:0",
+            "message": "msg_ca51126748cf0e2f8ac3e1d2a30ff",
+            "part": "text:0",
+            "kind": "text",
+            "title": "",
+            "body": "STREAM-ANSWER 2",
+            "bodyLength": 15,
+            "more": false,
+            "requestSummary": {
+              "request": "451294e5-a385-439a-91ab-9c748c561f9c",
+              "message": "msg_ca51126748cf0e2f8ac3e1d2a30ff",
+              "completedAt": 1793883093971,
+              "durationMs": 46,
+              "source": "received"
+            },
+            "messageTime": 1793883093954
+          }
+        ],
+        "connected": true,
+        "knownMessages": [
+          "msg_c7efde3326071c4c2488a1ddfeddc",
+          "msg_c330777f02a6eb3720f2804bbba97",
+          "msg_c3d6368c5112c2f63db6111ca6783",
+          "msg_ca51126748cf0e2f8ac3e1d2a30ff"
+        ],
+        "partialHistory": true,
+        "partialMessages": [],
+        "replacedMessages": [
+          "msg_ceac6c0bd5e017a8502bdfd4f3c90",
+          "msg_c2602c8931aed0fd962156b22c7ed"
+        ],
+        "busy": false,
+        "older": "",
+        "forms": [],
+        "attachmentsSupported": false
+      }
+    },
+    {
+      "label": "tool-before-completion",
+      "snapshot": {
+        "ok": true,
+        "nativeChat": true,
+        "session": "33333333-3333-4333-8333-333333333333",
+        "rows": [
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c7efde3326071c4c2488a1ddfeddc:text:0",
+            "message": "msg_c7efde3326071c4c2488a1ddfeddc",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "completed",
+            "body": "STREAM-FIRST long artificial task",
+            "bodyLength": 33,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_stream_first",
+              "delivery": "current",
+              "ack": "native-user-message-association"
+            },
+            "messageTime": 1793883078352
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_c330777f02a6eb3720f2804bbba97:text:0",
+            "message": "msg_c330777f02a6eb3720f2804bbba97",
+            "part": "text:0",
+            "kind": "text",
+            "title": "",
+            "body": "STREAM-ANSWER 1",
+            "bodyLength": 15,
+            "more": false,
+            "requestSummary": {
+              "request": "3d17882d-d9fd-4d02-8886-ff5c240b03d8",
+              "message": "msg_c330777f02a6eb3720f2804bbba97",
+              "completedAt": 1793883093909,
+              "durationMs": 15596,
+              "source": "received"
+            },
+            "messageTime": 1793883093886
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c3d6368c5112c2f63db6111ca6783:text:0",
+            "message": "msg_c3d6368c5112c2f63db6111ca6783",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "completed",
+            "body": "STREAM-FOLLOWUP additional artificial requirement",
+            "bodyLength": 49,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_stream_followup",
+              "delivery": "current",
+              "ack": "native-user-message-association"
+            },
+            "messageTime": 1793883093918
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_ca51126748cf0e2f8ac3e1d2a30ff:text:0",
+            "message": "msg_ca51126748cf0e2f8ac3e1d2a30ff",
+            "part": "text:0",
+            "kind": "text",
+            "title": "",
+            "body": "STREAM-ANSWER 2",
+            "bodyLength": 15,
+            "more": false,
+            "requestSummary": {
+              "request": "451294e5-a385-439a-91ab-9c748c561f9c",
+              "message": "msg_ca51126748cf0e2f8ac3e1d2a30ff",
+              "completedAt": 1793883093971,
+              "durationMs": 46,
+              "source": "received"
+            },
+            "messageTime": 1793883093954
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c67ad43c123c168e39b3a80278302:text:0",
+            "message": "msg_c67ad43c123c168e39b3a80278302",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "current",
+            "body": "TOOL-FIRST artificial task",
+            "bodyLength": 26,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_tool_first",
+              "delivery": "current",
+              "ack": "native-user-message-association"
+            },
+            "messageTime": 1793883094045
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_c7d70868923d7ec2bf8b1dfba87c4:tool:tool_3",
+            "message": "msg_c7d70868923d7ec2bf8b1dfba87c4",
+            "part": "tool:tool_3",
+            "kind": "tool",
+            "title": "Write",
+            "actionId": "tool_3",
+            "actionRole": "call",
+            "toolName": "Write",
+            "toolType": "Write",
+            "toolOutputLength": 0,
+            "outputTail": "",
+            "actionPreview": {
+              "kind": "fileTool",
+              "path": "/SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt",
+              "operation": "write"
+            },
+            "status": "inProgress",
+            "toolPath": "/SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt",
+            "body": "{\n  \"file_path\": \"/SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt\",\n  \"content\": \"SYNTHETIC-WRITE\\n\"\n}",
+            "bodyLength": 119,
+            "more": false,
+            "eventTime": 1793883094099,
+            "messageTime": 1793883094098
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_cbfcf99ea9a79da01da4d881008e4:text:0",
+            "message": "msg_cbfcf99ea9a79da01da4d881008e4",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": true,
+            "delivery": "queued",
+            "body": "TOOL-FOLLOWUP identical artificial requirement",
+            "bodyLength": 46,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_tool_followup",
+              "delivery": "queued",
+              "queuedWhileBusy": true,
+              "ack": "command-lifecycle:queued"
+            },
+            "messageTime": 1793883099292
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c7521aa696676393a7d8a4bd151ca:text:0",
+            "message": "msg_c7521aa696676393a7d8a4bd151ca",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": true,
+            "delivery": "queued",
+            "body": "TOOL-FOLLOWUP identical artificial requirement",
+            "bodyLength": 46,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_tool_repeat",
+              "delivery": "queued",
+              "queuedWhileBusy": true,
+              "ack": "command-lifecycle:queued"
+            },
+            "messageTime": 1793883099307
+          }
+        ],
+        "connected": true,
+        "knownMessages": [
+          "msg_c7efde3326071c4c2488a1ddfeddc",
+          "msg_c330777f02a6eb3720f2804bbba97",
+          "msg_c3d6368c5112c2f63db6111ca6783",
+          "msg_ca51126748cf0e2f8ac3e1d2a30ff",
+          "msg_c67ad43c123c168e39b3a80278302",
+          "msg_c7d70868923d7ec2bf8b1dfba87c4",
+          "msg_cbfcf99ea9a79da01da4d881008e4",
+          "msg_c7521aa696676393a7d8a4bd151ca"
+        ],
+        "partialHistory": true,
+        "partialMessages": [],
+        "replacedMessages": [
+          "msg_ceac6c0bd5e017a8502bdfd4f3c90",
+          "msg_c2602c8931aed0fd962156b22c7ed",
+          "msg_c879551d0c25ed032c8f98b8f397f"
+        ],
+        "busy": true,
+        "older": "",
+        "forms": [],
+        "attachmentsSupported": false
+      }
+    },
+    {
+      "label": "tool-after-final",
+      "snapshot": {
+        "ok": true,
+        "nativeChat": true,
+        "session": "33333333-3333-4333-8333-333333333333",
+        "rows": [
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c7efde3326071c4c2488a1ddfeddc:text:0",
+            "message": "msg_c7efde3326071c4c2488a1ddfeddc",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "completed",
+            "body": "STREAM-FIRST long artificial task",
+            "bodyLength": 33,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_stream_first",
+              "delivery": "current",
+              "ack": "native-user-message-association"
+            },
+            "messageTime": 1793883078352
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_c330777f02a6eb3720f2804bbba97:text:0",
+            "message": "msg_c330777f02a6eb3720f2804bbba97",
+            "part": "text:0",
+            "kind": "text",
+            "title": "",
+            "body": "STREAM-ANSWER 1",
+            "bodyLength": 15,
+            "more": false,
+            "requestSummary": {
+              "request": "3d17882d-d9fd-4d02-8886-ff5c240b03d8",
+              "message": "msg_c330777f02a6eb3720f2804bbba97",
+              "completedAt": 1793883093909,
+              "durationMs": 15596,
+              "source": "received"
+            },
+            "messageTime": 1793883093886
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c3d6368c5112c2f63db6111ca6783:text:0",
+            "message": "msg_c3d6368c5112c2f63db6111ca6783",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "completed",
+            "body": "STREAM-FOLLOWUP additional artificial requirement",
+            "bodyLength": 49,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_stream_followup",
+              "delivery": "current",
+              "ack": "native-user-message-association"
+            },
+            "messageTime": 1793883093918
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_ca51126748cf0e2f8ac3e1d2a30ff:text:0",
+            "message": "msg_ca51126748cf0e2f8ac3e1d2a30ff",
+            "part": "text:0",
+            "kind": "text",
+            "title": "",
+            "body": "STREAM-ANSWER 2",
+            "bodyLength": 15,
+            "more": false,
+            "requestSummary": {
+              "request": "451294e5-a385-439a-91ab-9c748c561f9c",
+              "message": "msg_ca51126748cf0e2f8ac3e1d2a30ff",
+              "completedAt": 1793883093971,
+              "durationMs": 46,
+              "source": "received"
+            },
+            "messageTime": 1793883093954
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c67ad43c123c168e39b3a80278302:text:0",
+            "message": "msg_c67ad43c123c168e39b3a80278302",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "completed",
+            "body": "TOOL-FIRST artificial task",
+            "bodyLength": 26,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_tool_first",
+              "delivery": "current",
+              "ack": "native-user-message-association"
+            },
+            "messageTime": 1793883094045
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_c7d70868923d7ec2bf8b1dfba87c4:receipt:tool_3",
+            "message": "msg_c7d70868923d7ec2bf8b1dfba87c4",
+            "part": "receipt:tool_3",
+            "kind": "receipt",
+            "title": "ⓘ Allowed once [C:46118a57]",
+            "body": "{\n  \"file_path\": \"/SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt\",\n  \"content\": \"SYNTHETIC-WRITE\\n\"\n}",
+            "bodyLength": 119,
+            "more": false,
+            "messageTime": 1793883094098
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_c7d70868923d7ec2bf8b1dfba87c4:tool:tool_3",
+            "message": "msg_c7d70868923d7ec2bf8b1dfba87c4",
+            "part": "tool:tool_3",
+            "kind": "tool",
+            "title": "Write",
+            "actionId": "tool_3",
+            "actionRole": "call",
+            "toolName": "Write",
+            "toolType": "Write",
+            "toolOutputLength": 160,
+            "outputTail": "File created successfully at: /SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt (file state is current in your context — no need to Read it back)",
+            "actionPreview": {
+              "kind": "fileTool",
+              "path": "/SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt",
+              "operation": "write"
+            },
+            "status": "completed",
+            "toolPath": "/SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt",
+            "body": "File created successfully at: /SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt (file state is current in your context — no need to Read it back)\n\n{\n  \"file_path\": \"/SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt\",\n  \"content\": \"SYNTHETIC-WRITE\\n\"\n}",
+            "bodyLength": 281,
+            "more": false,
+            "eventTime": 1793883094099,
+            "messageTime": 1793883094098
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_cbfcf99ea9a79da01da4d881008e4:text:0",
+            "message": "msg_cbfcf99ea9a79da01da4d881008e4",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "completed",
+            "body": "TOOL-FOLLOWUP identical artificial requirement",
+            "bodyLength": 46,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_tool_followup",
+              "delivery": "current",
+              "ack": "native-user-message-association"
+            },
+            "messageTime": 1793883099291
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c7521aa696676393a7d8a4bd151ca:text:0",
+            "message": "msg_c7521aa696676393a7d8a4bd151ca",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "completed",
+            "body": "TOOL-FOLLOWUP identical artificial requirement",
+            "bodyLength": 46,
+            "more": false,
+            "deliveryReceipt": {
+              "ok": true,
+              "accepted": true,
+              "clientId": "msg_tool_repeat",
+              "delivery": "current",
+              "ack": "native-user-message-association"
+            },
+            "messageTime": 1793883099305
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_ce86cf05bce385663de3deab685fb:result:tool_3",
+            "message": "msg_ce86cf05bce385663de3deab685fb",
+            "part": "result:tool_3",
+            "kind": "tool",
+            "title": "Tool result",
+            "actionId": "tool_3",
+            "actionRole": "result",
+            "status": "completed",
+            "body": "File created successfully at: /SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt (file state is current in your context — no need to Read it back)",
+            "bodyLength": 160,
+            "more": false,
+            "eventTime": 1793883099375,
+            "messageTime": 1793883099375
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_c8e8aadd927f9248965abb00ea356:text:0",
+            "message": "msg_c8e8aadd927f9248965abb00ea356",
+            "part": "text:0",
+            "kind": "text",
+            "title": "",
+            "body": "TOOL-ANSWER 4",
+            "bodyLength": 13,
+            "more": false,
+            "requestSummary": {
+              "request": "a6bc6521-e767-43be-9abd-92ff0cebc1ef",
+              "message": "msg_c8e8aadd927f9248965abb00ea356",
+              "completedAt": 1793883099427,
+              "durationMs": 26,
+              "source": "received"
+            },
+            "messageTime": 1793883099419
+          }
+        ],
+        "connected": true,
+        "knownMessages": [
+          "msg_c7efde3326071c4c2488a1ddfeddc",
+          "msg_c330777f02a6eb3720f2804bbba97",
+          "msg_c3d6368c5112c2f63db6111ca6783",
+          "msg_ca51126748cf0e2f8ac3e1d2a30ff",
+          "msg_c67ad43c123c168e39b3a80278302",
+          "msg_c7d70868923d7ec2bf8b1dfba87c4",
+          "msg_cbfcf99ea9a79da01da4d881008e4",
+          "msg_c7521aa696676393a7d8a4bd151ca",
+          "msg_ce86cf05bce385663de3deab685fb",
+          "msg_c8e8aadd927f9248965abb00ea356"
+        ],
+        "partialHistory": true,
+        "partialMessages": [],
+        "replacedMessages": [
+          "msg_ceac6c0bd5e017a8502bdfd4f3c90",
+          "msg_c2602c8931aed0fd962156b22c7ed",
+          "msg_c879551d0c25ed032c8f98b8f397f",
+          "msg_c6a959fc7efaebf0f0dfe9d1924e7"
+        ],
+        "busy": false,
+        "older": "",
+        "forms": [],
+        "attachmentsSupported": false
+      }
+    },
+    {
+      "label": "cold-reopen",
+      "snapshot": {
+        "ok": true,
+        "nativeChat": true,
+        "session": "33333333-3333-4333-8333-333333333333",
+        "rows": [
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c7efde3326071c4c2488a1ddfeddc:text:0",
+            "message": "msg_c7efde3326071c4c2488a1ddfeddc",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "",
+            "body": "STREAM-FIRST long artificial task",
+            "bodyLength": 33,
+            "more": false,
+            "messageTime": 1793883078352
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_c330777f02a6eb3720f2804bbba97:text:0",
+            "message": "msg_c330777f02a6eb3720f2804bbba97",
+            "part": "text:0",
+            "kind": "text",
+            "title": "",
+            "body": "STREAM-ANSWER 1",
+            "bodyLength": 15,
+            "more": false,
+            "requestSummary": {
+              "request": "3d17882d-d9fd-4d02-8886-ff5c240b03d8",
+              "message": "msg_c330777f02a6eb3720f2804bbba97",
+              "completedAt": 1793883093909,
+              "durationMs": 15596,
+              "source": "received"
+            },
+            "messageTime": 1793883093886
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c3d6368c5112c2f63db6111ca6783:text:0",
+            "message": "msg_c3d6368c5112c2f63db6111ca6783",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "",
+            "body": "STREAM-FOLLOWUP additional artificial requirement",
+            "bodyLength": 49,
+            "more": false,
+            "messageTime": 1793883093918
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_ca51126748cf0e2f8ac3e1d2a30ff:text:0",
+            "message": "msg_ca51126748cf0e2f8ac3e1d2a30ff",
+            "part": "text:0",
+            "kind": "text",
+            "title": "",
+            "body": "STREAM-ANSWER 2",
+            "bodyLength": 15,
+            "more": false,
+            "requestSummary": {
+              "request": "451294e5-a385-439a-91ab-9c748c561f9c",
+              "message": "msg_ca51126748cf0e2f8ac3e1d2a30ff",
+              "completedAt": 1793883093971,
+              "durationMs": 46,
+              "source": "received"
+            },
+            "messageTime": 1793883093954
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c67ad43c123c168e39b3a80278302:text:0",
+            "message": "msg_c67ad43c123c168e39b3a80278302",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "",
+            "body": "TOOL-FIRST artificial task",
+            "bodyLength": 26,
+            "more": false,
+            "messageTime": 1793883094045
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_c7d70868923d7ec2bf8b1dfba87c4:receipt:tool_3",
+            "message": "msg_c7d70868923d7ec2bf8b1dfba87c4",
+            "part": "receipt:tool_3",
+            "kind": "receipt",
+            "title": "ⓘ Allowed once [C:46118a57]",
+            "body": "{\n  \"file_path\": \"/SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt\",\n  \"content\": \"SYNTHETIC-WRITE\\n\"\n}",
+            "bodyLength": 119,
+            "more": false,
+            "messageTime": 1793883094098
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_c7d70868923d7ec2bf8b1dfba87c4:tool:tool_3",
+            "message": "msg_c7d70868923d7ec2bf8b1dfba87c4",
+            "part": "tool:tool_3",
+            "kind": "tool",
+            "title": "Write",
+            "actionId": "tool_3",
+            "actionRole": "call",
+            "toolName": "Write",
+            "toolType": "Write",
+            "toolOutputLength": 160,
+            "outputTail": "File created successfully at: /SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt (file state is current in your context — no need to Read it back)",
+            "actionPreview": {
+              "kind": "fileTool",
+              "path": "/SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt",
+              "operation": "write"
+            },
+            "status": "completed",
+            "toolPath": "/SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt",
+            "body": "File created successfully at: /SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt (file state is current in your context — no need to Read it back)\n\n{\n  \"file_path\": \"/SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt\",\n  \"content\": \"SYNTHETIC-WRITE\\n\"\n}",
+            "bodyLength": 281,
+            "more": false,
+            "eventTime": 1793883094099,
+            "messageTime": 1793883094098
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_cbfcf99ea9a79da01da4d881008e4:text:0",
+            "message": "msg_cbfcf99ea9a79da01da4d881008e4",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "",
+            "body": "TOOL-FOLLOWUP identical artificial requirement",
+            "bodyLength": 46,
+            "more": false,
+            "messageTime": 1793883099291
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_c7521aa696676393a7d8a4bd151ca:text:0",
+            "message": "msg_c7521aa696676393a7d8a4bd151ca",
+            "part": "text:0",
+            "kind": "user",
+            "title": "",
+            "queued": false,
+            "delivery": "",
+            "body": "TOOL-FOLLOWUP identical artificial requirement",
+            "bodyLength": 46,
+            "more": false,
+            "messageTime": 1793883099305
+          },
+          {
+            "messageSender": "user",
+            "fileReferences": [],
+            "key": "msg_ce86cf05bce385663de3deab685fb:result:tool_3",
+            "message": "msg_ce86cf05bce385663de3deab685fb",
+            "part": "result:tool_3",
+            "kind": "tool",
+            "title": "Tool result",
+            "actionId": "tool_3",
+            "actionRole": "result",
+            "status": "completed",
+            "body": "File created successfully at: /SYNTHETIC-CLAUDE-FIXTURE/project/owned.txt (file state is current in your context — no need to Read it back)",
+            "bodyLength": 160,
+            "more": false,
+            "eventTime": 1793883099375,
+            "messageTime": 1793883099375
+          },
+          {
+            "messageSender": "agent",
+            "fileReferences": [],
+            "key": "msg_c8e8aadd927f9248965abb00ea356:text:0",
+            "message": "msg_c8e8aadd927f9248965abb00ea356",
+            "part": "text:0",
+            "kind": "text",
+            "title": "",
+            "body": "TOOL-ANSWER 4",
+            "bodyLength": 13,
+            "more": false,
+            "requestSummary": {
+              "request": "a6bc6521-e767-43be-9abd-92ff0cebc1ef",
+              "message": "msg_c8e8aadd927f9248965abb00ea356",
+              "completedAt": 1793883099427,
+              "durationMs": 26,
+              "source": "received"
+            },
+            "messageTime": 1793883099419
+          }
+        ],
+        "connected": true,
+        "knownMessages": [
+          "msg_c7efde3326071c4c2488a1ddfeddc",
+          "msg_c330777f02a6eb3720f2804bbba97",
+          "msg_c3d6368c5112c2f63db6111ca6783",
+          "msg_ca51126748cf0e2f8ac3e1d2a30ff",
+          "msg_c67ad43c123c168e39b3a80278302",
+          "msg_c7d70868923d7ec2bf8b1dfba87c4",
+          "msg_cbfcf99ea9a79da01da4d881008e4",
+          "msg_c7521aa696676393a7d8a4bd151ca",
+          "msg_ce86cf05bce385663de3deab685fb",
+          "msg_c8e8aadd927f9248965abb00ea356"
+        ],
+        "partialHistory": true,
+        "partialMessages": [],
+        "replacedMessages": [],
+        "busy": false,
+        "older": "",
+        "forms": [],
+        "attachmentsSupported": false
+      }
+    }
+  ]
+}

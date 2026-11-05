@@ -6,6 +6,7 @@ const validId=v=>typeof v==='string'&&/^msg_[A-Za-z0-9_-]{1,124}$/.test(v);
 function receipt(raw,clientId){
  if(!validId(clientId)||!raw)return null;
  const r={ok:raw.ok!==false,accepted:raw.ok!==false&&raw.accepted===true,clientId,delivery:['api','queued','current','started','submitted','shell','rejected','unconfirmed'].includes(raw.delivery)?raw.delivery:'submitted'};
+ if(raw.queuedWhileBusy===true)r.queuedWhileBusy=true;
  for(const k of ['ack','error'])if(typeof raw[k]==='string'&&/^[A-Za-z0-9:_-]{1,100}$/.test(raw[k]))r[k]=raw[k];
  return r;
 }

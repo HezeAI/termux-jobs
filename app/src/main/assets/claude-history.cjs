@@ -3,7 +3,11 @@
 // Keep one bounded page, never the whole transcript, in memory.
 const fs=require('node:fs'),path=require('node:path');
 const MAX_RECORD=32*1024*1024,PAGE_BYTES=2*1024*1024,PAGE_ENTRIES=20;
-const visible=e=>e&&['user','assistant'].includes(e.type)&&typeof e.uuid==='string'&&!e.isSidechain&&!e.teamName&&!e.isMeta&&!e.parent_tool_use_id;
+function queued(e){const a=e?.attachment;return e?.type==='attachment'&&a?.type==='queued_command'&&a.humanTurn===true&&a.origin?.kind==='human'&&a.commandMode==='prompt'&&typeof a.prompt==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(a.source_uuid||'');}
+const visible=e=>e&&(['user','assistant'].includes(e.type)||queued(e))&&typeof e.uuid==='string'&&!e.isSidechain&&!e.teamName&&!e.isMeta&&!e.parent_tool_use_id;
+// Read-only projection: raw UUID walks ancestry, source_uuid owns UI identity.
+// This record proves text persistence, never admission to the current model request.
+function project(e){if(!queued(e))return e;const a=e.attachment;return {type:'user',uuid:a.source_uuid,parentUuid:e.parentUuid,sessionId:e.sessionId,timestamp:Number.isFinite(Date.parse(a.timestamp))?a.timestamp:e.timestamp,message:{role:'user',content:a.prompt},nativeQueueRecord:e.uuid};}
 function locate(config,session){
  if(!/^[0-9a-f-]{36}$/i.test(session))return null;
  const root=path.join(config,'projects');let real;try{real=fs.realpathSync(root);}catch{return null;}
@@ -37,7 +41,7 @@ class ClaudeHistory {
     if(!started){if(!visible(e))continue;started=true;want=e.uuid;}
     if(e.uuid!==want)continue;
     want=typeof e.parentUuid==='string'?e.parentUuid:typeof e.logicalParentUuid==='string'?e.logicalParentUuid:null;
-    if(visible(e)){const entry=this.strip(e);entries.push(entry);bytes+=Buffer.byteLength(JSON.stringify(entry));}
+    if(visible(e)){const entry=this.strip(project(e));entries.push(entry);bytes+=Buffer.byteLength(JSON.stringify(entry));}
     if(!want)break;
     if(entries.length>=PAGE_ENTRIES||bytes>=PAGE_BYTES){older=this.token({session:this.session,file:identity,end:row.at,want});break;}
    }
@@ -45,4 +49,4 @@ class ClaudeHistory {
   }finally{fs.closeSync(fd);}
  }
 }
-module.exports={ClaudeHistory,reverse,locate,visible,MAX_RECORD,PAGE_BYTES,PAGE_ENTRIES};
+module.exports={ClaudeHistory,reverse,locate,visible,MAX_RECORD,PAGE_BYTES,PAGE_ENTRIES,project,queued};

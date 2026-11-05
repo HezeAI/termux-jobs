@@ -161,7 +161,7 @@ class ClaudeChat {
    if(q.kind==='shell'){const promise=this.shell(q).then(r=>({...r,delivery:'shell',ack:'owned-process-spawn'}));this.sent.set(q.id,{raw,promise});return promise;}
    const id=crypto.randomUUID(),epoch=this.epoch,busyAtSend=this.busy||this.permissions.size>0;
    let resolve;const promise=new Promise(r=>resolve=r);const record={raw,promise,id:q.id,uuid:id,epoch,busyAtSend,state:'sending',started:false,result:null,timer:null,message:withoutImageData({type:'user',uuid:id,message:{role:'user',content}})};
-   record.finish=result=>{const view=deliveryStatus.receipt({...result,delivery:result.delivery==='submitted'&&['started','completed'].includes(record.state)?'started':result.delivery},record.id);if(record.deliveryReceipt?.delivery!=='current'||!view?.accepted)record.deliveryReceipt=view;record.result=result;if(record.timer){clearTimeout(record.timer);record.timer=null;}resolve(result);};
+   record.finish=result=>{if(result.delivery==='queued'&&record.busyAtSend)result={...result,queuedWhileBusy:true};const view=deliveryStatus.receipt({...result,delivery:result.delivery==='submitted'&&['started','completed'].includes(record.state)?'started':result.delivery},record.id);if(record.deliveryReceipt?.delivery!=='current'||!view?.accepted)record.deliveryReceipt=view;record.result=result;if(record.timer){clearTimeout(record.timer);record.timer=null;}resolve(result);};
    this.sent.set(q.id,record);this.admissions.set(id,record);this.deliveryByNative.set(id,record);
    record.timer=setTimeout(()=>{if(record.state==='sending'){record.state='unconfirmed';record.finish({ok:false,delivery:'unconfirmed',error:'SEND_UNCONFIRMED'});}},10000);
    // Reserve the ID before writing. A timeout/reconnect never writes this input again.
