@@ -34,6 +34,9 @@ export function instrument(source,name){
    replace('  getModel() {\n    return this.model;\n  }','  getModel() {\n    globalThis.__jobsGeminiLive?.attach(this);\n    return this.model;\n  }');
    replace('      coreEvents.emitModelChanged(newModel);','      coreEvents.emitModelChanged(newModel);\n      globalThis.__jobsGeminiLive?.attach(this);');
    replace('      this._activeModel = model;','      this._activeModel = model;\n      globalThis.__jobsGeminiLive?.attach(this);');
+   const windowFor=model=>`([GEMMA_4_31B_IT_MODEL,GEMMA_4_26B_A4B_IT_MODEL,PREVIEW_GEMINI_MODEL,PREVIEW_GEMINI_FLASH_MODEL,DEFAULT_GEMINI_MODEL,DEFAULT_GEMINI_FLASH_MODEL,DEFAULT_GEMINI_FLASH_LITE_MODEL].includes(${model})?tokenLimit(${model}):null)`;
+   replace('    logApiResponse(this.config, event);','    globalThis.__jobsGeminiLive?.contextResponse?.(this.config,model,usageMetadata,role,'+windowFor('model')+');\n    logApiResponse(this.config, event);');
+   replace('    return info2;\n  }\n  /**\n   * Masks bulky tool outputs to save context window space.', '    if (newHistory && [CompressionStatus.COMPRESSED,CompressionStatus.CONTENT_TRUNCATED].includes(info2.compressionStatus)) globalThis.__jobsGeminiLive?.contextCompressed?.(this.config,model,info2.newTokenCount,'+windowFor('model')+');\n    return info2;\n  }\n  /**\n   * Masks bulky tool outputs to save context window space.');
    replace('function logApiRequest(config2, event) {','function logApiRequest(config2, event) {\n  globalThis.__jobsGeminiLive?.api("request",config2,event);');
    replace('function logApiResponse(config2, event) {','function logApiResponse(config2, event) {\n  globalThis.__jobsGeminiLive?.api("response",config2,event);');
   } else {

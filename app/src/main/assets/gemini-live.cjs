@@ -1,5 +1,6 @@
 'use strict';
 // Owned Gemini child. Status files contain scalars only; permission details use private RPC, in memory.
+const {AgentContext,count:contextCount}=require('./agent-context.cjs');
 const MODEL=/^(?:auto|flash|pro|gemini-[A-Za-z0-9][A-Za-z0-9._-]{0,120})$/;
 const safeModel=v=>typeof v==='string'&&MODEL.test(v)?v:'';
 const number=v=>Number.isSafeInteger(v)&&v>=0?v:0;
@@ -8,6 +9,7 @@ function createBridge(send, fetcher=globalThis.fetch) {
   let config, state='starting', uiSeen=false, unsupported=false, queued=null, changing=false, last='', lastSent=0;
   let totals={requests:0,input:0,output:0,cache:0,thoughts:0,total:0,apiMs:0}, observed='';
   let modeController=null, modeQueued=null, modeChange=null, modeApplying=false;
+  let context=new AgentContext(process.env.JOBS_GEMINI_ATTACHMENT_ROOT||'','gemini','');
   let change=null, catalog=[], catalogAt=0, lastSelected='';
   const permissions=new Map(),receiptListeners=new Set();
   const {ReceiptStore}=require('./agent-receipts.cjs');let receiptStore=new ReceiptStore(null,'G'),receiptSession='';
@@ -74,10 +76,10 @@ function createBridge(send, fetcher=globalThis.fetch) {
     return {schema:1,available:!!config&&uiSeen&&!unsupported&&!!auth&&!!config.getContentGenerator?.(),model:actual(),selectedModel:selected(),
       mode:['default','autoEdit','auto_edit','plan','yolo'].includes(mode)?mode:'',
       state:unsupported?'unsupported':uiSeen?state:'starting',auth:['gemini-api-key','oauth-personal','vertex-ai','gateway','compute-default-credentials'].includes(auth)?auth:'',
-      ...totals,thinking:reasoning.status(actual()),change,modeChange,permissionId:unsupported?'':(currentPermission()?.value.id||''),canChangeMode:!!modeController?.active&&!unsupported,canPlan:!!modeController?.config?.isPlanEnabled?.(),canEdit:!!modeController?.config?.isTrustedFolder?.(),quotaAvailable:false};
+      ...totals,context:context.snapshot(),thinking:reasoning.status(actual()),change,modeChange,permissionId:unsupported?'':(currentPermission()?.value.id||''),canChangeMode:!!modeController?.active&&!unsupported,canPlan:!!modeController?.config?.isPlanEnabled?.(),canEdit:!!modeController?.config?.isTrustedFolder?.(),quotaAvailable:false};
   }
   function publish(force=false){try{const value=snapshot(),key=JSON.stringify(value);if(!force&&key===last&&Date.now()-lastSent<3000)return;last=key;lastSent=Date.now();send({type:'jobs-gemini-status',value});}catch{}}
-  function attach(value){if(value&&typeof value.setModel==='function'){config=value;reasoning.attach(config);receiptsFor(config);if(lastSelected!==selected()){lastSelected=selected();observed='';}publish();}}
+  function attach(value){if(value&&typeof value.setModel==='function'){config=value;const session=config.getSessionId?.()||'',switched=session!==context.session;if(switched){context=new AgentContext(process.env.JOBS_GEMINI_ATTACHMENT_ROOT||'','gemini',session);lastSelected=selected();}reasoning.attach(config);receiptsFor(config);if(lastSelected!==selected()){if(lastSelected)context.clear();lastSelected=selected();observed='';}publish();}}
   function apply(){
     if(!queued||state!=='idle'||!config||unsupported||!uiSeen||changing)return;
     const request=queued;queued=null;
@@ -87,7 +89,7 @@ function createBridge(send, fetcher=globalThis.fetch) {
       // Same native Config setter as /model set, temporary: no auth/rights/history mutation.
       config.setModel(request.model,true);
       if(selected()!==request.model)throw Error('not_applied');
-      observed=request.model;change={id:request.id,model:request.model,state:'applied'};
+      context.clear();observed=request.model;change={id:request.id,model:request.model,state:'applied'};
     }catch{change={id:request.id,model:request.model,state:'failed'};}
     finally{changing=false;publish();}
   }
@@ -151,7 +153,7 @@ function createBridge(send, fetcher=globalThis.fetch) {
     return {ok:false,error:'INVALID_OPERATION'};
   }
   const status=require('./agent-delivery-status.cjs');
-  return {requestBegin:(c,id,continuation)=>{attach(c);chat.nativeRequestBegin(id,continuation);},requestEnd:(c,id)=>{attach(c);chat.nativeRequestEnd(id);},historyCleared:()=>{for(const record of chat.sent.values())if(record.session===config?.getSessionId?.())record.hidden=true;chat.invalidate();},inputContext:status.current,runInputContext:status.run,historyMeta:status.historyMeta,queueContext:status.queueContext,queuedSubmit:(queue,submit,value)=>status.run(status.queuedContext(queue,config?.getSessionId?.()||''),()=>submit(value)),queueCancelled:queue=>{for(const id of status.queuedContext(queue,config?.getSessionId?.()||'').ids){const record=chat.sent.get(id);if(record){record.receipt=status.receipt({ok:false,accepted:false,delivery:'rejected',error:'CANCELLED',ack:'native-queue-cleared'},id);chat.invalidate();}}},attach,ui,chatUI,chatShell,approval,permission,consumePermission,prepareReceipt,receiptSubscribe,receiptText,api,publish,snapshot,command,unsupported(){unsupported=true;queued=null;modeQueued=null;publish(true);}};
+  return {contextResponse:(c,model,usage,role,capacity)=>{attach(c);if(role==='main'){const used=contextCount(usage?.promptTokenCount);if(used!==null)context.accept(used,capacity,safeModel(model),'native-last-prompt');else context.markStale();publish();}},contextCompressed:(c,model,used,capacity)=>{attach(c);context.accept(used,capacity,safeModel(model),'native-compression');publish();},requestBegin:(c,id,continuation)=>{attach(c);context.markStale();chat.nativeRequestBegin(id,continuation);},requestEnd:(c,id)=>{attach(c);chat.nativeRequestEnd(id);},historyCleared:()=>{for(const record of chat.sent.values())if(record.session===config?.getSessionId?.())record.hidden=true;chat.invalidate();},inputContext:status.current,runInputContext:status.run,historyMeta:status.historyMeta,queueContext:status.queueContext,queuedSubmit:(queue,submit,value)=>status.run(status.queuedContext(queue,config?.getSessionId?.()||''),()=>submit(value)),queueCancelled:queue=>{for(const id of status.queuedContext(queue,config?.getSessionId?.()||'').ids){const record=chat.sent.get(id);if(record){record.receipt=status.receipt({ok:false,accepted:false,delivery:'rejected',error:'CANCELLED',ack:'native-queue-cleared'},id);chat.invalidate();}}},attach,ui,chatUI,chatShell,approval,permission,consumePermission,prepareReceipt,receiptSubscribe,receiptText,api,publish,snapshot,command,unsupported(){unsupported=true;queued=null;modeQueued=null;publish(true);}};
 }
 module.exports={createBridge,safeModel};
 if(process.env.JOBS_GEMINI_LIVE==='1'&&typeof process.send==='function'){

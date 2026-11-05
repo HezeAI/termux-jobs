@@ -125,6 +125,8 @@ async function run(socket, model, mode, chat, thread, auth = 'auto') {
     next.mode=['default','autoEdit','auto_edit','plan','yolo'].includes(value.mode)?value.mode:'';
     next.auth=['gemini-api-key','oauth-personal','vertex-ai','gateway','compute-default-credentials'].includes(value.auth)?value.auth:'';
     for(const key of ['requests','input','output','cache','thoughts','total','apiMs'])next[key]=Number.isSafeInteger(value[key])&&value[key]>=0?value[key]:0;
+    const context=value.context,usage=context?.usage;
+    if(typeof context?.session==='string'&&context.session.length<=128){next.context={session:context.session,stale:context.stale!==false||!next.available,usage:null};if(usage&&Number.isSafeInteger(usage.used)&&usage.used>=0&&safeModel(usage.model))next.context.usage={used:usage.used,capacity:Number.isSafeInteger(usage.capacity)&&usage.capacity>0?usage.capacity:null,model:safeModel(usage.model),updated:Number.isSafeInteger(usage.updated)?usage.updated:0,source:['native-last-prompt','native-compression'].includes(usage.source)?usage.source:''};}
     if(value.thinking&&['default','minimal','low','medium','high'].includes(value.thinking.value)){const t=value.thinking;next.thinking={value:t.value,model:safeModel(t.model),options:Array.isArray(t.options)?t.options.filter(v=>['default','minimal','low','medium','high'].includes(v)).slice(0,5):[],available:!!t.available,effective:!!t.effective};}
     if(value.change&&/^[-a-zA-Z0-9]{1,64}$/.test(value.change.id)&&safeModel(value.change.model)&&['queued','applied','failed','cancelled'].includes(value.change.state))next.change={id:value.change.id,model:value.change.model,state:value.change.state};
     next.permissionId=uuid.test(value.permissionId||'')?value.permissionId:'';

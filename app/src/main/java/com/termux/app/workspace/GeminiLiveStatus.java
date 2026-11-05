@@ -8,6 +8,7 @@ import java.nio.file.LinkOption;
 
 /** Sanitized, local scalar snapshot from one owned Gemini run. Never reads its transcript/auth. */
 final class GeminiLiveStatus {
+    JSONObject context;
     String model="",selectedModel="",mode="",auth="",state="starting",error="";
     String changeId="",changeModel="",changeState="";
     boolean available,canChangeMode,canPlan,canEdit;
@@ -24,6 +25,7 @@ final class GeminiLiveStatus {
         s.state=one(v.optString("state"),"starting|idle|responding|waiting_for_confirmation|unsupported|ended");
         s.available=v.optBoolean("available")&&!s.state.equals("unsupported")&&!s.state.equals("ended");
         s.requests=count(v,"requests");s.input=count(v,"input");s.output=count(v,"output");s.cache=count(v,"cache");s.thoughts=count(v,"thoughts");s.total=count(v,"total");s.apiMs=count(v,"apiMs");
+        s.context=v.optJSONObject("context");
         JSONObject change=v.optJSONObject("change");if(change!=null){s.changeId=one(change.optString("id"),"[-a-zA-Z0-9]{1,64}");s.changeModel=model(change.optString("model"));s.changeState=one(change.optString("state"),"queued|applied|failed|cancelled");}
         JSONObject thinking=v.optJSONObject("thinking");if(thinking!=null){s.thinking=one(thinking.optString("value"),"default|minimal|low|medium|high");s.thinkingModel=model(thinking.optString("model"));s.canChangeThinking=thinking.optBoolean("available");s.thinkingEffective=thinking.optBoolean("effective");org.json.JSONArray options=thinking.optJSONArray("options");if(options!=null)for(int i=0;i<Math.min(options.length(),5);i++){String option=one(options.optString(i),"default|minimal|low|medium|high");if(!option.isEmpty()&&!s.thinkingOptions.contains(option))s.thinkingOptions.add(option);}}
         s.permissionId=GeminiCli.validThread(v.optString("permissionId"))?v.optString("permissionId"):"";

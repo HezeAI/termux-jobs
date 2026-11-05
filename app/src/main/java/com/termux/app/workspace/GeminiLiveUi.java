@@ -16,6 +16,7 @@ import java.util.function.Supplier;
 
 /** Gemini-only local polling: updates the chip text, never the terminal view or input. */
 final class GeminiLiveUi {
+    private AgentContextMeter detailsContext;
     private final TermuxActivity activity;
     private final Supplier<WorkspaceStore.Session> current;
     private final BooleanSupplier visible;
@@ -72,6 +73,7 @@ final class GeminiLiveUi {
     void syncPermissionVisibility(){permissions.syncVisibility();}
     private void update(){WorkspaceStore.Session active=current.get();if(active!=null)permissions.update(active,status);else permissions.syncVisibility();if(chip==null)return;String text="Gemini · "+(status==null||!status.available?tr("нет данных","unavailable"):status.model)+"\n"+state()+(status!=null&&status.available?" · "+GeminiRightsUi.label(status.mode):"")+(status!=null&&status.changeState.equals("queued")?tr(" · смена модели ожидает"," · model change queued"):"")+" ›";
         if(!text.contentEquals(chip.getText()))chip.setText(text);
+        if(detailsContext!=null&&owns(detailsRun))detailsContext.present(status==null?null:status.context);
         if(detailsDialog!=null&&detailsDialog.isShowing()){
             if(!owns(detailsRun)){detailsDialog.dismiss();return;}
             WorkspaceStore.Session profile=current.get();boolean available=status!=null&&status.available;
@@ -130,6 +132,7 @@ final class GeminiLiveUi {
         detailsInfo=AgentStatusUi.info(body,detailsSummary());detailsInfo.setId(android.R.id.message);
         AgentStatusUi.row(body,tr("Квоты AI Studio","AI Studio quotas"),"quotas",()->openQuotas());
         AgentChatScale.controls(body,profile,()->owns(captured),chatPreview,chatSave);
+        detailsContext=new AgentContextMeter(activity,"Gemini");body.addView(detailsContext);
         AlertDialog dialog=WorkspaceDialogs.builder(activity).setTitle(tr("Статус Gemini","Gemini status")).setView(AgentStatusUi.scroll(body)).setPositiveButton(tr("Обновить","Refresh"),null).setNegativeButton(tr("Закрыть","Close"),null).create();detailsDialog=dialog;detailsRun=captured;
         dialog.setOnDismissListener(d->{if(detailsDialog==dialog)detailsDialog=null;});dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{if(owns(captured))load(profile);}));dialog.show();update();
     }
