@@ -3,6 +3,7 @@
 Canonical checkout `/root/termux-fork/.verification/rollback-live-actions/source`,
 ветка `work/redesign-v35-1494` (историческое имя). Основной2.1.5-test4/code1498
 включает все уточнения1–15 и отдельные окна прав/настроек сессии.
+Исходный commit: `19952b796aeaa686962c0b1532d8f70215e6dcad`.
 
 Основной: `/sdcard/Download/Termux-Jobs-v2.1.5-test4-arm64.apk`, SHA256
 `f02ec13279067c2304b40e200c06da464f8c4bf0c03e5b29308b406432cde50a`.
