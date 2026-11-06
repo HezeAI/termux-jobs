@@ -20,7 +20,8 @@ import com.termux.R;
 
 /** Shared appearance for workspace dialogs; no shell execution or persistent state. */
 final class WorkspaceDialogs {
-    static final int ACCENT = 0xff79dfcd, TEXT = 0xffedf5f6, MUTED = 0xff91a6af, DANGER = 0xffff8f8f;
+    static final int ACCENT = 0xffecece5, TEXT = 0xfff0f0ee, MUTED = 0xffa5a5a2, DANGER = 0xffff8f8f;
+    static final int BG=0xff191a1c, SURFACE=0xff232426, LINE=0xff393a3c, TINT=0xff343531, USER=0xff303132;
     private WorkspaceDialogs() {}
     static int dp(Context c, float n) { return Math.round(c.getResources().getDisplayMetrics().density * n); }
     static Builder builder(Context c) { return new Builder(c); }
@@ -36,6 +37,7 @@ final class WorkspaceDialogs {
             return super.setSingleChoiceItems(new Rows(getContext(), items, selected), selected, listener);
         }
     }
+    static Drawable cardBackground(Context c){GradientDrawable panel=new GradientDrawable();panel.setColor(SURFACE);panel.setCornerRadius(dp(c,20));panel.setStroke(dp(c,1),LINE);return panel;}
     static android.widget.ListAdapter choiceAdapter(Context c,CharSequence[] items,int selected,java.util.function.IntPredicate enabled){return new Rows(c,items,selected,enabled);}
     private static final class Rows extends ArrayAdapter<CharSequence> {
         private final int selected;private final java.util.function.IntPredicate enabled;
@@ -73,8 +75,8 @@ final class WorkspaceDialogs {
         states.addState(new int[]{}, panel(c, selected)); return states;
     }
     private static Drawable panel(Context c, boolean highlight) {
-        GradientDrawable panel = new GradientDrawable(); panel.setColor(highlight ? 0xff123b36 : 0xff0b1319);
-        panel.setCornerRadius(dp(c, 12)); panel.setStroke(dp(c, 1), highlight ? ACCENT : 0xff213039);
+        GradientDrawable panel = new GradientDrawable(); panel.setColor(highlight ? 0xff343531 : 0xff232426);
+        panel.setCornerRadius(dp(c, 12)); panel.setStroke(dp(c, 1), highlight ? ACCENT : 0xff393a3c);
         if (!highlight) return panel;
         GradientDrawable marker = new GradientDrawable(); marker.setColor(ACCENT); marker.setCornerRadius(dp(c, 2));
         LayerDrawable layers = new LayerDrawable(new Drawable[]{panel, marker});

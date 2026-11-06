@@ -183,7 +183,7 @@ final class WorkspaceFileBrowser {
             }
             if(thumbnails.enabled()&&WorkspaceMediaThumbnails.media(e)){
                 FrameLayout frame=new FrameLayout(activity);ImageView preview=new ImageView(activity);boolean video=ProjectFiles.mime(e.name).startsWith("video/");preview.setImageResource(video?R.drawable.workspace_media_video:R.drawable.workspace_media_photo);preview.setScaleType(ImageView.ScaleType.CENTER_CROP);preview.setContentDescription(t("Миниатюра ","Thumbnail ")+e.name);frame.addView(preview,new FrameLayout.LayoutParams(-1,-1));
-                GradientDrawable shape=new GradientDrawable();shape.setColor(0xff152521);shape.setCornerRadius(dp(8));frame.setBackground(shape);frame.setClipToOutline(true);
+                GradientDrawable shape=new GradientDrawable();shape.setColor(WorkspaceDialogs.SURFACE);shape.setCornerRadius(dp(8));frame.setBackground(shape);frame.setClipToOutline(true);
                 if(video){ImageView play=new ImageView(activity);play.setImageResource(R.drawable.workspace_play);play.setColorFilter(0xffffffff);play.setPadding(dp(3),dp(3),dp(3),dp(3));GradientDrawable circle=new GradientDrawable();circle.setColor(0xcc000000);circle.setShape(GradientDrawable.OVAL);play.setBackground(circle);FrameLayout.LayoutParams overlay=new FrameLayout.LayoutParams(dp(22),dp(22),Gravity.BOTTOM|Gravity.END);overlay.setMargins(dp(3),dp(3),dp(3),dp(3));frame.addView(play,overlay);}
                 LinearLayout.LayoutParams tile=new LinearLayout.LayoutParams(dp(64),dp(64));tile.setMargins(dp(2),dp(4),dp(6),dp(4));line.addView(frame,tile);thumbnails.bind(line,preview,e);
             }

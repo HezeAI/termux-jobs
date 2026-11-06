@@ -21,7 +21,7 @@ final class WorkspaceLocalFilePicker implements AutoCloseable {
         result.add(new Location(storageLabel,"termux","/sdcard",true));return result;
     }
     private int chatLimit;
-    private final TermuxActivity activity;private final List<WorkspaceFileBrowser> browsers=new ArrayList<>();private AlertDialog chooser;private android.widget.PopupMenu attachmentMenu;private boolean closed;private int selectionEpoch;
+    private final TermuxActivity activity;private final List<WorkspaceFileBrowser> browsers=new ArrayList<>();private AlertDialog chooser;private WorkspacePopover attachmentMenu;private boolean closed;private int selectionEpoch;
     private final java.util.function.Consumer<Runnable> requestStorage;
     WorkspaceLocalFilePicker(TermuxActivity a){this(a,a::requestWorkspaceStorageAccess);}
     WorkspaceLocalFilePicker(TermuxActivity a,java.util.function.Consumer<Runnable> storage){activity=a;requestStorage=storage;}
@@ -39,23 +39,19 @@ final class WorkspaceLocalFilePicker implements AutoCloseable {
     }
     void chooseChatAttachments(android.view.View anchor,WorkspaceStore.Session project,int limit,java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> choice,Runnable gallery){
         if(closed)return;if(attachmentMenu!=null){attachmentMenu.dismiss();return;}chatLimit=limit;final int epoch=++selectionEpoch;
-        android.widget.PopupMenu menu=new android.widget.PopupMenu(activity,anchor);attachmentMenu=menu;
-        menu.getMenu().add(0,0,0,t("Изображение","Image"));menu.getMenu().add(0,1,1,t("Файл устройства","Device file"));menu.getMenu().add(0,2,2,t("Файл проекта","Project file"));
-        menu.getMenu().add(0,3,3,t("Другие окружения","Other environments"));
-        menu.setOnMenuItemClickListener(item->{
-            if(closed||epoch!=selectionEpoch)return true;
-            int kind=item.getItemId();if(kind==0){gallery.run();return true;}
-            if(kind==3){choose(t("Выберите окружение","Choose environment"),null,choice,null,false);return true;}
-            Runnable open=()->{
-                if(closed||epoch!=selectionEpoch)return;
-                WorkspaceStore.Session source=kind==2?project.copy():new WorkspaceStore.Session();
-                if(kind==1){source.name=t("Память устройства","Device storage");source.environment="termux";}
-                String directory=kind==2?source.directory:"/sdcard";
-                WorkspaceFileBrowser browser=new WorkspaceFileBrowser(activity,source,directory,null);if(kind==1)browser.setRootBoundary("/sdcard");
-                browser.setChatFileChoices((p,entries)->{if(!closed&&epoch==selectionEpoch)choice.accept(p,entries);},limit);browsers.add(browser);browser.show();
-            };
-            if(kind==1)requestStorage.accept(open);else open.run();return true;
-        });menu.setOnDismissListener(m->{if(attachmentMenu==m)attachmentMenu=null;});menu.show();
+        WorkspacePopover menu=new WorkspacePopover(activity);attachmentMenu=menu;
+        java.util.function.IntConsumer select=kind->{
+            if(closed||epoch!=selectionEpoch)return;
+            if(kind==0){gallery.run();return;}
+            if(kind==3){choose(t("Выберите окружение","Choose environment"),null,choice,null,false);return;}
+            Runnable open=()->{if(closed||epoch!=selectionEpoch)return;WorkspaceStore.Session source=kind==2?project.copy():new WorkspaceStore.Session();if(kind==1){source.name=t("Память устройства","Device storage");source.environment="termux";}String directory=kind==2?source.directory:"/sdcard";WorkspaceFileBrowser browser=new WorkspaceFileBrowser(activity,source,directory,null);if(kind==1)browser.setRootBoundary("/sdcard");browser.setChatFileChoices((p,entries)->{if(!closed&&epoch==selectionEpoch)choice.accept(p,entries);},limit);browsers.add(browser);browser.show();};
+            if(kind==1)requestStorage.accept(open);else open.run();
+        };
+        menu.item(t("Фото из галереи","Photo from gallery"),com.termux.R.drawable.workspace_media_photo,()->select.accept(0));
+        menu.item(t("Файл с устройства","File from device"),com.termux.R.drawable.workspace_server_file,()->select.accept(1));
+        menu.item(t("Файлы проекта","Project files"),com.termux.R.drawable.workspace_folder,()->select.accept(2));
+        menu.item(t("Другие окружения","Other environments"),com.termux.R.drawable.workspace_terminal,()->select.accept(3));
+        menu.dismissed(()->{if(attachmentMenu==menu)attachmentMenu=null;});menu.show(anchor);
     }
     void chooseChatAttachments(int limit,java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> choice,Runnable gallery){
         if(closed)return;chatLimit=limit;final int epoch=++selectionEpoch;

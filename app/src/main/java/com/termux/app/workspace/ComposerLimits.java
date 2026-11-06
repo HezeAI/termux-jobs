@@ -10,9 +10,13 @@ final class ComposerLimits extends LinearLayout {
     final TextView label;
     final TextView[] captions=new TextView[2];
     final ProgressBar[] bars=new ProgressBar[2];
-    ComposerLimits(Context c){super(c);setOrientation(VERTICAL);setTag("composer-limits");label=new TextView(c);label.setTextSize(10);label.setTextColor(WorkspaceDialogs.MUTED);addView(label);
-        LinearLayout windows=new LinearLayout(c);addView(windows,new LayoutParams(-1,-2));
-        for(int i=0;i<2;i++){LinearLayout window=new LinearLayout(c);window.setOrientation(VERTICAL);window.setPadding(4,0,4,0);windows.addView(window,new LayoutParams(0,-2,1));captions[i]=new TextView(c);captions[i].setTextSize(10);captions[i].setTextColor(WorkspaceDialogs.MUTED);window.addView(captions[i]);bars[i]=new ProgressBar(c,null,android.R.attr.progressBarStyleHorizontal);bars[i].setMax(100);bars[i].setProgressTintList(ColorStateList.valueOf(WorkspaceDialogs.ACCENT));window.addView(bars[i],new LayoutParams(-1,WorkspaceDialogs.dp(c,6)));}
+    final TextView[] names=new TextView[2];
+    ComposerLimits(Context c){super(c);setOrientation(HORIZONTAL);setGravity(android.view.Gravity.CENTER_VERTICAL);setTag("composer-limits");setPadding(WorkspaceDialogs.dp(c,3),0,WorkspaceDialogs.dp(c,3),0);
+        label=new TextView(c);label.setTextSize(9);label.setTextColor(WorkspaceDialogs.MUTED);addView(label,new LayoutParams(-2,-2));
+        for(int i=0;i<2;i++){LinearLayout window=new LinearLayout(c);window.setGravity(android.view.Gravity.CENTER_VERTICAL);window.setPadding(WorkspaceDialogs.dp(c,7),0,0,0);addView(window,new LayoutParams(0,-2,1));
+            names[i]=new TextView(c);names[i].setTextSize(9);names[i].setTextColor(WorkspaceDialogs.MUTED);window.addView(names[i],new LayoutParams(-2,-2));
+            bars[i]=new ProgressBar(c,null,android.R.attr.progressBarStyleHorizontal);bars[i].setMax(100);bars[i].setProgressTintList(ColorStateList.valueOf(WorkspaceDialogs.ACCENT));bars[i].setProgressBackgroundTintList(ColorStateList.valueOf(WorkspaceDialogs.LINE));LayoutParams track=new LayoutParams(0,WorkspaceDialogs.dp(c,3),1);track.setMargins(WorkspaceDialogs.dp(c,4),0,WorkspaceDialogs.dp(c,4),0);window.addView(bars[i],track);
+            captions[i]=new TextView(c);captions[i].setTextSize(9);captions[i].setTextColor(WorkspaceDialogs.MUTED);window.addView(captions[i],new LayoutParams(-2,-2));}
         present(null,null,false,false);
     }
     private String t(String ru,String en){return AgentStatusUi.tr(getContext(),ru,en);}
@@ -23,9 +27,9 @@ final class ComposerLimits extends LinearLayout {
     }
     void claude(JSONObject subscription,long now){boolean trusted=subscription!=null&&subscription.optBoolean("available")&&subscription.optString("source").equals("native-get-usage");JSONObject first=trusted?subscription.optJSONObject("fiveHour"):null,second=trusted?subscription.optJSONObject("sevenDay"):null;Long time=AgentContextMeter.count(subscription,"updatedAt");boolean stale=time==null||time<=0||time>now||now-time>90000||subscription.optBoolean("stale");present(first,second,stale||expired(first,now,1),stale||expired(second,now,1));}
     private boolean expired(JSONObject window,long now,int factor){Long time=AgentContextMeter.count(window,"resetsAt");return time!=null&&time>0&&time<=now/factor;}
-    void unavailable(){label.setText(t("Лимиты: Нет данных","Limits: No data"));for(int i=0;i<2;i++){captions[i].setVisibility(GONE);bars[i].setVisibility(GONE);}}
+    void unavailable(){label.setText(t("Лимиты: Нет данных","Limits: No data"));for(int i=0;i<2;i++){names[i].setVisibility(GONE);captions[i].setVisibility(GONE);bars[i].setVisibility(GONE);}}
     void present(JSONObject first,JSONObject second,boolean staleFirst,boolean staleSecond){
-        label.setText(t("Лимиты: остаток","Limits: remaining"));JSONObject[] windows={first,second};boolean[] stale={staleFirst,staleSecond};
-        for(int i=0;i<2;i++){captions[i].setVisibility(VISIBLE);Object raw=windows[i]==null?null:windows[i].opt("usedPercent");double used=raw instanceof Number?((Number)raw).doubleValue():Double.NaN;boolean known=Double.isFinite(used)&&used>=0&&used<=100;String caption=(i==0?t("5ч","5h"):t("7д","7d"))+" · "+(known?Math.round(100-used)+"%"+(stale[i]?t(" · устарело"," · stale"):""):t("Нет данных","No data"));if(!caption.contentEquals(captions[i].getText()))captions[i].setText(caption);bars[i].setVisibility(known?VISIBLE:GONE);if(known)bars[i].setProgress((int)Math.round(100-used));bars[i].setContentDescription(caption);}
+        label.setText(t("Лимиты:","Limits:"));JSONObject[] windows={first,second};boolean[] stale={staleFirst,staleSecond};
+        for(int i=0;i<2;i++){names[i].setVisibility(VISIBLE);names[i].setText(i==0?t("5ч","5h"):t("7д","7d"));captions[i].setVisibility(VISIBLE);Object raw=windows[i]==null?null:windows[i].opt("usedPercent");double used=raw instanceof Number?((Number)raw).doubleValue():Double.NaN;boolean known=Double.isFinite(used)&&used>=0&&used<=100;String caption=(i==0?t("5ч","5h"):t("7д","7d"))+" · "+(known?Math.round(100-used)+"%"+(stale[i]?t(" · устарело"," · stale"):""):t("Нет данных","No data"));if(!caption.contentEquals(captions[i].getText()))captions[i].setText(known?Math.round(100-used)+"%"+(stale[i]?"*":""):t("Нет данных","No data"));captions[i].setContentDescription(caption);if(android.os.Build.VERSION.SDK_INT>=26)captions[i].setTooltipText(caption);bars[i].setVisibility(known?VISIBLE:GONE);if(known)bars[i].setProgress((int)Math.round(100-used));bars[i].setContentDescription(caption);}
     }
 }

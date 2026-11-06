@@ -45,7 +45,7 @@ final class AgentChatView extends LinearLayout {
     final AgentProgressView execution;
     private int scalePercent=100;
     int scalePercent(){return scalePercent;}
-    void scale(int percent){percent=AgentChatScale.clamp(percent);if(scalePercent==percent)return;Position held=position();scalePercent=percent;scaleContent();queuePosition(held);}
+    void scale(int percent){percent=AgentChatScale.clamp(percent);if(scalePercent==percent)return;Position held=position();float ratio=(float)percent/scalePercent;scalePercent=percent;scaleContent();queuePosition(new Position(held.anchor,Math.round(held.offset*ratio),held.y,held.bottom,held.step));}
     void scaleContent(){AgentChatScale.apply(timeline,scalePercent);AgentChatScale.apply(attachmentDrafts,scalePercent);updateHeaderInset();updateComposerInset();}
 
     private boolean followNextRows;
@@ -80,7 +80,7 @@ final class AgentChatView extends LinearLayout {
     void bottomAfterLayout(){queuePosition(new Position(null,0,0,true));}
     void followAfterSend(){followNextRows=true;followLayout=true;bottomAfterLayout();}
     AgentChatView(Context c,Consumer<JSONObject> open,Runnable loadOlder,Runnable sendShell,Runnable terminal,Runnable interrupt){
-        super(c);this.open=open;setOrientation(VERTICAL);setBackgroundColor(Color.BLACK);
+        super(c);this.open=open;setOrientation(VERTICAL);setBackgroundColor(WorkspaceDialogs.BG);
         status=label("",12);status.setMaxLines(2);status.setEllipsize(android.text.TextUtils.TruncateAt.END);status.setTag("agent-model-connection");status.setVisibility(GONE);status.setBackground(WorkspaceDialogs.background(c,false));
         scroll=new ScrollView(c){
             @Override public boolean dispatchTouchEvent(MotionEvent e){
@@ -125,8 +125,8 @@ final class AgentChatView extends LinearLayout {
     void clearRequests(){requests.removeAllViews();requests.addView(connection);}
     String tr(String ru,String en){return WorkspaceLanguage.code(getContext()).equals("ru")?ru:en;}
     int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
-    TextView label(String s,int size){TextView t=new AgentLinkTextView(getContext());t.setText(s);t.setTextSize(size);t.setTextColor(0xffd5e4e0);t.setPadding(dp(10),dp(8),dp(10),dp(8));return t;}
-    TextView pill(String s,Runnable action){TextView t=label(s,12);GradientDrawable bg=new GradientDrawable();bg.setColor(0xff0b1b19);bg.setCornerRadius(dp(22));bg.setStroke(dp(1),0xff28433d);t.setBackground(bg);t.setOnClickListener(v->action.run());LayoutParams lp=new LayoutParams(-2,-2);lp.setMargins(dp(3),dp(5),dp(3),dp(5));t.setLayoutParams(lp);t.setMinHeight(dp(36));return t;}
+    TextView label(String s,int size){TextView t=new AgentLinkTextView(getContext());t.setText(s);t.setTextSize(size);t.setTextColor(0xfff0f0ee);t.setPadding(dp(10),dp(8),dp(10),dp(8));return t;}
+    TextView pill(String s,Runnable action){TextView t=label(s,12);GradientDrawable bg=new GradientDrawable();bg.setColor(0xff232426);bg.setCornerRadius(dp(22));bg.setStroke(dp(1),0xff393a3c);t.setBackground(bg);t.setOnClickListener(v->action.run());LayoutParams lp=new LayoutParams(-2,-2);lp.setMargins(dp(3),dp(5),dp(3),dp(5));t.setLayoutParams(lp);t.setMinHeight(dp(36));return t;}
     void olderState(boolean loading,String error){older.setEnabled(!loading);older.setText(loading?tr("Загрузка сообщений…","Loading messages…"):error!=null?error:tr("Предыдущие сообщения","Earlier messages"));}
     void olderRows(List<JSONObject> rows,boolean hasOlder){boolean fits=timeline.getHeight()<=scroll.getHeight();Position held=position();rows(rows,hasOlder);restorePosition(fits?new Position(null,0,0,false):new Position(held.anchor,held.offset,held.y,false,held.step));}
     boolean canReveal(String key){return views.containsKey(key);}
@@ -164,11 +164,11 @@ final class AgentChatView extends LinearLayout {
                         LinearLayout info=new LinearLayout(getContext());info.setOrientation(VERTICAL);TextView filename=label(a.optString("name","APK"),13);filename.setMaxLines(2);info.addView(filename);
                         TextView detail=label(android.text.format.Formatter.formatFileSize(getContext(),a.optLong("bytes"))+(isApk?" · SHA-256: "+tr("подготовка…","preparing…"):""),11);info.addView(detail);card.addView(info,new LayoutParams(0,-2,1));if(isApk)apkDetails.accept(a,detail);
                     }else if(a!=null){TextView title=label(a.optString("name",tr("Вложение","Attachment")),13);card.addView(title);
-                        String type=a.optString("type");if(type.equals("image")||type.equals("video")){ImageView image=new ImageView(getContext());image.setScaleType(ImageView.ScaleType.FIT_CENTER);image.setBackgroundColor(0xff111917);image.setContentDescription(title.getText());card.addView(image,new LayoutParams(-1,dp(160)));thumbnail.accept(a,image);}
+                        String type=a.optString("type");if(type.equals("image")||type.equals("video")){ImageView image=new ImageView(getContext());image.setScaleType(ImageView.ScaleType.FIT_CENTER);image.setBackgroundColor(0xff242527);image.setContentDescription(title.getText());card.addView(image,new LayoutParams(-1,dp(160)));thumbnail.accept(a,image);}
                         TextView hint=label(type.equals("video")?tr("Видео · выбранные кадры, без звука · открыть","Video · sampled frames, no audio · open"):tr("Нажмите, чтобы открыть","Tap to open"),11);card.addView(hint);
                     }
                     if(r.optJSONObject("deliveryReceipt")!=null){LinearLayout captionHost=card.getOrientation()==HORIZONTAL&&card.getChildAt(card.getChildCount()-1) instanceof LinearLayout?(LinearLayout)card.getChildAt(card.getChildCount()-1):card;captionHost.addView(deliveryCaption(r));}
-                    GradientDrawable bg=new GradientDrawable();bg.setColor(0xff0b1b19);bg.setCornerRadius(dp(14));bg.setStroke(dp(1),0xff28433d);card.setBackground(bg);LayoutParams lp=new LayoutParams(-1,-2);lp.setMargins(0,dp(6),0,dp(8));card.setLayoutParams(lp);final String k=key;final Runnable fileAction=a==null?null:fileCardAction.apply(a);card.setOnClickListener(v->{if(fileAction!=null){fileAction.run();return;}JSONObject row=data.get(k);if(row!=null)open.accept(row);});
+                    GradientDrawable bg=new GradientDrawable();bg.setColor(0xff232426);bg.setCornerRadius(dp(14));bg.setStroke(dp(1),0xff393a3c);card.setBackground(bg);LayoutParams lp=new LayoutParams(-1,-2);lp.setMargins(0,dp(6),0,dp(8));card.setLayoutParams(lp);final String k=key;final Runnable fileAction=a==null?null:fileCardAction.apply(a);card.setOnClickListener(v->{if(fileAction!=null){fileAction.run();return;}JSONObject row=data.get(k);if(row!=null)open.accept(row);});
                 }
                 views.put(key,card);if(card.getParent()==null){changed=true;timeline.addView(card,index);}else if(timeline.indexOfChild(card)!=index){changed=true;timeline.removeView(card);timeline.addView(card,index);}index++;continue;
             }
@@ -181,7 +181,7 @@ final class AgentChatView extends LinearLayout {
             if(r.optString("kind").equals("user")&&r.optJSONObject("deliveryReceipt")!=null){
                 View old=views.get(key);LinearLayout bubble=old instanceof LinearLayout?(LinearLayout)old:new LinearLayout(getContext());
                 if(!value.equals(values.get(key))||old!=bubble){changed=true;values.put(key,value);AgentChatScale.prepare(bubble);bubble.removeAllViews();bubble.setOrientation(VERTICAL);TextView text=label(tr("Вы: ","You: ")+r.optString("body")+(r.optBoolean("more")?tr("\nНажмите для полного текста…","\nTap for full text…"):""),14);text.setTextIsSelectable(true);if(r.optBoolean("more"))text.setOnClickListener(v->{JSONObject latest=data.get(key);if(latest!=null)open.accept(latest);});bubble.addView(text);bubble.addView(deliveryCaption(r));
-                    GradientDrawable bg=new GradientDrawable();bg.setColor(Color.BLACK);bg.setStroke(dp(1),0xff43776b);bubble.setBackground(bg);LayoutParams lp=new LayoutParams(-1,-2);lp.setMargins(0,dp(6),0,dp(10));bubble.setLayoutParams(lp);
+                    GradientDrawable bg=new GradientDrawable();bg.setColor(WorkspaceDialogs.USER);bg.setCornerRadius(dp(20));bubble.setBackground(bg);LayoutParams lp=new LayoutParams(-1,-2);lp.setMargins(dp(40),dp(6),0,dp(10));bubble.setLayoutParams(lp);
                 }
                 if(old!=null&&old!=bubble)timeline.removeView(old);views.put(key,bubble);
                 if(bubble.getParent()==null){changed=true;timeline.addView(bubble,index);}else if(timeline.indexOfChild(bubble)!=index){changed=true;timeline.removeView(bubble);timeline.addView(bubble,index);}index++;continue;
@@ -196,7 +196,7 @@ final class AgentChatView extends LinearLayout {
                 t.setTextIsSelectable(!chip&&!error);
                 if(kind.equals("text")){if(markdown==null)markdown=fileMarkdown();android.text.SpannableStringBuilder formatted=new android.text.SpannableStringBuilder(assistant+": ");formatted.append(markdown.toMarkdown(AgentMarkdown.checkboxes(shown)));if(r.optBoolean("more"))formatted.append(tr("\nНажмите для полного текста…","\nTap for full text…"));((AgentLinkTextView)t).animateNextText(animate,this::revealLayout);markdown.setParsedMarkdown(t,formatted);}
                 final String k=key;t.setOnClickListener(error||chip||r.optBoolean("more")?v->{JSONObject row=data.get(k);if(row!=null)open.accept(row);}:null);t.setTextSize(chip?12:14);t.setTypeface(chip?Typeface.DEFAULT:Typeface.DEFAULT);
-                GradientDrawable bg=new GradientDrawable();bg.setColor(error?0xff241416:chip?0xff0b1b19:Color.BLACK);bg.setCornerRadius(error?dp(12):chip?dp(22):0);bg.setStroke(dp(1),error?0xff704343:chip?0xff28433d:kind.equals("user")?0xff43776b:Color.BLACK);t.setBackground(bg);
+                GradientDrawable bg=new GradientDrawable();bg.setColor(error?0xff241416:chip?0xff232426:WorkspaceDialogs.BG);bg.setCornerRadius(error?dp(12):chip?dp(22):0);bg.setStroke(dp(1),error?0xff704343:chip?0xff393a3c:kind.equals("user")?0xff393a3c:WorkspaceDialogs.BG);t.setBackground(bg);
                 LayoutParams lp=new LayoutParams(chip?-2:-1,-2);lp.setMargins(0,dp(6),0,dp(chip?3:10));lp.gravity=Gravity.START;t.setLayoutParams(lp);
             }
             if(t.getParent()==null){changed=true;timeline.addView(t,index);}else if(timeline.indexOfChild(t)!=index){changed=true;timeline.removeView(t);timeline.addView(t,index);}index++;

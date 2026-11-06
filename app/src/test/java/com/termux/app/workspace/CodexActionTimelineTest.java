@@ -86,8 +86,8 @@ public class CodexActionTimelineTest {
  @Test public void provenUserDeclineUsesNeutralActionPresentationOnly()throws Exception{
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();
   for(String language:new String[]{"ru","en"}){WorkspaceLanguage.select(a,language);AgentChatView v=view(a,new AtomicReference<>());JSONObject denied=shell("denied","turn","synthetic","declined").put("actionOutcome","user_declined");v.rows(Arrays.asList(denied),false);
-   CodexActionsView card=(CodexActionsView)v.timeline.getChildAt(1);TextView step=(TextView)card.steps.getChildAt(0);assertEquals(0xffd5e4e0,step.getCurrentTextColor());assertTrue(step.getText().toString().contains(language.equals("ru")?"Действие отклонено":"Action declined"));assertFalse(card.outcomes.getText().toString().contains(language.equals("ru")?"ошибкой":"failed"));
-   AgentActionDetailsView detail=new AgentActionDetailsView(v,denied,(r,i)->{},r->{});assertEquals(0xff91a6af,detail.status.getCurrentTextColor());
+   CodexActionsView card=(CodexActionsView)v.timeline.getChildAt(1);TextView step=(TextView)card.steps.getChildAt(0);assertEquals(0xfff0f0ee,step.getCurrentTextColor());assertTrue(step.getText().toString().contains(language.equals("ru")?"Действие отклонено":"Action declined"));assertFalse(card.outcomes.getText().toString().contains(language.equals("ru")?"ошибкой":"failed"));
+   AgentActionDetailsView detail=new AgentActionDetailsView(v,denied,(r,i)->{},r->{});assertEquals(0xffa5a5a2,detail.status.getCurrentTextColor());
    denied.remove("actionOutcome");v.rows(Arrays.asList(denied),false);assertEquals(0xffffb08f,((TextView)card.steps.getChildAt(0)).getCurrentTextColor());
   }
  }

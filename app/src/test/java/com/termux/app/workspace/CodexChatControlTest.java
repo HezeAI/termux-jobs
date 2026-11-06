@@ -31,7 +31,7 @@ public class CodexChatControlTest {
         p.codexChat="id";p.codexThread="known-history";p.codexSourceDirectory="/root/original";String resume=CodexChatControl.command(c.getFilesDir(),p,"/tmp/socket");assertTrue(resume.contains("'id' 'known-history'"));assertTrue(resume.contains("'/root/original'"));
     }
     private TermuxActivity activity()throws Exception{
-        TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);FrameLayout root=new FrameLayout(a);root.setId(R.id.workspace_terminal_surface);TerminalView tv=new TerminalView(a,null);root.addView(tv);Field field=TermuxActivity.class.getDeclaredField("mTerminalView");field.setAccessible(true);field.set(a,tv);a.setContentView(root);return a;
+        TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);FrameLayout root=new FrameLayout(a);root.setId(R.id.workspace_terminal_surface);TerminalView tv=new TerminalView(a,null);root.addView(tv);Field field=TermuxActivity.class.getDeclaredField("mTerminalView");field.setAccessible(true);field.set(a,tv);android.widget.RelativeLayout outer=new android.widget.RelativeLayout(a);outer.setId(R.id.activity_termux_root_relative_layout);outer.addView(root);a.setContentView(outer);return a;
     }
     @Test public void codexChatUsesNativeThreadAndSendAckWithoutWritingTerminal()throws Exception{
         TermuxActivity a=activity();WorkspaceStore.Session p=profile();CodexChatControl.prepare(a,p);AtomicInteger sent=new AtomicInteger(),accepted=new AtomicInteger();
@@ -42,12 +42,11 @@ public class CodexChatControlTest {
         if(node instanceof android.widget.TextView&&((android.widget.TextView)node).getText().toString().equals(label))return (android.widget.TextView)node;
         if(node instanceof android.view.ViewGroup){android.view.ViewGroup group=(android.view.ViewGroup)node;for(int i=0;i<group.getChildCount();i++){android.widget.TextView found=text(group.getChildAt(i),label);if(found!=null)return found;}}return null;
     }
-    @Test public void minimizingDoesNotExitButExplicitReturnDoes()throws Exception{
-        TermuxActivity a=activity();WorkspaceStore.Session p=profile();CodexChatControl.prepare(a,p);AtomicInteger hidden=new AtomicInteger(),exited=new AtomicInteger();
-        AgentChatUi ui=new AgentChatUi(a,()->p,()->true,(captured,q)->{if(q.optString("op").equals("terminal-close"))hidden.incrementAndGet();if(q.optString("op").equals("terminal-exit"))exited.incrementAndGet();return new JSONObject().put("ok",true).put("nativeChat",true).put("connected",true).put("session","native-thread").put("rows",new JSONArray()).put("knownMessages",new JSONArray());});
-        try{for(int i=0;i<40&&!ui.showing();i++){Thread.sleep(20);Shadows.shadowOf(Looper.getMainLooper()).idle();}ui.terminal();Shadows.shadowOf(Looper.getMainLooper()).idle();android.app.AlertDialog d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(d.isShowing());d.getButton(android.app.AlertDialog.BUTTON_NEUTRAL).performClick();for(int i=0;i<40&&hidden.get()==0;i++){Thread.sleep(20);Shadows.shadowOf(Looper.getMainLooper()).idle();}assertEquals(1,hidden.get());assertEquals(0,exited.get());
-            ui.terminal();Shadows.shadowOf(Looper.getMainLooper()).idle();d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();android.widget.TextView back=text(d.getWindow().getDecorView(),"Вернуться в чат Codex");if(back==null)back=text(d.getWindow().getDecorView(),"Return to Codex chat");assertNotNull(back);back.performClick();for(int i=0;i<40&&d.isShowing();i++){Thread.sleep(20);Shadows.shadowOf(Looper.getMainLooper()).idle();}assertEquals(1,exited.get());assertFalse(d.isShowing());
+    @Test public void screenReturnDoesNotExitButExplicitNativeControlStillDoes()throws Exception{
+        TermuxActivity a=activity();WorkspaceStore.Session p=profile();CodexChatControl.prepare(a,p);AtomicInteger opened=new AtomicInteger(),exited=new AtomicInteger();
+        AgentChatUi ui=new AgentChatUi(a,()->p,()->true,(captured,q)->{if(q.optString("op").equals("terminal-open"))opened.incrementAndGet();if(q.optString("op").equals("terminal-exit"))exited.incrementAndGet();return new JSONObject().put("ok",true).put("nativeChat",true).put("connected",true).put("session","native-thread").put("rows",new JSONArray()).put("knownMessages",new JSONArray());});
+        try{ui.terminal();assertTrue(ui.terminalVisible());ui.terminalBack();assertFalse(ui.terminalVisible());ui.terminal();a.findViewById(R.id.activity_termux_root_relative_layout).findViewWithTag("agent-terminal-return").performClick();assertFalse(ui.terminalVisible());assertEquals(0,opened.get());assertEquals(0,exited.get());
+            java.lang.reflect.Method control=AgentChatUi.class.getDeclaredMethod("returnAgentChat");control.setAccessible(true);control.invoke(ui);for(int i=0;i<40&&exited.get()==0;i++){Thread.sleep(20);Shadows.shadowOf(Looper.getMainLooper()).idle();}assertEquals(1,exited.get());
         }finally{ui.close();}
     }
-
 }

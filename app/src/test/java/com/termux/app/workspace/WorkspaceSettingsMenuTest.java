@@ -47,46 +47,18 @@ public class WorkspaceSettingsMenuTest {
     @After public void tearDown(){for(int n=dialogs.size()-1;n>=0;n--)dialogs.get(n).dismiss();idle();controller.close();activity.finish();WorkspaceText.resources=previous;WorkspaceText.englishResources=previousEnglish;}
     void idle(){Shadows.shadowOf(Looper.getMainLooper()).idle();}
     AlertDialog latest(){idle();AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();if(!dialogs.contains(d))dialogs.add(d);return d;}
-    AlertDialog open(String language)throws Exception{
-        WorkspaceLanguage.select(activity,language);WorkspaceLanguage.apply(activity);Method menu=WorkspaceController.class.getDeclaredMethod("globalSettings");menu.setAccessible(true);menu.invoke(controller);return latest();
-    }
-    String firstText(View v){if(v instanceof TextView)return ((TextView)v).getText().toString();if(v instanceof ViewGroup)for(int n=0;n<((ViewGroup)v).getChildCount();n++){String text=firstText(((ViewGroup)v).getChildAt(n));if(!text.isEmpty())return text;}return "";}
+    View open(String language)throws Exception{WorkspaceLanguage.select(activity,language);WorkspaceLanguage.apply(activity);Method menu=WorkspaceController.class.getDeclaredMethod("globalSettings");menu.setAccessible(true);menu.invoke(controller);idle();return activity.findViewById(R.id.workspace_content).findViewWithTag("workspace-global-settings");}
+    TextView text(View v,String wanted){if(v instanceof TextView&&wanted.contentEquals(((TextView)v).getText()))return (TextView)v;if(v instanceof ViewGroup)for(int n=0;n<((ViewGroup)v).getChildCount();n++){TextView found=text(((ViewGroup)v).getChildAt(n),wanted);if(found!=null)return found;}return null;}
     String allText(View v){String result=v instanceof TextView?((TextView)v).getText().toString()+"\n":"";if(v instanceof ViewGroup)for(int n=0;n<((ViewGroup)v).getChildCount();n++)result+=allText(((ViewGroup)v).getChildAt(n));return result;}
-    List<String> rows(AlertDialog d,String tag){ViewGroup form=d.getWindow().getDecorView().findViewWithTag(tag);assertNotNull(form);List<String> labels=new ArrayList<>();for(int n=0;n<form.getChildCount();n++)labels.add(firstText(form.getChildAt(n)));return labels;}
-    View row(AlertDialog d,String tag,int index){ViewGroup form=d.getWindow().getDecorView().findViewWithTag(tag);return form.getChildAt(index);}
-    @Test public void rootAndAdvancedOrderNoDuplicatesInBothLanguages()throws Exception{
-        for(String language:new String[]{"ru","en"}){
-            boolean ru=language.equals("ru");AlertDialog root=open(language);
-            List<String> expected=ru?Arrays.asList("Язык интерфейса","Размер основного текста сессий (100% - Default): 100%","","Агенты и среда","Агенты и модели","Общие инструкции агентов","Проектные инструкции","Навыки агентов","Ubuntu AI","Данные","Проверить обновления окружений","Ошибки и решения","Истории чатов","Очистить хранилище","Резервное копирование","Дополнительно","О приложении"):Arrays.asList("Interface language","Session main text size (100% - Default): 100%","","Agents and environment","Agents and models","Shared agent instructions","Project instructions","Agent skills","Ubuntu AI","Data","Check environment updates","Errors and solutions","Chat histories","Clean up storage","Backup and restore","Advanced","About");
-            assertEquals(expected,rows(root,"workspace-global-settings"));row(root,"workspace-global-settings",15).performClick();AlertDialog advanced=latest();
-            assertEquals(ru?Arrays.asList("Журнал команд и пресеты запуска","Проверить обновления"):Arrays.asList("Command journal and launch presets","Check for updates"),rows(advanced,"workspace-advanced-settings"));
-            assertEquals(ru?"Назад":"Back",advanced.getButton(AlertDialog.BUTTON_NEGATIVE).getText().toString());assertTrue(root.isShowing());advanced.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();idle();assertFalse(advanced.isShowing());assertTrue(root.isShowing());root.dismiss();
-        }
+    void click(View root,String label){View row=text(root,label);assertNotNull(label,row);while(!row.isClickable())row=(View)row.getParent();row.performClick();idle();}
+    @Test public void settingsAreScrollContentUnderCommonHeaderWithGroupedCardsInBothLanguages()throws Exception{
+        for(String language:new String[]{"ru","en"}){boolean ru=language.equals("ru");AlertDialog before=ShadowAlertDialog.getLatestAlertDialog();View root=open(language);assertNotNull(root);assertSame(before,ShadowAlertDialog.getLatestAlertDialog());assertTrue(root.getParent() instanceof ScrollView);assertNull(text(root,ru?"Закрыть":"Close"));String all=allText(root);String[] names=ru?new String[]{"ВНЕШНИЙ ВИД","АГЕНТЫ И СРЕДА","ДАННЫЕ","Дополнительно","О приложении"}:new String[]{"APPEARANCE","AGENTS AND ENVIRONMENT","DATA","Advanced","About"};int last=-1;for(String name:names){int next=all.indexOf(name);assertTrue(name,next>last);last=next;}TextView agent=text(root,ru?"Агенты и модели":"Agents and models"),instructions=text(root,ru?"Общие инструкции агентов":"Shared agent instructions");assertSame(agent.getParent().getParent().getParent(),instructions.getParent().getParent().getParent());assertNotNull(root.findViewWithTag("session-text-size-preview"));assertNotNull(text(root,ru?"Русский":"English"));assertNotNull(text(root,"50%"));assertNotNull(text(root,"150%"));
+            click(root,ru?"Дополнительно":"Advanced");View advanced=activity.findViewById(R.id.workspace_content).findViewWithTag("workspace-advanced-settings");assertNotNull(advanced);assertTrue(allText(advanced).contains(ru?"Недавние команды":"Recent commands"));assertFalse(allText(advanced).contains(ru?"Пресеты":"Presets"));assertTrue(controller.onBack());assertNotNull(activity.findViewById(R.id.workspace_content).findViewWithTag("workspace-global-settings"));assertTrue(controller.onBack());assertEquals(View.GONE,activity.findViewById(R.id.workspace_content).getVisibility());assertNull(activity.getCurrentSession());}
         assertEquals(0,backupInventory);assertEquals(0,updateInventory);
     }
     @Test public void transferredActionsOpenActualWindowsAndReturnWithoutMaintenance()throws Exception{
-        for(String language:new String[]{"ru","en"}){
-            AlertDialog root=open(language);
-            int[] indexes={14,10,13,11};
-            for(int index=0;index<indexes.length;index++){
-                row(root,"workspace-global-settings",indexes[index]).performClick();AlertDialog child=latest();assertNotSame(root,child);assertTrue(child.isShowing());assertTrue(root.isShowing());
-                String[][] expected={{"Создать резервную копию","Проверить пакеты всех окружений","Ничего не отмечено заранее.","Ошибки и решения"},{"Create backup","Check packages in all environments","Nothing is preselected.","Errors and solutions"}};
-                assertTrue("Wrong child window",allText(child.getWindow().getDecorView()).contains(expected[language.equals("ru")?0:1][index]));
-                child.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();idle();assertFalse(child.isShowing());assertTrue(root.isShowing());assertNull(activity.getCurrentSession());
-            }
-            root.dismiss();
-        }
+        for(String language:new String[]{"ru","en"}){View root=open(language);String[] names=language.equals("ru")?new String[]{"Резервное копирование","Проверить обновления окружений","Очистить хранилище","Ошибки и решения"}:new String[]{"Backup and restore","Check environment updates","Clean up storage","Errors and solutions"};for(int n=0;n<names.length;n++){click(root,names[n]);AlertDialog child=latest();assertTrue(child.isShowing());String[][] expected={{"Создать резервную копию","Проверить пакеты всех окружений","Ничего не отмечено заранее.","Ошибки и решения"},{"Create backup","Check packages in all environments","Nothing is preselected.","Errors and solutions"}};assertTrue(allText(child.getWindow().getDecorView()).contains(expected[language.equals("ru")?0:1][n]));child.getButton(-2).performClick();idle();assertFalse(child.isShowing());assertSame(root,activity.findViewById(R.id.workspace_content).findViewWithTag("workspace-global-settings"));assertNull(activity.getCurrentSession());}}
         assertEquals(2,backupInventory);assertEquals(2,updateInventory);
     }
-    @Test public void backCancelAndRepeatedOpenPreserveOneParentMenu()throws Exception{
-        AlertDialog root=open("ru");row(root,"workspace-global-settings",15).performClick();AlertDialog advanced=latest();row(root,"workspace-global-settings",15).performClick();assertSame(advanced,latest());
-        advanced.onBackPressed();idle();assertFalse(advanced.isShowing());assertTrue(root.isShowing());
-        row(root,"workspace-global-settings",15).performClick();advanced=latest();advanced.cancel();idle();assertTrue(root.isShowing());assertFalse(advanced.isShowing());
-        row(root,"workspace-global-settings",15).performClick();advanced=latest();root.dismiss();idle();assertFalse(root.isShowing());assertFalse(advanced.isShowing());
-    }
-    @Test public void lastAboutEntryKeepsExistingActivityDestination()throws Exception{
-        for(String language:new String[]{"ru","en"}){
-            AlertDialog root=open(language);row(root,"workspace-global-settings",16).performClick();idle();Intent intent=Shadows.shadowOf(activity).getNextStartedActivity();assertNotNull(intent);assertEquals(SettingsActivity.class.getName(),intent.getComponent().getClassName());assertFalse(root.isShowing());assertNull(activity.getCurrentSession());
-        }
-    }
+    @Test public void lastAboutEntryKeepsExistingActivityDestination()throws Exception{for(String language:new String[]{"ru","en"}){View root=open(language);click(root,language.equals("ru")?"О приложении":"About");Intent intent=Shadows.shadowOf(activity).getNextStartedActivity();assertNotNull(intent);assertEquals(SettingsActivity.class.getName(),intent.getComponent().getClassName());assertSame(root,activity.findViewById(R.id.workspace_content).findViewWithTag("workspace-global-settings"));assertNull(activity.getCurrentSession());}}
 }

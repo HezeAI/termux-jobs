@@ -11,7 +11,7 @@ final class WorkspaceTransferBorder extends Drawable {
     private boolean active,framePending;
     private final Runnable frame=()->{framePending=false;if(active&&isVisible())invalidateSelf();};
     private final float inset,radius;
-    WorkspaceTransferBorder(float density){inset=density;radius=12*density;paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(2*density);paint.setStrokeCap(Paint.Cap.ROUND);paint.setColor(0xff79dfcd);}
+    WorkspaceTransferBorder(float density){inset=density;radius=12*density;paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(2*density);paint.setStrokeCap(Paint.Cap.ROUND);paint.setColor(0xffecece5);}
     void active(boolean value){if(active==value)return;active=value;if(!value){unscheduleSelf(frame);framePending=false;}invalidateSelf();}
     boolean active(){return active;}
     @Override protected void onBoundsChange(Rect b){outline.reset();outline.addRoundRect(new RectF(b.left+inset,b.top+inset,b.right-inset,b.bottom-inset),radius,radius,Path.Direction.CW);measure.setPath(outline,true);}

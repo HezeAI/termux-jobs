@@ -30,7 +30,7 @@ final class AgentMarkdown {
         @Override public void afterSetText(TextView text){if(text.getText() instanceof Spannable)bindLocal((Spannable)text.getText(),local);}
         @Override public void beforeRender(Node node){node.accept(new AbstractVisitor(){@Override public void visit(Text text){if(text.getParent() instanceof Paragraph&&text.getParent().getParent() instanceof ListItem&&text.getParent().getFirstChild()==text){String value=text.getLiteral();if(value.startsWith("[x] ")||value.startsWith("[X] "))text.setLiteral("☑ "+value.substring(4));else if(value.startsWith("[ ] "))text.setLiteral("☐ "+value.substring(4));}}});}
         @Override public void configureParser(Parser.Builder builder){builder.extensions(Collections.singletonList(TablesExtension.create()));}
-        @Override public void configureTheme(MarkwonTheme.Builder b){b.linkColor(0xff79dfcd).blockQuoteColor(0xff79dfcd).blockQuoteWidth(3).codeTextColor(0xffbdddd2).codeBackgroundColor(0xff14252b).codeBlockBackgroundColor(0xff0b131a).headingBreakHeight(0).headingTextSizeMultipliers(new float[]{1.5f,1.35f,1.2f,1.1f,1.05f,1f});}
+        @Override public void configureTheme(MarkwonTheme.Builder b){b.linkColor(0xffecece5).blockQuoteColor(0xffecece5).blockQuoteWidth(3).codeTextColor(WorkspaceDialogs.TEXT).codeBackgroundColor(WorkspaceDialogs.SURFACE).codeBlockBackgroundColor(WorkspaceDialogs.BG).headingBreakHeight(0).headingTextSizeMultipliers(new float[]{1.5f,1.35f,1.2f,1.1f,1.05f,1f});}
         @Override public void configureConfiguration(MarkwonConfiguration.Builder b){b.linkResolver((view,url)->openLink(view,url));}
     }).build();}
     static void bindLocal(Spannable spans,java.util.function.Function<String,Runnable> local){
@@ -78,7 +78,7 @@ final class AgentMarkdown {
         String lang=language.toLowerCase(Locale.ROOT);if(!Arrays.asList("python","py","javascript","js","typescript","ts","java","kotlin","kt","bash","sh","shell","json","c","cpp","rust","rs").contains(lang))return s;
         Set<String> keywords=new HashSet<>(Arrays.asList("from","import","def","class","return","if","else","elif","for","while","try","catch","except","finally","const","let","var","function","public","private","static","void","new","true","false","null","None","True","False","fn","use","val","fun","echo","export","then","fi","do","done"));
         for(int i=0;i<code.length();){int start=i,color=0;char ch=code.charAt(i);
-            if(ch=='#'||ch=='/'&&i+1<code.length()&&code.charAt(i+1)=='/'){while(i<code.length()&&code.charAt(i)!='\n')i++;color=0xff718e99;}
+            if(ch=='#'||ch=='/'&&i+1<code.length()&&code.charAt(i+1)=='/'){while(i<code.length()&&code.charAt(i)!='\n')i++;color=WorkspaceDialogs.MUTED;}
             else if(ch=='\"'||ch=='\''){i++;while(i<code.length()){char c=code.charAt(i++);if(c=='\\'&&i<code.length())i++;else if(c==ch)break;}color=0xffdfc08b;}
             else if(Character.isJavaIdentifierStart(ch)){i++;while(i<code.length()&&Character.isJavaIdentifierPart(code.charAt(i)))i++;if(keywords.contains(code.substring(start,i)))color=0xff8bc7e5;}
             else if(Character.isDigit(ch)){i++;while(i<code.length()&&(Character.isDigit(code.charAt(i))||code.charAt(i)=='.'))i++;color=0xffc5a6de;}

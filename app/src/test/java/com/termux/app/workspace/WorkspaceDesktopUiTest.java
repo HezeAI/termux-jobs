@@ -74,7 +74,7 @@ public class WorkspaceDesktopUiTest {
  @Test public void installedRowIsDisabledAndBelongsToSelectedUbuntu()throws Exception{
   TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();WorkspaceDesktop ui=create(a,profile());
   try{Field f=WorkspaceDesktop.class.getDeclaredField("installed");f.setAccessible(true);((Map<String,Boolean>)f.get(ui)).put("jobs-x11-ubuntu",true);ui.menu();AlertDialog d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
-   assertTrue(d.isShowing());TextView installed=d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-components");assertNull(installed);TextView change=d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-switch");assertTrue(change.isEnabled());assertEquals(WorkspaceDialogs.TEXT,change.getCurrentTextColor());d.dismiss();
+   assertTrue(d.isShowing());TextView installed=d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-components");assertNull(installed);TextView change=d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-switch");assertNull(change);assertNotNull(d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-renderer"));d.dismiss();
   }finally{ui.close();}
  }
  @Test public void completedCheckAndInstallReturnToDesktopCardInsteadOfTerminal()throws Exception{
@@ -103,7 +103,7 @@ public class WorkspaceDesktopUiTest {
   for(String alias:new String[]{"debian","alpine","termux"}){
   TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();WorkspaceStore.Session p=profile();p.prootAlias=alias.equals("termux")?"":alias;WorkspaceDesktop ui=create(a,p);
   try{Field f=WorkspaceDesktop.class.getDeclaredField("installed");f.setAccessible(true);((Map<String,Boolean>)f.get(ui)).put("jobs-x11-ubuntu",true);ui.menu();
-   AlertDialog d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-switch"));assertNull(d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-components"));assertNull(d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-programs"));d.dismiss();
+   AlertDialog d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNull(d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-switch"));assertNull(d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-components"));assertNull(d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-programs"));d.dismiss();
    ((Map<String,Boolean>)f.get(ui)).put(alias,true);ui.menu();d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNull(d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-components"));d.dismiss();
   }finally{ui.close();}
   }

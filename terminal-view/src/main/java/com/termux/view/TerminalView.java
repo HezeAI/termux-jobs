@@ -1108,7 +1108,7 @@ public final class TerminalView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         if (mEmulator == null) {
-            canvas.drawColor(0XFF000000);
+            canvas.drawColor(com.termux.terminal.TerminalColors.COLOR_SCHEME.mDefaultColors[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND]);
         } else {
             // render the terminal view and highlight any selected text
             int[] sel = mDefaultSelectors;

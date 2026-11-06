@@ -15,10 +15,12 @@ final class AgentStatusUi {
         TextView v=new TextView(c);v.setText(label);v.setTextSize(12);v.setTextColor(WorkspaceDialogs.ACCENT);
         v.setGravity(Gravity.CENTER);v.setMinHeight(WorkspaceDialogs.dp(c,34));v.setMaxLines(2);v.setEllipsize(TextUtils.TruncateAt.END);
         v.setPadding(WorkspaceDialogs.dp(c,12),WorkspaceDialogs.dp(c,4),WorkspaceDialogs.dp(c,12),WorkspaceDialogs.dp(c,4));
-        v.setBackground(new RippleDrawable(ColorStateList.valueOf(0x4479dfcd),WorkspaceDialogs.background(c,false),null));
+        v.setBackground(new RippleDrawable(ColorStateList.valueOf(0x44ecece5),WorkspaceDialogs.background(c,false),null));
         v.setContentDescription(description);v.setOnClickListener(view->click.run());return v;
     }
-    static void attach(LinearLayout parent,TextView chip){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,-2);lp.topMargin=lp.bottomMargin=WorkspaceDialogs.dp(parent.getContext(),6);parent.addView(chip,lp);}
+    static boolean compact(LinearLayout parent){return "composer-model-status".equals(parent.getTag());}
+    static boolean compact(TextView chip){return Boolean.TRUE.equals(chip.getTag(com.termux.R.id.workspace_codex_status));}
+    static void attach(LinearLayout parent,TextView chip){if(compact(parent)){chip.setTag(com.termux.R.id.workspace_codex_status,Boolean.TRUE);chip.setTextColor(WorkspaceDialogs.TEXT);chip.setTextSize(9);chip.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);chip.setBackgroundColor(android.graphics.Color.TRANSPARENT);chip.setPadding(2,0,2,0);chip.setMinHeight(WorkspaceDialogs.dp(parent.getContext(),44));chip.setMaxLines(Integer.MAX_VALUE);chip.setEllipsize(null);chip.setMaxWidth(WorkspaceDialogs.dp(parent.getContext(),parent.getResources().getDisplayMetrics().widthPixels/parent.getResources().getDisplayMetrics().density<=380?77:145));parent.addView(chip,new LinearLayout.LayoutParams(-2,-2));return;}LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,-2);lp.topMargin=lp.bottomMargin=WorkspaceDialogs.dp(parent.getContext(),6);parent.addView(chip,lp);}
     static LinearLayout body(Context c){LinearLayout body=new LinearLayout(c);body.setOrientation(LinearLayout.VERTICAL);body.setPadding(WorkspaceDialogs.dp(c,12),WorkspaceDialogs.dp(c,4),WorkspaceDialogs.dp(c,12),WorkspaceDialogs.dp(c,12));return body;}
     static TextView row(LinearLayout body,String label,String key,Runnable click){Context c=body.getContext();TextView v=WorkspaceDialogs.action(c,label,0);v.setTextSize(13);v.setGravity(Gravity.CENTER);v.setMinHeight(WorkspaceDialogs.dp(c,48));v.setTag("agent-status-"+key);v.setOnClickListener(view->click.run());LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.bottomMargin=WorkspaceDialogs.dp(c,8);body.addView(v,lp);return v;}
     static void available(TextView row,boolean enabled){row.setEnabled(enabled);row.setAlpha(enabled?1f:.45f);}

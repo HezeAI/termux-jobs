@@ -6,7 +6,7 @@ import android.view.*;
 import android.widget.*;
 import com.termux.R;
 import com.termux.app.TermuxActivity;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.robolectric.*;
 import org.robolectric.annotation.Config;
@@ -18,6 +18,9 @@ import static org.robolectric.Shadows.shadowOf;
 
 @RunWith(RobolectricTestRunner.class) @Config(sdk=28,application=Application.class)
 public class WorkspaceTextEditorTest {
+    private android.content.res.Resources prior;
+    @Before public void language(){prior=WorkspaceText.resources;android.content.Context c=Robolectric.buildActivity(Activity.class).get();WorkspaceLanguage.select(c,"ru");WorkspaceText.resources=WorkspaceLanguage.wrap(c).getResources();}
+    @After public void restoreLanguage(){WorkspaceText.resources=prior;}
     private TermuxActivity activity(){TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);return a;}
     private EditText input(WorkspaceTextEditor e)throws Exception{Field f=WorkspaceTextEditor.class.getDeclaredField("input");f.setAccessible(true);return (EditText)f.get(e);}
     @Test public void markdownMenuPlacesEditorAfterPreviewButApkHasNoEditor()throws Exception{

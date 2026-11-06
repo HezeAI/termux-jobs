@@ -201,7 +201,7 @@ public class TermuxTerminalViewClient extends TermuxTerminalViewClientBase {
             }
         }
 
-        if (showDialogTerminalKeyboard(e)) return;
+        if (showAgentTerminalKeyboard(e)) return;
 
         if (!term.isMouseTrackingActive() && !e.isFromSource(InputDevice.SOURCE_MOUSE)) {
             if (mActivity.getTerminalView().isSoftKeyboardInputEnabled() && !KeyboardUtils.areDisableSoftKeyboardFlagsSet(mActivity))
@@ -212,14 +212,15 @@ public class TermuxTerminalViewClient extends TermuxTerminalViewClientBase {
     }
 
     @Override public void onTerminalMouseTap(MotionEvent e) {
-        showDialogTerminalKeyboard(e);
+        showAgentTerminalKeyboard(e);
     }
 
-    private boolean showDialogTerminalKeyboard(MotionEvent e) {
-        // The agent terminal is reparented into a dialog. Native TUIs enable mouse
-        // tracking; taps must still be able to open Android's keyboard in this window.
+    private boolean showAgentTerminalKeyboard(MotionEvent e) {
+        // Native TUIs enable mouse tracking; the in-activity agent terminal must
+        // still open the IME on touch without changing its PTY or input mode.
         View terminalView = mActivity.getTerminalView();
-        boolean dialogTerminal = terminalView.getRootView() != mActivity.getWindow().getDecorView().getRootView();
+        boolean dialogTerminal=false;
+        for(View node=terminalView;node!=null;node=node.getParent() instanceof View?(View)node.getParent():null)if("agent-terminal-screen".equals(node.getTag())){dialogTerminal=true;break;}
         if (dialogTerminal && mActivity.getTerminalView().isSoftKeyboardInputEnabled()
             && !e.isFromSource(InputDevice.SOURCE_MOUSE)) {
             terminalView.requestFocus();

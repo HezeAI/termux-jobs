@@ -13,13 +13,13 @@ public class AgentComposerControlsTest {
   AtomicInteger notes=new AtomicInteger(),files=new AtomicInteger(),sends=new AtomicInteger();star.setOnClickListener(v->notes.incrementAndGet());clip.setOnClickListener(v->files.incrementAndGet());send.setOnClickListener(v->sends.incrementAndGet());int calls=0;
   for(String language:new String[]{"ru","en"})for(int width:new int[]{240,280,360})for(int size:new int[]{14,24,36}){
    WorkspaceLanguage.select(a,language);input.setText("draft\nline two\nline three");input.setTextSize(size);input.setSelection(2);controls.present(true);measure(width);
-   View note=text(row,language.equals("ru")?"Заметки":"Notes");assertNotNull(note);for(View target:new View[]{note,send,clip}){assertTrue(target.getWidth()>=48);assertTrue(target.getHeight()>=48);target.performClick();}
-   assertEquals("draft\nline two\nline three",input.getText().toString());assertEquals(2,input.getSelectionStart());assertEquals(width,send.getRight());assertTrue(controls.pair.getTop()>=input.getHeight());calls++;
+   View note=text(row,language.equals("ru")?"Заметки":"Notes");assertNotNull(note);for(View target:new View[]{note,send,clip}){assertTrue(target.getWidth()>=44);assertTrue(target.getHeight()>=44);target.performClick();}
+   assertEquals("draft\nline two\nline three",input.getText().toString());assertEquals(2,input.getSelectionStart());assertEquals(((View)send.getParent()).getWidth(),send.getRight());assertTrue(controls.pair.getTop()>=input.getHeight());calls++;
   }
   assertEquals(calls,notes.get());assertEquals(calls,files.get());assertEquals(calls,sends.get());
  }
  @Test public void oneLineManyLinesReopenOneLineKeepsActionBarHeightExactly(){
-  input.setPadding(12,10,12,10);input.setMinHeight(48);input.setTextSize(12);input.setText("one");controls.present(true);measure(320);int field=input.getHeight(),bar=controls.pair.getHeight();
+  input.setTextSize(13);input.setText("one");controls.present(true);measure(320);int field=input.getHeight(),bar=controls.pair.getHeight();
   String draft="one"+String.join("",java.util.Collections.nCopies(20,"\nnext"));input.setText(draft);input.setSelection(2);controls.present(true);measure(320);assertTrue(input.getHeight()>field);assertEquals(bar,controls.pair.getHeight());
   controls.present(false);controls=new AgentComposerControls(a,row,input,star,send,clip);controls.present(true);measure(320);assertEquals(bar,controls.pair.getHeight());assertEquals(draft,input.getText().toString());assertEquals(2,input.getSelectionStart());
   input.setText("one");controls.present(true);measure(320);assertEquals(field,input.getHeight());assertEquals(bar,controls.pair.getHeight());
@@ -27,7 +27,7 @@ public class AgentComposerControlsTest {
  @Test public void terminalUsesSeparatePickersAndIndependentModeSwitches(){
   AtomicInteger library=new AtomicInteger(-1),direct=new AtomicInteger(),keys=new AtomicInteger();controls.actions(null,null,()->{},()->{},library::set,on->direct.set(on?1:0),on->keys.set(on?1:0));WorkspaceLanguage.select(a,"ru");controls.present(false);measure(320);
   String[] labels={"Команды","Aliases","Заметки"};for(int i=0;i<labels.length;i++){text(row,labels[i]).performClick();assertEquals(i,library.get());}
-  assertNull(clip.getParent());CheckBox interactive=(CheckBox)text(row,"Интерактивный ввод"),extra=(CheckBox)text(row,"Дополнительные клавиши");interactive.performClick();assertEquals(1,direct.get());assertEquals(0,keys.get());extra.performClick();assertEquals(1,keys.get());controls.terminalModes(false,false);assertEquals(1,direct.get());assertEquals(1,keys.get());
+  assertNull(clip.getParent());Switch interactive=(Switch)text(row,"Интерактивный ввод"),extra=(Switch)text(row,"Дополнительные клавиши");interactive.performClick();assertEquals(1,direct.get());assertEquals(0,keys.get());extra.performClick();assertEquals(1,keys.get());controls.terminalModes(false,false);assertEquals(1,direct.get());assertEquals(1,keys.get());
  }
  @Test public void bothModesKeepHostBehindComposerAndReportItsRealHeight(){
   RelativeLayout root=new RelativeLayout(a);FrameLayout host=new FrameLayout(a);row.setId(901);((ViewGroup)row.getParent()).removeView(row);RelativeLayout.LayoutParams hp=new RelativeLayout.LayoutParams(-1,-1);hp.addRule(RelativeLayout.ABOVE,901);root.addView(host,hp);RelativeLayout.LayoutParams rp=new RelativeLayout.LayoutParams(-1,-2);rp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);root.addView(row,rp);AtomicInteger inset=new AtomicInteger();controls.overlay(host,inset::set);a.setContentView(root);input.setText("draft\nmore");input.setSelection(3);

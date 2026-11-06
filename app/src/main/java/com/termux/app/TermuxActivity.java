@@ -262,6 +262,8 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         setToggleKeyboardView();
 
         mWorkspace = new com.termux.app.workspace.WorkspaceController(this);
+        mWorkspace.updateEdgeExclusion();
+        mWorkspace.initialNavigation(savedInstanceState==null&&(getIntent()==null||getIntent().getAction()==null||Intent.ACTION_MAIN.equals(getIntent().getAction())));
 
         registerForContextMenu(mTerminalView);
 
@@ -582,9 +584,19 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
 
 
+    @Override public boolean dispatchTouchEvent(android.view.MotionEvent event) {
+        boolean claimed=mWorkspace!=null&&mWorkspace.edgeClaimed();
+        if(mWorkspace!=null&&mWorkspace.edgeTouch(event)){
+            if(!claimed&&event.getActionMasked()==android.view.MotionEvent.ACTION_MOVE){android.view.MotionEvent cancel=android.view.MotionEvent.obtain(event);cancel.setAction(android.view.MotionEvent.ACTION_CANCEL);super.dispatchTouchEvent(cancel);cancel.recycle();}
+            return true;
+        }
+        return super.dispatchTouchEvent(event);
+    }
+
     @SuppressLint("RtlHardcoded")
     @Override
     public void onBackPressed() {
+        if(com.termux.shared.view.KeyboardUtils.isSoftKeyboardVisible(this)){com.termux.shared.view.KeyboardUtils.hideSoftKeyboard(this,getWindow().getDecorView());return;}
         if (getDrawer().isDrawerOpen(Gravity.LEFT)) {
             getDrawer().closeDrawers();
         } else if (mWorkspace == null || !mWorkspace.onBack()) {

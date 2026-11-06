@@ -72,6 +72,7 @@ final class GeminiLiveUi {
         switch(status.state){case "idle":return tr("готов","ready");case "responding":return tr("отвечает","responding");case "waiting_for_confirmation":return tr("ожидает подтверждения","awaiting confirmation");default:return tr("нет подключения","disconnected");}}
     void syncPermissionVisibility(){permissions.syncVisibility();}
     private void update(){WorkspaceStore.Session active=current.get();if(active!=null)permissions.update(active,status);else permissions.syncVisibility();if(chip==null)return;String text="Gemini · "+(status==null||!status.available?tr("нет данных","unavailable"):status.model)+"\n"+state()+(status!=null&&status.available?" · "+GeminiRightsUi.label(status.mode):"")+(status!=null&&status.changeState.equals("queued")?tr(" · смена модели ожидает"," · model change queued"):"")+" ›";
+        if(AgentStatusUi.compact(chip))text=status==null||!status.available?tr("Нет данных","No data"):status.model;
         if(!text.contentEquals(chip.getText()))chip.setText(text);
         if(detailsContext!=null&&owns(detailsRun))detailsContext.present(status==null?null:status.context);
         if(detailsDialog!=null&&detailsDialog.isShowing()){

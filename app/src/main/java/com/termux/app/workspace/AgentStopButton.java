@@ -12,13 +12,16 @@ final class AgentStopButton extends View {
     private final Matrix geometry=new Matrix();
     private float sparkRadius=-1;
     private long time;
+    private boolean compact;
+    void compact(boolean value){compact=value;invalidate();}
+    boolean compact(){return compact;}
     private static final String[] OC_PIXELS={"11100111","10100100","10100100","10100100","11100111"};
     private String agent="Codex";
     private AgentIndicatorState.State state=AgentIndicatorState.State.IDLE;
     AgentStopButton(Context c){super(c);setClickable(true);setFocusable(true);setEnabled(false);}
     void indicator(String name,AgentIndicatorState.State next){if(agent.equals(name)&&state==next)return;agent=name;state=next;invalidate();}
     AgentIndicatorState.State state(){return state;}
-    boolean animated(){return state==AgentIndicatorState.State.WORKING||state==AgentIndicatorState.State.WAITING||state==AgentIndicatorState.State.RECONNECTING;}
+    boolean animated(){return !compact&&(state==AgentIndicatorState.State.WORKING||state==AgentIndicatorState.State.WAITING||state==AgentIndicatorState.State.RECONNECTING);}
     float circleRadius(){float d=getResources().getDisplayMetrics().density;return Math.max(1,Math.min(Math.min(getWidth(),getHeight())/2f-3*d,18*d));}
     void frame(long nanos,float ignored){long next=animated()?nanos:0;if(time!=next){time=next;invalidate();}}
     @Override public CharSequence getAccessibilityClassName(){return android.widget.Button.class.getName();}
@@ -72,13 +75,19 @@ final class AgentStopButton extends View {
         paint.setAlpha(255);
     }
     @Override protected void onDraw(Canvas c){
-        super.onDraw(c);float d=getResources().getDisplayMetrics().density,r=circleRadius();
+        super.onDraw(c);
+        if(compact){float d=getResources().getDisplayMetrics().density,cx=getWidth()/2f,cy=getHeight()/2f;
+            paint.setShader(null);paint.setStyle(Paint.Style.FILL);paint.setColor(WorkspaceDialogs.SURFACE);paint.setAlpha(isEnabled()?255:100);
+            c.drawRoundRect(cx-16.5f*d,cy-12.5f*d,cx+16.5f*d,cy+12.5f*d,8*d,8*d,paint);
+            paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(d);paint.setColor(WorkspaceDialogs.LINE);c.drawRoundRect(cx-16.5f*d,cy-12.5f*d,cx+16.5f*d,cy+12.5f*d,8*d,8*d,paint);
+            paint.setStyle(Paint.Style.FILL);paint.setColor(WorkspaceDialogs.TEXT);c.drawRoundRect(cx-4.5f*d,cy-4.5f*d,cx+4.5f*d,cy+4.5f*d,2*d,2*d,paint);paint.setAlpha(255);return;}
+        float d=getResources().getDisplayMetrics().density,r=circleRadius();
         boolean idle=state==AgentIndicatorState.State.IDLE,waiting=state==AgentIndicatorState.State.WAITING,reconnect=state==AgentIndicatorState.State.RECONNECTING,error=state==AgentIndicatorState.State.ERROR;
-        int accent=error?0xffff7481:reconnect?0xffffc168:idle?0xff74868c:state==AgentIndicatorState.State.WORKING?0xffb0ffed:0xff79dfcd;
+        int accent=error?0xffff7481:reconnect?0xffffc168:idle?WorkspaceDialogs.MUTED:state==AgentIndicatorState.State.WORKING?WorkspaceDialogs.ACCENT:0xffecece5;
         c.save();c.translate(getWidth()/2f,getHeight()/2f);
-        paint.setShader(null);paint.setStyle(Paint.Style.FILL);paint.setColor(idle?0xff111b21:state==AgentIndicatorState.State.WORKING?0xff081a17:0xff102821);c.drawCircle(0,0,r,paint);
+        paint.setShader(null);paint.setStyle(Paint.Style.FILL);paint.setColor(idle?WorkspaceDialogs.SURFACE:state==AgentIndicatorState.State.WORKING?WorkspaceDialogs.TINT:WorkspaceDialogs.SURFACE);c.drawCircle(0,0,r,paint);
         paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(d);ink(accent,idle?.51f:.82f);c.drawCircle(0,0,r,paint);
-        c.save();float scale=glyphScale();c.scale(scale,scale);glyph(c,r,idle?0xff8a9ba1:accent);c.restore();
+        c.save();float scale=glyphScale();c.scale(scale,scale);glyph(c,r,idle?WorkspaceDialogs.MUTED:accent);c.restore();
         float orbitR=Math.max(1,r-2*d);arcBounds.set(-orbitR,-orbitR,orbitR,orbitR);
         paint.setStyle(Paint.Style.STROKE);paint.setStrokeCap(Paint.Cap.ROUND);paint.setStrokeWidth((state==AgentIndicatorState.State.WORKING?2f:1.5f)*d);ink(accent,state==AgentIndicatorState.State.WORKING?1f:.9f);
         if(reconnect){for(int i=0;i<6;i++)c.drawArc(arcBounds,arcAngle()+i*60,27,false,paint);}

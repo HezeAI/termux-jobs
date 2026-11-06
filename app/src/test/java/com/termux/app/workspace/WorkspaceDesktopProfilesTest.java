@@ -28,7 +28,7 @@ public class WorkspaceDesktopProfilesTest {
   set("remote",new Binder());
   for(String target:new String[]{"termux","ubuntu","debian","alpine","fedora","opensuse","void","archlinux","kali","manjaro"}){
    p.environment=target.equals("termux")?"termux":"proot:"+target;ui.menu();AlertDialog d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
-   assertNotNull(target,tagged(d,"agent-status-desktop-switch"));assertNotNull(target,tagged(d,"agent-status-desktop-renderer"));assertNotNull(target,tagged(d,"agent-status-desktop-screen"));
+   assertNull(target,tagged(d,"agent-status-desktop-switch"));assertNotNull(target,tagged(d,"agent-status-desktop-renderer"));assertNotNull(target,tagged(d,"agent-status-desktop-screen"));
    assertNull(tagged(d,"agent-status-desktop-plasma"));assertNull(tagged(d,"agent-status-desktop-xfce"));assertNull(tagged(d,"desktop-wayland-driver-folder"));assertEquals("xfce",profile());d.dismiss();
   }
  }

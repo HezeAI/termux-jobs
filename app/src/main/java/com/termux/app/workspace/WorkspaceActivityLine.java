@@ -50,7 +50,7 @@ public final class WorkspaceActivityLine extends View {
     public WorkspaceActivityLine(Context c,AttributeSet a){super(c,a);setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);}
     public void working(boolean value){if(working==value)return;if(android.os.Build.VERSION.SDK_INT<26)legacyAnimations=android.provider.Settings.Global.getFloat(getContext().getContentResolver(),android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,1f)>0;working=value;if(!value){cancelFrame();clearRoute();}setVisibility(value?VISIBLE:INVISIBLE);invalidate();}
     boolean working(){return working;}
-    @Override protected void onSizeChanged(int w,int h,int oldw,int oldh){super.onSizeChanged(w,h,oldw,oldh);gradient=new LinearGradient(0,0,Math.max(1,w*.45f),0,new int[]{0x0079dfcd,0xff79dfcd,0x0079dfcd},null,Shader.TileMode.CLAMP);}
+    @Override protected void onSizeChanged(int w,int h,int oldw,int oldh){super.onSizeChanged(w,h,oldw,oldh);gradient=new LinearGradient(0,0,Math.max(1,w*.45f),0,new int[]{0x00ecece5,0xffecece5,0x00ecece5},null,Shader.TileMode.CLAMP);}
     @Override protected void onDraw(Canvas canvas){
         super.onDraw(canvas);if(!working||gradient==null)return;
         if(drawRoute()){scheduleFrame();return;}

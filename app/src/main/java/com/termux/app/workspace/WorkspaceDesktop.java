@@ -121,9 +121,6 @@ final class WorkspaceDesktop {
         WorkspaceStore.Session p=selected.get();if(!eligible(p))return;
         if(!supported(p)){WorkspaceDialogs.builder(activity).setTitle("X11 · "+WorkspaceEnvironments.label(target(p))).setMessage(tr("Рабочий стол доступен для Termux, Ubuntu, Debian, Alpine, Fedora, openSUSE, Void Linux, Arch Linux, Kali Linux и Manjaro ARM. Другие системы будут подключаться к своим рабочим столам, без перенаправления в Ubuntu.","The desktop is available for Termux, Ubuntu, Debian, Alpine, Fedora, openSUSE, Void Linux, Arch Linux, Kali Linux and Manjaro ARM. Other systems will use their own desktops, without redirecting to Ubuntu.")).setPositiveButton("OK",null).show();return;}
         if(remote==null)ensure("state",p);
-        List<String> items=new ArrayList<>();List<Integer> actions=new ArrayList<>();List<String> rowKeys=new ArrayList<>();
-        {items.add(showing()?tr("Вернуться в терминал","Return to terminal"):tr("Переключиться на рабочий стол","Switch to desktop"));actions.add(0);rowKeys.add("desktop-switch");}
-
         LinearLayout body=AgentStatusUi.body(activity);
         AgentStatusUi.info(body,tr("Применяется ко всем сессиям окружения ","Applies to all sessions in environment ")+WorkspaceEnvironments.label(target(p)));
         String phase=state.getString("phase","");
@@ -133,12 +130,10 @@ final class WorkspaceDesktop {
         AlertDialog[] dialog=new AlertDialog[1];
 
         styleCheck=null;rendererRow=null;wrapperFolder=null;wrapperDriver=null;
-        for(int i=0;i<items.size();i++){
-            final int which=actions.get(i);
-            TextView row=AgentStatusUi.row(body,items.get(i),rowKeys.get(i),()->{dialog[0].dismiss();menuAction(p,which);});
-            if(i==0&&styleSupported(p)){
+        {
+            if(styleSupported(p)){
                 LinearLayout styleRow=new LinearLayout(activity);styleRow.setGravity(Gravity.CENTER_VERTICAL);
-                TextView label=new TextView(activity);label.setText("Стиль Termux-job's");if(!WorkspaceLanguage.code(activity).equals("ru"))label.setText("Termux-job's style");label.setTextColor(WorkspaceDialogs.TEXT);label.setTextSize(13);styleRow.addView(label,new LinearLayout.LayoutParams(0,-2,1));
+                TextView label=new TextView(activity);label.setText("Темы Termux Job’s");if(!WorkspaceLanguage.code(activity).equals("ru"))label.setText("Termux Job’s themes");label.setTextColor(WorkspaceDialogs.TEXT);label.setTextSize(13);styleRow.addView(label,new LinearLayout.LayoutParams(0,-2,1));
                 CheckBox check=new CheckBox(activity);styleCheck=check;check.setTag("desktop-termux-style");check.setContentDescription(label.getText());check.setChecked(styleEnabled(p));check.setEnabled(!styleBusy());styleRow.addView(check);body.addView(styleRow);
                 check.setOnCheckedChangeListener((button,value)->{if(styleBusy()){check.setChecked(styleEnabled(p));return;}activity.getSharedPreferences("workspace-x11",0).edit().putBoolean(styleKey(p),value).apply();});label.setOnClickListener(v->{if(check.isEnabled())check.performClick();});
                 AgentStatusUi.info(body,tr("Kali-стиль: тёмные окна, синие акценты, крупные значки и фон с драконом. Применяется при следующем запуске. Для смены сначала остановите рабочий стол.","Kali-inspired style: dark windows, blue accents, large icons and dragon wallpaper. Applied on next launch. Stop the desktop before changing this setting."));
@@ -271,12 +266,16 @@ final class WorkspaceDesktop {
             public String privacy(){return tr("Новая запись заменяет предыдущую в памяти. Запись продолжается до остановки; закрытие окна её не прерывает. Полный отчёт включает состояние экрана и клавиатуры. Вывод программ может содержать пути. Отправка в сеть не выполняется.","A new capture replaces the previous in-memory capture. Recording continues until stopped; closing this dialog does not stop it. Full report includes display and keyboard state. Program output may contain paths. No network upload.");}
         });
     }
-    // Header navigation changes presentation only. Starting remains an explicit action in settings.
+    // Entering requires confirmation and checked startup if needed. Returning changes presentation only.
     void toggle(){
-        WorkspaceStore.Session p=selected.get();if(p==null)return;
-        if(graphical.remove(p.id)){sync();changed.run();}
-        else if(usesDesktop(p)||sameSession(p,preparationProfile)){graphical.add(p.id);sync();changed.run();}
-        else activity.showToast(tr("Запустите рабочий стол в настройках рабочего стола этой сессии.","Start the desktop in this session’s desktop settings."),true);
+        WorkspaceStore.Session p=selected.get();if(p==null||!eligible(p))return;
+        if(graphical.remove(p.id)){sync();changed.run();return;}
+        String id=p.id,handle=p.handle,target=target(p);
+        WorkspaceDialogs.builder(activity).setTitle(tr("Переключиться на рабочий стол?","Switch to desktop?"))
+            .setNegativeButton(tr("Отмена","Cancel"),null).setPositiveButton(tr("Переключиться","Switch"),(d,w)->{
+                WorkspaceStore.Session now=selected.get();if(closed||now==null||!id.equals(now.id)||!handle.equals(now.handle)||!target.equals(target(now))||!visible.getAsBoolean())return;
+                menuAction(now,0);
+            }).show();
     }
     void terminal(WorkspaceStore.Session p){if(p!=null&&graphical.remove(p.id)){sync();changed.run();}}
     boolean usesDesktop(WorkspaceStore.Session p){

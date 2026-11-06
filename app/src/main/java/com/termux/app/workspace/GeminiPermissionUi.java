@@ -67,10 +67,10 @@ final class GeminiPermissionUi {
         return yes&&no;
     }
     private TextView text(String value,int size){TextView t=new TextView(activity);t.setText(value);t.setTextSize(size);t.setTextColor(0xffd9e6eb);return t;}
-    private GradientDrawable background(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));d.setStroke(dp(1),0xff315047);return d;}
+    private GradientDrawable background(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));d.setStroke(dp(1),WorkspaceDialogs.LINE);return d;}
     private void ensureCard(){
         if(card!=null)return;FrameLayout host=activity.findViewById(R.id.workspace_terminal_surface);if(host==null)return;
-        card=new LinearLayout(activity);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(12),dp(10),dp(12),dp(10));card.setBackground(background(0xff0b1319,14));card.setTag("gemini-permission-card");
+        card=new LinearLayout(activity);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(12),dp(10),dp(12),dp(10));card.setBackground(background(0xff232426,14));card.setTag("gemini-permission-card");
         FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM);lp.setMargins(dp(12),dp(8),dp(12),dp(8));host.addView(card,lp);
     }
     private void render(){
@@ -82,7 +82,7 @@ final class GeminiPermissionUi {
         for(String outcome:new String[]{"proceed_once","proceed_always","cancel"}){
             boolean allowed=false;for(int i=0;i<options.length();i++)allowed|=outcome.equals(options.optString(i));if(!allowed)continue;
             TextView b=text(outcome.equals("cancel")?tr("Нет","No"):outcome.equals("proceed_always")?tr("На эту сессию","This session"):tr("Разрешить разово","Allow once"),13);
-            b.setGravity(Gravity.CENTER);b.setMinHeight(dp(44));b.setBackground(background(outcome.equals("cancel")?0xff20191c:0xff16342e,10));b.setOnClickListener(v->answer(outcome));
+            b.setGravity(Gravity.CENTER);b.setMinHeight(dp(44));b.setBackground(background(outcome.equals("cancel")?0xff20191c:WorkspaceDialogs.TINT,10));b.setOnClickListener(v->answer(outcome));
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(dp(3),0,dp(3),0);actions.addView(b,lp);
         }
         card.addView(actions);
