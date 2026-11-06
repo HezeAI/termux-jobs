@@ -2,6 +2,23 @@
 
 No other changes queued for publication.
 
+# 2026-11-06 — 2.1.5-test2 (versionCode1494, private v35 redesign)
+
+Native UI redesign, retaining the accepted1493 functionality and all changes since the last published stable **v2.1.4** described in the test1 entry below.
+
+- Native sidebar with separate terminal/agent/server sections and existing managers. Session titles expand in place; explicit Open selects the session. Base Termux remains first and protected. Saved-profile removal preserves history.
+- New agent and terminal composers, per-session drafts/input modes, floating viewport insets and reading anchors. Agent notes/queue/model/reasoning, Stop, attachments and native quota/context access remain available. Unknown quota stays No data.
+- Android speech recognition inserts into the original unchanged draft only; no automatic send, internal recorder or RECORD_AUDIO permission. Cancellation, denial, unavailable provider and changed owner/draft are handled.
+- Agent creation retains preparation/authorization and puts the connection command last. Global settings preserve existing libraries, aliases, instructions/skills, histories, backup/restore, updates and advanced settings; global session text size50–150% excludes X11.
+- X11 fills below the header without a hidden composer gap. Presentation switching is separate from desktop lifecycle. Environment-wide settings and shared ownership are explicit; sole-owner validation guards stop. Existing landscape controls are retained.
+- Adaptive grapheme reveal for new agent text and compatible terminal append output, with reduced-animation/hidden-view handling. Native terminal controls remain immediate; old history is not replayed. Local file actions remain bound after reveal.
+
+Same com.termux/certificate/ARM64/schema8; no automatic data/history/auth migration or instruction replacement. Explicit1494 exception: accepted1493 and standby1495 stay unchanged. APK is not a data backup; installed1495 cannot be replaced by1494 through an ordinary upgrade.
+
+Local regression and modern Lint results are separate from phone acceptance. New UI typography/gestures, IME/rotation, real X11 graphics and speech-provider behavior await phone checks. No emulator render is available. Image accumulation/disconnects, low-level Android handoff/crash recovery, device backup/restore and real connection limitations remain open; MCP/plugins and experimental CLI/automatic compaction are excluded. No installation or publication.
+
+[Scope, checks and phone steps](docs/fork/VALIDATION-2.1.5-test2.md) · [34-area function map](docs/fork/REDESIGN-v35.md).
+
 # 2026-11-06 — 2.1.5-backup1 (versionCode1495, private standby APK)
 
 Frozen application code from accepted **2.1.5-test1 /1493**, whose changes relative to the last published stable **v2.1.4** remain listed below. No new application behavior: only versionName/versionCode metadata changes. The original1493 APK, SHA256, source commit and user acceptance remain preserved separately.

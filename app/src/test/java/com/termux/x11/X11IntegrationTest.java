@@ -242,6 +242,22 @@ public class X11IntegrationTest {
         try{command(service,q);fail();}catch(IllegalArgumentException expected){}
         assertFalse(service.snapshot().getBoolean("started"));
     }
+    @Test @Config(shadows=StopService.class) public void sessionStopRejectsAnotherOwnerAndSharedDesktopAtServiceBoundary()throws Exception{
+        X11Service s=org.robolectric.Robolectric.buildService(X11Service.class).get();StopService.calls=0;
+        try{
+            field(s,"target","debian");field(s,"started",true);field(s,"phase","running");field(s,"desktopOwner","one:h1");
+            java.lang.reflect.Field usersField=X11Service.class.getDeclaredField("desktopUsers");usersField.setAccessible(true);
+            java.util.Set<String> users=(java.util.Set<String>)usersField.get(s);users.add("one:h1");
+            android.os.Bundle stop=X11Remote.command("stop");stop.putString("target","debian");
+            for(String owner:new String[]{"","one:old","other:h2"}){stop.putString("owner",owner);try{command(s,stop);fail(owner);}catch(IllegalStateException expected){}assertEquals("running",s.snapshot().getString("phase"));}
+            stop.putString("owner","one:h1");users.add("two:h2");
+            try{command(s,stop);fail("shared desktop stopped");}catch(IllegalStateException expected){}
+            assertEquals(2,s.snapshot().getStringArrayList("desktopOwners").size());assertEquals("running",s.snapshot().getString("phase"));
+            users.remove("two:h2");assertEquals("stopping",command(s,stop).getString("phase"));
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(151));assertEquals(1,StopService.calls);
+        }finally{java.lang.reflect.Field worker=X11Service.class.getDeclaredField("worker");worker.setAccessible(true);((java.util.concurrent.ExecutorService)worker.get(s)).shutdown();}
+    }
+
     @Test public void stopIsScopedAndLocksNewWorkForEverySupportedEnvironment()throws Exception{
         for(String target:new String[]{"ubuntu","jobs-x11-ubuntu","debian","alpine","termux","fedora","opensuse","void","archlinux"}){
             X11Service service=org.robolectric.Robolectric.buildService(X11Service.class).get();

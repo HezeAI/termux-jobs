@@ -40,7 +40,7 @@ final class ChatAttachmentUi implements AutoCloseable {
         if(busy()||drafts.getOrDefault(owner,Collections.emptyList()).size()>=ChatAttachments.MAX_COUNT){Toast.makeText(activity,t("Дождитесь подготовки файла. В одном сообщении — до 4 вложений.","Wait for file preparation. Up to 4 attachments per message."),Toast.LENGTH_LONG).show();return;}
         final String run=owner;final WorkspaceStore.Session destination=profile.copy();
         final int available=ChatAttachments.MAX_COUNT-drafts.getOrDefault(run,Collections.emptyList()).size();
-        picker.chooseChatAttachments(available,(source,entries)->{
+        picker.chooseChatAttachments(view.folder,destination,available,(source,entries)->{
             if(closed||!run.equals(owner))return;List<Staging> jobs=new ArrayList<>();for(ProjectFiles.Entry entry:entries)jobs.add(()->ChatAttachments.stage(activity,source,entry,destination));prepare(run,jobs);
         },()->activity.requestWorkspaceGallery(available,uris->{
             if(closed||!run.equals(owner))return;List<Staging> jobs=new ArrayList<>();for(android.net.Uri uri:uris)jobs.add(()->ChatAttachments.stageUri(activity,uri,destination));prepare(run,jobs);

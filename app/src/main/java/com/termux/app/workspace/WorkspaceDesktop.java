@@ -123,8 +123,9 @@ final class WorkspaceDesktop {
         if(remote==null)ensure("state",p);
         List<String> items=new ArrayList<>();List<Integer> actions=new ArrayList<>();List<String> rowKeys=new ArrayList<>();
         {items.add(showing()?tr("Вернуться в терминал","Return to terminal"):tr("Переключиться на рабочий стол","Switch to desktop"));actions.add(0);rowKeys.add("desktop-switch");}
-        if(target(p).equals(state.getString("target",""))&&state.getBoolean("started",false)){items.add(tr("Остановить графический рабочий стол","Stop graphical desktop"));actions.add(1);rowKeys.add("desktop-stop");}
+
         LinearLayout body=AgentStatusUi.body(activity);
+        AgentStatusUi.info(body,tr("Применяется ко всем сессиям окружения ","Applies to all sessions in environment ")+WorkspaceEnvironments.label(target(p)));
         String phase=state.getString("phase","");
         if(target(p).equals(state.getString("target",""))){
             if(phase.equals("missing")||phase.equals("error")||phase.equals("cancelled"))AgentStatusUi.info(body,state.getString("status",""));
@@ -159,7 +160,7 @@ final class WorkspaceDesktop {
         android.text.SpannableString help=new android.text.SpannableString(keyboardHelp.getText());int inputIcon=help.toString().indexOf('|');
         android.graphics.drawable.Drawable inputGlyph=activity.getDrawable(R.drawable.workspace_interactive_input).mutate();inputGlyph.setTint(WorkspaceDialogs.MUTED);int glyphSize=WorkspaceDialogs.dp(activity,16);inputGlyph.setBounds(0,0,glyphSize,glyphSize);
         if(inputIcon>=0)help.setSpan(new android.text.style.ImageSpan(inputGlyph,android.text.style.ImageSpan.ALIGN_BASELINE),inputIcon,inputIcon+1,android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);keyboardHelp.setText(help);
-        dialog[0]=WorkspaceDialogs.builder(activity).setTitle("X11 · "+WorkspaceEnvironments.label(target(p))).setView(AgentStatusUi.scroll(body)).setNegativeButton(tr("Назад","Back"),null).create();
+        dialog[0]=WorkspaceDialogs.builder(activity).setTitle(tr("Настройки рабочего стола","Desktop settings")+" · "+WorkspaceEnvironments.label(target(p))).setView(AgentStatusUi.scroll(body)).setNegativeButton(tr("Назад","Back"),null).create();
         dialog[0].show();
     }
     private void addX11Screen(LinearLayout body,WorkspaceStore.Session p,AlertDialog[] dialog){
@@ -270,6 +271,33 @@ final class WorkspaceDesktop {
             public String privacy(){return tr("Новая запись заменяет предыдущую в памяти. Запись продолжается до остановки; закрытие окна её не прерывает. Полный отчёт включает состояние экрана и клавиатуры. Вывод программ может содержать пути. Отправка в сеть не выполняется.","A new capture replaces the previous in-memory capture. Recording continues until stopped; closing this dialog does not stop it. Full report includes display and keyboard state. Program output may contain paths. No network upload.");}
         });
     }
+    // Header navigation changes presentation only. Starting remains an explicit action in settings.
+    void toggle(){
+        WorkspaceStore.Session p=selected.get();if(p==null)return;
+        if(graphical.remove(p.id)){sync();changed.run();}
+        else if(usesDesktop(p)||sameSession(p,preparationProfile)){graphical.add(p.id);sync();changed.run();}
+        else activity.showToast(tr("Запустите рабочий стол в настройках рабочего стола этой сессии.","Start the desktop in this session’s desktop settings."),true);
+    }
+    void terminal(WorkspaceStore.Session p){if(p!=null&&graphical.remove(p.id)){sync();changed.run();}}
+    boolean usesDesktop(WorkspaceStore.Session p){
+        if(p==null||owner(p).isEmpty()||!target(p).equals(state.getString("target",""))||!state.getBoolean("started",false))return false;
+        ArrayList<String> owners=state.getStringArrayList("desktopOwners");
+        return owners==null||owners.isEmpty()?owner(p).equals(state.getString("desktopOwner","")):owners.contains(owner(p));
+    }
+    int ownerCount(){ArrayList<String> owners=state.getStringArrayList("desktopOwners");return owners==null||owners.isEmpty()?(state.getString("desktopOwner","").isEmpty()?0:1):new HashSet<>(owners).size();}
+    void stopDesktop(WorkspaceStore.Session p){
+        if(!owns(p)||closed||remote==null)return;
+        String requestedOwner=owner(p),requestedTarget=target(p);IBinder requestedRemote=remote;
+        WorkspaceDialogs.builder(activity).setTitle(tr("Остановить рабочий стол","Stop desktop"))
+            .setMessage(tr("Остановить только графический рабочий стол? Терминальные сессии продолжат работу.","Stop only the graphical desktop? Terminal sessions will keep running."))
+            .setNegativeButton(tr("Назад","Back"),null).setPositiveButton(tr("Остановить","Stop"),(d,w)->{
+                if(closed||remote!=requestedRemote||!owner(p).equals(requestedOwner)||!target(p).equals(requestedTarget)||!owns(p)){
+                    activity.showToast(tr("Владелец рабочего стола изменился. Остановка отменена.","Desktop ownership changed. Stop cancelled."),true);return;
+                }
+                // The service rechecks the owner atomically before stopping; the UI snapshot can be stale.
+                send("stop",p);
+            }).show();
+    }
     private void menuAction(WorkspaceStore.Session p,int which){
         boolean active=target(p).equals(state.getString("target",""))&&state.getBoolean("started",false);
         if(which==0&&!graphical.contains(p.id)&&!sameSession(p,preparationProfile)&&!active&&!new WorkspaceStorageAccess(activity).granted()){
@@ -290,7 +318,7 @@ final class WorkspaceDesktop {
             else if(target(p).equals(state.getString("target",""))&&state.getBoolean("started",false)){graphical.add(p.id);ensure("launch",p);}
             else{preparationRenderer=renderer(p);rendererLaunchAfterInstall=true;rendererPreparationFailed=false;rendererReadyForPreparation=false;launchCheckAcknowledged=false;launchAfterCheck=p;preparationProfile=p;preparationNeedsInstall=false;preparationCancelling=false;graphical.add(p.id);sync();changed.run();ensure("check",p);}
         }
-        if(which==1)WorkspaceDialogs.builder(activity).setMessage(tr("Остановить только графический рабочий стол? Терминальные сессии продолжат работу.","Stop only the graphical desktop? Terminal sessions will keep running.")).setNegativeButton(tr("Назад","Back"),null).setPositiveButton(tr("Остановить","Stop"),(x,y)->{launchAfterCheck=null;if(remote!=null)send("stop",p);}).show();
+        if(which==1)stopDesktop(p);
     }
 
     void openPrograms(){WorkspaceStore.Session p=selected.get();if(!eligible(p)||!supported(p))return;programs.open(p,state.getBundle("programs"));poll();}
@@ -417,7 +445,7 @@ final class WorkspaceDesktop {
     private void send(String op,WorkspaceStore.Session p){send(op,p,"");}
     private void send(String op,WorkspaceStore.Session p,String program){
         IBinder binder=remote;if(binder==null||closed)return;
-        Bundle q=X11Remote.command(op);if(p!=null){q.putString("target",target(p));q.putString("desktop",desktop(p));q.putBoolean("garconFilter",false);q.putBoolean("termuxStyle",styleEnabled(p));q.putInt("interfaceScale",X11ScreenSettings.load(activity,target(p)).scalePercent);q.putString("renderer",renderer(p));if(op.equals("launch")||op.equals("session-close"))q.putString("owner",owner(p));}if(!program.isEmpty())q.putString("program",program);
+        Bundle q=X11Remote.command(op);if(p!=null){q.putString("target",target(p));q.putString("desktop",desktop(p));q.putBoolean("garconFilter",false);q.putBoolean("termuxStyle",styleEnabled(p));q.putInt("interfaceScale",X11ScreenSettings.load(activity,target(p)).scalePercent);q.putString("renderer",renderer(p));if(op.equals("launch")||op.equals("session-close")||op.equals("stop"))q.putString("owner",owner(p));}if(!program.isEmpty())q.putString("program",program);
         calls.execute(()->{try{Bundle result=X11Remote.call(binder,q);main.post(()->{if(!closed&&remote==binder){if((op.equals("check")||op.equals("install"))&&p!=null&&launchAfterCheck!=null&&p.id.equals(launchAfterCheck.id)&&p.handle.equals(launchAfterCheck.handle))launchCheckAcknowledged=true;accept(result);poll();sync();changed.run();}});}catch(Exception e){main.post(()->{if(!closed&&remote==binder){if(op.equals("session-close")){activity.showToast(tr("Не удалось подтвердить остановку X11. Проверьте рабочий стол и остановите его вручную.","Could not confirm X11 stop. Check the desktop and stop it manually."),true);return;}if(op.startsWith("observe-")){activity.showToast(tr("Не удалось изменить наблюдение X11. Повторите.","Could not change X11 observation. Try again."),true);poll();return;}if(op.startsWith("programs-")){programs.failed();activity.showToast(tr("Не удалось выполнить действие с программами. Дождитесь завершения другой установки и повторите проверку.","Program action failed. Wait for another installation to finish and check again."),true);return;}launchAfterCheck=null;if(sameSession(p,preparationProfile)){state=new Bundle();state.putString("target",target(p));state.putString("phase","error");state.putString("status",tr("Не удалось выполнить действие X11. Вернитесь в терминал и повторите.","X11 action failed. Return to terminal and retry."));preparationCancelling=false;sync();changed.run();return;}if(op.equals("launch")&&p!=null)graphical.remove(p.id);sync();dismissProgress();WorkspaceStore.Session origin=progressOrigin;progressOrigin=null;WorkspaceStore.Session current=selected.get();if(origin!=null&&current!=null&&current.id.equals(origin.id))menu();activity.showToast(tr("Не удалось выполнить действие X11. Проверьте, не запущен ли стол другого окружения, или остановите X11 и повторите.","X11 action failed. Check whether another environment owns the desktop, or stop X11 and retry."),true);changed.run();}});}});
     }
     private boolean programPolling(){return programs.polling();}

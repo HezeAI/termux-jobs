@@ -172,6 +172,12 @@ public class X11Service extends Service {
             if(phase.equals("installing")||phase.equals("checking")){generation++;componentResult="cancelling";phase="cancelling";componentsReady=false;DesktopProcess owned=child;if(owned!=null)owned.close();if(componentOperation.equals("repair-launchers"))setStatus("Исправление отменяется. Исходные права сохранены в резервной записи.","Cancelling repair. Original permissions are saved in the backup record.");else setStatus("Установка отменяется. При повторной проверке может потребоваться восстановление пакетов.","Cancelling installation. A package repair may be needed before retrying.");}
         }else if(op.equals("stop")){
             if(!target.equals(q.getString("target","")))throw new IllegalStateException("Desktop belongs to another environment");
+            // Session UI must never stop a shared desktop or a new owner after a stale confirmation.
+            if(q.containsKey("owner")){
+                String owner=q.getString("owner","");
+                if(owner.isEmpty()||!(desktopUsers.isEmpty()?owner.equals(desktopOwner):desktopUsers.size()==1&&desktopUsers.contains(owner)))
+                    throw new IllegalStateException("Desktop ownership changed or desktop is shared; stop cancelled");
+            }
             if(!stopping&&!phase.equals("stopping")){phase="stopping";main.postDelayed(this::requestStop,150);}
         }
         else if(op.equals("attach")||op.equals("resize")||op.equals("detach")||op.equals("input")){

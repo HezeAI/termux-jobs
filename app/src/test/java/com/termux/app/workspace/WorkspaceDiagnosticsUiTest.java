@@ -18,7 +18,7 @@ import static org.robolectric.Shadows.shadowOf;
 public class WorkspaceDiagnosticsUiTest {
     private View find(View root,String text){if(root instanceof TextView&&((TextView)root).getText().toString().equals(text))return root;if(root instanceof ViewGroup)for(int i=0;i<((ViewGroup)root).getChildCount();i++){View child=find(((ViewGroup)root).getChildAt(i),text);if(child!=null)return child;}return null;}
     @Test public void editorsOfferFlagAndDialogPauseSurvivesWindowClose() throws Exception {
-        TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);WorkspaceLanguage.select(a,"ru");a.setContentView(R.layout.activity_termux);
+        TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);WorkspaceLanguage.select(a,"ru");WorkspaceLanguage.initialize(a);a.setContentView(R.layout.activity_termux);
         Field view=TermuxActivity.class.getDeclaredField("mTerminalView");view.setAccessible(true);view.set(a,a.findViewById(R.id.terminal_view));WorkspaceController c=new WorkspaceController(a);
         try{
             Method edit=WorkspaceController.class.getDeclaredMethod("editSession",WorkspaceStore.Session.class,boolean.class);edit.setAccessible(true);
@@ -29,7 +29,7 @@ public class WorkspaceDiagnosticsUiTest {
             cancel.invoke(c,steps);shadowOf(Looper.getMainLooper()).idle();confirmation=ShadowAlertDialog.getLatestAlertDialog();confirmation.getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertTrue(marker.isFile());
             WorkspaceStore.Session s=new WorkspaceStore.Session();WorkspaceDiagnostics.register(s,true);
             WorkspaceDiagnosticsUi.show(a,s,()->null);shadowOf(Looper.getMainLooper()).idle();AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();
-            assertTrue(find(dialog.getWindow().getDecorView(),WorkspaceText.tr("Остановить журнал")).performClick());assertTrue(WorkspaceDiagnostics.paused(s.id));dialog.dismiss();
+            View pause=find(dialog.getWindow().getDecorView(),"Остановить журнал");assertNotNull("Russian diagnostics pause action",pause);assertTrue(pause.performClick());assertTrue(WorkspaceDiagnostics.paused(s.id));dialog.dismiss();
             WorkspaceDiagnosticsUi.show(a,s,()->null);shadowOf(Looper.getMainLooper()).idle();dialog=ShadowAlertDialog.getLatestAlertDialog();assertNotNull(find(dialog.getWindow().getDecorView(),"Возобновить журнал"));assertNotNull(find(dialog.getWindow().getDecorView(),"Скопировать путь"));assertNotNull(find(dialog.getWindow().getDecorView(),"В Download"));dialog.dismiss();
         }finally{c.close();}
     }

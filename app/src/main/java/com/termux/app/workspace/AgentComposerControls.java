@@ -5,91 +5,70 @@ import android.content.res.ColorStateList;
 import android.graphics.drawable.*;
 import android.view.*;
 import android.widget.*;
+import com.termux.R;
 
-/** Reparents existing actions only at the chat/terminal boundary; never recreates the draft. */
+/** Native composer shell; the original EditText and action handlers keep their identity. */
 final class AgentComposerControls {
     final LinearLayout row,pair;
     final EditText input;
     final TextView star,send;
     final View attachment;
-    private final Drawable starBackground;
-    private final Drawable rowBackground;
-    private View transcriptHost;
+    private final Context context;
+    final ComposerLimits limits;
+    private final ComposerActionLayout tools;
+    private final LinearLayout fieldLine,toggles;
+    private View transcriptHost,status,stop;
     private int terminalAbove;
     private java.util.function.IntConsumer inset=value->{};
-    private final boolean baselineAligned;
-    private boolean agent;
-    private int measuredOneLine,measuredStyle;
-    private final Context context;
+    private boolean agent,initialized;
+    private final TextView notes,queue,mic,commands,aliases,terminalNotes;
+    private final CheckBox interactive,extra;
+    private Runnable queueAction=()->{},voiceAction=()->{};
+    private java.util.function.IntConsumer library=value->{};
+    private java.util.function.Consumer<Boolean> interactiveAction=value->{},extraAction=value->{};
+    private boolean updating;
     AgentComposerControls(Context c,LinearLayout row,EditText input,TextView star,TextView send,View attachment){
-        context=c;this.row=row;this.input=input;this.star=star;this.send=send;this.attachment=attachment;starBackground=star.getBackground();rowBackground=row.getBackground();baselineAligned=row.isBaselineAligned();
-        pair=new LinearLayout(c);pair.setTag("agent-composer-tools");pair.setOrientation(LinearLayout.HORIZONTAL);pair.setGravity(Gravity.CENTER_VERTICAL);pair.setBackground(shape(0xff0b1319,0xff365b52));
-        input.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(agent)toolsHeight();});
+        context=c;this.row=row;this.input=input;this.star=star;this.send=send;this.attachment=attachment;
+        pair=new LinearLayout(c);pair.setOrientation(LinearLayout.VERTICAL);pair.setTag("agent-composer-tools");
+        limits=new ComposerLimits(c);
+        tools=new ComposerActionLayout(c);pair.addView(tools,new LinearLayout.LayoutParams(-1,-2));
+        fieldLine=new LinearLayout(c);fieldLine.setGravity(Gravity.BOTTOM);fieldLine.setBaselineAligned(false);
+        toggles=new LinearLayout(c);toggles.setOrientation(LinearLayout.VERTICAL);
+        interactive=new CheckBox(c);extra=new CheckBox(c);for(CheckBox b:new CheckBox[]{interactive,extra}){b.setTextSize(11);b.setTextColor(WorkspaceDialogs.MUTED);b.setMinHeight(dp(40));toggles.addView(b);}
+        interactive.setOnCheckedChangeListener((b,on)->{if(!updating)interactiveAction.accept(on);});extra.setOnCheckedChangeListener((b,on)->{if(!updating)extraAction.accept(on);});
+        notes=action("",()->star.performClick());queue=action("",()->queueAction.run());mic=action("",()->voiceAction.run());
+        android.graphics.drawable.Drawable microphone=c.getDrawable(R.drawable.workspace_microphone).mutate();microphone.setTint(WorkspaceDialogs.ACCENT);microphone.setBounds(0,0,dp(22),dp(22));mic.setCompoundDrawables(null,microphone,null,null);mic.setTag("agent-voice-input");
+        commands=action("",()->library.accept(0));aliases=action("Aliases",()->library.accept(1));terminalNotes=action("",()->library.accept(2));
+        if(attachment instanceof WorkspaceIconButton)((WorkspaceIconButton)attachment).setIcon(c.getDrawable(R.drawable.workspace_plus),dp(22));
+        attachment.setMinimumWidth(dp(48));attachment.setMinimumHeight(dp(48));send.setMinWidth(dp(48));send.setMinHeight(dp(48));
         labels();
     }
-    void overlay(View host,java.util.function.IntConsumer update){
-        transcriptHost=host;inset=update;
-        if(host.getLayoutParams() instanceof RelativeLayout.LayoutParams)terminalAbove=((RelativeLayout.LayoutParams)host.getLayoutParams()).getRule(RelativeLayout.ABOVE);
-        row.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(agent)inset.accept(row.getHeight());});
-    }
+    private TextView action(String title,Runnable run){TextView v=new TextView(context);v.setText(title);v.setTextSize(11);v.setTextColor(WorkspaceDialogs.TEXT);v.setGravity(Gravity.CENTER);v.setMinHeight(dp(48));v.setMinWidth(dp(48));v.setPadding(dp(6),dp(4),dp(6),dp(4));v.setBackground(new RippleDrawable(ColorStateList.valueOf(0x3379dfcd),null,null));v.setOnClickListener(x->run.run());return v;}
+    void actions(View status,View stop,Runnable queueAction,Runnable voice,java.util.function.IntConsumer library,java.util.function.Consumer<Boolean> interactiveAction,java.util.function.Consumer<Boolean> extraAction){this.status=status;this.stop=stop;this.queueAction=queueAction;voiceAction=voice;this.library=library;this.interactiveAction=interactiveAction;this.extraAction=extraAction;initialized=false;}
+    void terminalModes(boolean direct,boolean keys){updating=true;interactive.setChecked(direct);extra.setChecked(keys);updating=false;}
+    void overlay(View host,java.util.function.IntConsumer update){transcriptHost=host;inset=update;if(host.getLayoutParams() instanceof RelativeLayout.LayoutParams)terminalAbove=((RelativeLayout.LayoutParams)host.getLayoutParams()).getRule(RelativeLayout.ABOVE);row.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->inset.accept(row.getVisibility()==View.VISIBLE?row.getHeight():0));}
     private void geometry(){
-        if(transcriptHost!=null&&transcriptHost.getLayoutParams() instanceof RelativeLayout.LayoutParams){
-            RelativeLayout.LayoutParams p=(RelativeLayout.LayoutParams)transcriptHost.getLayoutParams();
-            if(agent){p.removeRule(RelativeLayout.ABOVE);p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);}
-            else{p.removeRule(RelativeLayout.ALIGN_PARENT_BOTTOM);if(terminalAbove!=0)p.addRule(RelativeLayout.ABOVE,terminalAbove);}
-            transcriptHost.setLayoutParams(p);
-        }
-        row.setBackground(agent?null:rowBackground);inset.accept(agent?row.getHeight():0);
+        if(transcriptHost!=null&&transcriptHost.getLayoutParams() instanceof RelativeLayout.LayoutParams){RelativeLayout.LayoutParams p=(RelativeLayout.LayoutParams)transcriptHost.getLayoutParams();p.removeRule(RelativeLayout.ABOVE);p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);transcriptHost.setLayoutParams(p);}
+        inset.accept(row.getVisibility()==View.VISIBLE?row.getHeight():0);
     }
     int dp(int value){return WorkspaceDialogs.dp(context,value);}
-    String t(String ru,String en){return AgentInstructionsUi.tr(context,ru,en);}
-    private GradientDrawable shape(int fill,int border){GradientDrawable bg=new GradientDrawable();bg.setColor(fill);bg.setCornerRadius(dp(12));bg.setStroke(dp(1),border);return bg;}
-    private Drawable feedback(){return new RippleDrawable(ColorStateList.valueOf(0x9979dfcd),null,shape(0xffffffff,0xffffffff));}
-    private static void remove(View view){if(view.getParent()!=null)((ViewGroup)view.getParent()).removeView(view);}
-    private int fieldStyle(){return java.util.Objects.hash(input.getTextSize(),input.getTypeface(),
-        input.getIncludeFontPadding(),input.getLineSpacingExtra(),input.getLineSpacingMultiplier(),
-        input.getCompoundPaddingTop(),input.getCompoundPaddingBottom(),input.getMinHeight(),input.getMinimumHeight());}
-    private int measuredBaseline(){
-        android.text.Layout layout=input.getLayout();int lines=layout==null?1:layout.getLineCount();
-        if(input.getMaxLines()>0)lines=Math.min(lines,input.getMaxLines());
-        int bottom=layout!=null&&layout.getLineCount()>lines&&input.getIncludeFontPadding()?layout.getBottomPadding():0;
-        return input.getMeasuredHeight()-Math.max(0,lines-1)*input.getLineHeight()+bottom;
-    }
-    private int singleLineHeight(){
-        int style=fieldStyle();android.text.Layout measured=input.getLayout();
-        if(measured!=null&&input.getMeasuredHeight()>0&&
-            (measuredOneLine==0||measuredStyle!=style)){
-            // Complete View measurement includes decoration absent from text Layout.
-            measuredOneLine=measuredBaseline();
-            measuredStyle=style;
-        }
-        return Math.max(dp(48),Math.max(input.getMinimumHeight(),Math.max(input.getMinHeight(),measuredOneLine)));
-    }
-    private void toolsHeight(){if(pair.getLayoutParams()!=null&&pair.getLayoutParams().height!=singleLineHeight()){ViewGroup.LayoutParams p=pair.getLayoutParams();p.height=singleLineHeight();pair.setLayoutParams(p);}}
+    private String t(String ru,String en){return AgentInstructionsUi.tr(context,ru,en);}
+    private static void remove(View view){if(view!=null&&view.getParent()!=null)((ViewGroup)view.getParent()).removeView(view);}
     void present(boolean nextAgent){
-        if(nextAgent&&(measuredOneLine==0||measuredStyle!=fieldStyle())){
-            // Resolve native View height before the row's first measure, without editing the draft.
-            // Updating only from an onLayout callback is too late for that measure pass.
-            input.measure(View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED),
-                View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));
-            measuredOneLine=measuredBaseline();
-            measuredStyle=fieldStyle();
+        if(!initialized||agent!=nextAgent){
+            initialized=true;agent=nextAgent;
+            for(View v:new View[]{input,star,send,attachment,pair,fieldLine,toggles,status,stop,limits})remove(v);
+            row.removeAllViews();fieldLine.removeAllViews();tools.removeAllViews();row.setOrientation(LinearLayout.VERTICAL);row.setBaselineAligned(false);row.setClickable(true);
+            GradientDrawable background=new GradientDrawable();background.setColor(0xff232426);background.setCornerRadius(dp(20));background.setStroke(dp(1),0xff393a3c);row.setBackground(background);
+            if(!agent)row.addView(toggles,new LinearLayout.LayoutParams(-1,-2));
+            fieldLine.addView(input,new LinearLayout.LayoutParams(0,-2,1));
+            if(agent&&stop!=null)fieldLine.addView(stop,new LinearLayout.LayoutParams(dp(48),dp(48)));
+            row.addView(fieldLine,new LinearLayout.LayoutParams(-1,-2));
+            if(agent){tools.addView(attachment);tools.addView(notes);tools.addView(queue);if(status!=null)tools.addView(status);tools.addView(mic);}
+            else{tools.addView(commands);tools.addView(aliases);tools.addView(terminalNotes);}
+            tools.addView(send);row.addView(pair,new LinearLayout.LayoutParams(-1,-2));if(agent)row.addView(limits,new LinearLayout.LayoutParams(-1,-2));geometry();
         }
-        if(agent!=nextAgent){
-            remove(star);remove(send);remove(attachment);remove(pair);pair.removeAllViews();
-            agent=nextAgent;
-            if(agent){
-                star.setBackground(feedback());attachment.setBackground(feedback());pair.addView(star,new LinearLayout.LayoutParams(dp(48),-1));
-                TextView slash=new TextView(context);slash.setText("/");slash.setTextColor(WorkspaceDialogs.MUTED);slash.setGravity(Gravity.CENTER);slash.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);slash.setClickable(false);slash.setFocusable(false);pair.addView(slash,new LinearLayout.LayoutParams(dp(12),-1));
-                pair.addView(attachment,new LinearLayout.LayoutParams(dp(48),-1));
-                LinearLayout.LayoutParams tools=new LinearLayout.LayoutParams(-2,singleLineHeight());tools.gravity=Gravity.BOTTOM;tools.setMarginEnd(dp(6));row.addView(pair,0,tools);
-                LinearLayout.LayoutParams actions=new LinearLayout.LayoutParams(dp(48),dp(48));actions.setMarginStart(dp(6));row.addView(send,actions);row.setBaselineAligned(false);row.setGravity(Gravity.BOTTOM);
-            }else{
-                star.setBackground(starBackground);LinearLayout.LayoutParams left=new LinearLayout.LayoutParams(dp(48),dp(48));left.setMarginEnd(dp(8));row.addView(star,0,left);LinearLayout.LayoutParams actions=new LinearLayout.LayoutParams(dp(48),dp(48));actions.setMarginStart(dp(8));row.addView(send,actions);row.setBaselineAligned(baselineAligned);row.setGravity(Gravity.CENTER_VERTICAL);
-            }
-            geometry();
-        }
-        if(agent)toolsHeight();inset.accept(agent?row.getHeight():0);labels();
+        if(stop!=null)stop.setVisibility(agent?View.VISIBLE:View.GONE);labels();inset.accept(row.getVisibility()==View.VISIBLE?row.getHeight():0);
     }
-    void labels(){star.setContentDescription(agent?t("Заметки","Notes"):t("Вставить сохранённую команду","Insert saved command"));attachment.setContentDescription(t("Прикрепить файл","Attach file"));attachment.setTooltipText(t("Прикрепить файл","Attach file"));send.setContentDescription(agent?t("Отправить сообщение","Send message"):t("Отправить в активный терминал","Send to active terminal"));}
+    void labels(){star.setContentDescription(agent?t("Заметки","Notes"):t("Команды","Commands"));commands.setContentDescription(t("Вставить сохранённую команду","Insert saved command"));interactive.setContentDescription(t("Интерактивный ввод","Interactive input"));extra.setContentDescription(t("Дополнительные клавиши","Extra keys"));notes.setText(t("Заметки","Notes"));queue.setText(t("Очередь","Queue"));commands.setText(t("Команды","Commands"));terminalNotes.setText(t("Заметки","Notes"));interactive.setText(t("Интерактивный ввод","Interactive input"));extra.setText(t("Дополнительные клавиши","Extra keys"));mic.setContentDescription(t("Диктовка в черновик","Dictate into draft"));attachment.setContentDescription(t("Прикрепить файл","Attach file"));send.setContentDescription(agent?t("Отправить сообщение","Send message"):t("Отправить в активный терминал","Send to active terminal"));}
 }

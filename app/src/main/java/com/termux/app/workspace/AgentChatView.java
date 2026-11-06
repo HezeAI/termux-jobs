@@ -39,6 +39,9 @@ final class AgentChatView extends LinearLayout {
     void rememberActions(Collection<JSONObject> rows,boolean expanded){for(JSONObject row:rows){String key=choiceKey(row);if(!key.isEmpty()){timelineExpansion.remove(key);timelineExpansion.put(key,expanded);}}while(timelineExpansion.size()>1024)timelineExpansion.remove(timelineExpansion.keySet().iterator().next());}
     Boolean actionChoice(JSONArray rows){Set<String> keys=new HashSet<>();for(int i=0;i<rows.length();i++){JSONObject row=rows.optJSONObject(i);if(row!=null)keys.add(choiceKey(row));}Boolean choice=null;for(Map.Entry<String,Boolean> entry:timelineExpansion.entrySet())if(keys.contains(entry.getKey()))choice=entry.getValue();return choice;}
     private boolean touchingTimeline;
+    private boolean seenLiveSnapshot;
+    private void revealLayout(){if(!touchingTimeline&&position().bottom){followLayout=true;bottomAfterLayout();}}
+    void liveRows(List<JSONObject> rows,boolean older,boolean busy){boolean animate=seenLiveSnapshot&&busy;seenLiveSnapshot=true;rows(rows,older,animate);}
     final AgentProgressView execution;
     private int scalePercent=100;
     int scalePercent(){return scalePercent;}
@@ -128,8 +131,9 @@ final class AgentChatView extends LinearLayout {
     void olderRows(List<JSONObject> rows,boolean hasOlder){boolean fits=timeline.getHeight()<=scroll.getHeight();Position held=position();rows(rows,hasOlder);restorePosition(fits?new Position(null,0,0,false):new Position(held.anchor,held.offset,held.y,false,held.step));}
     boolean canReveal(String key){return views.containsKey(key);}
     boolean reveal(String key){if(!views.containsKey(key))return false;restorePosition(new Position(key,headerInset,0,false));return true;}
-    void clear(){timelineExpansion.clear();olderState(false,null);cancelRestore();touchingTimeline=false;followNextRows=false;followLayout=false;views.clear();values.clear();data.clear();timeline.removeViews(1,timeline.getChildCount()-1);clearRequests();timeline.addView(requests);timeline.addView(execution);scroll.scrollTo(0,0);}
-    void rows(List<JSONObject> rows,boolean hasOlder){
+    void clear(){seenLiveSnapshot=false;timelineExpansion.clear();olderState(false,null);cancelRestore();touchingTimeline=false;followNextRows=false;followLayout=false;views.clear();values.clear();data.clear();timeline.removeViews(1,timeline.getChildCount()-1);clearRequests();timeline.addView(requests);timeline.addView(execution);scroll.scrollTo(0,0);}
+    void rows(List<JSONObject> rows,boolean hasOlder){rows(rows,hasOlder,false);}
+    private void rows(List<JSONObject> rows,boolean hasOlder,boolean animate){
         rows=AgentMessageTime.captions(rows);
         if(codexActions)rows=CodexActionTimeline.group(rows,groupAllTools);
         Position held=position();final boolean bottom=!touchingTimeline&&(followNextRows||held.bottom);
@@ -170,7 +174,7 @@ final class AgentChatView extends LinearLayout {
             }
             if(r.optString("kind").equals("text")&&AgentMarkdown.rich(r.optString("body"))){
                 if(markdown==null)markdown=fileMarkdown();View existing=views.get(key);AgentMarkdownView block=existing instanceof AgentMarkdownView?(AgentMarkdownView)existing:new AgentMarkdownView(getContext(),markdown);
-                if(!value.equals(values.get(key))||existing!=block){changed=true;values.put(key,value);AgentChatScale.prepare(block);final String k=key;block.update(assistant,r.optString("body"),r.optBoolean("more")?()->{JSONObject row=data.get(k);if(row!=null)open.accept(row);}:null);}
+                if(!value.equals(values.get(key))||existing!=block){changed=true;values.put(key,value);AgentChatScale.prepare(block);final String k=key;block.animation(animate,this::revealLayout);block.update(assistant,r.optString("body"),r.optBoolean("more")?()->{JSONObject row=data.get(k);if(row!=null)open.accept(row);}:null);}
                 if(existing!=null&&existing!=block){timeline.removeView(existing);}views.put(key,block);
                 if(block.getParent()==null){changed=true;timeline.addView(block,index);}else if(timeline.indexOfChild(block)!=index){changed=true;timeline.removeView(block);timeline.addView(block,index);}index++;continue;
             }
@@ -188,9 +192,9 @@ final class AgentChatView extends LinearLayout {
             if(!value.equals(values.get(key))){changed=true;values.put(key,value);AgentChatScale.prepare(t);String kind=r.optString("kind");boolean error=kind.equals("error");boolean chip=kind.equals("reasoning")||kind.equals("tool")||kind.equals("receipt");
                 String caption=kind.equals("reasoning")?tr("Рассуждение ▾","Thinking ▾"):kind.equals("receipt")?receiptTitle(r):(codexActions?CodexActionLabels.title(r,WorkspaceLanguage.code(getContext()).equals("ru")):r.optString("title"))+" ▾";
                 String body=r.optString("actionOutcome").equals("user_declined")?tr("Действие отклонено","Action declined"):r.optString("body");if(r.optBoolean("queued"))body=tr("В очереди · ","Queued · ")+body;else if(r.optString("delivery").equals("cancelled"))body=tr("Отменено · ","Cancelled · ")+body;else if(java.util.Arrays.asList("refused","discarded").contains(r.optString("delivery")))body=tr("Отклонено CLI · ","Rejected by CLI · ")+body;else if(java.util.Arrays.asList("started","current","completed").contains(r.optString("delivery")))body=tr("Принято CLI · ","Accepted by CLI · ")+body;String shown=AgentChatErrors.nativeDiagnosticHint(body)?tr("Подробности доступны по нажатию на сообщение об ошибке.","Tap the error message for details."):body;
-                t.setText(error?tr("Ошибка · ","Error · ")+assistant+"\n"+AgentChatErrors.explain(body,WorkspaceLanguage.code(getContext()).equals("ru"))+tr("\nПодробности ▾","\nDetails ▾"):chip?caption:(kind.equals("user")?tr("Вы: ","You: "):kind.equals("text")?assistant+": ":"")+shown+(r.optBoolean("more")?tr("\nНажмите для полного текста…","\nTap for full text…"):""));
+                if(!kind.equals("text"))t.setText(error?tr("Ошибка · ","Error · ")+assistant+"\n"+AgentChatErrors.explain(body,WorkspaceLanguage.code(getContext()).equals("ru"))+tr("\nПодробности ▾","\nDetails ▾"):chip?caption:(kind.equals("user")?tr("Вы: ","You: "):kind.equals("text")?assistant+": ":"")+shown+(r.optBoolean("more")?tr("\nНажмите для полного текста…","\nTap for full text…"):""));
                 t.setTextIsSelectable(!chip&&!error);
-                if(kind.equals("text")){if(markdown==null)markdown=fileMarkdown();android.text.SpannableStringBuilder formatted=new android.text.SpannableStringBuilder(assistant+": ");formatted.append(markdown.toMarkdown(AgentMarkdown.checkboxes(shown)));if(r.optBoolean("more"))formatted.append(tr("\nНажмите для полного текста…","\nTap for full text…"));markdown.setParsedMarkdown(t,formatted);}
+                if(kind.equals("text")){if(markdown==null)markdown=fileMarkdown();android.text.SpannableStringBuilder formatted=new android.text.SpannableStringBuilder(assistant+": ");formatted.append(markdown.toMarkdown(AgentMarkdown.checkboxes(shown)));if(r.optBoolean("more"))formatted.append(tr("\nНажмите для полного текста…","\nTap for full text…"));((AgentLinkTextView)t).animateNextText(animate,this::revealLayout);markdown.setParsedMarkdown(t,formatted);}
                 final String k=key;t.setOnClickListener(error||chip||r.optBoolean("more")?v->{JSONObject row=data.get(k);if(row!=null)open.accept(row);}:null);t.setTextSize(chip?12:14);t.setTypeface(chip?Typeface.DEFAULT:Typeface.DEFAULT);
                 GradientDrawable bg=new GradientDrawable();bg.setColor(error?0xff241416:chip?0xff0b1b19:Color.BLACK);bg.setCornerRadius(error?dp(12):chip?dp(22):0);bg.setStroke(dp(1),error?0xff704343:chip?0xff28433d:kind.equals("user")?0xff43776b:Color.BLACK);t.setBackground(bg);
                 LayoutParams lp=new LayoutParams(chip?-2:-1,-2);lp.setMargins(0,dp(6),0,dp(chip?3:10));lp.gravity=Gravity.START;t.setLayoutParams(lp);

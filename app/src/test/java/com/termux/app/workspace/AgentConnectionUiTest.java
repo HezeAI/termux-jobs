@@ -10,12 +10,12 @@ public class AgentConnectionUiTest {
  @Before public void setup()throws Exception{a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.setContentView(R.layout.activity_termux);WorkspaceLanguage.select(a,"en");Field field=TermuxActivity.class.getDeclaredField("mTerminalView");field.setAccessible(true);field.set(a,a.findViewById(R.id.terminal_view));controller=new WorkspaceController(a);}
  @After public void close(){controller.close();}
  private AlertDialog open(WorkspaceStore.Session p,boolean launch)throws Exception{Method edit=WorkspaceController.class.getDeclaredMethod("editSession",WorkspaceStore.Session.class,boolean.class);edit.setAccessible(true);edit.invoke(controller,p,launch);Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();return ShadowAlertDialog.getLatestAlertDialog();}
- @Test public void fieldIsAboveDebugForEachUbuntuAgentAndHiddenForOrdinaryShell()throws Exception{
+ @Test public void connectionFieldIsLastForEachUbuntuAgentAndHiddenForOrdinaryShell()throws Exception{
   for(String agent:new String[]{"codex","gemini","claude","opencode","shell"}){
    WorkspaceStore.Session p=new WorkspaceStore.Session();p.name=agent;p.environment=agent.equals("codex")?"codex":"ubuntu";p.codexEnvironment="ubuntu-ai";p.geminiAgent=agent.equals("gemini");p.claudeAgent=agent.equals("claude");if(agent.equals("opencode"))p.aiAgent=agent;
    AlertDialog dialog=open(p,false);View row=dialog.getWindow().getDecorView().findViewWithTag("agent-connection-fields");EditText input=dialog.getWindow().getDecorView().findViewWithTag("agent-connection-command");assertNotNull(input);View loginHint=dialog.getWindow().getDecorView().findViewWithTag("codex-login-hint");assertNotNull(loginHint);assertEquals(agent,agent.equals("codex")?View.VISIBLE:View.GONE,loginHint.getVisibility());assertEquals(agent,agent.equals("shell")?View.GONE:View.VISIBLE,row.getVisibility());
    ViewGroup form=(ViewGroup)row.getParent();int debug=form.indexOfChild(dialog.getWindow().getDecorView().findViewWithTag("agent-extended-debug"));
-   assertTrue(debug>form.indexOfChild(row));assertEquals(agent.equals("shell")?View.VISIBLE:View.GONE,dialog.getWindow().getDecorView().findViewWithTag("agent-extended-debug").getVisibility());dialog.dismiss();
+   assertTrue(debug<form.indexOfChild(row));assertEquals(form.getChildCount()-1,form.indexOfChild(row));assertEquals(agent.equals("shell")?View.VISIBLE:View.GONE,dialog.getWindow().getDecorView().findViewWithTag("agent-extended-debug").getVisibility());dialog.dismiss();
   }
  }
  @Test public void existingSessionAndPresetSaveConnectionWithoutStartingAProcess()throws Exception{
@@ -34,4 +34,11 @@ public class AgentConnectionUiTest {
    }
   }finally{store.close();}
  }
+ @Test public void createChatChooserPrefillsEveryAgentAndCancellationDoesNotPersistOrLaunch()throws Exception{
+  Field f=WorkspaceController.class.getDeclaredField("store");f.setAccessible(true);WorkspaceStore store=(WorkspaceStore)f.get(controller);store.sessions.clear();store.save();store.awaitWrites();java.io.File file=new java.io.File(a.getFilesDir(),"workspace-v1.json");byte[] before=java.nio.file.Files.readAllBytes(file.toPath());
+  for(String language:new String[]{"ru","en"})for(int agent=0;agent<4;agent++){
+   WorkspaceLanguage.select(a,language);WorkspaceText.resources=WorkspaceLanguage.wrap(a).getResources();Method create=WorkspaceController.class.getDeclaredMethod("createAgentChat");create.setAccessible(true);create.invoke(controller);AlertDialog chooser=ShadowAlertDialog.getLatestAlertDialog();assertEquals(4,chooser.getListView().getCount());String label=chooser.getListView().getItemAtPosition(agent).toString();chooser.getListView().performItemClick(null,agent,agent);Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();View root=form.getWindow().getDecorView();EditText connection=root.findViewWithTag("agent-connection-command"),directory=root.findViewWithTag("session-working-directory");View group=root.findViewWithTag("agent-connection-fields");assertEquals(View.VISIBLE,group.getVisibility());ViewGroup parent=(ViewGroup)group.getParent();assertEquals(parent.getChildCount()-1,parent.indexOfChild(group));assertEquals("/root",directory.getText().toString());assertTrue(directory.getParent() instanceof FrameLayout);assertEquals(2,((ViewGroup)directory.getParent()).getChildCount());assertEquals(language.equals("ru")?"Создать и открыть":"Create and open",form.getButton(-1).getText().toString());connection.setText("/root/artificial/"+label.toLowerCase(java.util.Locale.ROOT));directory.setText("/root/artificial project");form.getButton(-2).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertFalse(form.isShowing());assertTrue(store.sessions.isEmpty());assertNull(a.getCurrentSession());assertArrayEquals(before,java.nio.file.Files.readAllBytes(file.toPath()));
+  }
+ }
+
 }

@@ -181,6 +181,8 @@ final class WorkspaceServers implements AutoCloseable {
         if(selected==null){renderList(body);}else renderServer(body);
         scroll.restoreTo(y);
     }
+    java.util.Map<String,String> sidebarEntries(){java.util.Map<String,String> result=new java.util.LinkedHashMap<>();for(ServerProfiles.Profile p:store.profiles)result.put(p.id,p.name);return result;}
+    void openProfile(String id){if(busy)return;for(ServerProfiles.Profile p:store.profiles)if(p.id.equals(id)){selected=p;directory="~";tab="overview";listing=null;generation++;render();if(p.automatic&&!ServerConnection.disconnected(activity,p.id)&&!pollingEnabled(p))connect();return;}}
     private void renderList(LinearLayout body){
         if(store.profiles.isEmpty())add(body,text(t("Добавьте свой сервер. Подключения независимы от обычных SSH-сессий.","Add your server. These connections are independent of existing SSH sessions."),14,WorkspaceDialogs.MUTED));
         if(!store.profiles.isEmpty())add(body,text(t("Автообновление данных от сервера: после подключения каждые 10 с внутри сервера и 30 с в остальных разделах приложения. В фоне приложения приостановлено. «Отключиться» закрывает соединения панели и передачи; сервер, агент, удалённые задачи и отдельные SSH-сессии продолжают работать.","Auto-update data from server: every 10 s inside the server view and 30 s elsewhere after connecting. Paused while the app is in the background. Disconnect closes workspace connections and transfers; the server, agent, remote tasks and independent SSH sessions keep running."),12,WorkspaceDialogs.MUTED));

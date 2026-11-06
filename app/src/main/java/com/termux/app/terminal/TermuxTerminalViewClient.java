@@ -92,7 +92,7 @@ public class TermuxTerminalViewClient extends TermuxTerminalViewClientBase {
                 .remove("line-spacing-percent").apply();
             migration.edit().putBoolean("font-layout-reset-v17", true).apply();
         }
-        mActivity.getTerminalView().setTextSize(mActivity.getPreferences().getFontSize());
+        mActivity.getTerminalView().setTextSize(com.termux.app.workspace.SessionTextSize.terminalPixels(mActivity,mActivity.getPreferences().getFontSize()));
         mActivity.getTerminalView().setKeepScreenOn(mActivity.getPreferences().shouldKeepScreenOn());
     }
 
@@ -524,7 +524,7 @@ public class TermuxTerminalViewClient extends TermuxTerminalViewClientBase {
 
     public void changeFontSize(boolean increase) {
         mActivity.getPreferences().changeFontSize(increase);
-        mActivity.getTerminalView().setTextSize(mActivity.getPreferences().getFontSize());
+        mActivity.getTerminalView().setTextSize(com.termux.app.workspace.SessionTextSize.terminalPixels(mActivity,mActivity.getPreferences().getFontSize()));
     }
 
 

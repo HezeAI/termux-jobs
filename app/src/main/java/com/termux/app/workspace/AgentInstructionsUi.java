@@ -23,6 +23,10 @@ final class AgentInstructionsUi {
     static String runtimeNotice(android.content.Context c,String env){return tr(c,"Среда: ","Environment: ")+AgentEnvironments.label(env)+(env.equals("ubuntu-ai")?"":tr(c,". Сохранена среда старой сессии. Редактор работает с её файлами; инструкции Ubuntu AI не изменяются.",". The legacy session environment is retained. The editor uses its files; Ubuntu AI instructions are unchanged."));}
     static String suggested(WorkspaceStore.Session p){String env=runtime(p);String path=CodexProjects.directory(env,p!=null&&(!AgentPreparation.agent(p).isEmpty()||p.codexEnvironment.equals("ubuntu-ai")||WorkspaceEnvironments.alias(p).equals(env))?p.directory:env.equals("termux")?"~":"/root");return path.isEmpty()?"/root":path;}
     static void show(TermuxActivity a,WorkspaceStore.Session profile){Editor e=new Editor(a,suggested(profile),q->AgentInstructions.request(a,q));e.projectExplicit=false;e.selectedEnvironment=runtime(profile);if(profile!=null&&profile.claudeAgent){e.agent="claude";e.name="CLAUDE.md";}e.show();}
+    static void showProject(TermuxActivity a,WorkspaceStore.Session profile){
+        Editor e=new Editor(a,suggested(profile),q->AgentInstructions.request(a,q));e.scope="project";e.projectExplicit=false;e.selectedEnvironment=runtime(profile);
+        if(profile!=null&&profile.claudeAgent){e.agent="claude";e.name="CLAUDE.md";}e.show();
+    }
     static Editor sessionEditor(TermuxActivity a,WorkspaceStore.Session source,AgentInstructions.Backend backend){
         AgentSessionResourcesUi.Context context=AgentSessionResourcesUi.context(a,source);return context==null?null:context.editor(backend);
     }

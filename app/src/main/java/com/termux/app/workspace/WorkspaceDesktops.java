@@ -6,6 +6,7 @@ import java.util.*;
 import java.util.function.*;
 /** One UI channel/server per environment, one visible surface in the Activity. */
 final class WorkspaceDesktops {
+ private DesktopViewport viewport;
  private final Map<String,WorkspaceDesktop> channels=new LinkedHashMap<>();
  private final TermuxActivity activity;private final Supplier<WorkspaceStore.Session> selected;
  private final BooleanSupplier visible;private final View input;private final Runnable changed,restore;
@@ -41,9 +42,14 @@ final class WorkspaceDesktops {
  String label(){WorkspaceDesktop c=current(true);return c==null?(WorkspaceLanguage.code(activity).equals("ru")?"Терминал":"Terminal"):c.label();}
  void openPrograms(){WorkspaceDesktop c=current(true);if(c!=null)c.openPrograms();else activity.showToast(WorkspaceLanguage.code(activity).equals("ru")?"X11 пока не поддерживается этим окружением.":"X11 is not yet supported in this environment.",true);}
  boolean programsInstalling(){WorkspaceDesktop c=current(false);return c!=null&&c.programsInstalling()&&!c.programsVisible();}
+ void toggle(){WorkspaceDesktop c=current(true);if(c!=null)c.toggle();else menu();}
  void menu(){WorkspaceDesktop c=current(true);if(c!=null)c.menu();else activity.showToast(WorkspaceLanguage.code(activity).equals("ru")?"X11 пока не поддерживается этим окружением.":"X11 is not yet supported in this environment.",true);}
+ boolean usesDesktop(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));return c!=null&&c.usesDesktop(p);}
+ int ownerCount(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));return c==null?0:c.ownerCount();}
+ void stopDesktop(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));if(c!=null)c.stopDesktop(p);}
+ void terminal(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));if(c!=null)c.terminal(p);}
  boolean owns(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));return c!=null&&c.owns(p);}
  void sessionClosed(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));if(c!=null)c.sessionClosed(p);}
- void sync(){if(closed)return;WorkspaceDesktop active=current(false);for(WorkspaceDesktop c:new ArrayList<>(channels.values()))if(c!=active)c.sync();if(active!=null)active.sync();}
- void close(){if(closed)return;closed=true;for(WorkspaceDesktop c:channels.values())c.close();channels.clear();}
+ void sync(){if(closed)return;WorkspaceDesktop active=current(false);for(WorkspaceDesktop c:new ArrayList<>(channels.values()))if(c!=active)c.sync();if(active!=null)active.sync();if(viewport==null)viewport=new DesktopViewport(activity.findViewById(com.termux.R.id.drawer_layout));viewport.present(showing());}
+ void close(){if(closed)return;if(viewport!=null)viewport.present(false);closed=true;for(WorkspaceDesktop c:channels.values())c.close();channels.clear();}
 }

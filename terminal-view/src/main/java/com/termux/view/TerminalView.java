@@ -90,6 +90,7 @@ public final class TerminalView extends View {
     @Override protected void onWindowVisibilityChanged(int visibility) {
         super.onWindowVisibilityChanged(visibility);
         if (mResizeHandler == null) return;
+        if(visibility!=VISIBLE&&mTextReveal!=null)mTextReveal.reset();
         if (visibility != VISIBLE) cancelPendingResize();
         else if (mTermSession != null && mTermSession.usesStableResize()) updateSize();
     }
@@ -120,6 +121,16 @@ public final class TerminalView extends View {
     }
 
     /** The top row of text to display. Ranges from -activeTranscriptRows to 0. */
+    private TerminalTextReveal mTextReveal;
+    private int mComposerBottomInset;
+    private boolean mComposerViewport;
+    private final java.util.Map<TerminalSession,Integer> mSessionTopRows=new java.util.WeakHashMap<>();
+    /** Reserve the live viewport above the floating composer, while older rows may draw behind it. */
+    public void setComposerBottomInset(int pixels){
+        mComposerViewport=true;if(mTextReveal==null)mTextReveal=new TerminalTextReveal(this);int next=Math.max(0,pixels);if(next==mComposerBottomInset)return;
+        mComposerBottomInset=next;updateSize();invalidate();
+    }
+    public int getComposerBottomInset(){return mComposerBottomInset;}
     int mTopRow;
     int[] mDefaultSelectors = new int[]{-1,-1,-1,-1};
 
@@ -340,8 +351,10 @@ public final class TerminalView extends View {
      */
     public boolean attachSession(TerminalSession session) {
         if (session == mTermSession) return false;
+        if(mTextReveal!=null)mTextReveal.reset();
         cancelPendingResize();
         if(mClient!=null)mClient.onTerminalViewportChanged();
+        if(mComposerViewport&&mTermSession!=null)mSessionTopRows.put(mTermSession,mTopRow);
         mTopRow = 0;
 
         mTermSession = session;
@@ -349,6 +362,11 @@ public final class TerminalView extends View {
         mCombiningAccent = 0;
 
         updateSize();
+        if(mComposerViewport&&mEmulator!=null){
+            int held=mSessionTopRows.containsKey(session)?mSessionTopRows.get(session):0;
+            mTopRow=held<0?Math.max(-mEmulator.getScreen().getActiveTranscriptRows(),held-mEmulator.getScrollCounter()):0;
+            mEmulator.clearScrollCounter();
+        }
 
         // Wait with enabling the scrollbar until we have a terminal to get scroll position from.
         setVerticalScrollBarEnabled(true);
@@ -507,6 +525,7 @@ public final class TerminalView extends View {
     public void onScreenUpdated() {
         if (mEmulator == null) return;
 
+        if(mTextReveal!=null)mTextReveal.update(mEmulator.getScrollCounter());
         int rowsInHistory = mEmulator.getScreen().getActiveTranscriptRows();
         if (mTopRow < -rowsInHistory) mTopRow = -rowsInHistory;
 
@@ -525,7 +544,7 @@ public final class TerminalView extends View {
             }
         }
 
-        if (!skipScrolling && mTopRow < 0 && mTermSession != null && mTermSession.preservesTranscriptScroll()
+        if (!skipScrolling && mTopRow < 0 && mTermSession != null && (mTermSession.preservesTranscriptScroll()||mComposerViewport)
             && !mEmulator.isAlternateBufferActive()) {
             // Keep the same transcript text visible as new output pushes rows into history.
             mTopRow=Math.max(-rowsInHistory,mTopRow-mEmulator.getScrollCounter());
@@ -663,6 +682,7 @@ public final class TerminalView extends View {
     @Override
     @TargetApi(23)
     public boolean onTouchEvent(MotionEvent event) {
+        if(mTextReveal!=null)mTextReveal.interaction();
         if (mEmulator == null) return true;
         final int action = event.getAction();
         if (action == MotionEvent.ACTION_DOWN) {mTranscriptTapConsumed=false;finishResizeForInteraction();}
@@ -827,6 +847,7 @@ public final class TerminalView extends View {
      */
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if(mTextReveal!=null)mTextReveal.interaction();
         if (TERMINAL_VIEW_KEY_LOGGING_ENABLED)
             mClient.logInfo(LOG_TAG, "onKeyDown(keyCode=" + keyCode + ", isSystem()=" + event.isSystem() + ", event=" + event + ")");
         if (mEmulator == null) return true;
@@ -1060,7 +1081,7 @@ public final class TerminalView extends View {
         mResizeHandler.postAtTime(mPendingResize, Math.min(now + RESIZE_QUIET_MS, mResizeStarted + RESIZE_MAX_MS));
     }
     private int columnsForView() { return Math.max(4, (int) (getWidth() / mRenderer.mFontWidth)); }
-    private int rowsForView() { return Math.max(4, (getHeight() - mRenderer.mFontLineSpacingAndAscent) / mRenderer.mFontLineSpacing); }
+    private int rowsForView() { return Math.max(4, (getHeight() - mComposerBottomInset - mRenderer.mFontLineSpacingAndAscent) / mRenderer.mFontLineSpacing); }
     private void notifyEmulatorSet() {
         if (mClient != null) mClient.onEmulatorSet();
         if (mTerminalCursorBlinkerRunnable != null) mTerminalCursorBlinkerRunnable.setEmulator(mEmulator);
@@ -1073,7 +1094,7 @@ public final class TerminalView extends View {
         // Flushing may advance the transcript and its viewport. Take the anchor afterwards.
         boolean stable = mTermSession.usesStableResize();
         if (stable) mTermSession.flushFrameBeforeResize();
-        boolean preserve = stable && mEmulator != null && mTopRow < 0
+        boolean preserve = (stable||mComposerViewport) && mEmulator != null && mTopRow < 0
             && newColumns == mEmulator.mColumns && !mEmulator.isAlternateBufferActive() && !mEmulator.isMouseTrackingActive();
         int oldTop = mTopRow, oldHistory = preserve ? mEmulator.getScreen().getActiveTranscriptRows() : 0;
         mTermSession.updateSize(newColumns, newRows, (int) mRenderer.getFontWidth(), mRenderer.getFontLineSpacing());
@@ -1096,8 +1117,13 @@ public final class TerminalView extends View {
             }
 
             int rows = adaptiveResizeViewport() ? rowsForView() : mEmulator.mRows;
+            if(mComposerViewport&&mComposerBottomInset>0&&mTopRow<0&&!mEmulator.isAlternateBufferActive()){
+                int fullRows=Math.max(4,(getHeight()-mRenderer.mFontLineSpacingAndAscent)/mRenderer.mFontLineSpacing);
+                rows=Math.min(fullRows,mEmulator.mRows-getVisibleTopRow());
+            }
             mRenderer.render(mEmulator, canvas, getVisibleTopRow(), sel[0], sel[1], sel[2], sel[3], rows);
 
+            if(mTextReveal!=null)mTextReveal.paint(canvas);
             // render the text selection handles
             renderTextSelection();
         }
@@ -1524,6 +1550,7 @@ public final class TerminalView extends View {
 
     @Override
     protected void onDetachedFromWindow() {
+        if(mTextReveal!=null)mTextReveal.reset();
         mResizeDetached = true;
         cancelPendingResize();
         super.onDetachedFromWindow();

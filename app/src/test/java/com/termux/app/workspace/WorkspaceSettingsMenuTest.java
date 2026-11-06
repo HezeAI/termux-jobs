@@ -57,36 +57,36 @@ public class WorkspaceSettingsMenuTest {
     @Test public void rootAndAdvancedOrderNoDuplicatesInBothLanguages()throws Exception{
         for(String language:new String[]{"ru","en"}){
             boolean ru=language.equals("ru");AlertDialog root=open(language);
-            List<String> expected=ru?Arrays.asList("Язык / Language","Проверить обновления","Инструкции агентов","Навыки агентов","Истории чатов","Дополнительно","О приложении"):Arrays.asList("Language / Язык","Check for updates","Agent instructions","Agent skills","Chat histories","Advanced","About");
-            assertEquals(expected,rows(root,"workspace-global-settings"));row(root,"workspace-global-settings",5).performClick();AlertDialog advanced=latest();
-            assertEquals(ru?Arrays.asList("Резервное копирование","Проверить обновления окружений","Очистить хранилище","Ошибки и решения"):Arrays.asList("Backup and restore","Check environment updates","Clean up storage","Errors and solutions"),rows(advanced,"workspace-advanced-settings"));
+            List<String> expected=ru?Arrays.asList("Язык интерфейса","Размер основного текста сессий (100% - Default): 100%","","Агенты и среда","Агенты и модели","Общие инструкции агентов","Проектные инструкции","Навыки агентов","Ubuntu AI","Данные","Проверить обновления окружений","Ошибки и решения","Истории чатов","Очистить хранилище","Резервное копирование","Дополнительно","О приложении"):Arrays.asList("Interface language","Session main text size (100% - Default): 100%","","Agents and environment","Agents and models","Shared agent instructions","Project instructions","Agent skills","Ubuntu AI","Data","Check environment updates","Errors and solutions","Chat histories","Clean up storage","Backup and restore","Advanced","About");
+            assertEquals(expected,rows(root,"workspace-global-settings"));row(root,"workspace-global-settings",15).performClick();AlertDialog advanced=latest();
+            assertEquals(ru?Arrays.asList("Журнал команд и пресеты запуска","Проверить обновления"):Arrays.asList("Command journal and launch presets","Check for updates"),rows(advanced,"workspace-advanced-settings"));
             assertEquals(ru?"Назад":"Back",advanced.getButton(AlertDialog.BUTTON_NEGATIVE).getText().toString());assertTrue(root.isShowing());advanced.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();idle();assertFalse(advanced.isShowing());assertTrue(root.isShowing());root.dismiss();
         }
         assertEquals(0,backupInventory);assertEquals(0,updateInventory);
     }
     @Test public void transferredActionsOpenActualWindowsAndReturnWithoutMaintenance()throws Exception{
         for(String language:new String[]{"ru","en"}){
-            AlertDialog root=open(language);row(root,"workspace-global-settings",5).performClick();AlertDialog advanced=latest();
-            for(int index=0;index<4;index++){
-                row(advanced,"workspace-advanced-settings",index).performClick();AlertDialog child=latest();assertNotSame(advanced,child);assertTrue(child.isShowing());assertTrue(advanced.isShowing());assertTrue(root.isShowing());
+            AlertDialog root=open(language);
+            int[] indexes={14,10,13,11};
+            for(int index=0;index<indexes.length;index++){
+                row(root,"workspace-global-settings",indexes[index]).performClick();AlertDialog child=latest();assertNotSame(root,child);assertTrue(child.isShowing());assertTrue(root.isShowing());
                 String[][] expected={{"Создать резервную копию","Проверить пакеты всех окружений","Ничего не отмечено заранее.","Ошибки и решения"},{"Create backup","Check packages in all environments","Nothing is preselected.","Errors and solutions"}};
                 assertTrue("Wrong child window",allText(child.getWindow().getDecorView()).contains(expected[language.equals("ru")?0:1][index]));
-                assertNotNull(child.getButton(AlertDialog.BUTTON_NEGATIVE));child.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();idle();assertFalse(child.isShowing());assertTrue(advanced.isShowing());
-                assertNull(activity.getCurrentSession());
+                child.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();idle();assertFalse(child.isShowing());assertTrue(root.isShowing());assertNull(activity.getCurrentSession());
             }
-            advanced.dismiss();root.dismiss();
+            root.dismiss();
         }
         assertEquals(2,backupInventory);assertEquals(2,updateInventory);
     }
     @Test public void backCancelAndRepeatedOpenPreserveOneParentMenu()throws Exception{
-        AlertDialog root=open("ru");row(root,"workspace-global-settings",5).performClick();AlertDialog advanced=latest();row(root,"workspace-global-settings",5).performClick();assertSame(advanced,latest());
+        AlertDialog root=open("ru");row(root,"workspace-global-settings",15).performClick();AlertDialog advanced=latest();row(root,"workspace-global-settings",15).performClick();assertSame(advanced,latest());
         advanced.onBackPressed();idle();assertFalse(advanced.isShowing());assertTrue(root.isShowing());
-        row(root,"workspace-global-settings",5).performClick();advanced=latest();advanced.cancel();idle();assertTrue(root.isShowing());assertFalse(advanced.isShowing());
-        row(root,"workspace-global-settings",5).performClick();advanced=latest();root.dismiss();idle();assertFalse(root.isShowing());assertFalse(advanced.isShowing());
+        row(root,"workspace-global-settings",15).performClick();advanced=latest();advanced.cancel();idle();assertTrue(root.isShowing());assertFalse(advanced.isShowing());
+        row(root,"workspace-global-settings",15).performClick();advanced=latest();root.dismiss();idle();assertFalse(root.isShowing());assertFalse(advanced.isShowing());
     }
     @Test public void lastAboutEntryKeepsExistingActivityDestination()throws Exception{
         for(String language:new String[]{"ru","en"}){
-            AlertDialog root=open(language);row(root,"workspace-global-settings",6).performClick();idle();Intent intent=Shadows.shadowOf(activity).getNextStartedActivity();assertNotNull(intent);assertEquals(SettingsActivity.class.getName(),intent.getComponent().getClassName());assertFalse(root.isShowing());assertNull(activity.getCurrentSession());
+            AlertDialog root=open(language);row(root,"workspace-global-settings",16).performClick();idle();Intent intent=Shadows.shadowOf(activity).getNextStartedActivity();assertNotNull(intent);assertEquals(SettingsActivity.class.getName(),intent.getComponent().getClassName());assertFalse(root.isShowing());assertNull(activity.getCurrentSession());
         }
     }
 }

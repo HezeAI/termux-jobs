@@ -18,11 +18,17 @@ public class WorkspaceDesktopHeaderTest {
   try{
    Field screen=field(WorkspaceController.class,"screen");screen.set(c,Enum.valueOf((Class)screen.getType(),"TERMINAL"));
    Method render=WorkspaceController.class.getDeclaredMethod("renderHeader");render.setAccessible(true);render.invoke(c);
-   LinearLayout header=(LinearLayout)field(WorkspaceController.class,"header").get(c);View top=header.getChildAt(0),title=((LinearLayout)top).getChildAt(0),navigation=header.getChildAt(1);
-   assertEquals("Termux Job’s v2.0",((TextView)((LinearLayout)title).getChildAt(0)).getText().toString());
-   TextView button=(TextView)field(WorkspaceController.class,"desktopInputButton").get(c);field(WorkspaceController.class,"interactiveInput").setBoolean(c,true);
-   WorkspaceDesktops desktop=(WorkspaceDesktops)field(WorkspaceController.class,"desktopUi").get(c);Runnable changed=(Runnable)field(WorkspaceDesktops.class,"keyboardChanged").get(desktop);changed.run();
-   assertSame(top,header.getChildAt(0));assertSame(title,((LinearLayout)top).getChildAt(0));assertSame(navigation,header.getChildAt(1));assertSame(button,field(WorkspaceController.class,"desktopInputButton").get(c));assertTrue(button.isSelected());changed.run();assertSame(title,((LinearLayout)header.getChildAt(0)).getChildAt(0));
+   WorkspaceDesktops desktop=(WorkspaceDesktops)field(WorkspaceController.class,"desktopUi").get(c);Runnable changed=(Runnable)field(WorkspaceDesktops.class,"keyboardChanged").get(desktop);
+   WorkspaceStore.Session p=new WorkspaceStore.Session();p.id="synthetic";p.handle="h";p.environment="termux";
+   WorkspaceDesktops visible=new WorkspaceDesktops(a,()->p,()->true,a.findViewById(R.id.workspace_input),()->{},()->{});
+   visible.label();java.util.Map channels=(java.util.Map)field(WorkspaceDesktops.class,"channels").get(visible);WorkspaceDesktop channel=(WorkspaceDesktop)channels.get("termux");
+   ((java.util.Set<String>)field(WorkspaceDesktop.class,"graphical").get(channel)).add(p.id);field(WorkspaceController.class,"desktopUi").set(c,visible);desktop.close();render.invoke(c);
+   LinearLayout header=(LinearLayout)field(WorkspaceController.class,"header").get(c);LinearLayout top=(LinearLayout)header.getChildAt(0);View menu=top.getChildAt(0),title=top.getChildAt(1);
+   assertEquals("Termux",((TextView)((LinearLayout)title).getChildAt(0)).getText().toString());
+   TextView button=(TextView)field(WorkspaceController.class,"desktopInputButton").get(c);assertNotNull(button);field(WorkspaceController.class,"interactiveInput").setBoolean(c,true);
+   changed.run();
+   assertSame(top,header.getChildAt(0));assertSame(title,top.getChildAt(1));assertSame(menu,top.getChildAt(0));assertSame(button,field(WorkspaceController.class,"desktopInputButton").get(c));assertTrue(button.isSelected());changed.run();assertSame(title,((LinearLayout)header.getChildAt(0)).getChildAt(1));
+
   }finally{c.close();}
  }
 }

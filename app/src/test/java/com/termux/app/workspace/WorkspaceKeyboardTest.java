@@ -27,7 +27,7 @@ public class WorkspaceKeyboardTest {
         a.getWindow().addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
         new TermuxTerminalViewClient(a,null).setSoftKeyboardState(true,false);assertEnabled(a);
         a.getWindow().addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
-        EditText input=(EditText)((ViewGroup)a.findViewById(R.id.workspace_input)).getChildAt(1);input.performClick();shadowOf(Looper.getMainLooper()).idle();assertEnabled(a);assertTrue(input.getShowSoftInputOnFocus());
+        Field inputField=WorkspaceController.class.getDeclaredField("terminalInput");inputField.setAccessible(true);EditText input=(EditText)inputField.get(c);input.performClick();shadowOf(Looper.getMainLooper()).idle();assertEnabled(a);assertTrue(input.getShowSoftInputOnFocus());
         a.getWindow().addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);c.toggleKeyboard();shadowOf(Looper.getMainLooper()).idle();assertEnabled(a);c.close();
     }
     @Test public void enablingInteractiveInputDoesNotRestoreGlobalKeyboardBlock() throws Exception {

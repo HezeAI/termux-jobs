@@ -60,6 +60,31 @@ public class OpenCodeResizeTest {
     private String top(){return emulator.getScreen().getSelectedText(0,view.getTopRow(),79,view.getTopRow());}
     private void seed(){for(int i=0;i<120;i++)append("line "+i+"\r\n");view.onScreenUpdated();}
 
+    private boolean revealing()throws Exception{Field f=TerminalView.class.getDeclaredField("mTextReveal");f.setAccessible(true);Object reveal=f.get(view);Method pending=reveal.getClass().getDeclaredMethod("pending");pending.setAccessible(true);return (boolean)pending.invoke(reveal);}
+    @Test public void terminalRevealNeverDelaysEmulatorAndControlsFlushDecoration()throws Exception{
+        setup(false);view.setComposerBottomInset(0);seed();append("ABC🙂e\u0301 tail");view.onScreenUpdated();
+        assertTrue(revealing());assertTrue(emulator.getScreen().getTranscriptText().contains("ABC🙂e\u0301 tail"));
+        append("\rnew\033[K");view.onScreenUpdated();assertFalse(revealing());assertTrue(emulator.getScreen().getTranscriptText().contains("new"));
+        append("\033[?1049hinteractive");view.onScreenUpdated();assertTrue(emulator.isAlternateBufferActive());assertFalse(revealing());assertEquals(0,NativePty.creates);
+    }
+    @Test public void largeSyntheticOutputKeepsEveryByteInNativeTranscript()throws Exception{
+        setup(false);view.setComposerBottomInset(0);seed();StringBuilder all=new StringBuilder();
+        for(int i=0;i<200;i++){String line="synthetic-package-"+i+" ready\r\n";all.append(line);append(line);view.onScreenUpdated();tick(4);}
+        tick(1000);String transcript=emulator.getScreen().getTranscriptText();for(int i=0;i<200;i++)assertTrue(transcript.contains("synthetic-package-"+i+" ready"));assertFalse(revealing());assertEquals(0,NativePty.creates);
+    }
+    @Test public void floatingComposerReservesLiveRowsAndKeepsReadingAnchor()throws Exception{
+        setup(false);seed();view.setTopRow(-12);String before=top();view.setComposerBottomInset(160);
+        assertEquals(25,emulator.mRows);assertEquals(before,top());assertEquals(160,view.getComposerBottomInset());
+        append("more\r\n");view.onScreenUpdated();assertEquals(before,top());
+        view.setTopRow(0);view.setComposerBottomInset(80);assertEquals(30,emulator.mRows);assertEquals(0,view.getTopRow());
+        view.setComposerBottomInset(0);assertEquals(35,emulator.mRows);assertEquals(0,view.getTopRow());assertEquals(0,NativePty.creates);
+    }
+    @Test public void floatingComposerKeepsSeparateSessionScroll()throws Exception{
+        setup(false);view.setComposerBottomInset(0);seed();view.setTopRow(-12);String before=top();
+        TerminalSession other=existing(false,22);view.attachSession(other);assertEquals(0,view.getTopRow());
+        byte[] bytes="background line\r\n".getBytes(StandardCharsets.UTF_8);session.getEmulator().append(bytes,bytes.length);
+        view.attachSession(session);assertEquals(before,top());view.onScreenUpdated();assertEquals(before,top());assertEquals(0,NativePty.creates);
+    }
     @Test public void hiddenGeometryAndReturnToSameSizeDoNotSendPtyResize()throws Exception{
         setup(true);view.setWorkspaceTerminalVisible(false);geometry(80,42);tick(500);assertEquals(35,emulator.mRows);assertTrue(NativePty.writes.isEmpty());
         geometry(80,35);view.setWorkspaceTerminalVisible(true);tick(500);assertTrue(NativePty.writes.isEmpty());

@@ -10,6 +10,20 @@ import androidx.appcompat.widget.AppCompatTextView;
 
 /** Short link taps coexist with Android's selectable-text movement method. */
 final class AgentLinkTextView extends AppCompatTextView {
+    private AgentTextReveal reveal;
+    private boolean animateNext;
+    private java.util.function.Function<String,Runnable> local;
+    void localLinks(java.util.function.Function<String,Runnable> resolver){local=resolver;}
+    void animateNextText(boolean enabled,Runnable before){
+        if(reveal==null)reveal=new AgentTextReveal(this,text->AgentLinkTextView.super.setText(text,BufferType.SPANNABLE));
+        animateNext=enabled;reveal.beforeChange=before;
+    }
+    @Override public void setText(CharSequence text,BufferType type){
+        boolean animate=animateNext;animateNext=false;
+        if(local!=null&&text instanceof Spanned){android.text.SpannableString bound=new android.text.SpannableString(text);AgentMarkdown.bindLocal(bound,local);text=bound;}
+        if(reveal!=null)reveal.update(text,animate);else super.setText(text,type);
+    }
+    @Override protected void onVisibilityChanged(android.view.View changed,int visibility){super.onVisibilityChanged(changed,visibility);if(reveal!=null){if(visibility!=VISIBLE)reveal.finish();else reveal.attached();}}
     private URLSpan downLink, pendingLink;
     private CharSequence downText;
     private float downX, downY;
@@ -40,6 +54,7 @@ final class AgentLinkTextView extends AppCompatTextView {
     }
 
     @Override public boolean onTouchEvent(MotionEvent event) {
+        if(event.getActionMasked()==MotionEvent.ACTION_DOWN&&reveal!=null)reveal.finish();
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 downLink = event.getPointerCount() == 1 ? linkAt(event.getX(), event.getY()) : null;
@@ -71,7 +86,10 @@ final class AgentLinkTextView extends AppCompatTextView {
         return super.onTouchEvent(event);
     }
 
+    @Override protected void onAttachedToWindow(){super.onAttachedToWindow();if(reveal!=null)reveal.attached();}
+
     @Override protected void onDetachedFromWindow() {
+        if(reveal!=null)reveal.finish();
         downLink = null; pendingLink = null; downText = null;
         super.onDetachedFromWindow();
     }

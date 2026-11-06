@@ -107,15 +107,12 @@ public class WorkspaceLanguageTest {
         WorkspaceStore.Command command=new WorkspaceStore.Command();command.name="Моя команда";command.command="echo привет";command.category="Личное";store.commands.add(command);
         Field data=WorkspaceController.class.getDeclaredField("terminalDrafts");
         data.setAccessible(true);Object originalDrafts=data.get(controller);
-        ViewGroup nav=a.findViewById(R.id.workspace_navigation);int height=nav.getChildAt(0).getLayoutParams().height;
-        assertEquals(Math.round(56*a.getResources().getDisplayMetrics().density),height);
-        for(int i=0;i<3;i++)assertEquals("",((TextView)nav.getChildAt(i)).getText().toString());
+        android.view.View menu=a.findViewById(R.id.workspace_header).findViewWithTag("workspace-menu");int height=menu.getLayoutParams().height;assertEquals(Math.round(48*a.getResources().getDisplayMetrics().density),height);assertEquals("Открыть меню",menu.getContentDescription().toString());
         WorkspaceLanguage.select(a,"en");WorkspaceLanguage.apply(a);controller.refreshLanguage();
         assertEquals("Enter a command…",editor.getHint().toString());assertEquals(4,editor.getSelectionStart());
         assertEquals("cd /root/мой-проект\nprintf 'hello'\n",editor.getText().toString());
         assertSame(originalDrafts,data.get(controller));assertEquals("Моя команда",command.name);assertEquals("echo привет",command.command);assertEquals("Личное",command.category);
-        assertEquals("Home",nav.getChildAt(0).getContentDescription().toString());
-        for(int i=0;i<3;i++){assertEquals(height,nav.getChildAt(i).getLayoutParams().height);assertEquals("",((TextView)nav.getChildAt(i)).getText().toString());assertFalse(nav.getChildAt(i).isLongClickable());}
+        menu=a.findViewById(R.id.workspace_header).findViewWithTag("workspace-menu");assertEquals("Open menu",menu.getContentDescription().toString());assertEquals(height,menu.getLayoutParams().height);assertFalse(menu.isLongClickable());
         assertEquals("Settings",a.getString(R.string.action_open_settings));
         WorkspaceLanguage.select(a,"ru");WorkspaceLanguage.apply(a);controller.refreshLanguage();
         assertEquals("Введите команду…",editor.getHint().toString());assertEquals("Настройки",a.getString(R.string.action_open_settings));

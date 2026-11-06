@@ -108,14 +108,11 @@ public class WorkspaceDesktopUiTest {
   }finally{ui.close();}
   }
  }
- @Test public void stopAppearsOnlyForStartedSelectedDesktopEvenWhenReturnedToTerminal()throws Exception{
+ @Test public void desktopSettingsKeepControlsAndMoveStopToSessionMenu()throws Exception{
   TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();WorkspaceDesktop ui=create(a,profile());
-  try{Field field=WorkspaceDesktop.class.getDeclaredField("state");field.setAccessible(true);
-   for(String phase:new String[]{"idle","checking","installed","preparing","running","error","ended"})for(boolean started:new boolean[]{false,true})for(String target:new String[]{"ubuntu","jobs-x11-ubuntu"}){
-    Bundle b=new Bundle();b.putString("phase",phase);b.putString("target",target);b.putBoolean("started",started);field.set(ui,b);ui.menu();
-    AlertDialog d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertEquals(started&&target.equals("jobs-x11-ubuntu"),d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-stop")!=null);
-    assertNull(d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-programs"));d.dismiss();
-   }
+  try{ui.menu();AlertDialog d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+   assertNull(d.getWindow().getDecorView().findViewWithTag("agent-status-desktop-stop"));
+   for(String tag:new String[]{"agent-status-desktop-renderer","agent-status-desktop-screen","desktop-automatic-keyboard"})assertNotNull(tag,d.getWindow().getDecorView().findViewWithTag(tag));d.dismiss();
   }finally{ui.close();}
  }
 

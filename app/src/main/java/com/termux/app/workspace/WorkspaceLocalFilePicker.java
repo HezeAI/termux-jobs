@@ -21,7 +21,7 @@ final class WorkspaceLocalFilePicker implements AutoCloseable {
         result.add(new Location(storageLabel,"termux","/sdcard",true));return result;
     }
     private int chatLimit;
-    private final TermuxActivity activity;private final List<WorkspaceFileBrowser> browsers=new ArrayList<>();private AlertDialog chooser;private boolean closed;private int selectionEpoch;
+    private final TermuxActivity activity;private final List<WorkspaceFileBrowser> browsers=new ArrayList<>();private AlertDialog chooser;private android.widget.PopupMenu attachmentMenu;private boolean closed;private int selectionEpoch;
     private final java.util.function.Consumer<Runnable> requestStorage;
     WorkspaceLocalFilePicker(TermuxActivity a){this(a,a::requestWorkspaceStorageAccess);}
     WorkspaceLocalFilePicker(TermuxActivity a,java.util.function.Consumer<Runnable> storage){activity=a;requestStorage=storage;}
@@ -36,6 +36,26 @@ final class WorkspaceLocalFilePicker implements AutoCloseable {
             browser.setRootBoundary("/sdcard");
             browser.setFileChoice((profile,entry)->{if(!closed&&epoch==selectionEpoch)choice.selected(profile,entry);});browsers.add(browser);browser.show();
         });
+    }
+    void chooseChatAttachments(android.view.View anchor,WorkspaceStore.Session project,int limit,java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> choice,Runnable gallery){
+        if(closed)return;if(attachmentMenu!=null){attachmentMenu.dismiss();return;}chatLimit=limit;final int epoch=++selectionEpoch;
+        android.widget.PopupMenu menu=new android.widget.PopupMenu(activity,anchor);attachmentMenu=menu;
+        menu.getMenu().add(0,0,0,t("Изображение","Image"));menu.getMenu().add(0,1,1,t("Файл устройства","Device file"));menu.getMenu().add(0,2,2,t("Файл проекта","Project file"));
+        menu.getMenu().add(0,3,3,t("Другие окружения","Other environments"));
+        menu.setOnMenuItemClickListener(item->{
+            if(closed||epoch!=selectionEpoch)return true;
+            int kind=item.getItemId();if(kind==0){gallery.run();return true;}
+            if(kind==3){choose(t("Выберите окружение","Choose environment"),null,choice,null,false);return true;}
+            Runnable open=()->{
+                if(closed||epoch!=selectionEpoch)return;
+                WorkspaceStore.Session source=kind==2?project.copy():new WorkspaceStore.Session();
+                if(kind==1){source.name=t("Память устройства","Device storage");source.environment="termux";}
+                String directory=kind==2?source.directory:"/sdcard";
+                WorkspaceFileBrowser browser=new WorkspaceFileBrowser(activity,source,directory,null);if(kind==1)browser.setRootBoundary("/sdcard");
+                browser.setChatFileChoices((p,entries)->{if(!closed&&epoch==selectionEpoch)choice.accept(p,entries);},limit);browsers.add(browser);browser.show();
+            };
+            if(kind==1)requestStorage.accept(open);else open.run();return true;
+        });menu.setOnDismissListener(m->{if(attachmentMenu==m)attachmentMenu=null;});menu.show();
     }
     void chooseChatAttachments(int limit,java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> choice,Runnable gallery){
         if(closed)return;chatLimit=limit;final int epoch=++selectionEpoch;
@@ -67,6 +87,6 @@ final class WorkspaceLocalFilePicker implements AutoCloseable {
             if(location.shared)requestStorage.accept(open);else open.run();
         }).setNegativeButton(t("Отмена","Cancel"),null).create();chooser.show();
     }
-    void cancelSelection(){selectionEpoch++;if(chooser!=null)chooser.dismiss();for(WorkspaceFileBrowser browser:new ArrayList<>(browsers))browser.close();browsers.clear();}
+    void cancelSelection(){selectionEpoch++;if(attachmentMenu!=null)attachmentMenu.dismiss();if(chooser!=null)chooser.dismiss();for(WorkspaceFileBrowser browser:new ArrayList<>(browsers))browser.close();browsers.clear();}
     @Override public void close(){closed=true;cancelSelection();}
 }
