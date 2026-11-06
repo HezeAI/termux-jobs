@@ -2,7 +2,32 @@
 
 No other changes queued for publication.
 
+# 2026-11-06 — 2.1.5-test3 (versionCode1496, private v35 correction)
+
+Corrections to the visually rejected1494, retaining the accepted1493 features and the changes since the last published stable **v2.1.4** listed below.
+
+- Shared graphite palette and v35 spacing; text header navigation, compact square Stop, plain model selection and paired quota strips. Custom anchored attachment menu preserves all four file sources.
+- Full-screen native agent terminal with the shared terminal composer, horizontal input/extra-key switches, existing PTY and return to chat. Opening/returning does not restart the agent.
+- Protected base Termux at ordinary launch; separate recent commands and three type-specific libraries with existing CRUD/filter/favorites. Composer selectors only insert into drafts.
+- Full-screen grouped settings, language selection and50–150% text preview. Bottom-sheet chat creation orders name/folder/model/chat/permissions/optional launcher path; advanced environment/readiness/permission controls are collapsed. Existing compatibility and launch checks remain.
+- Left-edge draggable drawer with limited Android gesture exclusion; keyboard visibility disables drawer interception. X11 header transition asks for confirmation, reuses a running desktop or follows checked startup; return does not stop it. Environment-wide settings and shared-owner protection remain.
+- Reading position now scales its offset with text size, preventing a shortened row from moving the anchor to the next message.
+
+Same com.termux/certificate/ARM64/schema8. Explicit primary1496 / old-interface standby1497 ordering; prior1493/1494/1495 APKs are retained. Standby is not a data backup and must not be installed in advance when planning main1496. No working history/auth changes, installation or publication.
+
+HTML v35 was rendered separately at440 CSSpx; native Android appearance, real IME/edge gestures, rotation/X11 and speech-provider behavior still require phone acceptance. Existing image accumulation/disconnect and audit limitations remain open. No CLI fork, experimental context mode, new automatic compaction, MCP or plugins. Codex prelaunch model uses its existing CLI profile; live selection remains available after connection, without inventing a model catalogue.
+
+[Final-file checks and phone checklist](docs/fork/VALIDATION-2.1.5-test3.md) · [Function map](docs/fork/REDESIGN-v35.md).
+
+# 2026-11-06 — 2.1.5-backup2 (versionCode1497, private standby)
+
+Separate APK from the accepted old interface, baseline11aa991a / application83c233ef; only version metadata changes. Final signature, version, ZIP, static runtime and SHA-256 checked anew; all124 assets/resources match1495 and all seven ELF match stablev2.1.4. Source commit269a63cf. Earlier functional/Lint results are reused for matching inputs, not presented as new phone checks. Future-data rollback and external Components remain unverified.
+
+[Standby checks and limitations](docs/fork/VALIDATION-backup-1497.md).
+
 # 2026-11-06 — 2.1.5-test2 (versionCode1494, private v35 redesign)
+
+**Historical: visually rejected by the developer; corrected in1496. Functional checks below do not establish visual compliance.**
 
 Native UI redesign, retaining the accepted1493 functionality and all changes since the last published stable **v2.1.4** described in the test1 entry below.
 

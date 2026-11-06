@@ -9,7 +9,7 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
 import static org.junit.Assert.*;
 
-@RunWith(RobolectricTestRunner.class) @Config(manifest=Config.NONE)
+@RunWith(RobolectricTestRunner.class) @Config(sdk=28,application=android.app.Application.class)
 public class WorkspaceIconButtonTest {
     static final class Recording extends Drawable {
         Rect drawn;int tint;
@@ -30,9 +30,15 @@ public class WorkspaceIconButtonTest {
         WorkspaceIconButton button=new WorkspaceIconButton(RuntimeEnvironment.application);Recording icon=new Recording();button.setIcon(icon,22);button.setTextColor(Color.GREEN);assertEquals(Color.GREEN,icon.tint);
     }
     @Test public void activeFileFilterHasSelectionBackgroundAndAccessibleLabel() {
-        android.widget.TextView filter=new android.widget.TextView(RuntimeEnvironment.application);filter.setText("APK");
-        WorkspaceFileBrowser.styleFilter(RuntimeEnvironment.application,filter,true);assertTrue(filter.isSelected());assertEquals(WorkspaceDialogs.ACCENT,filter.getCurrentTextColor());assertTrue(filter.getContentDescription().toString().contains("выбран"));assertNotNull(filter.getBackground());
-        WorkspaceFileBrowser.styleFilter(RuntimeEnvironment.application,filter,false);assertFalse(filter.isSelected());assertEquals(WorkspaceDialogs.MUTED,filter.getCurrentTextColor());assertFalse(filter.getContentDescription().toString().contains("выбран"));
+        android.content.Context context=RuntimeEnvironment.application;
+        android.content.res.Resources prior=WorkspaceText.resources;String choice=WorkspaceLanguage.choice(context);
+        try{for(String language:new String[]{"ru","en"}){
+            WorkspaceLanguage.select(context,language);WorkspaceText.resources=WorkspaceLanguage.wrap(context).getResources();
+            android.widget.TextView filter=new android.widget.TextView(context);filter.setText("APK");
+            WorkspaceFileBrowser.styleFilter(context,filter,true);assertTrue(filter.isSelected());assertEquals(WorkspaceDialogs.ACCENT,filter.getCurrentTextColor());assertEquals(language.equals("ru")?"Фильтр файлов: APK, выбран":"File filter: APK, selected",filter.getContentDescription().toString());assertNotNull(filter.getBackground());
+            WorkspaceFileBrowser.styleFilter(context,filter,false);assertFalse(filter.isSelected());assertEquals(WorkspaceDialogs.MUTED,filter.getCurrentTextColor());assertEquals(language.equals("ru")?"Фильтр файлов: APK":"File filter: APK",filter.getContentDescription().toString());
+        }}finally{WorkspaceLanguage.select(context,choice);WorkspaceText.resources=prior;}
+
     }
 
 }

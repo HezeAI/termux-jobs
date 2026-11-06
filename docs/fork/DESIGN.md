@@ -1,3 +1,62 @@
+# v35 — единые параметры переноса, 2026-11-06
+
+Читать перед изменением любого переносимого экрана. Функциональная карта и
+остатки: [REDESIGN-v35.md](REDESIGN-v35.md). Старые разделы ниже исторические;
+их палитра не является эталоном нового интерфейса.
+
+HTML v35 **отрисован** Firefox158.0.1 headless с отдельным профилем и блокировкой
+внешнего HTTP(S) через локальный неработающий proxy. Исходный HTML не изменён.
+Его SHA, сценарий, viewport,15 PNG и итоговые computed styles сохранены в
+`.verification/redesign-v35-correction/html-render/` активного checkout.
+Управление через отдельный Marionette port28291; рабочий браузер не использовался.
+Проверено read-only: экран1216×2688, density520/override442. Эталонная ширина440 CSSpx
+получена как1216/(442/160). Высота824 CSSpx приближает область без браузерных и
+системных панелей; их высота и масштаб браузера на исходном снимке не измерены.
+Первый desktop viewport оказался500px: он не принят за размер телефона.
+Повтор использует iframe440×824 и screenshot самого #app. Шрифты/скроллбары Firefox
+отличаются от Android/браузера телефона; PNG не является пиксельным Android oracle.
+
+**Android:** эмулятор/аппаратный рендер новой реализации отсутствует в проверенном
+стенде. Robolectric проверяет состояния и геометрию, но не подтверждает графику.
+Фотографии пользователя доказывают расхождения1494; не доказывают вид1496.
+Наличие HTML-рендера и отсутствие Android-рендера фиксируются раздельно.
+
+| Область | Итоговое правило HTML quiet | Применение в native |
+|---|---|---|
+| Палитра | BG#191a1c; surface#232426; card#242527; line#393a3c; foreground#f0f0ee; muted#a5a5a2; accent#ecece5; tint#343531; user#303132; amber#e6be84 | WorkspaceDialogs и общие ресурсы. Ошибки, добавления/удаления diff и синтаксис сохраняют смысловые цвета. Пользовательские ANSI/terminal colors не заменяются. |
+| Шапка | padding14/14/13; gap8; title16/600; subtitle10,margin-top4; vector21 | Общая шапка и AgentTerminalScreen. Название/путь сохраняются, длинные строки переносятся. Android touch targets не меньше44dp. |
+| Меню | width≈61%; правые углы22; section9; action12,44–46px; name13bold/subtitle10 | WorkspaceSidebar; session identity и безопасные callbacks прежние. |
+| Chat composer | radius24; padding6/10/4; input13,min32; bottom40–44; send33circle; Stop33×25,filled9square | AgentComposerControls/AgentStopButton; цель нажатия44dp может быть больше видимой кнопки. Точное Android-наложение требует телефона. |
+| Лимиты | 5ч/7д в строку; font9; track3; gap7 | ComposerLimits; неизвестные и устаревшие данные не заменяются вымышленными числами. |
+| Терминал | общий composer24; input13,min44; padding10/11/9; switches12,min44; shortcuts gap8 | Общий native компонент, реальные PTY и ввод сохраняются. X11 не использует поле ввода. |
+| Popup «+» | width210; padding5; radius13; border1; shadow0/8/28/#0006; item12,padding9,gap9,icon18,min42 | WorkspacePopover; native elevation8,scroll при нехватке места,44dp touch target. Четвёртая строка «Другие окружения» сохранена. |
+| Настройки | content horizontal21; heading26; section9; grouped radius20; rows padding14,title12/sub10,divider1,icon18 | WorkspaceSettingsPage; текущий язык,scale50/100/150,preview. Advanced/About и действия сохранены. |
+| Форма создания | bottom sheet radius24top; heading16; labels11; fields13,padding12,min44,radius10; footerBack/Create | AgentLaunchForm переставляет существующие controls. Имя/папка/модель/чат/права/connection; подробности свёрнуты. |
+| Файлы/карточки | single column; card20,border1; title12/meta10; actions attached to own card | Общая палитра и карточки; поиск/filters/page loading/diff/Gallery остаются действующими. Согласованные действия важнее демонстрационных кнопок HTML. |
+| Подробности/служебные окна | BG/surface/line/foreground из общей палитры; vector icons; wrapping | Существующие редакторы/менеджеры сохраняют функции, права, ошибки и отмену. Демонстрационные данные не копируются. |
+
+Размеры CSS переводятся в dp для геометрии и sp для текста. Доступность и крупный
+шрифт могут увеличить строку; не уменьшать область нажатия ради совпадения PNG.
+Визуальную приёмку нельзя выводить из наличия этих констант или успешных тестов.
+
+## Сверка всех поверхностей
+
+Проверять не только кнопки, перечисленные в жалобе: navigation/sidebar; agent chat
+и timeline/Markdown/code/table; оба terminal composer; model/quota/context/queue;
+creation/preset/session settings; три отдельные библиотеки; settings/Advanced/About;
+files/attachments/Git/preview/Gallery; instructions/skills; servers/SSH/transfers;
+environments/packages/programs; backup/cleanup/error/update; X11/landscape/input.
+Для всех применена общая палитра; отдельные компоновки сверяются по34 строкам карты.
+HTML PNG фиксируют15 доступных состояний, а не проверку всех native диалогов.
+Неизображённые в макете функции сохраняются через прежние менеджеры.
+
+Снимки приложения пользователя: чёрный фон и бирюзовые границы, старый модальный
+терминал, вертикальные CheckBox, старые настройки-кнопки, системный attachment
+PopupMenu и развёрнутая форма подтверждены как расхождения. Их исправления в коде
+не помечаются визуально принятыми до нового Android-снимка/телефонной проверки.
+
+---
+
 # Current v2.1.4 agent chat behavior
 
 All four chats use a horizontal star / paperclip control; star opens notes only.

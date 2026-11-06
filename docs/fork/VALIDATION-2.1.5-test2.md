@@ -1,5 +1,7 @@
 # 2.1.5-test2 /1494 — native v35 redesign
 
+**Historical: the developer rejected the visual implementation.** The successful functional/artifact checks remain evidence for their scope only. Corrections and new visual limitations are recorded in [test3](VALIDATION-2.1.5-test3.md).
+
 This is a private test build. Source checkout: `/root/termux-fork/.verification/rollback-live-actions/source`, branch `work/redesign-v35-1494`. No installation, working-session restart, push, tag or publication is authorized. Application-source commit: `78e013a3b9f23cceda3035c3f4645892571753bd`. Final signed release APK was built and checked locally; device behavior remains unaccepted.
 
 ## Scope and compatibility
