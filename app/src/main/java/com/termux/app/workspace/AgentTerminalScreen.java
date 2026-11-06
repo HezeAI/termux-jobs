@@ -23,6 +23,6 @@ final class AgentTerminalScreen extends LinearLayout {
     void body(View view){addView(view,new LayoutParams(-1,0,1));}
     void setOnDismissListener(Runnable listener){dismissed=listener;}
     boolean isShowing(){return getParent()!=null&&!closing;}
-    void show(){ViewGroup root=activity.findViewById(R.id.activity_termux_root_relative_layout);root.addView(this,new android.widget.RelativeLayout.LayoutParams(-1,-1));bringToFront();}
+    void show(){ViewGroup root=activity.findViewById(R.id.activity_termux_root_relative_layout);float elevation=0;for(int i=0;i<root.getChildCount();i++)elevation=Math.max(elevation,root.getChildAt(i).getElevation());setElevation(elevation+dp(1));root.addView(this,new android.widget.RelativeLayout.LayoutParams(-1,-1));bringToFront();}
     void dismiss(){if(closing)return;closing=true;ViewParent parent=getParent();if(parent instanceof ViewGroup)((ViewGroup)parent).removeView(this);dismissed.run();}
 }

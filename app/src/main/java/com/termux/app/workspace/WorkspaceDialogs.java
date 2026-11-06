@@ -37,6 +37,14 @@ final class WorkspaceDialogs {
             return super.setSingleChoiceItems(new Rows(getContext(), items, selected), selected, listener);
         }
     }
+    static void centerLibrary(AlertDialog dialog){
+        android.view.Window window=dialog.getWindow();if(window==null)return;Context c=dialog.getContext();
+        GradientDrawable background=new GradientDrawable();background.setColor(BG);background.setCornerRadius(dp(c,24));background.setStroke(dp(c,1),LINE);window.setBackgroundDrawable(background);
+        window.setGravity(Gravity.CENTER);
+        Runnable resize=()->{int width=Math.max(dp(c,1),Math.min(dp(c,560),c.getResources().getDisplayMetrics().widthPixels-dp(c,24)));if(window.getAttributes().width!=width)window.setLayout(width,-2);};resize.run();
+        window.getDecorView().addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->resize.run());
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);window.getDecorView().setPadding(0,0,0,0);
+    }
     static Drawable cardBackground(Context c){GradientDrawable panel=new GradientDrawable();panel.setColor(SURFACE);panel.setCornerRadius(dp(c,20));panel.setStroke(dp(c,1),LINE);return panel;}
     static android.widget.ListAdapter choiceAdapter(Context c,CharSequence[] items,int selected,java.util.function.IntPredicate enabled){return new Rows(c,items,selected,enabled);}
     private static final class Rows extends ArrayAdapter<CharSequence> {

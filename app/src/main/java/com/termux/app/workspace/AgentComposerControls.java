@@ -39,10 +39,10 @@ final class AgentComposerControls {
         toggles=new ComposerActionLayout(c);toggles.setTag("terminal-inline-controls");
         interactive=new Switch(c);extra=new Switch(c);for(Switch b:new Switch[]{interactive,extra}){b.setTextSize(11);b.setTextColor(WorkspaceDialogs.TEXT);b.setMinHeight(dp(44));b.setSwitchMinWidth(dp(30));b.setSwitchPadding(dp(7));b.setPadding(0,0,dp(12),0);b.setThumbTintList(ColorStateList.valueOf(WorkspaceDialogs.ACCENT));b.setTrackTintList(new ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{0xff777872,WorkspaceDialogs.LINE}));toggles.addView(b);}
         interactive.setOnCheckedChangeListener((b,on)->{if(!updating)interactiveAction.accept(on);});extra.setOnCheckedChangeListener((b,on)->{if(!updating)extraAction.accept(on);});
-        notes=icon(R.drawable.workspace_note,18.5f,()->star.performClick());queue=action("",()->queueAction.run());mic=icon(R.drawable.workspace_microphone,18,()->voiceAction.run());
+        notes=icon(R.drawable.workspace_note,19f,()->star.performClick());queue=action("",()->queueAction.run());mic=icon(R.drawable.workspace_microphone,18.5f,()->voiceAction.run());
         mic.setTag("agent-voice-input");notes.setTag("agent-notes-input");
         commands=action("",()->library.accept(0));aliases=action("Aliases",()->library.accept(1));terminalNotes=action("",()->library.accept(2));
-        if(attachment instanceof WorkspaceIconButton)((WorkspaceIconButton)attachment).setIcon(c.getDrawable(R.drawable.workspace_plus),Math.round(18.5f*c.getResources().getDisplayMetrics().density));
+        if(attachment instanceof WorkspaceIconButton)((WorkspaceIconButton)attachment).setIcon(c.getDrawable(R.drawable.workspace_plus),Math.round(19f*c.getResources().getDisplayMetrics().density));
         attachment.setBackground(WorkspaceRipple.background(c,null,10));if(attachment instanceof TextView)((TextView)attachment).setTextColor(WorkspaceDialogs.TEXT);
         attachment.setMinimumWidth(dp(44));attachment.setMinimumHeight(dp(44));send.setMinWidth(dp(44));send.setMinHeight(dp(44));
         input.setBackgroundColor(android.graphics.Color.TRANSPARENT);input.setTextColor(WorkspaceDialogs.TEXT);input.setHintTextColor(WorkspaceDialogs.MUTED);input.setPadding(dp(5),dp(4),dp(5),dp(8));input.setTextSize(13);input.setMinHeight(dp(40));
@@ -61,6 +61,7 @@ final class AgentComposerControls {
         inset.accept(row.getVisibility()==View.VISIBLE?row.getHeight():0);
     }
     int dp(int value){return WorkspaceDialogs.dp(context,value);}
+    private int actionSize(){return Math.round(44.5f*context.getResources().getDisplayMetrics().density);}
     private String t(String ru,String en){return AgentInstructionsUi.tr(context,ru,en);}
     private static void remove(View view){if(view!=null&&view.getParent()!=null)((ViewGroup)view.getParent()).removeView(view);}
     void present(boolean nextAgent){
@@ -74,9 +75,9 @@ final class AgentComposerControls {
             fieldLine.addView(input,new LinearLayout.LayoutParams(0,-2,1));
             if(agent&&stop!=null)fieldLine.addView(stop,new LinearLayout.LayoutParams(dp(44),dp(44)));
             card.addView(fieldLine,new LinearLayout.LayoutParams(-1,-2));
-            if(agent){tools.addView(attachment,new ViewGroup.LayoutParams(dp(44),dp(44)));tools.addView(notes,new ViewGroup.LayoutParams(dp(44),dp(44)));if(status!=null)tools.addView(status);tools.addView(mic,new ViewGroup.LayoutParams(dp(44),dp(44)));}
+            if(agent){tools.addView(attachment,new ViewGroup.LayoutParams(actionSize(),actionSize()));tools.addView(notes,new ViewGroup.LayoutParams(actionSize(),actionSize()));if(status!=null){tools.addView(status);View gap=new View(context);gap.setTag("composer-model-mic-gap");tools.addView(gap,new ViewGroup.LayoutParams(dp(8),0));}tools.addView(mic,new ViewGroup.LayoutParams(actionSize(),actionSize()));}
             else{tools.addView(commands);tools.addView(separator());tools.addView(aliases);tools.addView(separator());tools.addView(terminalNotes);}
-            tools.addView(send,new ViewGroup.LayoutParams(dp(44),dp(44)));tools.rightGroup(agent?(status!=null?status:mic):send);card.setPadding(dp(agent?10:11),dp(agent?6:5),dp(agent?10:11),dp(agent?4:9));card.addView(pair,new LinearLayout.LayoutParams(-1,-2));if(agent)card.addView(limits,new LinearLayout.LayoutParams(-1,-2));geometry();
+            tools.addView(send,new ViewGroup.LayoutParams(agent?actionSize():dp(44),agent?actionSize():dp(44)));if(send instanceof WorkspaceIconButton)((WorkspaceIconButton)send).setIcon(context.getDrawable(R.drawable.workspace_up),Math.round((agent?17.5f:17f)*context.getResources().getDisplayMetrics().density));tools.rightGroup(agent?(status!=null?status:mic):send);card.setPadding(dp(agent?10:11),dp(agent?6:5),dp(agent?10:11),dp(agent?4:9));card.addView(pair,new LinearLayout.LayoutParams(-1,-2));if(agent)card.addView(limits,new LinearLayout.LayoutParams(-1,-2));geometry();
         }
         updateStop();labels();inset.accept(row.getVisibility()==View.VISIBLE?row.getHeight():0);
     }

@@ -198,6 +198,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         // Locale wrapping must not leave orientation/window bounds at launch values.
         // Keep the Activity and its existing sessions; no workspace/composer rebuild.
         com.termux.app.workspace.WorkspaceLanguage.configurationChanged(this,newConfig);
+        if(mProperties!=null)setMargins();
     }
 
     @Override
@@ -452,7 +453,10 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
     private void setMargins() {
         RelativeLayout relativeLayout = findViewById(R.id.activity_termux_root_relative_layout);
-        int marginHorizontal = mProperties.getTerminalMarginHorizontal();
+        // Portrait content reaches the safe window edges. Keep configured landscape
+        // spacing and system/cutout insets; never rewrite the user's properties.
+        int marginHorizontal = getResources().getConfiguration().orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+            ? mProperties.getTerminalMarginHorizontal() : 0;
         int marginVertical = mProperties.getTerminalMarginVertical();
         ViewUtils.setLayoutMarginsInDp(relativeLayout, marginHorizontal, marginVertical, marginHorizontal, marginVertical);
     }

@@ -29,7 +29,7 @@ HTML v35 **отрисован** Firefox158.0.1 headless с отдельным п
 | Chat composer | radius24; padding6/10/4; input13,min32; bottom40–44; send33circle; Stop33×25,filled9square | AgentComposerControls/AgentStopButton; цель нажатия44dp может быть больше видимой кнопки. Точное Android-наложение требует телефона. |
 | Лимиты | 5ч/7д в строку; font9; track3; gap7 | ComposerLimits; неизвестные и устаревшие данные не заменяются вымышленными числами. |
 | Терминал | общий composer24; input13,min44; padding10/11/9; switches12,min44; shortcuts gap8 | Общий native компонент, реальные PTY и ввод сохраняются. X11 не использует поле ввода. |
-| Popup «+» | width210; padding5; radius13; border1; shadow0/8/28/#0006; item12,padding9,gap9,icon18,min42 | WorkspacePopover; native elevation8,scroll при нехватке места,44dp touch target. Четвёртая строка «Другие окружения» сохранена. |
+| Popup «+» | width210; padding5; radius13; border1; shadow0/8/28/#0006; item12,padding9,gap9,icon18,min42 | WorkspacePopover; native elevation8,scroll при нехватке места,44dp touch target. Четвёртая строка переименована в «Файлы окружений» в1502; действие сохранено. |
 | Настройки | content horizontal21; heading26; section9; grouped radius20; rows padding14,title12/sub10,divider1,icon18 | WorkspaceSettingsPage; текущий язык,scale50/100/150,preview. Advanced/About и действия сохранены. |
 | Форма создания | bottom sheet radius24top; heading16; labels11; fields13,padding12,min44,radius10; footerBack/Create | AgentLaunchForm переставляет существующие controls. Имя/папка/модель/чат/права/connection; подробности свёрнуты. |
 | Файлы/карточки | single column; card20,border1; title12/meta10; actions attached to own card | Общая палитра и карточки; поиск/filters/page loading/diff/Gallery остаются действующими. Согласованные действия важнее демонстрационных кнопок HTML. |
@@ -61,7 +61,7 @@ Recent/Commands/Aliases/Notes используют нижнее окно и оф
 доступная высота ограничивается видимой областью с учётом IME, содержимое прокручивается.
 Чёрный фон#000 применяется только к области сообщений/вывода и extra keys.
 Остальные поверхности сохраняют согласованную графитовую палитру; X11 не перекрашен.
-Новые user/timeline: translationY−8dp→0, alpha0→1,210ms,DecelerateInterpolator.
+Новые user/timeline: translationY−8dp→0, alpha0→1,330ms (уточнение1502),DecelerateInterpolator.
 Старые строки и обновления существующих плашек не повторяют эффект.
 Параметры и переходы проверяются локально; плавность/типографика Android требуют телефона.
 
@@ -702,3 +702,41 @@ star / paperclip pair has one-line native field height and stays bottom-aligned 
 the draft grows. Ordinary terminal geometry is restored outside agent chat.
 [Release validation](VALIDATION-v2.1.3.md) distinguishes modeled geometry/touch tests
 from the developer's accepted phone candidate.
+
+## Терминальный фон1502
+
+Чёрный цвет задаётся не только в палитре. TerminalRenderer заполняет свою область
+текущим background на каждом кадре; в reverse video — foreground. Обычные default
+ячейки не закрашивают фон самостоятельно. Внешние16dp принадлежат подложке
+workspace_terminal_surface: она чёрная, размеры/отступы прежние. Агентский
+терминал переиспользует тот же TerminalView/renderer с заполнением своего viewport.
+Палитра, ANSI/OSC и элементы шапки/composer сохраняются. X11StartupView и
+RemoteDesktopView по-прежнему имеют собственный непрозрачный чёрный фон;
+нативная графика и её управление не менялись. Телефонная проверка1502 ожидается.
+
+### Шапка агентского чата1502
+
+Уточнение пользователя заменяет прежнюю фиксированную непрозрачную шапку.
+Основная шапка участвует в AgentChatHeaderOverlay только в режиме агентского чата.
+Три кнопки и блок названия имеют отдельные поверхности с промежутками; шапка
+не захватывает нажатие на всю ширину. Первый элемент истории отступает ниже
+всей измеренной шапки на4dp. Layout listener обновляет отступ с сохранением
+якоря; обычные терминалы, агентский терминал и X11 возвращают прежние правила.
+
+### Полная ширина1502
+
+TermuxActivity.setMargins обнуляет только внешний horizontal margin в portrait.
+Оно вызывается также после применения новой Configuration, чтобы возврат из
+landscape не сохранял боковые полосы. Системные insets остаются у корневого View;
+внутренние отступы содержимого и ручные X11-настройки не переписываются.
+
+### Дополнения1502: ввод и библиотеки
+
+В строке с плюсом hit-box44,5dp; плюс/заметка19dp, микрофон18,5dp, отправка17,5dp.
+Компактная модель12,5sp; между её блоком и микрофоном отдельные8dp, общий правый край
+сохраняется. ComposerLimits не меняется. Popup.plus использует panel-rise220ms,
+пункты160ms со сдвигом старта35ms; закрытие150ms, системный durationScale0 выключает
+анимацию. Форматная иконка gallery заменена отдельным outline-vector без заливки,
+поскольку общий tint делал прежнюю сплошную подложку непрозрачным квадратом.
+Команды/Aliases/Заметки — центрированные окна, радиус24dp, граница1dp, ширина окна−24dp
+с верхним пределом560dp. Создание сессии и недавние команды сохраняют прежнее оформление.

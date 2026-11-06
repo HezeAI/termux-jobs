@@ -87,6 +87,7 @@
 
             <FrameLayout
                 android:id="@+id/workspace_terminal_surface"
+                android:background="#000000"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">
             <com.termux.view.TerminalView

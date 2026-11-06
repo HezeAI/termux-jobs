@@ -652,7 +652,7 @@ public class WorkspaceNavigationTest {
         store.notes.clear();picker(controller,2);picker=ShadowAlertDialog.getLatestAlertDialog();assertEquals(0,picker.getListView().getAdapter().getCount());assertEquals(View.VISIBLE,findText(picker.getWindow().getDecorView(),"Сохраните заметку в библиотеке.").getVisibility());picker.dismiss();
         controller.close();
     }
-    @Test public void starPreviewBackRetainsTabQueryAndDraft()throws Exception{
+    @Test public void starPreviewSystemBackClosesToOriginAndRetainsDraft()throws Exception{
         TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.setContentView(R.layout.activity_termux);Field tv=TermuxActivity.class.getDeclaredField("mTerminalView");tv.setAccessible(true);tv.set(a,a.findViewById(R.id.terminal_view));WorkspaceController c=new WorkspaceController(a);android.content.res.Resources previous=WorkspaceText.resources;
         try{
             Field f=WorkspaceController.class.getDeclaredField("store");f.setAccessible(true);WorkspaceStore store=(WorkspaceStore)f.get(c);store.commands.clear();store.notes.clear();
@@ -662,9 +662,9 @@ public class WorkspaceNavigationTest {
             for(boolean ru:new boolean[]{true,false})for(boolean notes:new boolean[]{false,true}){
                 WorkspaceLanguage.select(a,ru?"ru":"en");WorkspaceText.resources=WorkspaceLanguage.wrap(a).getResources();picker(c,notes?2:0);AlertDialog picker=ShadowAlertDialog.getLatestAlertDialog();
                 List<EditText> fields=new ArrayList<>();collectEditors(picker.getWindow().getDecorView(),fields);EditText search=fields.get(0);search.setText("needle");Object selected=picker.getListView().getAdapter().getItem(0);
-                picker.getListView().performItemClick(null,0,0);shadowOf(Looper.getMainLooper()).idle();AlertDialog preview=ShadowAlertDialog.getLatestAlertDialog();assertEquals(ru?"Назад":"Back",preview.getButton(-2).getText().toString());preview.getButton(-2).performClick();shadowOf(Looper.getMainLooper()).idle();
-                assertTrue(picker.isShowing());assertEquals("needle",search.getText().toString());assertSame(selected,picker.getListView().getAdapter().getItem(0));assertEquals("draft",composer.getText().toString());
-                picker.getListView().performItemClick(null,0,0);shadowOf(Looper.getMainLooper()).idle();ShadowAlertDialog.getLatestAlertDialog().cancel();shadowOf(Looper.getMainLooper()).idle();assertTrue(picker.isShowing());assertSame(selected,picker.getListView().getAdapter().getItem(0));picker.dismiss();
+                picker.getListView().performItemClick(null,0,0);shadowOf(Looper.getMainLooper()).idle();AlertDialog preview=ShadowAlertDialog.getLatestAlertDialog();assertEquals(View.GONE,preview.getButton(-2).getVisibility());assertEquals(android.view.Gravity.CENTER,preview.getWindow().getAttributes().gravity);preview.cancel();shadowOf(Looper.getMainLooper()).idle();
+                assertFalse(picker.isShowing());assertFalse(preview.isShowing());assertEquals("draft",composer.getText().toString());
+                picker(c,notes?2:0);AlertDialog reopened=ShadowAlertDialog.getLatestAlertDialog();assertEquals(android.view.Gravity.CENTER,reopened.getWindow().getAttributes().gravity);reopened.cancel();assertEquals("draft",composer.getText().toString());
             }
         }finally{WorkspaceLanguage.select(a,"ru");WorkspaceText.resources=previous;c.close();}
     }

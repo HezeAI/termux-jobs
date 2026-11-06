@@ -75,4 +75,22 @@ public class X11RendererImeTest {
   renderer.release();
  }
 
+ @Test public void fullWidthAutoViewportMapsPointerAfterPortraitLandscapeAndReturn()throws Exception{
+  LorieView renderer=new LorieView(RuntimeEnvironment.application);
+  java.lang.reflect.Method resize=LorieView.class.getDeclaredMethod("resize",int.class,int.class);resize.setAccessible(true);
+  java.lang.reflect.Method callback=LorieView.class.getDeclaredMethod("setRendererViewport",int.class,int.class,int.class,int.class,float.class,float.class,float.class,float.class);callback.setAccessible(true);
+  for(int[] size:new int[][]{{1080,1800},{2400,1080},{1080,1800}}){
+   boolean landscape=size[0]>size[1];renderer.screenSettings(X11ScreenSettings.defaults(),landscape);resize.invoke(renderer,size[0],size[1]);
+   X11DisplayMode logical=X11DisplayMode.resolve(size[0],size[1],X11ScreenSettings.defaults(),landscape);
+   assertTrue(Math.abs((double)logical.width/logical.height-(double)size[0]/size[1])<.01);
+   callback.invoke(renderer,0,0,size[0],size[1],0f,0f,(float)logical.width,(float)logical.height);Shadows.shadowOf(Looper.getMainLooper()).idle();
+   for(float fraction:new float[]{0,.5f,1}){
+    android.view.MotionEvent e=android.view.MotionEvent.obtain(0,0,android.view.MotionEvent.ACTION_HOVER_MOVE,(size[0]-1)*fraction,(size[1]-1)*fraction,0);renderer.onGenericMotionEvent(e);e.recycle();
+    assertEquals(Math.min(logical.width-1,(size[0]-1)*fraction*logical.width/size[0]),NativeRenderer.position[0],.01f);
+    assertEquals(Math.min(logical.height-1,(size[1]-1)*fraction*logical.height/size[1]),NativeRenderer.position[1],.01f);
+   }
+  }
+  renderer.release();
+ }
+
 }

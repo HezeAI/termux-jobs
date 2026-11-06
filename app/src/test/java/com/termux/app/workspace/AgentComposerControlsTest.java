@@ -47,15 +47,15 @@ public class AgentComposerControlsTest {
  @Test public void compactModelKeepsReadableTypeAndIndependentTargetsAtNarrowWidths(){
   LinearLayout model=new LinearLayout(a);model.setTag("composer-model-status");
   TextView title=AgentStatusUi.chip(a,String.join("",java.util.Collections.nCopies(4,"claude-opus-long-model-name / высокий уровень рассуждения ")),"Model",()->{});AgentStatusUi.attach(model,title);
-  assertEquals(12,title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity,.01);assertNull(title.getEllipsize());assertEquals(Integer.MAX_VALUE,title.getMaxLines());
+  assertEquals(12.5f,title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity,.01);assertNull(title.getEllipsize());assertEquals(Integer.MAX_VALUE,title.getMaxLines());
   // Robolectric 4.4 does not supply physical glyph advances (a long wrapped label can measure as padding only).
   // Supply an explicit desired text width to test narrow layout allocation; phone typography is a separate check.
   title.setMinWidth(WorkspaceDialogs.dp(a,132));
   controls.actions(model,new View(a),()->{},()->{},n->{},v->{},v->{});controls.present(true);
   for(int size:new int[]{12,18,24})for(int width:new int[]{240,320,440}){
    title.setTextSize(size);measure(width);View mic=row.findViewWithTag("agent-voice-input");
-   for(View button:new View[]{clip,row.findViewWithTag("agent-notes-input"),mic,send}){assertEquals(WorkspaceDialogs.dp(a,44),button.getWidth());assertEquals(WorkspaceDialogs.dp(a,44),button.getHeight());}
-   String geometry="width="+width+" size="+size+" model="+model.getLeft()+","+model.getTop()+","+model.getRight()+","+model.getBottom()+" mic="+mic.getLeft()+","+mic.getTop()+","+mic.getRight()+" send="+send.getLeft()+","+send.getTop();assertTrue(geometry,model.getWidth()>=WorkspaceDialogs.dp(a,84));assertTrue(geometry,model.getRight()<=mic.getLeft());assertTrue(geometry,mic.getRight()<=send.getLeft());assertEquals(geometry,mic.getTop()+mic.getHeight()/2,send.getTop()+send.getHeight()/2);
+   for(View button:new View[]{clip,row.findViewWithTag("agent-notes-input"),mic,send}){assertEquals(Math.round(44.5f*a.getResources().getDisplayMetrics().density),button.getWidth());assertEquals(Math.round(44.5f*a.getResources().getDisplayMetrics().density),button.getHeight());}
+   String geometry="width="+width+" size="+size+" model="+model.getLeft()+","+model.getTop()+","+model.getRight()+","+model.getBottom()+" mic="+mic.getLeft()+","+mic.getTop()+","+mic.getRight()+" send="+send.getLeft()+","+send.getTop();assertTrue(geometry,model.getWidth()>=WorkspaceDialogs.dp(a,84));assertTrue(geometry,model.getRight()+WorkspaceDialogs.dp(a,8)<=mic.getLeft());assertTrue(geometry,mic.getRight()<=send.getLeft());assertEquals(geometry,mic.getTop()+mic.getHeight()/2,send.getTop()+send.getHeight()/2);
    assertEquals(size,title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity,.01);
   }
  }

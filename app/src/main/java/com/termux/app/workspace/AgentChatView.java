@@ -45,7 +45,7 @@ final class AgentChatView extends LinearLayout {
     private void land(View item){
         if(item==null||!isAttachedToWindow()||!isShown()||getWindowVisibility()!=VISIBLE||!android.animation.ValueAnimator.areAnimatorsEnabled())return;
         android.animation.ValueAnimator animation=android.animation.ValueAnimator.ofFloat(0,1);landings.put(item,animation);
-        item.setTranslationY(-dp(8));item.setAlpha(0);animation.setDuration(210);animation.setInterpolator(new android.view.animation.DecelerateInterpolator());
+        item.setTranslationY(-dp(8));item.setAlpha(0);animation.setDuration(330);animation.setInterpolator(new android.view.animation.DecelerateInterpolator());
         animation.addUpdateListener(frame->{float progress=(float)frame.getAnimatedValue();item.setAlpha(progress);item.setTranslationY(-dp(8)*(1-progress));});
         animation.addListener(new android.animation.AnimatorListenerAdapter(){@Override public void onAnimationEnd(android.animation.Animator a){if(landings.get(item)==animation){landings.remove(item);item.setAlpha(1);item.setTranslationY(0);}}});animation.start();
     }

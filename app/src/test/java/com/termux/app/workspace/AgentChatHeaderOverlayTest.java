@@ -16,7 +16,7 @@ public class AgentChatHeaderOverlayTest {
   input=new EditText(a);input.setId(40);input.setText("draft");RelativeLayout.LayoutParams ip=new RelativeLayout.LayoutParams(-1,64);ip.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);root.addView(input,ip);
   host=new FrameLayout(a);host.setId(50);RelativeLayout.LayoutParams vp=new RelativeLayout.LayoutParams(-1,-1);vp.addRule(RelativeLayout.BELOW,30);vp.addRule(RelativeLayout.ABOVE,40);root.addView(host,vp);
   chat=new AgentChatView(a,r->opened.incrementAndGet(),()->{},()->{},()->{},()->{});host.addView(chat,new FrameLayout.LayoutParams(-1,-1));List<JSONObject> rows=new ArrayList<>();for(int i=0;i<30;i++)rows.add(new JSONObject().put("key","m"+i).put("kind","reasoning").put("body","Synthetic message "+i).put("message","msg_"+i).put("part","reasoning"));chat.rows(rows,false);
-  overlay=new AgentChatHeaderOverlay(host,header,line,10,chat::headerInset);layout(360,700);chat.restorePosition(new AgentChatView.Position(null,0,0,false));layout(360,700);
+  overlay=new AgentChatHeaderOverlay(host,header,line,null,10,chat::headerInset);layout(360,700);chat.restorePosition(new AgentChatView.Position(null,0,0,false));layout(360,700);
  }
  void layout(int width,int height){for(int i=0;i<4;i++){root.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));root.layout(0,0,width,height);root.getViewTreeObserver().dispatchOnPreDraw();Shadows.shadowOf(Looper.getMainLooper()).idle();}}
  View first(){return chat.timeline.getChildAt(1);}
@@ -52,4 +52,20 @@ public class AgentChatHeaderOverlayTest {
   input.getLayoutParams().height=112;input.requestLayout();layout(360,420);assertEquals("draft\nsecond line",input.getText().toString());assertEquals(4,input.getSelectionStart());assertTrue(input.hasFocus());
   chat.restorePosition(new AgentChatView.Position(null,0,0,false));layout(360,420);assertTrue(firstY()>=headerBottom());
  }
+ @Test public void entireHeaderOverlaysHistoryButFirstMessageClearsItsMeasuredHeight(){
+  overlay.close();overlay=new AgentChatHeaderOverlay(host,header,line,selector,10,chat::headerInset);
+  overlay.present(true);layout(320,700);chat.restorePosition(new AgentChatView.Position(null,0,0,false));layout(320,700);
+  assertEquals(0,host.getTop());assertNull(selector.getBackground());assertTrue(selector.getElevation()>host.getElevation());
+  assertTrue(firstY()>headerBottom());
+  selector.getLayoutParams().height=116;selector.requestLayout();layout(320,700);
+  assertTrue(firstY()>headerBottom());assertEquals(0,chat.scroll.getScrollY());
+  chat.scroll.scrollTo(0,400);AgentChatView.Position held=chat.position();
+  selector.getLayoutParams().height=80;selector.requestLayout();layout(700,320);
+  assertEquals(held.anchor,chat.position().anchor);assertEquals(held.offset,chat.position().offset);
+  chat.restorePosition(new AgentChatView.Position(null,0,0,false));layout(700,320);assertTrue(firstY()>headerBottom());
+  chat.scroll.scrollTo(0,first().getTop());assertTrue(firstY()<selector.getBottom());
+  overlay.present(false);layout(320,700);assertEquals(line.getBottom(),host.getTop());
+  assertEquals(0xff335577,((ColorDrawable)selector.getBackground()).getColor());assertEquals(0,selector.getElevation(),0);
+ }
+
 }
