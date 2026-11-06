@@ -56,7 +56,7 @@ final class WorkspaceSidebar {
     private int width(){int screen=context.getResources().getDisplayMetrics().widthPixels;return Math.min(screen-dp(24),Math.max(dp(220),Math.round(screen*.61f)));}
     private int dp(int n){return WorkspaceDialogs.dp(context,n);}
     void show(){
-        dialog.show();Window w=dialog.getWindow();if(w!=null){w.setBackgroundDrawableResource(android.R.color.transparent);w.setDimAmount(0);w.setLayout(-1,-1);w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);}
+        dialog.show();Window w=dialog.getWindow();if(w!=null){w.setBackgroundDrawableResource(android.R.color.transparent);w.setStatusBarColor(android.graphics.Color.BLACK);w.getDecorView().setSystemUiVisibility(w.getDecorView().getSystemUiVisibility()&~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);w.setDimAmount(0);w.setLayout(-1,-1);w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);}
         if(selectedRow!=null){
             scroll.getViewTreeObserver().addOnGlobalLayoutListener(new android.view.ViewTreeObserver.OnGlobalLayoutListener(){
                 @Override public void onGlobalLayout(){
@@ -74,13 +74,14 @@ final class WorkspaceSidebar {
     void suspend(){if(closing||suspended)return;suspended=true;scroll.animate().cancel();scroll.setTranslationX(0);if(activePopup!=null)activePopup.dismissImmediately();dialog.hide();}
     void resume(){if(closing||!suspended)return;suspended=false;dialog.show();refreshSessions();}
     boolean suspended(){return suspended;}
-    void section(String title){TextView v=new TextView(context);v.setText(title);v.setTextSize(9);v.setTextColor(0xffa5a5a2);v.setPadding(dp(10),dp(20),0,dp(9));body.addView(v);}
+    void section(String title){TextView v=new TextView(context);v.setText(title);v.setTextSize(18);v.setTextColor(0xffa5a5a2);v.setPadding(dp(10),dp(20),0,dp(9));body.addView(v);}
     TextView action(LinearLayout parent,String title,int icon,Runnable callback){
-        TextView v=new TextView(context);v.setText(title);v.setTextSize(12);v.setTextColor(0xfff0f0ee);v.setGravity(Gravity.CENTER_VERTICAL);v.setMinHeight(dp(44));v.setPadding(dp(9),dp(10),dp(9),dp(10));
+        TextView v=new TextView(context);v.setText(title);v.setTextSize(12.2f);v.setTextColor(0xfff0f0ee);v.setGravity(Gravity.CENTER_VERTICAL);v.setMinHeight(dp(44));v.setPadding(dp(9),dp(10),dp(9),dp(10));
         if(icon!=0){android.graphics.drawable.Drawable d=context.getDrawable(icon).mutate();d.setTint(0xffa5a5a2);d.setBounds(0,0,dp(20),dp(20));v.setCompoundDrawables(d,null,null,null);v.setCompoundDrawablePadding(dp(11));}
         v.setBackground(WorkspaceRipple.background(context,null,10));
         v.setOnClickListener(x->callback.run());parent.addView(v,new LinearLayout.LayoutParams(-1,-2));return v;
     }
+    void overlayAction(String title,int icon,Runnable callback){action(body,title,icon,callback);}
     void action(String title,int icon,Runnable callback){action(body,title,icon,()->{dismiss();callback.run();});}
     LinearLayout session(String id,String title,String subtitle,boolean base,boolean saved,boolean selected,java.util.function.BooleanSupplier isSaved,Runnable save,Runnable unsave,Runnable close){
         return session(id,title,subtitle,base,saved,selected,false,isSaved,save,unsave,close);
@@ -107,7 +108,7 @@ final class WorkspaceSidebar {
 
         return actions;
     }
-    private void styleSessionLabel(TextView label){String value=label.getText().toString();int split=value.indexOf('\n');if(split<0)return;android.text.SpannableString styled=new android.text.SpannableString(value);styled.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD),0,split,0);styled.setSpan(new android.text.style.AbsoluteSizeSpan(13,true),0,split,0);styled.setSpan(new android.text.style.AbsoluteSizeSpan(10,true),split+1,value.length(),0);styled.setSpan(new android.text.style.ForegroundColorSpan(WorkspaceDialogs.MUTED),split+1,value.length(),0);label.setText(styled);}
+    private void styleSessionLabel(TextView label){String value=label.getText().toString();int split=value.indexOf('\n');if(split<0)return;android.text.SpannableString styled=new android.text.SpannableString(value);styled.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD),0,split,0);styled.setSpan(new android.text.style.RelativeSizeSpan(13.2f/12.2f),0,split,0);styled.setSpan(new android.text.style.RelativeSizeSpan(10.2f/12.2f),split+1,value.length(),0);styled.setSpan(new android.text.style.ForegroundColorSpan(WorkspaceDialogs.MUTED),split+1,value.length(),0);label.setText(styled);}
     void footer(String version){TextView v=new TextView(context);v.setText("Termux Job’s\n"+version);v.setTextColor(0xffa5a5a2);v.setTextSize(11);v.setGravity(Gravity.CENTER);v.setPadding(0,dp(24),0,dp(8));body.addView(v);}
     private String tr(String ru,String en){return WorkspaceLanguage.code(context).equals("ru")?ru:en;}
 }

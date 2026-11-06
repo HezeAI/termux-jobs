@@ -31,6 +31,7 @@ final class AgentChatHeaderOverlay {
             if(title!=null){title.setBackground(chat?null:titleBackground);title.setElevation(chat?top:titleElevation);}
             header.setElevation(chat?top:headerElevation);line.setElevation(chat?top:lineElevation);
         }
+        if(chat){RelativeLayout.LayoutParams enforced=(RelativeLayout.LayoutParams)transcript.getLayoutParams();if(title!=null&&enforced.getRule(RelativeLayout.BELOW)!=0){enforced.removeRule(RelativeLayout.BELOW);transcript.setLayoutParams(enforced);}header.setBackground(null);if(title!=null)title.setBackground(null);}
         updateInset();
     }
     private void updateInset(){inset.accept(active?(title==null||title.getVisibility()==View.GONE?0:title.getHeight())+(header.getVisibility()==View.GONE?0:header.getHeight())+(line.getVisibility()==View.GONE?0:line.getHeight()):0);}

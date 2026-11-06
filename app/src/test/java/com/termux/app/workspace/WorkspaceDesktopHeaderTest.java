@@ -24,8 +24,8 @@ public class WorkspaceDesktopHeaderTest {
    visible.label();java.util.Map channels=(java.util.Map)field(WorkspaceDesktops.class,"channels").get(visible);WorkspaceDesktop channel=(WorkspaceDesktop)channels.get("termux");
    ((java.util.Set<String>)field(WorkspaceDesktop.class,"graphical").get(channel)).add(p.id);field(WorkspaceController.class,"desktopUi").set(c,visible);desktop.close();render.invoke(c);
    LinearLayout header=(LinearLayout)field(WorkspaceController.class,"header").get(c);LinearLayout top=(LinearLayout)header.getChildAt(0);View menu=top.getChildAt(0),title=top.getChildAt(1);
-   assertEquals("Termux",((TextView)((LinearLayout)title).getChildAt(0)).getText().toString());
-   TextView button=(TextView)field(WorkspaceController.class,"desktopInputButton").get(c);assertNotNull(button);field(WorkspaceController.class,"interactiveInput").setBoolean(c,true);
+   assertEquals("Termux",((TextView)((LinearLayout)((FrameLayout)title).getChildAt(0)).getChildAt(0)).getText().toString());
+   TextView button=(TextView)field(WorkspaceController.class,"desktopInputButton").get(c);assertNotNull(button);((DesktopKeyboardState)field(WorkspaceDesktop.class,"keyboardState").get(channel)).enabled=true;
    changed.run();
    assertSame(top,header.getChildAt(0));assertSame(title,top.getChildAt(1));assertSame(menu,top.getChildAt(0));assertSame(button,field(WorkspaceController.class,"desktopInputButton").get(c));assertTrue(button.isSelected());changed.run();assertSame(title,((LinearLayout)header.getChildAt(0)).getChildAt(1));
 

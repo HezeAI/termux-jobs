@@ -29,7 +29,7 @@ final class WorkspaceDialogs {
         private boolean blockOutside;
         Builder(Context c) { super(c, R.style.WorkspaceDialog); }
         Builder blockOutsideDismiss(){blockOutside=true;return this;}
-        @Override public AlertDialog create(){AlertDialog dialog=super.create();WorkspaceRipple.install(dialog.getWindow());if(blockOutside)dialog.setCanceledOnTouchOutside(false);return dialog;}
+        @Override public AlertDialog create(){AlertDialog dialog=super.create();WorkspaceRipple.install(dialog.getWindow());dialog.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE|android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);dialog.getWindow().getDecorView().addOnAttachStateChangeListener(new View.OnAttachStateChangeListener(){public void onViewAttachedToWindow(View v){v.post(()->editorWindow(dialog));}public void onViewDetachedFromWindow(View v){}});if(blockOutside)dialog.setCanceledOnTouchOutside(false);return dialog;}
         @Override public AlertDialog.Builder setItems(CharSequence[] items, DialogInterface.OnClickListener listener) {
             return super.setAdapter(new Rows(getContext(), items, -1), listener);
         }
@@ -43,8 +43,9 @@ final class WorkspaceDialogs {
         window.setWindowAnimations(com.termux.R.style.WorkspaceLibraryAnimation);window.setGravity(Gravity.CENTER);
         Runnable resize=()->{int width=Math.max(dp(c,1),Math.min(dp(c,560),c.getResources().getDisplayMetrics().widthPixels-dp(c,24)));if(window.getAttributes().width!=width)window.setLayout(width,-2);};resize.run();
         window.getDecorView().addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->resize.run());
-        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);window.getDecorView().setPadding(0,0,0,0);
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE|android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_UNCHANGED);window.getDecorView().setPadding(0,0,0,0);
     }
+    static void editorWindow(AlertDialog dialog){if(dialog.getWindow()==null)return;if((dialog.getWindow().getAttributes().flags&android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)!=0)dialog.getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);int mode=(dialog.getWindow().getAttributes().softInputMode&android.view.WindowManager.LayoutParams.SOFT_INPUT_MASK_STATE)|android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;if(dialog.getWindow().getAttributes().softInputMode!=mode)dialog.getWindow().setSoftInputMode(mode);}
     static Drawable cardBackground(Context c){GradientDrawable panel=new GradientDrawable();panel.setColor(SURFACE);panel.setCornerRadius(dp(c,20));panel.setStroke(dp(c,1),LINE);return panel;}
     static android.widget.ListAdapter choiceAdapter(Context c,CharSequence[] items,int selected,java.util.function.IntPredicate enabled){return new Rows(c,items,selected,enabled);}
     private static final class Rows extends ArrayAdapter<CharSequence> {

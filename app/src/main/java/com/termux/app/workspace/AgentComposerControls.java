@@ -20,6 +20,7 @@ final class AgentComposerControls {
     private final ComposerActionLayout toggles;
     final LinearLayout card;
     private View transcriptHost,status,stop;
+    private final LinearLayout voiceRow;private final TextView voiceLabel,voiceStop,voiceCancel;
     private int terminalAbove;
     private java.util.function.IntConsumer inset=value->{};
     private boolean agent,initialized,stopAvailable;
@@ -34,8 +35,9 @@ final class AgentComposerControls {
         pair=new LinearLayout(c);pair.setOrientation(LinearLayout.VERTICAL);pair.setTag("agent-composer-tools");
         card=new LinearLayout(c);card.setTag("composer-card");card.setOrientation(LinearLayout.VERTICAL);card.setClickable(true);card.setPadding(dp(11),dp(5),dp(11),dp(9));
         limits=new ComposerLimits(c);
+        voiceRow=new LinearLayout(c);voiceRow.setGravity(Gravity.CENTER_VERTICAL);voiceLabel=new TextView(c);voiceLabel.setTextColor(WorkspaceDialogs.TEXT);voiceLabel.setTextSize(12);voiceStop=action(t("Стоп","Stop"),()->{});voiceCancel=action(t("Отмена","Cancel"),()->{});voiceRow.addView(voiceLabel,new LinearLayout.LayoutParams(0,-2,1));voiceRow.addView(voiceStop);voiceRow.addView(voiceCancel);voiceRow.setVisibility(View.GONE);
         tools=new ComposerActionLayout(c);pair.addView(tools,new LinearLayout.LayoutParams(-1,-2));
-        fieldLine=new LinearLayout(c);fieldLine.setGravity(Gravity.TOP);fieldLine.setBaselineAligned(false);
+        fieldLine=new LinearLayout(c);fieldLine.setGravity(Gravity.TOP);fieldLine.setMinimumHeight(dp(44));fieldLine.setBaselineAligned(false);
         toggles=new ComposerActionLayout(c);toggles.setTag("terminal-inline-controls");
         interactive=new Switch(c);extra=new Switch(c);for(Switch b:new Switch[]{interactive,extra}){b.setTextSize(11);b.setTextColor(WorkspaceDialogs.TEXT);b.setMinHeight(dp(44));b.setSwitchMinWidth(dp(30));b.setSwitchPadding(dp(7));b.setPadding(0,0,dp(12),0);b.setThumbTintList(ColorStateList.valueOf(WorkspaceDialogs.ACCENT));b.setTrackTintList(new ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{0xff777872,WorkspaceDialogs.LINE}));toggles.addView(b);}
         interactive.setOnCheckedChangeListener((b,on)->{if(!updating)interactiveAction.accept(on);});extra.setOnCheckedChangeListener((b,on)->{if(!updating)extraAction.accept(on);});
@@ -67,20 +69,23 @@ final class AgentComposerControls {
     void present(boolean nextAgent){
         if(!initialized||agent!=nextAgent){
             initialized=true;agent=nextAgent;
-            for(View v:new View[]{input,star,send,attachment,pair,fieldLine,toggles,card,status,stop,limits})remove(v);
+            for(View v:new View[]{input,star,send,attachment,pair,fieldLine,toggles,card,status,stop,limits,voiceRow})remove(v);
             row.removeAllViews();card.removeAllViews();fieldLine.removeAllViews();tools.removeAllViews();row.setOrientation(LinearLayout.VERTICAL);row.setBaselineAligned(false);row.setClickable(true);
             GradientDrawable background=new GradientDrawable();background.setColor(0xff232426);background.setCornerRadius(dp(24));background.setStroke(dp(1),0xff393a3c);card.setBackground(background);row.setBackgroundColor(android.graphics.Color.TRANSPARENT);row.setPadding(dp(12),0,dp(12),dp(10));
             if(!agent)row.addView(toggles,new LinearLayout.LayoutParams(-1,-2));
             row.addView(card,new LinearLayout.LayoutParams(-1,-2));
             fieldLine.addView(input,new LinearLayout.LayoutParams(0,-2,1));
             if(agent&&stop!=null)fieldLine.addView(stop,new LinearLayout.LayoutParams(dp(44),dp(44)));
-            card.addView(fieldLine,new LinearLayout.LayoutParams(-1,-2));
+            card.addView(fieldLine,new LinearLayout.LayoutParams(-1,-2));if(agent)card.addView(voiceRow,new LinearLayout.LayoutParams(-1,-2));
             if(agent){tools.addView(attachment,new ViewGroup.LayoutParams(actionSize(),actionSize()));tools.addView(notes,new ViewGroup.LayoutParams(actionSize(),actionSize()));if(status!=null){tools.addView(status);View gap=new View(context);gap.setTag("composer-model-mic-gap");tools.addView(gap,new ViewGroup.LayoutParams(dp(8),0));}tools.addView(mic,new ViewGroup.LayoutParams(actionSize(),actionSize()));}
             else{tools.addView(commands);tools.addView(separator());tools.addView(aliases);tools.addView(separator());tools.addView(terminalNotes);}
-            tools.addView(send,new ViewGroup.LayoutParams(agent?actionSize():dp(44),agent?actionSize():dp(44)));if(send instanceof WorkspaceIconButton)((WorkspaceIconButton)send).setIcon(context.getDrawable(R.drawable.workspace_up),Math.round((agent?17.5f:17f)*context.getResources().getDisplayMetrics().density));tools.rightGroup(agent?(status!=null?status:mic):send);card.setPadding(dp(agent?10:11),dp(agent?6:5),dp(agent?10:11),dp(agent?4:9));card.addView(pair,new LinearLayout.LayoutParams(-1,-2));if(agent)card.addView(limits,new LinearLayout.LayoutParams(-1,-2));geometry();
+            tools.addView(send,new ViewGroup.LayoutParams(actionSize(),actionSize()));if(send instanceof WorkspaceIconButton)((WorkspaceIconButton)send).setIcon(context.getDrawable(R.drawable.workspace_up),Math.round((agent?17.5f:17f)*context.getResources().getDisplayMetrics().density));tools.rightGroup(agent?(status!=null?status:mic):send);card.setPadding(dp(10),dp(6),dp(10),dp(4));card.addView(pair,new LinearLayout.LayoutParams(-1,-2));if(agent)card.addView(limits,new LinearLayout.LayoutParams(-1,-2));geometry();
         }
         updateStop();labels();inset.accept(row.getVisibility()==View.VISIBLE?row.getHeight():0);
     }
+    void voiceState(String text,boolean active,Runnable stop,Runnable cancel){voiceLabel.setText(text);voiceStop.setOnClickListener(v->stop.run());voiceCancel.setOnClickListener(v->cancel.run());voiceRow.setVisibility(active?View.VISIBLE:View.GONE);}
+    void minimumCardHeight(int pixels){card.setMinimumHeight(Math.max(0,pixels));}
+    int cardHeight(){return card.getHeight();}
     void stopAvailable(boolean available){stopAvailable=available;updateStop();}
     private void updateStop(){if(stop!=null){stop.setVisibility(agent?(stopAvailable?View.VISIBLE:View.INVISIBLE):View.GONE);stop.setEnabled(agent&&stopAvailable);}}
     private View separator(){TextView v=new TextView(context);v.setText("/");v.setTextSize(12);v.setTextColor(WorkspaceDialogs.MUTED);v.setPadding(dp(8),0,dp(8),0);v.setGravity(Gravity.CENTER);v.setMinHeight(dp(44));return v;}

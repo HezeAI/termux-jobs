@@ -60,4 +60,10 @@ public class AgentComposerControlsTest {
   }
  }
 
+ @Test public void agentTerminalEmptyCardMatchesChatHeightAndRetainsModes(){
+  for(int width:new int[]{320,412,700}){
+   LinearLayout chatRow=new LinearLayout(a);EditText chatInput=new EditText(a);TextView model=new TextView(a);model.setText("Model / reasoning");model.setMinHeight(44);AgentComposerControls chat=new AgentComposerControls(a,chatRow,chatInput,new WorkspaceIconButton(a),new WorkspaceIconButton(a),new WorkspaceIconButton(a));chat.actions(model,new View(a),()->{},()->{},section->{},on->{},on->{});chat.present(true);chatRow.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(1500,View.MeasureSpec.AT_MOST));chatRow.layout(0,0,width,chatRow.getMeasuredHeight());
+   LinearLayout terminalRow=new LinearLayout(a);AgentComposerControls terminal=new AgentComposerControls(a,terminalRow,new EditText(a),new WorkspaceIconButton(a),new WorkspaceIconButton(a),new WorkspaceIconButton(a));terminal.present(false);terminal.minimumCardHeight(chat.cardHeight());terminalRow.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(1500,View.MeasureSpec.AT_MOST));terminalRow.layout(0,0,width,terminalRow.getMeasuredHeight());assertEquals(chat.cardHeight(),terminal.cardHeight());assertEquals(chatRow.getPaddingBottom(),terminalRow.getPaddingBottom());assertEquals(chat.card.getPaddingTop(),terminal.card.getPaddingTop());assertEquals(chat.card.getPaddingBottom(),terminal.card.getPaddingBottom());assertNotNull(terminalRow.findViewWithTag("terminal-inline-controls"));assertNull(terminalRow.findViewWithTag("agent-voice-input"));
+  }
+ }
 }

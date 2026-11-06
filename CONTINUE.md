@@ -1,4 +1,31 @@
-# Текущая выдача — основной1503/test8
+# Текущая выдача — основной1504/test9
+
+[Карта десяти пунктов и проверки](docs/fork/VALIDATION-2.1.5-test9.md).
+APK `/sdcard/Download/Termux-Jobs-v2.1.5-test9-arm64.apk`,40609605байт.
+SHA256 `e2f5194fd39f05a10a8e4a7dd39b94bcd1517910065491c2d94620f98495c869`.
+Checksum рядом; exclusive copy/readback обоих Android-путей — PASS.
+
+Default SpeechRecognizer без Activity/chooser, inline partial/Stop/Cancel и сохранение
+черновика. Прозрачные общие шапки, restart→terminal/computer, верхний inset и hit mapping
+терминала, согласованная высота input card, базовая Termux без Session settings.
+X11 header всегда black/opaque, return + два режима ввода; обработчики прежние.
+Sidebar12,2sp/18sp. Центральные библиотеки с IME по tap остаются поверх прежнего меню.
+
+Broad158/2; оба отказа закрыты итоговым targeted28/0; card-height8/0. Engine154/0 --rerun-tasks.
+Изначальные compile/70-19/остановленный layout-прогон сохранены; не засчитаны как PASS.
+Lint5модулей0 errors/274 warnings; локализация587строк и checker8 — PASS.
+Финальный APK gate: package/version/ZIP/подпись/ABI/runtime/125assets/4templates/7ELF.
+630 production-файлов совпали по3stages;95native inputs/ComposerLimits/X11 неизменны.
+Локальный commit ID — `.verification/test-2.1.5-test9/source-commit.txt`.
+
+Телефонные mic/IME/шапки/поворот/Surface/GPU требуют проверки. Не заявлять приёмку
+или работу настоящей диктовки по JVM. Android Home при листании остаётся исследованием.
+Резерв1499 не читать/менять/пересобирать. Старые APK сохранены. Нет установки,
+публикации, push/тегов и перезапусков рабочих сессий.
+
+---
+
+# Предыдущая выдача — основной1503/test8
 
 [Состав, карта семи пунктов и ограничения](docs/fork/VALIDATION-2.1.5-test8.md).
 APK `/sdcard/Download/Termux-Jobs-v2.1.5-test8-arm64.apk`,40609053байт.

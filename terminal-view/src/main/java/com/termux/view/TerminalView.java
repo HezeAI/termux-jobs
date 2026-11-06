@@ -123,6 +123,9 @@ public final class TerminalView extends View {
     /** The top row of text to display. Ranges from -activeTranscriptRows to 0. */
     private TerminalTextReveal mTextReveal;
     private int mComposerBottomInset;
+    private int mHeaderTopInset;
+    public int getHeaderTopInset(){return mHeaderTopInset;}
+    public void setHeaderTopInset(int pixels){int next=Math.max(0,pixels);if(next==mHeaderTopInset)return;mHeaderTopInset=next;updateSize();invalidate();}
     private boolean mComposerViewport;
     private final java.util.Map<TerminalSession,Integer> mSessionTopRows=new java.util.WeakHashMap<>();
     /** Reserve the live viewport above the floating composer, while older rows may draw behind it. */
@@ -621,7 +624,7 @@ public final class TerminalView extends View {
      */
     public int[] getColumnAndRow(MotionEvent event, boolean relativeToScroll) {
         int column = (int) (event.getX() / mRenderer.mFontWidth);
-        int row = (int) ((event.getY() - mRenderer.mFontLineSpacingAndAscent) / mRenderer.mFontLineSpacing);
+        int row = (int) ((event.getY() - mHeaderTopInset - mRenderer.mFontLineSpacingAndAscent) / mRenderer.mFontLineSpacing);
         if (relativeToScroll) {
             row += getVisibleTopRow();
         }
@@ -682,6 +685,7 @@ public final class TerminalView extends View {
     @Override
     @TargetApi(23)
     public boolean onTouchEvent(MotionEvent event) {
+        if(mHeaderTopInset>0&&mTopRow==0&&!isSelectingText()&&event.getActionMasked()==MotionEvent.ACTION_DOWN&&event.getY()<mHeaderTopInset)return false;
         if(mTextReveal!=null)mTextReveal.interaction();
         if (mEmulator == null) return true;
         final int action = event.getAction();
@@ -1081,7 +1085,7 @@ public final class TerminalView extends View {
         mResizeHandler.postAtTime(mPendingResize, Math.min(now + RESIZE_QUIET_MS, mResizeStarted + RESIZE_MAX_MS));
     }
     private int columnsForView() { return Math.max(4, (int) (getWidth() / mRenderer.mFontWidth)); }
-    private int rowsForView() { return Math.max(4, (getHeight() - mComposerBottomInset - mRenderer.mFontLineSpacingAndAscent) / mRenderer.mFontLineSpacing); }
+    private int rowsForView() { return Math.max(4, (getHeight() - mComposerBottomInset - mHeaderTopInset - mRenderer.mFontLineSpacingAndAscent) / mRenderer.mFontLineSpacing); }
     private void notifyEmulatorSet() {
         if (mClient != null) mClient.onEmulatorSet();
         if (mTerminalCursorBlinkerRunnable != null) mTerminalCursorBlinkerRunnable.setEmulator(mEmulator);
@@ -1107,6 +1111,7 @@ public final class TerminalView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        if(mHeaderTopInset>0&&mEmulator!=null)canvas.drawColor(mEmulator.mColors.mCurrentColors[mEmulator.isReverseVideo()?com.termux.terminal.TextStyle.COLOR_INDEX_FOREGROUND:com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND]);
         if (mEmulator == null) {
             canvas.drawColor(com.termux.terminal.TerminalColors.COLOR_SCHEME.mDefaultColors[com.termux.terminal.TextStyle.COLOR_INDEX_BACKGROUND]);
         } else {
@@ -1121,9 +1126,16 @@ public final class TerminalView extends View {
                 int fullRows=Math.max(4,(getHeight()-mRenderer.mFontLineSpacingAndAscent)/mRenderer.mFontLineSpacing);
                 rows=Math.min(fullRows,mEmulator.mRows-getVisibleTopRow());
             }
+            if(mHeaderTopInset>0&&mTopRow<0&&!mEmulator.isAlternateBufferActive()){
+                int extraRows=(mHeaderTopInset+mRenderer.mFontLineSpacing-1)/mRenderer.mFontLineSpacing;
+                int history=mEmulator.getScreen().getActiveTranscriptRows();int from=Math.max(-history,getVisibleTopRow()-extraRows);int count=getVisibleTopRow()-from;
+                if(count>0){canvas.save();canvas.clipRect(0,0,getWidth(),mHeaderTopInset);canvas.translate(0,mHeaderTopInset-count*mRenderer.mFontLineSpacing);mRenderer.render(mEmulator,canvas,from,sel[0],sel[1],sel[2],sel[3],count);canvas.restore();}
+            }
+            canvas.save();canvas.translate(0,mHeaderTopInset);if(mHeaderTopInset>0)canvas.clipRect(0,0,getWidth(),getHeight());
             mRenderer.render(mEmulator, canvas, getVisibleTopRow(), sel[0], sel[1], sel[2], sel[3], rows);
 
             if(mTextReveal!=null)mTextReveal.paint(canvas);
+            canvas.restore();
             // render the text selection handles
             renderTextSelection();
         }
@@ -1143,7 +1155,7 @@ public final class TerminalView extends View {
     }
 
     public int getCursorY(float y) {
-        return (int) (((y - 40) / mRenderer.mFontLineSpacing) + getVisibleTopRow());
+        return (int) (((y - mHeaderTopInset - 40) / mRenderer.mFontLineSpacing) + getVisibleTopRow());
     }
 
     public int getPointX(int cx) {
@@ -1154,7 +1166,7 @@ public final class TerminalView extends View {
     }
 
     public int getPointY(int cy) {
-        return Math.round((cy - getVisibleTopRow()) * mRenderer.mFontLineSpacing);
+        return mHeaderTopInset+Math.round((cy - getVisibleTopRow()) * mRenderer.mFontLineSpacing);
     }
 
     public int getTopRow() {
