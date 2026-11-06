@@ -74,9 +74,9 @@ final class AgentComposerControls {
             fieldLine.addView(input,new LinearLayout.LayoutParams(0,-2,1));
             if(agent&&stop!=null)fieldLine.addView(stop,new LinearLayout.LayoutParams(dp(44),dp(44)));
             card.addView(fieldLine,new LinearLayout.LayoutParams(-1,-2));
-            if(agent){tools.addView(attachment);tools.addView(notes);if(status!=null)tools.addView(status);tools.addView(mic);}
+            if(agent){tools.addView(attachment,new ViewGroup.LayoutParams(dp(44),dp(44)));tools.addView(notes,new ViewGroup.LayoutParams(dp(44),dp(44)));if(status!=null)tools.addView(status);tools.addView(mic,new ViewGroup.LayoutParams(dp(44),dp(44)));}
             else{tools.addView(commands);tools.addView(separator());tools.addView(aliases);tools.addView(separator());tools.addView(terminalNotes);}
-            tools.addView(send);tools.rightGroup(agent?(status!=null?status:mic):send);card.setPadding(dp(agent?10:11),dp(agent?6:5),dp(agent?10:11),dp(agent?4:9));card.addView(pair,new LinearLayout.LayoutParams(-1,-2));if(agent)card.addView(limits,new LinearLayout.LayoutParams(-1,-2));geometry();
+            tools.addView(send,new ViewGroup.LayoutParams(dp(44),dp(44)));tools.rightGroup(agent?(status!=null?status:mic):send);card.setPadding(dp(agent?10:11),dp(agent?6:5),dp(agent?10:11),dp(agent?4:9));card.addView(pair,new LinearLayout.LayoutParams(-1,-2));if(agent)card.addView(limits,new LinearLayout.LayoutParams(-1,-2));geometry();
         }
         updateStop();labels();inset.accept(row.getVisibility()==View.VISIBLE?row.getHeight():0);
     }

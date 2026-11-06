@@ -476,7 +476,7 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
             }
 
             // App defaults only; explicit terminal colors and ANSI colors keep their meaning.
-            if(!props.containsKey("background"))props.setProperty("background","#191a1c");
+            if(!props.containsKey("background"))props.setProperty("background","#000000");
             if(!props.containsKey("foreground"))props.setProperty("foreground","#f0f0ee");
             TerminalColors.COLOR_SCHEME.updateWith(props);
             TerminalSession session = mActivity.getCurrentSession();

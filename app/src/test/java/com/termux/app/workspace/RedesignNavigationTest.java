@@ -47,5 +47,11 @@ public class RedesignNavigationTest {
         assertTrue(host.getHeight()>terminalHeight);viewport.present(false);input.setVisibility(View.VISIBLE);keys.setVisibility(View.VISIBLE);measure(root,400,900);
         assertEquals(terminalHeight,host.getHeight());assertEquals(keys.getTop(),host.getBottom());assertSame(host,surface.getParent());a.finish();
     }
+    @Test public void suspendedSidebarKeepsDisclosureAndDoesNotReturnAfterExplicitDismiss(){
+        Activity a=Robolectric.buildActivity(Activity.class).setup().get();WorkspaceSidebar sidebar=new WorkspaceSidebar(a);
+        LinearLayout actions=sidebar.session("owner","Owner","/project",false,false,true,()->false,()->fail(),()->fail(),()->fail());sidebar.show();measure(sidebar.body,260,1800);sidebar.scroll.scrollTo(0,120);int held=sidebar.scroll.getScrollY();
+        sidebar.suspend();sidebar.resume();assertSame(actions,((LinearLayout)sidebar.body.findViewWithTag("sidebar-session-owner")).getChildAt(1));assertEquals(View.VISIBLE,actions.getVisibility());assertEquals(held,sidebar.scroll.getScrollY());
+        sidebar.suspend();sidebar.dispose();sidebar.resume();assertFalse(sidebar.dialog.isShowing());a.finish();
+    }
     private void measure(View v,int width,int height){v.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));v.layout(0,0,width,height);}
 }

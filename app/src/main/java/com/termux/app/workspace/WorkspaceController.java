@@ -235,7 +235,7 @@ public final class WorkspaceController {
         activity.getTerminalToolbarViewPager().addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->composerViewport(inputRow.getVisibility()==View.VISIBLE?inputRow.getHeight():0));
         agentHeaderOverlay=new AgentChatHeaderOverlay(activity.findViewById(R.id.drawer_layout),activity.findViewById(R.id.workspace_terminal_tools),activityLine,R.id.workspace_header,pixels->{if(agentChatUi!=null)agentChatUi.headerInset(pixels);});
         agentChatUi.onVisibilityChanged(()->{updateAgentComposer();boolean chat=agentChatUi.showing();boolean focus=chat&&!wasAgentChat;wasAgentChat=chat;terminalInput.setHint(chat?tr("Сообщение ","Message ")+agentChatUi.name()+"…":WorkspaceText.tr("Введите команду…"));activity.getTerminalToolbarViewPager().setVisibility(screen==Screen.TERMINAL&&!activityStopped&&!chat?toolbarVisibility:View.GONE);if(focus)leaveAgentInputIdle();renderHeader();renderTabs();});
-        desktopUi=new WorkspaceDesktops(activity,()->{TerminalSession t=activity.getCurrentSession();return t!=null&&t.isRunning()?store.findByHandle(t.mHandle):null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL,inputRow,()->{renderCodexStatus();renderHeader();updateAgentComposer();},()->{
+        desktopUi=new WorkspaceDesktops(activity,()->{TerminalSession t=activity.getCurrentSession();return t!=null&&t.isRunning()?store.findByHandle(t.mHandle):null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL,inputRow,()->{renderCodexStatus();renderHeader();updateAgentComposer();if(sidebar!=null)sidebar.refreshSessions();},()->{
             boolean terminal=screen==Screen.TERMINAL&&!activityStopped;
             activity.getTerminalView().setVisibility(terminal?View.VISIBLE:View.INVISIBLE);
             activity.getTerminalView().setWorkspaceTerminalVisible(terminal);
@@ -324,6 +324,7 @@ public final class WorkspaceController {
         parent.addView(r);
     }
     private void show(Screen target, boolean animate) {
+        closeLibraryWindow();
         for(WorkspaceFileBrowser browser:new ArrayList<>(fileBrowsers))if(!browser.leavePageForNavigation())return;
         if(target!=Screen.TERMINAL)activity.getTerminalView().setWorkspaceTerminalVisible(false);
         if(screen!=target)onTerminalViewportChanged();
@@ -354,6 +355,7 @@ public final class WorkspaceController {
         if (terminal) activity.getTerminalView().requestFocus();
         if(agentChatUi!=null)agentChatUi.sync();if(desktopUi!=null)desktopUi.sync();
         if(terminal&&agentChatUi!=null&&agentChatUi.showing())leaveAgentInputIdle();
+        if(terminal&&desktopUi!=null){TerminalSession selected=activity.getCurrentSession();WorkspaceStore.Session p=selected==null?null:store.findByHandle(selected.mHandle);if(p!=null&&!isAgent(p))desktopUi.observeExisting(p);}
     }
     private void composerViewport(int pixels){
         boolean agent=agentChatUi!=null&&agentChatUi.handlesComposer();
@@ -393,11 +395,12 @@ public final class WorkspaceController {
         top.addView(titles,new LinearLayout.LayoutParams(0,-2,1));
         if(screen==Screen.TERMINAL&&profile!=null){
             boolean agent=isAgent(profile);TextView toggle=button("",false,()->{if(agent){if(agentChatUi!=null)agentChatUi.terminal();}else if(desktopUi!=null)desktopUi.toggle();});
-            String transition=agent?tr("Терминал этого чата","This chat’s terminal"):(desktopUi!=null&&desktopUi.showing()?tr("Вернуться в терминал","Return to terminal"):tr("Перейти в рабочий стол X11","Switch to X11 desktop"));
+            String transition=agent?tr("Терминал","Terminal"):(desktopUi!=null&&desktopUi.showing()?tr("Вернуться в терминал","Return to terminal"):desktopUi!=null&&desktopUi.running(profile)?tr("Вернуться на рабочий стол","Return to desktop"):tr("Перейти в рабочий стол X11","Switch to X11 desktop"));
+            android.graphics.drawable.Drawable transitionIcon=activity.getDrawable(agent||desktopUi!=null&&desktopUi.showing()?R.drawable.workspace_terminal:R.drawable.workspace_desktop).mutate();transitionIcon.setTint(TEXT);transitionIcon.setBounds(0,0,dp(18),dp(18));toggle.setCompoundDrawables(transitionIcon,null,null,null);toggle.setCompoundDrawablePadding(dp(6));
             toggle.setText(transition);toggle.setTextSize(11);toggle.setMaxLines(Integer.MAX_VALUE);toggle.setEllipsize(null);toggle.setPadding(dp(8),dp(6),dp(8),dp(6));toggle.setMinHeight(dp(44));
             toggle.setTag("workspace-header-terminal");toggle.setContentDescription(transition);top.addView(toggle,new LinearLayout.LayoutParams(Math.min(dp(138),activity.getResources().getDisplayMetrics().widthPixels/3),-2));
-            if(agent&&current!=null&&current.isRunning()){
-                WorkspaceIconButton restart=new WorkspaceIconButton(activity);restart.setTag("workspace-header-restart");restart.setTextColor(TEXT);restart.setIcon(activity.getDrawable(R.drawable.workspace_server_refresh).mutate(),dp(20));restart.setContentDescription(tr("Перезапустить чат","Restart chat"));restart.setBackground(WorkspaceRipple.background(activity,null,10));restart.setOnClickListener(v->restartSession(profile,v));top.addView(restart,new LinearLayout.LayoutParams(dp(44),dp(44)));
+            if(current!=null&&current.isRunning()&&(desktopUi==null||!desktopUi.showing())){
+                WorkspaceIconButton restart=new WorkspaceIconButton(activity);restart.setTag("workspace-header-restart");restart.setTextColor(TEXT);restart.setIcon(activity.getDrawable(R.drawable.workspace_server_refresh).mutate(),dp(20));restart.setContentDescription(agent?tr("Перезапустить чат","Restart chat"):tr("Перезапустить сессию","Restart session"));restart.setBackground(WorkspaceRipple.background(activity,null,10));restart.setOnClickListener(v->restartSession(profile,v));LinearLayout.LayoutParams restartParams=new LinearLayout.LayoutParams(dp(44),dp(44));restartParams.leftMargin=dp(10);top.addView(restart,restartParams);
             }
             if(agent){agentTerminalBorder=new WorkspaceTransferBorder(activity.getResources().getDisplayMetrics().density);toggle.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{toggle.getBackground(),agentTerminalBorder}));updateTransferBorder();}
 
@@ -405,7 +408,9 @@ public final class WorkspaceController {
         if(desktopUi!=null&&desktopUi.showing()){
             TextView keyboard=button("⌖",desktopUi.keyboardEnabled(),()->desktopUi.keyboard());desktopInputButton=keyboard;keyboard.setContentDescription(tr("Клавиатура X11","X11 keyboard"));top.addView(keyboard,new LinearLayout.LayoutParams(dp(48),dp(48)));
             TextView keys=button("⌨",desktopUi.extraKeysVisible(),()->desktopUi.extraKeys());desktopKeysButton=keys;keys.setContentDescription(tr("Дополнительные клавиши X11","X11 extra keys"));top.addView(keys,new LinearLayout.LayoutParams(dp(48),dp(48)));
-            TextView desktopSettings=button("⚙",false,()->desktopUi.menu());desktopSettings.setContentDescription(tr("Настройки X11","X11 settings"));top.addView(desktopSettings,new LinearLayout.LayoutParams(dp(48),dp(48)));
+            if(profile!=null&&current!=null&&current.isRunning()){
+                WorkspaceIconButton restart=new WorkspaceIconButton(activity);restart.setTag("workspace-header-restart");restart.setTextColor(TEXT);restart.setIcon(activity.getDrawable(R.drawable.workspace_server_refresh).mutate(),dp(20));restart.setContentDescription(tr("Перезапустить сессию","Restart session"));restart.setBackground(WorkspaceRipple.background(activity,null,10));restart.setOnClickListener(v->restartSession(profile,v));top.addView(restart,new LinearLayout.LayoutParams(dp(48),dp(48)));
+            }
         }
         header.addView(top,new LinearLayout.LayoutParams(-1,-2));
         if(screen==Screen.TERMINAL&&isAgent(profile)&&agentChatUi!=null&&agentChatUi.requiresTerminal()){
@@ -468,10 +473,13 @@ public final class WorkspaceController {
         boolean wasSaved=owner.saved;owner.saved=false;
         store.save(()->{if(sidebar!=null)sidebar.refreshSessions();activity.showToast(tr("Удалено из сохранённых. История сохранена.","Removed from saved. History retained."),false);},()->{owner.saved=wasSaved;if(sidebar!=null)sidebar.refreshSessions();activity.showToast(tr("Не удалось сохранить изменение","Could not save the change"),true);});
     }
-    private void sidebarAction(WorkspaceSidebar menu,LinearLayout parent,String title,int icon,Runnable action){menu.action(parent,title,icon,()->{menu.dismiss();action.run();});}
+    private void sidebarAction(WorkspaceSidebar menu,LinearLayout parent,String title,int icon,Runnable action){menu.action(parent,title,icon,action);}
+    private TextView sidebarTransition(WorkspaceSidebar menu,LinearLayout parent,String title,int icon,Runnable action){return menu.action(parent,title,icon,()->{menu.dismiss();action.run();});}
     private void showSidebar(){
+        if(sidebar!=null&&sidebar.suspended()){sidebar.resume();return;}
         if(sidebar!=null&&sidebar.dialog.isShowing()){sidebar.dismiss();return;}
         createSidebar().show();
+        if(desktopUi!=null)for(WorkspaceStore.Session p:sortedSessions())if(!isAgent(p))desktopUi.observeExisting(p);
     }
     private WorkspaceSidebar createSidebar(){
         WorkspaceSidebar menu=new WorkspaceSidebar(activity);sidebar=menu;
@@ -483,24 +491,24 @@ public final class WorkspaceController {
                 TerminalSession live=liveFor(p);boolean active=live!=null&&live==activity.getCurrentSession();
                 java.util.function.Supplier<String> subtitle=()->{TerminalSession running=liveFor(p);boolean started=running!=null&&running.isRunning();return (agent?AgentPreparation.agent(p):ProjectFiles.environmentLabel(p))+" · "+compact(p.directory)+" · "+(agent?(started?tr("Запущен","Running"):tr("Не запущен","Not running")):(started?tr("Открыта","Open"):tr("Сохранена","Saved")));};
                 LinearLayout actions=menu.session(p.id,p.name,subtitle,WorkspaceStore.isBase(p),p.saved,active,agent,()->{TerminalSession running=liveFor(p);return running!=null&&running.isRunning();},()->p.saved,()->saveSessionProfile(p),()->unsaveSession(p),()->closeSession(p));
-                sidebarAction(menu,actions,agent?tr("Открыть чат","Open chat"):tr("Открыть терминал","Open terminal"),R.drawable.workspace_terminal,()->{if(!agent&&desktopUi!=null)desktopUi.terminal(p);launch(p);});
-                if(!agent&&live!=null&&live.isRunning())sidebarAction(menu,actions,tr("Перезапустить сессию","Restart session"),R.drawable.workspace_server_refresh,()->restartSession(p));
+                sidebarTransition(menu,actions,agent?(live!=null&&live.isRunning()&&!active?tr("Вернуться в этот чат","Return to this chat"):tr("Открыть чат","Open chat")):(active&&desktopUi!=null&&desktopUi.showing()?tr("Вернуться в терминал","Return to terminal"):tr("Открыть терминал","Open terminal")),agent?R.drawable.workspace_chat:R.drawable.workspace_terminal,()->{if(!agent&&desktopUi!=null)desktopUi.terminal(p);launch(p);});
+                if(!agent&&desktopUi!=null){TextView openDesktop=sidebarTransition(menu,actions,tr("Открыть рабочий стол","Open desktop"),R.drawable.workspace_desktop,()->selectedAction(p,()->desktopUi.openExisting()));menu.track(()->openDesktop.setVisibility(liveFor(p)!=null&&liveFor(p).isRunning()&&desktopUi.running(p)&&!(liveFor(p)==activity.getCurrentSession()&&desktopUi.showing())?View.VISIBLE:View.GONE));}
                 if(!agent&&desktopUi!=null&&desktopUi.usesDesktop(p)){
                     int owners=desktopUi.ownerCount(p);
-                    TextView stop=menu.action(actions,tr("Остановить рабочий стол","Stop desktop"),R.drawable.workspace_desktop,()->{menu.dismiss();desktopUi.stopDesktop(p);});
+                    TextView stop=menu.action(actions,tr("Остановить рабочий стол","Stop desktop"),R.drawable.workspace_desktop,()->desktopUi.stopDesktop(p));
                     stop.setTag("sidebar-desktop-stop-"+p.id);stop.setEnabled(desktopUi.owns(p));
                     if(owners>1){stop.setText(stop.getText()+"\n"+tr("Общий рабочий стол · сессий: ","Shared desktop · sessions: ")+owners+"\n"+tr("Остановка недоступна: есть другие владельцы","Cannot stop while other sessions use it"));stop.setAlpha(.65f);}
                 }
                 sidebarAction(menu,actions,tr("Настройки сессии","Session settings"),R.drawable.workspace_settings,()->{if(WorkspaceStore.isBase(p))sessionMenu(p,true);else editSession(p);});
                 if(agent){
-                    sidebarAction(menu,actions,tr("Файлы и изменения проекта","Project files and changes"),R.drawable.workspace_folder,()->selectedAction(p,this::showProjectFiles));
+                    sidebarAction(menu,actions,tr("Файлы и изменения проекта","Project files and changes"),R.drawable.workspace_folder,()->selectedAction(p,()->showProjectFiles(menu)));
                     sidebarAction(menu,actions,tr("Лимиты и контекст","Limits and context"),R.drawable.workspace_library,()->selectedAction(p,()->showAgentLimits(p)));
                     sidebarAction(menu,actions,tr("Права и подтверждения","Permissions and approvals"),R.drawable.workspace_settings,()->showAgentPermissions(p));
                     if(!AgentSessionResourcesUi.menuLabel(p).isEmpty()){WorkspaceStore.Session source=p.copy();sidebarAction(menu,actions,AgentSessionResourcesUi.menuLabel(source),R.drawable.workspace_commands,()->agentResourcesOpener.accept(source));}
                     sidebarAction(menu,actions,tr("Навыки агента","Agent skills"),R.drawable.workspace_library,()->AgentSkillsUi.showForSession(activity,p));
 
                 }else{
-                    sidebarAction(menu,actions,tr("Настройки рабочего стола","Desktop settings"),R.drawable.workspace_settings,()->selectedAction(p,()->desktopUi.menu()));
+                    sidebarAction(menu,actions,tr("Настройки рабочего стола","Desktop settings"),R.drawable.workspace_desktop,()->selectedAction(p,()->desktopUi.menu()));
                     sidebarAction(menu,actions,tr("Программы","Programs"),R.drawable.workspace_packages,()->selectedAction(p,()->desktopUi.openPrograms()));
 
                     if(SessionShell.hasCancellableStartup(p))sidebarAction(menu,actions,WorkspaceText.tr("Отменить команды запуска"),R.drawable.workspace_cancel_startup,()->confirmCancelStartup(p));
@@ -516,7 +524,7 @@ public final class WorkspaceController {
         for(java.util.Map.Entry<String,String> entry:servers.sidebarEntries().entrySet())menu.action(entry.getValue(),R.drawable.workspace_terminal,()->{show(Screen.SERVERS,true);servers.openProfile(entry.getKey());});
         menu.action(tr("Создать SSH • сервер","Create SSH • server"),R.drawable.workspace_plus,()->editSession(null,true,"ssh","codex"));
         menu.section(tr("Приложение","Application"));
-        menu.action(WorkspaceText.tr("Недавние команды"),R.drawable.workspace_commands,()->show(Screen.HOME,true));
+        menu.action(WorkspaceText.tr("Недавние команды"),R.drawable.workspace_commands,()->openLibraryWindow(-1));
         menu.action(tr("Команды","Commands"),R.drawable.workspace_commands,()->openLibrary(0));
         menu.action("Aliases",R.drawable.workspace_terminal,()->openLibrary(1));
         menu.action(tr("Заметки","Notes"),R.drawable.workspace_library,()->openLibrary(2));
@@ -526,7 +534,30 @@ public final class WorkspaceController {
         menu.action(tr("О приложении","About"),R.drawable.workspace_server_info,()->activity.startActivity(new android.content.Intent(activity,SettingsActivity.class)));
         menu.footer(com.termux.BuildConfig.VERSION_NAME);return menu;
     }
-    private void openLibrary(int section){if(screen==Screen.COMMANDS)libraryQueries[librarySection]=query;librarySection=section;aliasesSelected=section==1;query=libraryQueries[section];show(Screen.COMMANDS,true);}
+    private AlertDialog libraryWindow;
+    private FrameLayout libraryContent;
+    private int libraryWindowSection=-2;
+    private void openLibrary(int section){openLibraryWindow(section);}
+    private void openLibraryWindow(int section){
+        closeLibraryWindow();
+        libraryWindowSection=section;if(section>=0){librarySection=section;aliasesSelected=section==1;query=libraryQueries[section];}
+        libraryContent=new FrameLayout(activity);libraryContent.setTag("library-sheet-content");
+        String title=section<0?tr("Недавние команды","Recent commands"):section==2?tr("Заметки","Notes"):section==1?"Aliases":tr("Команды","Commands");
+        AlertDialog dialog=WorkspaceDialogs.builder(activity).setView(libraryContent).create();libraryWindow=dialog;
+        AgentLaunchForm.title(dialog,title);dialog.setOnDismissListener(d->libraryClosed(dialog));
+        dialog.show();AgentLaunchForm.style(dialog);resizeLibraryWindow();renderLibraryWindow();
+        dialog.getWindow().getDecorView().addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->resizeLibraryWindow());
+    }
+    private void closeLibraryWindow(){AlertDialog old=libraryWindow;if(old==null)return;libraryClosed(old);old.dismiss();}
+    private void libraryClosed(AlertDialog dialog){if(libraryWindow!=dialog)return;if(libraryWindowSection>=0)libraryQueries[libraryWindowSection]=query;libraryWindow=null;libraryContent=null;libraryWindowSection=-2;commandResults=null;noteResults=null;}
+    private void resizeLibraryWindow(){if(libraryWindow==null||libraryContent==null)return;android.graphics.Rect frame=new android.graphics.Rect();libraryWindow.getWindow().getDecorView().getWindowVisibleDisplayFrame(frame);int height=Math.max(dp(160),Math.min(Math.round(activity.getResources().getDisplayMetrics().heightPixels*.7f),frame.height()-dp(100)));ViewGroup.LayoutParams p=libraryContent.getLayoutParams();if(p!=null&&p.height!=height){p.height=height;libraryContent.setLayoutParams(p);}}
+    private void renderLibraryWindow(){
+        if(libraryContent==null)return;libraryContent.removeAllViews();commandResults=null;noteResults=null;
+        LinearLayout body=column();body.setPadding(dp(16),0,dp(16),dp(12));AdaptiveWorkspaceLayout viewport=new AdaptiveWorkspaceLayout(activity);viewport.addView(body);libraryContent.addView(viewport,new FrameLayout.LayoutParams(-1,-1));
+        if(libraryWindowSection<0){home(body);return;}
+        EditText search=field(librarySection==2?tr("Поиск заметок","Search notes"):librarySection==1?tr("Поиск aliases","Search aliases"):tr("Поиск команд","Search commands"),query,false);search.setMinHeight(dp(48));search.setContentDescription(tr("Поиск в библиотеке","Search library"));body.addView(search);
+        search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void afterTextChanged(Editable e){}public void onTextChanged(CharSequence s,int start,int before,int count){query=s.toString();libraryQueries[librarySection]=query;renderLibraryResults();}});commands(body);
+    }
     private void renderNavigation() {
         navigation.removeAllViews();navigation.setVisibility(View.GONE);
     }
@@ -631,7 +662,8 @@ public final class WorkspaceController {
         if(profile==null){activity.showToast(WorkspaceText.tr("Сначала откройте сессию"),false);return;}
         showPackages(profile);
     }
-    private void showProjectFiles() {
+    private void showProjectFiles(){showProjectFiles(null);}
+    private void showProjectFiles(WorkspaceSidebar origin) {
 
         TerminalSession terminal=activity.getCurrentSession();WorkspaceStore.Session profile=terminal==null?null:store.findByHandle(terminal.mHandle);
         if(profile==null){activity.showToast(WorkspaceText.tr("Сначала откройте сессию"),false);return;}
@@ -644,13 +676,14 @@ public final class WorkspaceController {
         if(agentChatUi!=null&&agentChatUi.showing()){
             WorkspaceFileBrowser browser=new WorkspaceFileBrowser(activity,profile,directory,null);
             browser.projectPanel=new AgentProjectPanel(activity,profile,directory,agentChatUi.projectSource());
-            browser.setOnClosed(()->fileBrowsers.remove(browser));fileBrowsers.add(browser);browser.show();
+            browser.setOnClosed(()->{fileBrowsers.remove(browser);if(origin!=null)origin.resume();});fileBrowsers.add(browser);if(origin!=null)origin.suspend();try{browser.show();}catch(RuntimeException failed){browser.close();throw failed;}
         }else showFileBrowser(profile,directory,null);
     }
     private void showFileBrowser(WorkspaceStore.Session profile,String path,WorkspaceFileBrowser.DirectoryChoice choice){
         WorkspaceFileBrowser browser=new WorkspaceFileBrowser(activity,profile,path,choice);browser.setOnClosed(()->fileBrowsers.remove(browser));fileBrowsers.add(browser);browser.show();
     }
     private void renderContent() {
+        if(libraryWindow!=null){renderLibraryWindow();return;}
         if (screen == Screen.TERMINAL) {
             content.setVisibility(View.GONE);activity.getDrawer().setVisibility(View.VISIBLE);
             return;
@@ -805,7 +838,7 @@ public final class WorkspaceController {
         renderLibraryResults();
     }
     private void renderLibraryResults() {
-        if (screen != Screen.COMMANDS || commandResults == null || noteResults == null) return;
+        if ((screen != Screen.COMMANDS && libraryWindowSection<0) || commandResults == null || noteResults == null) return;
         commandResults.removeAllViews(); noteResults.removeAllViews();
         int count = 0;
         if(librarySection==1){
@@ -2013,9 +2046,9 @@ public final class WorkspaceController {
         if(anchor==null){confirm(restartWarning,restart);return;}
         if(live==null||!live.isRunning())return;
         WorkspacePopover popup=new WorkspacePopover(activity).animated();
-        popup.label(tr("Вы хотите перезапустить чат?","Do you want to restart the chat?"));
-        popup.label(tr("Выполняемая задача будет остановлена. История и настройки сохранятся.","The running task will stop. History and settings will be retained."));
-        popup.item(tr("Нет","No"),0,()->{});popup.item(tr("Да","Yes"),0,restart);popup.showBelow(anchor);
+        popup.label(agent?tr("Вы хотите перезапустить чат?","Do you want to restart the chat?"):tr("Вы хотите перезапустить сессию?","Do you want to restart the session?"));
+        popup.label(agent?tr("Выполняемая задача будет остановлена. История и настройки сохранятся.","The running task will stop. History and settings will be retained."):tr("Текущая команда будет остановлена. Рабочий стол и другие сессии продолжат работу.","The current command will stop. The desktop and other sessions will keep running."));
+        popup.choices(tr("Нет","No"),tr("Да","Yes"),restart);popup.showBelow(anchor);
     }
     private void sessionMenu(WorkspaceStore.Session s) { sessionMenu(s, false); }
     private void sessionMenu(WorkspaceStore.Session s, boolean terminalTab) {
@@ -2342,6 +2375,7 @@ public final class WorkspaceController {
         search.setOnClickListener(v->openSearchKeyboard.run());
         search.setOnFocusChangeListener((v,focused)-> {if(focused)openSearchKeyboard.run();});
         picker.setOnShowListener(d -> {
+            AgentLaunchForm.style(picker);
             // AlertController does not inspect customTitle for text editors.
             picker.getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
             picker.getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE | android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN);
@@ -2682,7 +2716,7 @@ public final class WorkspaceController {
         show(Screen.TERMINAL, true); return true;
     }
     public void close() {
-        if(sidebar!=null)sidebar.dialog.dismiss();if(dictation!=null)dictation.clear();
+        if(sidebar!=null)sidebar.dispose();closeLibraryWindow();if(dictation!=null)dictation.clear();
         WorkspaceDocumentationUi.dispose(activity);
         activity.getTerminalView().setWorkspaceTerminalVisible(false);
         if(transferBorder!=null)transferBorder.active(false);if(agentTerminalBorder!=null)agentTerminalBorder.active(false);if(desktopSessionBar!=null)desktopSessionBar.working(false);servers.close();if(activityLine!=null)activityLine.working(false);

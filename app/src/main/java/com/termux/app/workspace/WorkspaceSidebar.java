@@ -25,9 +25,11 @@ final class WorkspaceSidebar {
     private WorkspaceExpansion expanded;
     private float downX, downY;
     private boolean closing;
+    private boolean suspended;
     private View selectedRow;
     private WorkspacePopover activePopup;
     private final java.util.List<Runnable> sessionRefresh=new java.util.ArrayList<>();
+    void track(Runnable refresh){sessionRefresh.add(refresh);refresh.run();}
     void refreshSessions(){for(Runnable refresh:sessionRefresh)refresh.run();}
 
     WorkspaceSidebar(Context context) {
@@ -68,6 +70,10 @@ final class WorkspaceSidebar {
     }
     private long duration(int ms){return android.animation.ValueAnimator.areAnimatorsEnabled()?ms:0;}
     void dismiss(){if(closing)return;closing=true;scroll.animate().translationX(-width()).setDuration(duration(220)).withEndAction(dialog::dismiss).start();}
+    void dispose(){closing=true;scroll.animate().cancel();if(activePopup!=null)activePopup.dismissImmediately();dialog.dismiss();}
+    void suspend(){if(closing||suspended)return;suspended=true;scroll.animate().cancel();scroll.setTranslationX(0);if(activePopup!=null)activePopup.dismissImmediately();dialog.hide();}
+    void resume(){if(closing||!suspended)return;suspended=false;dialog.show();refreshSessions();}
+    boolean suspended(){return suspended;}
     void section(String title){TextView v=new TextView(context);v.setText(title);v.setTextSize(9);v.setTextColor(0xffa5a5a2);v.setPadding(dp(10),dp(20),0,dp(9));body.addView(v);}
     TextView action(LinearLayout parent,String title,int icon,Runnable callback){
         TextView v=new TextView(context);v.setText(title);v.setTextSize(12);v.setTextColor(0xfff0f0ee);v.setGravity(Gravity.CENTER_VERTICAL);v.setMinHeight(dp(44));v.setPadding(dp(9),dp(10),dp(9),dp(10));

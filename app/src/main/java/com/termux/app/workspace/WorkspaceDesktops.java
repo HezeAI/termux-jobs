@@ -12,12 +12,13 @@ final class WorkspaceDesktops {
  private final BooleanSupplier visible;private final View input;private final Runnable changed,restore;
  private Runnable keyboardChanged=()->{};private boolean closed;
  WorkspaceDesktops(TermuxActivity a,Supplier<WorkspaceStore.Session> s,BooleanSupplier v,View i,Runnable c,Runnable r){activity=a;selected=s;visible=v;input=i;changed=c;restore=r;}
- private WorkspaceDesktop current(boolean create){
-  WorkspaceStore.Session p=selected.get();String target=WorkspaceDesktop.target(p);
+ private WorkspaceDesktop current(boolean create){return channel(selected.get(),create);}
+ private WorkspaceDesktop channel(WorkspaceStore.Session p,boolean create){
+  String target=WorkspaceDesktop.target(p);
   if(closed||!DesktopPrograms.supportsTarget(target))return null;
   WorkspaceDesktop existing=channels.get(target);
   if(existing==null&&create){
-   existing=new WorkspaceDesktop(activity,()->{WorkspaceStore.Session now=selected.get();return target.equals(WorkspaceDesktop.target(now))?now:null;},()->visible.getAsBoolean()&&target.equals(WorkspaceDesktop.target(selected.get())),input,changed,restore);
+   existing=new WorkspaceDesktop(activity,()->{WorkspaceStore.Session now=selected.get();return target.equals(WorkspaceDesktop.target(now))?now:null;},()->visible.getAsBoolean()&&target.equals(WorkspaceDesktop.target(selected.get())),input,changed,restore,target);
    existing.onKeyboardChanged(()->{if(target.equals(WorkspaceDesktop.target(selected.get())))keyboardChanged.run();});channels.put(target,existing);
   }
   return existing;
@@ -44,6 +45,9 @@ final class WorkspaceDesktops {
  boolean programsInstalling(){WorkspaceDesktop c=current(false);return c!=null&&c.programsInstalling()&&!c.programsVisible();}
  void toggle(){WorkspaceDesktop c=current(true);if(c!=null)c.toggle();else menu();}
  void menu(){WorkspaceDesktop c=current(true);if(c!=null)c.menu();else activity.showToast(WorkspaceLanguage.code(activity).equals("ru")?"X11 пока не поддерживается этим окружением.":"X11 is not yet supported in this environment.",true);}
+ void observeExisting(WorkspaceStore.Session p){WorkspaceDesktop c=channel(p,true);if(c!=null)c.observeExisting(p);}
+ boolean running(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));return c!=null&&c.running(p);}
+ void openExisting(){WorkspaceDesktop c=current(false);if(c!=null)c.openExisting(selected.get());}
  boolean usesDesktop(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));return c!=null&&c.usesDesktop(p);}
  int ownerCount(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));return c==null?0:c.ownerCount();}
  void stopDesktop(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));if(c!=null)c.stopDesktop(p);}

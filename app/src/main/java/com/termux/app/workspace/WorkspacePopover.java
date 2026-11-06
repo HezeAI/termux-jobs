@@ -24,6 +24,18 @@ final class WorkspacePopover {
     }
     private int dp(int n){return WorkspaceDialogs.dp(context,n);}
     void item(String title,int icon,Runnable action){TextView row=new TextView(context);row.setText(title);row.setTextSize(12);row.setTextColor(WorkspaceDialogs.TEXT);row.setMinHeight(dp(44));row.setPadding(dp(9),dp(9),dp(9),dp(9));row.setGravity(Gravity.CENTER_VERTICAL);if(icon!=0){android.graphics.drawable.Drawable image=context.getDrawable(icon).mutate();image.setTint(WorkspaceDialogs.MUTED);image.setBounds(0,0,dp(18),dp(18));row.setCompoundDrawables(image,null,null,null);row.setCompoundDrawablePadding(dp(9));}row.setBackground(WorkspaceRipple.background(context,null,8));row.setOnClickListener(v->{if(closing||!window.isShowing())return;dismiss();action.run();});items.addView(row,new LinearLayout.LayoutParams(-1,-2));}
+    void choices(String negative,String positive,Runnable action){
+        LinearLayout row=new LinearLayout(context);row.setBaselineAligned(false);
+        for(int i=0;i<2;i++){
+            final boolean accept=i==1;TextView button=new TextView(context);
+            button.setText(accept?positive:negative);button.setTextSize(12);button.setTextColor(WorkspaceDialogs.TEXT);
+            button.setGravity(Gravity.CENTER);button.setMinHeight(dp(44));button.setPadding(dp(8),dp(8),dp(8),dp(8));
+            button.setBackground(WorkspaceRipple.background(context,null,8));
+            button.setOnClickListener(v->{if(closing||!window.isShowing())return;dismiss();if(accept)action.run();});
+            row.addView(button,new LinearLayout.LayoutParams(0,-2,1));
+        }
+        items.addView(row,new LinearLayout.LayoutParams(-1,-2));
+    }
     void label(String title){TextView text=new TextView(context);text.setText(title);text.setTextSize(12);text.setTextColor(WorkspaceDialogs.TEXT);text.setPadding(dp(9),dp(9),dp(9),dp(9));items.addView(text,new LinearLayout.LayoutParams(-1,-2));}
     void dismissed(Runnable action){onDismiss=action;}
     WorkspacePopover animated(){animated=true;return this;}

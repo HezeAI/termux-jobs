@@ -103,6 +103,14 @@ public class X11Service extends Service {
         // new rootfs/operation can reuse the display or its control directory.
         if((retiring||stopping||phase.equals("stopping"))&&!op.equals("stop")&&!op.equals("session-close")&&!op.equals("detach"))throw new IllegalStateException("X11 is stopping; retry after it has stopped");
         if(phase.equals("cancelling")&&!op.equals("stop")&&!op.equals("cancel")&&!op.equals("session-close")&&!op.equals("detach"))throw new IllegalStateException("X11 installer is stopping; wait for cleanup");
+        if(op.equals("open-existing")){
+            String owner=q.getString("owner","");
+            if(owner.isEmpty()||owner.length()>160||!owner.matches("[A-Za-z0-9_:.-]+"))throw new IllegalArgumentException("Invalid desktop owner");
+            if(!started||!target.equals(q.getString("target","")))throw new IllegalStateException("Desktop is no longer running");
+            // Attach an owner atomically without changing configuration or starting a child.
+            desktopUsers.add(owner);if(desktopOwner.isEmpty())desktopOwner=owner;
+            return snapshot();
+        }
         if(op.equals("session-rebind")){
             String old=q.getString("owner",""),next=q.getString("nextOwner","");
             int split=old.lastIndexOf(':');

@@ -79,7 +79,7 @@ final class WorkspaceFileBrowser {
     private AgentTerminalScreen page;
     private Button pageSelectAll;
     boolean leavePageForNavigation(){if(page==null||!page.isShowing())return true;if(transferring)return false;close();return true;}
-    boolean pageBack(){if(page==null||!page.isShowing())return false;if(!transferring)close();return true;}
+    boolean pageBack(){if(page==null||!page.isShowing())return false;if(!transferring&&(projectPanel==null||!projectPanel.back()))close();return true;}
     private final List<WorkspaceTextEditor> editors=new ArrayList<>();
     private LinearLayout rows,filters;private TextView pathLabel,message;private EditText search;
     private ProjectFiles.Listing listing;private String path,filter=WorkspaceText.tr("Все");private volatile boolean closed;private boolean busy,transferring;
@@ -126,7 +126,7 @@ final class WorkspaceFileBrowser {
         if(projectPanel!=null){LinearLayout.LayoutParams p=(LinearLayout.LayoutParams)scroll.getLayoutParams();p.height=0;p.weight=1;scroll.setLayoutParams(p);}
         if(projectPanel!=null){
             View panel=projectPanel.wrap(body,show->{filesTabVisible=show;updateTransfer();},this::load);
-            page=new AgentTerminalScreen(activity,projectPanel.title(),files.profile.name+" · "+path,t("Вернуться в чат","Return to chat"),"project-files-screen",()->pageBack());
+            page=new AgentTerminalScreen(activity,projectPanel.title(),files.profile.name+" · "+path,t("Назад","Back"),"project-files-screen",()->pageBack());
             LinearLayout pageBody=column();pageBody.addView(panel,new LinearLayout.LayoutParams(-1,0,1));
             pageSelectAll=new Button(activity);pageSelectAll.setText(t("Выбрать всё","Select all"));pageSelectAll.setTextColor(WorkspaceDialogs.TEXT);pageSelectAll.setBackground(WorkspaceDialogs.background(activity,false));pageSelectAll.setOnClickListener(v->selectAllVisible());pageBody.addView(pageSelectAll,new LinearLayout.LayoutParams(-1,-2));
             page.body(pageBody);page.setOnDismissListener(this::close);projectPanel.dismiss=this::close;page.show();updateTransfer();

@@ -35,8 +35,13 @@ public class RedesignDesktopOwnershipTest {
   state.getStringArrayList("desktopOwners").add("two:h2");assertTrue(ui.usesDesktop(other));assertFalse(ui.owns(first));assertEquals(2,ui.ownerCount());
  }
  @Test public void headerCancelAndChangedSelectionNeverStartDesktop(){
-  visible=true;ui.toggle();AlertDialog prompt=ShadowAlertDialog.getLatestAlertDialog();assertNotNull(prompt);prompt.getButton(-2).performClick();Shadows.shadowOf(Looper.getMainLooper()).idle();assertTrue(calls.isEmpty());
+  state.putBoolean("started",false);visible=true;ui.toggle();AlertDialog prompt=ShadowAlertDialog.getLatestAlertDialog();assertNotNull(prompt);prompt.getButton(-2).performClick();Shadows.shadowOf(Looper.getMainLooper()).idle();assertTrue(calls.isEmpty());
   ui.toggle();prompt=ShadowAlertDialog.getLatestAlertDialog();selected[0]=other;prompt.getButton(-1).performClick();Shadows.shadowOf(Looper.getMainLooper()).idle();assertTrue(calls.isEmpty());assertEquals("h1",first.handle);assertEquals("h2",other.handle);
+ }
+ @Test public void runningDesktopUsesOnlyAtomicOpenExistingAndReturnSendsNothing()throws Exception{
+  visible=true;assertTrue(ui.running(first));ui.toggle();Field f=WorkspaceDesktop.class.getDeclaredField("calls");f.setAccessible(true);((ExecutorService)f.get(ui)).submit(()->{}).get(3,TimeUnit.SECONDS);
+  assertEquals(1,calls.size());assertEquals("open-existing",calls.get(0).getString("op"));assertEquals("one:h1",calls.get(0).getString("owner"));ui.toggle();assertFalse(ui.showing());assertEquals(1,calls.size());
+  state.putBoolean("started",false);ui.openExisting(first);assertEquals(1,calls.size());assertFalse(ui.running(first));
  }
  @Test public void cancellingStopAndStaleConfirmationSendNothing(){
   ui.stopDesktop(first);AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();assertNotNull(dialog);dialog.getButton(-2).performClick();Shadows.shadowOf(Looper.getMainLooper()).idle();assertTrue(calls.isEmpty());

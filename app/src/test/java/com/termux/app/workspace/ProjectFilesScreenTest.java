@@ -14,4 +14,14 @@ public class ProjectFilesScreenTest {
    Field transfer=WorkspaceFileBrowser.class.getDeclaredField("transferring");transfer.setAccessible(true);transfer.setBoolean(browser,true);assertFalse(browser.leavePageForNavigation());assertNotNull(page.getParent());transfer.setBoolean(browser,false);assertTrue(browser.leavePageForNavigation());assertNull(host.findViewWithTag("project-files-screen"));assertEquals(originalChildren,host.getChildCount());assertEquals(1,closed[0]);assertFalse(browser.pageBack());
   }a.finish();
  }
+ @Test public void backFromDiffPreservesProjectPageQueryListingAndReturnOrigin()throws Exception{
+  TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.setContentView(R.layout.activity_termux);int[] closed={0};
+  AgentProjectPanel.Chat chat=new AgentProjectPanel.Chat(){public boolean valid(){return closed[0]==0;}public List<JSONObject> rows(){return Collections.emptyList();}public boolean hasOlder(){return false;}public void older(){fail();}public void open(JSONObject file){fail();}public boolean jump(String key){return false;}public void observe(Runnable r){}public void close(){closed[0]++;}};
+  AgentProjectPanel.Backend backend=new AgentProjectPanel.Backend(){public byte[] read(String s,int n){return new byte[0];}public void close(){}};
+  WorkspaceStore.Session p=new WorkspaceStore.Session();WorkspaceFileBrowser browser=new WorkspaceFileBrowser(a,p,"/fixture",null);Field busy=WorkspaceFileBrowser.class.getDeclaredField("busy");busy.setAccessible(true);busy.setBoolean(browser,true);AgentProjectPanel panel=new AgentProjectPanel(a,p,"/fixture",chat,backend);browser.projectPanel=panel;
+  WorkspaceSidebar origin=new WorkspaceSidebar(a);origin.show();origin.suspend();browser.setOnClosed(origin::resume);browser.show();ProjectChanges.Listing list=new ProjectChanges.Listing();list.state="OK";list.root="/fixture";list.head="HEAD";ProjectChanges.Entry entry=new ProjectChanges.Entry("src/a.java"," M");list.entries.add(entry);panel.listing=list;panel.select(2);panel.gitSearch.setText("src/");panel.selectedDiff=entry;panel.diffLoading=true;int serial=panel.gitSerial;
+  assertTrue(browser.pageBack());assertNull(panel.selectedDiff);assertFalse(panel.diffLoading);assertTrue(panel.gitSerial>serial);assertSame(list,panel.listing);assertEquals("src/",panel.gitQuery);assertEquals(2,panel.selected);assertNotNull(a.findViewById(R.id.activity_termux_root_relative_layout).findViewWithTag("project-files-screen"));assertEquals(0,closed[0]);assertTrue(origin.suspended());
+  assertTrue(browser.pageBack());assertEquals(1,closed[0]);assertFalse(origin.suspended());assertTrue(origin.dialog.isShowing());assertFalse(browser.pageBack());origin.dispose();a.finish();
+ }
+
 }

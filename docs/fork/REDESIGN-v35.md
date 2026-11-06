@@ -1,3 +1,39 @@
+## Новая партия после1500 — 18 пунктов (1501/test6)
+
+Источник: NEXT-UI-FIXES.txt и дополнение18 пользователя. Номера относятся
+только к этой партии. Резерв1499 не трогать; без установки/публикации/рабочих перезапусков.
+
+| № | Изменение | Реализация | Локально | Телефон |
+| --- | --- | --- | --- | --- |
+| 1 | Исследование выхода на Android Home при прокрутке Codex | Только исследование; исправление исключено из ближайшей сборки до подтверждённой причины и решения | Crash buffer прочитан: пустой; причина не установлена | Сообщён симптом, воспроизведение не подтверждено |
+| 2 | Вектор Open chat | Реализовано; ожидает телефона | Вектор в финальном APK, source/переходы | Ожидается |
+| 3 | Terminal icon/label/header spacing | Реализовано; ожидает телефона | WorkspaceRestartUiTest: шапка/переходы | Ожидается |
+| 4 | Горизонтальное No/Yes перезапуска | Реализовано; ожидает телефона | WorkspaceRestartUiTest: No/Yes и отмена | Ожидается |
+| 5 | Читаемость модели/рассуждения | Реализовано; ожидает телефона | 12sp и перенос в коде; геометрия — итог в отчёте, метрики телефона не подтверждены | Ожидается |
+| 6 | Размеры/ось composer без изменения лимитов | Реализовано; ожидает телефона | AgentComposerControlsTest: цели44dp/ось; лимиты побайтово прежние | Ожидается |
+| 7 | Back из diff в Changes с scroll/filter | Реализовано; ожидает телефона | ProjectFilesScreenTest: diff→Changes, query/scroll, поздний ответ | Ожидается |
+| 8 | Библиотеки в нижних окнах | Реализовано; ожидает телефона | WorkspaceNavigationTest/WorkspaceAliasesUiTest: отдельные списки и операции | Ожидается |
+| 9 | Return terminal в активном X11 | Реализовано; ожидает телефона | RedesignDesktopOwnershipTest: возврат без stop | Ожидается |
+| 10 | Restart терминала в шапке | Реализовано; ожидает телефона | WorkspaceRestartUiTest и штатные restart guard fixtures | Ожидается |
+| 11 | Restart вместо gear X11 | Реализовано; ожидает телефона | WorkspaceRestartUiTest: шапка; существующие fullscreen/rotation fixtures | Ожидается |
+| 12 | Return existing desktop без повторного запуска | Реализовано; ожидает телефона | X11ExistingDesktopTest: atomic open-existing; реальный Android bind не проверен | Ожидается |
+| 13 | Open desktop из другой записи | Реализовано; ожидает телефона | RedesignDesktopOwnershipTest, dynamic visibility/source; общий desktop на телефоне не проверен | Ожидается |
+| 14 | Единый компьютер | Реализовано; ожидает телефона | Общий workspace_desktop в источниках и APK | Ожидается |
+| 15 | Возврат к исходному раскрытому sidebar, nested stack | Реализовано; ожидает телефона | ProjectFilesScreenTest/RedesignNavigationTest: тот же sidebar, nested Back, scroll/disclosure | Ожидается |
+| 16 | Return other running agent chat | Реализовано; ожидает телефона | WorkspaceRestartUiTest/source: Return для другого running chat | Ожидается |
+| 17 | Чёрный output/extra keys, остальные поверхности прежние | Реализовано; ожидает телефона | WorkspaceExtraKeysStyleTest: Black/press/cancel; scope output по source diff | Ожидается |
+| 18 | Landing новых user/timeline, не истории | Реализовано; ожидает телефона | AgentArrivalTest: четыре агента, кадр/interpolation, old/hidden/disabled/anchor | Ожидается |
+
+Выполненный локальный план: сначала navigation/Back и X11 ownership по существующим событиям;
+затем оболочки библиотек/composer/output/motion. Использованы искусственные профили и mock
+signals; целевые тесты переходов/скролла/отмены/IME/поворота, полный применимый
+JVM набор, RU/EN, Modern Lint5 модулей. Финальный1501: подпись/ZIP/version/ABI/runtime,
+шаблоны/ELF stable/SHA и Download readback. Причина пункта1 пока не установлена.
+
+[Итоговые прогоны, исходные отказы и ограничения](VALIDATION-2.1.5-test6.md).
+
+---
+
 ## Замечания телефона к1498 — следующий тест (15 пунктов)
 
 Телефонные замечания пользователя — источник новых требований, не локальная приёмка.

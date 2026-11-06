@@ -40,6 +40,21 @@ final class AgentChatView extends LinearLayout {
     Boolean actionChoice(JSONArray rows){Set<String> keys=new HashSet<>();for(int i=0;i<rows.length();i++){JSONObject row=rows.optJSONObject(i);if(row!=null)keys.add(choiceKey(row));}Boolean choice=null;for(Map.Entry<String,Boolean> entry:timelineExpansion.entrySet())if(keys.contains(entry.getKey()))choice=entry.getValue();return choice;}
     private boolean touchingTimeline;
     private boolean seenLiveSnapshot;
+    private final Set<String> arrivalSeen=new HashSet<>(),arrivalActions=new HashSet<>();
+    private final Map<View,android.animation.ValueAnimator> landings=new HashMap<>();
+    private void land(View item){
+        if(item==null||!isAttachedToWindow()||!isShown()||getWindowVisibility()!=VISIBLE||!android.animation.ValueAnimator.areAnimatorsEnabled())return;
+        android.animation.ValueAnimator animation=android.animation.ValueAnimator.ofFloat(0,1);landings.put(item,animation);
+        item.setTranslationY(-dp(8));item.setAlpha(0);animation.setDuration(210);animation.setInterpolator(new android.view.animation.DecelerateInterpolator());
+        animation.addUpdateListener(frame->{float progress=(float)frame.getAnimatedValue();item.setAlpha(progress);item.setTranslationY(-dp(8)*(1-progress));});
+        animation.addListener(new android.animation.AnimatorListenerAdapter(){@Override public void onAnimationEnd(android.animation.Animator a){if(landings.get(item)==animation){landings.remove(item);item.setAlpha(1);item.setTranslationY(0);}}});animation.start();
+    }
+    private void finishArrivals(){if(landings==null)return;for(android.animation.ValueAnimator animation:new ArrayList<>(landings.values()))animation.cancel();}
+    @Override protected void onVisibilityChanged(View changed,int visibility){super.onVisibilityChanged(changed,visibility);if(!isShown()){finishArrivals();seenLiveSnapshot=false;}}
+    @Override protected void onWindowVisibilityChanged(int visibility){super.onWindowVisibilityChanged(visibility);if(visibility!=VISIBLE){finishArrivals();seenLiveSnapshot=false;}}
+
+    void historyBaseline(){seenLiveSnapshot=false;finishArrivals();}
+    @Override protected void onDetachedFromWindow(){finishArrivals();seenLiveSnapshot=false;super.onDetachedFromWindow();}
     private void revealLayout(){if(!touchingTimeline&&position().bottom){followLayout=true;bottomAfterLayout();}}
     void liveRows(List<JSONObject> rows,boolean older,boolean busy){boolean animate=seenLiveSnapshot;seenLiveSnapshot=true;rows(rows,older,animate);}
     final AgentProgressView execution;
@@ -80,7 +95,7 @@ final class AgentChatView extends LinearLayout {
     void bottomAfterLayout(){queuePosition(new Position(null,0,0,true));}
     void followAfterSend(){followNextRows=true;followLayout=true;bottomAfterLayout();}
     AgentChatView(Context c,Consumer<JSONObject> open,Runnable loadOlder,Runnable sendShell,Runnable terminal,Runnable interrupt){
-        super(c);this.open=open;setOrientation(VERTICAL);setBackgroundColor(WorkspaceDialogs.BG);
+        super(c);this.open=open;setOrientation(VERTICAL);setBackgroundColor(android.graphics.Color.BLACK);
         status=label("",12);status.setMaxLines(2);status.setEllipsize(android.text.TextUtils.TruncateAt.END);status.setTag("agent-model-connection");status.setVisibility(GONE);status.setBackground(WorkspaceDialogs.background(c,false));
         scroll=new ScrollView(c){
             @Override public boolean dispatchTouchEvent(MotionEvent e){
@@ -131,14 +146,14 @@ final class AgentChatView extends LinearLayout {
     void olderRows(List<JSONObject> rows,boolean hasOlder){boolean fits=timeline.getHeight()<=scroll.getHeight();Position held=position();rows(rows,hasOlder);restorePosition(fits?new Position(null,0,0,false):new Position(held.anchor,held.offset,held.y,false,held.step));}
     boolean canReveal(String key){return views.containsKey(key);}
     boolean reveal(String key){if(!views.containsKey(key))return false;restorePosition(new Position(key,headerInset,0,false));return true;}
-    void clear(){seenLiveSnapshot=false;timelineExpansion.clear();olderState(false,null);cancelRestore();touchingTimeline=false;followNextRows=false;followLayout=false;views.clear();values.clear();data.clear();timeline.removeViews(1,timeline.getChildCount()-1);clearRequests();timeline.addView(requests);timeline.addView(execution);scroll.scrollTo(0,0);}
+    void clear(){finishArrivals();arrivalSeen.clear();arrivalActions.clear();seenLiveSnapshot=false;timelineExpansion.clear();olderState(false,null);cancelRestore();touchingTimeline=false;followNextRows=false;followLayout=false;views.clear();values.clear();data.clear();timeline.removeViews(1,timeline.getChildCount()-1);clearRequests();timeline.addView(requests);timeline.addView(execution);scroll.scrollTo(0,0);}
     void rows(List<JSONObject> rows,boolean hasOlder){rows(rows,hasOlder,false);}
     private void rows(List<JSONObject> rows,boolean hasOlder,boolean animate){
         rows=AgentMessageTime.captions(rows);
         if(codexActions)rows=CodexActionTimeline.group(rows,groupAllTools);
         Position held=position();final boolean bottom=!touchingTimeline&&(followNextRows||held.bottom);
-        boolean changed=false;Set<String> present=new HashSet<>();int index=1;
-        for(JSONObject r:rows){String key=r.optString("key");present.add(key);data.put(key,r);String value=r.toString()+(codexActions?WorkspaceLanguage.code(getContext()):"");
+        boolean changed=false;Set<String> present=new HashSet<>();Set<String> arriving=new HashSet<>();int index=1;
+        for(JSONObject r:rows){String key=r.optString("key");String arrivalType=r.optString("kind");boolean userAttachment=arrivalType.equals("attachment")&&r.optString("messageSender").equals("user");if(arrivalType.equals("user")||arrivalType.equals("actionGroup")||userAttachment){String identity=arrivalType+":"+(arrivalType.equals("user")?(r.optString("message").isEmpty()?key:r.optString("message")):key);boolean fresh=arrivalSeen.add(identity);if(arrivalType.equals("actionGroup")){JSONArray steps=r.optJSONArray("steps");if(steps!=null)for(int i=0;i<steps.length();i++){JSONObject step=steps.optJSONObject(i);if(step!=null&&!arrivalActions.add(choiceKey(step)))fresh=false;}}if(fresh&&animate)arriving.add(key);}present.add(key);data.put(key,r);String value=r.toString()+(codexActions?WorkspaceLanguage.code(getContext()):"");
             if(r.optString("kind").equals("completionTime")){
                 TextView caption=views.get(key) instanceof TextView?(TextView)views.get(key):label("",11);
                 String signature=value+java.util.TimeZone.getDefault().getID()+WorkspaceLanguage.code(getContext())+android.text.format.DateFormat.is24HourFormat(getContext());
@@ -196,12 +211,13 @@ final class AgentChatView extends LinearLayout {
                 t.setTextIsSelectable(!chip&&!error);
                 if(kind.equals("text")){if(markdown==null)markdown=fileMarkdown();android.text.SpannableStringBuilder formatted=new android.text.SpannableStringBuilder(assistant+": ");formatted.append(markdown.toMarkdown(AgentMarkdown.checkboxes(shown)));if(r.optBoolean("more"))formatted.append(tr("\nНажмите для полного текста…","\nTap for full text…"));((AgentLinkTextView)t).animateNextText(animate,this::revealLayout);markdown.setParsedMarkdown(t,formatted);}
                 final String k=key;t.setOnClickListener(error||chip||r.optBoolean("more")?v->{JSONObject row=data.get(k);if(row!=null)open.accept(row);}:null);t.setTextSize(chip?12:14);t.setTypeface(chip?Typeface.DEFAULT:Typeface.DEFAULT);
-                GradientDrawable bg=new GradientDrawable();bg.setColor(error?0xff241416:chip?0xff232426:WorkspaceDialogs.BG);bg.setCornerRadius(error?dp(12):chip?dp(22):0);bg.setStroke(dp(1),error?0xff704343:chip?0xff393a3c:kind.equals("user")?0xff393a3c:WorkspaceDialogs.BG);t.setBackground(bg);
+                GradientDrawable bg=new GradientDrawable();bg.setColor(error?0xff241416:chip?0xff232426:android.graphics.Color.BLACK);bg.setCornerRadius(error?dp(12):chip?dp(22):0);bg.setStroke(dp(1),error?0xff704343:chip?0xff393a3c:kind.equals("user")?0xff393a3c:android.graphics.Color.BLACK);t.setBackground(bg);
                 LayoutParams lp=new LayoutParams(chip?-2:-1,-2);lp.setMargins(0,dp(6),0,dp(chip?3:10));lp.gravity=Gravity.START;t.setLayoutParams(lp);
             }
             if(t.getParent()==null){changed=true;timeline.addView(t,index);}else if(timeline.indexOfChild(t)!=index){changed=true;timeline.removeView(t);timeline.addView(t,index);}index++;
         }
         for(String key:new ArrayList<>(views.keySet()))if(!present.contains(key)){changed=true;timeline.removeView(views.remove(key));values.remove(key);data.remove(key);}
+        for(String key:arriving)land(views.get(key));
         older.setVisibility(hasOlder?VISIBLE:GONE);
         scaleContent();
         if(changed){if(bottom)followLayout=true;followNextRows=false;queuePosition(bottom?new Position(null,0,0,true):new Position(held.anchor,held.offset,held.y,false,held.step));}

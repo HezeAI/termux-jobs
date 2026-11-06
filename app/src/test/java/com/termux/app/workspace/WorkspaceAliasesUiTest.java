@@ -27,6 +27,7 @@ public class WorkspaceAliasesUiTest {
     private Object call(String name,Class<?>[] types,Object... args)throws Exception{Method m=WorkspaceController.class.getDeclaredMethod(name,types);m.setAccessible(true);Object r=m.invoke(c,args);shadowOf(Looper.getMainLooper()).idle();return r;}
     private static TextView text(View root,String value){if(root instanceof TextView&&((TextView)root).getText().toString().equals(value))return (TextView)root;if(root instanceof ViewGroup)for(int i=0;i<((ViewGroup)root).getChildCount();i++){TextView found=text(((ViewGroup)root).getChildAt(i),value);if(found!=null)return found;}return null;}
     private static EditText input(View root,String description){if(root instanceof EditText&&description.contentEquals(root.getContentDescription()))return (EditText)root;if(root instanceof ViewGroup)for(int i=0;i<((ViewGroup)root).getChildCount();i++){EditText found=input(((ViewGroup)root).getChildAt(i),description);if(found!=null)return found;}return null;}
+    private View libraryContent()throws Exception{Field f=WorkspaceController.class.getDeclaredField("libraryContent");f.setAccessible(true);return (View)f.get(c);}
     private WorkspaceStore.Alias alias(){WorkspaceStore.Alias v=new WorkspaceStore.Alias();v.name="ll";v.command="ls -lah\nprintf 'full preview'";v.category="Files";v.environment="fedora";s.aliases.add(v);return v;}
     @Test public void creationMenuHasOutlinedChoicesAndAliasEditorExplainsPersistence()throws Exception{
         call("openLibrary",new Class<?>[]{int.class},1);call("newLibraryEntry",new Class<?>[]{});
@@ -35,8 +36,8 @@ public class WorkspaceAliasesUiTest {
     }
     @Test public void libraryFiltersAndCategoriesSeparateCommandsAliasesAndNotes()throws Exception{
         alias();WorkspaceStore.Command cmd=new WorkspaceStore.Command();cmd.name="ordinary";cmd.command="pwd";cmd.category="Build";s.commands.add(cmd);
-        call("show",new Class<?>[]{Class.forName("com.termux.app.workspace.WorkspaceController$Screen"),boolean.class},Enum.valueOf((Class)Class.forName("com.termux.app.workspace.WorkspaceController$Screen"),"COMMANDS"),true);
-        View root=a.findViewById(R.id.workspace_content);assertNotNull(text(root,"ordinary"));assertNull(text(root,"Все Alias"));call("openLibrary",new Class<?>[]{int.class},1);root=a.findViewById(R.id.workspace_content);assertNotNull(text(root,"ll"));assertNull(text(root,"ordinary"));
+        call("openLibrary",new Class<?>[]{int.class},0);
+        View root=libraryContent();assertNotNull(text(root,"ordinary"));assertNull(text(root,"Все Alias"));call("openLibrary",new Class<?>[]{int.class},1);root=libraryContent();assertNotNull(text(root,"ll"));assertNull(text(root,"ordinary"));
         call("chooseLibraryCategory",new Class<?>[]{});AlertDialog categories=ShadowAlertDialog.getLatestAlertDialog();View menu=categories.getWindow().getDecorView();assertNull(text(menu,"Категории команд"));assertNull(text(menu,"Категории Alias"));assertEquals("Files",categories.getListView().getItemAtPosition(1));categories.dismiss();call("openLibrary",new Class<?>[]{int.class},0);call("chooseLibraryCategory",new Class<?>[]{});categories=ShadowAlertDialog.getLatestAlertDialog();assertEquals("Build",categories.getListView().getItemAtPosition(1));
     }
     @Test public void termuxRestartHintIsOnlyVisibleForTermuxAndDeleteUsesSameScope()throws Exception{
@@ -53,9 +54,9 @@ public class WorkspaceAliasesUiTest {
     @Test public void favoritesAreIndependentVirtualCategoriesAndAliasToggleOnlyChangesMetadata()throws Exception{
         WorkspaceStore.Alias value=alias();WorkspaceStore.Command command=new WorkspaceStore.Command();command.name="favorite command";command.command="pwd";command.favorite=true;s.commands.add(command);
         call("openAlias",new Class<?>[]{WorkspaceStore.Alias.class,Runnable.class},value,null);AlertDialog preview=ShadowAlertDialog.getLatestAlertDialog();text(preview.getWindow().getDecorView(),"В избранное").performClick();assertTrue(value.favorite);
-        call("openLibrary",new Class<?>[]{int.class},1);text(a.findViewById(R.id.workspace_content),"Избранное").performClick();
+        call("openLibrary",new Class<?>[]{int.class},1);text(libraryContent(),"Избранное").performClick();
         Field af=WorkspaceController.class.getDeclaredField("aliasFavorites"),cf=WorkspaceController.class.getDeclaredField("favorites");af.setAccessible(true);cf.setAccessible(true);assertTrue(af.getBoolean(c));assertFalse(cf.getBoolean(c));
-        call("openLibrary",new Class<?>[]{int.class},0);text(a.findViewById(R.id.workspace_content),"Избранное").performClick();assertTrue(cf.getBoolean(c));assertTrue(af.getBoolean(c));
+        call("openLibrary",new Class<?>[]{int.class},0);text(libraryContent(),"Избранное").performClick();assertTrue(cf.getBoolean(c));assertTrue(af.getBoolean(c));
     }
     @Test public void aliasSelectionHasSearchAndFullPreviewWithoutManagementOrSending()throws Exception{
         WorkspaceStore.Alias outside=alias();WorkspaceStore.Alias value=alias();value.environment="termux";call("chooseInputCommand",new Class<?>[]{int.class},1);AlertDialog picker=ShadowAlertDialog.getLatestAlertDialog();View root=picker.getWindow().getDecorView();assertNull(root.findViewWithTag("input-library-tabs"));assertEquals(1,picker.getListView().getCount());assertSame(value,picker.getListView().getItemAtPosition(0));

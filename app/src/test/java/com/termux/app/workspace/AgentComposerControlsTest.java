@@ -38,10 +38,26 @@ public class AgentComposerControlsTest {
   for(boolean agent:new boolean[]{true,false,true})for(int height:new int[]{800,430,800}){controls.present(agent);for(int i=0;i<2;i++){root.measure(View.MeasureSpec.makeMeasureSpec(320,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));root.layout(0,0,320,height);}assertEquals(height,host.getBottom());assertEquals(height,row.getBottom());assertEquals(row.getHeight(),inset.get());assertNotNull(row.getBackground());assertTrue(row.isClickable());assertEquals("draft\nmore",input.getText().toString());assertEquals(3,input.getSelectionStart());}
  }
  @Test public void iconsAndRightActionsShareAxisAndQueueIsAbsent(){
-  WorkspaceLanguage.select(a,"en");LinearLayout model=new LinearLayout(a);TextView title=new TextView(a);title.setText("Model / High");title.setTextSize(9.5f);model.addView(title);controls.actions(model,new View(a),()->fail("queue UI"),()->{},n->{},v->{},v->{});controls.present(true);measure(440);
+  WorkspaceLanguage.select(a,"en");LinearLayout model=new LinearLayout(a);TextView title=new TextView(a);title.setText("Model / High");title.setTextSize(12f);model.addView(title);controls.actions(model,new View(a),()->fail("queue UI"),()->{},n->{},v->{},v->{});controls.present(true);measure(440);
   View note=row.findViewWithTag("agent-notes-input"),mic=row.findViewWithTag("agent-voice-input");assertTrue(note instanceof WorkspaceIconButton);assertTrue(mic instanceof WorkspaceIconButton);assertNull(text(row,"Queue"));assertNull(text(row,"Notes"));
   for(View v:new View[]{note,mic,model,send})assertEquals(clip.getTop()+clip.getHeight()/2,v.getTop()+v.getHeight()/2,1);
   assertTrue(note.getWidth()>=WorkspaceDialogs.dp(a,44));assertTrue(note.getHeight()>=WorkspaceDialogs.dp(a,44));
+ }
+
+ @Test public void compactModelKeepsReadableTypeAndIndependentTargetsAtNarrowWidths(){
+  LinearLayout model=new LinearLayout(a);model.setTag("composer-model-status");
+  TextView title=AgentStatusUi.chip(a,String.join("",java.util.Collections.nCopies(4,"claude-opus-long-model-name / высокий уровень рассуждения ")),"Model",()->{});AgentStatusUi.attach(model,title);
+  assertEquals(12,title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity,.01);assertNull(title.getEllipsize());assertEquals(Integer.MAX_VALUE,title.getMaxLines());
+  // Robolectric 4.4 does not supply physical glyph advances (a long wrapped label can measure as padding only).
+  // Supply an explicit desired text width to test narrow layout allocation; phone typography is a separate check.
+  title.setMinWidth(WorkspaceDialogs.dp(a,132));
+  controls.actions(model,new View(a),()->{},()->{},n->{},v->{},v->{});controls.present(true);
+  for(int size:new int[]{12,18,24})for(int width:new int[]{240,320,440}){
+   title.setTextSize(size);measure(width);View mic=row.findViewWithTag("agent-voice-input");
+   for(View button:new View[]{clip,row.findViewWithTag("agent-notes-input"),mic,send}){assertEquals(WorkspaceDialogs.dp(a,44),button.getWidth());assertEquals(WorkspaceDialogs.dp(a,44),button.getHeight());}
+   String geometry="width="+width+" size="+size+" model="+model.getLeft()+","+model.getTop()+","+model.getRight()+","+model.getBottom()+" mic="+mic.getLeft()+","+mic.getTop()+","+mic.getRight()+" send="+send.getLeft()+","+send.getTop();assertTrue(geometry,model.getWidth()>=WorkspaceDialogs.dp(a,84));assertTrue(geometry,model.getRight()<=mic.getLeft());assertTrue(geometry,mic.getRight()<=send.getLeft());assertEquals(geometry,mic.getTop()+mic.getHeight()/2,send.getTop()+send.getHeight()/2);
+   assertEquals(size,title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity,.01);
+  }
  }
 
 }

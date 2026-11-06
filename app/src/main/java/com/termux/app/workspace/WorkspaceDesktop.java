@@ -102,7 +102,8 @@ final class WorkspaceDesktop {
         @Override public void onServiceDisconnected(ComponentName n){if(closed)return;if(bound){activity.unbindService(this);bound=false;}remote=null;launchAfterCheck=null;clearPreparation();state=new Bundle();installed.clear();graphical.clear();shownTargets.clear();dismissProgress();programs.failed();sync();changed.run();activity.showToast(tr("X11 остановлен. Терминальная сессия продолжает работу.","X11 stopped. The terminal session is still running."),true);}
         @Override public void onBindingDied(ComponentName n){onServiceDisconnected(n);if(bound){activity.unbindService(this);bound=false;}}
     };
-    WorkspaceDesktop(TermuxActivity a,Supplier<WorkspaceStore.Session> s,BooleanSupplier v,View input,Runnable changed,Runnable restore){activity=a;selected=s;visible=v;this.input=input;this.changed=changed;this.restore=restore;extraKeys=new DesktopExtraKeys(a,()->keyboardChanged.run());fullscreen=new DesktopFullscreen(a,this::keyboard,this::keyboardEnabled,this::observeIme,this::extraKeys,this::extraKeysVisible);migrateRetiredStyle();wrapper=new WorkspaceDesktopWrapper(a,WorkspaceDesktopWrapper.bridgeSupported(target(s.get()))?target(s.get()):"termux");programs=new WorkspaceDesktopPrograms(a,(op,id)->ensure(op,programsProfile(),id),()->{},this::maintenance);if(Build.VERSION.SDK_INT>=30)activity.getWindow().getDecorView().getViewTreeObserver().addOnPreDrawListener(imeObserver);}
+    WorkspaceDesktop(TermuxActivity a,Supplier<WorkspaceStore.Session> s,BooleanSupplier v,View input,Runnable changed,Runnable restore){this(a,s,v,input,changed,restore,target(s.get()));}
+    WorkspaceDesktop(TermuxActivity a,Supplier<WorkspaceStore.Session> s,BooleanSupplier v,View input,Runnable changed,Runnable restore,String channelTarget){activity=a;selected=s;visible=v;this.input=input;this.changed=changed;this.restore=restore;extraKeys=new DesktopExtraKeys(a,()->keyboardChanged.run());fullscreen=new DesktopFullscreen(a,this::keyboard,this::keyboardEnabled,this::observeIme,this::extraKeys,this::extraKeysVisible);migrateRetiredStyle();wrapper=new WorkspaceDesktopWrapper(a,WorkspaceDesktopWrapper.bridgeSupported(channelTarget)?channelTarget:"termux");programs=new WorkspaceDesktopPrograms(a,(op,id)->ensure(op,programsProfile(),id),()->{},this::maintenance);if(Build.VERSION.SDK_INT>=30)activity.getWindow().getDecorView().getViewTreeObserver().addOnPreDrawListener(imeObserver);}
     private WorkspaceStore.Session programsProfile(){return programs.profile();}
     static boolean eligible(WorkspaceStore.Session p){
         if(p==null||p.environment.equals("codex")||!p.aiAgent.isEmpty()||p.claudeAgent||p.geminiAgent)return false;
@@ -275,12 +276,29 @@ final class WorkspaceDesktop {
     void toggle(){
         WorkspaceStore.Session p=selected.get();if(p==null||!eligible(p))return;
         if(graphical.remove(p.id)){sync();changed.run();return;}
+        if(running(p)){openExisting(p);return;}
         String id=p.id,handle=p.handle,target=target(p);
         WorkspaceDialogs.builder(activity).setTitle(tr("Переключиться на рабочий стол?","Switch to desktop?"))
             .setNegativeButton(tr("Отмена","Cancel"),null).setPositiveButton(tr("Переключиться","Switch"),(d,w)->{
                 WorkspaceStore.Session now=selected.get();if(closed||now==null||!id.equals(now.id)||!handle.equals(now.handle)||!target.equals(target(now))||!visible.getAsBoolean())return;
                 menuAction(now,0);
             }).show();
+    }
+    // Bind only to an already running service. No AUTO_CREATE or foreground start.
+    void observeExisting(WorkspaceStore.Session p){
+        if(closed||!eligible(p)||Build.VERSION.SDK_INT<30)return;
+        if(remote!=null){send("state",p);return;}if(bound)return;
+        pending="state";pendingProfile=p;
+        try{bound=activity.bindService(new Intent(activity,X11Environment.forTarget(target(p)).service),connection,0);}catch(RuntimeException unavailable){bound=false;}
+        if(!bound){pending="";pendingProfile=null;return;}
+        main.postDelayed(()->{if(!closed&&bound&&remote==null&&pending.equals("state")){activity.unbindService(connection);bound=false;pending="";pendingProfile=null;}},1500);
+    }
+    boolean running(WorkspaceStore.Session p){return !closed&&remote!=null&&remote.isBinderAlive()&&eligible(p)&&target(p).equals(state.getString("target",""))&&state.getBoolean("started",false);}
+    void openExisting(WorkspaceStore.Session p){
+        if(!sameSession(p,selected.get())||!visible.getAsBoolean()||!running(p)){
+            activity.showToast(tr("Рабочий стол уже недоступен. Проверьте его состояние.","The desktop is no longer available. Check its status."),true);return;
+        }
+        graphical.add(p.id);send("open-existing",p);
     }
     void terminal(WorkspaceStore.Session p){if(p!=null&&graphical.remove(p.id)){sync();changed.run();}}
     boolean usesDesktop(WorkspaceStore.Session p){
@@ -319,7 +337,7 @@ final class WorkspaceDesktop {
         if(which==0){
             if(graphical.remove(p.id)){sync();changed.run();}
             else if(sameSession(p,preparationProfile)){graphical.add(p.id);sync();changed.run();}
-            else if(target(p).equals(state.getString("target",""))&&state.getBoolean("started",false)){graphical.add(p.id);ensure("launch",p);}
+            else if(running(p)){openExisting(p);}
             else{preparationRenderer=renderer(p);rendererLaunchAfterInstall=true;rendererPreparationFailed=false;rendererReadyForPreparation=false;launchCheckAcknowledged=false;launchAfterCheck=p;preparationProfile=p;preparationNeedsInstall=false;preparationCancelling=false;graphical.add(p.id);sync();changed.run();ensure("check",p);}
         }
         if(which==1)stopDesktop(p);
@@ -449,16 +467,17 @@ final class WorkspaceDesktop {
     private void send(String op,WorkspaceStore.Session p){send(op,p,"");}
     private void send(String op,WorkspaceStore.Session p,String program){
         IBinder binder=remote;if(binder==null||closed)return;
-        Bundle q=X11Remote.command(op);if(p!=null){q.putString("target",target(p));q.putString("desktop",desktop(p));q.putBoolean("garconFilter",false);q.putBoolean("termuxStyle",styleEnabled(p));q.putInt("interfaceScale",X11ScreenSettings.load(activity,target(p)).scalePercent);q.putString("renderer",renderer(p));if(op.equals("launch")||op.equals("session-close")||op.equals("stop"))q.putString("owner",owner(p));}if(!program.isEmpty())q.putString("program",program);
-        calls.execute(()->{try{Bundle result=X11Remote.call(binder,q);main.post(()->{if(!closed&&remote==binder){if((op.equals("check")||op.equals("install"))&&p!=null&&launchAfterCheck!=null&&p.id.equals(launchAfterCheck.id)&&p.handle.equals(launchAfterCheck.handle))launchCheckAcknowledged=true;accept(result);poll();sync();changed.run();}});}catch(Exception e){main.post(()->{if(!closed&&remote==binder){if(op.equals("session-close")){activity.showToast(tr("Не удалось подтвердить остановку X11. Проверьте рабочий стол и остановите его вручную.","Could not confirm X11 stop. Check the desktop and stop it manually."),true);return;}if(op.startsWith("observe-")){activity.showToast(tr("Не удалось изменить наблюдение X11. Повторите.","Could not change X11 observation. Try again."),true);poll();return;}if(op.startsWith("programs-")){programs.failed();activity.showToast(tr("Не удалось выполнить действие с программами. Дождитесь завершения другой установки и повторите проверку.","Program action failed. Wait for another installation to finish and check again."),true);return;}launchAfterCheck=null;if(sameSession(p,preparationProfile)){state=new Bundle();state.putString("target",target(p));state.putString("phase","error");state.putString("status",tr("Не удалось выполнить действие X11. Вернитесь в терминал и повторите.","X11 action failed. Return to terminal and retry."));preparationCancelling=false;sync();changed.run();return;}if(op.equals("launch")&&p!=null)graphical.remove(p.id);sync();dismissProgress();WorkspaceStore.Session origin=progressOrigin;progressOrigin=null;WorkspaceStore.Session current=selected.get();if(origin!=null&&current!=null&&current.id.equals(origin.id))menu();activity.showToast(tr("Не удалось выполнить действие X11. Проверьте, не запущен ли стол другого окружения, или остановите X11 и повторите.","X11 action failed. Check whether another environment owns the desktop, or stop X11 and retry."),true);changed.run();}});}});
+        Bundle q=X11Remote.command(op);if(p!=null){q.putString("target",target(p));q.putString("desktop",desktop(p));q.putBoolean("garconFilter",false);q.putBoolean("termuxStyle",styleEnabled(p));q.putInt("interfaceScale",X11ScreenSettings.load(activity,target(p)).scalePercent);q.putString("renderer",renderer(p));if(op.equals("launch")||op.equals("open-existing")||op.equals("session-close")||op.equals("stop"))q.putString("owner",owner(p));}if(!program.isEmpty())q.putString("program",program);
+        calls.execute(()->{try{Bundle result=X11Remote.call(binder,q);main.post(()->{if(!closed&&remote==binder){if((op.equals("check")||op.equals("install"))&&p!=null&&launchAfterCheck!=null&&p.id.equals(launchAfterCheck.id)&&p.handle.equals(launchAfterCheck.handle))launchCheckAcknowledged=true;accept(result);poll();sync();changed.run();}});}catch(Exception e){main.post(()->{if(!closed&&remote==binder){if(op.equals("open-existing")){graphical.remove(p.id);send("state",p);sync();changed.run();activity.showToast(tr("Не удалось открыть существующий рабочий стол. Повторный запуск не выполнялся.","Could not open the existing desktop. It was not restarted."),true);return;}if(op.equals("session-close")){activity.showToast(tr("Не удалось подтвердить остановку X11. Проверьте рабочий стол и остановите его вручную.","Could not confirm X11 stop. Check the desktop and stop it manually."),true);return;}if(op.startsWith("observe-")){activity.showToast(tr("Не удалось изменить наблюдение X11. Повторите.","Could not change X11 observation. Try again."),true);poll();return;}if(op.startsWith("programs-")){programs.failed();activity.showToast(tr("Не удалось выполнить действие с программами. Дождитесь завершения другой установки и повторите проверку.","Program action failed. Wait for another installation to finish and check again."),true);return;}launchAfterCheck=null;if(sameSession(p,preparationProfile)){state=new Bundle();state.putString("target",target(p));state.putString("phase","error");state.putString("status",tr("Не удалось выполнить действие X11. Вернитесь в терминал и повторите.","X11 action failed. Return to terminal and retry."));preparationCancelling=false;sync();changed.run();return;}if(op.equals("launch")&&p!=null)graphical.remove(p.id);sync();dismissProgress();WorkspaceStore.Session origin=progressOrigin;progressOrigin=null;WorkspaceStore.Session current=selected.get();if(origin!=null&&current!=null&&current.id.equals(origin.id))menu();activity.showToast(tr("Не удалось выполнить действие X11. Проверьте, не запущен ли стол другого окружения, или остановите X11 и повторите.","X11 action failed. Check whether another environment owns the desktop, or stop X11 and retry."),true);changed.run();}});}});
     }
     private boolean programPolling(){return programs.polling();}
     private void poll(){if(polling||closed||remote==null)return;polling=true;main.postDelayed(tick,400);}
     private final Runnable tick=()->{polling=false;if(closed||remote==null||inFlight)return;inFlight=true;IBinder binder=remote;calls.execute(()->{Bundle result=null;try{result=X11Remote.call(binder,X11Remote.command("state"));}catch(Exception ignored){}Bundle answer=result;main.post(()->{inFlight=false;if(closed||binder!=remote)return;if(answer!=null){accept(answer);sync();}if(progress!=null||showing()||launchAfterCheck!=null||preparationCancelling||programPolling()||programStatusPolling())poll();});});};
     private void accept(Bundle b){
         boolean hadProgress=progress!=null;
+        boolean desktopChanged=state.getBoolean("started",false)!=b.getBoolean("started",false)||!state.getString("target","").equals(b.getString("target",""));
         Bundle programState=b.getBundle("programs");if(programState!=null)programs.accept(programState);
-        diagnosticState=b;diagnosticAt=SystemClock.elapsedRealtime();state=b;if(styleCheck!=null){styleCheck.setEnabled(!styleBusy());styleCheck.setAlpha(styleBusy()?.4f:1f);}if(rendererRow!=null)AgentStatusUi.available(rendererRow,!rendererBusy());if(wrapperFolder!=null)AgentStatusUi.available(wrapperFolder,!rendererBusy());if(wrapperDriver!=null)AgentStatusUi.available(wrapperDriver,!rendererBusy());String phase=b.getString("phase","");String t=b.getString("target","");
+        diagnosticState=b;diagnosticAt=SystemClock.elapsedRealtime();state=b;if(desktopChanged)changed.run();if(styleCheck!=null){styleCheck.setEnabled(!styleBusy());styleCheck.setAlpha(styleBusy()?.4f:1f);}if(rendererRow!=null)AgentStatusUi.available(rendererRow,!rendererBusy());if(wrapperFolder!=null)AgentStatusUi.available(wrapperFolder,!rendererBusy());if(wrapperDriver!=null)AgentStatusUi.available(wrapperDriver,!rendererBusy());String phase=b.getString("phase","");String t=b.getString("target","");
         if((phase.equals("installed")||phase.equals("running"))&&b.getString("desktop","xfce").equals(desktop(selected.get())))installed.put(t,true);
         if(phase.equals("missing")||phase.equals("error")||phase.equals("cancelled"))installed.put(t,false);
         WorkspaceStore.Session launch=launchAfterCheck;
