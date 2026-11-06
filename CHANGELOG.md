@@ -2,6 +2,16 @@
 
 No other changes queued for publication.
 
+# 2026-11-06 — 2.1.5-backup1 (versionCode1495, private standby APK)
+
+Frozen application code from accepted **2.1.5-test1 /1493**, whose changes relative to the last published stable **v2.1.4** remain listed below. No new application behavior: only versionName/versionCode metadata changes. The original1493 APK, SHA256, source commit and user acceptance remain preserved separately.
+
+Developer-approved ordering: installed/current1493 → planned primary1494 → standby1495 if required. Do not install the standby in advance. This explicitly scoped exception is recorded in RELEASING.md. After standby1495 is installed, a subsequent primary/rescue must exceed1495. Same com.termux/certificate/ARM64/schema8; the APK is not a backup of user data, rootfs or authorization. Future-data compatibility and actual rollback are unverified. Do not uninstall/clear data to force a downgrade.
+
+Application-source/asset identities are checked against the accepted build; prior functional/phone evidence is reused only for unchanged behavior. The1495 binary requires fresh packaging/signature/runtime/hash checks and is not itself phone-accepted merely because1493 was. All attachment/Claude/Android/backup limitations and MCP/plugin exclusions remain. No automatic installation, working restart, push or publication.
+
+[Standby evidence and recovery constraints](docs/fork/VALIDATION-backup-1495.md).
+
 # 2026-11-05 — 2.1.5-test1 (versionCode 1493, private test release)
 
 Changes since the last published stable release, **v2.1.4**.
