@@ -1,6 +1,16 @@
 # 2.1.5-test1 /1493 — private test APK
 
-The signed private APK is built and checked. Phone acceptance is pending. No install, working restart, push or publication is authorized or performed.
+The signed private APK is built and checked. Developer-reported phone acceptance was received on **2026-11-06**, limited to scenarios actually checked by the developer. The assistant did not install the APK, restart working sessions, push or publish.
+
+## Developer phone acceptance — 2026-11-06
+
+Source: the developer's chat message, **not an assistant/stand result**: «Текущее тестовое обновление проверил на телефоне — всё работает». The same message limits acceptance to the scenarios the developer checked. Context identifies the delivered **2.1.5-test1 /1493** APK; its SHA256 is `b841cf4cc8bb6ff6e392da2d714ffb5dfc13e5bf01b4ef81e072feea014e5778` (40,533,338 bytes).
+
+Acceptance is recorded as received. The message does not enumerate individual steps, agents, accounts, models, font sizes or restart conditions. No per-scenario pass, real subscription value, original-message diagnosis or audit closure is inferred. The checklist below remains a coverage guide, not a claim that every listed step was completed. Historical stand/native/JVM/Lint results retain their original source and date.
+
+The original APK, SHA256SUMS, source commit `83c233ef7a16dc3d824d9c9b2123acc3c778eae6` and original build evidence remain unchanged. On acceptance recording, the assistant checked the actual APK hash, local source commit availability and all629 recorded application input hashes. The existing Git commits preserve the sources; no rebuild, re-signing or duplicate source/SDK copy was needed. A preservation inventory of178 pre-existing evidence files and a separate user-acceptance sidecar are retained in `.verification/test-2.1.5-test1/{preservation-2026-11-06,phone-acceptance-2026-11-06}.json`. Original `validation.json` is the unchanged build-time stand snapshot; the later phone statement is in the separate sidecar and this section.
+
+Remaining limitations are unchanged: real Claude subscription percentages/resets and account/profile scope; attribution of the developer's original clarification incident; attachment accumulation/disconnections; low-level Android handoff/crash/device backup and real Gemini API/Vertex login. New Claude OS sandbox remains deferred; MCP/plugins remain excluded/unverified. Acceptance recording is not authorization for a stable release, push, tag, publication, assistant installation or working-session restart.
 
 ## Agreed APK scope before assembly
 
@@ -29,7 +39,7 @@ This feature does **not** establish reset eligibility, subscription type, or ava
 
 ### Verification scope
 
-Fresh JVM/UI checks cover both real expanded-menu entry points, fixed chooser destinations, unchanged synthetic current-request/status/limit values, RU/EN, 280dp with double font scale, wrapping full names, separate touch target, wider layout and reopened Claude menu. The existing documentation browser tests cover the shared browser path and rejected non-HTTPS addresses. Real browser/account actions are not performed.
+Fresh JVM/UI checks cover both real expanded-menu entry points, fixed chooser destinations, unchanged synthetic current-request/status/limit values, RU/EN, 280dp with double font scale, wrapping full names, separate touch target, wider layout and reopened Claude menu. The existing documentation browser tests cover the shared browser path and rejected non-HTTPS addresses. The assistant performed no real browser/account actions in those stand checks.
 
 Evidence: `.verification/test-2.1.5-test1/subscription-links-tests.log`, `subscription-first-results/`, `subscription-links-recheck.log`; modern Lint results are recorded separately below. The first wrapping assertions failed because Robolectric 4.4's font advances do not reproduce physical glyph widths, even in REALISTIC line-layout mode. The final fixture deliberately uses an overlong name that overflows in either renderer, retaining the 280dp width and double font scale. It verifies button relocation, full TextView text, unlimited label lines, no ellipsis and touch bounds. ShadowPaint measures String.length(); the API28 shadow also returned a zero line end for the nonempty label. These native-font layout results cannot verify physical multiline typography. Production layout thresholds remain unchanged. Actual short-label typography remains a phone check; preserved failed runs are not counted as passes.
 
@@ -37,13 +47,13 @@ Initial link-only modern Lint: all five modules analyzed, 0 errors /247 warnings
 
 Across the targeted runs, **48 unique JVM/UI scenarios passed**, including the final layout-bound test. Original failed attempts remain preserved and are not counted as passes. Unchanged context/limit/menu tests from earlier targeted runs are reused only for the same production source bytes; four affected Java hashes match the modern-Lint stage. Compact identities/results: `.verification/test-2.1.5-test1/subscription-source-hashes.json` and `subscription-verification-summary.json`. The final focused layout run is `subscription-layout-checked.log`. These results do not close the separate timeline/controller regression check or any device check.
 
-### Phone scenario — not checked
+### Phone checklist — item-level coverage not recorded
 
 Use the combined Short phone scenario below, including official sites, narrow width/large font, reopen and unchanged counters. No reset/purchase is required.
 
 ## Remaining acceptance
 
-The timeline controller/session-switch tests and final APK checks have passed locally. Phone acceptance, positive real subscription values and diagnosis of the original user clarification episode remain separate and pending. No old APK result substitutes for the new final-file gate.
+The timeline controller/session-switch tests and final APK checks have passed locally. General phone acceptance is recorded above. Individual checklist coverage, positive real subscription values and diagnosis of the original user clarification episode are not separately confirmed. No old APK result substitutes for the new final-file gate.
 
 Existing scope restrictions remain: attachment accumulation/disconnections are unresolved; low-level Android handoff/crash/device-backup checks and real Gemini API/Vertex login remain unverified; MCP/plugins excluded.
 
@@ -61,7 +71,7 @@ Evidence: `.verification/claude-quota-native/root.txt`, `status.log` and pointed
 
 Native reproduction and separate Android replay established two cases: next-turn queued clarification can move below the preceding final answer, while a clarification at a tool boundary can join the current task. The local fix labels the queue explicitly and restores human native queued_command records by source UUID and original timestamp without inventing delivery status. Two identical texts with distinct UUIDs survive cold reopen separately. [Full evidence, conditions and limits](CLAUDE-ANDROID-CHAT.md).
 
-The developer's original episode is **not conclusively diagnosed** without its native event/UUID evidence. Phone acceptance of these new changes remains pending. The clarification task is not closed by timeline/quota tests.
+The developer's original episode is **not conclusively diagnosed** without its native event/UUID evidence. General phone acceptance was reported on2026-11-06; this does not independently diagnose the original incident or itemize the clarification scenarios. The clarification task is not closed by timeline/quota tests.
 
 ## Final source gates before assembly
 
@@ -88,9 +98,9 @@ No new third-party dependency or native component is added.95 source/config inpu
 
 `artifact.json`, `runtime.json`, `extra-artifact-checks.json`, `template-identity.json`, `final-build-inputs.json`, `validation.json`, SHA256SUMS and certificate are in the private output directory. Fresh compatibility Lint passed with0 errors/250 warnings; legacy AGP4.2 packaging emitted the known Kotlin metadata diagnostics despite successful assembly. That legacy output is not counted as a Lint pass. No CI was invoked because no push/publication was authorized.
 
-## Short phone scenario — pending
+## Short phone checklist — retained for coverage reference
 
-Use separate test profiles/chats; no working restart is needed. New adapter behavior takes effect on a newly initiated test launch, not by hot-replacing a working agent. Existing phone acceptance of stable/test6 is retained as history and does not cover this candidate.
+Use separate test profiles/chats; no working restart is needed. New adapter behavior takes effect on a newly initiated test launch, not by hot-replacing a working agent. The new general acceptance above applies to this candidate in the developer-tested scope; this checklist is not automatically marked passed. Earlier acceptance of stable/test6 remains a separate historical result.
 
 1. In each of the four test chats, run a harmless action against artificial files. Keep the timeline collapsed while events arrive; then open details. Check separate failure/No/cancel states, no guessed unknown type/duration, wrapped paths/commands.
 2. Scroll up, load earlier messages, switch to another test chat and back. Check reading position and independent expansion; new events should follow only when already at the bottom.

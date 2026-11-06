@@ -36,7 +36,7 @@ Regression checks: `test_claude_clarification_history.cjs` (45 identical strings
 
 ## What remains unconfirmed
 
-The developer's actual clarification UUID, task boundary, runtime version/launch route and receive/replay timestamps were unavailable. No working message was resent or moved. The screenshot alone cannot select between the queued and absorbed cases; the long real task is not reproduced by a20s local fixture. Actual phone display/reopen and real subscription authentication remain separate checks. This finding is independent of timeline styling and quota/reset links.
+The developer's actual clarification UUID, task boundary, runtime version/launch route and receive/replay timestamps were unavailable. No working message was resent or moved. The screenshot alone cannot select between the queued and absorbed cases; the long real task is not reproduced by a20s local fixture. The developer reported general phone acceptance of2.1.5-test1 on2026-11-06, limited to checked scenarios without an itemized list; it does not confirm the original episode or independently close each delivery/reopen case. See [acceptance scope](VALIDATION-2.1.5-test1.md#developer-phone-acceptance--2026-11-06). Real subscription authentication remains a separate check. This finding is independent of timeline styling and quota/reset links.
 
 ---
 
