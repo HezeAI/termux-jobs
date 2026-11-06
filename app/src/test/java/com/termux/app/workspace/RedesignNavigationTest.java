@@ -20,10 +20,10 @@ public class RedesignNavigationTest {
         Activity a=Robolectric.buildActivity(Activity.class).setup().get();WorkspaceSidebar sidebar=new WorkspaceSidebar(a);
         AtomicInteger opened=new AtomicInteger(-1),mutations=new AtomicInteger();
         String[] agents={"Codex","Claude","Gemini","OpenCode","Termux"};
-        LinearLayout[] actions=new LinearLayout[agents.length];TextView[] titles=new TextView[agents.length];
+        LinearLayout[] actions=new LinearLayout[agents.length];View[] titles=new View[agents.length];
         for(int i=0;i<agents.length;i++){
             final int owner=i;actions[i]=sidebar.session("id"+i,agents[i],"/synthetic/project",i==4,false,false,()->false,mutations::incrementAndGet,mutations::incrementAndGet,mutations::incrementAndGet);
-            LinearLayout frame=(LinearLayout)actions[i].getParent();titles[i]=(TextView)((LinearLayout)frame.getChildAt(0)).getChildAt(0);
+            LinearLayout frame=(LinearLayout)actions[i].getParent();titles[i]=((LinearLayout)frame.getChildAt(0)).getChildAt(0);
             sidebar.action(actions[i],"Open chat",R.drawable.workspace_terminal,()->opened.set(owner));
         }
         for(int i=0;i<agents.length;i++){

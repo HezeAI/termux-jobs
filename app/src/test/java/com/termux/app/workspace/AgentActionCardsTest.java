@@ -22,7 +22,7 @@ public class AgentActionCardsTest {
         for(String name:new String[]{"OpenCode","Gemini","Claude"}) {
             AtomicReference<JSONObject> opened=new AtomicReference<>();AgentChatView view=new AgentChatView(a,opened::set,()->{},()->{},()->{},()->{});view.actionCards(true);view.assistantName(name);a.setContentView(view);
             JSONObject first=tool("read","read_file","success"),second=tool("search","grep","executing");view.rows(Arrays.asList(first,second),false);
-            CodexActionsView card=(CodexActionsView)view.timeline.getChildAt(1);assertEquals(View.GONE,card.steps.getVisibility());card.heading.performClick();assertEquals(View.VISIBLE,card.steps.getVisibility());View firstView=card.steps.getChildAt(0);assertEquals(2,card.steps.getChildCount());assertTrue(card.heading.getText().toString().contains("В работе"));
+            CodexActionsView card=(CodexActionsView)view.timeline.getChildAt(1);assertEquals(View.GONE,card.steps.getVisibility());card.summaryCard.performClick();assertEquals(View.VISIBLE,card.steps.getVisibility());View firstView=card.steps.getChildAt(0);assertEquals(2,card.steps.getChildCount());assertTrue(card.heading.getText().toString().contains("В работе"));
             second.put("status","error");view.rows(Arrays.asList(first,second),false);assertSame(card,view.timeline.getChildAt(1));assertSame(firstView,card.steps.getChildAt(0));assertEquals(View.VISIBLE,card.steps.getVisibility());assertTrue(card.outcomes.getText().toString().contains("Одно действие"));card.steps.getChildAt(1).performClick();assertSame(second,opened.get());assertEquals("search",opened.get().getString("part"));
             WorkspaceLanguage.select(a,"en");view.rows(Arrays.asList(first,second),false);assertTrue(((TextView)card.steps.getChildAt(0)).getText().toString().contains("Read files"));WorkspaceLanguage.select(a,"ru");
         }
@@ -43,7 +43,7 @@ public class AgentActionCardsTest {
     }
     @Test public void pendingAndUnknownAreNotDisplayedAsCompleted()throws Exception {
         Activity a=Robolectric.buildActivity(Activity.class).setup().get();WorkspaceLanguage.select(a,"ru");AgentChatView view=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});view.actionCards(true);a.setContentView(view);
-        view.rows(Arrays.asList(tool("a","Read","awaiting_approval"),tool("b","Read","")),false);CodexActionsView card=(CodexActionsView)view.timeline.getChildAt(1);card.heading.performClick();assertTrue(((TextView)card.steps.getChildAt(0)).getText().toString().contains("Ожидает разрешения"));assertTrue(((TextView)card.steps.getChildAt(1)).getText().toString().contains("Статус неизвестен"));assertFalse(((TextView)card.steps.getChildAt(1)).getText().toString().contains("✓"));
+        view.rows(Arrays.asList(tool("a","Read","awaiting_approval"),tool("b","Read","")),false);CodexActionsView card=(CodexActionsView)view.timeline.getChildAt(1);card.summaryCard.performClick();assertTrue(((TextView)card.steps.getChildAt(0)).getText().toString().contains("Ожидает разрешения"));assertTrue(((TextView)card.steps.getChildAt(1)).getText().toString().contains("Статус неизвестен"));assertFalse(((TextView)card.steps.getChildAt(1)).getText().toString().contains("✓"));
     }
 
     @Test public void automaticBottomScrollDoesNotStealComposerFocusSelectionOrComposition()throws Exception {

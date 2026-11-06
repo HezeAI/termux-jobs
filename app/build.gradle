@@ -43,8 +43,8 @@ android {
         ndk { abiFilters "arm64-v8a" }
         minSdkVersion project.properties.minSdkVersion.toInteger()
         targetSdkVersion project.properties.targetSdkVersion.toInteger()
-        versionCode 1504
-        versionName "2.1.5-test9"
+        versionCode 1505
+        versionName "2.1.5-test10"
 
         if (appVersionName) versionName = appVersionName
         validateVersionName(versionName)

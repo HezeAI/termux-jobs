@@ -37,10 +37,10 @@ public class WorkspaceRestartUiTest {
   Method menu=WorkspaceController.class.getDeclaredMethod("createSidebar");menu.setAccessible(true);
   for(String language:new String[]{"ru","en"})for(String agent:new String[]{"codex","claude","gemini","opencode"}){
    WorkspaceLanguage.select(a,language);p.environment=agent.equals("codex")?"codex":"ubuntu";p.claudeAgent=agent.equals("claude");p.geminiAgent=agent.equals("gemini");p.aiAgent=agent.equals("opencode")?"opencode":"";p.directory="/fixture/project";p.saved=true;p.handle=terminal.mHandle;
-   WorkspaceSidebar sidebar=(WorkspaceSidebar)menu.invoke(ui);android.widget.LinearLayout frame=sidebar.body.findViewWithTag("sidebar-session-"+p.id);android.widget.TextView label=(android.widget.TextView)((android.view.ViewGroup)frame.getChildAt(0)).getChildAt(0);
-   String[] lines=label.getText().toString().split("\n");String badge=language.equals("ru")?"Сохранён":"Saved";assertTrue(lines[0].contains(badge));assertFalse(lines[1].contains(badge));assertTrue(lines[1].contains(p.directory));assertTrue(lines[1].endsWith(language.equals("ru")?"Запущен":"Running"));
-   p.handle="missing";sidebar.refreshSessions();assertTrue(label.getText().toString().endsWith(language.equals("ru")?"Не запущен":"Not running"));assertNotNull(frame.getParent());
-   p.handle=terminal.mHandle;p.saved=false;sidebar.refreshSessions();assertFalse(label.getText().toString().contains(badge));assertNotNull(frame.getParent());
+   WorkspaceSidebar sidebar=(WorkspaceSidebar)menu.invoke(ui);android.widget.LinearLayout frame=sidebar.body.findViewWithTag("sidebar-session-"+p.id);android.view.View label=((android.view.ViewGroup)frame.getChildAt(0)).getChildAt(0);
+   String[] lines=label.getContentDescription().toString().split("\n");String badge=language.equals("ru")?"Сохранён":"Saved";assertTrue(lines[0].contains(badge));assertFalse(lines[1].contains(badge));assertTrue(lines[1].contains(p.directory));assertTrue(lines[1].endsWith(language.equals("ru")?"Запущен":"Running"));
+   p.handle="missing";sidebar.refreshSessions();assertTrue(label.getContentDescription().toString().endsWith(language.equals("ru")?"Не запущен":"Not running"));assertNotNull(frame.getParent());
+   p.handle=terminal.mHandle;p.saved=false;sidebar.refreshSessions();assertFalse(label.getContentDescription().toString().contains(badge));assertNotNull(frame.getParent());
    p.handle="missing";sidebar.refreshSessions();assertNull(frame.getParent());assertTrue(finished.isEmpty());
   }
  }

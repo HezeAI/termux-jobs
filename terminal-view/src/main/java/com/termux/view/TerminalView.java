@@ -75,7 +75,7 @@ public final class TerminalView extends View {
     private boolean mResizeDetached;
 
     public void setWorkspaceTerminalVisible(boolean visible) {
-        if (mWorkspaceTerminalVisible == visible) return;
+        if (mWorkspaceTerminalVisible == visible) {if(visible)invalidate();return;}
         mWorkspaceTerminalVisible = visible;
         cancelPendingResize();
         if (visible && mTermSession != null && mTermSession.usesStableResize()) updateSize();
@@ -99,9 +99,10 @@ public final class TerminalView extends View {
             && mEmulator != null && mRenderer != null && getHeight() > 0
             && columnsForView() == mEmulator.mColumns && !mEmulator.isAlternateBufferActive() && !mEmulator.isMouseTrackingActive();
     }
+    private boolean floatingViewport(){return mComposerViewport&&mEmulator!=null&&mRenderer!=null&&getHeight()>0&&mRenderer.mFontLineSpacing>0&&!mEmulator.isAlternateBufferActive()&&!mEmulator.isMouseTrackingActive();}
     /** Drawing/hit-test position while geometry settles; logical transcript scroll stays unchanged. */
     public int getVisibleTopRow() {
-        if (!adaptiveResizeViewport() || mTopRow < 0) return mTopRow;
+        if ((!floatingViewport()&&!adaptiveResizeViewport()) || mTopRow < 0) return mTopRow;
         return Math.max(-mEmulator.getScreen().getActiveTranscriptRows(), mEmulator.mRows - rowsForView());
     }
     private void finishResizeForInteraction() {
@@ -130,7 +131,7 @@ public final class TerminalView extends View {
     private final java.util.Map<TerminalSession,Integer> mSessionTopRows=new java.util.WeakHashMap<>();
     /** Reserve the live viewport above the floating composer, while older rows may draw behind it. */
     public void setComposerBottomInset(int pixels){
-        mComposerViewport=true;if(mTextReveal==null)mTextReveal=new TerminalTextReveal(this);int next=Math.max(0,pixels);if(next==mComposerBottomInset)return;
+        mComposerViewport=true;if(mTextReveal==null)mTextReveal=new TerminalTextReveal(this);int next=Math.max(0,pixels);if(next==mComposerBottomInset){invalidate();return;}
         mComposerBottomInset=next;updateSize();invalidate();
     }
     public int getComposerBottomInset(){return mComposerBottomInset;}
@@ -517,12 +518,12 @@ public final class TerminalView extends View {
 
     @Override
     protected int computeVerticalScrollExtent() {
-        return mEmulator == null ? 1 : mEmulator.mRows;
+        return mEmulator == null ? 1 : floatingViewport()?rowsForView():mEmulator.mRows;
     }
 
     @Override
     protected int computeVerticalScrollOffset() {
-        return mEmulator == null ? 1 : mEmulator.getScreen().getActiveRows() + mTopRow - mEmulator.mRows;
+        return mEmulator == null ? 1 : mEmulator.getScreen().getActiveRows() + getVisibleTopRow() - mEmulator.mRows;
     }
 
     public void onScreenUpdated() {
@@ -1122,10 +1123,7 @@ public final class TerminalView extends View {
             }
 
             int rows = adaptiveResizeViewport() ? rowsForView() : mEmulator.mRows;
-            if(mComposerViewport&&mComposerBottomInset>0&&mTopRow<0&&!mEmulator.isAlternateBufferActive()){
-                int fullRows=Math.max(4,(getHeight()-mRenderer.mFontLineSpacingAndAscent)/mRenderer.mFontLineSpacing);
-                rows=Math.min(fullRows,mEmulator.mRows-getVisibleTopRow());
-            }
+            if(floatingViewport())rows=Math.min(Math.max(4,(getHeight()-mHeaderTopInset-mRenderer.mFontLineSpacingAndAscent)/mRenderer.mFontLineSpacing),mEmulator.mRows-getVisibleTopRow());
             if(mHeaderTopInset>0&&mTopRow<0&&!mEmulator.isAlternateBufferActive()){
                 int extraRows=(mHeaderTopInset+mRenderer.mFontLineSpacing-1)/mRenderer.mFontLineSpacing;
                 int history=mEmulator.getScreen().getActiveTranscriptRows();int from=Math.max(-history,getVisibleTopRow()-extraRows);int count=getVisibleTopRow()-from;
@@ -1146,7 +1144,7 @@ public final class TerminalView extends View {
     }
 
     private CharSequence getText() {
-        int top = getVisibleTopRow(), rows = adaptiveResizeViewport() ? rowsForView() : mEmulator.mRows;
+        int top = getVisibleTopRow(), rows = floatingViewport()||adaptiveResizeViewport() ? rowsForView() : mEmulator.mRows;
         return mEmulator.getScreen().getSelectedText(0, top, mEmulator.mColumns, Math.min(mEmulator.mRows, top + rows));
     }
 

@@ -59,7 +59,7 @@ final class AgentComposerControls {
     void terminalModes(boolean direct,boolean keys){updating=true;interactive.setChecked(direct);extra.setChecked(keys);updating=false;}
     void overlay(View host,java.util.function.IntConsumer update){transcriptHost=host;inset=update;if(host.getLayoutParams() instanceof RelativeLayout.LayoutParams)terminalAbove=((RelativeLayout.LayoutParams)host.getLayoutParams()).getRule(RelativeLayout.ABOVE);row.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->inset.accept(row.getVisibility()==View.VISIBLE?row.getHeight():0));}
     private void geometry(){
-        if(transcriptHost!=null&&transcriptHost.getLayoutParams() instanceof RelativeLayout.LayoutParams){RelativeLayout.LayoutParams p=(RelativeLayout.LayoutParams)transcriptHost.getLayoutParams();p.removeRule(RelativeLayout.ABOVE);p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);transcriptHost.setLayoutParams(p);}
+        if(transcriptHost!=null&&transcriptHost.getLayoutParams() instanceof RelativeLayout.LayoutParams){RelativeLayout.LayoutParams p=(RelativeLayout.LayoutParams)transcriptHost.getLayoutParams();if(p.getRule(RelativeLayout.ABOVE)!=0||p.getRule(RelativeLayout.ALIGN_PARENT_BOTTOM)==0){p.removeRule(RelativeLayout.ABOVE);p.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);transcriptHost.setLayoutParams(p);}}
         inset.accept(row.getVisibility()==View.VISIBLE?row.getHeight():0);
     }
     int dp(int value){return WorkspaceDialogs.dp(context,value);}
@@ -81,7 +81,7 @@ final class AgentComposerControls {
             else{tools.addView(commands);tools.addView(separator());tools.addView(aliases);tools.addView(separator());tools.addView(terminalNotes);}
             tools.addView(send,new ViewGroup.LayoutParams(actionSize(),actionSize()));if(send instanceof WorkspaceIconButton)((WorkspaceIconButton)send).setIcon(context.getDrawable(R.drawable.workspace_up),Math.round((agent?17.5f:17f)*context.getResources().getDisplayMetrics().density));tools.rightGroup(agent?(status!=null?status:mic):send);card.setPadding(dp(10),dp(6),dp(10),dp(4));card.addView(pair,new LinearLayout.LayoutParams(-1,-2));if(agent)card.addView(limits,new LinearLayout.LayoutParams(-1,-2));geometry();
         }
-        updateStop();labels();inset.accept(row.getVisibility()==View.VISIBLE?row.getHeight():0);
+        geometry();updateStop();labels();inset.accept(row.getVisibility()==View.VISIBLE?row.getHeight():0);
     }
     void voiceState(String text,boolean active,Runnable stop,Runnable cancel){voiceLabel.setText(text);voiceStop.setOnClickListener(v->stop.run());voiceCancel.setOnClickListener(v->cancel.run());voiceRow.setVisibility(active?View.VISIBLE:View.GONE);}
     void minimumCardHeight(int pixels){card.setMinimumHeight(Math.max(0,pixels));}

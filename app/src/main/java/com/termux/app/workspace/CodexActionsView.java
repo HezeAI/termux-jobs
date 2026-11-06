@@ -18,6 +18,7 @@ import java.util.function.Consumer;
 final class CodexActionsView extends LinearLayout {
     final TextView heading,summary,time,currentAction,outcomes;
     final LinearLayout steps;
+    final LinearLayout summaryCard;
     private final AgentChatView owner;
     private final Consumer<JSONObject> open;
     private final Map<String,TextView> entries=new HashMap<>();
@@ -29,18 +30,19 @@ final class CodexActionsView extends LinearLayout {
 
     CodexActionsView(AgentChatView owner,Consumer<JSONObject> open) {
         super(owner.getContext());this.owner=owner;this.open=open;
-        setOrientation(VERTICAL);setPadding(owner.dp(4),owner.dp(3),owner.dp(4),owner.dp(4));
+        setOrientation(VERTICAL);
+        summaryCard=new LinearLayout(getContext());summaryCard.setOrientation(VERTICAL);summaryCard.setPadding(owner.dp(4),owner.dp(3),owner.dp(4),owner.dp(4));summaryCard.setTag("timeline-summary-hit");summaryCard.setBackground(WorkspaceRipple.background(getContext(),null,12));summaryCard.setOnClickListener(v->{expanded=!expanded;owner.rememberActions(data.values(),expanded);refreshHeading();});addView(summaryCard,new LayoutParams(-1,-2));
         GradientDrawable background=new GradientDrawable();background.setColor(0xff232426);
         background.setCornerRadius(owner.dp(12));background.setStroke(owner.dp(1),0xff393a3c);setBackground(background);
         heading=owner.label("",13);heading.setMinHeight(owner.dp(36));heading.setPadding(owner.dp(10),owner.dp(5),owner.dp(10),owner.dp(5));heading.setGravity(Gravity.CENTER_VERTICAL);
-        heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);heading.setOnClickListener(v->{expanded=!expanded;owner.rememberActions(data.values(),expanded);refreshHeading();});
+        heading.setTypeface(Typeface.DEFAULT,Typeface.BOLD);heading.setClickable(false);
         LinearLayout header=new LinearLayout(getContext());header.setOrientation(HORIZONTAL);header.setGravity(Gravity.CENTER_VERTICAL);
         header.addView(heading,new LayoutParams(0,-2,1));
-        time=owner.label("",12);time.setTag("action-group-time");time.setTextColor(0xffa5a5a2);time.setSingleLine(true);time.setPadding(0,owner.dp(5),owner.dp(10),owner.dp(5));time.setOnClickListener(v->heading.performClick());header.addView(time,new LayoutParams(-2,-2));addView(header,new LayoutParams(-1,-2));
-        summary=owner.label("",12);summary.setTextColor(0xffa5a5a2);summary.setSingleLine(false);summary.setPadding(owner.dp(10),0,owner.dp(10),owner.dp(4));summary.setOnClickListener(v->heading.performClick());addView(summary,new LayoutParams(-1,-2));
-        currentAction=owner.label("",12);currentAction.setTag("timeline-current");currentAction.setTextColor(0xffa5a5a2);currentAction.setPadding(owner.dp(10),0,owner.dp(10),owner.dp(4));currentAction.setOnClickListener(v->heading.performClick());addView(currentAction,new LayoutParams(-1,-2));
-        outcomes=owner.label("",12);outcomes.setTag("timeline-outcomes");outcomes.setPadding(owner.dp(10),0,owner.dp(10),owner.dp(4));outcomes.setOnClickListener(v->heading.performClick());addView(outcomes,new LayoutParams(-1,-2));
-        steps=new LinearLayout(getContext());steps.setOrientation(VERTICAL);steps.setVisibility(GONE);addView(steps,new LayoutParams(-1,-2));
+        time=owner.label("",12);time.setTag("action-group-time");time.setTextColor(0xffa5a5a2);time.setSingleLine(true);time.setPadding(0,owner.dp(5),owner.dp(10),owner.dp(5));time.setClickable(false);header.addView(time,new LayoutParams(-2,-2));summaryCard.addView(header,new LayoutParams(-1,-2));
+        summary=owner.label("",12);summary.setTextColor(0xffa5a5a2);summary.setSingleLine(false);summary.setPadding(owner.dp(10),0,owner.dp(10),owner.dp(4));summary.setClickable(false);summaryCard.addView(summary,new LayoutParams(-1,-2));
+        currentAction=owner.label("",12);currentAction.setTag("timeline-current");currentAction.setTextColor(0xffa5a5a2);currentAction.setPadding(owner.dp(10),0,owner.dp(10),owner.dp(4));currentAction.setClickable(false);summaryCard.addView(currentAction,new LayoutParams(-1,-2));
+        outcomes=owner.label("",12);outcomes.setTag("timeline-outcomes");outcomes.setPadding(owner.dp(10),0,owner.dp(10),owner.dp(4));outcomes.setClickable(false);summaryCard.addView(outcomes,new LayoutParams(-1,-2));
+        steps=new LinearLayout(getContext());steps.setOrientation(VERTICAL);steps.setPadding(owner.dp(4),0,owner.dp(4),owner.dp(4));steps.setVisibility(GONE);addView(steps,new LayoutParams(-1,-2));
         LinearLayout.LayoutParams layout=new LinearLayout.LayoutParams(-1,-2);layout.setMargins(0,owner.dp(4),0,owner.dp(6));setLayoutParams(layout);
     }
 
@@ -97,6 +99,6 @@ final class CodexActionsView extends LinearLayout {
         if(!heading.getText().toString().equals(caption))heading.setText(caption);
         LinearLayout.LayoutParams layout=(LinearLayout.LayoutParams)getLayoutParams();int width=!skillName.isEmpty()&&!expanded&&time.getVisibility()==GONE?LayoutParams.WRAP_CONTENT:LayoutParams.MATCH_PARENT;if(layout.width!=width){layout.width=width;setLayoutParams(layout);}
         heading.setTextColor(failures>0?0xffffb08f:0xffecece5);steps.setVisibility(expanded?VISIBLE:GONE);
-        heading.setContentDescription(caption+". "+owner.tr(expanded?"Свернуть":"Развернуть",expanded?"Collapse":"Expand"));
+        summaryCard.setContentDescription(caption+". "+summary.getText()+". "+currentAction.getText()+". "+outcomes.getText()+". "+owner.tr(expanded?"Свернуть":"Развернуть",expanded?"Collapse":"Expand"));
     }
 }

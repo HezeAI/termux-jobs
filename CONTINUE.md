@@ -1,4 +1,32 @@
-# Текущая выдача — основной1504/test9
+# Текущая выдача — основной1505/test10
+
+[Состав, карта6пунктов, проверки и остатки](docs/fork/VALIDATION-2.1.5-test10.md).
+APK `/sdcard/Download/Termux-Jobs-v2.1.5-test10-arm64.apk`,40610229байт.
+SHA256 `670d711f62d62303267e54ed35d8560ed9512c3dbe976a3982fa9aba9662171b`.
+Checksum рядом; exclusive copy/readback двух Android-путей — PASS.
+
+Sidebar80%,20,5/16/22sp, новые читаемые строки/иконки; круглые шапки48dp без центра;
+X11 input/extra circles по центру; legacy title Toast скрыт; summary card toggle целиком;
+first-DOWN IME и сохранён click/accessibility; floating viewport без первого жеста.
+
+Broad284/4; повторы76/2,20/1; финальный6/0. Старые отказы сохранены. Новый first-DOWN
+contract/click/focus/draft и controller search DOWN/UP проверены; native Editor popup
+Robolectric сломан также наAPI29, настоящая клавиатура не подтверждена. Остальные
+переходы/resize/history/links/X11 fixtures прошли. Engine154/0 из1504 — reuse.
+Lint5модулей0errors/272warnings, localization587/checker8; APK gate ZIP/version/ABI/
+подпись/runtime/125assets/4templates/7ELF — PASS.630production files совпали по3stages,
+95native inputs/X11/ComposerLimits неизменны. КоммитID в `.verification/test-2.1.5-test10/source-commit.txt`.
+
+Следующее: пользовательская проверка6строк карты при одинаковых font/display settings;
+реальные IME, курсор/выделение, terminal scroll/поворот/клавиши/X11/прозрачность/типографика.
+Настоящий микрофон/default speech service тоже не подтверждены. Android Home при долгом
+листании — исследование, решения нет; изображения/обрывы — отдельная задача.
+Резерв1499 не читать/менять/пересобирать; старые APK сохранить. Нет установки,
+публикации, push/тегов и перезапусков рабочих сессий.
+
+---
+
+# Предыдущая выдача — основной1504/test9
 
 [Карта десяти пунктов и проверки](docs/fork/VALIDATION-2.1.5-test9.md).
 APK `/sdcard/Download/Termux-Jobs-v2.1.5-test9-arm64.apk`,40609605байт.

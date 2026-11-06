@@ -121,9 +121,7 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
     public void onTitleChanged(TerminalSession updatedSession) {
         if (!mActivity.isVisible()) return;
 
-        if (updatedSession != mActivity.getCurrentSession()) {
-            mActivity.showToast(toToastTitle(updatedSession), true);
-        }
+        // Session names remain in the workspace sidebar; no legacy top title toast.
 
         mActivity.termuxSessionTitleNotifyUpdated();
     }
@@ -285,12 +283,7 @@ public class TermuxTerminalSessionClient extends TermuxTerminalSessionClientBase
     }
 
     void notifyOfSessionChange() {
-        if (!mActivity.isVisible()) return;
-
-        if (!mActivity.getProperties().areTerminalSessionChangeToastsDisabled()) {
-            TerminalSession session = mActivity.getCurrentSession();
-            mActivity.showToast(toToastTitle(session), false);
-        }
+        // The workspace owns session navigation. A title-only TOP Toast obscures its header.
     }
 
     public void switchToSession(boolean forward) {
