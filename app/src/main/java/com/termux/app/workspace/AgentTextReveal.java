@@ -17,6 +17,8 @@ final class AgentTextReveal {
     private BreakIterator characters;
     private long last;
     private double budget;
+    private long batchStarted;
+    private int batchStart,batchLength;
     private boolean scheduled;
     Runnable beforeChange=()->{};
     AgentTextReveal(TextView view,java.util.function.Consumer<CharSequence> draw){this.view=view;this.draw=draw;}
@@ -24,6 +26,7 @@ final class AgentTextReveal {
     boolean pending(){return offset<target.length();}
     void update(CharSequence next,boolean animate){
         String text=next==null?"":next.toString();boolean append=text.startsWith(plain);
+        if(!pending()&&text.length()>offset){batchStarted=SystemClock.uptimeMillis();batchStart=offset;batchLength=text.length()-offset;}
         target=next instanceof android.text.Spanned?new SpannedString(next):text;plain=text;
         if(!animate||!append||!ValueAnimator.areAnimatorsEnabled()){showAll();return;}
         offset=Math.min(offset,target.length());characters=BreakIterator.getCharacterInstance();characters.setText(plain);
@@ -40,7 +43,9 @@ final class AgentTextReveal {
         long now=SystemClock.uptimeMillis();budget+=Math.min(64,Math.max(0,now-last));last=now;
         int start=offset;
         // Advance in grapheme order, then paint once per display frame. Large backlogs accelerate.
-        while(pending()){
+        int minimumDuration=Math.min(420,Math.max(120,batchLength*8));
+        int frameLimit=batchStart+(int)Math.min(batchLength,(long)batchLength*Math.max(0,now-batchStarted)/minimumDuration);
+        while(pending()&&(offset<frameLimit||offset>=batchStart+batchLength)){
             double delay=delay(target.length()-offset);if(budget<delay)break;budget-=delay;
             int next=characters.following(offset);offset=next==BreakIterator.DONE?target.length():next;
         }

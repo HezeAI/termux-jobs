@@ -27,6 +27,8 @@ final class WorkspaceSidebar {
     private boolean closing;
     private View selectedRow;
     private WorkspacePopover activePopup;
+    private final java.util.List<Runnable> sessionRefresh=new java.util.ArrayList<>();
+    void refreshSessions(){for(Runnable refresh:sessionRefresh)refresh.run();}
 
     WorkspaceSidebar(Context context) {
         this.context=context;
@@ -78,17 +80,24 @@ final class WorkspaceSidebar {
         return session(id,title,subtitle,base,saved,selected,false,isSaved,save,unsave,close);
     }
     LinearLayout session(String id,String title,String subtitle,boolean base,boolean saved,boolean selected,boolean agent,java.util.function.BooleanSupplier isSaved,Runnable save,Runnable unsave,Runnable close){
+        return session(id,title,subtitle,base,saved,selected,agent,()->true,isSaved,save,unsave,close);
+    }
+    LinearLayout session(String id,String title,String subtitle,boolean base,boolean saved,boolean selected,boolean agent,java.util.function.BooleanSupplier running,java.util.function.BooleanSupplier isSaved,Runnable save,Runnable unsave,Runnable close){
+        return session(id,title,()->subtitle,base,saved,selected,agent,running,isSaved,save,unsave,close);
+    }
+    LinearLayout session(String id,String title,java.util.function.Supplier<String> subtitle,boolean base,boolean saved,boolean selected,boolean agent,java.util.function.BooleanSupplier running,java.util.function.BooleanSupplier isSaved,Runnable save,Runnable unsave,Runnable close){
         LinearLayout frame=new LinearLayout(context);frame.setOrientation(LinearLayout.VERTICAL);frame.setTag("sidebar-session-"+id);body.addView(frame);
         LinearLayout heading=new LinearLayout(context);heading.setGravity(Gravity.CENTER_VERTICAL);frame.addView(heading);
-        TextView label=action(heading,title+(saved?" · "+tr("Сохранен","Saved"):"")+"\n"+subtitle,agent?R.drawable.workspace_ai_agent:R.drawable.workspace_terminal,()->{});
+        TextView label=action(heading,title+(saved?" · "+tr("Сохранён","Saved"):"")+"\n"+subtitle.get(),agent?R.drawable.workspace_ai_agent:R.drawable.workspace_terminal,()->{});
         label.setLayoutParams(new LinearLayout.LayoutParams(0,-2,1));styleSessionLabel(label);
         if(selected){GradientDrawable bg=new GradientDrawable();bg.setColor(0xff303132);bg.setCornerRadius(dp(10));heading.setBackground(bg);}
         LinearLayout actions=new LinearLayout(context);actions.setOrientation(LinearLayout.VERTICAL);actions.setPadding(dp(8),0,0,dp(8));actions.setVisibility(View.GONE);frame.addView(actions);
         WorkspaceExpansion disclosure=new WorkspaceExpansion(actions);
         if(selected){if(expanded!=null)expanded.setOpen(false);disclosure.setOpen(true);expanded=disclosure;selectedRow=frame;}
         label.setOnClickListener(v->{boolean open=!disclosure.isOpen();if(expanded!=null&&expanded!=disclosure)expanded.setOpen(false);disclosure.setOpen(open);expanded=open?disclosure:null;});
+        sessionRefresh.add(()->{boolean stored=isSaved.getAsBoolean();label.setText(title+(stored?" · "+tr("Сохранён","Saved"):"")+"\n"+subtitle.get());styleSessionLabel(label);if(!base&&!stored&&!running.getAsBoolean()){if(selectedRow==frame)selectedRow=null;body.removeView(frame);}});
         if(!base){TextView more=new TextView(context);more.setText("⋯");more.setTextSize(24);more.setTextColor(0xfff0f0ee);more.setGravity(Gravity.CENTER);more.setBackground(WorkspaceRipple.background(context,null,10));more.setContentDescription(tr("Меню: ","Menu: ")+title);heading.addView(more,new LinearLayout.LayoutParams(dp(48),dp(48)));
-            final WorkspacePopover[] popup={null};more.setOnClickListener(v->{if(popup[0]!=null){popup[0].dismiss();return;}if(activePopup!=null)activePopup.dismissImmediately();WorkspacePopover m=new WorkspacePopover(context).animated();popup[0]=m;activePopup=m;boolean stored=isSaved.getAsBoolean();Runnable updateLabel=()->{label.setText(title+(isSaved.getAsBoolean()?" · "+tr("Сохранен","Saved"):"")+"\n"+subtitle);styleSessionLabel(label);};m.item(stored?tr("Удалить из сохранённых","Remove from saved"):(agent?tr("Сохранить чат","Save chat"):tr("Сохранить сессию","Save session")),R.drawable.workspace_library,()->{if(stored)unsave.run();else save.run();updateLabel.run();});m.item(agent?tr("Закрыть чат","Close chat"):tr("Закрыть сессию","Close session"),R.drawable.workspace_delete,()->{dismiss();close.run();});m.dismissed(()->{popup[0]=null;if(activePopup==m)activePopup=null;updateLabel.run();});m.showBelow(more);});}
+            final WorkspacePopover[] popup={null};more.setOnClickListener(v->{if(popup[0]!=null){popup[0].dismiss();return;}if(activePopup!=null)activePopup.dismissImmediately();WorkspacePopover m=new WorkspacePopover(context).animated();popup[0]=m;activePopup=m;boolean stored=isSaved.getAsBoolean();Runnable updateLabel=()->{label.setText(title+(isSaved.getAsBoolean()?" · "+tr("Сохранён","Saved"):"")+"\n"+subtitle.get());styleSessionLabel(label);};m.item(stored?tr("Удалить из сохранённых","Remove from saved"):(agent?tr("Сохранить чат","Save chat"):tr("Сохранить сессию","Save session")),R.drawable.workspace_library,()->{if(stored)unsave.run();else save.run();updateLabel.run();});if(running.getAsBoolean())m.item(agent?tr("Закрыть чат","Close chat"):tr("Закрыть сессию","Close session"),R.drawable.workspace_close,()->{if(running.getAsBoolean()){dismiss();close.run();}});m.dismissed(()->{popup[0]=null;if(activePopup==m)activePopup=null;updateLabel.run();});m.showBelow(more);});}
 
         return actions;
     }

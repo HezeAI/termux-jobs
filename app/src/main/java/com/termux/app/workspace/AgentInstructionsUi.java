@@ -34,7 +34,7 @@ final class AgentInstructionsUi {
         final TermuxActivity activity;final AgentInstructions.Backend backend;
         final ExecutorService worker=Executors.newSingleThreadExecutor();final Handler handler=new Handler(Looper.getMainLooper());
         final String initialProject;String project,scope="general",name="AGENTS.md",agent="codex",selectedEnvironment="ubuntu-ai";JSONObject document;
-        android.app.Dialog dialog;AgentManagerLayout frame;LinearLayout root,body,tabs,agents;TextView environmentLabel,runtimeLabel,projectCreate,projectTemplate;boolean projectExplicit,projectTemplateEditing;ImageButton refresh;EditText editor;TextView status,save,close;boolean busy;volatile boolean closed;int epoch;
+        android.app.Dialog dialog;AgentManagerLayout frame;LinearLayout root,body,tabs,agents;TextView environmentLabel,runtimeLabel,projectCreate,projectTemplate;boolean projectExplicit,projectTemplateEditing,sessionBound;ImageButton refresh;EditText editor;TextView status,save,close;boolean busy;volatile boolean closed;int epoch;
         boolean createRequested,createReading,createGuard;String createContext="";AlertDialog creationDialog;String[] creationDraft;String creationDraftContext="";
         WorkspaceFileBrowser browser;WorkspaceLocalFilePicker importPicker;volatile ProjectFiles importFiles;
         interface ImportReader {String read(WorkspaceStore.Session source,ProjectFiles.Entry file)throws Exception;}
@@ -56,7 +56,7 @@ final class AgentInstructionsUi {
         String memoryKey(){return environment().equals("ubuntu-ai")?project:environment()+"|"+project;}
         String memoryPath(){return activity.getSharedPreferences("agent-instructions-memory-paths",0).getString(memoryKey(),"");}
         void selectAgents(){if(agents!=null)for(int n=0;n<agents.getChildCount();n++){TextView v=(TextView)agents.getChildAt(n);selected(v,("instructions-agent-"+agent).equals(v.getTag()));}if(environmentLabel!=null)environmentLabel.setText(t("Посмотреть шаблон приложения","View app template"));if(runtimeLabel!=null)runtimeLabel.setText(runtimeNotice(activity,environment()));}
-        void switchAgent(String chosen){if(busy)return;guard(()->{String old=environment();agent=chosen;if(!old.equals(environment()))project="/root";name=baseName();selectAgents();load();});}
+        void switchAgent(String chosen){if(busy||sessionBound)return;guard(()->{String old=environment();agent=chosen;if(!old.equals(environment()))project="/root";name=baseName();selectAgents();load();});}
 
         boolean memory(){return scope.equals("project")&&name.equals("LEARNING.md");}
         String savedNotice(){return memory()?t("Сохранено. Агент читает память по указанию в инструкциях проекта; сохранение не запускает автоматическое обучение.","Saved. The agent reads memory when instructed by project rules; saving does not start automatic learning."):agent.equals("claude")?t("Сохранено. Выполняющийся запрос не изменяется. Для надёжного перечитывания правил перезапустите только Claude Code с продолжением диалога; поведение зависит от версии CLI.","Saved. The running request is unchanged. To reliably reread rules, restart only Claude Code and resume the conversation; behavior depends on the CLI version."):saved(activity);}
@@ -80,10 +80,10 @@ final class AgentInstructionsUi {
         }
         void show(){
             if(closed||dialog!=null&&dialog.isShowing())return;
-            frame=new AgentManagerLayout(activity);root=frame;agents=new LinearLayout(activity);for(String a:new String[]{"codex","claude"}){TextView button=WorkspaceDialogs.action(activity,a.equals("codex")?"Codex":"Claude Code",0);button.setTag("instructions-agent-"+a);button.setOnClickListener(v->switchAgent(a));agents.addView(button,new LinearLayout.LayoutParams(-2,-2));}frame.content.addView(horizontal(agents,"instructions-agents-scroll"));
+            frame=new AgentManagerLayout(activity);root=frame;agents=new LinearLayout(activity);for(String a:new String[]{"codex","claude"}){TextView button=WorkspaceDialogs.action(activity,a.equals("codex")?"Codex":"Claude Code",0);button.setTag("instructions-agent-"+a);button.setOnClickListener(v->switchAgent(a));agents.addView(button,new LinearLayout.LayoutParams(-2,-2));}if(!sessionBound)frame.content.addView(horizontal(agents,"instructions-agents-scroll"));
             environmentLabel=WorkspaceDialogs.action(activity,"",0);environmentLabel.setTag("instructions-template-view");environmentLabel.setOnClickListener(v->viewTemplate());frame.content.addView(environmentLabel);projectTemplate=WorkspaceDialogs.action(activity,t("Шаблон проектных инструкций","Project instructions template"),0);projectTemplate.setTag("instructions-project-template");projectTemplate.setOnClickListener(v->viewProjectTemplate());frame.content.addView(projectTemplate);projectCreate=WorkspaceDialogs.action(activity,t("Создание инструкций проекта","Create project instructions"),0);projectCreate.setTag("instructions-project-create");projectCreate.setOnClickListener(v->createProjectInstructions());frame.content.addView(projectCreate);runtimeLabel=text("");runtimeLabel.setTag("instructions-environment");frame.content.addView(runtimeLabel);selectAgents();
             tabs=new LinearLayout(activity);
-            for(String tab:new String[]{"general","project","diagnostics"}){
+            for(String tab:sessionBound?new String[]{}:new String[]{"general","project","diagnostics"}){
                 TextView v=WorkspaceDialogs.action(activity,tab.equals("general")?t("Общие","General"):tab.equals("project")?t("Проектные","Project"):t("Диагностика","Diagnostics"),0);
                 v.setTag("instructions-tab-"+tab);v.setOnClickListener(w->{if(!busy)guard(()->{scope=tab;load();});});tabs.addView(v,new LinearLayout.LayoutParams(-2,-1));
             }
@@ -95,7 +95,7 @@ final class AgentInstructionsUi {
                 @Override public void onBackPressed(){if(!hideKeyboard())requestClose();}
             };
             LinearLayout title=new LinearLayout(activity);title.setGravity(Gravity.CENTER_VERTICAL);title.setPadding(dp(16),dp(6),dp(10),dp(6));
-            TextView heading=text(label(activity));heading.setTextSize(20);heading.setTypeface(null,Typeface.BOLD);title.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
+            TextView heading=text(sessionBound?t("Инструкции проекта","Project instructions"):label(activity));heading.setTextSize(20);heading.setTypeface(null,Typeface.BOLD);title.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
             refresh=new ImageButton(activity);refresh.setTag("instructions-refresh");refresh.setImageResource(com.termux.R.drawable.workspace_server_refresh);refresh.setBackground(WorkspaceDialogs.background(activity,false));refresh.setPadding(dp(12),dp(12),dp(12),dp(12));refresh.setContentDescription(t("Обновить","Refresh"));
             refresh.setTooltipText(t("Обновить","Refresh"));
             refresh.setOnClickListener(v->reloadSelectedFile());title.addView(refresh,new LinearLayout.LayoutParams(dp(48),dp(48)));((AlertDialog)dialog).setCustomTitle(title);((AlertDialog)dialog).setView(root,0,0,0,0);selectTabs();
@@ -180,7 +180,7 @@ final class AgentInstructionsUi {
                 String selected=d.isNull("projectSource")?"":d.optString("projectSource","");
                 TextView active=text(agent.equals("claude")?t("Claude читает несколько файлов совместно. Полный список и ограничения — в диагностике; выбор плашки меняет только редактируемый файл.","Claude combines multiple files. See diagnostics for sources and limits; a tab selects only the edit target."):selected.isEmpty()?t("В этой папке проектные инструкции отсутствуют.","No project instructions in this folder."):t("Codex читает в этой папке: ","Codex reads in this folder: ")+new java.io.File(selected).getName());
                 active.setTag("instructions-project-active");active.setTextSize(12);fields.addView(active);
-                action(fields,t("Выбрать другой проект","Choose another project"),"instructions-choose-project",()->guard(this::chooseProject));
+                if(!sessionBound)action(fields,t("Выбрать другой проект","Choose another project"),"instructions-choose-project",()->guard(this::chooseProject));
             }
             if(scope.equals("project")&&!memory()&&!d.optBoolean("exists")){
                 TextView absent=text(t("Файл отсутствует. Используйте «Создание инструкций проекта». Открытие ничего не создаёт.","The file is absent. Use Create project instructions. Opening creates nothing."));absent.setTag("instructions-project-missing");fields.addView(absent);

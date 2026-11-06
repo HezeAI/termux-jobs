@@ -231,17 +231,19 @@ public class AgentChatUiTest {
   }finally{release.countDown();ui.close();marker.delete();}
  }
  @Test public void partialMessagePagesSurviveFreshSnapshotsForCodexAndClaude()throws Exception{
-  for(boolean claude:new boolean[]{false,true}){
+  // This fixture has no attached window; frame timing is covered by AgentTextRevealTest.
+  java.lang.reflect.Method scale=android.animation.ValueAnimator.class.getDeclaredMethod("setDurationScale",float.class);scale.setAccessible(true);scale.invoke(null,0f);
+  try{for(boolean claude:new boolean[]{false,true}){
    TermuxActivity a=activity();WorkspaceStore.Session first=profile();first.aiAgent="";first.environment=claude?"ubuntu":"codex";first.claudeAgent=claude;first.codexEnvironment="ubuntu-ai";java.io.File marker=CodexChatControl.marker(a.getFilesDir(),first);marker.getParentFile().mkdirs();marker.createNewFile();AtomicReference<WorkspaceStore.Session> selected=new AtomicReference<>(first);AtomicBoolean finalNative=new AtomicBoolean();
    AgentChatUi ui=new AgentChatUi(a,selected::get,()->true,(p,q)->{boolean old=q.has("cursor");JSONArray rows=new JSONArray();if(old)rows.put(new JSONObject().put("key","early").put("message","same").put("kind","text").put("body","earlier part"));else rows.put(new JSONObject().put("key","tail").put("message","same").put("kind","text").put("body","latest part"));
     if(!old)rows.put(new JSONObject().put("key",finalNative.get()?"native":"stream").put("message",finalNative.get()?"native-id":"provisional-id").put("kind","text").put("body",finalNative.get()?"final answer":"streaming"));
     return result().put("session","fixture-thread").put("connected",true).put("partialHistory",true).put("partialMessages",new JSONArray().put("same")).put("replacedMessages",finalNative.get()?new JSONArray().put("provisional-id"):new JSONArray()).put("knownMessages",new JSONArray().put("same")).put("older",old?JSONObject.NULL:"previous").put("rows",rows);
    });
    try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);chat.older.performClick();for(int i=0;i<30&&!hasText(chat,(claude?"Claude":"Codex")+": earlier part");i++)drain();assertTrue(hasText(chat,(claude?"Claude":"Codex")+": earlier part"));
-    java.lang.reflect.Method load=AgentChatUi.class.getDeclaredMethod("load",boolean.class);load.setAccessible(true);finalNative.set(true);load.invoke(ui,false);for(int i=0;i<10;i++)drain();assertTrue(hasText(chat,(claude?"Claude":"Codex")+": earlier part"));assertTrue(hasText(chat,(claude?"Claude":"Codex")+": latest part"));assertFalse(hasText(chat,(claude?"Claude":"Codex")+": streaming"));assertTrue(hasText(chat,(claude?"Claude":"Codex")+": final answer"));
+    java.lang.reflect.Method load=AgentChatUi.class.getDeclaredMethod("load",boolean.class);load.setAccessible(true);finalNative.set(true);load.invoke(ui,false);for(int i=0;i<10;i++)drain();Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));assertTrue(hasText(chat,(claude?"Claude":"Codex")+": earlier part"));assertTrue(hasText(chat,(claude?"Claude":"Codex")+": latest part"));assertFalse(hasText(chat,(claude?"Claude":"Codex")+": streaming"));assertTrue(hasText(chat,(claude?"Claude":"Codex")+": final answer"));
     WorkspaceStore.Session other=profile();other.aiAgent="";selected.set(other);ui.sync();selected.set(first);ui.sync();assertTrue(hasText(chat,(claude?"Claude":"Codex")+": earlier part"));
    }finally{ui.close();marker.delete();a.finish();}
-  }
+  }}finally{scale.invoke(null,1f);}
  }
  @Test public void failedOlderRequestKeepsChatAndAllowsRetry()throws Exception{
   TermuxActivity a=activity();WorkspaceStore.Session selected=profile();AtomicInteger tries=new AtomicInteger();

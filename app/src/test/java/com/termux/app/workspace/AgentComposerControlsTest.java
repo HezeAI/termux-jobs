@@ -13,7 +13,7 @@ public class AgentComposerControlsTest {
   AtomicInteger notes=new AtomicInteger(),files=new AtomicInteger(),sends=new AtomicInteger();star.setOnClickListener(v->notes.incrementAndGet());clip.setOnClickListener(v->files.incrementAndGet());send.setOnClickListener(v->sends.incrementAndGet());int calls=0;
   for(String language:new String[]{"ru","en"})for(int width:new int[]{240,280,360})for(int size:new int[]{14,24,36}){
    WorkspaceLanguage.select(a,language);input.setText("draft\nline two\nline three");input.setTextSize(size);input.setSelection(2);controls.present(true);measure(width);
-   View note=text(row,language.equals("ru")?"Заметки":"Notes");assertNotNull(note);for(View target:new View[]{note,send,clip}){assertTrue(target.getWidth()>=44);assertTrue(target.getHeight()>=44);target.performClick();}
+   View note=row.findViewWithTag("agent-notes-input");assertEquals(language.equals("ru")?"Заметки":"Notes",note.getContentDescription());assertNotNull(note);for(View target:new View[]{note,send,clip}){assertTrue(target.getWidth()>=44);assertTrue(target.getHeight()>=44);target.performClick();}
    assertEquals("draft\nline two\nline three",input.getText().toString());assertEquals(2,input.getSelectionStart());assertEquals(((View)send.getParent()).getWidth(),send.getRight());assertTrue(controls.pair.getTop()>=input.getHeight());calls++;
   }
   assertEquals(calls,notes.get());assertEquals(calls,files.get());assertEquals(calls,sends.get());
@@ -37,4 +37,11 @@ public class AgentComposerControlsTest {
   RelativeLayout root=new RelativeLayout(a);FrameLayout host=new FrameLayout(a);row.setId(901);((ViewGroup)row.getParent()).removeView(row);RelativeLayout.LayoutParams hp=new RelativeLayout.LayoutParams(-1,-1);hp.addRule(RelativeLayout.ABOVE,901);root.addView(host,hp);RelativeLayout.LayoutParams rp=new RelativeLayout.LayoutParams(-1,-2);rp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);root.addView(row,rp);AtomicInteger inset=new AtomicInteger();controls.overlay(host,inset::set);a.setContentView(root);input.setText("draft\nmore");input.setSelection(3);
   for(boolean agent:new boolean[]{true,false,true})for(int height:new int[]{800,430,800}){controls.present(agent);for(int i=0;i<2;i++){root.measure(View.MeasureSpec.makeMeasureSpec(320,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));root.layout(0,0,320,height);}assertEquals(height,host.getBottom());assertEquals(height,row.getBottom());assertEquals(row.getHeight(),inset.get());assertNotNull(row.getBackground());assertTrue(row.isClickable());assertEquals("draft\nmore",input.getText().toString());assertEquals(3,input.getSelectionStart());}
  }
+ @Test public void iconsAndRightActionsShareAxisAndQueueIsAbsent(){
+  WorkspaceLanguage.select(a,"en");LinearLayout model=new LinearLayout(a);TextView title=new TextView(a);title.setText("Model / High");title.setTextSize(9.5f);model.addView(title);controls.actions(model,new View(a),()->fail("queue UI"),()->{},n->{},v->{},v->{});controls.present(true);measure(440);
+  View note=row.findViewWithTag("agent-notes-input"),mic=row.findViewWithTag("agent-voice-input");assertTrue(note instanceof WorkspaceIconButton);assertTrue(mic instanceof WorkspaceIconButton);assertNull(text(row,"Queue"));assertNull(text(row,"Notes"));
+  for(View v:new View[]{note,mic,model,send})assertEquals(clip.getTop()+clip.getHeight()/2,v.getTop()+v.getHeight()/2,1);
+  assertTrue(note.getWidth()>=WorkspaceDialogs.dp(a,44));assertTrue(note.getHeight()>=WorkspaceDialogs.dp(a,44));
+ }
+
 }

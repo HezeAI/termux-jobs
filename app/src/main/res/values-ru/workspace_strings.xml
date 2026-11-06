@@ -544,7 +544,7 @@
     <string name="workspace_claude_07">Доступ Claude Code</string>
     <string name="workspace_claude_08">Чат Claude Code</string>
     <string name="workspace_claude_09">ID чата Claude Code</string>
-    <string name="workspace_claude_10">Claude Code запускается в Ubuntu. Компоненты устанавливаются при первом запуске в отдельный каталог. Нужна подписка Claude или оплачиваемый API; ChatGPT Plus не подходит. Авторизация и история отдельные. «Выбрать чат» открывает список Claude в терминале. Доступность моделей зависит от аккаунта.</string>
+    <string name="workspace_claude_10">Claude Code запускается в Ubuntu. Компоненты устанавливаются при первом запуске в отдельный каталог. Нужна подписка Claude или оплачиваемый API; ChatGPT Plus не подходит. Авторизация и история отдельные. «Выбрать чат» открывает список локальной истории Claude. Доступность моделей зависит от аккаунта.</string>
     <string name="workspace_claude_11">Этот агент пока не поддерживается.</string>
     <string name="workspace_claude_12">Модель и разрешения задаются при запуске. Текущее состояние: /status; смена модели: /model; разрешения: /permissions; вход: /login. Эти команды вводятся в терминале Claude. История сохраняется самим Claude; выберите чат или укажите ID при новом запуске.</string>
     <string name="workspace_claude_launch">"При запуске: "</string>
@@ -586,4 +586,5 @@
     <string name="workspace_preview_back">Назад</string>
     <string name="workspace_text_585" formatted="false">"printf \'%s\\n\' \'Для выбранной политики нужен канал чата Codex. Подтверждения не отключены.\' &gt;&amp;2; exit 1;\n"</string>
     <string name="workspace_text_586" formatted="false">Выбранный режим разрешений не поддерживается. Запуск остановлен; полный доступ не включён.</string>
+    <string name="workspace_project_instructions_label">Инструкции проекта</string>
 </resources>

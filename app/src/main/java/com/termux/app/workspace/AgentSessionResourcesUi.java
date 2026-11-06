@@ -7,7 +7,7 @@ import com.termux.app.TermuxActivity;
 final class AgentSessionResourcesUi {
     static String menuLabel(WorkspaceStore.Session source){
         String agent=AgentPreparation.agent(source);
-        return agent.equals("codex")?"AGENTS.md & SKILL.md":agent.equals("claude")?"CLAUDE.md & SKILL.md":"";
+        return agent.equals("codex")||agent.equals("claude")?WorkspaceText.tr("Инструкции проекта"):"";
     }
     static final class Context {
         final TermuxActivity activity;
@@ -15,14 +15,18 @@ final class AgentSessionResourcesUi {
         Context(TermuxActivity a,WorkspaceStore.Session snapshot){activity=a;agent=AgentPreparation.agent(snapshot);environment=snapshot.codexEnvironment;project=AgentInstructionsUi.suggested(snapshot);}
         String t(String ru,String en){return AgentInstructionsUi.tr(activity,ru,en);}
         String description(){return (agent.equals("codex")?"Codex":"Claude Code")+"\n"+AgentInstructionsUi.runtimeNotice(activity,environment)+"\n"+t("Папка проекта: ","Project folder: ")+project;}
-        AgentInstructionsUi.Editor editor(AgentInstructions.Backend backend){AgentInstructionsUi.Editor e=new AgentInstructionsUi.Editor(activity,project,backend);e.agent=agent;e.name=e.baseName();e.scope="project";e.selectedEnvironment=environment;return e;}
-        AgentSkillsUi.Screen skills(AgentInstructions.Backend backend){AgentSkillsUi.Screen s=new AgentSkillsUi.Screen(activity,project,agent);s.environment=environment;s.scope="project";if(backend!=null)s.backend=backend;return s;}
+        AgentInstructionsUi.Editor editor(AgentInstructions.Backend backend){AgentInstructionsUi.Editor e=new AgentInstructionsUi.Editor(activity,project,backend);e.agent=agent;e.name=e.baseName();e.scope="project";e.selectedEnvironment=environment;e.sessionBound=true;return e;}
+        AgentSkillsUi.Screen skills(AgentInstructions.Backend backend){AgentSkillsUi.Screen s=new AgentSkillsUi.Screen(activity,project,agent);s.environment=environment;s.scope="project";s.sessionBound=true;if(backend!=null)s.backend=backend;return s;}
     }
     static Context context(TermuxActivity a,WorkspaceStore.Session source){
         if(source==null||menuLabel(source).isEmpty())return null;
         WorkspaceStore.Session snapshot=source.copy();
         if(!AgentEnvironments.ubuntu(snapshot.codexEnvironment)&&!snapshot.codexEnvironment.equals("termux"))return null;
         return new Context(a,snapshot);
+    }
+    static void showProject(TermuxActivity a,WorkspaceStore.Session source){
+        Context c=context(a,source);if(c==null){Toast.makeText(a,AgentInstructionsUi.tr(a,"Инструкции этого агента в выбранной среде пока не поддерживаются.","This agent’s instructions in the selected environment are not supported yet."),Toast.LENGTH_LONG).show();return;}
+        c.editor(q->AgentInstructions.request(a,q)).show();
     }
     static android.app.AlertDialog show(TermuxActivity a,WorkspaceStore.Session source){return show(a,source,q->AgentInstructions.request(a,q));}
     static android.app.AlertDialog show(TermuxActivity a,WorkspaceStore.Session source,AgentInstructions.Backend backend){

@@ -14,6 +14,7 @@ final class WorkspaceText {
     private static final Map<String,Integer> IDS;
     static {
         Map<String,Integer> ids = new HashMap<>();
+        ids.put("Инструкции проекта", R.string.workspace_project_instructions_label);
         ids.put("Назад", R.string.workspace_preview_back);
         ids.put("printf '%s\\n' 'Ожидание оболочки Ubuntu…'\n", R.string.workspace_text_000);
         ids.put("Команда ", R.string.workspace_text_001);
@@ -559,7 +560,7 @@ final class WorkspaceText {
         ids.put("Доступ Claude Code", R.string.workspace_claude_07);
         ids.put("Чат Claude Code", R.string.workspace_claude_08);
         ids.put("ID чата Claude Code", R.string.workspace_claude_09);
-        ids.put("Claude Code запускается в Ubuntu. Компоненты устанавливаются при первом запуске в отдельный каталог. Нужна подписка Claude или оплачиваемый API; ChatGPT Plus не подходит. Авторизация и история отдельные. «Выбрать чат» открывает список Claude в терминале. Доступность моделей зависит от аккаунта.", R.string.workspace_claude_10);
+        ids.put("Claude Code запускается в Ubuntu. Компоненты устанавливаются при первом запуске в отдельный каталог. Нужна подписка Claude или оплачиваемый API; ChatGPT Plus не подходит. Авторизация и история отдельные. «Выбрать чат» открывает список локальной истории Claude. Доступность моделей зависит от аккаунта.", R.string.workspace_claude_10);
         ids.put("Этот агент пока не поддерживается.", R.string.workspace_claude_11);
         ids.put("Модель и разрешения задаются при запуске. Текущее состояние: /status; смена модели: /model; разрешения: /permissions; вход: /login. Эти команды вводятся в терминале Claude. История сохраняется самим Claude; выберите чат или укажите ID при новом запуске.", R.string.workspace_claude_12);
         ids.put("При запуске: ", R.string.workspace_claude_launch);

@@ -24,6 +24,7 @@ final class WorkspacePopover {
     }
     private int dp(int n){return WorkspaceDialogs.dp(context,n);}
     void item(String title,int icon,Runnable action){TextView row=new TextView(context);row.setText(title);row.setTextSize(12);row.setTextColor(WorkspaceDialogs.TEXT);row.setMinHeight(dp(44));row.setPadding(dp(9),dp(9),dp(9),dp(9));row.setGravity(Gravity.CENTER_VERTICAL);if(icon!=0){android.graphics.drawable.Drawable image=context.getDrawable(icon).mutate();image.setTint(WorkspaceDialogs.MUTED);image.setBounds(0,0,dp(18),dp(18));row.setCompoundDrawables(image,null,null,null);row.setCompoundDrawablePadding(dp(9));}row.setBackground(WorkspaceRipple.background(context,null,8));row.setOnClickListener(v->{if(closing||!window.isShowing())return;dismiss();action.run();});items.addView(row,new LinearLayout.LayoutParams(-1,-2));}
+    void label(String title){TextView text=new TextView(context);text.setText(title);text.setTextSize(12);text.setTextColor(WorkspaceDialogs.TEXT);text.setPadding(dp(9),dp(9),dp(9),dp(9));items.addView(text,new LinearLayout.LayoutParams(-1,-2));}
     void dismissed(Runnable action){onDismiss=action;}
     WorkspacePopover animated(){animated=true;return this;}
     void show(View anchor){show(anchor,true);}

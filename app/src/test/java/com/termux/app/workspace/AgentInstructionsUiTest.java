@@ -468,12 +468,12 @@ assertEquals(0,writes);
    find("instructions-tab-diagnostics").performClick();waitIdle();assertEquals(View.GONE,ui.refresh.getVisibility());
   }
  }
- @Test public void sessionEntryRetainsOriginWhileAllowingGeneralSaveAndCopy()throws Exception{
+ @Test public void sessionEntryRetainsOriginAndOnlyAllowsProjectSaveAndCopy()throws Exception{
   for(String agent:new String[]{"codex","claude"})for(String env:new String[]{"ubuntu-ai","ubuntu"}){
    if(ui!=null)ui.dialog.dismiss();WorkspaceStore.Session origin=new WorkspaceStore.Session();origin.environment=agent.equals("codex")?"codex":"ubuntu";origin.claudeAgent=agent.equals("claude");origin.codexEnvironment=env;origin.directory="/project/кириллица with spaces";
    ui=AgentInstructionsUi.sessionEditor(activity,origin,this::backend);assertNotNull(ui);origin.directory="/other";origin.codexEnvironment="ubuntu-ai";ui.show();waitIdle();assertEquals("project",ui.scope);assertEquals(agent,ui.agent);assertEquals(env,last.optString("environment"));assertEquals("/project/кириллица with spaces",last.optString("project"));assertEquals(ui.project+"/"+ui.baseName(),ui.document.optString("path"));
    ui.editor.setText("copy and save");ui.editor.selectAll();assertTrue(ui.editor.onTextContextMenuItem(android.R.id.copy));android.content.ClipboardManager clipboard=(android.content.ClipboardManager)activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);assertEquals("copy and save",clipboard.getPrimaryClip().getItemAt(0).getText().toString());ui.save.performClick();waitIdle();assertEquals("copy and save",lastText);assertEquals(env,last.optString("environment"));
-   find("instructions-tab-general").performClick();waitIdle();assertEquals("general",last.optString("scope"));assertEquals(env,last.optString("environment"));
+   assertNull(find("instructions-tab-general"));assertNull(find("instructions-agent-codex"));assertNull(find("instructions-agent-claude"));ui.switchAgent(agent.equals("codex")?"claude":"codex");assertEquals(agent,ui.agent);assertEquals("project",last.optString("scope"));assertEquals(env,last.optString("environment"));
   }
  }
  @Test public void sessionEntryMissingFileOffersCreationAndLegacyTermuxIsNotRedirected()throws Exception{

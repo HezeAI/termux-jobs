@@ -41,7 +41,7 @@ final class AgentChatView extends LinearLayout {
     private boolean touchingTimeline;
     private boolean seenLiveSnapshot;
     private void revealLayout(){if(!touchingTimeline&&position().bottom){followLayout=true;bottomAfterLayout();}}
-    void liveRows(List<JSONObject> rows,boolean older,boolean busy){boolean animate=seenLiveSnapshot&&busy;seenLiveSnapshot=true;rows(rows,older,animate);}
+    void liveRows(List<JSONObject> rows,boolean older,boolean busy){boolean animate=seenLiveSnapshot;seenLiveSnapshot=true;rows(rows,older,animate);}
     final AgentProgressView execution;
     private int scalePercent=100;
     int scalePercent(){return scalePercent;}

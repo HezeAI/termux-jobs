@@ -21,12 +21,12 @@ final class AgentProjectPanel implements AutoCloseable {
  LinearLayout column(){LinearLayout v=new LinearLayout(activity);v.setOrientation(LinearLayout.VERTICAL);return v;}
  TextView label(LinearLayout parent,String text){TextView v=AgentStatusUi.info(parent,text);v.setTextIsSelectable(true);return v;}
  TextView action(LinearLayout parent,String text,Runnable click){TextView v=WorkspaceDialogs.action(activity,text,0);v.setOnClickListener(w->{if(owns())click.run();});parent.addView(v);return v;}
- View wrap(View fileView,Consumer<Boolean> visibility,Consumer<String> navigate){files=fileView;fileVisibility=visibility;this.navigate=navigate;root=column();root.setTag("agent-project-panel");label(root,AgentPreparation.agent(profile)+" · "+directory);
+ View wrap(View fileView,Consumer<Boolean> visibility,Consumer<String> navigate){files=fileView;fileVisibility=visibility;this.navigate=navigate;root=column();root.setPadding(WorkspaceDialogs.dp(activity,16),WorkspaceDialogs.dp(activity,12),WorkspaceDialogs.dp(activity,16),WorkspaceDialogs.dp(activity,12));root.setTag("agent-project-panel");label(root,AgentPreparation.agent(profile)+" · "+directory);
   LinearLayout row=new LinearLayout(activity);String[] names={t("Файлы","Files"),t("Вложения","Attachments"),t("Изменения","Changes")};for(int n=0;n<3;n++){final int index=n;tabs[n]=WorkspaceDialogs.action(activity,names[n],0);tabs[n].setTextSize(12);tabs[n].setTag("project-tab-"+n);tabs[n].setOnClickListener(v->{if(owns())select(index);});row.addView(tabs[n],new LinearLayout.LayoutParams(0,-2,1));}root.addView(row);
   content=new FrameLayout(activity);content.addView(files);attachments=column();changes=column();
   LinearLayout attachmentPage=column();attachmentSearch=search(attachmentPage,1);addScroll(attachmentPage,attachments);content.addView(attachmentPage,new FrameLayout.LayoutParams(-1,-1));
   LinearLayout changesPage=column();gitSearch=search(changesPage,2);addScroll(changesPage,changes);content.addView(changesPage,new FrameLayout.LayoutParams(-1,-1));
-  root.addView(content,new LinearLayout.LayoutParams(-1,-2));chat.observe(()->{if(owns()&&selected==1)renderAttachments();});select(0);return root;
+  root.addView(content,new LinearLayout.LayoutParams(-1,0,1));chat.observe(()->{if(owns()&&selected==1)renderAttachments();});select(0);return root;
  }
  void addScroll(LinearLayout page,LinearLayout body){ScrollView scroll=new ScrollView(activity);scroll.addView(body);page.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));}
  EditText search(LinearLayout parent,int tab){
@@ -38,7 +38,7 @@ final class AgentProjectPanel implements AutoCloseable {
  }
  void refreshState(TextView button,ProgressBar progress,boolean busy){button.setEnabled(!busy);button.setAlpha(busy?.4f:1f);progress.setVisibility(busy?View.VISIBLE:View.GONE);}
  void select(int n){if(!owns())return;selected=n;epoch++;for(int i=0;i<3;i++){boolean active=i==n;content.getChildAt(i).setVisibility(active?View.VISIBLE:View.GONE);tabs[i].setSelected(active);tabs[i].setBackground(WorkspaceDialogs.background(activity,active));tabs[i].setTypeface(null,active?android.graphics.Typeface.BOLD:android.graphics.Typeface.NORMAL);tabs[i].setTextColor(active?WorkspaceDialogs.TEXT:WorkspaceDialogs.MUTED);tabs[i].setGravity(Gravity.CENTER);tabs[i].setPadding(WorkspaceDialogs.dp(activity,8),WorkspaceDialogs.dp(activity,10),WorkspaceDialogs.dp(activity,8),WorkspaceDialogs.dp(activity,10));tabs[i].setMaxLines(2);}
-  content.getLayoutParams().height=Math.max(WorkspaceDialogs.dp(activity,180),Math.min(WorkspaceDialogs.dp(activity,420),activity.getResources().getDisplayMetrics().heightPixels/2));content.requestLayout();fileVisibility.accept(n==0);if(n==1){availabilityCache.clear();renderAttachments();}if(n==2){if(listing==null&&!gitLoading)loadChanges();else renderChanges();}
+  content.requestLayout();fileVisibility.accept(n==0);if(n==1){availabilityCache.clear();renderAttachments();}if(n==2){if(listing==null&&!gitLoading)loadChanges();else renderChanges();}
  }
  static boolean matches(String value,String query){return value.toLowerCase(Locale.ROOT).contains(query.trim().toLowerCase(Locale.ROOT));}
  void refreshAttachments(){if(!owns()||refreshingAttachments||chat.loadingOlder())return;refreshingAttachments=true;attachmentRefreshError="";availabilityCache.clear();try{chat.refresh();}catch(Exception failed){attachmentRefreshError=t("Не удалось обновить вложения. Повторите.","Could not refresh attachments. Retry.");}renderAttachments();}

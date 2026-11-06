@@ -544,7 +544,7 @@
     <string name="workspace_claude_07">Claude Code permissions</string>
     <string name="workspace_claude_08">Claude Code chat</string>
     <string name="workspace_claude_09">Claude Code chat ID</string>
-    <string name="workspace_claude_10">Claude Code runs in Ubuntu. Components are installed in a separate directory on first launch. A Claude subscription or paid API is required; ChatGPT Plus does not apply. Authentication and history are separate. Choose chat opens the Claude picker in the terminal. Model availability depends on your account.</string>
+    <string name="workspace_claude_10">Claude Code runs in Ubuntu. Components are installed in a separate directory on first launch. A Claude subscription or paid API is required; ChatGPT Plus does not apply. Authentication and history are separate. Choose chat opens the local Claude history list. Model availability depends on your account.</string>
     <string name="workspace_claude_11">This agent is not supported yet.</string>
     <string name="workspace_claude_12">Model and permissions are set at launch. Current status: /status; change model: /model; permissions: /permissions; sign in: /login. Enter these commands in the Claude terminal. Claude saves its own history; choose a chat or enter its ID when starting again.</string>
     <string name="workspace_claude_launch">"At launch: "</string>
@@ -586,4 +586,5 @@
     <string name="workspace_preview_back">Back</string>
     <string name="workspace_text_585" formatted="false">"printf \'%s\\n\' \'The selected policy requires the Codex chat connection. Approvals were not disabled.\' &gt;&amp;2; exit 1;\n"</string>
     <string name="workspace_text_586" formatted="false">The selected permission policy is unsupported. Startup stopped; full access was not enabled.</string>
+    <string name="workspace_project_instructions_label">Project instructions</string>
 </resources>

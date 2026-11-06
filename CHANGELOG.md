@@ -2,6 +2,26 @@
 
 No other changes queued for publication.
 
+# 2026-11-06 — 2.1.5-test5 (versionCode1500, private v35 follow-up)
+
+Retains the previously agreed test4/test3/test2/test1 features relative to stablev2.1.4.
+
+- Existing-chat selection reads native conversation metadata, shows a specific title/ID, and keeps loading, empty, error/retry and cancellation separate. Active conversation guards remain; listing does not request a model response.
+- Agent hints point to the chat terminal. Restart moves to the running chat's header with an anchored confirmation. Sidebar title/path are not menu buttons; terminal access remains in the header. Close uses a cross and is offered only for running records.
+- Save chat and close persists the confirmed native conversation ID before stopping that chat. Save failure leaves it running. Removing a stopped record from saved hides its sidebar row immediately; running records remain.
+- Project instructions and General/Project skills stay bound to the selected agent, environment and project. They no longer offer a different agent from these session entries; unsupported skill providers are identified explicitly.
+- The common terminal composer uses the same vector send button. Agent composer uses a note icon, +0.5dp plus/note icons, +0.5sp model/reasoning text and aligned actions. Queue entry points are removed; delivery handling and quota-row geometry are retained.
+- New replies arriving all at once receive a short character reveal as well as streamed replies. Existing history, disabled animations and hidden views keep their prior behavior.
+- Project files and changes use an in-activity full screen. Existing Files controls and operations remain; attachment/Git search, cards, paging, errors and read cancellation are retained.
+- Sidebar keeps Saved only beside the chat name. The path line reports Running or Not running from the actual session, independently of saving.
+
+Same com.termux/certificate/ARM64/min26/target28/schema8. No authorization/history
+migration, agent protocol/version or native-library change. Only main1500 is prepared;
+existing standby1499 is not read, changed or rebuilt. No installation or publication.
+Phone visual/IME/rotation and real native resume/restart checks remain separate.
+
+[Checks and limitations](docs/fork/VALIDATION-2.1.5-test5.md) · [Function map](docs/fork/REDESIGN-v35.md).
+
 # 2026-11-06 — 2.1.5-test4 (versionCode1498, private v35 corrections)
 
 Retains the full test3/test2/test1 change set relative to published stablev2.1.4.

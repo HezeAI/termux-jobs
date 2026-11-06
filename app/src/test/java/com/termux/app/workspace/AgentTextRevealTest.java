@@ -14,12 +14,13 @@ import org.robolectric.annotation.Config;
 import static org.junit.Assert.*;
 
 @RunWith(RobolectricTestRunner.class) @Config(sdk=28,application=Application.class)
+@org.robolectric.annotation.LooperMode(org.robolectric.annotation.LooperMode.Mode.PAUSED)
 public class AgentTextRevealTest {
- private Activity a;private TextView view;private AgentTextReveal reveal;private final List<String> painted=new ArrayList<>();
+ private Activity a;private TextView view;private AgentTextReveal reveal;private final List<String> painted=new ArrayList<>();private final List<Long> paintTimes=new ArrayList<>();
  @Before public void setup()throws Exception{
   a=Robolectric.buildActivity(Activity.class).setup().visible().get();view=new TextView(a);a.setContentView(view);
   java.lang.reflect.Field attach=View.class.getDeclaredField("mAttachInfo");attach.setAccessible(true);Object info=attach.get(view);java.lang.reflect.Field visible=info.getClass().getDeclaredField("mWindowVisibility");visible.setAccessible(true);visible.setInt(info,View.VISIBLE);
-  reveal=new AgentTextReveal(view,text->{painted.add(text.toString());view.setText(text);});
+  reveal=new AgentTextReveal(view,text->{painted.add(text.toString());paintTimes.add(android.os.SystemClock.uptimeMillis());view.setText(text);});
  }
  @After public void close(){reveal.finish();a.finish();}
  private void tick(int ms){Shadows.shadowOf(Looper.getMainLooper()).idleFor(ms,TimeUnit.MILLISECONDS);}
@@ -37,6 +38,12 @@ public class AgentTextRevealTest {
  @Test public void largeBacklogAcceleratesWithoutLosingText(){
   reveal.update("",false);StringBuilder text=new StringBuilder();for(int i=0;i<1500;i++)text.append("данные🙂 ");String expected=text.toString();
   reveal.update(expected,true);assertTrue(AgentTextReveal.delay(1000)<AgentTextReveal.delay(5));tick(4000);assertEquals(expected,view.getText().toString());assertFalse(reveal.pending());
+ }
+ @Test public void completeShortAndLongRepliesHaveIntermediateFramesWithoutLongLag(){
+  for(String value:new String[]{"Short whole reply",String.join("",Collections.nCopies(3000,"many characters "))}){
+   reveal.update("",false);painted.clear();paintTimes.clear();reveal.update(value,true);assertTrue(reveal.pending());tick(4500);assertEquals(value,view.getText().toString());assertFalse(reveal.pending());assertTrue("intermediate paints",painted.size()>2);assertTrue(painted.get(0).length()<value.length());assertTrue("visible duration",paintTimes.get(paintTimes.size()-1)-paintTimes.get(0)>=100);
+
+  }
  }
  @Test public void streamingLocalLinksKeepTheirCapturedActionAfterRevealAndTouch()throws Exception{
   AgentLinkTextView text=new AgentLinkTextView(a);a.setContentView(text);Object attach=org.robolectric.util.ReflectionHelpers.getField(text,"mAttachInfo");org.robolectric.util.ReflectionHelpers.setField(attach,"mWindowVisibility",View.VISIBLE);java.util.concurrent.atomic.AtomicInteger bound=new java.util.concurrent.atomic.AtomicInteger(),opened=new java.util.concurrent.atomic.AtomicInteger();io.noties.markwon.Markwon markdown=AgentMarkdown.create(a,path->{assertEquals("/root/original.gif",path);bound.incrementAndGet();return opened::incrementAndGet;});
