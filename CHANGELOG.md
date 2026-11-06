@@ -1,3 +1,7 @@
+# 2.1.5-backup2 (1497) — 2026-11-06
+
+Private standby APK of the accepted old UI for primary1496. Version metadata only. Same package/signer/schema8; no data rollback guarantee. [Validation](docs/fork/VALIDATION-backup-1497.md).
+
 # Unreleased
 
 No other changes queued for publication.
