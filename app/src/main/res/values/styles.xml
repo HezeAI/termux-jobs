@@ -9,6 +9,7 @@
 
         <!-- Seen in buttons on left drawer: -->
         <item name="android:colorAccent">#ecece5</item>
+        <item name="android:colorControlHighlight">#18ecece5</item>
         <item name="android:alertDialogTheme">@style/TermuxAlertDialogStyle</item>
         <!-- Avoid action mode toolbar pushing down terminal content when
              selecting text on pre-6.0 (non-floating toolbar). -->
@@ -33,6 +34,7 @@
 
         <!-- Seen in buttons on left drawer: -->
         <item name="android:colorAccent">#ecece5</item>
+        <item name="android:colorControlHighlight">#18ecece5</item>
         <!-- Avoid action mode toolbar pushing down terminal content when
              selecting text on pre-6.0 (non-floating toolbar). -->
         <item name="android:windowActionModeOverlay">true</item>
@@ -49,12 +51,14 @@
     <style name="TermuxAlertDialogStyle" parent="@android:style/Theme.Material.Light.Dialog.Alert">
         <!-- Seen in buttons on alert dialog: -->
         <item name="android:colorAccent">#ecece5</item>
+        <item name="android:colorControlHighlight">#18ecece5</item>
     </style>
 
     <style name="WorkspaceDialog" parent="@android:style/Theme.Material.Dialog.Alert">
         <item name="android:windowBackground">@drawable/workspace_dialog_background</item>
         <item name="android:colorBackground">#232426</item>
         <item name="android:colorAccent">#ecece5</item>
+        <item name="android:colorControlHighlight">#18ecece5</item>
         <item name="android:textColorPrimary">#f0f0ee</item>
         <item name="android:textColorSecondary">#a5a5a2</item>
         <item name="android:windowMinWidthMajor">92%</item>

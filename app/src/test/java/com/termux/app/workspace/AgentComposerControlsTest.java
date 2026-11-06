@@ -24,6 +24,10 @@ public class AgentComposerControlsTest {
   controls.present(false);controls=new AgentComposerControls(a,row,input,star,send,clip);controls.present(true);measure(320);assertEquals(bar,controls.pair.getHeight());assertEquals(draft,input.getText().toString());assertEquals(2,input.getSelectionStart());
   input.setText("one");controls.present(true);measure(320);assertEquals(field,input.getHeight());assertEquals(bar,controls.pair.getHeight());
  }
+ @Test public void hiddenStopReservesGeometryAndDoesNotReappearOnPresentationRefresh(){
+  View stop=new View(a);controls.actions(new TextView(a),stop,()->{},()->{},n->{},on->{},on->{});controls.present(true);controls.stopAvailable(true);measure(360);int height=row.getHeight(),inputWidth=input.getWidth(),bar=controls.pair.getTop();assertEquals(View.VISIBLE,stop.getVisibility());
+  controls.stopAvailable(false);controls.present(true);measure(360);assertEquals(View.INVISIBLE,stop.getVisibility());assertFalse(stop.isEnabled());assertEquals(height,row.getHeight());assertEquals(inputWidth,input.getWidth());assertEquals(bar,controls.pair.getTop());controls.stopAvailable(true);assertEquals(View.VISIBLE,stop.getVisibility());controls.present(false);assertNull(stop.getParent());
+ }
  @Test public void terminalUsesSeparatePickersAndIndependentModeSwitches(){
   AtomicInteger library=new AtomicInteger(-1),direct=new AtomicInteger(),keys=new AtomicInteger();controls.actions(null,null,()->{},()->{},library::set,on->direct.set(on?1:0),on->keys.set(on?1:0));WorkspaceLanguage.select(a,"ru");controls.present(false);measure(320);
   String[] labels={"Команды","Aliases","Заметки"};for(int i=0;i<labels.length;i++){text(row,labels[i]).performClick();assertEquals(i,library.get());}

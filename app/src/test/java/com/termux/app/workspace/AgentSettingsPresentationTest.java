@@ -21,21 +21,25 @@ public class AgentSettingsPresentationTest {
  @Test public void allAgentEditorsHideDebugAndUnrelatedHelpInBothLanguages()throws Exception{
   for(String language:new String[]{"ru","en"})for(String agent:new String[]{"codex","gemini","claude","opencode"})for(boolean launch:new boolean[]{false,true}){
    WorkspaceLanguage.select(activity,language);WorkspaceLanguage.apply(activity);WorkspaceStore.Session p=profile(agent);p.extendedDebug=true;open(p,launch);
-   assertEquals(View.GONE,tag("agent-extended-debug").getVisibility());assertEquals(View.GONE,tag("agent-extended-debug-hint").getVisibility());assertFalse(((CheckBox)tag("agent-extended-debug")).isChecked());assertEquals(View.GONE,tag("terminal-launch-hint").getVisibility());
-   String text=visible(editor.getWindow().getDecorView());assertTrue(text.contains("Ubuntu AI"));assertTrue(text.contains("/root/project"));assertTrue(text.contains(language.equals("ru")?"root Android":"Android root"));assertFalse(text.contains("workspace-write"));assertFalse(text.contains("on-request"));assertFalse(text.contains("--remote"));assertFalse(text.contains("SSH:"));assertFalse(p.extendedDebugEnabled());editor.dismiss();idle();
+   assertNull(tag("agent-extended-debug"));assertNull(tag("agent-extended-debug-hint"));assertEquals(View.GONE,tag("terminal-launch-hint").getVisibility());
+   String text=visible(editor.getWindow().getDecorView());assertTrue(text.contains("Ubuntu AI"));assertTrue(text.contains("/root/project"));assertFalse(text.contains("workspace-write"));assertFalse(text.contains("on-request"));assertFalse(text.contains("--remote"));assertFalse(text.contains("SSH:"));assertFalse(p.extendedDebugEnabled());editor.dismiss();idle();
   }
  }
- @Test public void creationFormsToggleOnlyPresentationAndOrdinaryDebugRemainsAvailable()throws Exception{
-  for(boolean launch:new boolean[]{false,true}){
-   open(null,launch);CheckBox debug=(CheckBox)tag("agent-extended-debug");assertEquals(View.VISIBLE,debug.getVisibility());debug.setChecked(true);
-   tag("session-launch-environment").performClick();AlertDialog kinds=ShadowAlertDialog.getLatestAlertDialog();kinds.getListView().performItemClick(null,2,2);idle();assertEquals(View.GONE,debug.getVisibility());assertEquals(View.GONE,tag("terminal-launch-hint").getVisibility());
-   tag("session-launch-environment").performClick();kinds=ShadowAlertDialog.getLatestAlertDialog();kinds.getListView().performItemClick(null,0,0);idle();assertEquals(View.VISIBLE,debug.getVisibility());assertTrue(debug.isChecked());assertEquals(View.VISIBLE,tag("terminal-launch-hint").getVisibility());editor.dismiss();idle();
+ @Test public void terminalCreateRetainsEnvironmentAndReadinessAndCancelDoesNotStart()throws Exception{
+  for(String language:new String[]{"ru","en"}){WorkspaceLanguage.select(activity,language);WorkspaceLanguage.apply(activity);
+   open(null,true);assertNull(tag("agent-extended-debug"));assertNull(tag("session-launch-environment"));assertNotNull(tag("agent-environment-check"));
+   assertEquals(language.equals("ru")?"Создать и открыть":"Create and open",editor.getButton(-1).getText().toString());assertEquals(View.GONE,editor.getButton(-2).getVisibility());assertEquals(language.equals("ru")?"Отмена":"Cancel",editor.getButton(-3).getText().toString());
+   assertFalse(visible(editor.getWindow().getDecorView()).contains(language.equals("ru")?"Пресеты":"Presets"));editor.getButton(-3).performClick();idle();assertFalse(editor.isShowing());assertNull(activity.getCurrentSession());
   }
  }
- @Test public void codexDetailsTrackScopeAndApprovalWithoutConflatingThem()throws Exception{
-  WorkspaceStore.Session p=profile("codex");p.codexAccess="project";p.codexConfirmActions=false;open(p,false);TextView details=(TextView)tag("codex-launch-details");assertEquals(View.GONE,details.getVisibility());assertTrue(details.getText().toString().contains("workspace-write"));assertTrue(details.getText().toString().contains("never"));tag("codex-launch-details-toggle").performClick();assertEquals(View.VISIBLE,details.getVisibility());
-  CheckBox confirm=(CheckBox)tag("codex-command-confirmations");confirm.setChecked(true);assertTrue(details.getText().toString().contains("on-request"));assertTrue(details.getText().toString().contains("workspace-write"));
-  findCheck(editor.getWindow().getDecorView(),"Codex project write scope").setChecked(false);assertTrue(details.getText().toString().contains("danger-full-access"));assertTrue(details.getText().toString().contains("on-request"));assertEquals("project",p.codexAccess);assertEquals(Boolean.FALSE,p.codexConfirmActions);
+ @Test public void sessionEditorsDoNotExposePermissionsAndPreserveIndependentChanges()throws Exception{
+  for(String agent:new String[]{"codex","claude","gemini","opencode"}){
+   WorkspaceStore.Session p=profile(agent);open(p,false);
+   assertNull(tag("codex-command-confirmations"));assertNull(tag("codex-launch-details"));assertNull(tag("codex-launch-details-toggle"));assertNull(tag("agent-unavailable-scope"));
+   String text=visible(editor.getWindow().getDecorView());assertFalse(text.contains("Подтверждать недоверенные команды"));assertFalse(text.contains("Права: "));assertNotNull(tag("session-working-directory"));
+   p.codexAccess="read";p.codexConfirmActions=true;p.claudeMode="plan";p.geminiMode="plan";p.aiAccess="read";p.aiMode="plan";p.aiProjectOnly=false;
+   editor.getButton(-1).performClick();idle();assertEquals("read",p.codexAccess);assertEquals(Boolean.TRUE,p.codexConfirmActions);assertEquals("plan",p.claudeMode);assertEquals("plan",p.geminiMode);assertEquals("read",p.aiAccess);assertEquals("plan",p.aiMode);assertFalse(p.aiProjectOnly);
+  }
  }
  CheckBox findCheck(View view,String label){if(view instanceof CheckBox&&label.equals(view.getContentDescription()))return (CheckBox)view;if(view instanceof ViewGroup)for(int n=0;n<((ViewGroup)view).getChildCount();n++){CheckBox result=findCheck(((ViewGroup)view).getChildAt(n),label);if(result!=null)return result;}return null;}
  @Test public void oldAgentFlagsAreClearedOnReadCopyEncodeAndLaunchButOrdinaryFlagsSurvive()throws Exception{
@@ -48,7 +52,7 @@ public class AgentSettingsPresentationTest {
  }
  @Test public void saveExistingAgentPreservesPermissionsConnectionAndWorkingDirectory()throws Exception{
   for(String agent:new String[]{"codex","gemini","claude","opencode"})for(boolean preset:new boolean[]{false,true}){
-   WorkspaceStore.Session p=profile(agent);p.extendedDebug=true;p.saved=preset;p.codexAccess="full";p.codexConfirmActions=true;p.aiAccess="ask";p.aiProjectOnly=false;p.agentConnectionCommand="/root/launcher";open(p,!preset);editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();idle();assertFalse(p.extendedDebug);assertEquals("full",p.codexAccess);assertEquals(Boolean.TRUE,p.codexConfirmActions);assertEquals("ask",p.aiAccess);assertFalse(p.aiProjectOnly);assertEquals("/root/launcher",p.agentConnectionCommand);assertEquals("/root/project",p.directory);assertNull(activity.getCurrentSession());
+   WorkspaceStore.Session p=profile(agent);p.extendedDebug=true;p.saved=preset;p.codexAccess="full";p.codexConfirmActions=true;p.aiAccess="ask";p.aiProjectOnly=false;p.agentConnectionCommand="/root/launcher";open(p,!preset);editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();idle();assertTrue("removing UI must not rewrite stored diagnostic preference",p.extendedDebug);assertFalse(p.extendedDebugEnabled());assertEquals("full",p.codexAccess);assertEquals(Boolean.TRUE,p.codexConfirmActions);assertEquals("ask",p.aiAccess);assertFalse(p.aiProjectOnly);assertEquals("/root/launcher",p.agentConnectionCommand);assertEquals("/root/project",p.directory);assertNull(activity.getCurrentSession());
   }
  }
  @Test public void locationReflectsEditedFolderAndLegacyTermuxInsteadOfAssumingUbuntu()throws Exception{
@@ -80,7 +84,7 @@ public class AgentSettingsPresentationTest {
  @Test public void newCodexPolicySurvivesUiCreateSaveAndReopen()throws Exception{
   WorkspaceLanguage.select(activity,"ru");WorkspaceLanguage.apply(activity);open(null,false);tag("session-launch-environment").performClick();AlertDialog kinds=ShadowAlertDialog.getLatestAlertDialog();kinds.getListView().performItemClick(null,2,2);idle();CheckBox confirm=(CheckBox)tag("codex-command-confirmations");assertTrue(confirm.isChecked());assertEquals("Подтверждать недоверенные команды",confirm.getText().toString());editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();idle();
   Field f=WorkspaceController.class.getDeclaredField("store");f.setAccessible(true);WorkspaceStore store=(WorkspaceStore)f.get(controller);WorkspaceStore.Session fresh=store.sessions.stream().filter(p->p.environment.equals("codex")&&p.codexUntrustedApproval).findFirst().orElseThrow(AssertionError::new);String id=fresh.id;assertEquals("untrusted",CodexSessionShell.approval(fresh));store.awaitWrites();
-  open(fresh,false);assertTrue(((CheckBox)tag("codex-command-confirmations")).isChecked());editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();idle();store.awaitWrites();WorkspaceStore reloaded=new WorkspaceStore(activity,x->{throw new AssertionError(x);});try{WorkspaceStore.Session saved=reloaded.sessions.stream().filter(p->p.id.equals(id)).findFirst().orElseThrow(AssertionError::new);assertEquals("untrusted",CodexSessionShell.approval(saved));assertTrue(CodexSessionShell.invocation(saved,"/fixture.sock").contains("--ask-for-approval untrusted"));}finally{reloaded.close();}
+  open(fresh,false);assertNull(tag("codex-command-confirmations"));editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();idle();store.awaitWrites();WorkspaceStore reloaded=new WorkspaceStore(activity,x->{throw new AssertionError(x);});try{WorkspaceStore.Session saved=reloaded.sessions.stream().filter(p->p.id.equals(id)).findFirst().orElseThrow(AssertionError::new);assertEquals("untrusted",CodexSessionShell.approval(saved));assertTrue(CodexSessionShell.invocation(saved,"/fixture.sock").contains("--ask-for-approval untrusted"));}finally{reloaded.close();}
  }
 
  @Test public void allNewAgentPoliciesSurviveUiSaveReopenAndSave()throws Exception{

@@ -24,16 +24,12 @@ public class ActiveAgentSettingsTest extends AgentSettingsPresentationTest {
         Constructor<TermuxSession> c=TermuxSession.class.getDeclaredConstructor(TerminalSession.class,ExecutionCommand.class,TermuxSession.TermuxSessionClient.class,boolean.class);c.setAccessible(true);
         TermuxService service=new TermuxService();service.getTermuxSessions().add(c.newInstance(terminal,new ExecutionCommand(),null,false));set(activity,"mTermuxService",service);
         CodexStatus active=new CodexStatus();active.cwd="/root/project";active.thread="fixture-thread";active.model="fixture";((Map<String,CodexStatus>)get(controller,"codexStatuses")).put(p.id,active);
-        open(p,false);((EditText)tag("session-working-directory")).setText("/root/next");findCheck(editor.getWindow().getDecorView(),"Codex project write scope").setChecked(true);
+        open(p,false);((EditText)tag("session-working-directory")).setText("/root/next");assertNull(findCheck(editor.getWindow().getDecorView(),"Codex project write scope"));p.codexAccess="project";
         editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();store.awaitWrites();idle();
         assertEquals("/root/next",p.directory);assertEquals("project",p.codexAccess);assertEquals("/root/project",active.cwd);assertTrue(terminal.isRunning());
         Method show=WorkspaceController.class.getDeclaredMethod("showCodexStatus",WorkspaceStore.Session.class);show.setAccessible(true);show.invoke(controller,p);idle();editor=ShadowAlertDialog.getLatestAlertDialog();
         String text=visible(editor.getWindow().getDecorView());
-        assertTrue(text.contains("Действующий процесс · каталог: /root/project"));
-        assertTrue(text.contains("Действующий доступ: не передан помощником"));
-        assertTrue(text.contains("Следующий запуск · доступ: в пределах проекта"));
-        assertTrue(text.contains("Следующий запуск · каталог: /root/next"));
-        assertFalse(text.contains("Общий лимит аккаунта. Доступ: в пределах проекта"));
+        assertFalse(text.contains("Действующий доступ"));assertFalse(text.contains("Следующий запуск"));
         String limitsBefore=active.limits.toString();editor.getWindow().getDecorView().findViewWithTag("subscription-usage-link").performClick();
         android.content.Intent browser=org.robolectric.Shadows.shadowOf(activity).getNextStartedActivity().getParcelableExtra(android.content.Intent.EXTRA_INTENT);
         assertEquals(SubscriptionUsageLink.CODEX,browser.getDataString());assertTrue(editor.isShowing());assertTrue(terminal.isRunning());assertEquals(limitsBefore,active.limits.toString());

@@ -10,6 +10,15 @@ import com.termux.shared.logger.Logger;
 public class TermuxApplication extends Application {
     public void onCreate() {
         super.onCreate();
+        registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks(){
+            public void onActivityCreated(android.app.Activity a,android.os.Bundle state){com.termux.app.workspace.WorkspaceRipple.install(a.getWindow());}
+            public void onActivityStarted(android.app.Activity a){}
+            public void onActivityResumed(android.app.Activity a){}
+            public void onActivityPaused(android.app.Activity a){}
+            public void onActivityStopped(android.app.Activity a){}
+            public void onActivitySaveInstanceState(android.app.Activity a,android.os.Bundle state){}
+            public void onActivityDestroyed(android.app.Activity a){}
+        });
 
         // Set crash handler for the app
         TermuxCrashUtils.setCrashHandler(this);

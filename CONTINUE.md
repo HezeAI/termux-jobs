@@ -1,3 +1,37 @@
+# Текущая выдача — основной1498 и резерв1499 сохранены
+
+Canonical checkout `/root/termux-fork/.verification/rollback-live-actions/source`,
+ветка `work/redesign-v35-1494` (историческое имя). Основной2.1.5-test4/code1498
+включает все уточнения1–15 и отдельные окна прав/настроек сессии.
+
+Основной: `/sdcard/Download/Termux-Jobs-v2.1.5-test4-arm64.apk`, SHA256
+`f02ec13279067c2304b40e200c06da464f8c4bf0c03e5b29308b406432cde50a`.
+Резерв2.1.5-backup3/code1499 из принятого старого UI, source dfbf111f:
+`/sdcard/Download/Termux-Jobs-v2.1.5-backup3-1499-arm64.apk`, SHA256
+`c32c75c389879c8e4c4d74f9dce9a2a6301aeb9cd4e90bb18d2ab7b8c47469ca`.
+[Отчёт основного](docs/fork/VALIDATION-2.1.5-test4.md),
+[отдельные проверки резерва](docs/fork/VALIDATION-backup-1499.md).
+Старые1493–1497 сохранены; резерв не является копией данных и не ставится заранее.
+
+Уточнение15 заменило левый открывающий свайп: detector/exclusions удалены,
+меню кнопкой раскрывает текущую запись без переключения/запуска. Закрытие осталось.
+Права отдельно от формы сессии: native live switches Claude/Gemini/OpenCode,
+unique approvals/scope, честные next-launch/No data и защита параллельных изменений.
+
+Проверки: полный app1670/4 первоначальных отказа + успешный targeted-5:19/0,
+terminal-emulator154/0; современные Lint5 модулей0 errors/268 warnings;
+locale, scoped Stop и свежий финальный APK gate пройдены. Отказы, причины,
+источники и границы записаны в отчёте и `.verification/redesign-1498/`.
+Установка, рабочие перезапуски, push/tag/publication не выполнялись и не разрешены.
+
+Следующий шаг — телефонная приёмка нового интерфейса по сценарию отчёта.
+HTML/снимки/стенд не равны Android-приёмке; приёмка старого1493 не переносится.
+[Актуальная карта функций](docs/fork/REDESIGN-v35.md).
+
+---
+
+## Предыдущая выдача1496/1497 (сохранена)
+
 # Текущая работа — основной1496 готов к проверке телефона, резерв1497 сохранён
 
 Checkout `/root/termux-fork/.verification/rollback-live-actions/source`, ветка

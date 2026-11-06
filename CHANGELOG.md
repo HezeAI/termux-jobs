@@ -2,6 +2,40 @@
 
 No other changes queued for publication.
 
+# 2026-11-06 — 2.1.5-test4 (versionCode1498, private v35 corrections)
+
+Retains the full test3/test2/test1 change set relative to published stablev2.1.4.
+
+- Settings now expose only Instructions and Skills under AI agents. Automatic update checking stays in Data; About is the last Application entry. Arch Wiki moves between Notes and General settings, using the existing viewer.
+- Sidebar adds confirmed, selected-session restart. Native chat IDs are preserved; shared X11 ownership transfers to the replacement terminal without stopping its desktop. Base Termux retains its protected record.
+- Drawer disclosures animate height260ms; overflow menus fade/scale150ms and release touch on close. Scrollbars are hidden; bounded soft native touch ripples follow the current palette. System-disabled animations use immediate transitions.
+- New agent forms use Ubuntu AI with native readiness/preparation after Create, agent-specific titles, existing permissions and optional launcher-path semantics. Terminal creation keeps environment/readiness, with a single left Cancel and Create and open; saved presets remain in the drawer. Session diagnostics/debug UI is removed, internal errors/logs retained.
+- Shared extra-key palette for ordinary and native agent terminals; existing key dispatch is retained. Working dots animate independently of the hidden header; the per-request timer keeps its one-second update cadence.
+- Composer keeps model/reasoning beside microphone/send, with space before that group and two balanced quota windows. Model selection and Limits/context have separate menus for all four agents. Chat scale is available only in global settings.
+- Sidebar opens only from its header button, automatically disclosing and scrolling to the active session without selecting or launching it. Left-edge opening and its Back-gesture exclusions are removed; swipe-left/outside-tap/Back closing remain.
+- Permissions and approvals have their own selected-agent window, including native live switches. Session settings no longer contain permission controls and preserve concurrent policy changes. Unknown active permissions are not replaced with saved launch values; next-launch changes are explicitly labeled.
+- Stop appears only for a busy request with a native cancellation token, including approval/retry phases, and hides without moving other controls. A connected idle agent does not show Stop; original scoped confirmation remains.
+
+Same com.termux/certificate/ARM64/min26/target28/schema8; no history, authorization,
+attachment-send limits, CLI versions, rootfs or graphics-library changes. No CLI fork,
+experimental context mode or automatic compaction. No installation or publication.
+The new main1498 and separate old-interface standby1499 follow the explicit ordering
+exception. Prior APKs1493–1497 are preserved. Standby is not a data backup.
+Native visual/IME/gesture/rotation/X11 acceptance is still required on the phone;
+older phone acceptance does not cover this candidate.
+
+[Checks and phone scenarios](docs/fork/VALIDATION-2.1.5-test4.md) · [Function map](docs/fork/REDESIGN-v35.md).
+
+# 2026-11-06 — 2.1.5-backup3 (versionCode1499, private standby)
+
+Old accepted interface from269a63cf, source dfbf111f; only version metadata and
+documentation change. Final APK signature, version, ZIP, runtime and SHA-256 checked
+anew.124 assets/resources equal1497 and all7 ELF equal stablev2.1.4. Existing
+functional/Lint results are reused after source/tool/config equality checks.
+No new phone installation or data rollback verification.
+
+[Standby checks](docs/fork/VALIDATION-backup-1499.md).
+
 # 2026-11-06 — 2.1.5-test3 (versionCode1496, private v35 correction)
 
 Corrections to the visually rejected1494, retaining the accepted1493 features and the changes since the last published stable **v2.1.4** listed below.

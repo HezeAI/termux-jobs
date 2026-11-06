@@ -15,7 +15,7 @@ final class AgentStatusUi {
         TextView v=new TextView(c);v.setText(label);v.setTextSize(12);v.setTextColor(WorkspaceDialogs.ACCENT);
         v.setGravity(Gravity.CENTER);v.setMinHeight(WorkspaceDialogs.dp(c,34));v.setMaxLines(2);v.setEllipsize(TextUtils.TruncateAt.END);
         v.setPadding(WorkspaceDialogs.dp(c,12),WorkspaceDialogs.dp(c,4),WorkspaceDialogs.dp(c,12),WorkspaceDialogs.dp(c,4));
-        v.setBackground(new RippleDrawable(ColorStateList.valueOf(0x44ecece5),WorkspaceDialogs.background(c,false),null));
+        v.setBackground(WorkspaceDialogs.background(c,false));
         v.setContentDescription(description);v.setOnClickListener(view->click.run());return v;
     }
     static boolean compact(LinearLayout parent){return "composer-model-status".equals(parent.getTag());}

@@ -236,6 +236,11 @@ final class WorkspaceDesktop {
     private boolean maintenanceReturn;
     private static String owner(WorkspaceStore.Session p){return p==null||p.handle.isEmpty()?"":p.id+":"+p.handle;}
     boolean owns(WorkspaceStore.Session p){java.util.ArrayList<String> owners=state.getStringArrayList("desktopOwners");return p!=null&&!owner(p).isEmpty()&&(owners==null||owners.isEmpty()?owner(p).equals(state.getString("desktopOwner","")):owners.size()==1&&owners.contains(owner(p)))&&target(p).equals(state.getString("target",""))&&state.getBoolean("started",false);}
+    void sessionRestarted(WorkspaceStore.Session before,WorkspaceStore.Session after){
+        if(remote==null||closed||!eligible(before)||!before.id.equals(after.id)||!target(before).equals(target(after))||owner(before).isEmpty()||owner(after).isEmpty())return;
+        final android.os.IBinder binder=remote;Bundle q=X11Remote.command("session-rebind");q.putString("target",target(before));q.putString("owner",owner(before));q.putString("nextOwner",owner(after));
+        calls.execute(()->{try{Bundle result=X11Remote.call(binder,q);main.post(()->{if(!closed&&remote==binder){accept(result);sync();changed.run();}});}catch(Exception error){main.post(()->{if(!closed)activity.showToast(tr("Сессия перезапущена; связь с рабочим столом не подтверждена. Рабочий стол не остановлен.","Session restarted; its desktop association is unconfirmed. The desktop was not stopped."),true);});}});
+    }
     void sessionClosed(WorkspaceStore.Session p){
         if(p==null)return;if(launchAfterCheck!=null&&p.id.equals(launchAfterCheck.id)&&p.handle.equals(launchAfterCheck.handle))launchAfterCheck=null;if(sameSession(p,preparationProfile)){clearPreparation();}graphical.remove(p.id);sync();
         if(pending.equals("launch")&&owner(p).equals(owner(pendingProfile))){pending="";pendingProfile=null;pendingProgram="";}

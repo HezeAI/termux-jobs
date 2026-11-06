@@ -73,7 +73,7 @@ public class WorkspaceNavigationTest {
         Field tv=TermuxActivity.class.getDeclaredField("mTerminalView");tv.setAccessible(true);tv.set(a,a.findViewById(R.id.terminal_view));WorkspaceLanguage.select(a,"ru");WorkspaceController c=new WorkspaceController(a);
         try{for(String label:new String[]{"Главная","Команды/Заметки","Терминал"}){
             navigate(c,label);View header=a.findViewById(R.id.workspace_header);assertNull(findDescription(header,"Язык / Language"));
-            call(c,"globalSettings",new Class[]{});shadowOf(Looper.getMainLooper()).idle();View page=a.findViewById(R.id.workspace_content);for(String item:new String[]{"Язык интерфейса","Резервное копирование","Дополнительно","О приложении"})assertNotNull(findText(page,item));View advanced=findText(page,"Дополнительно");while(!advanced.isClickable())advanced=(View)advanced.getParent();advanced.performClick();assertNotNull(findDescription(page,"Автопроверка при открытии приложения"));assertTrue(c.onBack());
+            call(c,"globalSettings",new Class[]{});shadowOf(Looper.getMainLooper()).idle();View page=a.findViewById(R.id.workspace_content);for(String item:new String[]{"Язык интерфейса","Резервное копирование"})assertNotNull(findText(page,item));assertNull(findText(page,"Дополнительно"));assertNull(findText(page,"О приложении"));assertNotNull(page.findViewWithTag("automatic-app-updates"));assertTrue(c.onBack());
         }}finally{c.close();}
     }
 
@@ -398,8 +398,8 @@ public class WorkspaceNavigationTest {
         sessionMenu(controller,store.sessions.get(0));
         shadowOf(Looper.getMainLooper()).idle();
         AlertDialog menu = ShadowAlertDialog.getLatestAlertDialog();
-        assertEquals(6, menu.getListView().getAdapter().getCount());
-        assertEquals("Диагностика сессии",menu.getListView().getAdapter().getItem(4));
+        assertEquals(5, menu.getListView().getAdapter().getCount());
+        for(int n=0;n<menu.getListView().getCount();n++)assertNotEquals("Диагностика сессии",menu.getListView().getItemAtPosition(n));
         assertEquals("Добавить в пресеты запуска", menu.getListView().getAdapter().getItem(0));
         assertEquals("Перезапустить", menu.getListView().getAdapter().getItem(1));
         assertEquals("Настройки", menu.getListView().getAdapter().getItem(2));
@@ -408,15 +408,15 @@ public class WorkspaceNavigationTest {
         store.awaitWrites(); assertTrue(store.sessions.get(0).saved); assertEquals(1, store.sessions.size());
         sessionMenu(controller,store.sessions.get(0)); shadowOf(Looper.getMainLooper()).idle();
         menu = ShadowAlertDialog.getLatestAlertDialog();
-        assertEquals(5, menu.getListView().getAdapter().getCount());
-        assertEquals("Диагностика сессии",menu.getListView().getAdapter().getItem(3));
+        assertEquals(4, menu.getListView().getAdapter().getCount());
+        for(int n=0;n<menu.getListView().getCount();n++)assertNotEquals("Диагностика сессии",menu.getListView().getItemAtPosition(n));
         assertEquals("Перезапустить", menu.getListView().getAdapter().getItem(0));
         assertEquals("Настройки", menu.getListView().getAdapter().getItem(1));
         assertEquals("Закрыть сессию", menu.getListView().getAdapter().getItem(2));
         menu.getListView().performItemClick(null, 0, 0);
         shadowOf(Looper.getMainLooper()).idle();
         AlertDialog confirmation = ShadowAlertDialog.getLatestAlertDialog();
-        assertNotNull(findText(confirmation.getWindow().getDecorView(), "Остановить текущий процесс и повторно выполнить стартовую команду?"));
+        assertNotNull(findText(confirmation.getWindow().getDecorView(), "Перезапустить эту сессию? Текущая команда будет остановлена. Рабочий стол и другие сессии продолжат работу."));
         confirmation.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();
         sessionMenu(controller,store.sessions.get(0)); shadowOf(Looper.getMainLooper()).idle();
         menu = ShadowAlertDialog.getLatestAlertDialog(); menu.getListView().performItemClick(null, 2, 2);
@@ -438,7 +438,7 @@ public class WorkspaceNavigationTest {
         WorkspaceStore reopened = new WorkspaceStore(activity, message -> fail(message));
         assertEquals(1, reopened.sessions.size()); assertTrue(reopened.sessions.get(0).saved); reopened.close();
     }
-    @Test public void newSessionOffersSavedProfilesOnLeft() throws Exception {
+    @Test public void newSessionCancelsFromLeftWhileSavedProfilesRemainInSidebar() throws Exception {
         TermuxActivity activity = Robolectric.buildActivity(TermuxActivity.class).get();
         activity.setTheme(R.style.Theme_Termux_Black); activity.setContentView(R.layout.activity_termux);
         Field terminalView = TermuxActivity.class.getDeclaredField("mTerminalView");
@@ -454,13 +454,12 @@ public class WorkspaceNavigationTest {
         assertNotNull(drawer.body.findViewWithTag("sidebar-session-"+saved.id));assertNull(drawer.body.findViewWithTag("sidebar-session-"+temporary.id));findText(drawer.body,"Создать сессию").performClick();
         shadowOf(Looper.getMainLooper()).idle(); AlertDialog dialog = ShadowAlertDialog.getLatestAlertDialog();
         assertEquals("Создать сессию", shadowOf(dialog).getTitle());
-        assertEquals("Пресеты", dialog.getButton(AlertDialog.BUTTON_NEUTRAL).getText().toString());
-        assertEquals("Отмена", dialog.getButton(AlertDialog.BUTTON_NEGATIVE).getText().toString());
+        assertEquals("Отмена", dialog.getButton(AlertDialog.BUTTON_NEUTRAL).getText().toString());
+        assertEquals(View.GONE,dialog.getButton(AlertDialog.BUTTON_NEGATIVE).getVisibility());
+        assertEquals("Создать и открыть",dialog.getButton(AlertDialog.BUTTON_POSITIVE).getText().toString());
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).performClick(); shadowOf(Looper.getMainLooper()).idle();
-        AlertDialog picker = ShadowAlertDialog.getLatestAlertDialog();
-        assertEquals(1, picker.getListView().getAdapter().getCount());
-        assertEquals("Saved Ubuntu", picker.getListView().getAdapter().getItem(0));
-        assertEquals(2, store.sessions.size()); picker.dismiss(); controller.close();
+        assertFalse(dialog.isShowing());assertSame(dialog,ShadowAlertDialog.getLatestAlertDialog());
+        assertEquals(2,store.sessions.size());assertSame(saved,store.sessions.get(0));assertTrue(saved.saved);assertNull(activity.getCurrentSession());controller.close();
     }
     @Test public void closingRemovesOnlyUnsavedProfileAndItsOwnHistoryAfterExit() throws Exception {
         TermuxActivity activity = Robolectric.buildActivity(TermuxActivity.class).get();
@@ -758,7 +757,7 @@ public class WorkspaceNavigationTest {
     @Test public void sidebarKeepsSessionActionsAndTitleDoesNotOpenTerminal() throws Exception {
         TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.setContentView(R.layout.activity_termux);Field tv=TermuxActivity.class.getDeclaredField("mTerminalView");tv.setAccessible(true);tv.set(a,a.findViewById(R.id.terminal_view));WorkspaceController c=new WorkspaceController(a);
         try{Field f=WorkspaceController.class.getDeclaredField("store");f.setAccessible(true);WorkspaceStore store=(WorkspaceStore)f.get(c);store.sessions.clear();WorkspaceStore.Session p=new WorkspaceStore.Session();p.name="Synthetic saved Ubuntu";p.environment="ubuntu";p.saved=true;store.sessions.add(p);call(c,"showSidebar",new Class[]{});f=WorkspaceController.class.getDeclaredField("sidebar");f.setAccessible(true);WorkspaceSidebar menu=(WorkspaceSidebar)f.get(c);ViewGroup frame=menu.body.findViewWithTag("sidebar-session-"+p.id);ViewGroup actions=(ViewGroup)frame.getChildAt(1);assertEquals(View.GONE,actions.getVisibility());((ViewGroup)frame.getChildAt(0)).getChildAt(0).performClick();assertEquals(View.VISIBLE,actions.getVisibility());assertNull(a.getCurrentSession());
-        String[] expected={"Открыть терминал","Настройки сессии","Настройки рабочего стола","Программы","Другие действия сессии","Файлы окружения","Пакеты окружения","Документация окружения","Arch Wiki"};assertEquals(expected.length,actions.getChildCount());for(int i=0;i<expected.length;i++)assertEquals(expected[i],((TextView)actions.getChildAt(i)).getText().toString());assertNull(actions.findViewWithTag("sidebar-desktop-stop-"+p.id));assertNotNull(findText(menu.body,"Создать сессию"));assertNotNull(findText(menu.body,"Создать чат"));assertNotNull(findText(menu.body,"Общие настройки"));actions.getChildAt(1).performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog editor=ShadowAlertDialog.getLatestAlertDialog();assertTrue(editor.isShowing());assertNotNull(findText(editor.getWindow().getDecorView(),p.name));assertNull(a.getCurrentSession());editor.getButton(-2).performClick();shadowOf(Looper.getMainLooper()).idle();assertSame(p,store.sessions.get(0));assertTrue(p.saved);
+        String[] expected={"Открыть терминал","Перезапустить сессию","Настройки сессии","Настройки рабочего стола","Программы","Файлы окружения","Пакеты окружения","Документация окружения"};assertEquals(expected.length,actions.getChildCount());for(int i=0;i<expected.length;i++)assertEquals(expected[i],((TextView)actions.getChildAt(i)).getText().toString());assertNull(actions.findViewWithTag("sidebar-desktop-stop-"+p.id));assertNotNull(findText(menu.body,"Создать сессию"));assertNotNull(findText(menu.body,"Создать чат"));assertNotNull(findText(menu.body,"Общие настройки"));actions.getChildAt(2).performClick();shadowOf(Looper.getMainLooper()).idle();AlertDialog editor=ShadowAlertDialog.getLatestAlertDialog();assertTrue(editor.isShowing());assertNotNull(findText(editor.getWindow().getDecorView(),p.name));assertNull(a.getCurrentSession());editor.getButton(-2).performClick();shadowOf(Looper.getMainLooper()).idle();assertSame(p,store.sessions.get(0));assertTrue(p.saved);
         }finally{c.close();}
     }
     @Test public void baseTerminalMenuCannotCloseDeleteOrChangeItsProfile() throws Exception {
@@ -766,7 +765,7 @@ public class WorkspaceNavigationTest {
         Field f=TermuxActivity.class.getDeclaredField("mTerminalView");f.setAccessible(true);f.set(activity,activity.findViewById(R.id.terminal_view));WorkspaceController controller=new WorkspaceController(activity);
         WorkspaceStore.Session profile=new WorkspaceStore.Session();profile.id=WorkspaceStore.BASE_TERMINAL_ID;profile.name="Terminal";
         java.lang.reflect.Method menu=WorkspaceController.class.getDeclaredMethod("sessionMenu",WorkspaceStore.Session.class,boolean.class);menu.setAccessible(true);menu.invoke(controller,profile,true);
-        AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();assertEquals("Диагностика сессии",dialog.getListView().getItemAtPosition(0));assertEquals("Перезапустить",dialog.getButton(AlertDialog.BUTTON_POSITIVE).getText().toString());
+        AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();assertEquals("Установка пакетов",dialog.getListView().getItemAtPosition(0));assertEquals("Перезапустить",dialog.getButton(AlertDialog.BUTTON_POSITIVE).getText().toString());
         assertNull(findText(dialog.getWindow().getDecorView(),"Закрыть сессию"));assertNull(findText(dialog.getWindow().getDecorView(),"Настройки"));dialog.dismiss();controller.close();
     }
     @Test public void savingBusyNewCodexDoesNotCreateFalseResumeAssociation() throws Exception {

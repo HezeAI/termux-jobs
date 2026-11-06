@@ -11,10 +11,10 @@ final class ComposerLimits extends LinearLayout {
     final TextView[] captions=new TextView[2];
     final ProgressBar[] bars=new ProgressBar[2];
     final TextView[] names=new TextView[2];
-    ComposerLimits(Context c){super(c);setOrientation(HORIZONTAL);setGravity(android.view.Gravity.CENTER_VERTICAL);setTag("composer-limits");setPadding(WorkspaceDialogs.dp(c,3),0,WorkspaceDialogs.dp(c,3),0);
-        label=new TextView(c);label.setTextSize(9);label.setTextColor(WorkspaceDialogs.MUTED);addView(label,new LayoutParams(-2,-2));
+    ComposerLimits(Context c){super(c);setOrientation(HORIZONTAL);setGravity(android.view.Gravity.CENTER_VERTICAL);setTag("composer-limits");setMinimumHeight(WorkspaceDialogs.dp(c,14));setPadding(WorkspaceDialogs.dp(c,3),0,WorkspaceDialogs.dp(c,3),0);
+        label=new TextView(c);label.setTextSize(9);label.setTextColor(WorkspaceDialogs.MUTED);addView(label,new LayoutParams(-2,-2));label.setSingleLine(true);
         for(int i=0;i<2;i++){LinearLayout window=new LinearLayout(c);window.setGravity(android.view.Gravity.CENTER_VERTICAL);window.setPadding(WorkspaceDialogs.dp(c,7),0,0,0);addView(window,new LayoutParams(0,-2,1));
-            names[i]=new TextView(c);names[i].setTextSize(9);names[i].setTextColor(WorkspaceDialogs.MUTED);window.addView(names[i],new LayoutParams(-2,-2));
+            names[i]=new TextView(c);names[i].setTextSize(9);names[i].setSingleLine(true);names[i].setTextColor(WorkspaceDialogs.MUTED);window.addView(names[i],new LayoutParams(-2,-2));
             bars[i]=new ProgressBar(c,null,android.R.attr.progressBarStyleHorizontal);bars[i].setMax(100);bars[i].setProgressTintList(ColorStateList.valueOf(WorkspaceDialogs.ACCENT));bars[i].setProgressBackgroundTintList(ColorStateList.valueOf(WorkspaceDialogs.LINE));LayoutParams track=new LayoutParams(0,WorkspaceDialogs.dp(c,3),1);track.setMargins(WorkspaceDialogs.dp(c,4),0,WorkspaceDialogs.dp(c,4),0);window.addView(bars[i],track);
             captions[i]=new TextView(c);captions[i].setTextSize(9);captions[i].setTextColor(WorkspaceDialogs.MUTED);window.addView(captions[i],new LayoutParams(-2,-2));}
         present(null,null,false,false);

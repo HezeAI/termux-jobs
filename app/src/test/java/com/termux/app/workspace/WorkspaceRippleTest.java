@@ -1,0 +1,10 @@
+package com.termux.app.workspace;
+import android.app.*;import android.view.*;import android.widget.*;import android.graphics.drawable.*;import org.junit.*;import org.junit.runner.RunWith;import org.robolectric.*;import org.robolectric.annotation.Config;import static org.junit.Assert.*;
+@RunWith(RobolectricTestRunner.class) @Config(sdk=28,application=Application.class)
+public class WorkspaceRippleTest {
+ @Test public void boundedRippleCancelsWithoutClickAndDoesNotReplaceSelectionOrInputs(){
+  Activity a=Robolectric.buildActivity(Activity.class).setup().visible().get();LinearLayout root=new LinearLayout(a);root.setOrientation(1);TextView action=WorkspaceDialogs.action(a,"Action",0);java.util.concurrent.atomic.AtomicInteger clicks=new java.util.concurrent.atomic.AtomicInteger();action.setOnClickListener(v->clicks.incrementAndGet());root.addView(action);EditText edit=new EditText(a);root.addView(edit);SeekBar seek=new SeekBar(a);root.addView(seek);a.setContentView(root);WorkspaceRipple.install(a.getWindow());android.graphics.drawable.Drawable originalEdit=edit.getBackground(),originalSeek=seek.getBackground();root.measure(View.MeasureSpec.makeMeasureSpec(360,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY));root.layout(0,0,360,600);root.getViewTreeObserver().dispatchOnGlobalLayout();
+  assertTrue(action.getBackground() instanceof RippleDrawable);RippleDrawable ripple=(RippleDrawable)action.getBackground();assertNotNull(ripple.findDrawableByLayerId(android.R.id.mask));assertSame(originalEdit,edit.getBackground());assertSame(originalSeek,seek.getBackground());
+  action.dispatchTouchEvent(MotionEvent.obtain(0,0,MotionEvent.ACTION_DOWN,15,20,0));action.dispatchTouchEvent(MotionEvent.obtain(0,10,MotionEvent.ACTION_CANCEL,15,60,0));assertEquals(0,clicks.get());assertFalse(action.isPressed());action.dispatchTouchEvent(MotionEvent.obtain(20,20,MotionEvent.ACTION_DOWN,15,20,0));action.dispatchTouchEvent(MotionEvent.obtain(20,30,MotionEvent.ACTION_UP,15,20,0));Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals(1,clicks.get());a.finish();
+ }
+}

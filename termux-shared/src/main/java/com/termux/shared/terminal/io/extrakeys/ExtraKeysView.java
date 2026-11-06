@@ -265,6 +265,16 @@ public final class ExtraKeysView extends GridLayout {
     }
 
 
+    private final java.util.Set<View> styledButtons=java.util.Collections.newSetFromMap(new java.util.WeakHashMap<View,Boolean>());
+    private java.util.function.Supplier<android.graphics.drawable.Drawable> mButtonBackgroundFactory;
+    /** Optional application styling; key definitions and input dispatch remain unchanged. */
+    public void setButtonBackgroundFactory(java.util.function.Supplier<android.graphics.drawable.Drawable> factory){mButtonBackgroundFactory=factory;}
+    private void buttonBackground(View view,int color){
+        if(mButtonBackgroundFactory==null){view.setBackgroundColor(color);return;}
+        if(styledButtons.add(view))view.setBackground(mButtonBackgroundFactory.get());
+        view.setPressed(color==mButtonActiveBackgroundColor);
+    }
+
     /** Get {@link #mButtonTextColor}. */
     public int getButtonTextColor() {
         return mButtonTextColor;
@@ -393,6 +403,7 @@ public final class ExtraKeysView extends GridLayout {
                 button.setAllCaps(mButtonTextAllCaps);
                 button.setPadding(0, 0, 0, 0);
 
+                if(mButtonBackgroundFactory!=null)buttonBackground(button,mButtonBackgroundColor);
                 button.setOnClickListener(view -> {
                     performExtraKeyButtonHapticFeedback(view, buttonInfo, button);
                     onAnyExtraKeyButtonClick(view, buttonInfo, button);
@@ -401,7 +412,8 @@ public final class ExtraKeysView extends GridLayout {
                 button.setOnTouchListener((view, event) -> {
                     switch (event.getAction()) {
                         case MotionEvent.ACTION_DOWN:
-                            view.setBackgroundColor(mButtonActiveBackgroundColor);
+                            view.drawableHotspotChanged(event.getX(),event.getY());
+                            buttonBackground(view,mButtonActiveBackgroundColor);
                             // Start long press scheduled executors which will be stopped in next MotionEvent
                             startScheduledExecutors(view, buttonInfo, button);
                             return true;
@@ -411,23 +423,23 @@ public final class ExtraKeysView extends GridLayout {
                                 // Show popup on swipe up
                                 if (mPopupWindow == null && event.getY() < 0) {
                                     stopScheduledExecutors();
-                                    view.setBackgroundColor(mButtonBackgroundColor);
+                                    buttonBackground(view,mButtonBackgroundColor);
                                     showPopup(view, buttonInfo.getPopup());
                                 }
                                 if (mPopupWindow != null && event.getY() > 0) {
-                                    view.setBackgroundColor(mButtonActiveBackgroundColor);
+                                    buttonBackground(view,mButtonActiveBackgroundColor);
                                     dismissPopup();
                                 }
                             }
                             return true;
 
                         case MotionEvent.ACTION_CANCEL:
-                            view.setBackgroundColor(mButtonBackgroundColor);
+                            buttonBackground(view,mButtonBackgroundColor);
                             stopScheduledExecutors();
                             return true;
 
                         case MotionEvent.ACTION_UP:
-                            view.setBackgroundColor(mButtonBackgroundColor);
+                            buttonBackground(view,mButtonBackgroundColor);
                             stopScheduledExecutors();
                             // If ACTION_UP up was not from a repetitive key or was with a key with a popup button
                             if (mLongPressCount == 0 || mPopupWindow != null) {
@@ -581,7 +593,7 @@ public final class ExtraKeysView extends GridLayout {
         button.setMinimumHeight(0);
         button.setWidth(width);
         button.setHeight(height);
-        button.setBackgroundColor(mButtonActiveBackgroundColor);
+        buttonBackground(button,mButtonActiveBackgroundColor);
         mPopupWindow = new PopupWindow(this);
         mPopupWindow.setWidth(LayoutParams.WRAP_CONTENT);
         mPopupWindow.setHeight(LayoutParams.WRAP_CONTENT);

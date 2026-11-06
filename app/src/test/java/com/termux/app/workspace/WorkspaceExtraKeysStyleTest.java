@@ -1,0 +1,10 @@
+package com.termux.app.workspace;
+import android.app.*;import android.view.*;import android.widget.*;import com.termux.shared.terminal.io.extrakeys.*;import org.junit.*;import org.junit.runner.RunWith;import org.robolectric.*;import org.robolectric.annotation.Config;import static org.junit.Assert.*;
+@RunWith(RobolectricTestRunner.class) @Config(sdk=28,application=Application.class)
+public class WorkspaceExtraKeysStyleTest {
+ @Test public void stylingKeepsDefinitionsAndDispatchAcrossPressCancelAndReload()throws Exception{
+  Activity a=Robolectric.buildActivity(Activity.class).setup().get();ExtraKeysView keys=new ExtraKeysView(a,null);WorkspaceExtraKeysStyle.apply(keys);java.util.List<String> sent=new java.util.ArrayList<>();keys.setExtraKeysViewClient(new ExtraKeysView.IExtraKeysView(){public void onExtraKeyButtonClick(View v,ExtraKeyButton info,Button b){sent.add(info.getKey());}public boolean performExtraKeyButtonHapticFeedback(View v,ExtraKeyButton info,Button b){return true;}});
+  ExtraKeysInfo info=new ExtraKeysInfo("[['ESC','CTRL','a']]","default",ExtraKeysConstants.CONTROL_CHARS_ALIASES);keys.reload(info);assertEquals(3,keys.getChildCount());assertEquals(WorkspaceDialogs.TEXT,keys.getButtonTextColor());assertEquals(WorkspaceDialogs.SURFACE,keys.getButtonBackgroundColor());Button b=(Button)keys.getChildAt(2);android.graphics.drawable.Drawable background=b.getBackground();assertTrue(background instanceof android.graphics.drawable.RippleDrawable);
+  b.dispatchTouchEvent(MotionEvent.obtain(0,0,MotionEvent.ACTION_DOWN,8,8,0));assertTrue(b.isPressed());b.dispatchTouchEvent(MotionEvent.obtain(0,1,MotionEvent.ACTION_CANCEL,8,8,0));assertFalse(b.isPressed());assertTrue(sent.isEmpty());assertSame(background,b.getBackground());b.dispatchTouchEvent(MotionEvent.obtain(2,2,MotionEvent.ACTION_DOWN,8,8,0));b.dispatchTouchEvent(MotionEvent.obtain(2,3,MotionEvent.ACTION_UP,8,8,0));assertEquals(java.util.Collections.singletonList("a"),sent);keys.reload(info);assertEquals(3,keys.getChildCount());assertTrue(keys.getChildAt(0).getBackground() instanceof android.graphics.drawable.RippleDrawable);a.finish();
+ }
+}

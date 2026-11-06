@@ -196,6 +196,15 @@ public class X11IntegrationTest {
             try{command(service,q);fail("Maintenance accepted while desktop started");}catch(IllegalStateException expected){}
         }
     }
+    @Test public void restartRebindsOnlyItsOwnerAndOldCloseCannotStopDesktop()throws Exception{
+        X11Service service=org.robolectric.Robolectric.buildService(X11Service.class).get();field(service,"started",true);field(service,"phase","running");field(service,"target","termux");field(service,"desktopOwner","one:h1");
+        java.lang.reflect.Field users=X11Service.class.getDeclaredField("desktopUsers");users.setAccessible(true);java.util.Set<String> owners=(java.util.Set<String>)users.get(service);owners.add("one:h1");owners.add("two:h2");
+        android.os.Bundle q=X11Remote.command("session-rebind");q.putString("target","termux");q.putString("owner","one:h1");q.putString("nextOwner","other:h3");try{command(service,q);fail("cross-profile rebind");}catch(IllegalArgumentException expected){}assertTrue(owners.contains("one:h1"));
+        q.putString("nextOwner","one:h3");q.putString("target","ubuntu");command(service,q);assertTrue(owners.contains("one:h1"));q.putString("target","termux");command(service,q);assertEquals(new java.util.HashSet<>(java.util.Arrays.asList("one:h3","two:h2")),owners);assertEquals("one:h3",service.snapshot().getString("desktopOwner"));command(service,q);assertEquals(2,owners.size());
+        q=X11Remote.command("session-close");q.putString("target","termux");q.putString("owner","one:h1");assertEquals("running",command(service,q).getString("phase"));assertEquals(2,owners.size());
+        q.putString("owner","one:h3");assertEquals("running",command(service,q).getString("phase"));assertEquals(java.util.Collections.singleton("two:h2"),owners);
+        // No native server or process was created in this fixture.
+    }
     @Test public void sessionClosureRequiresExactOwnerHandleAndEnvironment()throws Exception{
         X11Service service=org.robolectric.Robolectric.buildService(X11Service.class).get();
         field(service,"started",true);field(service,"phase","running");field(service,"target","jobs-x11-ubuntu");field(service,"desktopOwner","preset:handle-new");

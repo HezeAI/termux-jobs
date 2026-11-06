@@ -349,6 +349,13 @@ public class AgentChatUiTest {
   }
  }
 
+ @Test public void stopVisibilityFollowsCancellableRequestNotConnectionForAllAgents()throws Exception{
+  for(String agent:new String[]{"codex","claude","gemini","opencode"}){
+   TermuxActivity a=activity();WorkspaceStore.Session p=profile();p.aiAgent=agent.equals("opencode")?agent:"";p.environment=agent.equals("codex")?"codex":"ubuntu";p.claudeAgent=agent.equals("claude");p.geminiAgent=agent.equals("gemini");AtomicReference<WorkspaceStore.Session> selected=new AtomicReference<>(p);java.io.File marker=null;if(agent.equals("codex")){marker=CodexChatControl.marker(a.getFilesDir(),p);marker.getParentFile().mkdirs();marker.createNewFile();}
+   AtomicInteger phase=new AtomicInteger();AgentChatUi ui=new AgentChatUi(a,selected::get,()->true,(profile,q)->{int n=phase.get();assertEquals("chat-snapshot",q.optString("op"));return result().put("session",p.id).put("connected",true).put("busy",n>=1&&n<=4).put("stopToken",n>=2&&n<=4?"request":"").put("needsTerminal",n==3).put("modelConnection",n==4?new JSONObject().put("state","retrying").put("turn","request"):JSONObject.NULL).put("error",n==6?"final failure":"");});
+   try{for(int n=0;n<30&&!ui.showing();n++)drain();assertFalse(agent,ui.canShowStop());for(int n=1;n<=6;n++){phase.set(n);reload(ui);assertEquals(agent+" phase "+n,n>=2&&n<=4,ui.canShowStop());}phase.set(2);reload(ui);assertTrue(ui.canShowStop());selected.set(new WorkspaceStore.Session());assertFalse(ui.canShowStop());ui.sync();assertFalse(ui.canShowStop());}finally{ui.close();if(marker!=null)marker.delete();}
+  }
+ }
  @Test public void stopConfirmationIsScopedCancelableAndNeverTargetsTheNextRequest()throws Exception{
   for(String agent:new String[]{"codex","claude","gemini","opencode"}){
    TermuxActivity a=activity();WorkspaceLanguage.select(a,"en");WorkspaceLanguage.apply(a);WorkspaceStore.Session p=profile();p.aiAgent=agent.equals("opencode")?agent:"";p.environment=agent.equals("codex")?"codex":"ubuntu";p.codexEnvironment="ubuntu-ai";p.claudeAgent=agent.equals("claude");p.geminiAgent=agent.equals("gemini");AtomicReference<WorkspaceStore.Session> selected=new AtomicReference<>(p);java.io.File marker=null;if(agent.equals("codex")){marker=CodexChatControl.marker(a.getFilesDir(),p);marker.getParentFile().mkdirs();marker.createNewFile();}
@@ -360,7 +367,7 @@ public class AgentChatUiTest {
     ui.stopCurrent();dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();busy.set(false);reload(ui);assertFalse(dialog.isShowing());dialog.getButton(-2).performClick();drain();assertEquals(0,stops.get());
     busy.set(true);token.set("request-B");reload(ui);ui.stopCurrent();dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();token.set("request-C");dialog.getButton(-2).performClick();for(int n=0;n<8;n++)drain();assertEquals("stale backend token",0,stops.get());
     reload(ui);ui.stopCurrent();dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();selected.set(new WorkspaceStore.Session());ui.sync();dialog.getButton(-2).performClick();drain();assertEquals(0,stops.get());
-    selected.set(p);ui.sync();reload(ui);for(int n=0;n<40&&!ui.canInterrupt();n++)drain();ui.stopCurrent();dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();dialog.getButton(-2).performClick();for(int n=0;n<40&&stops.get()==0;n++)drain();assertEquals(agent,1,stops.get());reload(ui);assertFalse(ui.canInterrupt());ui.stopCurrent();assertEquals(1,stops.get());
+    selected.set(p);ui.sync();reload(ui);for(int n=0;n<40&&!ui.canInterrupt();n++)drain();ui.stopCurrent();dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();dialog.getButton(-2).performClick();for(int n=0;n<40&&stops.get()==0;n++)drain();assertEquals(agent,1,stops.get());reload(ui);assertFalse(ui.canShowStop());assertFalse(ui.canInterrupt());ui.stopCurrent();assertEquals(1,stops.get());
    }finally{ui.close();if(marker!=null)marker.delete();}
   }
  }

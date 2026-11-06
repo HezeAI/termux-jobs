@@ -59,7 +59,7 @@ final class GeminiLiveUi {
     private boolean owns(String captured){WorkspaceStore.Session p=current.get();return !closed&&p!=null&&captured.equals(p.geminiSocketId);}
     void render(LinearLayout parent,WorkspaceStore.Session p){
         if(!run.equals(p.geminiSocketId)){run=p.geminiSocketId;status=null;}
-        chip=AgentStatusUi.chip(activity,"",tr("Статус, модель и права Gemini","Gemini status, model and permissions"),()->details(p));AgentStatusUi.attach(parent,chip);update();load(p);
+        chip=AgentStatusUi.chip(activity,"",tr("Статус, модель и права Gemini","Gemini status, model and permissions"),()->details(p,true));AgentStatusUi.attach(parent,chip);update();load(p);
     }
     private void load(WorkspaceStore.Session profile){
         if(closed)return;String captured=profile.geminiSocketId;if(!loadingRuns.add(captured))return;
@@ -79,8 +79,8 @@ final class GeminiLiveUi {
             if(!owns(detailsRun)){detailsDialog.dismiss();return;}
             WorkspaceStore.Session profile=current.get();boolean available=status!=null&&status.available;
             detailsModel.setText(tr("Модель: ","Model: ")+(available?status.model:tr("нет данных","unavailable"))+" ›");AgentStatusUi.available(detailsModel,available);
-            detailsMode.setText(tr("Режим прав: ","Permissions: ")+(available?GeminiRightsUi.label(status.mode):tr("нет данных","unavailable"))+" ›");AgentStatusUi.available(detailsMode,available&&status.canChangeMode);
-            detailsThinking.setText(tr("Рассуждения: ","Reasoning: ")+(available?(status.thinkingEffective?AgentStatusUi.level(activity,status.thinking):tr("По умолчанию CLI","CLI default")):tr("нет данных","unavailable"))+" ›");AgentStatusUi.available(detailsThinking,available&&status.canChangeThinking&&status.state.equals("idle"));
+            detailsMode.setText(tr("Действующий режим: ","Active mode: ")+(available&&!status.mode.isEmpty()?GeminiRightsUi.label(status.mode):tr("нет данных","unavailable"))+" ›");AgentStatusUi.available(detailsMode,available&&status.canChangeMode);
+            detailsThinking.setVisibility(status!=null&&!status.thinkingOptions.isEmpty()?android.view.View.VISIBLE:android.view.View.GONE);detailsThinking.setText(tr("Рассуждения: ","Reasoning: ")+(available?(status.thinkingEffective?AgentStatusUi.level(activity,status.thinking):tr("По умолчанию CLI","CLI default")):tr("нет данных","unavailable"))+" ›");AgentStatusUi.available(detailsThinking,available&&status.canChangeThinking&&status.state.equals("idle"));
             String latest=detailsSummary()+(available&&!status.canChangeThinking?"\n\n"+tr("Выбор рассуждений для этой модели пока недоступен. Используются настройки CLI.","Reasoning selection is unavailable for this model. CLI settings are used."):"");if(!latest.contentEquals(detailsInfo.getText()))detailsInfo.setText(latest);
         }
     }
@@ -126,16 +126,20 @@ final class GeminiLiveUi {
             if(owns(captured))activity.showToast(saved?(pending.profile.saved?tr("Права применены. Настройки сессии и пресета обновлены.","Permissions applied. Session/preset settings updated."):tr("Права применены. Настройки сессии обновлены.","Permissions applied. Session settings updated.")):tr("Права применены, но настройки изменились отдельно или недоступны для записи. Проверьте пресет.","Permissions applied, but settings changed separately or cannot be saved. Check the preset."),true);
         }else if(owns(captured))activity.showToast(tr("Смена прав не подтверждена или отменена в Gemini. Пресет не изменён.","Permission change was not confirmed or was cancelled in Gemini. Preset unchanged."),true);
     }
-    private void details(WorkspaceStore.Session profile){
+    void showLimits(WorkspaceStore.Session p){details(p,false);}
+    private void details(WorkspaceStore.Session p){details(p,false);}
+    void showPermissions(WorkspaceStore.Session p){details(p,false,true);}
+ private void details(WorkspaceStore.Session profile,boolean modelOnly){details(profile,modelOnly,false);}
+ private void details(WorkspaceStore.Session profile,boolean modelOnly,boolean permissionsOnly){
         String captured=profile.geminiSocketId;if(!owns(captured))return;if(detailsDialog!=null)detailsDialog.dismiss();LinearLayout body=AgentStatusUi.body(activity);
         detailsModel=AgentStatusUi.row(body,"","model",()->{if(owns(captured))choose(profile);});detailsMode=AgentStatusUi.row(body,"","permissions",()->{if(owns(captured))chooseMode(profile);});
         detailsThinking=AgentStatusUi.row(body,"","reasoning",()->{if(owns(captured))chooseThinking(profile);});
         detailsInfo=AgentStatusUi.info(body,detailsSummary());detailsInfo.setId(android.R.id.message);
         AgentStatusUi.row(body,tr("Квоты AI Studio","AI Studio quotas"),"quotas",()->openQuotas());
-        AgentChatScale.controls(body,profile,()->owns(captured),chatPreview,chatSave);
         detailsContext=new AgentContextMeter(activity,"Gemini");body.addView(detailsContext);
-        AlertDialog dialog=WorkspaceDialogs.builder(activity).setTitle(tr("Статус Gemini","Gemini status")).setView(AgentStatusUi.scroll(body)).setPositiveButton(tr("Обновить","Refresh"),null).setNegativeButton(tr("Закрыть","Close"),null).create();detailsDialog=dialog;detailsRun=captured;
-        dialog.setOnDismissListener(d->{if(detailsDialog==dialog)detailsDialog=null;});dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{if(owns(captured))load(profile);}));dialog.show();update();
+        if(permissionsOnly){body.removeAllViews();body.addView(detailsMode);}else if(modelOnly){body.removeAllViews();body.addView(detailsModel);body.addView(detailsThinking);}else{body.removeView(detailsModel);body.removeView(detailsThinking);body.removeView(detailsMode);}
+        AlertDialog dialog=WorkspaceDialogs.builder(activity).setTitle(permissionsOnly?tr("Права и подтверждения · Gemini","Permissions and approvals · Gemini "):modelOnly?tr("Модель Gemini","Gemini model"):tr("Лимиты и контекст · Gemini","Limits and context · Gemini")).setView(AgentStatusUi.scroll(body)).setPositiveButton(tr("Обновить","Refresh"),null).setNegativeButton(tr("Закрыть","Close"),null).create();detailsDialog=dialog;detailsRun=captured;
+        dialog.setOnDismissListener(d->{if(detailsDialog==dialog)detailsDialog=null;});dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{if(owns(captured))load(profile);}));dialog.show();if(modelOnly)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setVisibility(android.view.View.GONE);update();
     }
     private void chooseThinking(WorkspaceStore.Session p){if(status==null||!status.available||!status.canChangeThinking||!status.state.equals("idle"))return;String captured=p.geminiSocketId,model=status.model,before=p.geminiThinking;java.util.List<String> values=new java.util.ArrayList<>(status.thinkingOptions);String[] labels=new String[values.size()];for(int i=0;i<labels.length;i++)labels[i]=AgentStatusUi.level(activity,values.get(i))+(status.thinkingModel.startsWith("gemini-2.5-")&&!values.get(i).equals("default")?" · "+(values.get(i).equals("low")?1024:values.get(i).equals("medium")?8192:status.thinkingModel.equals("gemini-2.5-pro")?32768:24576)+tr(" токенов"," tokens"):"");int checked=values.indexOf(status.thinking);WorkspaceDialogs.builder(activity).setTitle(tr("Рассуждения Gemini","Gemini reasoning")).setSingleChoiceItems(labels,checked,(d,w)->{d.dismiss();String level=values.get(w);WorkspaceDialogs.builder(activity).setTitle(tr("Подтвердить выбор","Confirm selection")).setMessage(model+" · "+labels[w]+"\n\n"+tr("Применяется к следующим запросам основного чата через thinkingConfig Gemini CLI. У Gemini 2.5 это бюджет токенов, у поддерживаемых новых моделей — уровень. Расход и время ответа могут измениться. Права не меняются.","Applies to subsequent main-chat requests through Gemini CLI thinkingConfig. Gemini 2.5 uses a token budget; supported newer models use a level. Usage and response time may change. Permissions stay the same.")).setPositiveButton(tr("Применить","Apply"),(confirm,index)->{if(!owns(captured))return;control.execute(()->{boolean ok=false;String error="CONTROL_FAILED";try{JSONObject r=GeminiLiveControl.request(activity.getFilesDir(),captured,new JSONObject().put("op","thinking").put("model",model).put("level",level));JSONObject t=r.optJSONObject("thinking");ok=t!=null&&level.equals(t.optString("value"))&&t.optBoolean("effective");}catch(Exception e){error=failureCode(e);}boolean accepted=ok;String reason=error;handler.post(()->{if(closed||!captured.equals(p.geminiSocketId))return;if(accepted&&before.equals(p.geminiThinking))thinkingApplied.accept(p,level);if(owns(captured)){if(!accepted)controlFailure(reason);load(p);}});});}).setNegativeButton(tr("Назад","Back"),null).show();}).setNegativeButton(tr("Назад","Back"),null).show();}
     private void openQuotas(){

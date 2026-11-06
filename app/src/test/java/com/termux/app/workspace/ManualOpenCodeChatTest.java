@@ -47,14 +47,14 @@ public class ManualOpenCodeChatTest {
             }
         } finally {c.close();}
     }
-    @Test public void ordinaryTerminalMenuRetainsPackageAndDiagnosticAccessInBothLanguages()throws Exception{
+    @Test public void ordinaryTerminalMenuRetainsPackagesAndRemovesDiagnosticsInBothLanguages()throws Exception{
         WorkspaceController c=controller();try{
             Field field=WorkspaceController.class.getDeclaredField("activity");field.setAccessible(true);TermuxActivity a=(TermuxActivity)field.get(c);
             Method menu=WorkspaceController.class.getDeclaredMethod("sessionMenu",WorkspaceStore.Session.class,boolean.class);menu.setAccessible(true);
             for(String language:new String[]{"ru","en"}){WorkspaceLanguage.select(a,language);for(String env:new String[]{"termux","ubuntu","proot:debian","proot:archlinux"}){
                 WorkspaceStore.Session s=new WorkspaceStore.Session();s.environment=env;menu.invoke(c,s,true);AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();boolean packages=false,diagnostics=false;
                 for(int n=0;n<d.getListView().getCount();n++){String label=d.getListView().getItemAtPosition(n).toString();packages|=label.equals("Установка пакетов")||label.equals("Install packages");diagnostics|=label.equals("Диагностика сессии")||label.equals("Session diagnostics");}
-                assertTrue(packages);assertTrue(diagnostics);d.dismiss();
+                assertTrue(packages);assertFalse(diagnostics);d.dismiss();
             }}
         }finally{c.close();}
     }

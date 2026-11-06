@@ -49,6 +49,7 @@ final class WorkspaceDesktops {
  void stopDesktop(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));if(c!=null)c.stopDesktop(p);}
  void terminal(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));if(c!=null)c.terminal(p);}
  boolean owns(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));return c!=null&&c.owns(p);}
+ void sessionRestarted(WorkspaceStore.Session before,WorkspaceStore.Session after){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(before));if(c!=null&&WorkspaceDesktop.target(before).equals(WorkspaceDesktop.target(after)))c.sessionRestarted(before,after);}
  void sessionClosed(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));if(c!=null)c.sessionClosed(p);}
  void sync(){if(closed)return;WorkspaceDesktop active=current(false);for(WorkspaceDesktop c:new ArrayList<>(channels.values()))if(c!=active)c.sync();if(active!=null)active.sync();if(viewport==null)viewport=new DesktopViewport(activity.findViewById(com.termux.R.id.drawer_layout));viewport.present(showing());}
  void close(){if(closed)return;if(viewport!=null)viewport.present(false);closed=true;for(WorkspaceDesktop c:channels.values())c.close();channels.clear();}

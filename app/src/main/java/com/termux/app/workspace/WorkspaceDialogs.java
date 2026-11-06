@@ -29,7 +29,7 @@ final class WorkspaceDialogs {
         private boolean blockOutside;
         Builder(Context c) { super(c, R.style.WorkspaceDialog); }
         Builder blockOutsideDismiss(){blockOutside=true;return this;}
-        @Override public AlertDialog create(){AlertDialog dialog=super.create();if(blockOutside)dialog.setCanceledOnTouchOutside(false);return dialog;}
+        @Override public AlertDialog create(){AlertDialog dialog=super.create();WorkspaceRipple.install(dialog.getWindow());if(blockOutside)dialog.setCanceledOnTouchOutside(false);return dialog;}
         @Override public AlertDialog.Builder setItems(CharSequence[] items, DialogInterface.OnClickListener listener) {
             return super.setAdapter(new Rows(getContext(), items, -1), listener);
         }
@@ -69,10 +69,7 @@ final class WorkspaceDialogs {
         row.setBackground(background(c, false)); return row;
     }
     static Drawable background(Context c, boolean selected) {
-        StateListDrawable states = new StateListDrawable();
-        states.addState(new int[]{android.R.attr.state_pressed}, panel(c, true));
-        states.addState(new int[]{android.R.attr.state_focused}, panel(c, true));
-        states.addState(new int[]{}, panel(c, selected)); return states;
+        return WorkspaceRipple.background(c,panel(c,selected),12);
     }
     private static Drawable panel(Context c, boolean highlight) {
         GradientDrawable panel = new GradientDrawable(); panel.setColor(highlight ? 0xff343531 : 0xff232426);

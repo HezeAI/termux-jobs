@@ -7,12 +7,10 @@ public class StartupEnvironmentTest {
     @After public void close(){controller.close();}
     private View described(View root,String value){if(value.contentEquals(root.getContentDescription()==null?"":root.getContentDescription()))return root;if(root instanceof ViewGroup)for(int i=0;i<((ViewGroup)root).getChildCount();i++){View found=described(((ViewGroup)root).getChildAt(i),value);if(found!=null)return found;}return null;}
     private EditText firstEditor(View root){if(root instanceof EditText)return (EditText)root;if(root instanceof ViewGroup)for(int i=0;i<((ViewGroup)root).getChildCount();i++){EditText found=firstEditor(((ViewGroup)root).getChildAt(i));if(found!=null)return found;}return null;}
-    @Test public void newSessionAndPresetKeepOtherEnvironmentsEnabled()throws Exception{
+    @Test public void newTerminalKeepsEnvironmentChoiceButNoLaunchKindOrPresetPicker()throws Exception{
         Method edit=WorkspaceController.class.getDeclaredMethod("editSession",WorkspaceStore.Session.class,boolean.class);edit.setAccessible(true);
-        for(boolean preset:new boolean[]{false,true}){edit.invoke(controller,null,preset);AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();View environment=described(dialog.findViewById(android.R.id.content),"Startup environment");if(environment==null)environment=described(dialog.findViewById(android.R.id.content),"Среда запуска");assertNotNull(environment);environment.performClick();AlertDialog chooser=ShadowAlertDialog.getLatestAlertDialog();ListAdapter adapter=chooser.getListView().getAdapter();assertEquals(3,adapter.getCount());for(int i=0;i<3;i++)assertTrue(adapter.isEnabled(i));chooser.dismiss();dialog.dismiss();}
+        for(boolean launch:new boolean[]{false,true}){edit.invoke(controller,null,launch);AlertDialog dialog=ShadowAlertDialog.getLatestAlertDialog();View root=dialog.getWindow().getDecorView();assertNotNull(described(root,"Environment"));assertNotNull(root.findViewWithTag("agent-environment-check"));assertEquals(!launch,root.findViewWithTag("session-launch-environment")!=null);if(launch){assertEquals("Cancel",dialog.getButton(-3).getText().toString());assertEquals(View.GONE,dialog.getButton(-2).getVisibility());dialog.getButton(-3).performClick();assertNull(activity.getCurrentSession());}else dialog.dismiss();}
     }
-
-
 
     @Test public void selectedLinuxAliasIsPersistedAndEntryCommandIsVisible()throws Exception{
         Field setup=WorkspaceController.class.getDeclaredField("environmentSetup");setup.setAccessible(true);((EnvironmentSetup)setup.get(controller)).close();

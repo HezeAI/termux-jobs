@@ -22,9 +22,10 @@ final class WorkspaceSidebar {
     final ScrollView scroll;
     private final Context context;
     private final FrameLayout root;
-    private LinearLayout expanded;
+    private WorkspaceExpansion expanded;
     private float downX, downY;
-    private boolean closing,preview;
+    private boolean closing;
+    private View selectedRow;
     private WorkspacePopover activePopup;
 
     WorkspaceSidebar(Context context) {
@@ -35,7 +36,7 @@ final class WorkspaceSidebar {
             if(event.getActionMasked()==MotionEvent.ACTION_DOWN){downX=event.getX();downY=event.getY();}
             if(event.getActionMasked()==MotionEvent.ACTION_MOVE&&event.getX()-downX<-dp(64)&&Math.abs(event.getY()-downY)<dp(48)){MotionEvent cancel=MotionEvent.obtain(event);cancel.setAction(MotionEvent.ACTION_CANCEL);super.dispatchTouchEvent(cancel);cancel.recycle();dismiss();return true;}
             return super.dispatchTouchEvent(event);
-        }};scroll.setTag("workspace-sidebar");scroll.setFillViewport(true);
+        }};scroll.setTag("workspace-sidebar");scroll.setFillViewport(true);scroll.setVerticalScrollBarEnabled(false);scroll.setHorizontalScrollBarEnabled(false);
         GradientDrawable drawer=new GradientDrawable();drawer.setColor(WorkspaceDialogs.BG);drawer.setStroke(dp(1),WorkspaceDialogs.LINE);float radius=dp(22);drawer.setCornerRadii(new float[]{0,0,radius,radius,radius,radius,0,0});scroll.setBackground(drawer);scroll.setClipToOutline(true);
         body=new LinearLayout(context);body.setOrientation(LinearLayout.VERTICAL);
         body.setPadding(dp(10),dp(16),dp(10),dp(20));scroll.addView(body);
@@ -45,26 +46,31 @@ final class WorkspaceSidebar {
             int width=width();if(scroll.getLayoutParams().width!=width){scroll.getLayoutParams().width=width;scroll.requestLayout();}
         });
         dialog.setContentView(root);
-        dialog.setOnDismissListener(d->{if(activePopup!=null)activePopup.dismiss();});
+        dialog.setOnDismissListener(d->{if(activePopup!=null)activePopup.dismissImmediately();});
         dialog.setOnKeyListener((d,key,event)->{if(key==android.view.KeyEvent.KEYCODE_BACK){if(event.getAction()==android.view.KeyEvent.ACTION_UP)dismiss();return true;}return false;});
     }
     private int width(){int screen=context.getResources().getDisplayMetrics().widthPixels;return Math.min(screen-dp(24),Math.max(dp(220),Math.round(screen*.61f)));}
     private int dp(int n){return WorkspaceDialogs.dp(context,n);}
-    int panelWidth(){return width();}
-    void beginDrag(android.view.ViewGroup host){preview=true;detachRoot();host.addView(root,new android.view.ViewGroup.LayoutParams(-1,-1));root.bringToFront();dragTo(0);}
-    private void detachRoot(){if(root.getParent() instanceof android.view.ViewGroup)((android.view.ViewGroup)root.getParent()).removeView(root);}
-    void dragTo(float distance){scroll.animate().cancel();float x=Math.min(width(),Math.max(0,distance));scroll.setTranslationX(x-width());root.setBackgroundColor(((int)(136*x/width())<<24));}
-    boolean isPreview(){return preview;}
-    void finishDrag(boolean open){if(!preview)return;Runnable complete=()->{if(!preview||closing)return;detachRoot();preview=false;if(open){dialog.setContentView(root);root.setBackgroundColor(0x88000000);dialog.show();configureWindow();}else closing=true;};if(!scroll.isLaidOut()){scroll.setTranslationX(open?0:-width());complete.run();return;}scroll.animate().translationX(open?0:-width()).setDuration(duration(180)).withEndAction(complete).start();}
-    private void configureWindow(){Window w=dialog.getWindow();if(w!=null){w.setBackgroundDrawableResource(android.R.color.transparent);w.setDimAmount(0);w.setLayout(-1,-1);w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);}}
-    void show(){dialog.show();Window w=dialog.getWindow();if(w!=null){w.setBackgroundDrawableResource(android.R.color.transparent);w.setDimAmount(0);w.setLayout(-1,-1);w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);}scroll.setTranslationX(-width());scroll.animate().translationX(0).setDuration(duration(280)).start();}
+    void show(){
+        dialog.show();Window w=dialog.getWindow();if(w!=null){w.setBackgroundDrawableResource(android.R.color.transparent);w.setDimAmount(0);w.setLayout(-1,-1);w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);}
+        if(selectedRow!=null){
+            scroll.getViewTreeObserver().addOnGlobalLayoutListener(new android.view.ViewTreeObserver.OnGlobalLayoutListener(){
+                @Override public void onGlobalLayout(){
+                    if(!scroll.getViewTreeObserver().isAlive())return;
+                    scroll.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                    if(dialog.isShowing())scroll.scrollTo(0,Math.max(0,selectedRow.getTop()-dp(8)));
+                }
+            });
+        }
+        scroll.setTranslationX(-width());scroll.animate().translationX(0).setDuration(duration(280)).start();
+    }
     private long duration(int ms){return android.animation.ValueAnimator.areAnimatorsEnabled()?ms:0;}
-    void dismiss(){if(closing)return;if(preview){scroll.animate().cancel();detachRoot();preview=false;closing=true;return;}closing=true;scroll.animate().translationX(-width()).setDuration(duration(220)).withEndAction(dialog::dismiss).start();}
+    void dismiss(){if(closing)return;closing=true;scroll.animate().translationX(-width()).setDuration(duration(220)).withEndAction(dialog::dismiss).start();}
     void section(String title){TextView v=new TextView(context);v.setText(title);v.setTextSize(9);v.setTextColor(0xffa5a5a2);v.setPadding(dp(10),dp(20),0,dp(9));body.addView(v);}
     TextView action(LinearLayout parent,String title,int icon,Runnable callback){
         TextView v=new TextView(context);v.setText(title);v.setTextSize(12);v.setTextColor(0xfff0f0ee);v.setGravity(Gravity.CENTER_VERTICAL);v.setMinHeight(dp(44));v.setPadding(dp(9),dp(10),dp(9),dp(10));
         if(icon!=0){android.graphics.drawable.Drawable d=context.getDrawable(icon).mutate();d.setTint(0xffa5a5a2);d.setBounds(0,0,dp(20),dp(20));v.setCompoundDrawables(d,null,null,null);v.setCompoundDrawablePadding(dp(11));}
-        v.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x33ecece5),null,null));
+        v.setBackground(WorkspaceRipple.background(context,null,10));
         v.setOnClickListener(x->callback.run());parent.addView(v,new LinearLayout.LayoutParams(-1,-2));return v;
     }
     void action(String title,int icon,Runnable callback){action(body,title,icon,()->{dismiss();callback.run();});}
@@ -78,9 +84,11 @@ final class WorkspaceSidebar {
         label.setLayoutParams(new LinearLayout.LayoutParams(0,-2,1));styleSessionLabel(label);
         if(selected){GradientDrawable bg=new GradientDrawable();bg.setColor(0xff303132);bg.setCornerRadius(dp(10));heading.setBackground(bg);}
         LinearLayout actions=new LinearLayout(context);actions.setOrientation(LinearLayout.VERTICAL);actions.setPadding(dp(8),0,0,dp(8));actions.setVisibility(View.GONE);frame.addView(actions);
-        label.setOnClickListener(v->{boolean open=actions.getVisibility()!=View.VISIBLE;if(expanded!=null&&expanded!=actions)expanded.setVisibility(View.GONE);actions.setVisibility(open?View.VISIBLE:View.GONE);expanded=open?actions:null;if(open){actions.setAlpha(0);actions.animate().alpha(1).setDuration(duration(260)).start();}});
-        if(!base){TextView more=new TextView(context);more.setText("⋯");more.setTextSize(24);more.setTextColor(0xfff0f0ee);more.setGravity(Gravity.CENTER);more.setContentDescription(tr("Меню: ","Menu: ")+title);heading.addView(more,new LinearLayout.LayoutParams(dp(48),dp(48)));
-            final WorkspacePopover[] popup={null};more.setOnClickListener(v->{if(popup[0]!=null){popup[0].dismiss();return;}if(activePopup!=null)activePopup.dismiss();WorkspacePopover m=new WorkspacePopover(context);popup[0]=m;activePopup=m;boolean stored=isSaved.getAsBoolean();Runnable updateLabel=()->{label.setText(title+(isSaved.getAsBoolean()?" · "+tr("Сохранен","Saved"):"")+"\n"+subtitle);styleSessionLabel(label);};m.item(stored?tr("Удалить из сохранённых","Remove from saved"):(agent?tr("Сохранить чат","Save chat"):tr("Сохранить сессию","Save session")),R.drawable.workspace_library,()->{if(stored)unsave.run();else save.run();updateLabel.run();});m.item(agent?tr("Закрыть чат","Close chat"):tr("Закрыть сессию","Close session"),R.drawable.workspace_delete,()->{dismiss();close.run();});m.dismissed(()->{popup[0]=null;if(activePopup==m)activePopup=null;updateLabel.run();});m.showBelow(more);});}
+        WorkspaceExpansion disclosure=new WorkspaceExpansion(actions);
+        if(selected){if(expanded!=null)expanded.setOpen(false);disclosure.setOpen(true);expanded=disclosure;selectedRow=frame;}
+        label.setOnClickListener(v->{boolean open=!disclosure.isOpen();if(expanded!=null&&expanded!=disclosure)expanded.setOpen(false);disclosure.setOpen(open);expanded=open?disclosure:null;});
+        if(!base){TextView more=new TextView(context);more.setText("⋯");more.setTextSize(24);more.setTextColor(0xfff0f0ee);more.setGravity(Gravity.CENTER);more.setBackground(WorkspaceRipple.background(context,null,10));more.setContentDescription(tr("Меню: ","Menu: ")+title);heading.addView(more,new LinearLayout.LayoutParams(dp(48),dp(48)));
+            final WorkspacePopover[] popup={null};more.setOnClickListener(v->{if(popup[0]!=null){popup[0].dismiss();return;}if(activePopup!=null)activePopup.dismissImmediately();WorkspacePopover m=new WorkspacePopover(context).animated();popup[0]=m;activePopup=m;boolean stored=isSaved.getAsBoolean();Runnable updateLabel=()->{label.setText(title+(isSaved.getAsBoolean()?" · "+tr("Сохранен","Saved"):"")+"\n"+subtitle);styleSessionLabel(label);};m.item(stored?tr("Удалить из сохранённых","Remove from saved"):(agent?tr("Сохранить чат","Save chat"):tr("Сохранить сессию","Save session")),R.drawable.workspace_library,()->{if(stored)unsave.run();else save.run();updateLabel.run();});m.item(agent?tr("Закрыть чат","Close chat"):tr("Закрыть сессию","Close session"),R.drawable.workspace_delete,()->{dismiss();close.run();});m.dismissed(()->{popup[0]=null;if(activePopup==m)activePopup=null;updateLabel.run();});m.showBelow(more);});}
 
         return actions;
     }

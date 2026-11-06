@@ -103,6 +103,16 @@ public class X11Service extends Service {
         // new rootfs/operation can reuse the display or its control directory.
         if((retiring||stopping||phase.equals("stopping"))&&!op.equals("stop")&&!op.equals("session-close")&&!op.equals("detach"))throw new IllegalStateException("X11 is stopping; retry after it has stopped");
         if(phase.equals("cancelling")&&!op.equals("stop")&&!op.equals("cancel")&&!op.equals("session-close")&&!op.equals("detach"))throw new IllegalStateException("X11 installer is stopping; wait for cleanup");
+        if(op.equals("session-rebind")){
+            String old=q.getString("owner",""),next=q.getString("nextOwner","");
+            int split=old.lastIndexOf(':');
+            if(split<=0||split==old.length()-1||!next.startsWith(old.substring(0,split+1))||next.length()<=split+1||next.equals(old))throw new IllegalArgumentException("Invalid restart owner");
+            if(started&&target.equals(q.getString("target",""))&&!stopping){
+                boolean matched=desktopUsers.remove(old)||desktopUsers.isEmpty()&&desktopOwner.equals(old);
+                if(matched){desktopUsers.add(next);if(desktopOwner.equals(old))desktopOwner=next;}
+            }
+            return snapshot();
+        }
         if(op.equals("session-close")){
             String owner=q.getString("owner","");
             if(started&&target.equals(q.getString("target",""))&&!stopping&&!phase.equals("stopping")){
