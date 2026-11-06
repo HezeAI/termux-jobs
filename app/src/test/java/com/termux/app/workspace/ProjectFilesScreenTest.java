@@ -27,7 +27,7 @@ public class ProjectFilesScreenTest {
  @Test public void projectPageCoversFloatingChatHeaderAndRestoresItOnClose(){
   TermuxActivity a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.setContentView(R.layout.activity_termux);
   View header=a.findViewById(R.id.workspace_header);header.setElevation(1);
-  AgentTerminalScreen page=new AgentTerminalScreen(a,"Synthetic project","/fixture",()->{});page.body(new View(a));page.show();
+  AgentTerminalScreen page=new AgentTerminalScreen(a,"Synthetic project","/fixture","Back","project-files-screen",()->{});page.body(new View(a));page.show();
   assertTrue(page.getElevation()>header.getElevation());assertEquals(ViewGroup.LayoutParams.MATCH_PARENT,page.getLayoutParams().width);
   page.dismiss();assertNull(page.getParent());assertEquals(1,header.getElevation(),0);a.finish();
  }

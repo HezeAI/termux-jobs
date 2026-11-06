@@ -1,4 +1,32 @@
-# Текущая выдача — основной1502/test7
+# Текущая выдача — основной1503/test8
+
+[Состав, карта семи пунктов и ограничения](docs/fork/VALIDATION-2.1.5-test8.md).
+APK `/sdcard/Download/Termux-Jobs-v2.1.5-test8-arm64.apk`,40609053байт.
+SHA256 `d70dc988e80de6119853945eb55c6a6e4c270d941a23a724ca58ea44727f5b77`.
+Checksum рядом; exclusive copy и readback двух Android-путей — PASS.
+
+Реализованы все7: скрытие launch selector существующих записей, SpeechRecognizer
+fallback с выбором службы/RECORD_AUDIO, чёрный status bar, compact agent header,
+slide терминала/обратно, минимальная шапка терминала, fade центральных библиотек.
+Read-only manifest установленного Claude: exported recognition service,
+BIND_RECOGNITION_SERVICE. Настоящие bind/микрофон/распознавание не подтверждены.
+
+Финальный targeted7/0; ранее height6/0 и широкие53/55 до двух исправлений.
+Исходные52/7,55/2,55/2 и все повторы сохранены. Полный app-suite не повторялся.
+Lint5модулей0 errors/275 warnings. APK ZIP/package/version/подпись/ABI/runtime/
+125assets/4templates/7ELF,630production files по3stages,95native inputs — PASS.
+Доказательства `.verification/ui-1503/`, `.verification/test-2.1.5-test8/`.
+ID локального коммита — `.verification/test-2.1.5-test8/source-commit.txt`.
+
+Следующее — проверка телефона по отчёту, особенно выбранная Claude recognition
+service, её разрешения/ошибки, смена чата, первый кадр IME и header/terminal переходы.
+Исследование Android Home при долгом листании остаётся открытым, исправление не заявлено.
+Резерв1499 не читать/менять/пересобирать. Старые APK сохранены. Нет установки,
+публикации, push/тегов и рабочих перезапусков.
+
+---
+
+# Предыдущая выдача — основной1502/test7
 
 APK: `/sdcard/Download/Termux-Jobs-v2.1.5-test7-arm64.apk`,40603693байт.
 SHA256: `e4e60caedee3bbd92ad52daca83ae54d71e40858a988825bba5ba8d4cd115819`.

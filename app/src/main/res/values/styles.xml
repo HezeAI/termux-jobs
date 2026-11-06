@@ -65,4 +65,5 @@
         <item name="android:windowMinWidthMinor">92%</item>
         <item name="android:windowSoftInputMode">adjustResize|stateAlwaysHidden</item>
     </style>
+<style name="WorkspaceLibraryAnimation"><item name="android:windowEnterAnimation">@anim/workspace_library_enter</item><item name="android:windowExitAnimation">@anim/workspace_library_exit</item></style>
 </resources>

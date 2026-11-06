@@ -24,13 +24,13 @@ public class AgentComposerControllerTest {
    android.content.res.Configuration config=new android.content.res.Configuration(a.getResources().getConfiguration());config.fontScale=font;config.setLocale(new java.util.Locale(locale));a.getResources().updateConfiguration(config,a.getResources().getDisplayMetrics());WorkspaceLanguage.select(a,locale);
    call(c,"renderHeader");android.widget.LinearLayout header=a.findViewById(R.id.workspace_header);
    android.widget.LinearLayout titles=header.findViewWithTag("agent-header-title");assertNotNull(titles);
-   assertEquals(locale.equals("ru")?"Чат":"Chat",((android.widget.TextView)titles.getChildAt(0)).getText().toString());
+   assertEquals(p.geminiAgent?"Gemini":p.claudeAgent?"Claude":p.aiAgent.equals("opencode")?"OpenCode":"Codex",((android.widget.TextView)titles.getChildAt(0)).getText().toString());
    assertFalse(header.isClickable());assertFalse(titles.isClickable());
    for(String tag:new String[]{"agent-header-name","agent-header-path"}){android.widget.TextView text=header.findViewWithTag(tag);assertEquals(1,text.getMaxLines());assertNotNull(text.getEllipsize());assertFalse(text.isClickable());}
    for(int width:new int[]{320,412,700}){
     int px=Math.round(width*a.getResources().getDisplayMetrics().density);header.measure(View.MeasureSpec.makeMeasureSpec(px,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(1000,View.MeasureSpec.AT_MOST));header.layout(0,0,px,header.getMeasuredHeight());
     android.widget.LinearLayout row=(android.widget.LinearLayout)header.getChildAt(0);View menu=row.findViewWithTag("workspace-menu"),terminal=row.findViewWithTag("workspace-header-terminal"),restart=row.findViewWithTag("workspace-header-restart");
-    assertNotNull(restart);assertTrue(titles.getWidth()>0);assertTrue(menu.getRight()<titles.getLeft());assertTrue(titles.getRight()<terminal.getLeft());assertTrue(terminal.getRight()<restart.getLeft());assertTrue(restart.getRight()<=row.getWidth());
+    assertNotNull(restart);assertTrue(titles.getWidth()>0);int[] ml=new int[2],tl=new int[2],xl=new int[2],rl=new int[2];ml[0]=menu.getLeft();tl[0]=((View)titles.getParent()).getLeft()+titles.getLeft();xl[0]=((View)terminal.getParent()).getLeft()+terminal.getLeft();rl[0]=restart.getLeft();assertTrue("menu-title",ml[0]+menu.getWidth()<=tl[0]);assertTrue("title-terminal",tl[0]+titles.getWidth()<xl[0]);assertTrue("terminal-restart",xl[0]+terminal.getWidth()<=rl[0]);assertEquals("",((android.widget.TextView)terminal).getText().toString());assertEquals(titles.getHeight(),terminal.getHeight());assertTrue(restart.getRight()<=row.getWidth());
     for(View button:new View[]{menu,terminal,restart}){assertNotNull(button.getBackground());assertTrue(button.isClickable());assertTrue(button.getHeight()>=Math.round(44*a.getResources().getDisplayMetrics().density));}
    }
   }

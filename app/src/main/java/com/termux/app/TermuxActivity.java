@@ -780,6 +780,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if(mWorkspace!=null&&mWorkspace.dictationPermissionResult(requestCode))return;
         if(mWorkspaceImageSaveAccess!=null&&mWorkspaceImageSaveAccess.permissionResult(requestCode))return;
         if(mWorkspaceStorageAccess!=null&&mWorkspaceStorageAccess.permissionResult(requestCode))return;
         if (requestCode == PermissionUtils.REQUEST_GRANT_STORAGE_PERMISSION && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
