@@ -3,7 +3,6 @@ package com.termux.app.terminal.io;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.EditText;
 
 import androidx.annotation.NonNull;
 import androidx.viewpager.widget.PagerAdapter;
@@ -12,7 +11,6 @@ import androidx.viewpager.widget.ViewPager;
 import com.termux.R;
 import com.termux.app.TermuxActivity;
 import com.termux.shared.terminal.io.extrakeys.ExtraKeysView;
-import com.termux.terminal.TerminalSession;
 
 public class TerminalToolbarViewPager {
 
@@ -28,7 +26,7 @@ public class TerminalToolbarViewPager {
 
         @Override
         public int getCount() {
-            return 2;
+            return 1;
         }
 
         @Override
@@ -56,30 +54,7 @@ public class TerminalToolbarViewPager {
                     FullScreenWorkAround.apply(mActivity);
                 }
 
-            } else {
-                layout = inflater.inflate(R.layout.view_terminal_toolbar_text_input, collection, false);
-                final EditText editText = layout.findViewById(R.id.terminal_toolbar_text_input);
-
-                if (mSavedTextInput != null) {
-                    editText.setText(mSavedTextInput);
-                    mSavedTextInput = null;
-                }
-
-                editText.setOnEditorActionListener((v, actionId, event) -> {
-                    TerminalSession session = mActivity.getCurrentSession();
-                    if (session != null) {
-                        if (session.isRunning()) {
-                            String textToSend = editText.getText().toString();
-                            if (textToSend.length() == 0) textToSend = "\r";
-                            session.write(textToSend);
-                        } else {
-                            mActivity.getTermuxTerminalSessionClient().removeFinishedSession(session);
-                        }
-                        editText.setText("");
-                    }
-                    return true;
-                });
-            }
+            } else {throw new IllegalArgumentException("Only extra keys page exists");}
             collection.addView(layout);
             return layout;
         }
@@ -107,9 +82,6 @@ public class TerminalToolbarViewPager {
         public void onPageSelected(int position) {
             if (position == 0) {
                 mActivity.getTerminalView().requestFocus();
-            } else {
-                final EditText editText = mTerminalToolbarViewPager.findViewById(R.id.terminal_toolbar_text_input);
-                if (editText != null) editText.requestFocus();
             }
         }
 

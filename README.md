@@ -151,7 +151,9 @@ rights; component distribution does not imply official endorsement.
 AI development assistance: OpenAI Codex
 
 
-Private test17 centers terminal Notes, moves Enter before PgUp/PgDn, highlights active modifiers in yellow and refines general settings. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test17.md).
+Private test18 removes the secondary toolbar input page, adds a tall vector Enter after PgUp/PgDn and renames input history. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test18.md).
+
+Previous Private test17 centers terminal Notes, moves Enter before PgUp/PgDn, highlights active modifiers in yellow and refines general settings. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test17.md).
 
 Previous Private test16 preserves chat insets across terminal transitions, refines typography/creation controls and adds Enter above PgUp. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test16.md).
 

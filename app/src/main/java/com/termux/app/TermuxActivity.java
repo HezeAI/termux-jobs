@@ -826,7 +826,7 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
     }
 
     public boolean isTerminalToolbarTextInputViewSelected() {
-        return getTerminalToolbarViewPager().getCurrentItem() == 1;
+        return false;
     }
 
 

@@ -1,4 +1,22 @@
-# Текущая выдача — основной1512/test17
+# Текущая выдача — основной1513/test18
+
+[Карта/проверки](docs/fork/VALIDATION-2.1.5-test18.md).
+APK /sdcard/Download/Termux-Jobs-v2.1.5-test18-arm64.apk
+SHA256 7114891d3ed787df711a871eef87177d959d5ddd569a2803010dad970d1c9fff.
+Toolbar pager только1страница; второе EditText не создаётся.
+Enter послеPgUp/PgDn занимает2ряда; customAppCompatButton рисует vector↵,
+contentDescription Enter. Сохранены модификаторы/жёлтый цвет/штатные keycodes.
+История поля ввода: название меню/окна/шапки и пояснение, storage прежний.
+47тестовPASS, ModernLint0errors/279warnings, финальныйAPKgatePASS.
+ПервыйlintAppCompatCustomView исправлен,2устаревших теста обновлены,
+исходные свидетельства сохранены; промежуточныйAPK не выдавался.
+Телефонная проверка свайпов/IME/поворота/реальных клавиш и истории не выполнена.
+Без автоматической установки/публикации/рабочих перезапусков.
+Резерв1499 не читать/не менять/не пересобирать. ПрежниеAPK сохранены.
+
+---
+
+# Предыдущая выдача — основной1512/test17
 
 [Карта/проверки](docs/fork/VALIDATION-2.1.5-test17.md).
 APK /sdcard/Download/Termux-Jobs-v2.1.5-test17-arm64.apk

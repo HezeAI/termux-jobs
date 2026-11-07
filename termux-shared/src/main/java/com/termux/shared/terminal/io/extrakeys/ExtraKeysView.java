@@ -390,16 +390,22 @@ public final class ExtraKeysView extends GridLayout {
         for (int row = 0; row < buttons.length; row++) {
             for (int col = 0; col < buttons[row].length; col++) {
                 final ExtraKeyButton buttonInfo = buttons[row][col];
+                boolean tallEnter=row==0&&"ENTER".equals(buttonInfo.getKey())&&buttons.length>1&&col<buttons[1].length&&buttons[1][col].getKey().isEmpty();
+                if(row==1&&buttonInfo.getKey().isEmpty()&&col<buttons[0].length&&"ENTER".equals(buttons[0][col].getKey()))continue;
 
                 Button button;
                 if (isSpecialButton(buttonInfo)) {
                     button = createSpecialButton(buttonInfo.getKey(), true);
                     if (button == null) return;
                 } else {
-                    button = new Button(getContext(), null, android.R.attr.buttonBarButtonStyle);
+                    button = tallEnter?new androidx.appcompat.widget.AppCompatButton(getContext(),null,android.R.attr.buttonBarButtonStyle){
+                        final android.graphics.drawable.Drawable icon=getContext().getDrawable(com.termux.shared.R.drawable.extra_keys_enter).mutate();
+                        @Override protected void onDraw(android.graphics.Canvas canvas){super.onDraw(canvas);int size=Math.round(24*getResources().getDisplayMetrics().density);icon.setTint(getCurrentTextColor());icon.setBounds((getWidth()-size)/2,(getHeight()-size)/2,(getWidth()+size)/2,(getHeight()+size)/2);icon.draw(canvas);}
+                    }:new Button(getContext(), null, android.R.attr.buttonBarButtonStyle);
                 }
 
-                button.setText(buttonInfo.getDisplay());
+                button.setText(tallEnter?"":buttonInfo.getDisplay());
+                if(tallEnter)button.setContentDescription("Enter");
                 if(!isSpecialButton(buttonInfo))button.setTextColor(mButtonTextColor);
                 button.setAllCaps(mButtonTextAllCaps);
                 button.setPadding(0, 0, 0, 0);
@@ -466,7 +472,7 @@ public final class ExtraKeysView extends GridLayout {
                 param.height = 0;
                 param.setMargins(0, 0, 0, 0);
                 param.columnSpec = GridLayout.spec(col, GridLayout.FILL, 1.f);
-                param.rowSpec = GridLayout.spec(row, GridLayout.FILL, 1.f);
+                param.rowSpec = GridLayout.spec(row,tallEnter?2:1, GridLayout.FILL, 1.f);
                 button.setLayoutParams(param);
 
                 if(buttonInfo.getKey().isEmpty()){button.setVisibility(INVISIBLE);button.setEnabled(false);button.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);}

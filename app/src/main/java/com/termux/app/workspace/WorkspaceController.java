@@ -390,7 +390,7 @@ public final class WorkspaceController {
         header.removeAllViews();header.setPadding(dp(terminalScreen?10:14),dp(14),dp(terminalScreen?10:14),dp(13));
         LinearLayout top=row();top.setBaselineAligned(false);
         WorkspaceIconButton menu=WorkspaceDialogs.headerButton(activity,R.drawable.workspace_menu,tr("Открыть меню","Open menu"),this::showSidebar);menu.setTag("workspace-menu");top.addView(menu,new LinearLayout.LayoutParams(dp(48),dp(48)));
-        if(!terminalScreen){TextView title=text(screen==Screen.COMMANDS?(librarySection==2?tr("Заметки","Notes"):librarySection==1?"Aliases":tr("Команды","Commands")):screen==Screen.SETTINGS?tr("Общие настройки","General settings"):screen==Screen.SERVERS?tr("Серверы","Servers"):tr("Недавние команды","Recent commands"),16,TEXT);title.setPadding(dp(10),0,0,0);top.addView(title,new LinearLayout.LayoutParams(0,-2,1));}else{
+        if(!terminalScreen){TextView title=text(screen==Screen.COMMANDS?(librarySection==2?tr("Заметки","Notes"):librarySection==1?"Aliases":tr("Команды","Commands")):screen==Screen.SETTINGS?tr("Общие настройки","General settings"):screen==Screen.SERVERS?tr("Серверы","Servers"):tr("История поля ввода","Input history"),16,TEXT);title.setPadding(dp(10),0,0,0);top.addView(title,new LinearLayout.LayoutParams(0,-2,1));}else{
             top.addView(new View(activity),new LinearLayout.LayoutParams(0,1,1));
             if(desktop){desktopInputButton=WorkspaceDialogs.headerButton(activity,R.drawable.workspace_interactive_input,tr("Интерактивный ввод","Interactive input"),()->desktopUi.keyboard());desktopInputButton.setTag("workspace-header-input");desktopKeysButton=WorkspaceDialogs.headerButton(activity,R.drawable.workspace_extra_keys,tr("Дополнительные клавиши","Extra keys"),()->desktopUi.extraKeys());desktopKeysButton.setTag("workspace-header-keys");WorkspaceDialogs.headerState(desktopInputButton,desktopUi.keyboardEnabled());WorkspaceDialogs.headerState(desktopKeysButton,desktopUi.extraKeysVisible());top.addView(desktopInputButton,new LinearLayout.LayoutParams(dp(48),dp(48)));LinearLayout.LayoutParams keys=new LinearLayout.LayoutParams(dp(48),dp(48));keys.leftMargin=dp(6);top.addView(desktopKeysButton,keys);top.addView(new View(activity),new LinearLayout.LayoutParams(0,1,1));}
             if(profile!=null){boolean agent=isAgent(profile);if(!desktop&&current.isRunning()){WorkspaceIconButton restart=WorkspaceDialogs.headerButton(activity,R.drawable.workspace_server_refresh,agent?tr("Перезапустить чат","Restart chat"):tr("Перезапустить сессию","Restart session"),()->{});restart.setTag("workspace-header-restart");restart.setOnClickListener(v->restartSession(profile,v));LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(dp(48),dp(48));rp.rightMargin=dp(6);top.addView(restart,rp);}
@@ -513,7 +513,7 @@ public final class WorkspaceController {
         for(java.util.Map.Entry<String,String> entry:servers.sidebarEntries().entrySet())menu.action(entry.getValue(),R.drawable.workspace_terminal,()->{show(Screen.SERVERS,true);servers.openProfile(entry.getKey());});
         menu.action(tr("Создать SSH • сервер","Create SSH • server"),R.drawable.workspace_plus,()->editSession(null,true,"ssh","codex"));
         menu.section(tr("Приложение","Application"));
-        menu.overlayAction(WorkspaceText.tr("Недавние команды"),R.drawable.workspace_commands,()->openLibraryWindow(-1));
+        menu.overlayAction(tr("История поля ввода","Input history"),R.drawable.workspace_commands,()->openLibraryWindow(-1));
         menu.overlayAction(tr("Команды","Commands"),R.drawable.workspace_commands,()->openLibrary(0));
         menu.overlayAction("Aliases",R.drawable.workspace_terminal,()->openLibrary(1));
         menu.overlayAction(tr("Заметки","Notes"),R.drawable.workspace_library,()->openLibrary(2));
@@ -531,7 +531,7 @@ public final class WorkspaceController {
         closeLibraryWindow();
         libraryWindowSection=section;if(section>=0){librarySection=section;aliasesSelected=section==1;query=libraryQueries[section];}
         libraryContent=new FrameLayout(activity);libraryContent.setTag("library-sheet-content");
-        String title=section<0?tr("Недавние команды","Recent commands"):section==2?tr("Заметки","Notes"):section==1?"Aliases":tr("Команды","Commands");
+        String title=section<0?tr("История поля ввода","Input history"):section==2?tr("Заметки","Notes"):section==1?"Aliases":tr("Команды","Commands");
         AlertDialog dialog=WorkspaceDialogs.builder(activity).setView(libraryContent).create();libraryWindow=dialog;
         AgentLaunchForm.title(dialog,title,false);dialog.setOnDismissListener(d->libraryClosed(dialog));
         WorkspaceDialogs.centerLibrary(dialog);renderLibraryWindow();libraryContent.setMinimumHeight(libraryHeight());dialog.show();WorkspaceDialogs.editorWindow(dialog);resizeLibraryWindow();
@@ -698,7 +698,8 @@ public final class WorkspaceController {
     }
 
     private void home(LinearLayout body) {
-        section(body, WorkspaceText.tr("Недавние команды"), store.recentCommands.isEmpty() ? null : WorkspaceText.tr("Очистить"), () -> {
+        body.addView(text(tr("История отправки в терминал и чат агента","History of submissions to the terminal and agent chat"),13,MUTED));
+        section(body, tr("История поля ввода","Input history"), store.recentCommands.isEmpty() ? null : WorkspaceText.tr("Очистить"), () -> {
             if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Журнал недоступен для записи"), true); return; }
             confirm(WorkspaceText.tr("Очистить весь журнал недавних команд?"), () -> { store.clearRecentCommands(); renderContent(); });
         });
