@@ -477,7 +477,7 @@ public final class WorkspaceController {
                 if(isAgent(p)!=agent||(!WorkspaceStore.isBase(p)&&!p.saved&&liveFor(p)==null))continue;
                 TerminalSession live=liveFor(p);boolean active=live!=null&&live==activity.getCurrentSession();
                 java.util.function.Supplier<String> subtitle=()->{TerminalSession running=liveFor(p);boolean started=running!=null&&running.isRunning();return (agent?AgentPreparation.agent(p):ProjectFiles.environmentLabel(p))+" · "+compact(p.directory)+" · "+(agent?(started?tr("Запущен","Running"):tr("Не запущен","Not running")):(started?tr("Открыта","Open"):tr("Сохранена","Saved")));};
-                LinearLayout actions=menu.session(p.id,p.name,subtitle,WorkspaceStore.isBase(p),p.saved,active,agent,()->{TerminalSession running=liveFor(p);return running!=null&&running.isRunning();},()->p.saved,()->saveSessionProfile(p),()->unsaveSession(p),()->closeSession(p));
+                LinearLayout actions=menu.session(p.id,()->p.name,subtitle,WorkspaceStore.isBase(p),p.saved,active,agent,()->{TerminalSession running=liveFor(p);return running!=null&&running.isRunning();},()->p.saved,()->saveSessionProfile(p),()->unsaveSession(p),()->closeSession(p));
                 sidebarTransition(menu,actions,agent?(live!=null&&live.isRunning()&&!active?tr("Вернуться в этот чат","Return to this chat"):tr("Открыть чат","Open chat")):(active&&desktopUi!=null&&desktopUi.showing()?tr("Вернуться в терминал","Return to terminal"):tr("Открыть терминал","Open terminal")),agent?R.drawable.workspace_chat:R.drawable.workspace_terminal,()->{if(!agent&&desktopUi!=null)desktopUi.terminal(p);launch(p);});
                 if(agent){
                     LinearLayout project=menu.group(actions,tr("Проект","Project"),"project");
@@ -699,10 +699,12 @@ public final class WorkspaceController {
 
     private void home(LinearLayout body) {
         body.addView(text(tr("История отправки в терминал и чат агента","History of submissions to the terminal and agent chat"),13,MUTED));
-        if (!store.recentCommands.isEmpty()) body.addView(button(WorkspaceText.tr("Очистить"), false, () -> {
+        TextView clear = button(WorkspaceText.tr("Очистить"), false, () -> {
             if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Журнал недоступен для записи"), true); return; }
-            confirm(WorkspaceText.tr("Очистить весь журнал недавних команд?"), () -> { store.clearRecentCommands(); renderContent(); });
-        }));
+            confirm(tr("Очистить историю поля ввода?", "Clear input history?"), () -> { store.clearRecentCommands(); renderContent(); });
+        });
+        clear.setTag("input-history-clear");clear.setEnabled(!store.recentCommands.isEmpty());
+        clear.setAlpha(clear.isEnabled()?1f:.5f);body.addView(clear);
         EditText search = field(WorkspaceText.tr("Поиск по журналу"), journalQuery, false);
         search.setContentDescription(WorkspaceText.tr("Поиск по журналу"));
         LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, -2);
@@ -2150,8 +2152,14 @@ public final class WorkspaceController {
         if(isAgent(profile)){
             dialog.setTitle(tr("Закрыть чат «","Close chat “")+profile.name+tr("»?","”?"));
             dialog.setMessage(tr("Процесс будет остановлен. История разговора сохранится.","The process will stop. Conversation history will be retained."));
+            if(profile.saved){
+                dialog.setTitle(tr("Закрыть чат „","Close chat “")+profile.name+tr("“?","”?"));
+                dialog.setNegativeButton(tr("Нет","No"),null);
+                dialog.setPositiveButton(tr("Да","Yes"),(d,w)->{profile.keepHistory=true;finishClose(profile,target,true);});
+            }else{
             dialog.setNegativeButton(tr("Сохранить чат и закрыть","Save chat and close"),(d,w)->{profile.keepHistory=true;bindChatForSave(profile,target,()->finishClose(profile,target,true));});
             dialog.setPositiveButton(tr("Закрыть","Close"),(d,w)->{profile.keepHistory=true;finishClose(profile,target,false);});
+            }
             dialog.show();return;
         }
         if (profile.saved) {
