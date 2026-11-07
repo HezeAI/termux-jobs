@@ -8,9 +8,9 @@ public final class WorkspaceExtraKeysStyle {
     private WorkspaceExtraKeysStyle(){}
     public static void apply(ExtraKeysView keys){
         keys.setBackgroundColor(android.graphics.Color.BLACK);
-        keys.setButtonColors(WorkspaceDialogs.TEXT,WorkspaceDialogs.ACCENT,android.graphics.Color.BLACK,WorkspaceDialogs.TINT);
+        keys.setButtonColors(WorkspaceDialogs.TEXT,0xffffd54f,android.graphics.Color.BLACK,WorkspaceDialogs.TINT);
         keys.setButtonBackgroundFactory(()->{
-            GradientDrawable shape=new GradientDrawable();shape.setColor(android.graphics.Color.BLACK);shape.setCornerRadius(WorkspaceDialogs.dp(keys.getContext(),6));shape.setStroke(WorkspaceDialogs.dp(keys.getContext(),1),WorkspaceDialogs.LINE);
+            GradientDrawable shape=new GradientDrawable();shape.setColor(android.graphics.Color.BLACK);shape.setCornerRadius(WorkspaceDialogs.dp(keys.getContext(),6));
             return WorkspaceRipple.background(keys.getContext(),shape,6);
         });
     }

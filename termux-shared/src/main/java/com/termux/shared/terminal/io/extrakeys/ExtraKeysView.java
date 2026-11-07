@@ -270,6 +270,7 @@ public final class ExtraKeysView extends GridLayout {
     /** Optional application styling; key definitions and input dispatch remain unchanged. */
     public void setButtonBackgroundFactory(java.util.function.Supplier<android.graphics.drawable.Drawable> factory){mButtonBackgroundFactory=factory;}
     private void buttonBackground(View view,int color){
+        for(SpecialButtonState state:mSpecialButtons.values())if(state.buttons.contains(view))((Button)view).setTextColor(color==mButtonActiveBackgroundColor||state.isActive?mButtonActiveTextColor:mButtonTextColor);
         if(mButtonBackgroundFactory==null){view.setBackgroundColor(color);return;}
         if(styledButtons.add(view))view.setBackground(mButtonBackgroundFactory.get());
         view.setPressed(color==mButtonActiveBackgroundColor);
@@ -399,7 +400,7 @@ public final class ExtraKeysView extends GridLayout {
                 }
 
                 button.setText(buttonInfo.getDisplay());
-                button.setTextColor(mButtonTextColor);
+                if(!isSpecialButton(buttonInfo))button.setTextColor(mButtonTextColor);
                 button.setAllCaps(mButtonTextAllCaps);
                 button.setPadding(0, 0, 0, 0);
 

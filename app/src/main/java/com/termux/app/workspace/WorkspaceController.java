@@ -2394,7 +2394,7 @@ public final class WorkspaceController {
     private void globalSettings(){show(Screen.SETTINGS,true);}
     private void settingsPage(LinearLayout form){
         form.setTag("workspace-global-settings");form.setPadding(dp(21),dp(16),dp(21),dp(24));
-        form.addView(WorkspaceSettingsPage.text(activity,"TERMUX JOB’S",10,MUTED));TextView title=WorkspaceSettingsPage.text(activity,tr("Общие настройки","General settings"),26,TEXT);title.setTypeface(null,Typeface.BOLD);form.addView(title);form.addView(WorkspaceSettingsPage.text(activity,tr("Оформление, агенты, окружения и данные","Appearance, agents, environments and data"),12.8f,MUTED));
+        TextView title=WorkspaceSettingsPage.text(activity,tr("Общие настройки","General settings"),26,TEXT);title.setTypeface(null,Typeface.BOLD);form.addView(title);form.addView(WorkspaceSettingsPage.text(activity,tr("Оформление, агенты, окружения и данные","Appearance, agents, environments and data"),12.8f,MUTED));
         LinearLayout appearance=WorkspaceSettingsPage.group(form,tr("Внешний вид","Appearance"));
         String languageCode=WorkspaceLanguage.choice(activity);
         String languageName=languageCode.equals("ru")?"Русский":languageCode.equals("en")?"English":"System";

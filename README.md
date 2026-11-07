@@ -151,7 +151,9 @@ rights; component distribution does not imply official endorsement.
 AI development assistance: OpenAI Codex
 
 
-Private test16 preserves chat insets across terminal transitions, refines typography/creation controls and adds Enter above PgUp. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test16.md).
+Private test17 centers terminal Notes, moves Enter before PgUp/PgDn, highlights active modifiers in yellow and refines general settings. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test17.md).
+
+Previous Private test16 preserves chat insets across terminal transitions, refines typography/creation controls and adds Enter above PgUp. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test16.md).
 
 Previous Private test15 keeps chat behind its sliding terminal, shares limit data, updates composer/menu sizes and centers agent creation. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test15.md).
 

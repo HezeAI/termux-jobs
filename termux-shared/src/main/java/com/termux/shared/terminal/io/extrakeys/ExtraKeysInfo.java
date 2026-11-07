@@ -168,12 +168,12 @@ public class ExtraKeysInfo {
             }
         }
 
-        // Keep configured rows intact; add Enter above the first-row PgUp when absent.
+        // Add an Enter column immediately before the existing PgUp/PgDn block.
         boolean enter=false;int pageUp=-1;
         for(int row=0;row<buttons.length;row++)for(int col=0;col<buttons[row].length;col++){
             String key=buttons[row][col].getKey();if("ENTER".equals(key))enter=true;if(row==0&&"PGUP".equals(key))pageUp=col;
         }
-        if(!enter&&pageUp>=0){ExtraKeyButton[][] expanded=new ExtraKeyButton[buttons.length+1][];expanded[0]=new ExtraKeyButton[buttons[0].length];for(int col=0;col<expanded[0].length;col++)expanded[0][col]=new ExtraKeyButton(normalizeKeyConfig(col==pageUp?"ENTER":""),extraKeyDisplayMap,extraKeyAliasMap);System.arraycopy(buttons,0,expanded,1,buttons.length);return expanded;}
+        if(!enter&&pageUp>=0){ExtraKeyButton[][] expanded=new ExtraKeyButton[buttons.length][];for(int row=0;row<buttons.length;row++){int at=Math.min(pageUp,buttons[row].length);expanded[row]=new ExtraKeyButton[buttons[row].length+1];System.arraycopy(buttons[row],0,expanded[row],0,at);expanded[row][at]=new ExtraKeyButton(normalizeKeyConfig(row==0?"ENTER":""),extraKeyDisplayMap,extraKeyAliasMap);System.arraycopy(buttons[row],at,expanded[row],at+1,buttons[row].length-at);}return expanded;}
         return buttons;
     }
 
