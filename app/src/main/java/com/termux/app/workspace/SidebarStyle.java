@@ -8,9 +8,12 @@ final class SidebarStyle {
     static final float SCALE=.8f;
     private SidebarStyle(){}
     static Context content(Context base){
+        return scaled(base,SCALE);
+    }
+    static Context scaled(Context base,float scale){
         Configuration config=new Configuration(base.getResources().getConfiguration());
         int density=config.densityDpi>0?config.densityDpi:base.getResources().getDisplayMetrics().densityDpi;
-        config.densityDpi=Math.max(1,Math.round((density>0?density:DisplayMetrics.DENSITY_DEFAULT)*SCALE));
+        config.densityDpi=Math.max(1,Math.round((density>0?density:DisplayMetrics.DENSITY_DEFAULT)*scale));
         ContextThemeWrapper context=new ContextThemeWrapper(base,0);context.applyOverrideConfiguration(config);context.getTheme().setTo(base.getTheme());return context;
     }
 }

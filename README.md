@@ -151,6 +151,8 @@ rights; component distribution does not imply official endorsement.
 AI development assistance: OpenAI Codex
 
 
-Private test14 adds grouped sidebar branches, uniform80% content sizing and caption-fitted panel width; attachment-menu items are reduced. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test14.md).
+Private test15 keeps chat behind its sliding terminal, shares limit data, updates composer/menu sizes and centers agent creation. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test15.md).
+
+Previous Private test14 adds grouped sidebar branches, uniform80% content sizing and caption-fitted panel width; attachment-menu items are reduced. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test14.md).
 
 Previous private test13 removes voice input and its models/permission, restores the clockwise terminal-attention segment, adds desktop-stop feedback, shows current model/reasoning values and enlarges attachment-menu items. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test13.md).

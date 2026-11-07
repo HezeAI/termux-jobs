@@ -39,7 +39,7 @@ public class AgentComposerControlsTest {
  }
  @Test public void iconsAndRightActionsShareAxisAndQueueIsAbsent(){
   WorkspaceLanguage.select(a,"en");LinearLayout model=new LinearLayout(a);TextView title=new TextView(a);title.setText("Model / High");title.setTextSize(12f);model.addView(title);controls.actions(model,new View(a),()->fail("queue UI"),n->{},v->{},v->{});controls.present(true);measure(440);
-  View note=row.findViewWithTag("agent-notes-input"),mic=row.findViewWithTag("composer-action-clearance");assertTrue(note instanceof WorkspaceIconButton);assertFalse(mic.isClickable());assertNull(row.findViewWithTag("agent-voice-input"));assertNull(text(row,"Queue"));assertNull(text(row,"Notes"));
+  View note=row.findViewWithTag("agent-notes-input"),mic=row.findViewWithTag("composer-action-clearance");assertTrue(note instanceof TextView);assertFalse(note instanceof WorkspaceIconButton);assertFalse(mic.isClickable());assertNull(row.findViewWithTag("agent-voice-input"));assertNull(text(row,"Queue"));assertSame(note,text(row,"Notes"));
   for(View v:new View[]{note,mic,model,send})assertEquals(clip.getTop()+clip.getHeight()/2,v.getTop()+v.getHeight()/2,1);
   assertTrue(note.getWidth()>=WorkspaceDialogs.dp(a,44));assertTrue(note.getHeight()>=WorkspaceDialogs.dp(a,44));
  }
@@ -54,7 +54,7 @@ public class AgentComposerControlsTest {
   controls.actions(model,new View(a),()->{},n->{},v->{},v->{});controls.present(true);
   for(int size:new int[]{12,18,24})for(int width:new int[]{240,320,440}){
    title.setTextSize(size);measure(width);View mic=row.findViewWithTag("composer-action-clearance");
-   for(View button:new View[]{clip,row.findViewWithTag("agent-notes-input"),mic,send}){assertEquals(Math.round(44.5f*a.getResources().getDisplayMetrics().density),button.getWidth());assertEquals(Math.round(44.5f*a.getResources().getDisplayMetrics().density),button.getHeight());}
+   for(View button:new View[]{clip,mic,send}){assertEquals(Math.round(44.5f*a.getResources().getDisplayMetrics().density),button.getWidth());assertEquals(Math.round(44.5f*a.getResources().getDisplayMetrics().density),button.getHeight());}
    String geometry="width="+width+" size="+size+" model="+model.getLeft()+","+model.getTop()+","+model.getRight()+","+model.getBottom()+" mic="+mic.getLeft()+","+mic.getTop()+","+mic.getRight()+" send="+send.getLeft()+","+send.getTop();assertTrue(geometry,model.getWidth()>=WorkspaceDialogs.dp(a,84));assertTrue(geometry,model.getRight()+WorkspaceDialogs.dp(a,8)<=mic.getLeft());assertTrue(geometry,mic.getRight()<=send.getLeft());assertEquals(geometry,mic.getTop()+mic.getHeight()/2,send.getTop()+send.getHeight()/2);
    assertEquals(size,title.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity,.01);
   }

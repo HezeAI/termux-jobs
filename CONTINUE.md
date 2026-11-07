@@ -1,4 +1,20 @@
-# Текущая выдача — основной1509/test14
+# Текущая выдача — основной1510/test15
+
+[Карта/проверки](docs/fork/VALIDATION-2.1.5-test15.md).
+APK /sdcard/Download/Termux-Jobs-v2.1.5-test15-arm64.apk
+SHA256 5a4f3503c848f31256424b53a20d52c7dfe79c27b04da80bce2b2d9d1c4148dd.
+Чат и composer сохраняются под sliding terminal; общий источник лимитов.
+Noteslabel/plus21dp stroke2; popup0.8, more1.3. Центральный chooser и
+sliding параметры, header submit делегирует старому валидатору.
+46тестовPASS, ModernLint0errors/276warnings, finalAPKgatePASS.
+Следующий шаг — телефонная приёмка переходов/IME/позиции истории и реального
+создания/запуска. Не объявлять отсутствие чёрных кадров подтверждённым без телефона.
+Не устанавливать/публиковать/перезапускать рабочие сессии автоматически.
+Резерв1499 не читать/не менять/не пересобирать; прежниеAPK сохранить.
+
+---
+
+# Предыдущая выдача — основной1509/test14
 
 [Карта/проверки](docs/fork/VALIDATION-2.1.5-test14.md).
 APK /sdcard/Download/Termux-Jobs-v2.1.5-test14-arm64.apk

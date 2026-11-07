@@ -24,7 +24,7 @@ final class AgentChatUi {
     private final AgentChatView view;
     private final ChatAttachmentUi attachments;private boolean attachmentsSupported,codexAuthRequired,codexLoginTerminal;
     boolean hasAttachments(){return attachments.has();}
-    void applyPresentationScale(){WorkspaceStore.Session p=current.get();view.scale(SessionTextSize.agentPercent(activity,p==null?100:p.chatScale));if(composerArea!=null)AgentChatScale.apply(composerArea,selected()&&terminal==null&&view.getVisibility()==View.VISIBLE&&p!=null?SessionTextSize.agentPercent(activity,p.chatScale):100);}
+    void applyPresentationScale(){WorkspaceStore.Session p=current.get();view.scale(SessionTextSize.agentPercent(activity,p==null?100:p.chatScale));if(composerArea!=null)AgentChatScale.apply(composerArea,selected()&&view.getVisibility()==View.VISIBLE&&p!=null?SessionTextSize.agentPercent(activity,p.chatScale):100);}
     private final LinkedHashMap<String,JSONObject> rows=new LinkedHashMap<>();
     private final AgentChatCache cache=new AgentChatCache();
     private boolean connected,transportFailed,stopAwaiting;
@@ -94,7 +94,11 @@ final class AgentChatUi {
     private WorkspaceStore.Session snapshot(){WorkspaceStore.Session p=current.get();WorkspaceStore.Session s=new WorkspaceStore.Session();s.environment=p.environment;s.codexEnvironment=p.codexEnvironment;s.codexSocketId=p.codexSocketId;s.id=p.id;s.name=p.name;s.directory=p.directory;s.aiThread=p.aiThread;s.aiSocketId=p.aiSocketId;s.aiAgent=p.aiAgent;s.aiConnection=p.aiConnection;s.aiModel=p.aiModel;s.aiVariant=p.aiVariant;s.geminiAgent=p.geminiAgent;s.geminiSocketId=p.geminiSocketId;s.geminiThread=p.geminiThread;s.geminiModel=p.geminiModel;s.claudeAgent=p.claudeAgent;s.claudeSocketId=p.claudeSocketId;s.claudeThread=p.claudeThread;s.claudeModel=p.claudeModel;s.claudeMode=p.claudeMode;return s;}
     boolean terminalBack(){if(terminal==null)return false;terminal.dismiss();return true;}
     boolean terminalVisible(){return terminal!=null&&terminal.isShowing();}
-    boolean handlesComposer(){return selected()&&terminal==null&&(nativeChat||!resolved);}
+    boolean handlesComposer(){return terminal==null&&keepsChatPresentation();}
+    boolean keepsChatPresentation(){return selected()&&(nativeChat||!resolved);}
+    private java.util.function.Consumer<ComposerLimits> terminalLimits=limits->limits.unavailable();
+    private ComposerLimits openTerminalLimits;
+    void terminalLimits(java.util.function.Consumer<ComposerLimits> update){terminalLimits=update;}
     String name(){WorkspaceStore.Session p=current.get();return p!=null&&p.environment.equals("codex")?"Codex":p!=null&&p.claudeAgent?"Claude":p!=null&&p.geminiAgent?"Gemini":"OpenCode";}
     boolean structured(){return selected()&&nativeChat;}
     boolean terminalAvailable(){return selected();}
@@ -166,15 +170,16 @@ final class AgentChatUi {
         if(terminalAttentionBorder!=null)terminalAttentionBorder.active(requiresTerminal());
         applyPresentationScale();attachments.sync(owner,current.get()==null?null:snapshot(),attachmentsSupported);
         view.execution.timing(owner,requestTiming,busy);view.execution.present(indicatorState(),showing());
-        boolean cover=showing()||(selected()&&!resolved&&terminal==null);
+        boolean cover=selected()&&(nativeChat||!resolved);
+        if(openTerminalLimits!=null)terminalLimits.accept(openTerminalLimits);
         boolean changed=(view.getVisibility()==View.VISIBLE)!=cover||presented!=showing();presented=showing();
         view.setVisibility(cover?View.VISIBLE:View.GONE);applyPresentationScale();
         // show(TERMINAL) may restore the shared toolbar even without a chat visibility
         // transition. Enforce the structured-chat boundary on every synchronization.
         if((cover||terminal!=null)&&activity.getTerminalToolbarViewPager()!=null)activity.getTerminalToolbarViewPager().setVisibility(View.GONE);
-        activity.getTerminalView().setVisibility(cover||externalDisplay.getAsBoolean()?View.INVISIBLE:View.VISIBLE);
+        activity.getTerminalView().setVisibility(cover&&terminal==null||externalDisplay.getAsBoolean()?View.INVISIBLE:View.VISIBLE);
         layoutChatKeys();syncExtraKeys();if(changed)visibilityChanged.run();
-        activity.getTerminalView().setWorkspaceTerminalVisible(!closed&&visible.getAsBoolean()&&!cover&&!externalDisplay.getAsBoolean());
+        activity.getTerminalView().setWorkspaceTerminalVisible(!closed&&visible.getAsBoolean()&&(!cover||terminal!=null)&&!externalDisplay.getAsBoolean());
     }
     private void savePresentation(){
         if(!resolved&&!nativeChat)return;
@@ -448,10 +453,10 @@ final class AgentChatUi {
             LinearLayout terminalComposer=new LinearLayout(activity);EditText terminalDraft=new EditText(activity);terminalDraft.setTextColor(WorkspaceDialogs.TEXT);terminalDraft.setTextSize(12);terminalDraft.setMinLines(1);terminalDraft.setMaxLines(6);terminalDraft.setHint(tr("Введите команду…","Enter command…"));terminalDraft.setText(nativeTerminalDrafts.getOrDefault(terminalOwner.id,""));
             TextView library=new TextView(activity),submit=new WorkspaceIconButton(activity);submit.setOnClickListener(v->{if(activity.getCurrentSession()!=session||session==null||!session.isRunning())return;String command=terminalDraft.getText().toString();if(command.isEmpty()){session.write("\r");return;}if(session.getEmulator()!=null){session.getEmulator().paste(command);session.write("\r");}else session.write(command+"\r");terminalDraft.setText("");});
             AgentComposerControls terminalControls=new AgentComposerControls(activity,terminalComposer,terminalDraft,library,submit,new WorkspaceIconButton(activity));
-            terminalControls.actions(null,null,()->{},section->terminalLibrary.accept(section,terminalDraft),enabled->{nativeTerminalInteractive.put(terminalOwner.id,enabled);activity.getTerminalView().setSoftKeyboardInputEnabled(enabled);if(enabled)tv.requestFocus();else terminalDraft.requestFocus();},enabled->{nativeTerminalKeys.put(terminalOwner.id,enabled);keys.setVisibility(enabled?View.VISIBLE:View.GONE);});terminalControls.present(false);terminalControls.minimumCardHeight(composerCardHeight());terminalControls.terminalModes(directInput,showKeys);floating.addView(terminalComposer,new LinearLayout.LayoutParams(-1,-2));
+            terminalControls.actions(null,null,()->{},section->terminalLibrary.accept(section,terminalDraft),enabled->{nativeTerminalInteractive.put(terminalOwner.id,enabled);activity.getTerminalView().setSoftKeyboardInputEnabled(enabled);if(enabled)tv.requestFocus();else terminalDraft.requestFocus();},enabled->{nativeTerminalKeys.put(terminalOwner.id,enabled);keys.setVisibility(enabled?View.VISIBLE:View.GONE);});terminalControls.present(false);terminalControls.agentTerminalLimits();openTerminalLimits=terminalControls.limits;terminalLimits.accept(openTerminalLimits);terminalControls.minimumCardHeight(composerCardHeight());terminalControls.terminalModes(directInput,showKeys);floating.addView(terminalComposer,new LinearLayout.LayoutParams(-1,-2));
             terminal=new AgentTerminalScreen(activity,terminalOwner.name,terminalOwner.directory,this::terminalBack);terminal.body(box);terminal.headerInset(pixels->activity.getTerminalView().setHeaderTopInset(pixels));
-            terminal.setOnDismissListener(()->{nativeTerminalDrafts.put(terminalOwner.id,terminalDraft.getText().toString());if(preparationWatcher!=null){preparationWatcher.stopWatching();preparationWatcher=null;}if(terminalAttentionBorder!=null)terminalAttentionBorder.active(false);terminalAttentionBorder=null;ViewGroup parent=(ViewGroup)tv.getParent();if(parent!=null)parent.removeView(tv);terminalParent.addView(tv,0,terminalParams);activity.getTerminalView().setComposerBottomInset(insetBefore);activity.getTerminalView().setHeaderTopInset(headerBefore);if(keys!=null){ViewGroup kp=(ViewGroup)keys.getParent();if(kp!=null)kp.removeView(keys);if(keysParent!=null)keysParent.addView(keys,Math.min(keysIndex,keysParent.getChildCount()),keysParams);keys.setVisibility(keysVisibility);if(createdKeys&&activity.getExtraKeysView()==keys)activity.setExtraKeysView(originalKeys);}activity.getTerminalView().setSoftKeyboardInputEnabled(keyboardBefore);terminal=null;codexLoginTerminal=false;activity.getTerminalView().setWorkspaceTerminalVisible(false);if(prepareNative)actions.execute(()->{try{transport.request(terminalOwner,op("terminal-close"));}catch(Exception ignored){}});sync();});
-            terminal.show();tv.setVisibility(View.VISIBLE);activity.getTerminalView().setWorkspaceTerminalVisible(true);tv.requestFocus();view.setVisibility(View.GONE);applyPresentationScale();syncExtraKeys();visibilityChanged.run();
+            terminal.setOnDismissListener(()->{nativeTerminalDrafts.put(terminalOwner.id,terminalDraft.getText().toString());if(preparationWatcher!=null){preparationWatcher.stopWatching();preparationWatcher=null;}if(terminalAttentionBorder!=null)terminalAttentionBorder.active(false);terminalAttentionBorder=null;ViewGroup parent=(ViewGroup)tv.getParent();if(parent!=null)parent.removeView(tv);terminalParent.addView(tv,0,terminalParams);activity.getTerminalView().setComposerBottomInset(insetBefore);activity.getTerminalView().setHeaderTopInset(headerBefore);if(keys!=null){ViewGroup kp=(ViewGroup)keys.getParent();if(kp!=null)kp.removeView(keys);if(keysParent!=null)keysParent.addView(keys,Math.min(keysIndex,keysParent.getChildCount()),keysParams);keys.setVisibility(keysVisibility);if(createdKeys&&activity.getExtraKeysView()==keys)activity.setExtraKeysView(originalKeys);}activity.getTerminalView().setSoftKeyboardInputEnabled(keyboardBefore);terminal=null;openTerminalLimits=null;codexLoginTerminal=false;activity.getTerminalView().setWorkspaceTerminalVisible(false);if(prepareNative)actions.execute(()->{try{transport.request(terminalOwner,op("terminal-close"));}catch(Exception ignored){}});sync();});
+            terminal.show();tv.setVisibility(View.VISIBLE);activity.getTerminalView().setWorkspaceTerminalVisible(true);tv.requestFocus();applyPresentationScale();syncExtraKeys();visibilityChanged.run();
             final AgentTerminalScreen opened=terminal;
             if(preparationWatcher!=null)preparationWatcher.stopWatching();
             if(AgentPreparation.supports(terminalOwner)){
