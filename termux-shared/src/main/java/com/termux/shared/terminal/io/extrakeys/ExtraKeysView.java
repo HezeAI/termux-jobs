@@ -468,6 +468,7 @@ public final class ExtraKeysView extends GridLayout {
                 param.rowSpec = GridLayout.spec(row, GridLayout.FILL, 1.f);
                 button.setLayoutParams(param);
 
+                if(buttonInfo.getKey().isEmpty()){button.setVisibility(INVISIBLE);button.setEnabled(false);button.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);}
                 addView(button);
             }
         }

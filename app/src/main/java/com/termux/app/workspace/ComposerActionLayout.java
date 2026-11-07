@@ -13,6 +13,7 @@ final class ComposerActionLayout extends ViewGroup {
         int width=MeasureSpec.getSize(ws),available=Math.max(0,width-getPaddingLeft()-getPaddingRight());
         boolean model=rightStart!=null&&"composer-model-status".equals(rightStart.getTag());int used=0,rightUsed=0;
         for(int i=0;i<getChildCount();i++){View v=getChildAt(i);if(v.getVisibility()==GONE||model&&v==rightStart)continue;LayoutParams p=v.getLayoutParams();v.measure(MeasureSpec.makeMeasureSpec(p.width>=0?p.width:available,p.width>=0?MeasureSpec.EXACTLY:MeasureSpec.AT_MOST),MeasureSpec.makeMeasureSpec(p.height>=0?p.height:0,p.height>=0?MeasureSpec.EXACTLY:MeasureSpec.UNSPECIFIED));used+=v.getMeasuredWidth();if(rightStart!=null&&i>indexOfChild(rightStart))rightUsed+=v.getMeasuredWidth();}
+        for(int i=0;i<getChildCount();i++){View child=getChildAt(i);if("terminal-library-row".equals(child.getTag()))child.measure(MeasureSpec.makeMeasureSpec(Math.max(0,available-used),MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(child.getLayoutParams().height,MeasureSpec.EXACTLY));}
         if(model&&rightStart.getVisibility()!=GONE){int min=Math.round(84*getResources().getDisplayMetrics().density);int room=available-used;if(room<min)room=available-rightUsed;rightStart.measure(MeasureSpec.makeMeasureSpec(Math.max(1,room),MeasureSpec.AT_MOST),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));}
         setMeasuredDimension(resolveSize(width,ws),resolveSize(arrange(width,false)+getPaddingBottom(),hs));
     }

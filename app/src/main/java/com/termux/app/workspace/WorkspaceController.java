@@ -357,7 +357,7 @@ public final class WorkspaceController {
     private void applyHeaderSurface(){if(header==null)return;boolean desktop=screen==Screen.TERMINAL&&desktopUi!=null&&desktopUi.showing();header.setBackgroundColor(desktop?android.graphics.Color.BLACK:screen==Screen.TERMINAL?android.graphics.Color.TRANSPARENT:WorkspaceDialogs.BG);if(screen==Screen.TERMINAL&&!desktop)activity.findViewById(R.id.workspace_terminal_tools).setBackground(null);}
     private void updateTerminalHeaderInset(int pixels){if(agentChatUi!=null&&agentChatUi.terminalVisible())return;boolean plain=screen==Screen.TERMINAL&&(desktopUi==null||!desktopUi.showing())&&(agentChatUi==null||!agentChatUi.handlesComposer());activity.getTerminalView().setHeaderTopInset(plain?pixels:0);}
     private void composerViewport(int pixels){
-        boolean agent=agentChatUi!=null&&agentChatUi.handlesComposer();
+        boolean agent=agentChatUi!=null&&agentChatUi.keepsChatPresentation();
         if(agentChatUi!=null)agentChatUi.composerInset(agent?pixels:0);
         if(!agent&&(agentChatUi==null||!agentChatUi.terminalVisible())&&(desktopUi==null||!desktopUi.showing())){
             View keys=activity.getTerminalToolbarViewPager();int extra=keys.getVisibility()==View.VISIBLE?keys.getHeight():0;
@@ -390,7 +390,7 @@ public final class WorkspaceController {
         header.removeAllViews();header.setPadding(dp(terminalScreen?10:14),dp(14),dp(terminalScreen?10:14),dp(13));
         LinearLayout top=row();top.setBaselineAligned(false);
         WorkspaceIconButton menu=WorkspaceDialogs.headerButton(activity,R.drawable.workspace_menu,tr("Открыть меню","Open menu"),this::showSidebar);menu.setTag("workspace-menu");top.addView(menu,new LinearLayout.LayoutParams(dp(48),dp(48)));
-        if(!terminalScreen){TextView title=text(screen==Screen.COMMANDS?(librarySection==2?tr("Заметки","Notes"):librarySection==1?"Aliases":tr("Команды","Commands")):screen==Screen.SETTINGS?tr("Настройки","Settings"):screen==Screen.SERVERS?tr("Серверы","Servers"):tr("Недавние команды","Recent commands"),16,TEXT);title.setPadding(dp(10),0,0,0);top.addView(title,new LinearLayout.LayoutParams(0,-2,1));}else{
+        if(!terminalScreen){TextView title=text(screen==Screen.COMMANDS?(librarySection==2?tr("Заметки","Notes"):librarySection==1?"Aliases":tr("Команды","Commands")):screen==Screen.SETTINGS?tr("Общие настройки","General settings"):screen==Screen.SERVERS?tr("Серверы","Servers"):tr("Недавние команды","Recent commands"),16,TEXT);title.setPadding(dp(10),0,0,0);top.addView(title,new LinearLayout.LayoutParams(0,-2,1));}else{
             top.addView(new View(activity),new LinearLayout.LayoutParams(0,1,1));
             if(desktop){desktopInputButton=WorkspaceDialogs.headerButton(activity,R.drawable.workspace_interactive_input,tr("Интерактивный ввод","Interactive input"),()->desktopUi.keyboard());desktopInputButton.setTag("workspace-header-input");desktopKeysButton=WorkspaceDialogs.headerButton(activity,R.drawable.workspace_extra_keys,tr("Дополнительные клавиши","Extra keys"),()->desktopUi.extraKeys());desktopKeysButton.setTag("workspace-header-keys");WorkspaceDialogs.headerState(desktopInputButton,desktopUi.keyboardEnabled());WorkspaceDialogs.headerState(desktopKeysButton,desktopUi.extraKeysVisible());top.addView(desktopInputButton,new LinearLayout.LayoutParams(dp(48),dp(48)));LinearLayout.LayoutParams keys=new LinearLayout.LayoutParams(dp(48),dp(48));keys.leftMargin=dp(6);top.addView(desktopKeysButton,keys);top.addView(new View(activity),new LinearLayout.LayoutParams(0,1,1));}
             if(profile!=null){boolean agent=isAgent(profile);if(!desktop&&current.isRunning()){WorkspaceIconButton restart=WorkspaceDialogs.headerButton(activity,R.drawable.workspace_server_refresh,agent?tr("Перезапустить чат","Restart chat"):tr("Перезапустить сессию","Restart session"),()->{});restart.setTag("workspace-header-restart");restart.setOnClickListener(v->restartSession(profile,v));LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(dp(48),dp(48));rp.rightMargin=dp(6);top.addView(restart,rp);}
@@ -1185,8 +1185,8 @@ public final class WorkspaceController {
     private void createAgentChat(){
         String[] agents={"Codex","Claude","Gemini","OpenCode"};LinearLayout list=new LinearLayout(activity);list.setOrientation(LinearLayout.VERTICAL);list.setTag("agent-chooser-list");
         AlertDialog chooser=WorkspaceDialogs.builder(activity).setView(list).create();agentChooser=chooser;AgentLaunchForm.creationTitle(chooser,tr("Выберите агента","Choose an agent"),false);
-        for(String agent:agents){TextView choice=WorkspaceDialogs.action(activity,agent,0);list.addView(choice);choice.setOnClickListener(v->{if(!choice.isEnabled())return;for(int i=0;i<list.getChildCount();i++)list.getChildAt(i).setEnabled(false);editSession(null,true,"codex",agent.toLowerCase(java.util.Locale.ROOT));});}
-        chooser.setOnDismissListener(d->{if(agentChooser==chooser)agentChooser=null;});AgentLaunchForm.creationWindow(chooser);chooser.show();AgentLaunchForm.creationWindow(chooser);
+        for(String agent:agents){TextView choice=WorkspaceDialogs.action(activity,agent,0);choice.setGravity(Gravity.CENTER);list.addView(choice);choice.setOnClickListener(v->{if(!choice.isEnabled())return;for(int i=0;i<list.getChildCount();i++)list.getChildAt(i).setEnabled(false);editSession(null,true,"codex",agent.toLowerCase(java.util.Locale.ROOT));});}
+        chooser.setOnDismissListener(d->{if(agentChooser==chooser)agentChooser=null;});AgentLaunchForm.compactChooser(chooser);chooser.show();AgentLaunchForm.compactChooser(chooser);
     }
 
     private void editSession(WorkspaceStore.Session existing, boolean launchAfterSave,String initialEnvironment,String initialAgent) {
@@ -1203,7 +1203,7 @@ public final class WorkspaceController {
         String[] chosenAgent={existing==null?initialAgent:draft.geminiAgent?"gemini":draft.claudeAgent?"claude":draft.aiAgent.equals("opencode")?"opencode":"codex"};
         TextView chooseDirectory=button("▱",false,()->{});
         chooseDirectory.setContentDescription(WorkspaceText.tr("Выбрать рабочий каталог"));
-        form.removeView(directory);FrameLayout directoryRow=new FrameLayout(activity);directory.setPadding(directory.getPaddingLeft(),directory.getPaddingTop(),dp(58),directory.getPaddingBottom());directoryRow.addView(directory,new FrameLayout.LayoutParams(-1,-2));FrameLayout.LayoutParams folderParams=new FrameLayout.LayoutParams(dp(44),dp(44),Gravity.END|Gravity.CENTER_VERTICAL);folderParams.setMarginEnd(dp(4));directoryRow.addView(chooseDirectory,folderParams);form.addView(directoryRow);
+        form.removeView(directory);LinearLayout directoryRow=new LinearLayout(activity);directoryRow.setGravity(Gravity.CENTER_VERTICAL);directoryRow.addView(directory,new LinearLayout.LayoutParams(0,-2,1));LinearLayout.LayoutParams folderParams=new LinearLayout.LayoutParams(dp(44),dp(44));folderParams.setMarginStart(dp(8));chooseDirectory.setText("");android.graphics.drawable.Drawable folderIcon=activity.getDrawable(R.drawable.workspace_folder).mutate();folderIcon.setTint(WorkspaceDialogs.TEXT);folderIcon.setBounds(0,0,dp(22),dp(22));chooseDirectory.setCompoundDrawables(folderIcon,null,null,null);chooseDirectory.setPadding(dp(11),dp(11),dp(11),dp(11));chooseDirectory.setBackground(WorkspaceRipple.background(activity,null,22));directoryRow.addView(chooseDirectory,folderParams);form.addView(directoryRow);
 
         boolean[] editorOpen={true};
         String[] environments = {"local", "ssh", "codex"};
@@ -1642,6 +1642,11 @@ public final class WorkspaceController {
             });
         }));
         dialog.setOnDismissListener(d -> {editorOpen[0]=false;preparationCard.close();password.setText("");geminiApiKey.setText("");}); dialog.show();
+        if(createAgent){dialog.getWindow().getDecorView().findViewWithTag("agent-create-back").setOnClickListener(v->{
+            LinearLayout choices=new LinearLayout(activity);choices.setOrientation(LinearLayout.VERTICAL);choices.setTag("agent-chooser-list");AlertDialog picker=WorkspaceDialogs.builder(activity).setView(choices).create();AgentLaunchForm.creationTitle(picker,tr("Выберите агента","Choose an agent"),false);
+            for(String agent:new String[]{"Codex","Claude","Gemini","OpenCode"}){TextView item=WorkspaceDialogs.action(activity,agent,0);item.setGravity(Gravity.CENTER);choices.addView(item);item.setOnClickListener(x->{chosenAgent[0]=agent.toLowerCase(java.util.Locale.ROOT);updateEnvironment.run();((TextView)dialog.getWindow().getDecorView().findViewWithTag("agent-create-title")).setText(newChatTitle(chosenAgent[0]));dialog.show();AgentLaunchForm.creationWindow(dialog);View page=dialog.getWindow().getDecorView();if(android.animation.ValueAnimator.areAnimatorsEnabled()){page.setTranslationX(activity.getResources().getDisplayMetrics().widthPixels);page.animate().translationX(0).setDuration(260).withEndAction(picker::dismiss).start();}else picker.dismiss();});}
+            picker.setOnCancelListener(x->dialog.cancel());AgentLaunchForm.compactChooser(picker);dialog.hide();picker.show();AgentLaunchForm.compactChooser(picker);dialog.show();View page=dialog.getWindow().getDecorView();if(android.animation.ValueAnimator.areAnimatorsEnabled()){page.animate().translationX(activity.getResources().getDisplayMetrics().widthPixels).setDuration(260).withEndAction(()->{dialog.hide();page.setTranslationX(0);}).start();}else dialog.hide();
+        });}
         if(createAgent){AgentLaunchForm.creationWindow(dialog);AlertDialog previous=agentChooser;View page=dialog.getWindow().getDecorView();dialog.getWindow().setWindowAnimations(0);if(previous!=null&&previous.isShowing()&&android.animation.ValueAnimator.areAnimatorsEnabled()){page.setTranslationX(activity.getResources().getDisplayMetrics().widthPixels);page.animate().translationX(0).setDuration(260).setInterpolator(new android.view.animation.DecelerateInterpolator()).withEndAction(previous::dismiss).start();dialog.setOnCancelListener(d->{page.animate().cancel();previous.dismiss();});}else if(previous!=null)previous.dismiss();}
 
     }
@@ -2389,7 +2394,7 @@ public final class WorkspaceController {
     private void globalSettings(){show(Screen.SETTINGS,true);}
     private void settingsPage(LinearLayout form){
         form.setTag("workspace-global-settings");form.setPadding(dp(21),dp(16),dp(21),dp(24));
-        form.addView(WorkspaceSettingsPage.text(activity,"TERMUX JOB’S",10,MUTED));TextView title=WorkspaceSettingsPage.text(activity,tr("Настройки","Settings"),26,TEXT);title.setTypeface(null,Typeface.BOLD);form.addView(title);form.addView(WorkspaceSettingsPage.text(activity,tr("Оформление, агенты, окружения и данные","Appearance, agents, environments and data"),12,MUTED));
+        form.addView(WorkspaceSettingsPage.text(activity,"TERMUX JOB’S",10,MUTED));TextView title=WorkspaceSettingsPage.text(activity,tr("Общие настройки","General settings"),26,TEXT);title.setTypeface(null,Typeface.BOLD);form.addView(title);form.addView(WorkspaceSettingsPage.text(activity,tr("Оформление, агенты, окружения и данные","Appearance, agents, environments and data"),12.8f,MUTED));
         LinearLayout appearance=WorkspaceSettingsPage.group(form,tr("Внешний вид","Appearance"));
         String languageCode=WorkspaceLanguage.choice(activity);
         String languageName=languageCode.equals("ru")?"Русский":languageCode.equals("en")?"English":"System";

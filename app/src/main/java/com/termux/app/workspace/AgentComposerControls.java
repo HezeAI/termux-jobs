@@ -41,8 +41,9 @@ final class AgentComposerControls {
         interactive=new Switch(c);extra=new Switch(c);for(Switch b:new Switch[]{interactive,extra}){b.setTextSize(11);b.setTextColor(WorkspaceDialogs.TEXT);b.setMinHeight(dp(44));b.setSwitchMinWidth(dp(30));b.setSwitchPadding(dp(7));b.setPadding(0,0,dp(12),0);b.setThumbTintList(ColorStateList.valueOf(WorkspaceDialogs.ACCENT));b.setTrackTintList(new ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{0xff777872,WorkspaceDialogs.LINE}));toggles.addView(b);}
         interactive.setOnCheckedChangeListener((b,on)->{if(!updating)interactiveAction.accept(on);});extra.setOnCheckedChangeListener((b,on)->{if(!updating)extraAction.accept(on);});
         notes=action("",()->star.performClick());queue=action("",()->queueAction.run());actionClearance=new View(c);actionClearance.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);actionClearance.setTag("composer-action-clearance");
-        notes.setTag("agent-notes-input");
-        commands=action("",()->library.accept(0));aliases=action("Aliases",()->library.accept(1));terminalNotes=action("",()->library.accept(2));
+        notes.setTag("agent-notes-input");notes.setTextSize(12.65f);
+        commands=action("",()->library.accept(0));aliases=action(t("Алиасы","Aliases"),()->library.accept(1));terminalNotes=action("",()->library.accept(2));
+        for(TextView label:new TextView[]{commands,aliases,terminalNotes})label.setTextSize(12.65f);
         if(attachment instanceof WorkspaceIconButton)((WorkspaceIconButton)attachment).setIcon(c.getDrawable(R.drawable.workspace_composer_plus),Math.round(21f*c.getResources().getDisplayMetrics().density));
         attachment.setBackground(WorkspaceRipple.background(c,null,10));if(attachment instanceof TextView)((TextView)attachment).setTextColor(WorkspaceDialogs.TEXT);
         attachment.setMinimumWidth(dp(44));attachment.setMinimumHeight(dp(44));send.setMinWidth(dp(44));send.setMinHeight(dp(44));
@@ -69,15 +70,15 @@ final class AgentComposerControls {
         if(!initialized||agent!=nextAgent){
             initialized=true;agent=nextAgent;
             for(View v:new View[]{input,star,send,attachment,pair,fieldLine,toggles,card,status,stop,limits})remove(v);
-            row.removeAllViews();card.removeAllViews();fieldLine.removeAllViews();tools.removeAllViews();row.setOrientation(LinearLayout.VERTICAL);row.setBaselineAligned(false);row.setClickable(true);
+            row.removeAllViews();card.removeAllViews();fieldLine.removeAllViews();tools.removeAllViews();for(View libraryItem:new View[]{commands,aliases,terminalNotes})remove(libraryItem);row.setOrientation(LinearLayout.VERTICAL);row.setBaselineAligned(false);row.setClickable(true);
             GradientDrawable background=new GradientDrawable();background.setColor(0xff232426);background.setCornerRadius(dp(24));background.setStroke(dp(1),0xff393a3c);card.setBackground(background);row.setBackgroundColor(android.graphics.Color.TRANSPARENT);row.setPadding(dp(12),0,dp(12),dp(10));
             if(!agent)row.addView(toggles,new LinearLayout.LayoutParams(-1,-2));
             row.addView(card,new LinearLayout.LayoutParams(-1,-2));
             fieldLine.addView(input,new LinearLayout.LayoutParams(0,-2,1));
             if(agent&&stop!=null)fieldLine.addView(stop,new LinearLayout.LayoutParams(dp(44),dp(44)));
             card.addView(fieldLine,new LinearLayout.LayoutParams(-1,-2));
-            if(agent){tools.addView(attachment,new ViewGroup.LayoutParams(actionSize(),actionSize()));View notesGap=new View(context);tools.addView(notesGap,new ViewGroup.LayoutParams(dp(4),0));tools.addView(notes,new ViewGroup.LayoutParams(-2,actionSize()));if(status!=null){tools.addView(status);View gap=new View(context);gap.setTag("composer-model-action-gap");tools.addView(gap,new ViewGroup.LayoutParams(dp(8),0));}tools.addView(actionClearance,new ViewGroup.LayoutParams(actionSize(),actionSize()));}
-            else{tools.addView(commands);tools.addView(separator());tools.addView(aliases);tools.addView(separator());tools.addView(terminalNotes);}
+            if(agent){tools.addView(attachment,new ViewGroup.LayoutParams(actionSize(),actionSize()));View notesGap=new View(context);tools.addView(notesGap,new ViewGroup.LayoutParams(dp(8),0));tools.addView(notes,new ViewGroup.LayoutParams(-2,actionSize()));if(status!=null){tools.addView(status);View gap=new View(context);gap.setTag("composer-model-action-gap");tools.addView(gap,new ViewGroup.LayoutParams(dp(8),0));}tools.addView(actionClearance,new ViewGroup.LayoutParams(actionSize(),actionSize()));}
+            else{LinearLayout libraries=new LinearLayout(context);libraries.setGravity(Gravity.CENTER_VERTICAL);libraries.setTag("terminal-library-row");for(TextView item:new TextView[]{commands,aliases,terminalNotes})libraries.addView(item,new LinearLayout.LayoutParams(0,actionSize(),1));terminalNotes.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);terminalNotes.setPadding(dp(6),dp(4),0,dp(4));tools.addView(libraries,new ViewGroup.LayoutParams(0,actionSize()));View gap=new View(context);tools.addView(gap,new ViewGroup.LayoutParams(actionSize()+dp(8),0));}
             tools.addView(send,new ViewGroup.LayoutParams(actionSize(),actionSize()));if(send instanceof WorkspaceIconButton)((WorkspaceIconButton)send).setIcon(context.getDrawable(R.drawable.workspace_up),Math.round((agent?17.5f:17f)*context.getResources().getDisplayMetrics().density));tools.rightGroup(agent?(status!=null?status:actionClearance):send);card.setPadding(dp(10),dp(6),dp(10),dp(4));card.addView(pair,new LinearLayout.LayoutParams(-1,-2));if(agent)card.addView(limits,new LinearLayout.LayoutParams(-1,-2));geometry();
         }
         geometry();updateStop();labels();inset.accept(row.getVisibility()==View.VISIBLE?row.getHeight():0);
