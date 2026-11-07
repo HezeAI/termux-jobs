@@ -27,7 +27,8 @@ final class WorkspaceExpansion {
         cancel();open=value;
         if(!ValueAnimator.areAnimatorsEnabled()||!body.isAttachedToWindow()||!body.isLaidOut()&&((View)body.getParent()).getWidth()==0){finish();return;}
         View parent=(View)body.getParent();
-        int width=Math.max(0,parent.getWidth()-parent.getPaddingLeft()-parent.getPaddingRight());
+        int margins=0;if(body.getLayoutParams() instanceof ViewGroup.MarginLayoutParams){ViewGroup.MarginLayoutParams p=(ViewGroup.MarginLayoutParams)body.getLayoutParams();margins=p.leftMargin+p.rightMargin;}
+        int width=Math.max(0,parent.getWidth()-parent.getPaddingLeft()-parent.getPaddingRight()-margins);
         body.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));
         int target=value?body.getMeasuredHeight():0;
         body.setVisibility(View.VISIBLE);height(from);

@@ -21,6 +21,9 @@ final class WorkspaceSidebar {
     final LinearLayout body;
     final ScrollView scroll;
     private final Context context;
+    private final Context windowContext;
+    private final java.util.List<TextView> widthRows=new java.util.ArrayList<>();
+    private final java.util.List<String> widthCaptions=new java.util.ArrayList<>();
     private final FrameLayout root;
     private WorkspaceExpansion expanded;
     private float downX, downY;
@@ -33,8 +36,8 @@ final class WorkspaceSidebar {
     void refreshSessions(){for(Runnable refresh:sessionRefresh)refresh.run();}
 
     WorkspaceSidebar(Context context) {
-        this.context=context;
-        dialog=new Dialog(context);dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        this.windowContext=context;this.context=SidebarStyle.content(context);context=this.context;
+        dialog=new Dialog(windowContext);dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         root=new FrameLayout(context);root.setBackgroundColor(0x88000000);
         scroll=new ScrollView(context){@Override public boolean dispatchTouchEvent(MotionEvent event){
             if(event.getActionMasked()==MotionEvent.ACTION_DOWN){downX=event.getX();downY=event.getY();}
@@ -53,7 +56,29 @@ final class WorkspaceSidebar {
         dialog.setOnDismissListener(d->{if(activePopup!=null)activePopup.dismissImmediately();});
         dialog.setOnKeyListener((d,key,event)->{if(key==android.view.KeyEvent.KEYCODE_BACK){if(event.getAction()==android.view.KeyEvent.ACTION_UP)dismiss();return true;}return false;});
     }
-    private int width(){int screen=root.getWidth()>0?root.getWidth():context.getResources().getDisplayMetrics().widthPixels;return Math.max(dp(1),Math.min(screen-dp(24),Math.round(screen*.80f)));}
+    private int width(){
+        int screen=root.getWidth()>0?root.getWidth():windowContext.getResources().getDisplayMetrics().widthPixels;
+        int cap=Math.max(1,Math.min(screen-WorkspaceDialogs.dp(windowContext,24),Math.round(screen*.80f)));
+        int natural=dp(200);
+        for(int i=0;i<widthRows.size();i++){
+            TextView row=widthRows.get(i);String title=widthCaptions.get(i);int text=0;
+            for(String part:title.split("\n"))text=Math.max(text,(int)Math.ceil(row.getPaint().measureText(part)));
+            int edges=body.getPaddingLeft()+body.getPaddingRight()+row.getCompoundPaddingLeft()+row.getCompoundPaddingRight();
+            View current=row;
+            while(current!=body){android.view.ViewGroup.LayoutParams lp=current.getLayoutParams();if(lp instanceof android.view.ViewGroup.MarginLayoutParams){android.view.ViewGroup.MarginLayoutParams m=(android.view.ViewGroup.MarginLayoutParams)lp;edges+=m.leftMargin+m.rightMargin;}
+                if(!(current.getParent() instanceof View)||current.getParent()==body)break;
+                current=(View)current.getParent();edges+=current.getPaddingLeft()+current.getPaddingRight();
+            }
+            natural=Math.max(natural,Math.max(row.getMinWidth(),text+edges));
+        }
+        return Math.max(1,Math.min(cap,natural+dp(8)));
+    }
+    private void fitWidth(TextView view,String caption){widthRows.add(view);widthCaptions.add(caption);}
+    LinearLayout group(LinearLayout parent,String title,String key){
+        LinearLayout group=new LinearLayout(context);group.setOrientation(LinearLayout.VERTICAL);group.setTag("sidebar-group-"+key);parent.addView(group,new LinearLayout.LayoutParams(-1,-2));
+        TextView label=new TextView(context);label.setText(title);label.setAllCaps(true);label.setTextSize(15);label.setLetterSpacing(.07f);label.setTextColor(0xff949c98);label.setPadding(dp(10),dp(14),dp(6),dp(5));label.setTag("sidebar-group-title");group.addView(label,new LinearLayout.LayoutParams(-1,-2));fitWidth(label,title);
+        LinearLayout children=new LinearLayout(context);children.setOrientation(LinearLayout.VERTICAL);children.setPadding(dp(10),0,0,0);children.setTag("sidebar-group-items-"+key);group.addView(children,new LinearLayout.LayoutParams(-1,-2));return children;
+    }
     private int dp(int n){return WorkspaceDialogs.dp(context,n);}
     void show(){
         dialog.show();Window w=dialog.getWindow();if(w!=null){w.setBackgroundDrawableResource(android.R.color.transparent);w.setStatusBarColor(android.graphics.Color.BLACK);w.getDecorView().setSystemUiVisibility(w.getDecorView().getSystemUiVisibility()&~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);w.setDimAmount(0);w.setLayout(-1,-1);w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);}
@@ -74,12 +99,12 @@ final class WorkspaceSidebar {
     void suspend(){if(closing||suspended)return;suspended=true;scroll.animate().cancel();scroll.setTranslationX(0);if(activePopup!=null)activePopup.dismissImmediately();dialog.hide();}
     void resume(){if(closing||!suspended)return;suspended=false;dialog.show();refreshSessions();}
     boolean suspended(){return suspended;}
-    void section(String title){TextView v=new TextView(context);v.setText(title);v.setTextSize(22);v.setTypeface(null,android.graphics.Typeface.BOLD);v.setTextColor(WorkspaceDialogs.TEXT);v.setPadding(dp(12),dp(20),dp(12),dp(9));body.addView(v);}
+    void section(String title){TextView v=new TextView(context);v.setText(title);v.setTextSize(22);v.setTypeface(null,android.graphics.Typeface.BOLD);v.setTextColor(WorkspaceDialogs.TEXT);v.setPadding(dp(12),dp(20),dp(12),dp(9));body.addView(v);fitWidth(v,title);}
     TextView action(LinearLayout parent,String title,int icon,Runnable callback){
         TextView v=new TextView(context);v.setText(title);v.setTextSize(20.5f);v.setTextColor(0xfff0f0ee);v.setGravity(Gravity.CENTER_VERTICAL);v.setMinHeight(dp(48));v.setPadding(dp(12),dp(10),dp(12),dp(10));
         if(icon!=0){android.graphics.drawable.Drawable d=context.getDrawable(icon).mutate();d.setTint(0xffa5a5a2);d.setBounds(0,0,dp(24),dp(24));v.setCompoundDrawables(d,null,null,null);v.setCompoundDrawablePadding(dp(16));}
         v.setBackground(WorkspaceRipple.background(context,null,10));
-        v.setOnClickListener(x->callback.run());parent.addView(v,new LinearLayout.LayoutParams(-1,-2));return v;
+        v.setOnClickListener(x->callback.run());parent.addView(v,new LinearLayout.LayoutParams(-1,-2));fitWidth(v,title);return v;
     }
     void overlayAction(String title,int icon,Runnable callback){action(body,title,icon,callback);}
     void action(String title,int icon,Runnable callback){action(body,title,icon,()->{dismiss();callback.run();});}
@@ -98,7 +123,7 @@ final class WorkspaceSidebar {
         SessionLabel label=new SessionLabel(title+(saved?" · "+tr("Сохранён","Saved"):"")+"\n"+subtitle.get(),agent?R.drawable.workspace_ai_agent:R.drawable.workspace_terminal);heading.addView(label,new LinearLayout.LayoutParams(0,-2,1));
         label.setLayoutParams(new LinearLayout.LayoutParams(0,-2,1));
         if(selected){GradientDrawable bg=new GradientDrawable();bg.setColor(0xff303132);bg.setCornerRadius(dp(10));heading.setBackground(bg);}
-        LinearLayout actions=new LinearLayout(context);actions.setOrientation(LinearLayout.VERTICAL);actions.setPadding(dp(8),0,0,dp(8));actions.setVisibility(View.GONE);frame.addView(actions);
+        SidebarTreeActions actions=new SidebarTreeActions(context);actions.setVisibility(View.GONE);LinearLayout.LayoutParams branch=new LinearLayout.LayoutParams(-1,-2);branch.leftMargin=dp(24);branch.rightMargin=dp(4);branch.topMargin=dp(6);branch.bottomMargin=dp(12);frame.addView(actions,branch);
         WorkspaceExpansion disclosure=new WorkspaceExpansion(actions);
         if(selected){if(expanded!=null)expanded.setOpen(false);disclosure.setOpen(true);expanded=disclosure;selectedRow=frame;}
         label.setOnClickListener(v->{boolean open=!disclosure.isOpen();if(expanded!=null&&expanded!=disclosure)expanded.setOpen(false);disclosure.setOpen(open);expanded=open?disclosure:null;});
@@ -113,6 +138,6 @@ final class WorkspaceSidebar {
         SessionLabel(String value,int icon){super(context);setGravity(Gravity.CENTER_VERTICAL);setPadding(dp(12),dp(10),dp(12),dp(10));setMinimumHeight(dp(64));setBackground(WorkspaceRipple.background(context,null,10));android.widget.ImageView image=new android.widget.ImageView(context);android.graphics.drawable.Drawable drawable=context.getDrawable(icon).mutate();drawable.setTint(WorkspaceDialogs.MUTED);image.setImageDrawable(drawable);addView(image,new LinearLayout.LayoutParams(dp(24),dp(24)));LinearLayout text=new LinearLayout(context);text.setOrientation(VERTICAL);LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(0,-2,1);tp.leftMargin=dp(16);addView(text,tp);name=new TextView(context);name.setTag("sidebar-session-title");name.setTextSize(20.5f);name.setTypeface(null,android.graphics.Typeface.BOLD);name.setTextColor(WorkspaceDialogs.TEXT);name.setSingleLine(true);name.setEllipsize(android.text.TextUtils.TruncateAt.END);details=new TextView(context);details.setTag("sidebar-session-subtitle");details.setTextSize(16);details.setTextColor(WorkspaceDialogs.MUTED);details.setSingleLine(true);details.setEllipsize(android.text.TextUtils.TruncateAt.MIDDLE);text.addView(name,new LinearLayout.LayoutParams(-1,-2));text.addView(details,new LinearLayout.LayoutParams(-1,-2));setText(value);}
         void setText(String value){int split=value.indexOf('\n');name.setText(split<0?value:value.substring(0,split));details.setText(split<0?"":value.substring(split+1).replace('\n',' '));setContentDescription(value);setTooltipText(value);}
     }
-    void footer(String version){TextView v=new TextView(context);v.setText("Termux Job’s\n"+version);v.setTextColor(0xffa5a5a2);v.setTextSize(14);v.setGravity(Gravity.CENTER);v.setPadding(0,dp(24),0,dp(8));body.addView(v);}
+    void footer(String version){TextView v=new TextView(context);v.setText("Termux Job’s\n"+version);v.setTextColor(0xffa5a5a2);v.setTextSize(14);v.setGravity(Gravity.CENTER);v.setPadding(0,dp(24),0,dp(8));body.addView(v);fitWidth(v,"Termux Job’s\n"+version);}
     private String tr(String ru,String en){return WorkspaceLanguage.code(context).equals("ru")?ru:en;}
 }

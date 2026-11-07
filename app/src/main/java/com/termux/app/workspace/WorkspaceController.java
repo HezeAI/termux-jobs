@@ -479,29 +479,32 @@ public final class WorkspaceController {
                 java.util.function.Supplier<String> subtitle=()->{TerminalSession running=liveFor(p);boolean started=running!=null&&running.isRunning();return (agent?AgentPreparation.agent(p):ProjectFiles.environmentLabel(p))+" · "+compact(p.directory)+" · "+(agent?(started?tr("Запущен","Running"):tr("Не запущен","Not running")):(started?tr("Открыта","Open"):tr("Сохранена","Saved")));};
                 LinearLayout actions=menu.session(p.id,p.name,subtitle,WorkspaceStore.isBase(p),p.saved,active,agent,()->{TerminalSession running=liveFor(p);return running!=null&&running.isRunning();},()->p.saved,()->saveSessionProfile(p),()->unsaveSession(p),()->closeSession(p));
                 sidebarTransition(menu,actions,agent?(live!=null&&live.isRunning()&&!active?tr("Вернуться в этот чат","Return to this chat"):tr("Открыть чат","Open chat")):(active&&desktopUi!=null&&desktopUi.showing()?tr("Вернуться в терминал","Return to terminal"):tr("Открыть терминал","Open terminal")),agent?R.drawable.workspace_chat:R.drawable.workspace_terminal,()->{if(!agent&&desktopUi!=null)desktopUi.terminal(p);launch(p);});
-                if(!agent&&desktopUi!=null){TextView openDesktop=sidebarTransition(menu,actions,tr("Открыть рабочий стол","Open desktop"),R.drawable.workspace_desktop,()->selectedAction(p,()->desktopUi.openExisting()));menu.track(()->openDesktop.setVisibility(liveFor(p)!=null&&liveFor(p).isRunning()&&desktopUi.running(p)&&!(liveFor(p)==activity.getCurrentSession()&&desktopUi.showing())?View.VISIBLE:View.GONE));}
-                if(!agent&&desktopUi!=null&&(desktopUi.usesDesktop(p)||desktopUi.stopping(p))){
-                    TextView stop=menu.action(actions,tr("Остановить рабочий стол","Stop desktop"),R.drawable.workspace_desktop,()->desktopUi.stopDesktop(p));
-                    stop.setTag("sidebar-desktop-stop-"+p.id);DesktopStopAction stopAction=new DesktopStopAction(stop);
-                    menu.track(()->stopAction.update(desktopUi.stopping(p),desktopUi.usesDesktop(p),desktopUi.owns(p),desktopUi.ownerCount(p)));
-                }
-                if(!WorkspaceStore.isBase(p))sidebarAction(menu,actions,tr("Настройки сессии","Session settings"),R.drawable.workspace_settings,()->editSession(p));
                 if(agent){
-                    sidebarAction(menu,actions,tr("Файлы и изменения проекта","Project files and changes"),R.drawable.workspace_folder,()->selectedAction(p,()->showProjectFiles(menu)));
-                    sidebarAction(menu,actions,tr("Лимиты и контекст","Limits and context"),R.drawable.workspace_library,()->selectedAction(p,()->showAgentLimits(p)));
-                    sidebarAction(menu,actions,tr("Права и подтверждения","Permissions and approvals"),R.drawable.workspace_settings,()->showAgentPermissions(p));
-                    if(!AgentSessionResourcesUi.menuLabel(p).isEmpty()){WorkspaceStore.Session source=p.copy();sidebarAction(menu,actions,AgentSessionResourcesUi.menuLabel(source),R.drawable.workspace_commands,()->agentResourcesOpener.accept(source));}
-                    sidebarAction(menu,actions,tr("Навыки агента","Agent skills"),R.drawable.workspace_library,()->AgentSkillsUi.showForSession(activity,p));
-
+                    LinearLayout project=menu.group(actions,tr("Проект","Project"),"project");
+                    sidebarAction(menu,project,tr("Файлы и изменения проекта","Project files and changes"),R.drawable.workspace_folder,()->selectedAction(p,()->showProjectFiles(menu)));
+                    if(!AgentSessionResourcesUi.menuLabel(p).isEmpty()){WorkspaceStore.Session source=p.copy();sidebarAction(menu,project,AgentSessionResourcesUi.menuLabel(source),R.drawable.workspace_commands,()->agentResourcesOpener.accept(source));}
+                    sidebarAction(menu,project,tr("Навыки агента","Agent skills"),R.drawable.workspace_library,()->AgentSkillsUi.showForSession(activity,p));
+                    LinearLayout management=menu.group(actions,tr("Управление чатом","Chat management"),"chat-management");
+                    sidebarAction(menu,management,tr("Лимиты и контекст","Limits and context"),R.drawable.workspace_library,()->selectedAction(p,()->showAgentLimits(p)));
+                    sidebarAction(menu,management,tr("Права и подтверждения","Permissions and approvals"),R.drawable.workspace_settings,()->showAgentPermissions(p));
+                    sidebarAction(menu,management,tr("Настройки сессии","Session settings"),R.drawable.workspace_settings,()->editSession(p));
                 }else{
-                    sidebarAction(menu,actions,tr("Настройки рабочего стола","Desktop settings"),R.drawable.workspace_desktop,()->selectedAction(p,()->desktopUi.menu()));
-                    sidebarAction(menu,actions,tr("Программы","Programs"),R.drawable.workspace_packages,()->selectedAction(p,()->desktopUi.openPrograms()));
-
-                    if(SessionShell.hasCancellableStartup(p))sidebarAction(menu,actions,WorkspaceText.tr("Отменить команды запуска"),R.drawable.workspace_cancel_startup,()->confirmCancelStartup(p));
-                    if(!AgentSessionResourcesUi.menuLabel(p).isEmpty()){WorkspaceStore.Session source=p.copy();sidebarAction(menu,actions,AgentSessionResourcesUi.menuLabel(source),R.drawable.workspace_commands,()->agentResourcesOpener.accept(source));}
-                    sidebarAction(menu,actions,tr("Файлы окружения","Environment files"),R.drawable.workspace_folder,()->showFileBrowser(p,p.directory,null));
-                    sidebarAction(menu,actions,tr("Пакеты окружения","Environment packages"),R.drawable.workspace_packages,()->showPackages(p));
-                    sidebarAction(menu,actions,tr("Документация окружения","Environment documentation"),R.drawable.workspace_library,()->WorkspaceDocumentationUi.environment(activity,ProjectFiles.environment(p)));
+                    if(desktopUi!=null){
+                        TextView openDesktop=sidebarTransition(menu,actions,tr("Открыть рабочий стол","Open desktop"),R.drawable.workspace_desktop,()->selectedAction(p,()->desktopUi.openExisting()));
+                        menu.track(()->openDesktop.setVisibility(liveFor(p)!=null&&liveFor(p).isRunning()&&desktopUi.running(p)&&!(liveFor(p)==activity.getCurrentSession()&&desktopUi.showing())?View.VISIBLE:View.GONE));
+                        TextView stop=menu.action(actions,tr("Остановить рабочий стол","Stop desktop"),R.drawable.workspace_desktop,()->desktopUi.stopDesktop(p));
+                        stop.setTag("sidebar-desktop-stop-"+p.id);DesktopStopAction stopAction=new DesktopStopAction(stop);
+                        menu.track(()->stopAction.update(desktopUi.stopping(p),desktopUi.usesDesktop(p),desktopUi.owns(p),desktopUi.ownerCount(p)));
+                    }
+                    LinearLayout environment=menu.group(actions,tr("Окружение","Environment"),"environment");
+                    sidebarAction(menu,environment,tr("Файлы окружения","Environment files"),R.drawable.workspace_folder,()->showFileBrowser(p,p.directory,null));
+                    sidebarAction(menu,environment,tr("Программы","Programs"),R.drawable.workspace_packages,()->selectedAction(p,()->desktopUi.openPrograms()));
+                    sidebarAction(menu,environment,tr("Пакеты окружения","Environment packages"),R.drawable.workspace_packages,()->showPackages(p));
+                    sidebarAction(menu,environment,tr("Документация окружения","Environment documentation"),R.drawable.workspace_library,()->WorkspaceDocumentationUi.environment(activity,ProjectFiles.environment(p)));
+                    LinearLayout management=menu.group(actions,tr("Управление сессией","Session management"),"session-management");
+                    if(!WorkspaceStore.isBase(p))sidebarAction(menu,management,tr("Настройки сессии","Session settings"),R.drawable.workspace_settings,()->editSession(p));
+                    sidebarAction(menu,management,tr("Настройки рабочего стола","Desktop settings"),R.drawable.workspace_desktop,()->selectedAction(p,()->desktopUi.menu()));
+                    if(SessionShell.hasCancellableStartup(p))sidebarAction(menu,management,WorkspaceText.tr("Отменить команды запуска"),R.drawable.workspace_cancel_startup,()->confirmCancelStartup(p));
                 }
             }
             menu.action(agent?tr("Создать чат","Create chat"):tr("Создать сессию","Create session"),R.drawable.workspace_plus,()->{if(agent)createAgentChat();else editSession(null);});

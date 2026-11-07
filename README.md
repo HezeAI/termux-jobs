@@ -151,4 +151,6 @@ rights; component distribution does not imply official endorsement.
 AI development assistance: OpenAI Codex
 
 
-Private test13 removes voice input and its models/permission, restores the clockwise terminal-attention segment, adds desktop-stop feedback, shows current model/reasoning values and enlarges attachment-menu items. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test13.md).
+Private test14 adds grouped sidebar branches, uniform80% content sizing and caption-fitted panel width; attachment-menu items are reduced. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test14.md).
+
+Previous private test13 removes voice input and its models/permission, restores the clockwise terminal-attention segment, adds desktop-stop feedback, shows current model/reasoning values and enlarges attachment-menu items. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test13.md).
