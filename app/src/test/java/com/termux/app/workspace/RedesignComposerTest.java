@@ -18,15 +18,14 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class) @Config(sdk=28,application=Application.class)
 public class RedesignComposerTest {
     public static class SpeechActivity extends Activity {int launches;Intent sent;boolean denied;@Override public void startActivityForResult(Intent intent,int request){if(denied)throw new SecurityException();launches++;sent=intent;}}
-    @Test public void dictationOnlyEditsUnchangedOwnerDraftAndNeverSends(){
-        SpeechActivity a=Robolectric.buildActivity(SpeechActivity.class).setup().get();EditText input=new EditText(a);input.setText("before ");input.setSelection(7);String[] owner={"first"};List<String> notices=new ArrayList<>();AgentDictation voice=new AgentDictation(a,input,()->owner[0],notices::add);
-        Intent result=new Intent().putStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS,new ArrayList<>(Arrays.asList("hello 😀")));
-        voice.start();voice.start();assertEquals(1,a.launches);assertEquals(RecognizerIntent.ACTION_RECOGNIZE_SPEECH,a.sent.getAction());assertEquals("before ",input.getText().toString());
-        voice.result(AgentDictation.REQUEST,Activity.RESULT_OK,result);assertEquals("before hello 😀",input.getText().toString());assertEquals(1,a.launches);
-        voice.start();voice.result(AgentDictation.REQUEST,Activity.RESULT_CANCELED,null);assertEquals("before hello 😀",input.getText().toString());
-        voice.start();owner[0]="second";voice.result(AgentDictation.REQUEST,Activity.RESULT_OK,result);assertEquals("before hello 😀",input.getText().toString());
-        voice.start();input.setText("edited");voice.result(AgentDictation.REQUEST,Activity.RESULT_OK,result);assertEquals("edited",input.getText().toString());
-        a.denied=true;voice.start();assertEquals("edited",input.getText().toString());assertFalse(notices.isEmpty());a.finish();
+    @Test @Config(shadows=AgentSpeechServiceTest.Engine.class) public void dictationOnlyEditsUnchangedOwnerDraftAndNeverSends(){
+        SpeechActivity a=Robolectric.buildActivity(SpeechActivity.class).setup().get();AgentSpeechServiceTest.configure(a);EditText input=new EditText(a);input.setText("before ");String[] owner={"first"};List<String> notices=new ArrayList<>();AgentDictation voice=new AgentDictation(a,input,()->owner[0],notices::add);
+        voice.start();voice.start();assertEquals(0,a.launches);assertEquals("before ",input.getText().toString());
+        AgentSpeechServiceTest.Engine.listener.onResults(AgentSpeechServiceTest.words("hello 😀"));assertEquals("before hello 😀",input.getText().toString());
+        voice.start();voice.clear();assertEquals("before hello 😀",input.getText().toString());
+        voice.start();owner[0]="second";AgentSpeechServiceTest.Engine.listener.onResults(AgentSpeechServiceTest.words("wrong"));assertEquals("before hello 😀",input.getText().toString());
+        voice.start();input.setText("edited");AgentSpeechServiceTest.Engine.listener.onResults(AgentSpeechServiceTest.words("discard"));assertEquals("edited",input.getText().toString());
+        assertEquals(0,a.launches);a.finish();
     }
     @Test public void composerWrapsLargeActionsWithoutLosingDraftAndKeepsStopAboveSend(){
         Activity a=Robolectric.buildActivity(Activity.class).setup().get();LinearLayout root=new LinearLayout(a);EditText input=new EditText(a);input.setMinHeight(48);input.setMaxLines(6);input.setText("one\ntwo\nthree");input.setSelection(2);TextView star=new TextView(a),send=new TextView(a);send.setText("Send");send.setMinHeight(48);send.setMinWidth(48);WorkspaceIconButton clip=new WorkspaceIconButton(a);View stop=new View(a);LinearLayout status=new LinearLayout(a);TextView model=new TextView(a);model.setText("a long model name and reasoning");model.setTextSize(24);status.addView(model);

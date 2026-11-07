@@ -19,31 +19,28 @@ final class AgentDictation {
     private final Activity activity;private final EditText input;private final Supplier<String> owner;private final Consumer<String> notice;
     private String pendingOwner,original;private int epoch;
     private SpeechRecognizer recognizer;
+    private String serviceState="";
     private Presentation presentation=(text,active,stop,cancel)->{};
     AgentDictation(Activity a,EditText input,Supplier<String> owner,Consumer<String> notice){activity=a;this.input=input;this.owner=owner;this.notice=notice;}
     void presentation(Presentation value){presentation=value;}
     void start(){
         if(pendingOwner!=null)return;
         String id=owner.get();if(id==null||id.isEmpty()){notice.accept(tr("Откройте агентский чат для диктовки.","Open an agent chat to dictate."));return;}
-        try{
-            String configured=Settings.Secure.getString(activity.getContentResolver(),"voice_recognition_service");
-            ComponentName component=configured==null?null:ComponentName.unflattenFromString(configured);
-            if(component==null){notice.accept(tr("В Android не настроена системная служба распознавания речи. Выберите службу голосового ввода в настройках Android. Диктовка клавиатуры не подтверждает её наличие.","Android has no default speech recognition service configured. Select a voice input service in Android settings. Keyboard dictation does not confirm its availability."));return;}
-            android.content.pm.ServiceInfo info=activity.getPackageManager().getServiceInfo(component,0);
-            if(!info.enabled||!info.exported||!info.applicationInfo.enabled){notice.accept(tr("Системная служба распознавания отключена или недоступна для приложений. Проверьте службу голосового ввода в настройках Android.","The default speech service is disabled or unavailable to apps. Check voice input settings in Android."));return;}
-            if(!SpeechRecognizer.isRecognitionAvailable(activity)){notice.accept(tr("Android не обнаружил доступной SpeechRecognizer-службы. Включите или установите совместимую службу и выберите её в настройках Android.","Android found no SpeechRecognizer service. Enable or install a compatible service and select it in Android settings."));return;}
-        }catch(PackageManager.NameNotFoundException e){notice.accept(tr("Настроенная системная служба распознавания не установлена. Выберите доступную службу в настройках Android.","The configured default speech service is not installed. Select an available service in Android settings."));return;}
-        catch(RuntimeException e){notice.accept(tr("Не удалось проверить системную службу распознавания. Черновик сохранён.","Could not check the default speech service. Draft retained."));return;}
         pendingOwner=id;original=input.getText().toString();
-        if(activity.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED)activity.requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO},AUDIO_REQUEST);else listen();
+        if(activity.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){
+            try{activity.requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO},AUDIO_REQUEST);}
+            catch(RuntimeException e){fail(tr("Не удалось запросить микрофон: ","Could not request microphone: ")+e.getClass().getSimpleName()+". "+tr("Черновик сохранён.","Draft retained."));}
+        }else listen();
     }
-    boolean permissionResult(int code){if(code!=AUDIO_REQUEST)return false;if(pendingOwner==null)return true;if(activity.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)listen();else fail(tr("Доступ к микрофону не разрешён. Черновик сохранён.","Microphone permission denied. Draft retained."));return true;}
+    boolean permissionResult(int code){if(code!=AUDIO_REQUEST)return false;if(pendingOwner==null)return true;if(activity.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)listen();else fail(tr("Разрешение RECORD_AUDIO отклонено (PERMISSION_DENIED=-1). Настройки Android → Приложения → Termux Job’s → Разрешения → Микрофон. Черновик сохранён.","RECORD_AUDIO denied (PERMISSION_DENIED=-1). Android Settings → Apps → Termux Job’s → Permissions → Microphone. Draft retained."));return true;}
     private boolean current(){return pendingOwner!=null&&pendingOwner.equals(owner.get())&&original.equals(input.getText().toString());}
     void ownerChanged(){if(pendingOwner!=null&&!current())clear();}
     void background(){if(recognizer!=null)clear();}
     private void state(String value){presentation.update(value,true,this::stop,this::clear);}
     private void listen(){
         if(!current()){clear();return;}
+        serviceState=serviceState();
+        String stage="createSpeechRecognizer";
         try{
             final int ticket=epoch;
             recognizer=SpeechRecognizer.createSpeechRecognizer(activity);
@@ -56,14 +53,54 @@ final class AgentDictation {
                 public void onError(int error){if(ticket!=epoch)return;fail(errorText(error));}
             });
             state(tr("Подключение микрофона…","Connecting microphone…"));
+            stage="startListening";
             recognizer.startListening(new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,RecognizerIntent.LANGUAGE_MODEL_FREE_FORM).putExtra(RecognizerIntent.EXTRA_MAX_RESULTS,1).putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS,true));
-        }catch(RuntimeException e){fail(tr("Не удалось подключиться к системной службе распознавания. Проверьте её настройки и разрешение микрофона. Черновик сохранён.","Could not connect to the default speech service. Check its settings and microphone permission. Draft retained."));}
+        }catch(RuntimeException e){fail(stage+": "+e.getClass().getSimpleName()+". "+tr("Черновик сохранён.","Draft retained.")+"\n\n"+serviceState);}
     }
     private static String first(Bundle b){ArrayList<String> words=b==null?null:b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);if(words==null||words.isEmpty()||words.get(0)==null||words.get(0).trim().isEmpty())return null;return words.get(0).trim();}
     void stop(){if(recognizer==null)return;try{state(tr("Распознавание…","Recognizing…"));recognizer.stopListening();}catch(RuntimeException e){fail(tr("Не удалось завершить распознавание. Черновик сохранён.","Could not finish recognition. Draft retained."));}}
     void clear(){epoch++;pendingOwner=null;original=null;SpeechRecognizer old=recognizer;recognizer=null;if(old!=null){try{old.cancel();}catch(RuntimeException ignored){}try{old.destroy();}catch(RuntimeException ignored){}}presentation.update("",false,this::stop,this::clear);}
     private void fail(String message){clear();notice.accept(message);}
-    private String errorText(int code){String reason=code==SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS?tr("Нет разрешения микрофона","Microphone permission missing"):code==SpeechRecognizer.ERROR_NETWORK||code==SpeechRecognizer.ERROR_NETWORK_TIMEOUT?tr("Ошибка сети службы распознавания","Speech service network error"):code==SpeechRecognizer.ERROR_NO_MATCH||code==SpeechRecognizer.ERROR_SPEECH_TIMEOUT?tr("Речь не распознана","No speech recognized"):code==SpeechRecognizer.ERROR_RECOGNIZER_BUSY?tr("Системная служба распознавания занята","Default speech service is busy"):tr("Ошибка системной службы распознавания","Default speech service error");return reason+" ("+code+"). "+tr("Черновик сохранён.","Draft retained.");}
+    private String errorText(int code){
+        String name;
+        switch(code){
+            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:name="ERROR_NETWORK_TIMEOUT";break;
+            case SpeechRecognizer.ERROR_NETWORK:name="ERROR_NETWORK";break;
+            case SpeechRecognizer.ERROR_AUDIO:name="ERROR_AUDIO";break;
+            case SpeechRecognizer.ERROR_SERVER:name="ERROR_SERVER";break;
+            case SpeechRecognizer.ERROR_CLIENT:name="ERROR_CLIENT";break;
+            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:name="ERROR_SPEECH_TIMEOUT";break;
+            case SpeechRecognizer.ERROR_NO_MATCH:name="ERROR_NO_MATCH";break;
+            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:name="ERROR_RECOGNIZER_BUSY";break;
+            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:name="ERROR_INSUFFICIENT_PERMISSIONS";break;
+            case SpeechRecognizer.ERROR_TOO_MANY_REQUESTS:name="ERROR_TOO_MANY_REQUESTS";break;
+            case SpeechRecognizer.ERROR_SERVER_DISCONNECTED:name="ERROR_SERVER_DISCONNECTED";break;
+            case SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED:name="ERROR_LANGUAGE_NOT_SUPPORTED";break;
+            case SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE:name="ERROR_LANGUAGE_UNAVAILABLE";break;
+            default:name="UNKNOWN_ERROR";
+        }
+        return "SpeechRecognizer.onError: "+code+" ("+name+"). "+tr("Черновик сохранён.","Draft retained.")+"\n\n"+serviceState;
+    }
+    /** Facts from the registered Activity; observation never blocks the platform start attempt. */
+    private String serviceState(){
+        StringBuilder state=new StringBuilder();
+        try{String selected=Settings.Secure.getString(activity.getContentResolver(),"voice_recognition_service");
+            state.append("voice_recognition_service: ").append(selected==null?"<null>":selected.isEmpty()?"<empty>":selected);
+            if(selected!=null&&!selected.isEmpty()){
+                ComponentName component=ComponentName.unflattenFromString(selected);
+                if(component==null)state.append(" (invalid ComponentName)");
+                else try{android.content.pm.ServiceInfo info=activity.getPackageManager().getServiceInfo(component,PackageManager.MATCH_DISABLED_COMPONENTS);state.append("; enabled=").append(info.enabled&&info.applicationInfo.enabled).append("; exported=").append(info.exported);}
+                catch(PackageManager.NameNotFoundException e){state.append(" (not installed or not visible)");}
+            }
+        }catch(RuntimeException e){state.append("voice_recognition_service: ").append(e.getClass().getSimpleName());}
+        try{state.append("\nisRecognitionAvailable: ").append(SpeechRecognizer.isRecognitionAvailable(activity));}catch(RuntimeException e){state.append("\nisRecognitionAvailable: ").append(e.getClass().getSimpleName());}
+        state.append("\nRECORD_AUDIO: ").append(activity.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED?"GRANTED":"DENIED");
+        try{java.util.List<android.content.pm.ResolveInfo> services=activity.getPackageManager().queryIntentServices(new Intent("android.speech.RecognitionService"),0);
+            state.append("\nRecognitionService: ");if(services.isEmpty())state.append(tr("не найдены","none found"));
+            for(int i=0;i<services.size();i++){android.content.pm.ServiceInfo info=services.get(i).serviceInfo;if(i>0)state.append(", ");state.append(new ComponentName(info.packageName,info.name).flattenToShortString());}
+        }catch(RuntimeException e){state.append("\nRecognitionService: ").append(e.getClass().getSimpleName());}
+        return state.toString();
+    }
     boolean result(int code,int result,Intent data){return false;}
     private String tr(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
 }

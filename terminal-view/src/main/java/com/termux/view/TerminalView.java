@@ -125,6 +125,13 @@ public final class TerminalView extends View {
     private TerminalTextReveal mTextReveal;
     private int mComposerBottomInset;
     private int mHeaderTopInset;
+    /** Preceding rows already available above the safe live viewport, independent of gestures. */
+    private int headerHistoryRows() {
+        if (mHeaderTopInset <= 0 || mEmulator == null || mRenderer == null || mRenderer.mFontLineSpacing <= 0
+            || mEmulator.isAlternateBufferActive() || mEmulator.isMouseTrackingActive()) return 0;
+        int capacity = (mHeaderTopInset + mRenderer.mFontLineSpacing - 1) / mRenderer.mFontLineSpacing;
+        return Math.min(capacity, Math.max(0, getVisibleTopRow() + mEmulator.getScreen().getActiveTranscriptRows()));
+    }
     public int getHeaderTopInset(){return mHeaderTopInset;}
     public void setHeaderTopInset(int pixels){int next=Math.max(0,pixels);if(next==mHeaderTopInset)return;mHeaderTopInset=next;updateSize();invalidate();}
     private boolean mComposerViewport;
@@ -626,6 +633,11 @@ public final class TerminalView extends View {
     public int[] getColumnAndRow(MotionEvent event, boolean relativeToScroll) {
         int column = (int) (event.getX() / mRenderer.mFontWidth);
         int row = (int) ((event.getY() - mHeaderTopInset - mRenderer.mFontLineSpacingAndAscent) / mRenderer.mFontLineSpacing);
+        int headerRows = headerHistoryRows();
+        if (event.getY() < mHeaderTopInset && headerRows > 0) {
+            row = Math.max(-headerRows, (int) Math.floor((event.getY() - mHeaderTopInset
+                - mRenderer.mFontLineSpacingAndAscent) / mRenderer.mFontLineSpacing));
+        }
         if (relativeToScroll) {
             row += getVisibleTopRow();
         }
@@ -686,7 +698,8 @@ public final class TerminalView extends View {
     @Override
     @TargetApi(23)
     public boolean onTouchEvent(MotionEvent event) {
-        if(mHeaderTopInset>0&&mTopRow==0&&!isSelectingText()&&event.getActionMasked()==MotionEvent.ACTION_DOWN&&event.getY()<mHeaderTopInset)return false;
+        if (mHeaderTopInset > 0 && !isSelectingText() && event.getActionMasked() == MotionEvent.ACTION_DOWN
+            && event.getY() < mHeaderTopInset - headerHistoryRows() * (mRenderer == null ? 0 : mRenderer.mFontLineSpacing)) return false;
         if(mTextReveal!=null)mTextReveal.interaction();
         if (mEmulator == null) return true;
         final int action = event.getAction();
@@ -1124,13 +1137,17 @@ public final class TerminalView extends View {
 
             int rows = adaptiveResizeViewport() ? rowsForView() : mEmulator.mRows;
             if(floatingViewport())rows=Math.min(Math.max(4,(getHeight()-mHeaderTopInset-mRenderer.mFontLineSpacingAndAscent)/mRenderer.mFontLineSpacing),mEmulator.mRows-getVisibleTopRow());
-            if(mHeaderTopInset>0&&mTopRow<0&&!mEmulator.isAlternateBufferActive()){
-                int extraRows=(mHeaderTopInset+mRenderer.mFontLineSpacing-1)/mRenderer.mFontLineSpacing;
-                int history=mEmulator.getScreen().getActiveTranscriptRows();int from=Math.max(-history,getVisibleTopRow()-extraRows);int count=getVisibleTopRow()-from;
-                if(count>0){canvas.save();canvas.clipRect(0,0,getWidth(),mHeaderTopInset);canvas.translate(0,mHeaderTopInset-count*mRenderer.mFontLineSpacing);mRenderer.render(mEmulator,canvas,from,sel[0],sel[1],sel[2],sel[3],count);canvas.restore();}
+            int headerRows = headerHistoryRows();
+            if (headerRows > 0) {
+                int from = getVisibleTopRow() - headerRows;
+                canvas.save();canvas.clipRect(0,0,getWidth(),mHeaderTopInset);
+                canvas.translate(0,mHeaderTopInset-headerRows*mRenderer.mFontLineSpacing);
+                mRenderer.render(mEmulator,canvas,from,sel[0],sel[1],sel[2],sel[3],headerRows,false);canvas.restore();
             }
             canvas.save();canvas.translate(0,mHeaderTopInset);if(mHeaderTopInset>0)canvas.clipRect(0,0,getWidth(),getHeight());
-            mRenderer.render(mEmulator, canvas, getVisibleTopRow(), sel[0], sel[1], sel[2], sel[3], rows);
+            int cursorRow = mEmulator.getCursorRow() - getVisibleTopRow();
+            boolean cursorInViewport = !mComposerViewport || (cursorRow >= 0 && cursorRow < rowsForView());
+            mRenderer.render(mEmulator, canvas, getVisibleTopRow(), sel[0], sel[1], sel[2], sel[3], rows, cursorInViewport);
 
             if(mTextReveal!=null)mTextReveal.paint(canvas);
             canvas.restore();

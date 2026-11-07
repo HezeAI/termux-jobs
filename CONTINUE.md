@@ -1,4 +1,36 @@
-# Текущая выдача — основной1505/test10
+# Текущая выдача — основной1506/test11
+
+[Состав/карта/проверки](docs/fork/VALIDATION-2.1.5-test11.md),
+[устройство/Яндекс/ограничения диктовки](docs/fork/DICTATION-DEVICE-2026-11-07.md).
+APK `/sdcard/Download/Termux-Jobs-v2.1.5-test11-arm64.apk`,40611413байт.
+SHA256 `fa486f2df803746b89b74f011db25001dea56f9d7d02d9251106c88ca395246c`.
+Checksum рядом; exclusive copy/readback двух Android-путей — PASS.
+
+Два изменения: terminal history под прозрачной шапкой при auto-follow, без первого
+жеста; cursor safe viewport/hit testing. Диктовка request RECORD_AUDIO → default
+create/start; exact onError N/name/stage и параметры из Activity вместо раннего отказа.
+Default/provider автоматически не меняется. Черновик/owner/epoch/partial/final прежние.
+
+Baseline терминала3/3:2paint-gate,1fixture безsession; повтор31/0. Объединённый60/0,
+финальный54/0; не суммировать. Lint5модулей0errors/272warnings, locale587/checker8.
+APK gate ZIP/package/version/signature/ABI/runtime/125assets/4templates/7ELF — PASS.
+630production files совпали по3stages,95native inputs/X11/ComposerLimits прежние.
+КоммитID `.verification/test-2.1.5-test11/source-commit.txt`.
+
+**Следующий шаг пользователя:** вручную установить1506, нажать микрофон в исходном
+чате, выдать право Android, продиктовать. Диктовка не завершена до текста в черновике.
+При отказе нужен полный onError/этап/снимок из окна. На SDK36 UID10620 право было
+DENIED, availability=true, onDevice=false, доступна ClaudeRecognitionService.
+Буквальное secure setting вне зарегистрированного UI прочитать не удалось.
+Яндекс26.10.3.50 содержит SpeechKit, но не предоставляет Android RecognitionService;
+его поиск не подключается как системный provider. Не выбирать Claude автоматически.
+Телефон: auto-output/первый жест/return, низ cursor/IME/keys/rotation требуют проверки.
+Не ставить APK автоматически; не перезапускать рабочие сессии; резерв1499 не трогать.
+Изображения/обрывы и Android Home при листании остаются отдельными открытыми задачами.
+
+---
+
+# Предыдущая выдача — основной1505/test10
 
 [Состав, карта6пунктов, проверки и остатки](docs/fork/VALIDATION-2.1.5-test10.md).
 APK `/sdcard/Download/Termux-Jobs-v2.1.5-test10-arm64.apk`,40610229байт.
