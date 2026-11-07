@@ -369,7 +369,7 @@ public class WorkspaceNavigationTest {
         assertSame(originalCommands, content.getChildAt(0));
         assertTrue(search.hasFocus());
         navigate(controller,"Главная");
-        assertNotNull(findText(content(controller,activity), "История поля ввода"));
+        assertNull(findText(content(controller,activity), "История поля ввода"));
         assertNotNull(findText(content(controller,activity), "История отправки в терминал и чат агента"));
         controller.close();
     }

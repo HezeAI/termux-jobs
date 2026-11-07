@@ -19,6 +19,7 @@ final class AgentActionPresentation {
     }
     static String title(JSONObject row,boolean ru){
         JSONObject p=preview(row);String kind=p==null?"":p.optString("kind");
+        if(kind.equals("image"))return ru?"Просмотр изображения":"View image";
         if(kind.equals("files")){
             int n=p.optInt("count");if(n<=0)return ru?"Работа с файлами":"File operations";
             if(CodexActionTimeline.status(row).equals("completed")&&!CodexActionTimeline.failed(row)){

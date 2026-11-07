@@ -151,6 +151,8 @@ rights; component distribution does not imply official endorsement.
 AI development assistance: OpenAI Codex
 
 
+Private test19 restores standalone image-view actions, corrects empty input history and makes the Stop square red. The reported Claude original-preview failure remains under investigation; diagnostic messages are more specific. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test19.md).
+
 Private test18 removes the secondary toolbar input page, adds a tall vector Enter after PgUp/PgDn and renames input history. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test18.md).
 
 Previous Private test17 centers terminal Notes, moves Enter before PgUp/PgDn, highlights active modifiers in yellow and refines general settings. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test17.md).

@@ -80,7 +80,7 @@ final class AgentStopButton extends View {
             paint.setShader(null);paint.setStyle(Paint.Style.FILL);paint.setColor(WorkspaceDialogs.SURFACE);paint.setAlpha(isEnabled()?255:100);
             c.drawRoundRect(cx-16.5f*d,cy-12.5f*d,cx+16.5f*d,cy+12.5f*d,8*d,8*d,paint);
             paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(d);paint.setColor(WorkspaceDialogs.LINE);c.drawRoundRect(cx-16.5f*d,cy-12.5f*d,cx+16.5f*d,cy+12.5f*d,8*d,8*d,paint);
-            paint.setStyle(Paint.Style.FILL);paint.setColor(WorkspaceDialogs.TEXT);c.drawRoundRect(cx-4.5f*d,cy-4.5f*d,cx+4.5f*d,cy+4.5f*d,2*d,2*d,paint);paint.setAlpha(255);return;}
+            paint.setStyle(Paint.Style.FILL);paint.setColor(0xffff5252);c.drawRoundRect(cx-4.5f*d,cy-4.5f*d,cx+4.5f*d,cy+4.5f*d,2*d,2*d,paint);paint.setAlpha(255);return;}
         float d=getResources().getDisplayMetrics().density,r=circleRadius();
         boolean idle=state==AgentIndicatorState.State.IDLE,waiting=state==AgentIndicatorState.State.WAITING,reconnect=state==AgentIndicatorState.State.RECONNECTING,error=state==AgentIndicatorState.State.ERROR;
         int accent=error?0xffff7481:reconnect?0xffffc168:idle?WorkspaceDialogs.MUTED:state==AgentIndicatorState.State.WORKING?WorkspaceDialogs.ACCENT:0xffecece5;

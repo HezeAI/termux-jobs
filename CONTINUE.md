@@ -1,3 +1,35 @@
+# Текущая выдача — основной1514/test19
+
+[Карта/проверки](docs/fork/VALIDATION-2.1.5-test19.md).
+APK /sdcard/Download/Termux-Jobs-v2.1.5-test19-arm64.apk
+SHA256 e255dd15e2f1602f86f022dd0c34c9fbf82638d2c640d4b7ee34a7b0eb31c13b.
+История: исправлены пустые тексты, внутренний повтор заголовка убран.
+Стоп: только квадрат #FF5252, размеры/условия/обработчики прежние.
+Image actions снова отдельные плашки всех4агентов, без дубля внутри хронологии.
+Claude Read(PNG) получает подпись Просмотр изображения. Детали/thumbnail/original прежние.
+94Java testsPASS +4повторные усиленные viewer testsPASS,5JSfixturesPASS.
+FullModernLint0errors/279warnings5modules, finalAPKgatePASS,620sourcefilesmatch,
+7ELFstable2.1.4identity. InitialClaude test expectation corrected declined/nativeStatusfailed;
+permission production untouched. Evidence .verification/test-2.1.5-test19/.
+
+НЕ ЗАКРЫТО: ошибка оригинала threads-menu.png на другом телефоне со старымUI.
+Пользовательское видео1001643106 показывает thumbnail, generic error иsave notifications.
+PNG пока не прислан; rootcause не установлен. Раздельная диагностика в1514 не
+объявляется исправлением декодирования. Codex/Claude actions идут через общий
+bitmap320/2048. Markdown-link entry дополнительно fingerprint/localFileLink.
+Попытка отдельногоCLIчата (--setting-sources empty) остановиласьNot logged in;
+это не статус авторизации пользовательского профиля/другого телефона.
+ADBdevices пуст, screenrecord ERROR:no display; физическоеUIне проверено.
+Пользователь согласился проверить сам; готовый вход/задание:
+/sdcard/Download/Claude-image-check-test19.txt.
+Отдельный каталог /root/termux-fork/.verification/claude-image-check-test19 создан,
+TASK.txt подготовлен. Сам чат в приложении не создан: нужен новыйClaudeчерезформу.
+Следующий шаг: пользователь сравнивает карточку/ссылку одногоPNG, присылаетошибку
+иоригинал; воспроизвести320/2048decode, установитьпричину, затемисправить.
+Без установки/публикации/рабочих перезапусков; резерв1499 не читать/не менять.
+
+---
+
 # Текущая выдача — основной1513/test18
 
 [Карта/проверки](docs/fork/VALIDATION-2.1.5-test18.md).

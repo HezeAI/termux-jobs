@@ -102,7 +102,7 @@ final class ChatAttachments {
     static void checkImage(File f)throws IOException{
         BitmapFactory.Options o=new BitmapFactory.Options();o.inJustDecodeBounds=true;BitmapFactory.decodeFile(f.getPath(),o);
         if(o.outWidth<=0||o.outHeight<=0)throw new IOException("IMAGE_DECODER_UNAVAILABLE");
-        if((long)o.outWidth*o.outHeight>64000000L)throw new IOException("INVALID_IMAGE");
+        if((long)o.outWidth*o.outHeight>64000000L)throw new IOException("IMAGE_PIXEL_LIMIT");
     }
     static Bitmap bitmap(File f,int edge)throws IOException{
         checkImage(f);BitmapFactory.Options o=new BitmapFactory.Options();o.inJustDecodeBounds=true;BitmapFactory.decodeFile(f.getPath(),o);int sample=1;while(Math.max(o.outWidth,o.outHeight)/sample>edge)sample*=2;

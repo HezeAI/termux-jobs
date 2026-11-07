@@ -60,4 +60,18 @@ public class AgentActionCardsTest {
             assertTrue("streaming update must keep composer focus",composer.hasFocus());assertEquals("unsent draft",composer.getText().toString());assertEquals(3,composer.getSelectionStart());assertEquals(7,composer.getSelectionEnd());assertEquals(0,android.view.inputmethod.BaseInputConnection.getComposingSpanStart(composer.getText()));assertEquals(3,android.view.inputmethod.BaseInputConnection.getComposingSpanEnd(composer.getText()));
         }
     }
+
+    @Test public void imageActionIsASeparateChipForEveryAgentAndKeepsItsOriginal()throws Exception{
+        for(String agent:new String[]{"Codex","Claude","Gemini","OpenCode"}){
+            Activity a=Robolectric.buildActivity(Activity.class).setup().get();WorkspaceLanguage.select(a,"ru");
+            AtomicReference<JSONObject> opened=new AtomicReference<>();AgentChatView v=new AgentChatView(a,opened::set,()->{},()->{},()->{},()->{});v.actionCards(true);v.assistantName(agent);
+            JSONObject image=tool("image","Read","completed").put("actionId","image-id").put("actionRole","call").put("actionPreview",new JSONObject().put("kind","image").put("image",new JSONObject().put("type","image").put("path","/project/threads-menu.png").put("name","threads-menu.png")));
+            JSONObject result=tool("image-result","Tool result","completed").put("actionId","image-id").put("actionRole","result");
+            List<JSONObject> rows=Arrays.asList(tool("before","Bash","completed"),image,result,tool("after","Read","completed"));
+            List<JSONObject> grouped=CodexActionTimeline.group(rows,true);assertEquals(3,grouped.size());assertSame(image,grouped.get(1));assertEquals(1,grouped.get(0).getJSONArray("steps").length());assertEquals(1,grouped.get(2).getJSONArray("steps").length());
+            v.rows(rows,false);View chip=v.timeline.getChildAt(2);assertTrue(chip instanceof TextView);assertEquals("Просмотр изображения ▾",((TextView)chip).getText().toString());chip.performClick();assertSame(image,opened.get());
+            v.rows(rows,false);assertSame(chip,v.timeline.getChildAt(2));assertEquals("View image",CodexActionLabels.title(image,false));
+            a.finish();
+        }
+    }
 }

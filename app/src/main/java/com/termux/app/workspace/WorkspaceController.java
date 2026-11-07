@@ -699,10 +699,10 @@ public final class WorkspaceController {
 
     private void home(LinearLayout body) {
         body.addView(text(tr("История отправки в терминал и чат агента","History of submissions to the terminal and agent chat"),13,MUTED));
-        section(body, tr("История поля ввода","Input history"), store.recentCommands.isEmpty() ? null : WorkspaceText.tr("Очистить"), () -> {
+        if (!store.recentCommands.isEmpty()) body.addView(button(WorkspaceText.tr("Очистить"), false, () -> {
             if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Журнал недоступен для записи"), true); return; }
             confirm(WorkspaceText.tr("Очистить весь журнал недавних команд?"), () -> { store.clearRecentCommands(); renderContent(); });
-        });
+        }));
         EditText search = field(WorkspaceText.tr("Поиск по журналу"), journalQuery, false);
         search.setContentDescription(WorkspaceText.tr("Поиск по журналу"));
         LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, -2);
@@ -725,8 +725,8 @@ public final class WorkspaceController {
     private void renderJournal(LinearLayout entries, TextView count) {
         entries.removeAllViews(); int shown = 0;
         if (store.recentCommands.isEmpty()) {
-            entries.addView(text(WorkspaceText.tr("Команд пока нет"), 16, TEXT));
-            TextView hint = text(WorkspaceText.tr("Здесь появятся команды, отправленные из поля ввода терминала."), 13, MUTED);
+            entries.addView(text(tr("История пока пуста","History is empty"), 16, TEXT));
+            TextView hint = text(tr("Здесь появятся записи, отправленные из поля ввода в терминал или чат агента","Entries sent from the input field to the terminal or agent chat will appear here"), 13, MUTED);
             hint.setPadding(0, dp(8), 0, 0); entries.addView(hint);
         }
         for (WorkspaceStore.RecentCommand recent : store.recentCommands) {

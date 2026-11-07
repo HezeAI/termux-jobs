@@ -12,6 +12,12 @@ final class CodexActionTimeline {
 
     static boolean action(JSONObject row){return row.optString("kind").equals("tool")&&!row.optString("toolType").equals("contextCompaction")&&!row.optString("part").equals("context");}
 
+    static boolean image(JSONObject row){
+        if(!action(row))return false;
+        JSONObject preview=AgentActionPresentation.preview(row);
+        return preview!=null&&preview.optString("kind").equals("image")&&preview.optJSONObject("image")!=null;
+    }
+
     static boolean shell(JSONObject row) {
         return row.optString("kind").equals("tool") && (row.optString("actionType").equals("shell")
             || row.optString("title").startsWith("Shell · "));
@@ -59,6 +65,7 @@ final class CodexActionTimeline {
         List<JSONObject> result=new ArrayList<>();
         for(int i=0;i<rows.size();) {
             JSONObject first=rows.get(i);
+            if(image(first)){result.add(first);i++;continue;}
             String skill=first.optString("skillContextName");
             if(skill.isEmpty())skill=first.optString("skillName");
             boolean skillGroup=!skill.isEmpty()&&action(first);
@@ -66,6 +73,7 @@ final class CodexActionTimeline {
             JSONArray steps=new JSONArray();String turn=first.optString("turn");
             while(i<rows.size()) {
                 JSONObject next=rows.get(i);
+                if(image(next))break;
                 String nextSkill=next.optString("skillContextName");if(nextSkill.isEmpty())nextSkill=next.optString("skillName");
                 if(skillGroup?!action(next)||!skill.equals(nextSkill):!(allTools?action(next):shell(next))||!nextSkill.isEmpty())break;
                 if(steps.length()>0&&!turn.isEmpty()&&!next.optString("turn").isEmpty()

@@ -45,4 +45,12 @@ public class ChatAttachmentsTest {
   assertEquals("binary",ChatAttachments.type("document.tiff"));assertEquals("application/octet-stream",ProjectFiles.mime("document.tiff"));
  }
 
+
+ @Test public void previewFailuresDoNotInferDamageAndKeepDistinctCauses(){
+  assertTrue(ChatAttachmentUi.previewFailure(new IOException("IMAGE_DECODER_UNAVAILABLE"),true,true).contains("не доказывает"));
+  assertTrue(ChatAttachmentUi.previewFailure(new IOException("IMAGE_PIXEL_LIMIT"),true,true).contains("64 миллиона"));
+  assertTrue(ChatAttachmentUi.previewFailure(new SecurityException(),false,true).contains("запрещён"));
+  assertTrue(ChatAttachmentUi.previewFailure(new IOException("ATTACHMENT_MISSING"),false,true).contains("не найден"));
+  assertTrue(ChatAttachmentUi.previewFailure(new IOException("unknown"),false,true).contains("не установлена"));
+ }
 }

@@ -136,9 +136,9 @@ final class ChatAttachmentUi implements AutoCloseable {
         }catch(Exception e){failure=e;}final File ready=file;final Bitmap image=bitmap;final String content=text;final Exception error=failure;final int originalWidth=mediaWidth,originalHeight=mediaHeight;
             main.post(()->{if(closed||!dialog.isShowing())return;box.removeAllViews();if(gallery&&ready!=null&&ready.isFile())galleryAction(dialog,ready,a.optString("name","image"));if(error!=null){
                     if(ready!=null&&ready.isFile()){
-                        box.addView(view.label("PREVIEW_LIMIT".equals(error.getMessage())?t("Предпросмотр ограничен: HTML до 32 МиБ, GIF до 64 МиБ. Оригинал можно сохранить.","Preview limits: HTML up to 32 MiB, GIF up to 64 MiB. You can save the original."):t("Предпросмотр недоступен: формат не поддерживается или файл повреждён. Оригинал можно сохранить.","Preview unavailable: unsupported format or damaged file. You can save the original."),14));
+                        box.addView(view.label(previewFailure(error,true,WorkspaceLanguage.code(activity).equals("ru")),14));
                         dialog.getButton(saveButton).setEnabled(true);dialog.getButton(saveButton).setOnClickListener(v->activity.requestWorkspaceStorageAccess(()->save(ready,a.optString("name","attachment"),dialog,saveButton)));
-                    }else box.addView(view.label(t("Вложение недоступно: исходный файл удалён или нет доступа.","Attachment unavailable: the source was removed or access is missing."),14));return;
+                    }else box.addView(view.label(previewFailure(error,false,WorkspaceLanguage.code(activity).equals("ru")),14));return;
                 }
                 if(ChatFileViewer.handles(a.optString("name"))){
                     try{
@@ -157,6 +157,20 @@ final class ChatAttachmentUi implements AutoCloseable {
                 dialog.getButton(saveButton).setEnabled(true);dialog.getButton(saveButton).setOnClickListener(v->activity.requestWorkspaceStorageAccess(()->save(ready,a.optString("name","attachment"),dialog,saveButton)));
             });
         });
+    }
+    static String previewFailure(Exception error,boolean available,boolean ru){
+        String code=error.getMessage(),detail;
+        if("ATTACHMENT_MISSING".equals(code)||error instanceof FileNotFoundException)detail=ru?"Исходный файл не найден или не удалось открыть его для чтения.":"The source file was not found or could not be opened for reading.";
+        else if(error instanceof SecurityException)detail=ru?"Доступ к исходному файлу запрещён.":"Access to the source file was denied.";
+        else if("IMAGE_DECODER_UNAVAILABLE".equals(code))detail=ru?"Android не смог определить размеры изображения. Это не доказывает повреждение файла.":"Android could not determine the image dimensions. This does not prove file damage.";
+        else if("IMAGE_PIXEL_LIMIT".equals(code))detail=ru?"Изображение превышает лимит просмотра: 64 миллиона пикселей.":"The image exceeds the preview limit of 64 million pixels.";
+        else if("INVALID_IMAGE".equals(code))detail=ru?"Декодер Android не вернул изображение.":"The Android decoder did not return an image.";
+        else if("PREVIEW_LIMIT".equals(code))detail=ru?"Превышен лимит предпросмотра: HTML до 32 МиБ, GIF до 64 МиБ.":"Preview size limit exceeded: HTML up to 32 MiB, GIF up to 64 MiB.";
+        else if("INVALID_GIF".equals(code))detail=ru?"Заголовок файла не соответствует поддерживаемому GIF.":"The file header does not match a supported GIF.";
+        else if("FILE_LIMIT".equals(code))detail=ru?"Файл пуст или превышает допустимый размер.":"The file is empty or exceeds the size limit.";
+        else if("STORAGE_UNAVAILABLE".equals(code))detail=ru?"Не удалось записать копию во внутренний кеш.":"Could not write a copy to the internal cache.";
+        else detail=ru?"Не удалось прочитать или показать оригинал. Причина не установлена.":"Could not read or display the original. The cause is undetermined.";
+        return detail+(available?(ru?" Оригинал можно сохранить.":" You can save the original."):"");
     }
     private void install(File apk){
         try{
