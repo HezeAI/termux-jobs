@@ -18,13 +18,13 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class) @Config(sdk=28,application=Application.class)
 public class RedesignComposerTest {
     public static class SpeechActivity extends Activity {int launches;Intent sent;boolean denied;@Override public void startActivityForResult(Intent intent,int request){if(denied)throw new SecurityException();launches++;sent=intent;}}
-    @Test @Config(shadows=AgentSpeechServiceTest.Engine.class) public void dictationOnlyEditsUnchangedOwnerDraftAndNeverSends(){
-        SpeechActivity a=Robolectric.buildActivity(SpeechActivity.class).setup().get();AgentSpeechServiceTest.configure(a);EditText input=new EditText(a);input.setText("before ");String[] owner={"first"};List<String> notices=new ArrayList<>();AgentDictation voice=new AgentDictation(a,input,()->owner[0],notices::add);
+    @Test public void dictationOnlyEditsUnchangedOwnerDraftAndNeverSends(){
+        SpeechActivity a=Robolectric.buildActivity(SpeechActivity.class).setup().get();AgentSpeechServiceTest.configure(a);EditText input=new EditText(a);input.setText("before ");String[] owner={"first"};List<String> notices=new ArrayList<>();AgentSpeechServiceTest.Engine engine=new AgentSpeechServiceTest.Engine();AgentDictation voice=new AgentDictation(a,input,()->owner[0],notices::add,engine);
         voice.start();voice.start();assertEquals(0,a.launches);assertEquals("before ",input.getText().toString());
-        AgentSpeechServiceTest.Engine.listener.onResults(AgentSpeechServiceTest.words("hello 😀"));assertEquals("before hello 😀",input.getText().toString());
+        engine.listener.result("hello 😀");assertEquals("before hello 😀",input.getText().toString());
         voice.start();voice.clear();assertEquals("before hello 😀",input.getText().toString());
-        voice.start();owner[0]="second";AgentSpeechServiceTest.Engine.listener.onResults(AgentSpeechServiceTest.words("wrong"));assertEquals("before hello 😀",input.getText().toString());
-        voice.start();input.setText("edited");AgentSpeechServiceTest.Engine.listener.onResults(AgentSpeechServiceTest.words("discard"));assertEquals("edited",input.getText().toString());
+        voice.start();owner[0]="second";engine.listener.result("wrong");assertEquals("before hello 😀",input.getText().toString());
+        voice.start();input.setText("edited");engine.listener.result("discard");assertEquals("edited",input.getText().toString());
         assertEquals(0,a.launches);a.finish();
     }
     @Test public void composerWrapsLargeActionsWithoutLosingDraftAndKeepsStopAboveSend(){

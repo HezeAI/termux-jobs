@@ -149,3 +149,6 @@ rights; component distribution does not imply official endorsement.
 в отчёте; полное соблюдение всех условий заранее не заявляется.
 
 AI development assistance: OpenAI Codex
+
+
+Private test12 adds app-owned offline Russian field dictation (Vosk), shared by all four agent chats. Real microphone acceptance is pending phone testing. [Investigation, model size and limitations](docs/fork/DICTATION-OFFLINE-2026-11-07.md).

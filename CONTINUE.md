@@ -1,3 +1,40 @@
+# Текущая выдача — основной1507/test12
+
+[Карта/проверки](docs/fork/VALIDATION-2.1.5-test12.md),
+[подтверждённая причина/новый offline backend](docs/fork/DICTATION-OFFLINE-2026-11-07.md).
+APK Termux-Jobs-v2.1.5-test12-arm64.apk,89543162байт, SHA256:
+c5ea0c24eac94468546dcde4aebd16b51dbb9f286807b1d725fe833c4395d5a8.
+Путь выдачи /sdcard/Download; без автоматической установки.
+
+Новый Vosk0.3.75/JNA5.18.1/Russian-small0.22, собственный AudioRecord для всех4agents.
+Нет Google/чужих Activity/системного provider. Runtime RECORD_AUDIO, подготовка,
+partial preview/stop/cancel, draft-owner/epoch guards. ModelZIP generated ignored;
+подготовка scripts/prepare-dictation-model.py, preBuild SHA guard. Asset/лицензии
+вAPK. Нативные7 прежние;2новые pinnedARM64/16KiB. Движок/production-extractor
+и реальная модель запущены через Android helper, но только на тишине.
+Настоящий микрофон/фраза в исходном черновике НЕ проверены и остаются приёмкой телефона.
+
+38тестов0fail/error/skip, ModernLint5modules0errors/272warnings. APK final gate
+package/signature/ABI/ZIP/runtime/130assets/9ELF,3stage623files — PASS.
+Сведения о первой неудаче helper linker namespace и inventory4AWT сохранены;
+исправленные проверки не маскируют их. Доказательства .verification/test-2.1.5-test12,
+.verification/offline-dictation, .verification/dictation-1507. Последние стили/терминал1506
+сохранены; функциональную приёмку телефона не объявлять выполненной.
+
+Claude public APK RecognitionService.onStartListening сразуcallback.error(5).
+Явный helperbind: proxytrue/start1/error5/cleanupaftercallback. Androiddefaultnull
+такжеerror5доconnect; isRecognitionAvailable=true толькоdiscovery. Target speech
+logcat пуст; это ограничение, не доказательство отсутствия подключения. Yandex
+имеет внутренний SpeechKit, но не экспортирует Android RecognitionService.
+Никаких auth/private browser data/APIkeys не читалось и не использовалось.
+
+Следующий шаг: пользователь вручную ставит APK и диктует русскую фразу в черновик.
+При отказе нужен точный stage/exception из окна. Не устанавливать/публиковать,
+не менять системную службу и не перезапускать рабочие сессии. Резерв1499 не трогать.
+Исследование AndroidHome при скролле/изображений/обрывов остаётся отдельно.
+
+---
+
 # Текущая выдача — основной1506/test11
 
 [Состав/карта/проверки](docs/fork/VALIDATION-2.1.5-test11.md),

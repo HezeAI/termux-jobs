@@ -62,3 +62,6 @@ __pycache__/
 
 # Reviewed upstream source bundle used by the private Ubuntu AI installer.
 !/app/src/main/assets/ubuntu-ai-proot-distro-5.9.0.zip
+
+# Verified generated dictation model; see scripts/prepare-dictation-model.py.
+/app/src/main/assets/dictation-model-ru.zip
