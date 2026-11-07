@@ -18,7 +18,7 @@ import static org.junit.Assert.*;
 import static org.robolectric.Shadows.shadowOf;
 import android.os.Looper;
 
-@RunWith(RobolectricTestRunner.class) @Config(sdk=28,application=Application.class,shadows=ClaudeCodeUiTest.LocalCatalog.class)
+@RunWith(RobolectricTestRunner.class) @Config(sdk=28,application=Application.class,shadows={ClaudeCodeUiTest.LocalCatalog.class,ClaudePermissionsTest.LocalSupport.class})
 public class ClaudeCodeUiTest {
     @org.robolectric.annotation.Implements(value=AgentChatCatalogUi.class,isInAndroidSdk=false)
     public static class LocalCatalog {
@@ -39,7 +39,7 @@ public class ClaudeCodeUiTest {
             AlertDialog picker=ShadowAlertDialog.getLatestAlertDialog();assertEquals(3,picker.getListView().getCount());assertEquals(WorkspaceText.tr("Выбрать чат"),picker.getListView().getItemAtPosition(1));
             picker.getListView().performItemClick(null,1,1);shadowOf(Looper.getMainLooper()).idle();AlertDialog catalog=ShadowAlertDialog.getLatestAlertDialog();View chosen=null;for(int i=0;i<100&&chosen==null;i++){shadowOf(Looper.getMainLooper()).idle();Thread.sleep(5);chosen=catalog.getWindow().getDecorView().findViewWithTag("chat-catalog-12345678-1234-1234-1234-123456789012");}assertNotNull(chosen);chosen.performClick();shadowOf(Looper.getMainLooper()).idle();assertNotNull(find(editor.getWindow().getDecorView(),WorkspaceText.tr("Чат: ")+"Fixture title"));
             View mode=find(editor.getWindow().getDecorView(),(WorkspaceLanguage.code(a).equals("ru")?"Права: ":"Permissions: ")+WorkspaceText.tr("Подтверждать действия"));assertNull(mode);
-            Method permissions=WorkspaceController.class.getDeclaredMethod("showAgentPermissions",WorkspaceStore.Session.class);permissions.setAccessible(true);permissions.invoke(c,s);shadowOf(Looper.getMainLooper()).idle();AlertDialog rights=ShadowAlertDialog.getLatestAlertDialog();rights.getWindow().getDecorView().findViewWithTag("agent-status-launch-permission").performClick();shadowOf(Looper.getMainLooper()).idle();
+            Method permissions=WorkspaceController.class.getDeclaredMethod("showAgentPermissions",WorkspaceStore.Session.class);permissions.setAccessible(true);permissions.invoke(c,s);shadowOf(Looper.getMainLooper()).idle();AlertDialog rights=ShadowAlertDialog.getLatestAlertDialog();rights.getWindow().getDecorView().findViewWithTag("agent-status-claude-ordinary-mode").performClick();shadowOf(Looper.getMainLooper()).idle();
             picker=ShadowAlertDialog.getLatestAlertDialog();picker.getListView().performItemClick(null,2,2);shadowOf(Looper.getMainLooper()).idle();rights.getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();
             editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertTrue(s.claudeAgent);assertEquals("id",s.claudeChat);assertEquals("12345678-1234-1234-1234-123456789012",s.claudeThread);assertEquals("plan",s.claudeMode);assertEquals("ubuntu",s.environment);assertEquals("",s.aiAgent);
         } finally {c.close();}

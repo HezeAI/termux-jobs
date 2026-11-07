@@ -24,7 +24,7 @@ public class ClaudeCodeTest {
     }
     @Test public void invalidProfileKeepsOriginalLibrary() throws Exception {
         WorkspaceStore.Session s=profile();store.sessions.add(s);JSONObject data=store.encode();JSONObject row=data.getJSONArray("sessions").getJSONObject(0);
-        for(String[] bad:new String[][]{{"claudeThread","x; touch /bad"},{"claudeMode","bypassPermissions"},{"claudeModel","$(bad)"},{"claudeChat","last"},{"environment","termux"},{"aiAgent","opencode"}}) {
+        for(String[] bad:new String[][]{{"claudeThread","x; touch /bad"},{"claudeMode","unsupported"},{"claudeModel","$(bad)"},{"claudeChat","last"},{"environment","termux"},{"aiAgent","opencode"}}) {
             JSONObject attempt=new JSONObject(data.toString());attempt.getJSONArray("sessions").getJSONObject(0).put(bad[0],bad[1]);
             try{store.decode(attempt.toString());fail("Invalid profile accepted: "+bad[0]);}catch(JSONException expected){}assertSame(s,store.sessions.get(0));
         }

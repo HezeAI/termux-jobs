@@ -15,7 +15,7 @@ final class ClaudeCode {
     static boolean valid(WorkspaceStore.Session s) {
         return s.claudeAgent && s.environment.equals("ubuntu") && AgentEnvironments.ubuntu(s.codexEnvironment) && s.aiAgent.isEmpty()
             && java.util.Arrays.asList("","sonnet","opus","haiku").contains(s.claudeModel)
-            && java.util.Arrays.asList("manual","acceptEdits","plan").contains(s.claudeMode)
+            && ClaudePermissions.valid(s.claudeMode)
             && java.util.Arrays.asList("default","low","medium","high","xhigh","max").contains(s.claudeEffort)
             && java.util.Arrays.asList("new","choose","id").contains(s.claudeChat)
             && validThread(s.claudeThread) && validThread(s.claudeSocketId);
@@ -24,7 +24,7 @@ final class ClaudeCode {
         File dir=directory(context.getFilesDir());
         if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create Claude controls");
         protect(dir);
-        for(String asset:new String[]{"agent-download.sh","claude-bootstrap.sh","claude-control.js","claude-control-v2.js","claude-chat.cjs","claude-history.cjs","claude-subscription.cjs","claude-native-hook.cjs","agent-receipts.cjs","agent-action-preview.cjs","agent-completion-times.cjs","agent-context.cjs","agent-delivery-status.cjs","agent-attachments.cjs"}) {
+        for(String asset:new String[]{"agent-download.sh","claude-bootstrap.sh","claude-control.js","claude-control-v2.js","claude-chat.cjs","claude-permissions.cjs","claude-history.cjs","claude-subscription.cjs","claude-native-hook.cjs","agent-receipts.cjs","agent-action-preview.cjs","agent-completion-times.cjs","agent-context.cjs","agent-delivery-status.cjs","agent-attachments.cjs"}) {
             File temporary=File.createTempFile("claude-",".tmp",dir);
             try {
                 try(InputStream in=context.getAssets().open(asset);OutputStream out=new FileOutputStream(temporary)) {
@@ -40,7 +40,7 @@ final class ClaudeCode {
             ||!f.setReadable(true,true)||!f.setWritable(true,true)||(f.isDirectory()&&!f.setExecutable(true,true)))throw new IOException("Cannot protect Claude controls");
     }
     static String command(File files,WorkspaceStore.Session s) {
-        if(!java.util.Arrays.asList("manual","acceptEdits","plan").contains(s.claudeMode))throw new IllegalArgumentException(WorkspaceText.tr("Выбранный режим разрешений не поддерживается. Запуск остановлен; полный доступ не включён."));
+        if(!ClaudePermissions.valid(s.claudeMode))throw new IllegalArgumentException(WorkspaceText.tr("Выбранный режим разрешений не поддерживается. Запуск остановлен; полный доступ не включён."));
         if(!valid(s))throw new IllegalArgumentException("Invalid Claude profile");
         return "( set -e; export JOBS_CLAUDE_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")
             +"; export JOBS_CLAUDE_EFFORT="+SessionShell.quote(s.claudeEffort)

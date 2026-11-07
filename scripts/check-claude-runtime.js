@@ -27,7 +27,7 @@ fs.writeFileSync(stub,'#!'+process.execPath+'\n'+"const fs=require('fs');fs.writ
  assert.deepEqual(argsFor('','manual','new',id),['--permission-mode','manual','--session-id',id]);
  assert.deepEqual(argsFor('opus','plan','choose',id),['--permission-mode','plan','--model','opus','--resume']);
  assert.deepEqual(argsFor('haiku','acceptEdits','id',id),['--permission-mode','acceptEdits','--model','haiku','--resume',id]);
- for(const values of [['$(bad)','manual','new',id],['','bypassPermissions','new',id],['','manual','last',id],['','manual','id','bad']])assert.throws(()=>argsFor(...values));
+ for(const values of [['$(bad)','manual','new',id],['','unsupported','new',id],['','manual','last',id],['','manual','id','bad']])assert.throws(()=>argsFor(...values));
  // Unrelated process must survive both normal and forced owned-child cleanup.
  const orphanSocket=path.join(root,'32345678-1234-4234-8234-123456789abc.sock');
  const orphanPid=orphanSocket+'.pid';

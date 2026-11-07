@@ -5,7 +5,7 @@ const net = require('node:net');
 const {spawn} = require('node:child_process');
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function argsFor(model, mode, chat, thread) {
-  if (!['', 'sonnet', 'opus', 'haiku'].includes(model) || !['manual', 'acceptEdits', 'plan'].includes(mode)
+  if (!['', 'sonnet', 'opus', 'haiku'].includes(model) || !require('./claude-permissions.cjs').modes.includes(mode)
       || !['new', 'choose', 'id'].includes(chat) || !uuid.test(thread)) throw new Error('Invalid Claude profile');
   const args = ['--permission-mode', mode];
   if (model) args.push('--model', model);

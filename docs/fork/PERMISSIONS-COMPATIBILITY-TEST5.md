@@ -1981,3 +1981,14 @@ Keystore, действующего аккаунта или исключённы�
 - Подтверждение: активный checkout, SECURITY-AUDIT-STAGE2.md / «Границы доступа: общая таблица», .verification/phone-boundaries/summary.json. Актуальные статусы телефона ведутся отдельно в отчёте; стендовые результаты автоматически на телефон не переносить.
 - Дополнение исследования Claude 2.1.296: blockReadsOutsideWorkingDirectories технически блокирует файловый Read, но разрешённый Bash всё ещё читает вне проекта. Строгий native sandbox с failIfUnavailable остановился до модели из-за socat not installed; это отсутствие зависимости, не доказательство несовместимости Ubuntu AI. Подготовка зависимости и реальные Bash-границы — отдельная будущая задача. Детали и неудачные пробы сохранены в том же отчёте, раздел исследования Claude.
 - Дополнение Gemini 0.64.0: auto/default делает вспомогательный model-routing generateContent без tools до основного tool-enabled запроса. Провайдер фикстуры не должен расходовать тестовую операцию на таком запросе. Исходный телефонный проход без tool calls был недействительным; explicit-model повтор принят отдельно, фактический label gemini-2.5-flash-lite. Проверять наличие native tool call/result, а не только BOUNDARY FINISHED. См. Gemini phone acceptance и .verification/gemini-boundary-routing в текущем плане аудита.
+
+## 2026-11-07 — Claude launch-mode extension, private test23 /1518
+
+Auto and Bypass permissions are explicit next-launch choices, with stored ordinary
+fallback and no automatic working-session restart. Native2.1.296 supports both flag
+values; Bypass refuses root in the current Ubuntu/proot. No root-check workaround.
+Auto control ACK and a local synthetic-provider flow passed, but no authenticated
+real-model classifier or non-root Bypass decision is claimed. Earlier manual-mode
+phone acceptance remains historical and does not cover these new modes.
+See [test23 checks/limits](VALIDATION-2.1.5-test23.md) and
+[the separate phone fixture](CLAUDE-MODE-PHONE-FIXTURE.md).

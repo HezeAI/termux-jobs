@@ -1,3 +1,19 @@
+# Текущая выдача — test23 /1518: режимы Claude
+
+Auto/Bypass: квадратныечекбоксы, взаимоисключение, сохранение прежнего обычного
+режима. Применение только на следующем запуске, без рабочихперезапусков.
+Native2.1.296: AutoACK принят; Bypass запрещён приroot/proot. Настоящейавторизации
+нет, реальныйклассификатор не проверен. Fakeстенд готов отдельно:
+/root/termux-fork/.verification/claude-mode-phone; manual26/Auto27/nativeBypassRefusal.
+79unitPASS, 4Node suitesPASS, ModernLint0errors283warnings, finalAPKgatePASS.
+ТелефонныйUI не проверен; установки/публикации нет. Перед откатом наtest22/старше
+вернуть обычныйрежим уClaude: старыйвалидатор отвергаетauto/bypassPermissions.
+APK /sdcard/Download/Termux-Jobs-v2.1.5-test23-arm64.apk
+SHA256 17d3a5dfb97c2c35ae1ed5d936009ede36f324fa6d8206bc77f645738726f497.
+Отчёты docs/fork/VALIDATION-2.1.5-test23.md и CLAUDE-MODE-PHONE-FIXTURE.md.
+
+---
+
 # Текущая выдача — test22 /1517
 
 Компактные Файлы/Вложения/Изменения; настоящие миниатюры и исправленный доступ

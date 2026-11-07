@@ -172,7 +172,7 @@ public final class WorkspaceController {
         agentEnvironments=new AgentEnvironmentManager(activity,store,alias->{for(WorkspaceStore.Session p:store.sessions){TerminalSession t=liveFor(p);if(alias.equals(AgentEnvironments.scope(p))&&t!=null&&t.isRunning())return true;}return false;});
         environmentSetup.removal=(choice,refresh)->agentEnvironments.remove(choice,refresh);
         agentEnvironments.prepareTools=environmentSetup::prepareOperationTools;
-        claudeLiveUi=new ClaudeLiveUi(activity,()->{TerminalSession t=activity.getCurrentSession();WorkspaceStore.Session p=t==null?null:store.findByHandle(t.mHandle);return t!=null&&t.isRunning()&&p!=null&&p.claudeAgent?p:null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible(),(p,run,model,mode)->{if(store.sessions.contains(p)&&run.equals(p.claudeSocketId)){p.claudeModel=model;p.claudeMode=mode;store.save();}});
+        claudeLiveUi=new ClaudeLiveUi(activity,()->{TerminalSession t=activity.getCurrentSession();WorkspaceStore.Session p=t==null?null:store.findByHandle(t.mHandle);return t!=null&&t.isRunning()&&p!=null&&p.claudeAgent?p:null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible(),(p,run,model,mode)->{if(store.sessions.contains(p)&&run.equals(p.claudeSocketId)){p.claudeModel=model;ClaudePermissions.select(p,mode);store.save();}});
         geminiLiveUi=new GeminiLiveUi(activity,()->{TerminalSession t=activity.getCurrentSession();WorkspaceStore.Session p=t==null?null:store.findByHandle(t.mHandle);return t!=null&&t.isRunning()&&p!=null&&p.geminiAgent?p:null;},()->!closed&&!activityStopped&&screen==Screen.TERMINAL&&activity.isVisible(),(profile,run,before,mode)->store.applyGeminiMode(profile,run,before,mode));
         claudeLiveUi.effortApplied((p,value)->{if(store.sessions.contains(p)){p.claudeEffort=value;store.save();}});
         geminiLiveUi.thinkingApplied((p,value)->{if(store.sessions.contains(p)){p.geminiThinking=value;store.save();}});
@@ -1314,13 +1314,14 @@ public final class WorkspaceController {
             }).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
         agentDetails(geminiFields,"gemini-launch-details").setText(tr("При запуске проверяем компоненты Gemini в выбранной среде и предлагаем установить недостающее. Выберите Gemini API-ключ или Vertex AI с отдельной авторизацией Google Cloud. История привязана к каталогу проекта; для продолжения выберите прежний каталог.","Launch checks Gemini components in the selected environment and offers to install missing items. Choose a Gemini API key or Vertex AI with separate Google Cloud authentication. History is tied to the project directory; choose the previous directory to resume."));
         LinearLayout claudeFields=column();agentFields.addView(claudeFields);
+        String[] claudePrevious={draft.claudeOrdinaryMode};
         String[] claudeModel={draft.claudeModel},claudeMode={draft.claudeMode},claudeChat={draft.claudeChat},claudeThread={draft.claudeThread};
         TextView claudeModelButton=button("",false,()->{});claudeFields.addView(claudeModelButton);
         TextView claudeModeButton=button("",false,()->{});claudeFields.addView(claudeModeButton);
         TextView claudeChatButton=button("",false,()->{});claudeFields.addView(claudeChatButton);
-        String[] claudeModes={"manual","acceptEdits","plan"};
-        String[] claudeModeNames={WorkspaceText.tr("Подтверждать действия"),WorkspaceText.tr("Разрешать редактирование"),WorkspaceText.tr("Планирование")};
-        String[] claudeModeDescriptions={WorkspaceText.tr("Claude запрашивает разрешения на действия в терминале."),WorkspaceText.tr("Правки файлов и обычные файловые команды разрешаются автоматически; остальные действия требуют разрешения."),WorkspaceText.tr("Анализ и план без выполнения изменений. Это режим Claude, а не системная песочница.")};
+        String[] claudeModes=ClaudePermissions.MODES;
+        String[] claudeModeNames={WorkspaceText.tr("Подтверждать действия"),WorkspaceText.tr("Разрешать редактирование"),WorkspaceText.tr("Планирование"),"Auto","Bypass permissions"};
+        String[] claudeModeDescriptions={WorkspaceText.tr("Claude запрашивает разрешения на действия в терминале."),WorkspaceText.tr("Правки файлов и обычные файловые команды разрешаются автоматически; остальные действия требуют разрешения."),WorkspaceText.tr("Анализ и план без выполнения изменений. Это режим Claude, а не системная песочница."),tr("Автоматическая проверка действий; некоторые действия могут быть отклонены.","Automatic action review; some actions may be denied."),tr("Без большинства подтверждений; исключения Claude сохраняются. Недоступен при запуске от root.","Skip most approvals; Claude exceptions remain. Unavailable when running as root.")};
         TextView claudeAccessDetails=text("",12,MUTED);claudeFields.addView(claudeAccessDetails);unavailableAgentScope(claudeFields);
         String[] claudeTitle={""};
         Runnable updateClaude=()->{
@@ -1332,7 +1333,7 @@ public final class WorkspaceController {
         claudeModelButton.setOnClickListener(v->WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Модель Claude Code"))
             .setSingleChoiceItems(new String[]{WorkspaceText.tr("По умолчанию"),"Sonnet","Opus","Haiku"},java.util.Arrays.asList("","sonnet","opus","haiku").indexOf(claudeModel[0]),(d,w)->{claudeModel[0]=new String[]{"","sonnet","opus","haiku"}[w];updateClaude.run();d.dismiss();}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
         claudeModeButton.setOnClickListener(v->WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Доступ Claude Code"))
-            .setSingleChoiceItems(new String[]{claudeModeNames[0]+"\n"+claudeModeDescriptions[0],claudeModeNames[1]+"\n"+claudeModeDescriptions[1],claudeModeNames[2]+"\n"+claudeModeDescriptions[2]},java.util.Arrays.asList(claudeModes).indexOf(claudeMode[0]),(d,w)->{claudeMode[0]=claudeModes[w];updateClaude.run();d.dismiss();}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
+            .setSingleChoiceItems(java.util.stream.IntStream.range(0,claudeModes.length).mapToObj(i->claudeModeNames[i]+"\n"+claudeModeDescriptions[i]).toArray(String[]::new),java.util.Arrays.asList(claudeModes).indexOf(claudeMode[0]),(d,w)->{if(ClaudePermissions.ordinary(claudeMode[0]))claudePrevious[0]=claudeMode[0];claudeMode[0]=claudeModes[w];if(ClaudePermissions.ordinary(claudeMode[0]))claudePrevious[0]=claudeMode[0];updateClaude.run();d.dismiss();}).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
         claudeChatButton.setOnClickListener(v->WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("Чат Claude Code"))
             .setItems(new String[]{WorkspaceText.tr("Новый чат"),WorkspaceText.tr("Выбрать чат"),WorkspaceText.tr("Ввести ID чата")},(d,w)->{
                 if(w==0){claudeChat[0]="new";claudeThread[0]=java.util.UUID.randomUUID().toString();claudeTitle[0]="";updateClaude.run();return;}
@@ -1541,7 +1542,7 @@ public final class WorkspaceController {
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             if(separatePermissions){
                 // A session form must never overwrite permissions changed independently by native events.
-                geminiMode[0]=existing.geminiMode;claudeMode[0]=existing.claudeMode;aiMode[0]=existing.aiMode;aiAccess[0]=existing.aiAccess;codexAccess[0]=existing.codexAccess;codexConfirm.setChecked(!CodexSessionShell.approval(existing).equals("never"));aiProjectScope.setChecked(existing.aiProjectOnly);AgentPermissionsUi.copyPolicy(existing,draft);
+                geminiMode[0]=existing.geminiMode;claudeMode[0]=existing.claudeMode;claudePrevious[0]=existing.claudeOrdinaryMode;aiMode[0]=existing.aiMode;aiAccess[0]=existing.aiAccess;codexAccess[0]=existing.codexAccess;codexConfirm.setChecked(!CodexSessionShell.approval(existing).equals("never"));aiProjectScope.setChecked(existing.aiProjectOnly);AgentPermissionsUi.copyPolicy(existing,draft);
             }
             if (name.getText().toString().trim().isEmpty()) { name.setError(WorkspaceText.tr("Укажите название")); return; }
             String agentConnection=connectionCommand.getText().toString().trim();if(chosenEnvironment[0].equals("codex")&&!AgentConnection.valid(agentConnection)){connectionCommand.setError(tr("Укажите абсолютный путь к запускателю без управляющих символов","Enter an absolute launcher path without control characters"));return;}
@@ -1621,7 +1622,7 @@ public final class WorkspaceController {
             if(selectedGemini&&geminiAuth[0].equals("vertex")){draft.geminiCloudProject=geminiCloudProject.getText().toString().trim();draft.geminiCloudLocation=geminiCloudLocation.getText().toString().trim();}
             draft.geminiAgent=selectedGemini;draft.geminiAuth=geminiAuth[0];draft.geminiModel=geminiModel[0];draft.geminiMode=geminiMode[0];draft.geminiChat=geminiChat[0];draft.geminiThread=geminiThread[0];
             if(VertexConnection.selected(draft)&&!draft.geminiCloudProject.isEmpty())VertexConnection.remember(activity,draft.geminiCloudProject,draft.geminiCloudLocation);
-            draft.claudeAgent=selectedClaude;draft.claudeModel=claudeModel[0];draft.claudeMode=claudeMode[0];draft.claudeChat=claudeChat[0];draft.claudeThread=claudeThread[0];
+            draft.claudeAgent=selectedClaude;draft.claudeModel=claudeModel[0];draft.claudeMode=claudeMode[0];draft.claudeOrdinaryMode=ClaudePermissions.ordinary(claudeMode[0])?claudeMode[0]:claudePrevious[0];draft.claudeChat=claudeChat[0];draft.claudeThread=claudeThread[0];
             draft.aiAgent=chosenEnvironment[0].equals("codex")&&chosenAgent[0].equals("opencode")?"opencode":"";
             if(draft.aiAgent.equals("opencode"))draft.environment="ubuntu";
             if(!draft.aiConnection.equals(aiConnection[0]) || aiChat[0].equals("new") || !draft.aiSavedThread.equals(aiThread[0]))draft.aiSavedThread="";
