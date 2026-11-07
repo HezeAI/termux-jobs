@@ -1,10 +1,12 @@
-> Current stable release: v2.1.4, versionCode 1492, compared with v2.1.3.
-> Update compatibility: previous Termux Job’s builds with matching com.termux/certificate;
-> schema8, ARM64, min26/target28/compile35. Official-Termux compatibility is not verified.
-> Build with the repository-local SDK/JDK/Gradle setup below; preserve the reviewed
+> Stable release: v2.1.5 /1520, compared with v2.1.4.
+> Optional manual legacy-interface rollback: 2.1.5-rollback /1521, separate source tag.
+> Same com.termux/certificate, ARM64, schema8, min26/target28/compile35.
+> In-app update metadata points only to the main APK. No reset/environment reinstall.
+> Before rollback, save ordinary Claude modes; actual device downgrade is unverified.
+> Existing processes need explicit chat restart to load updated adapters.
+> Build with the repository-local SDK/JDK/Gradle setup below. Preserve the reviewed
 > ubuntu-ai-proot-distro-5.9.0.zip source asset and its upstream LICENSE.
-> Source/APK validation: [VALIDATION-v2.1.4](docs/fork/VALIDATION-v2.1.4.md).
-> Dated private-build sections below are historical development records.
+> [Release validation](docs/fork/VALIDATION-v2.1.5.md). Historical build notes follow.
 
 # Private test14 — Advanced menu and clearer agent settings
 

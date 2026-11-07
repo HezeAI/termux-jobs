@@ -8,7 +8,7 @@
 Linux environments, agent chats and server tools. Commands execute in the selected
 Termux session, environment or server.
 
-**[Скачать APK / Download APK — v2.1.4](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.4/Termux-Jobs-v2.1.4-arm64.apk)**
+**[Скачать APK / Download APK — v2.1.5](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.5/Termux-Jobs-v2.1.5-arm64.apk)**
 · [Установка / Installation](#installation-and-compatibility)
 · [Релизы / Releases](https://github.com/HezeAI/termux-jobs/releases)
 · [Безопасность и данные / Security and data](SECURITY.md)
@@ -27,28 +27,37 @@ from OpenAI Codex; not affiliated with or endorsed by the Termux team.
 - **AI-чаты / Agent chats:** Codex, Claude Code, Gemini and OpenCode, with attachments and action approvals supported by each CLI.
 - **Серверы / Servers:** SSH connections and commands in the selected remote environment.
 
-## v2.1.4
+## v2.1.5 — Redesigned workspace
 
-Changes since the last published stable release, v2.1.3.
+Changes since the last published stable release, v2.1.4.
 
-- Files and changes in all four agent chats: local attachment search, sender filters,
-  explicit bounded loading, original-message navigation and whole-project Git diffs against HEAD.
-- Refreshed file modification dates; readable cards and compact search/refresh controls.
-- Save original chat images, including animated GIF, to Pictures/TermuxJobs without re-encoding.
-- Native context estimates for Codex, Claude and Gemini; confirmed manual Codex compaction.
-- One elapsed timer per user request in all four chats, including tools, approvals and retries.
-- Notes-only star menus; exact updated Codex/Claude RU/EN common templates, explicitly applied.
-- Late native history cursors remain discoverable when an early snapshot is empty.
+- New chat/terminal/sidebar/settings design, nested project and session actions.
+- Centered creation forms, smooth page transitions and preserved drafts/reading position.
+- Updated input rows and extra keys, compact action/file windows and attachment Download export.
+- Original-image opening, action timelines, input history and saved-chat closing improvements.
+- Claude Auto/Bypass preferences, availability checks and explicit next-launch behavior.
 
-[Release notes](docs/fork/RELEASE-v2.1.4.md) · [Validation](docs/fork/VALIDATION-v2.1.4.md)
+**Known issue:** image-heavy Codex cold replay can retry/disconnect. The failure was
+reproduced without this UI; the remote closing component was not established.
+[Upstream issue](https://github.com/openai/codex/issues/55730) ·
+[Published HezeAI report](https://github.com/openai/codex/issues/55730#issuecomment-6645086819).
+This release does not fix it. Auto's real-model classifier is unverified; Bypass is
+unavailable under root in Ubuntu/PRoot.
+
+**In-app updates install the new interface, code 1520.** A separate manual old-interface
+rollback APK (1521) is available in the release. Disable Auto/Bypass in every saved Claude
+profile first. Device rollback/data retention is unverified. After rollback, returning
+to the new interface requires a future main APK above code 1521; do not uninstall.
+
+[Release notes](docs/fork/RELEASE-v2.1.5.md) · [Validation](docs/fork/VALIDATION-v2.1.5.md)
 · [CHANGELOG](CHANGELOG.md)
-· [AI instructions ZIP](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.4/AI-INSTRUCTIONS.zip)
+· [AI instructions ZIP](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.5/AI-INSTRUCTIONS.zip)
 
 ## Проверки и ограничения / Checks and limitations
 
-**RU:** Для v2.1.4 опубликованы результаты автоматических проверок, проверки
+**RU:** Для v2.1.5 опубликованы результаты автоматических проверок, проверки
 подписанного APK и сценариев, принятых разработчиком на телефоне. Эти результаты
-разделены в [отчёте выпуска](docs/fork/VALIDATION-v2.1.4.md).
+разделены в [отчёте выпуска](docs/fork/VALIDATION-v2.1.5.md).
 Независимый аудит безопасности этой версии не подтверждён.
 
 - Накопление вложений и связанные обрывы чатов остаются неисправленными.
@@ -61,7 +70,7 @@ Changes since the last published stable release, v2.1.3.
 - Архивы резервных копий не зашифрованы и могут содержать авторизацию,
   историю и снимки проектов. [Состав и ограничения копий](docs/fork/BACKUP-RESTORE.md).
 
-**EN:** [Release validation](docs/fork/VALIDATION-v2.1.4.md) distinguishes automated
+**EN:** [Release validation](docs/fork/VALIDATION-v2.1.5.md) distinguishes automated
 checks, signed-APK verification and developer-reported phone acceptance. No
 independent security audit of this version is confirmed. Attachment accumulation
 and disconnections remain unfixed. Low-level Android key handoff/crash and device
@@ -125,7 +134,7 @@ limited coverage; OpenCode connection data is a separate optional component.
 
 - [Contributing](CONTRIBUTING.md) and [architecture](docs/fork/ARCHITECTURE.md).
 - [Build notes](FORK.md), [testing policy](docs/fork/TESTING.md) and [release procedure](docs/fork/RELEASING.md).
-- [Release evidence](docs/fork/VALIDATION-v2.1.4.md) and [audit scope/results](docs/fork/SECURITY-AUDIT-STAGE2.md).
+- [Release evidence](docs/fork/VALIDATION-v2.1.5.md) and [audit scope/results](docs/fork/SECURITY-AUDIT-STAGE2.md).
 - [AGENTS.md](AGENTS.md): repository instructions for coding agents; not the user guide.
 
 ## Лицензия и благодарности / License and acknowledgements

@@ -1,3 +1,12 @@
+# v2.1.5 interface
+
+Native Android UI: compact nested sidebar, centered creation pages in one dimmed
+window, terminal overlay above a retained chat, stable composer rows, compact
+project-file controls and centered library headings. Image-view actions stay
+visible separately from grouped action timelines. No experimental HTML concept
+is loaded by the application. Device-specific verification limits are recorded
+in VALIDATION-v2.1.5.md.
+
 # Уточнение1506 — единая верхняя область терминала
 
 Измеренный header inset сохраняется всегда. При отсутствии предшествующих строк

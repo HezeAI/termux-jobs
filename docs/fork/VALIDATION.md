@@ -1,4 +1,13 @@
-# Current release validation — v2.1.4
+# Current release validation — v2.1.5
+
+See [VALIDATION-v2.1.5.md](VALIDATION-v2.1.5.md) for the new-interface APK, manual
+rollback, local/CI checks, retained warnings and device limitations. The updater
+targets only main code 1520; rollback code 1521 is manual. No independent security
+certification is claimed. Earlier reports retain their historical scope.
+
+---
+
+# Historical release validation — v2.1.4
 
 See [VALIDATION-v2.1.4.md](VALIDATION-v2.1.4.md) for final APK identity, checked/reused
 stand results, developer phone acceptance and remaining limits. CI and anonymous

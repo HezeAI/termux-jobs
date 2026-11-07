@@ -1,3 +1,13 @@
+# v2.1.5 navigation
+
+Use the nested sidebar for each chat's Project and Chat management actions.
+Creation keeps model/chat/ordinary rights together; Claude special modes are in
+Permission details. Permissions and approvals distinguishes the active mode from
+next-launch settings. Auto/Bypass disables ordinary selection until switched off.
+Commands, Aliases, Notes and Input history open centered library windows. Clear
+removes only input history after confirmation. Attachments can open originals,
+jump to their message, save the original to Download or show its location.
+
 # Current v2.1.4 agent chat behavior
 
 All four chats use a horizontal star / paperclip control; star opens notes only.

@@ -1,0 +1,34 @@
+{
+  "ru": [
+    "Крупное обновление интерфейса: чаты, терминалы, вложенное боковое меню и общие настройки.",
+    "Новые формы создания чатов, плавные переходы и обновлённые поля ввода.",
+    "Компактные файлы/вложения/изменения; открытие оригиналов и сохранение вложений в Download.",
+    "Улучшены карточки действий, история ввода, закрытие сохранённых чатов и дополнительные клавиши.",
+    "Claude: Auto/Bypass как отдельные режимы; настройки применяются при следующем запуске.",
+    "WebSocket Codex при большом контексте изображений остаётся известной проблемой: https://github.com/openai/codex/issues/55730#issuecomment-6645086819"
+  ],
+  "en": [
+    "Major interface update: chats, terminals, nested sidebar and general settings.",
+    "New chat creation forms, smoother transitions and updated input controls.",
+    "Compact Files/Attachments/Changes; open originals and save attachments to Download.",
+    "Improved action cards, input history, saved-chat closing and terminal extra keys.",
+    "Claude: separate Auto/Bypass modes; settings apply on the next launch.",
+    "Image-heavy Codex WebSocket replay remains an unresolved issue: https://github.com/openai/codex/issues/55730#issuecomment-6645086819"
+  ],
+  "compatibility": {
+    "ru": [
+      "ARM64; Android 8+ для приложения, Android 11+ для X11. Прежние com.termux, подпись и schema8. Сброс данных и переустановка окружений не требуются. APK не заменяет резервную копию; не удаляйте приложение для обновления.",
+      "Обновлятор устанавливает только новый интерфейс, код 1520. Старый интерфейс — отдельный ручной rollback APK с кодом 1521 на GitHub.",
+      "Перед rollback выключите Auto/Bypass во всех сохранённых профилях Claude. Сохранность данных при реальном откате на устройстве не проверена.",
+      "После установки rollback 1521 основной 1520 не установится обычным обновлением; следующий основной APK должен иметь код выше 1521.",
+      "Auto не проверен с настоящей моделью/аккаунтом. Bypass недоступен при root в Ubuntu; действующие чаты автоматически не перезапускаются."
+    ],
+    "en": [
+      "ARM64; Android 8+ app, Android 11+ X11. Same com.termux, signer and schema8. No data reset or environment reinstall required. An APK is not a backup; do not uninstall to update.",
+      "The updater installs only the new interface, code 1520. The old interface is a separate manual rollback APK, code 1521, on GitHub.",
+      "Before rollback, disable Auto/Bypass in every saved Claude profile. Actual on-device rollback/data retention is unverified.",
+      "After installing rollback 1521, main 1520 cannot update it normally; a future main APK needs a code above 1521.",
+      "Auto is unverified with a real model/account. Bypass is unavailable as root in Ubuntu; running chats are never automatically restarted."
+    ]
+  }
+}

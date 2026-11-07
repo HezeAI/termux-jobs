@@ -1,3 +1,15 @@
+# v2.1.5 changes
+
+AgentCreationSteps owns both creation pages in one window. AgentTerminalScreen
+keeps chat/terminal views and drafts separate during transitions. SidebarTreeActions
+and WorkspaceSidebar maintain expansion/selection independently of modal windows.
+ClaudePermissions stores the previous ordinary mode separately; special choices
+are checked against CLI/environment and native rejection. Working Claude rights
+open the same next-launch editor; saving does not send a live set-mode command.
+The attachment panel uses resolved environment-aware originals for preview/export.
+Schema8 adds optional claudeOrdinaryMode; old readers reject auto/bypassPermissions
+mode values, so manual rollback requires ordinary modes first.
+
 # Current v2.1.4 agent chat behavior
 
 All four chats use a horizontal star / paperclip control; star opens notes only.
