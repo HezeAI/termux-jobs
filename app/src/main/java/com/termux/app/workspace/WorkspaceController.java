@@ -704,7 +704,11 @@ public final class WorkspaceController {
             confirm(tr("Очистить историю поля ввода?", "Clear input history?"), () -> { store.clearRecentCommands(); renderContent(); });
         });
         clear.setTag("input-history-clear");clear.setEnabled(!store.recentCommands.isEmpty());
-        clear.setAlpha(clear.isEnabled()?1f:.5f);body.addView(clear);
+        clear.setAlpha(clear.isEnabled()?1f:.5f);clear.setTextColor(ACCENT);
+        // Preserve the former section row geometry without its duplicate title.
+        LinearLayout historyActions=row();historyActions.setPadding(0,dp(22),0,dp(10));historyActions.setMinimumHeight(dp(80));
+        historyActions.addView(new View(activity),new LinearLayout.LayoutParams(0,0,1));
+        historyActions.addView(clear,new LinearLayout.LayoutParams(-2,-2));body.addView(historyActions);
         EditText search = field(WorkspaceText.tr("Поиск по журналу"), journalQuery, false);
         search.setContentDescription(WorkspaceText.tr("Поиск по журналу"));
         LinearLayout.LayoutParams searchParams = new LinearLayout.LayoutParams(-1, -2);
