@@ -102,6 +102,7 @@ final class WorkspaceFileBrowser {
             WorkspaceIconButton icon=new WorkspaceIconButton(activity);icon.setTextColor(WorkspaceDialogs.TEXT);icon.setMinHeight(dp(48));icon.setBackground(WorkspaceDialogs.background(activity,false));
             icon.setIcon(activity.getDrawable(label.equals("↑")?R.drawable.workspace_server_back:R.drawable.workspace_home).mutate(),dp(22));icon.setContentDescription(label.equals("↑")?WorkspaceText.tr("Родительская папка"):WorkspaceText.tr("Домашний каталог"));t=icon;
         }else t=WorkspaceDialogs.action(activity,label,0);
+        if(projectPanel!=null){t.setTextSize(13);t.setMinHeight(dp(44));t.setPadding(dp(8),dp(4),dp(8),dp(4));}
         t.setOnClickListener(v->run.run());return t;
     }
     static void styleFilter(Context context,TextView item,boolean selected){
@@ -110,14 +111,14 @@ final class WorkspaceFileBrowser {
     }
     AgentProjectPanel projectPanel;private boolean filesTabVisible=true;
     void show() {
-        LinearLayout body=column();body.setPadding(dp(12),0,dp(12),dp(8));
+        LinearLayout body=column();body.setPadding(projectPanel==null?dp(12):0,0,projectPanel==null?dp(12):0,dp(4));
         body.addView(text(ProjectFiles.environmentLabel(files.profile),12));
         LinearLayout navigation=row();navigation.addView(action("↑",()->load(parent(path))),new LinearLayout.LayoutParams(dp(48),-2));
         pathLabel=text(path,12);pathLabel.setMaxLines(2);pathLabel.setEllipsize(TextUtils.TruncateAt.MIDDLE);navigation.addView(pathLabel,new LinearLayout.LayoutParams(0,-2,1));
         refreshButton=new WorkspaceIconButton(activity);refreshButton.setIcon(activity.getDrawable(R.drawable.workspace_server_refresh).mutate(),dp(22));refreshButton.setTextColor(WorkspaceDialogs.TEXT);refreshButton.setBackground(WorkspaceDialogs.background(activity,false));refreshButton.setTag("workspace-file-refresh");refreshButton.setContentDescription(t("Обновить список файлов","Refresh file list"));refreshButton.setOnClickListener(v->load(path,true));navigation.addView(refreshButton,new LinearLayout.LayoutParams(dp(48),dp(48)));
         navigation.addView(action("⌂",()->load("~")),new LinearLayout.LayoutParams(dp(48),-2));
-        WorkspaceIconButton sort=new WorkspaceIconButton(activity);sort.setIcon(activity.getDrawable(R.drawable.workspace_sort).mutate(),dp(22));sort.setTextColor(WorkspaceDialogs.TEXT);sort.setBackground(WorkspaceDialogs.background(activity,false));sort.setTag("workspace-file-sort");sort.setContentDescription(t("Сортировка файлов","Sort files"));sort.setOnClickListener(v->sortMenu());navigation.addView(sort,new LinearLayout.LayoutParams(dp(48),dp(48)));body.addView(navigation);
-        search=new EditText(activity);search.setTextColor(WorkspaceDialogs.TEXT);search.setHintTextColor(WorkspaceDialogs.MUTED);search.setTextSize(14);search.setSingleLine(true);search.setHint(choice==null?WorkspaceText.tr("Найти файл или папку"):WorkspaceText.tr("Найти папку"));LinearLayout searchBar=row();searchBar.addView(search,new LinearLayout.LayoutParams(0,-2,1));
+        WorkspaceIconButton sort=new WorkspaceIconButton(activity);sort.setIcon(activity.getDrawable(R.drawable.workspace_sort).mutate(),dp(22));sort.setTextColor(WorkspaceDialogs.TEXT);sort.setBackground(WorkspaceDialogs.background(activity,false));sort.setTag("workspace-file-sort");sort.setContentDescription(t("Сортировка файлов","Sort files"));sort.setOnClickListener(v->sortMenu());navigation.addView(sort,new LinearLayout.LayoutParams(dp(48),dp(48)));if(projectPanel!=null)for(int i=0;i<navigation.getChildCount();i++){View child=navigation.getChildAt(i);LinearLayout.LayoutParams size=(LinearLayout.LayoutParams)child.getLayoutParams();if(size.width==dp(48))size.width=dp(44);size.height=dp(44);size.setMarginEnd(dp(4));child.setMinimumHeight(dp(44));}body.addView(navigation);
+        search=new EditText(activity);search.setTextColor(WorkspaceDialogs.TEXT);search.setHintTextColor(WorkspaceDialogs.MUTED);search.setTextSize(projectPanel==null?14:13);if(projectPanel!=null){search.setMinHeight(dp(44));search.setPadding(dp(8),dp(4),dp(8),dp(4));}search.setSingleLine(true);search.setHint(choice==null?WorkspaceText.tr("Найти файл или папку"):WorkspaceText.tr("Найти папку"));LinearLayout searchBar=row();searchBar.addView(search,new LinearLayout.LayoutParams(0,-2,1));
         if(transfersEnabled()){clearTransferButton=action("",()->{invalidateTransferChoice();transferSelection.clear();render();});clearTransferButton.setContentDescription(t("Снять всё выделение","Clear selection"));searchBar.addView(clearTransferButton,new LinearLayout.LayoutParams(-2,dp(48)));WorkspaceIconButton down=new WorkspaceIconButton(activity);down.setIcon(activity.getDrawable(R.drawable.workspace_diag_download).mutate(),dp(22));down.setTextColor(WorkspaceDialogs.ACCENT);down.setContentDescription(t("Копировать или переместить сюда","Copy or move here"));down.setOnClickListener(v->transferMenu());transferButton=down;searchBar.addView(down,new LinearLayout.LayoutParams(dp(48),dp(48)));}body.addView(searchBar);
         search.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int c,int b){}public void onTextChanged(CharSequence s,int a,int b,int c){render();}public void afterTextChanged(Editable e){}});
         if(choice==null){filters=row();HorizontalScrollView scroll=new HorizontalScrollView(activity);scroll.setHorizontalScrollBarEnabled(false);scroll.addView(filters);body.addView(scroll);for(String name:new String[]{WorkspaceText.tr("Все"),WorkspaceText.tr("Текст"),WorkspaceText.tr("Изображения"),"APK"}){TextView item=action(name,()->{filter=name;render();});item.setTextSize(13);item.setMinHeight(dp(42));item.setPadding(dp(12),dp(8),dp(12),dp(8));styleFilter(activity,item,name.equals(filter));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-2,-2);lp.setMarginEnd(dp(4));filters.addView(item,lp);}}
@@ -128,7 +129,7 @@ final class WorkspaceFileBrowser {
             View panel=projectPanel.wrap(body,show->{filesTabVisible=show;updateTransfer();},this::load);
             page=new AgentTerminalScreen(activity,projectPanel.title(),files.profile.name+" · "+path,t("Назад","Back"),"project-files-screen",()->pageBack());
             LinearLayout pageBody=column();pageBody.addView(panel,new LinearLayout.LayoutParams(-1,0,1));
-            pageSelectAll=new Button(activity);pageSelectAll.setText(t("Выбрать всё","Select all"));pageSelectAll.setTextColor(WorkspaceDialogs.TEXT);pageSelectAll.setBackground(WorkspaceDialogs.background(activity,false));pageSelectAll.setOnClickListener(v->selectAllVisible());pageBody.addView(pageSelectAll,new LinearLayout.LayoutParams(-1,-2));
+            pageSelectAll=new Button(activity);pageSelectAll.setText(t("Выбрать всё","Select all"));pageSelectAll.setTextColor(WorkspaceDialogs.TEXT);pageSelectAll.setTextSize(13);pageSelectAll.setMinHeight(dp(44));pageSelectAll.setMinimumHeight(dp(44));pageSelectAll.setPadding(dp(8),dp(4),dp(8),dp(4));pageSelectAll.setBackground(WorkspaceDialogs.background(activity,false));pageSelectAll.setOnClickListener(v->selectAllVisible());pageBody.addView(pageSelectAll,new LinearLayout.LayoutParams(-1,-2));
             page.body(pageBody);page.setOnDismissListener(this::close);projectPanel.dismiss=this::close;page.show();updateTransfer();
             load(path);return;
         }
@@ -170,7 +171,7 @@ final class WorkspaceFileBrowser {
     }
     private CharSequence entryLabel(ProjectFiles.Entry entry,String prefix){
         String name=prefix+entry.name;
-        String metadata=(entry.directory?"":android.text.format.Formatter.formatShortFileSize(activity,entry.size)+"\n")+modifiedTime(entry.modified,t("Дата неизвестна","Date unknown"));
+        String metadata=(entry.directory?"":android.text.format.Formatter.formatShortFileSize(activity,entry.size)+(projectPanel==null?"\n":" · "))+modifiedTime(entry.modified,t("Дата неизвестна","Date unknown"));
         SpannableString label=new SpannableString(name+"\n"+metadata);
         label.setSpan(new ForegroundColorSpan(WorkspaceDialogs.MUTED),name.length()+1,label.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         label.setSpan(new RelativeSizeSpan(.85f),name.length()+1,label.length(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);return label;
@@ -197,9 +198,9 @@ final class WorkspaceFileBrowser {
                 FrameLayout frame=new FrameLayout(activity);ImageView preview=new ImageView(activity);boolean video=ProjectFiles.mime(e.name).startsWith("video/");preview.setImageResource(video?R.drawable.workspace_media_video:R.drawable.workspace_media_photo);preview.setScaleType(ImageView.ScaleType.CENTER_CROP);preview.setContentDescription(t("Миниатюра ","Thumbnail ")+e.name);frame.addView(preview,new FrameLayout.LayoutParams(-1,-1));
                 GradientDrawable shape=new GradientDrawable();shape.setColor(WorkspaceDialogs.SURFACE);shape.setCornerRadius(dp(8));frame.setBackground(shape);frame.setClipToOutline(true);
                 if(video){ImageView play=new ImageView(activity);play.setImageResource(R.drawable.workspace_play);play.setColorFilter(0xffffffff);play.setPadding(dp(3),dp(3),dp(3),dp(3));GradientDrawable circle=new GradientDrawable();circle.setColor(0xcc000000);circle.setShape(GradientDrawable.OVAL);play.setBackground(circle);FrameLayout.LayoutParams overlay=new FrameLayout.LayoutParams(dp(22),dp(22),Gravity.BOTTOM|Gravity.END);overlay.setMargins(dp(3),dp(3),dp(3),dp(3));frame.addView(play,overlay);}
-                LinearLayout.LayoutParams tile=new LinearLayout.LayoutParams(dp(64),dp(64));tile.setMargins(dp(2),dp(4),dp(6),dp(4));line.addView(frame,tile);thumbnails.bind(line,preview,e);
+                LinearLayout.LayoutParams tile=new LinearLayout.LayoutParams(dp(projectPanel==null?64:48),dp(projectPanel==null?64:48));tile.setMargins(dp(2),dp(4),dp(6),dp(4));line.addView(frame,tile);thumbnails.bind(line,preview,e);
             }
-            line.addView(item,new LinearLayout.LayoutParams(0,-2,1));rows.addView(line);count++;}
+            line.addView(item,new LinearLayout.LayoutParams(0,-2,1));LinearLayout.LayoutParams lineSize=new LinearLayout.LayoutParams(-1,-2);if(projectPanel!=null)lineSize.bottomMargin=dp(4);rows.addView(line,lineSize);count++;}
         if(viewport!=null)thumbnails.schedule(viewport);
         updateTransfer();message.setText(count==0?WorkspaceText.tr("Нет подходящих файлов или папок"):WorkspaceText.tr("Открыт каталог выбранной среды · ")+count);
     }

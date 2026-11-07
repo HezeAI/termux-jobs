@@ -1649,12 +1649,13 @@ public final class WorkspaceController {
             });
         }));
         dialog.setOnDismissListener(d -> {editorOpen[0]=false;preparationCard.close();password.setText("");geminiApiKey.setText("");}); dialog.show();
-        if(createAgent){dialog.getWindow().getDecorView().findViewWithTag("agent-create-back").setOnClickListener(v->{
-            LinearLayout choices=new LinearLayout(activity);choices.setOrientation(LinearLayout.VERTICAL);choices.setTag("agent-chooser-list");AlertDialog picker=WorkspaceDialogs.builder(activity).setView(choices).create();AgentLaunchForm.creationTitle(picker,tr("Выберите агента","Choose an agent"),false);
-            for(String agent:new String[]{"Codex","Claude","Gemini","OpenCode"}){TextView item=WorkspaceDialogs.action(activity,agent,0);item.setGravity(Gravity.CENTER);choices.addView(item);item.setOnClickListener(x->{chosenAgent[0]=agent.toLowerCase(java.util.Locale.ROOT);updateEnvironment.run();((TextView)dialog.getWindow().getDecorView().findViewWithTag("agent-create-title")).setText(newChatTitle(chosenAgent[0]));dialog.show();AgentLaunchForm.creationWindow(dialog);View page=dialog.getWindow().getDecorView();if(android.animation.ValueAnimator.areAnimatorsEnabled()){page.setTranslationX(activity.getResources().getDisplayMetrics().widthPixels);page.animate().translationX(0).setDuration(260).withEndAction(picker::dismiss).start();}else picker.dismiss();});}
-            picker.setOnCancelListener(x->dialog.cancel());AgentLaunchForm.compactChooser(picker);dialog.hide();picker.show();AgentLaunchForm.compactChooser(picker);dialog.show();View page=dialog.getWindow().getDecorView();if(android.animation.ValueAnimator.areAnimatorsEnabled()){page.animate().translationX(activity.getResources().getDisplayMetrics().widthPixels).setDuration(260).withEndAction(()->{dialog.hide();page.setTranslationX(0);}).start();}else dialog.hide();
-        });}
-        if(createAgent){AgentLaunchForm.creationWindow(dialog);AlertDialog previous=agentChooser;View page=dialog.getWindow().getDecorView();dialog.getWindow().setWindowAnimations(0);if(previous!=null&&previous.isShowing()&&android.animation.ValueAnimator.areAnimatorsEnabled()){page.setTranslationX(activity.getResources().getDisplayMetrics().widthPixels);page.animate().translationX(0).setDuration(260).setInterpolator(new android.view.animation.DecelerateInterpolator()).withEndAction(previous::dismiss).start();dialog.setOnCancelListener(d->{page.animate().cancel();previous.dismiss();});}else if(previous!=null)previous.dismiss();}
+        if(createAgent){
+            AgentLaunchForm.creationWindow(dialog);
+            new AgentCreationSteps(dialog,agentChooser,agent->{
+                chosenAgent[0]=agent;updateEnvironment.run();
+                ((TextView)dialog.getWindow().getDecorView().findViewWithTag("agent-create-title")).setText(newChatTitle(agent));
+            });
+        }
 
     }
     private interface ChatChoice {void chosen(String id,String name,String sourceDirectory);}
@@ -2411,7 +2412,7 @@ public final class WorkspaceController {
         LinearLayout appearance=WorkspaceSettingsPage.group(form,tr("Внешний вид","Appearance"));
         String languageCode=WorkspaceLanguage.choice(activity);
         String languageName=languageCode.equals("ru")?"Русский":languageCode.equals("en")?"English":"System";
-        LinearLayout[] language={null};language[0]=WorkspaceSettingsPage.row(appearance,tr("Язык интерфейса","Interface language"),languageName,0,()->{WorkspacePopover popup=new WorkspacePopover(activity);String[] codes={"system","ru","en"},labels={"System","Русский","English"};for(int i=0;i<codes.length;i++){final String value=codes[i];popup.item(labels[i],0,()->{WorkspaceLanguage.select(activity,value);WorkspaceLanguage.apply(activity);refreshLanguage();});}popup.show(language[0]);});
+        LinearLayout[] language={null};language[0]=WorkspaceSettingsPage.row(appearance,tr("Язык интерфейса","Interface language"),languageName,0,()->{WorkspacePopover popup=new WorkspacePopover(activity).animated();String[] codes={"system","ru","en"},labels={"System","Русский","English"};for(int i=0;i<codes.length;i++){final String value=codes[i];popup.item(labels[i],0,()->{WorkspaceLanguage.select(activity,value);WorkspaceLanguage.apply(activity);refreshLanguage();});}popup.showDropdown(language[0]);});
         WorkspaceSettingsPage.separator(appearance);SessionTextSize.control(appearance,()->{previewChatScale();if(activity.getPreferences()!=null)activity.getTerminalView().setTextSize(SessionTextSize.terminalPixels(activity,activity.getPreferences().getFontSize()));});
         LinearLayout agents=WorkspaceSettingsPage.group(form,tr("Агенты AI","AI agents"));
         WorkspaceSettingsPage.row(agents,tr("Инструкции агентов","Agent instructions"),tr("Общие правила работы выбранного агента","Shared rules for the selected agent"),R.drawable.workspace_commands,()->AgentInstructionsUi.show(activity,currentProfile()));

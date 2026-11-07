@@ -131,10 +131,15 @@ final class ProjectFiles implements AutoCloseable {
     }
     byte[] readOnly(String script,int max)throws Exception{return bytes(script,max);}
     private byte[] bytes(String script,int max) throws Exception {ByteArrayOutputStream out=new ByteArrayOutputStream();run(script,out,max);return out.toByteArray();}
+    static String attachmentMount(WorkspaceStore.Session s,File files){
+        if(!ChatAttachments.supported(s))return "";
+        File root=ChatAttachments.root(files,s);if(!root.isDirectory())return "";
+        String guest=ChatAttachments.prefix(s);return "--bind "+SessionShell.quote(root.getAbsolutePath()+":"+guest.substring(0,guest.length()-1))+" ";
+    }
     static String command(WorkspaceStore.Session s,String script) {
-        String e=environment(s);String bash="bash --noprofile --norc -c "+SessionShell.quote(script);
-        if(e.startsWith("proot:")){String alias=e.substring(6);if(!WorkspaceLocalFilePicker.validAlias(alias))throw new IllegalArgumentException("INVALID_ENVIRONMENT");return "proot-distro "+WorkspaceEnvironments.verb(alias)+" "+(s.prootIsolated?"--isolated ":"")+SessionShell.quote(alias)+" -- /bin/sh -c "+SessionShell.quote(script);}
-        if(e.equals("ubuntu"))return "proot-distro login ubuntu -- /bin/"+bash;
+        String e=environment(s);String mounts=attachmentMount(s,new File(TermuxConstants.TERMUX_FILES_DIR_PATH));String bash="bash --noprofile --norc -c "+SessionShell.quote(script);
+        if(e.startsWith("proot:")){String alias=e.substring(6);if(!WorkspaceLocalFilePicker.validAlias(alias))throw new IllegalArgumentException("INVALID_ENVIRONMENT");return "proot-distro "+WorkspaceEnvironments.verb(alias)+" "+(s.prootIsolated?"--isolated ":"")+mounts+SessionShell.quote(alias)+" -- /bin/sh -c "+SessionShell.quote(script);}
+        if(e.equals("ubuntu"))return "proot-distro login "+mounts+"ubuntu -- /bin/"+bash;
         if(!e.equals("ssh"))return bash;
         if(!SshSessionShell.validHost(s.sshHost)||!SshSessionShell.validUser(s.sshUser)||!SshSessionShell.validPort(s.sshPort))throw new IllegalArgumentException(WorkspaceText.tr("Укажите корректные параметры SSH"));
         String options=" -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=2 -o StrictHostKeyChecking=yes -o ControlMaster=no -o ControlPath=none";

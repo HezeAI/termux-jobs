@@ -20,7 +20,8 @@ final class ChatAttachments {
     static final String GUEST="/tmp/termux-jobs-codex/chat-attachments/";
     static File root(Context c){return new File(CodexSessionShell.socketDirectory(c.getFilesDir()),"chat-attachments");}
     static boolean supported(WorkspaceStore.Session p){return p!=null&&(p.environment.equals("codex")||p.geminiAgent||p.claudeAgent||p.aiAgent.equals("opencode"));}
-    static File root(Context c,WorkspaceStore.Session p){return new File(p!=null&&!p.environment.equals("codex")&&p.geminiAgent?GeminiCli.directory(c.getFilesDir()):p!=null&&!p.environment.equals("codex")&&p.claudeAgent?ClaudeCode.directory(c.getFilesDir()):p!=null&&!p.environment.equals("codex")&&p.aiAgent.equals("opencode")?AiAgents.directory(c.getFilesDir()):CodexSessionShell.socketDirectory(c.getFilesDir()),"chat-attachments");}
+    static File root(Context c,WorkspaceStore.Session p){return root(c.getFilesDir(),p);}
+    static File root(File files,WorkspaceStore.Session p){return new File(p!=null&&!p.environment.equals("codex")&&p.geminiAgent?GeminiCli.directory(files):p!=null&&!p.environment.equals("codex")&&p.claudeAgent?ClaudeCode.directory(files):p!=null&&!p.environment.equals("codex")&&p.aiAgent.equals("opencode")?AiAgents.directory(files):CodexSessionShell.socketDirectory(files),"chat-attachments");}
     static String prefix(WorkspaceStore.Session p){return p!=null&&!p.environment.equals("codex")&&p.geminiAgent?GeminiCli.GUEST+"/chat-attachments/":p!=null&&!p.environment.equals("codex")&&p.claudeAgent?ClaudeCode.GUEST+"/chat-attachments/":p!=null&&!p.environment.equals("codex")&&p.aiAgent.equals("opencode")?"/tmp/termux-jobs-ai/chat-attachments/":GUEST;}
     static String type(String name)throws IOException{
         String n=name.toLowerCase(Locale.ROOT);
@@ -140,6 +141,9 @@ final class ChatAttachments {
         MessageDigest digest=MessageDigest.getInstance("SHA-256");byte[] buffer=new byte[65536];
         try(InputStream in=new FileInputStream(file)){int n;while((n=in.read(buffer))!=-1){if(Thread.currentThread().isInterrupted())throw new InterruptedIOException();digest.update(buffer,0,n);}}
         return WorkspaceUpdates.hex(digest.digest());
+    }
+    static File managedFile(Context c,WorkspaceStore.Session profile,String path)throws IOException {
+        String prefix=prefix(profile);return path.startsWith(prefix)?inside(root(c,profile),path.substring(prefix.length())):null;
     }
     static File materialize(Context c,WorkspaceStore.Session profile,JSONObject a)throws Exception{
         String path=a.getString("path");File root=root(c,profile);String guestPrefix=prefix(profile);boolean apk=a.optString("type").equals("apk");
