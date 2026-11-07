@@ -4,7 +4,7 @@ import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
 
-/** Wraps at natural widths, keeping the model, microphone and send action together. */
+/** Wraps at natural widths, keeping the model, reserved clearance and send action together. */
 final class ComposerActionLayout extends ViewGroup {
     private View rightStart;
     ComposerActionLayout(Context c){super(c);}

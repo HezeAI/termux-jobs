@@ -1,3 +1,6 @@
+> Исторический отчёт1507. Пользователь отменил голосовой ввод; в1508 он удалён.
+> Это не инструкция включения или загрузки моделей. [Текущее изменение](VALIDATION-2.1.5-test13.md).
+
 # Offline field dictation — investigation and private test12
 
 ## Confirmed system-provider failure

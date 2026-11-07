@@ -47,6 +47,13 @@ final class WorkspaceDialogs {
     }
     static void editorWindow(AlertDialog dialog){if(dialog.getWindow()==null)return;if((dialog.getWindow().getAttributes().flags&android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)!=0)dialog.getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);int mode=(dialog.getWindow().getAttributes().softInputMode&android.view.WindowManager.LayoutParams.SOFT_INPUT_MASK_STATE)|android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;if(dialog.getWindow().getAttributes().softInputMode!=mode)dialog.getWindow().setSoftInputMode(mode);}
     static WorkspaceIconButton headerButton(Context c,int icon,String label,Runnable action){WorkspaceIconButton button=new WorkspaceIconButton(c);button.setIcon(c.getDrawable(icon),dp(c,21));button.setMinWidth(dp(c,48));button.setMinHeight(dp(c,48));button.setContentDescription(label);button.setTooltipText(label);button.setOnClickListener(v->action.run());headerState(button,false);return button;}
+    static void headerAttention(WorkspaceIconButton button,WorkspaceTransferBorder border){
+        Context c=button.getContext();GradientDrawable circle=new GradientDrawable();circle.setShape(GradientDrawable.OVAL);circle.setColor(SURFACE);circle.setStroke(dp(c,1),LINE);
+        android.graphics.drawable.LayerDrawable content=new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{circle,border});
+        // Install a single ripple root. Wrapping the current background afterward
+        // lets View.setBackground clear the child callback owned by that wrapper.
+        button.setBackground(WorkspaceRipple.background(c,content,24));border.follow(button);
+    }
     static void headerState(TextView button,boolean selected){button.setSelected(selected);button.setTextColor(selected?BG:TEXT);GradientDrawable circle=new GradientDrawable();circle.setShape(GradientDrawable.OVAL);circle.setColor(selected?ACCENT:SURFACE);circle.setStroke(dp(button.getContext(),1),selected?ACCENT:LINE);button.setBackground(WorkspaceRipple.background(button.getContext(),circle,24));}
     /** Arm IME before EditText processes the first down, rather than after its first focus-taking click. */
     static void firstTouchEditor(android.widget.EditText editor,Runnable prepare){

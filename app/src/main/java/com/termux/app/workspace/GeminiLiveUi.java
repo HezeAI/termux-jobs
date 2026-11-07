@@ -71,16 +71,18 @@ final class GeminiLiveUi {
     private String state(){if(status==null)return tr("подключение…","connecting…");if(!status.available)return tr("нет подключения","disconnected");
         switch(status.state){case "idle":return tr("готов","ready");case "responding":return tr("отвечает","responding");case "waiting_for_confirmation":return tr("ожидает подтверждения","awaiting confirmation");default:return tr("нет подключения","disconnected");}}
     void syncPermissionVisibility(){permissions.syncVisibility();}
+    private String modelValue(){return AgentStatusUi.current(activity,status!=null&&status.available?status.model:"");}
+    private String reasoningValue(){return AgentStatusUi.reasoning(activity,status!=null&&status.available&&status.thinkingEffective?status.thinking:"");}
     private void update(){WorkspaceStore.Session active=current.get();if(active!=null)permissions.update(active,status);else permissions.syncVisibility();if(chip==null)return;String text="Gemini · "+(status==null||!status.available?tr("нет данных","unavailable"):status.model)+"\n"+state()+(status!=null&&status.available?" · "+GeminiRightsUi.label(status.mode):"")+(status!=null&&status.changeState.equals("queued")?tr(" · смена модели ожидает"," · model change queued"):"")+" ›";
-        if(AgentStatusUi.compact(chip))text=status==null||!status.available?tr("Нет данных","No data"):status.model;
+        if(AgentStatusUi.compact(chip))text=modelValue()+(status!=null&&!status.thinkingOptions.isEmpty()?" · "+reasoningValue():"");
         if(!text.contentEquals(chip.getText()))chip.setText(text);
         if(detailsContext!=null&&owns(detailsRun))detailsContext.present(status==null?null:status.context);
         if(detailsDialog!=null&&detailsDialog.isShowing()){
             if(!owns(detailsRun)){detailsDialog.dismiss();return;}
             WorkspaceStore.Session profile=current.get();boolean available=status!=null&&status.available;
-            detailsModel.setText(tr("Модель: ","Model: ")+(available?status.model:tr("нет данных","unavailable"))+" ›");AgentStatusUi.available(detailsModel,available);
+            detailsModel.setText(tr("Модель: ","Model: ")+modelValue()+" ›");AgentStatusUi.available(detailsModel,available);
             detailsMode.setText(tr("Действующий режим: ","Active mode: ")+(available&&!status.mode.isEmpty()?GeminiRightsUi.label(status.mode):tr("нет данных","unavailable"))+" ›");AgentStatusUi.available(detailsMode,available&&status.canChangeMode);
-            detailsThinking.setVisibility(status!=null&&!status.thinkingOptions.isEmpty()?android.view.View.VISIBLE:android.view.View.GONE);detailsThinking.setText(tr("Рассуждения: ","Reasoning: ")+(available?(status.thinkingEffective?AgentStatusUi.level(activity,status.thinking):tr("По умолчанию CLI","CLI default")):tr("нет данных","unavailable"))+" ›");AgentStatusUi.available(detailsThinking,available&&status.canChangeThinking&&status.state.equals("idle"));
+            detailsThinking.setVisibility(status!=null&&status.canChangeThinking&&!status.thinkingOptions.isEmpty()?android.view.View.VISIBLE:android.view.View.GONE);detailsThinking.setText(tr("Рассуждение: ","Reasoning: ")+reasoningValue()+" ›");AgentStatusUi.available(detailsThinking,available&&status.canChangeThinking&&status.state.equals("idle"));
             String latest=detailsSummary()+(available&&!status.canChangeThinking?"\n\n"+tr("Выбор рассуждений для этой модели пока недоступен. Используются настройки CLI.","Reasoning selection is unavailable for this model. CLI settings are used."):"");if(!latest.contentEquals(detailsInfo.getText()))detailsInfo.setText(latest);
         }
     }

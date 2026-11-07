@@ -1,4 +1,45 @@
-# Текущая выдача — основной1507/test12
+# Текущая выдача — основной1508/test13
+
+[Карта/проверки](docs/fork/VALIDATION-2.1.5-test13.md).
+APK /sdcard/Download/Termux-Jobs-v2.1.5-test13-arm64.apk, 40612510байт.
+SHA256 56d7bf648863a39f2892b8a0fc1a1bf85b8acaa2bf5aad5dcac4f81f560c8944.
+
+Голос полностью удалён из приложения по новому заданию: микрофон, Vosk/JNA,
+model ZIP, код/скрипт загрузки/распознавания и RECORD_AUDIO/queries. Вынос моделей
+в GitHub Components отменён. Старые файлы privatecache удаляются только по полному
+manifest/hash/marker; неизвестное сохраняется. Прежнее место модели/рассуждения
+сохранено пассивным44.5dp промежутком; ComposerLimits не менялся.
+
+Нужна именно прежняя «змейка» CW по круглой обводке, НЕ пульсация значка.
+WorkspaceIconButton рисование прежнее. Причина зависания воспроизведена: оборачивание
+текущего background в новый ripple отключало callback/visibility прежнего фона.
+Теперь headerAttention сразу делает один ripple-root с кругом/обводкой; follow(View)
+ведёт phase через ValueAnimator/INFINITE/2sec и invalidate кнопки. Возврат/ожидание/
+reduced motion обработаны. Android Canvas подтвердил CW-геометрию; это не запись UI.
+
+X11 stop pending/grey/spinner, per-owner guards, error/timeout/retry, success после
+подтверждения/отключения своего сервиса. Старый service shutdown/7native неизменны.
+Все4модели показывают текущие значения; unsupported Gemini reasoning скрыт даже
+при metadata options. Меню«+»:24sp/36dp/88dp и18dp padding, ограничение экрана/scroll.
+
+120тестов0fail/error/skip в18классах. После одной дополнительной capability-проверки
+Gemini повторены13целевых тестов,0fail/error/skip; прогоны пересекаются. Другие
+результаты120 переиспользованы с source-delta proof. Lint5modules0errors/274warnings,
+checker8/0. APK ZIP/package/version/cert/ABI/runtime/126assets/7ELF — PASS;
+616production files совпали по3stages. Доказательства .verification/test-2.1.5-test13.
+Промежуточные отказы/ограничения старого Robolectric clock сохранены в отчёте.
+
+Телефонная приёмка и запись исправленного UI НЕ выполнены. Присланный ролик
+подтвердил исходное замирание, но не исправление. screenrecord из текущего доступа
+вернул exit254 ERROR: no display; это не отсутствие записи на самом телефоне.
+Следующий шаг пользователя: вручную установить APK и записать6–10сек движения
+без касаний, возврат/окончание ожидания; отдельно проверить X11 stop, модели/меню/IME.
+Автоматической установки, публикации, push/tags, рабочих остановок/перезапусков нет.
+Резерв1499 не читать/не менять/не пересобирать. Прежние APK сохранить.
+
+---
+
+# Предыдущая выдача — основной1507/test12
 
 [Карта/проверки](docs/fork/VALIDATION-2.1.5-test12.md),
 [подтверждённая причина/новый offline backend](docs/fork/DICTATION-OFFLINE-2026-11-07.md).

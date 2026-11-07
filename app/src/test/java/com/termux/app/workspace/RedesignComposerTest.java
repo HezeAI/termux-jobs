@@ -18,18 +18,9 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class) @Config(sdk=28,application=Application.class)
 public class RedesignComposerTest {
     public static class SpeechActivity extends Activity {int launches;Intent sent;boolean denied;@Override public void startActivityForResult(Intent intent,int request){if(denied)throw new SecurityException();launches++;sent=intent;}}
-    @Test public void dictationOnlyEditsUnchangedOwnerDraftAndNeverSends(){
-        SpeechActivity a=Robolectric.buildActivity(SpeechActivity.class).setup().get();AgentSpeechServiceTest.configure(a);EditText input=new EditText(a);input.setText("before ");String[] owner={"first"};List<String> notices=new ArrayList<>();AgentSpeechServiceTest.Engine engine=new AgentSpeechServiceTest.Engine();AgentDictation voice=new AgentDictation(a,input,()->owner[0],notices::add,engine);
-        voice.start();voice.start();assertEquals(0,a.launches);assertEquals("before ",input.getText().toString());
-        engine.listener.result("hello 😀");assertEquals("before hello 😀",input.getText().toString());
-        voice.start();voice.clear();assertEquals("before hello 😀",input.getText().toString());
-        voice.start();owner[0]="second";engine.listener.result("wrong");assertEquals("before hello 😀",input.getText().toString());
-        voice.start();input.setText("edited");engine.listener.result("discard");assertEquals("edited",input.getText().toString());
-        assertEquals(0,a.launches);a.finish();
-    }
     @Test public void composerWrapsLargeActionsWithoutLosingDraftAndKeepsStopAboveSend(){
         Activity a=Robolectric.buildActivity(Activity.class).setup().get();LinearLayout root=new LinearLayout(a);EditText input=new EditText(a);input.setMinHeight(48);input.setMaxLines(6);input.setText("one\ntwo\nthree");input.setSelection(2);TextView star=new TextView(a),send=new TextView(a);send.setText("Send");send.setMinHeight(48);send.setMinWidth(48);WorkspaceIconButton clip=new WorkspaceIconButton(a);View stop=new View(a);LinearLayout status=new LinearLayout(a);TextView model=new TextView(a);model.setText("a long model name and reasoning");model.setTextSize(24);status.addView(model);
-        AgentComposerControls c=new AgentComposerControls(a,root,input,star,send,clip);c.actions(status,stop,()->{},()->{},n->{},v->{},v->{});c.present(true);a.setContentView(root);
+        AgentComposerControls c=new AgentComposerControls(a,root,input,star,send,clip);c.actions(status,stop,()->{},n->{},v->{},v->{});c.present(true);a.setContentView(root);
         for(int width:new int[]{280,360,740,280}){root.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(900,View.MeasureSpec.AT_MOST));root.layout(0,0,width,root.getMeasuredHeight());assertTrue(send.getWidth()>0);assertTrue(send.getHeight()>=44);assertTrue(input.getWidth()>0);assertTrue(c.pair.getTop()>=input.getBottom());assertEquals("one\ntwo\nthree",input.getText().toString());assertEquals(2,input.getSelectionStart());}
         c.present(false);c.present(true);assertEquals("one\ntwo\nthree",input.getText().toString());assertEquals(2,input.getSelectionStart());a.finish();
     }

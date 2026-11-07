@@ -39,7 +39,7 @@ final class WorkspaceLocalFilePicker implements AutoCloseable {
     }
     void chooseChatAttachments(android.view.View anchor,WorkspaceStore.Session project,int limit,java.util.function.BiConsumer<WorkspaceStore.Session,List<ProjectFiles.Entry>> choice,Runnable gallery){
         if(closed)return;if(attachmentMenu!=null){attachmentMenu.dismiss();return;}chatLimit=limit;final int epoch=++selectionEpoch;
-        WorkspacePopover menu=new WorkspacePopover(activity).rise();attachmentMenu=menu;
+        WorkspacePopover menu=new WorkspacePopover(activity).largeItems().rise();attachmentMenu=menu;
         java.util.function.IntConsumer select=kind->{
             if(closed||epoch!=selectionEpoch)return;
             if(kind==0){gallery.run();return;}

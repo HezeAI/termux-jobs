@@ -151,4 +151,4 @@ rights; component distribution does not imply official endorsement.
 AI development assistance: OpenAI Codex
 
 
-Private test12 adds app-owned offline Russian field dictation (Vosk), shared by all four agent chats. Real microphone acceptance is pending phone testing. [Investigation, model size and limitations](docs/fork/DICTATION-OFFLINE-2026-11-07.md).
+Private test13 removes voice input and its models/permission, restores the clockwise terminal-attention segment, adds desktop-stop feedback, shows current model/reasoning values and enlarges attachment-menu items. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test13.md).

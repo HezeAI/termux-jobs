@@ -1,0 +1,16 @@
+{
+  "vosk-model-small-ru-0.22/graph/phones/word_boundary.int": "23081404fe1cc7338c013a4beec133637147d60472c06ab64ff88ee3d028a7b5",
+  "vosk-model-small-ru-0.22/graph/Gr.fst": "189b4f67c69eb34b9d8b47b12f184665e5445667ca5264579b61c6b9eb2cef1e",
+  "vosk-model-small-ru-0.22/graph/HCLr.fst": "0b096f4676f306aa3e60d2244ef1e24c5c699b8794acf3c3946b59bcc9dca831",
+  "vosk-model-small-ru-0.22/graph/disambig_tid.int": "c3af3dbc5eb301c4b282480d785c04b1642a8db83210a12332e9790e50146fd2",
+  "vosk-model-small-ru-0.22/am/final.mdl": "36d67b53dc90d96ea48097f9e17e7c5937689ad76cb8bed25091317bbaf25919",
+  "vosk-model-small-ru-0.22/README": "b662517cacda14945e159538d6dd8faff23bd706e024c4fb338b6013c9939b9e",
+  "vosk-model-small-ru-0.22/conf/model.conf": "dd7178da0e99fdbe489816c1e9702c3daa28e02accacc2993e0becb7af33b80c",
+  "vosk-model-small-ru-0.22/conf/mfcc.conf": "1e2228006d01d805ad1c267fee9f79709ca87ac51bd82b0e3f5c69ba543f0fc4",
+  "vosk-model-small-ru-0.22/ivector/final.dubm": "7dffe22bd992d7274fba925632bded4756d82dfd9b962d3c703110251fdf35b8",
+  "vosk-model-small-ru-0.22/ivector/global_cmvn.stats": "c600cbf4acfbfac99d587040d48dc31129cd635b112ff15bfa2e9d3b0cece1f8",
+  "vosk-model-small-ru-0.22/ivector/final.ie": "94f2558d00fe199ac01409281352eb16707ec075baaf9cc0d7b53011583cfa0e",
+  "vosk-model-small-ru-0.22/ivector/final.mat": "956577d396b636fe359b4321f10df5ed6a76bdfdec366b4a2b7d3242e524f04f",
+  "vosk-model-small-ru-0.22/ivector/splice.conf": "9f0c5f7c82d18eaf25d8bce470efa9f7741f88411fe428774bc0a9bb69a24756",
+  "vosk-model-small-ru-0.22/ivector/online_cmvn.conf": "a2f3571754b64297cb7efb2e7ca3df61995c5a45fcbb97188f90613552bb2dfe"
+}

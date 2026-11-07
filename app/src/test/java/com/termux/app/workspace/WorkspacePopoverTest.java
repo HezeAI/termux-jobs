@@ -29,4 +29,8 @@ public class WorkspacePopoverTest {
   try{menu=new WorkspacePopover(a).rise();menu.item("Photo",com.termux.R.drawable.workspace_image_frame,()->{});menu.show(anchor(400));View panel=popup().getContentView();assertEquals(1,panel.getAlpha(),.001);assertEquals(0,panel.getTranslationY(),.001);assertEquals(1,((LinearLayout)((ScrollView)panel).getChildAt(0)).getChildAt(0).getAlpha(),.001);menu.dismiss();assertFalse(menu.isShowing());}finally{scale.invoke(null,1f);}
  }
 
+ @Test public void enlargedAttachmentRowsKeepDoubleMetricsAndScrollWithinKeyboardSpace()throws Exception{
+  menu=new WorkspacePopover(a).largeItems().rise();for(int i=0;i<4;i++)menu.item("Файлы окружений с длинной подписью",com.termux.R.drawable.workspace_image_frame,()->{});menu.show(anchor(150));PopupWindow w=popup();assertTrue(w.getWidth()<=360-WorkspaceDialogs.dp(a,16));assertTrue(w.getHeight()<=150-24-WorkspaceDialogs.dp(a,14));ScrollView panel=(ScrollView)w.getContentView();LinearLayout rows=(LinearLayout)panel.getChildAt(0);assertEquals(4,rows.getChildCount());for(int i=0;i<4;i++){TextView row=(TextView)rows.getChildAt(i);assertEquals(24f,row.getTextSize()/a.getResources().getDisplayMetrics().scaledDensity,.001);assertEquals(WorkspaceDialogs.dp(a,88),row.getMinHeight());assertEquals(WorkspaceDialogs.dp(a,36),row.getCompoundDrawables()[0].getBounds().width());assertEquals(WorkspaceDialogs.dp(a,18),row.getPaddingTop());assertTrue(row.isClickable());}menu.dismissImmediately();
+ }
+
 }

@@ -53,4 +53,21 @@ public class RedesignDesktopOwnershipTest {
   Field f=WorkspaceDesktop.class.getDeclaredField("calls");f.setAccessible(true);((ExecutorService)f.get(ui)).submit(()->{}).get(3,TimeUnit.SECONDS);
   assertEquals(1,calls.size());assertEquals("stop",calls.get(0).getString("op"));assertEquals("one:h1",calls.get(0).getString("owner"));assertEquals("debian",calls.get(0).getString("target"));assertEquals("h1",first.handle);assertEquals("h2",other.handle);
  }
+ private String debugStop()throws Exception{StringBuilder text=new StringBuilder();for(String n:new String[]{"stoppingOwner","stoppingTarget","stoppingRemote"}){Field f=WorkspaceDesktop.class.getDeclaredField(n);f.setAccessible(true);text.append(n).append('=').append(f.get(ui)).append(' ');}return text+"state="+state+" calls="+calls;}
+ private void drainCalls()throws Exception{Field f=WorkspaceDesktop.class.getDeclaredField("calls");f.setAccessible(true);((ExecutorService)f.get(ui)).submit(()->{}).get(3,TimeUnit.SECONDS);Shadows.shadowOf(Looper.getMainLooper()).idle();}
+ @Test public void stopRemainsPendingAcrossStoppingSnapshotAndCompletesOnlyOnDisconnect()throws Exception{
+  ui.stopDesktop(first);ShadowAlertDialog.getLatestAlertDialog().getButton(-1).performClick();Shadows.shadowOf(Looper.getMainLooper()).idle();assertTrue("Pending after confirm: "+debugStop(),ui.stopping(first));assertFalse(ui.owns(other));ui.stopDesktop(first);drainCalls();assertEquals(1,calls.stream().filter(b->"stop".equals(b.getString("op"))).count());assertEquals("h1",first.handle);
+  Bundle stopping=new Bundle(state);stopping.putString("phase","stopping");stopping.putBoolean("started",false);Method accept=WorkspaceDesktop.class.getDeclaredMethod("accept",Bundle.class);accept.setAccessible(true);accept.invoke(ui,stopping);assertTrue("Pending after confirm: "+debugStop(),ui.stopping(first));
+  Field f=WorkspaceDesktop.class.getDeclaredField("connection");f.setAccessible(true);((android.content.ServiceConnection)f.get(ui)).onServiceDisconnected(new android.content.ComponentName("fixture","fixture.Service"));assertFalse(ui.stopping(first));assertFalse(ui.usesDesktop(first));assertEquals("h1",first.handle);
+ }
+ @Test public void stopRpcFailureRestoresRetryAndKeepsSelectedTerminal()throws Exception{
+  set("remote",new Binder(){@Override protected boolean onTransact(int c,Parcel d,Parcel r,int flags){throw new IllegalStateException("fixture ownership changed");}});ui.stopDesktop(first);ShadowAlertDialog.getLatestAlertDialog().getButton(-1).performClick();Shadows.shadowOf(Looper.getMainLooper()).idle();drainCalls();assertFalse(ui.stopping(first));assertTrue(ui.owns(first));assertEquals("h1",first.handle);
+ }
+ @Test public void stoppingRowIsDisabledAndOnlyHiddenAfterConfirmation(){TextView row=new TextView(activity);DesktopStopAction view=new DesktopStopAction(row);view.update(true,false,true,1);assertEquals(android.view.View.VISIBLE,row.getVisibility());assertFalse(row.isEnabled());assertTrue(row.getText().toString().contains("…"));assertNotNull(row.getCompoundDrawables()[0]);view.update(false,true,true,1);assertTrue(row.isEnabled());view.update(false,false,false,0);assertEquals(android.view.View.GONE,row.getVisibility());}
+
+ @Test public void internalPreparationStopFailureRetainsItsOriginalErrorPath()throws Exception{
+  set("preparationProfile",first);set("preparationCancelling",true);set("remote",new Binder(){@Override protected boolean onTransact(int code,Parcel d,Parcel r,int flags){d.enforceInterface(com.termux.x11.X11Remote.DESCRIPTOR);calls.add(d.readBundle(getClass().getClassLoader()));throw new IllegalStateException("fixture preparation stop failed");}});
+  Method send=WorkspaceDesktop.class.getDeclaredMethod("send",String.class,WorkspaceStore.Session.class);send.setAccessible(true);send.invoke(ui,"stop",first);drainCalls();assertFalse(ui.stopping(first));Field f=WorkspaceDesktop.class.getDeclaredField("state");f.setAccessible(true);assertEquals("error",((Bundle)f.get(ui)).getString("phase"));assertEquals(1,calls.size());assertEquals("stop",calls.get(0).getString("op"));assertEquals("h1",first.handle);
+ }
+
 }

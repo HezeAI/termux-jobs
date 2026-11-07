@@ -48,6 +48,7 @@ final class WorkspaceDesktops {
  void observeExisting(WorkspaceStore.Session p){WorkspaceDesktop c=channel(p,true);if(c!=null)c.observeExisting(p);}
  boolean running(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));return c!=null&&c.running(p);}
  void openExisting(){WorkspaceDesktop c=current(false);if(c!=null)c.openExisting(selected.get());}
+ boolean stopping(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));return c!=null&&c.stopping(p);}
  boolean usesDesktop(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));return c!=null&&c.usesDesktop(p);}
  int ownerCount(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));return c==null?0:c.ownerCount();}
  void stopDesktop(WorkspaceStore.Session p){WorkspaceDesktop c=channels.get(WorkspaceDesktop.target(p));if(c!=null)c.stopDesktop(p);}
