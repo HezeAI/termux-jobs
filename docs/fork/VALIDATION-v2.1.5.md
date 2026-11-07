@@ -125,3 +125,19 @@ and remaining limits. Public download verification is performed after publicatio
 its local evidence is kept under `.verification/release-v2.1.5/` with initial failures,
 Lint reports, source inventories and checksums. This report alone does not assert
 that a still-unpublished asset has already been downloaded publicly.
+
+### Publication completed — 2026-11-07
+
+Published [v2.1.5](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.5)
+from `61e40cef03d0a748f4ccb3c756e1937c168538c3`; rollback tag points to
+`2352ee808ad23203e92195be60a00e1d3c82b5c5`. All eight release assets were downloaded
+anonymously and matched the prepared bytes/checksums. Both public APKs passed
+signature/package/version/ZIP checks again. Latest-stable metadata targets only
+main code 1520. Tagged documents, release links/body/credit and rollback source
+were checked. Previous stable assets and all eight Components releases are unchanged.
+
+The first download-check script retained a v2.1.4 version-name assertion. It stopped
+after successfully comparing downloaded bytes. Correcting that checker literal
+allowed the same downloaded files to pass; no public APK or metadata was replaced.
+The original checker error is retained locally. This post-publication clarification
+does not move either release tag, rebuild binaries or change updater metadata.
