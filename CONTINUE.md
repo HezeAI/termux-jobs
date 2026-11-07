@@ -1,3 +1,21 @@
+# Дополнение — готов fake-Claude для проверки PNG
+
+Пользователь явно запросил прежний fake-login стенд. Он подготовлен и native-проверен.
+[Инструкция и доказательства](docs/fork/CLAUDE-IMAGE-PHONE-FIXTURE.md).
+НовыйClaude/Sonnet/manual/UbuntuAI; папка:
+/root/termux-fork/.verification/claude-image-phone/project
+Команда подключения (исполняемыйпуть безаргументов):
+/root/termux-fork/.verification/claude-image-phone/launch-claude
+Сообщение IMAGE TEST. Нужен Allowonce для fixturePython, затем nativeReadPNG.
+Fakeprovider получил1imageblock; snapshot1imageaction/completed/exactpath; stopACK/processExited.
+Kernelguard проверен заново. UI проверяет пользователь; реальнаяавторизация не нужна.
+/root/termux-fork/.verification/claude-image-phone — symlink на собственныйfixture;
+код .verification/claude-image-fixture-code. НЕ очищать, пользователь будет запускать.
+/sdcard/Download/Claude-fake-image-test.txt заменяет прежнююинструкцию с реальнымвходом.
+Новая сборка не нужна;1514 остаётся текущей. СтарыйPNGдругоготелефона не получен.
+
+---
+
 # Текущая выдача — основной1514/test19
 
 [Карта/проверки](docs/fork/VALIDATION-2.1.5-test19.md).
