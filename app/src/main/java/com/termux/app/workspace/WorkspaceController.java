@@ -533,7 +533,7 @@ public final class WorkspaceController {
         libraryContent=new FrameLayout(activity);libraryContent.setTag("library-sheet-content");
         String title=section<0?tr("История поля ввода","Input history"):section==2?tr("Заметки","Notes"):section==1?"Aliases":tr("Команды","Commands");
         AlertDialog dialog=WorkspaceDialogs.builder(activity).setView(libraryContent).create();libraryWindow=dialog;
-        AgentLaunchForm.title(dialog,title,false);dialog.setOnDismissListener(d->libraryClosed(dialog));
+        AgentLaunchForm.title(dialog,title,false,true);dialog.setOnDismissListener(d->libraryClosed(dialog));
         WorkspaceDialogs.centerLibrary(dialog);renderLibraryWindow();libraryContent.setMinimumHeight(libraryHeight());dialog.show();WorkspaceDialogs.editorWindow(dialog);resizeLibraryWindow();
         dialog.getWindow().getDecorView().addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->resizeLibraryWindow());
     }
@@ -698,16 +698,16 @@ public final class WorkspaceController {
     }
 
     private void home(LinearLayout body) {
-        body.addView(text(tr("История отправки в терминал и чат агента","History of submissions to the terminal and agent chat"),13,MUTED));
         TextView clear = button(WorkspaceText.tr("Очистить"), false, () -> {
             if (!store.isWritable()) { activity.showToast(WorkspaceText.tr("Журнал недоступен для записи"), true); return; }
             confirm(tr("Очистить историю поля ввода?", "Clear input history?"), () -> { store.clearRecentCommands(); renderContent(); });
         });
         clear.setTag("input-history-clear");clear.setEnabled(!store.recentCommands.isEmpty());
         clear.setAlpha(clear.isEnabled()?1f:.5f);clear.setTextColor(ACCENT);
-        // Preserve the former section row geometry without its duplicate title.
-        LinearLayout historyActions=row();historyActions.setPadding(0,dp(22),0,dp(10));historyActions.setMinimumHeight(dp(80));
-        historyActions.addView(new View(activity),new LinearLayout.LayoutParams(0,0,1));
+        // Keep the explanation and compact clear action in one vertically centered row.
+        LinearLayout historyActions=row();historyActions.setPadding(0,0,0,dp(10));historyActions.setMinimumHeight(dp(58));
+        TextView historyDescription=text(tr("История отправки в терминал и чат агента","History of submissions to the terminal and agent chat"),13,MUTED);historyDescription.setTag("input-history-description");historyDescription.setPadding(0,0,dp(8),0);
+        historyActions.addView(historyDescription,new LinearLayout.LayoutParams(0,-2,1));
         historyActions.addView(clear,new LinearLayout.LayoutParams(-2,-2));body.addView(historyActions);
         EditText search = field(WorkspaceText.tr("Поиск по журналу"), journalQuery, false);
         search.setContentDescription(WorkspaceText.tr("Поиск по журналу"));
@@ -1181,10 +1181,6 @@ public final class WorkspaceController {
         CheckBox scope=new CheckBox(activity);scope.setText(tr("Работать только в пределах проекта · недоступно","Work only within the project · unavailable"));scope.setTextColor(MUTED);scope.setEnabled(false);scope.setChecked(false);form.addView(scope);
         form.addView(text(tr("Для этого агента ограничение папкой не реализовано в нашей среде Android/proot. Рабочий каталог не является защитной границей; действуют штатные права агента.","Project-folder enforcement is not implemented for this agent in our Android/proot environment. The working directory is not a security boundary; native agent permissions apply."),12,MUTED));
     }
-    private TextView agentDetails(LinearLayout form,String tag){
-        TextView details=text("",12,MUTED);details.setTag(tag);details.setVisibility(View.GONE);
-        TextView toggle=button(tr("Подробности ▾","Details ▾"),false,()->details.setVisibility(details.getVisibility()==View.GONE?View.VISIBLE:View.GONE));toggle.setTag(tag+"-toggle");form.addView(toggle);form.addView(details);return details;
-    }
     private void editSession(WorkspaceStore.Session existing) { editSession(existing, true); }
     private void editSession(WorkspaceStore.Session existing,boolean launchAfterSave){editSession(existing,launchAfterSave,"termux","codex");}
     private String newChatTitle(String agent){String name=agent.equals("opencode")?"OpenCode":agent.equals("claude")?"Claude":agent.equals("gemini")?"Gemini":"Codex";return tr("Новый чат (","New chat (")+name+")";}
@@ -1312,7 +1308,6 @@ public final class WorkspaceController {
                 AlertDialog picker=WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("ID чата Gemini CLI")).setView(id).setPositiveButton(WorkspaceText.tr("Выбрать"),null).setNegativeButton(WorkspaceText.tr("Отмена"),null).create();
                 picker.setOnShowListener(x->picker.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(y->{String value=id.getText().toString().trim();if(!GeminiCli.validThread(value)){id.setError(WorkspaceText.tr("Некорректный ID"));return;}geminiThread[0]=value;geminiTitle[0]="";geminiChat[0]="id";updateGemini.run();picker.dismiss();}));picker.show();
             }).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
-        agentDetails(geminiFields,"gemini-launch-details").setText(tr("При запуске проверяем компоненты Gemini в выбранной среде и предлагаем установить недостающее. Выберите Gemini API-ключ или Vertex AI с отдельной авторизацией Google Cloud. История привязана к каталогу проекта; для продолжения выберите прежний каталог.","Launch checks Gemini components in the selected environment and offers to install missing items. Choose a Gemini API key or Vertex AI with separate Google Cloud authentication. History is tied to the project directory; choose the previous directory to resume."));
         LinearLayout claudeFields=column();agentFields.addView(claudeFields);
         String[] claudePrevious={draft.claudeOrdinaryMode};
         String[] claudeModel={draft.claudeModel},claudeMode={draft.claudeMode},claudeChat={draft.claudeChat},claudeThread={draft.claudeThread};
@@ -1326,7 +1321,7 @@ public final class WorkspaceController {
         String[] claudeTitle={""};
         Runnable updateClaude=()->{
             claudeModelButton.setText(WorkspaceText.tr("Модель: ")+(claudeModel[0].isEmpty()?WorkspaceText.tr("По умолчанию"):claudeModel[0]));
-            claudeModeButton.setText(tr("Права: ","Permissions: ")+claudeModeNames[java.util.Arrays.asList(claudeModes).indexOf(claudeMode[0])]);
+            claudeModeButton.setText(tr("Права: ","Permissions: ")+claudeModeNames[java.util.Arrays.asList(claudeModes).indexOf(ClaudePermissions.ordinary(claudeMode[0])?claudeMode[0]:claudePrevious[0])]);
             claudeAccessDetails.setText(claudeModeDescriptions[java.util.Arrays.asList(claudeModes).indexOf(claudeMode[0])]);
             claudeChatButton.setText(WorkspaceText.tr("Чат: ")+(claudeChat[0].equals("new")?WorkspaceText.tr("Новый чат"):claudeChat[0].equals("choose")?WorkspaceText.tr("Выбрать чат"):(claudeTitle[0].isEmpty()?claudeThread[0]:claudeTitle[0])));
         };updateClaude.run();
@@ -1342,7 +1337,6 @@ public final class WorkspaceController {
                 AlertDialog picker=WorkspaceDialogs.builder(activity).setTitle(WorkspaceText.tr("ID чата Claude Code")).setView(id).setPositiveButton(WorkspaceText.tr("Выбрать"),null).setNegativeButton(WorkspaceText.tr("Отмена"),null).create();
                 picker.setOnShowListener(x->picker.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(y->{String value=id.getText().toString().trim();if(!ClaudeCode.validThread(value)){id.setError(WorkspaceText.tr("Некорректный ID"));return;}claudeThread[0]=value;claudeTitle[0]="";claudeChat[0]="id";updateClaude.run();picker.dismiss();}));picker.show();
             }).setNegativeButton(WorkspaceText.tr("Отмена"),null).show());
-        agentDetails(claudeFields,"claude-launch-details").setText(WorkspaceText.tr("Claude Code запускается в Ubuntu. Компоненты устанавливаются при первом запуске в отдельный каталог. Нужна подписка Claude или оплачиваемый API; ChatGPT Plus не подходит. Авторизация и история отдельные. «Выбрать чат» открывает список локальной истории Claude. Доступность моделей зависит от аккаунта."));
         LinearLayout openCodeFields=column();agentFields.addView(openCodeFields);
         CheckBox aiProjectScope=new CheckBox(activity);aiProjectScope.setText(tr("Ограничивать внешние пути · OpenCode","Restrict external paths · OpenCode"));aiProjectScope.setTextColor(TEXT);aiProjectScope.setChecked(draft.aiProjectOnly);aiProjectScope.setContentDescription("OpenCode project scope");
         String[] aiConnection={draft.aiConnection},aiModel={draft.aiModel},aiVariant={draft.aiVariant},aiMode={draft.aiMode},aiAccess={draft.aiAccess},aiChat={draft.aiChat},aiThread={draft.aiThread};
@@ -1357,7 +1351,6 @@ public final class WorkspaceController {
         Runnable scopeHint=()->aiScopeHint.setText(aiProjectScope.isChecked()?tr("Внешние пути и shell-инструменты ограничены правилами OpenCode. Подтверждения зависят от выбранных прав. Это не системная песочница.","OpenCode rules restrict external paths and shell tools. Confirmations depend on selected permissions. This is not an OS sandbox."):tr("Рабочая папка не является границей доступа. Доступ и подтверждения определяются выбранными правами OpenCode.","The working folder is not an access boundary. Access and confirmations follow the selected OpenCode permissions."));
         aiProjectScope.setOnCheckedChangeListener((v,on)->scopeHint.run());scopeHint.run();
         TextView chatButton=button("",false,()->{});openCodeFields.addView(chatButton);
-        agentDetails(openCodeFields,"opencode-launch-details").setText(openCodeScopeTechnical+"\n"+WorkspaceText.tr("OpenCode запускается в Ubuntu. При «Создать и запустить» компоненты проверяются и при необходимости устанавливаются в этой же вкладке. Node.js устанавливается отдельно от системного. Подключения и история отдельные от Codex; разрешения запрашиваются в терминале."));
         String[] aiTitle={""};
         Runnable updateOpenCode=()->{connectionButton.setText(WorkspaceText.tr("Подключение: ")+AiAgentsUi.title(activity,aiConnection[0]));modelButton.setText(WorkspaceText.tr("Модель: ")+(aiModel[0].isEmpty()?WorkspaceText.tr("По умолчанию"):aiModel[0]));modeButton.setText(WorkspaceText.tr("Режим: ")+ (aiMode[0].equals("build")?"Build":"Plan"));modeDescription.setText(AiAgentsUi.modeDescription(aiMode[0]));aiAccessButton.setText(tr("Права: ","Permissions: ")+AiAgentsUi.accessLabel(aiAccess[0]));aiAccessDescription.setText(AiAgentsUi.accessDescription(aiAccess[0]));chatButton.setText(WorkspaceText.tr("Чат: ")+(aiChat[0].equals("new")?WorkspaceText.tr("Новый чат"):(aiTitle[0].isEmpty()?aiThread[0]:aiTitle[0])));};updateOpenCode.run();
         connectionButton.setOnClickListener(v->AiAgentsUi.chooseConnection(activity,aiConnection[0],(id,title)->{aiConnection[0]=id;aiModel[0]="";aiVariant[0]="";aiChat[0]="new";aiThread[0]="ses"+java.util.UUID.randomUUID().toString().replace("-","");updateOpenCode.run();}));
@@ -1385,14 +1378,12 @@ public final class WorkspaceController {
         TextView codexScopeNote=text(tr("Ограничение записи и подтверждение действий — разные настройки. При отказе запуска песочницы права автоматически не расширяются.","Write restrictions and action confirmations are separate settings. If the sandbox fails to start, permissions are not automatically broadened."),12,MUTED);codexFields.addView(codexScopeNote);
         CheckBox codexConfirm=new CheckBox(activity);codexConfirm.setTag("codex-command-confirmations");codexConfirm.setText(draft.codexUntrustedApproval?tr("Подтверждать недоверенные команды","Confirm untrusted commands"):tr("Подтверждать действия · Codex","Confirm actions · Codex"));codexConfirm.setTextColor(TEXT);codexConfirm.setChecked(!CodexSessionShell.approval(draft).equals("never"));codexConfirm.setContentDescription(codexConfirm.getText());codexFields.addView(codexConfirm);
         TextView codexApprovalHint=text("",12,MUTED);codexApprovalHint.setTag("codex-approval-hint");codexFields.addView(codexApprovalHint);
-        TextView codexTechnical=agentDetails(codexFields,"codex-launch-details");
 
         boolean[] codexChatEdited={false};
         Runnable updateCodex = () -> {
             codexAccessButton.setText(tr("Права: ","Permissions: ")+(codexAccess[0].equals("read")?tr("Чтение","Read"):tr("Чтение и запись","Read and write")));
             codexScope.setEnabled(!codexAccess[0].equals("read"));
             codexApprovalHint.setText(codexConfirm.isChecked()&&draft.codexUntrustedApproval?tr("Codex запрашивает разрешение для команд вне списка доверенных. Это не ограничение доступа папкой проекта.","Codex asks permission for commands outside its trusted list. This does not restrict access to the project folder."):codexConfirm.isChecked()?tr("Codex запрашивает подтверждения по своей политике, не перед каждым действием.","Codex requests confirmations under its policy, not before every action."):tr("Подтверждения отключены; запросы повышения прав не разрешаются. Ограничения выбранной песочницы сохраняются.","Confirmations are off; escalation approvals are unavailable. The selected sandbox restrictions remain."));
-            codexTechnical.setText("sandbox: "+CodexSessionShell.sandbox(codexAccess[0])+"\napproval: "+(codexConfirm.isChecked()?(draft.codexUntrustedApproval?"untrusted":"on-request"):"never")+"\n"+tr("workspace-write ограничивает запись, а не всё чтение. Штатная связка: app-server и --remote; версия CLI должна их поддерживать. Авторизация и история берутся из выбранной среды. Поддержка песочницы зависит от Android/proot; автоматического перехода на полный доступ при ошибке нет.","workspace-write restricts writes, not all reads. Native connection: app-server and --remote; the CLI version must support them. Authentication and history come from the selected environment. Sandbox support depends on Android/proot; errors never trigger a full-access fallback."));
             codexAccessDescription.setText(codexAccessDetails[Math.max(0,java.util.Arrays.asList(accessModes).indexOf(codexAccess[0]))]);
             codexChatButton.setText(WorkspaceText.tr("Чат: ") + (codexChat[0].equals("new") ? WorkspaceText.tr("Новый") : codexChat[0].equals("last") ? WorkspaceText.tr("Выберите конкретный чат") : codexChat[0].equals("id") ? codexThreadName[0] : WorkspaceText.tr("Выбрать при запуске")));
         }; updateCodex.run();
@@ -1523,17 +1514,23 @@ public final class WorkspaceController {
             for(TextView label:new TextView[]{(TextView)nameLabel,(TextView)directoryLabel})label.setTextSize(11);
             for(EditText input:new EditText[]{name,directory,connectionCommand}){input.setTextSize(13);input.setMinHeight(dp(44));}
             LinearLayout modelSlot=AgentLaunchForm.slot(form,tr("Модель","Model"),"agent-create-model"),chatSlot=AgentLaunchForm.slot(form,tr("Чат","Chat"),"agent-create-chat"),rightsSlot=AgentLaunchForm.slot(form,tr("Права","Permissions"),"agent-create-permissions");
-            LinearLayout rightsDetails=AgentLaunchForm.details(form,tr("Подробные параметры прав и агента","Detailed agent and permission settings"),"agent-create-details");
-            AgentLaunchForm.move(rightsDetails,agentFields);
+            LinearLayout permissionGroup=column();form.addView(permissionGroup);
+            LinearLayout rightsDetails=AgentLaunchForm.details(permissionGroup,tr("Подробности прав","Permission details"),"agent-create-permission-details");
             AgentLaunchForm.move(rightsDetails,codexFields);
+            LinearLayout claudeRights=column();claudeRights.setTag("claude-create-permissions");rightsDetails.addView(claudeRights);
+            WorkspaceStore.Session claudeDraft=WorkspaceRestart.snapshot(draft);claudeDraft.claudeAgent=true;claudeDraft.environment="ubuntu";claudeDraft.aiAgent="";
+            ClaudePermissions.Controls claudeControls=new ClaudePermissions.Controls(activity,claudeRights,claudeDraft,claudeModeButton);
+            claudeControls.changed=()->{claudeMode[0]=claudeDraft.claudeMode;claudePrevious[0]=claudeDraft.claudeOrdinaryMode;};
+            boolean[] claudeSupportStarted={false};
+            LinearLayout agentOptions=AgentLaunchForm.slot(form,tr("Параметры агента","Agent settings"),"agent-create-options");AgentLaunchForm.move(agentOptions,agentFields);
             if(agentButton.getParent() instanceof ViewGroup)((ViewGroup)agentButton.getParent()).removeView(agentButton);
             AgentLaunchForm.move(form,connectionFields);
             TextView codexDefault=button(tr("По профилю CLI","CLI profile default"),false,()->WorkspaceDialogs.builder(activity).setTitle(tr("Модель Codex","Codex model")).setMessage(tr("При запуске используется модель профиля CLI. Доступные модели можно выбрать после подключения чата. Эта форма не меняет настройки CLI.","Startup uses the CLI profile model. Available models can be selected after connecting the chat. This form does not change CLI settings.")).setPositiveButton(tr("Понятно","OK"),null).show());
-            updateLaunchForm[0]=()->{boolean gemini=chosenAgent[0].equals("gemini"),claude=chosenAgent[0].equals("claude"),openCode=chosenAgent[0].equals("opencode");AgentLaunchForm.selection(modelSlot,gemini?geminiModelButton:claude?claudeModelButton:openCode?modelButton:codexDefault);AgentLaunchForm.selection(chatSlot,gemini?geminiChatButton:claude?claudeChatButton:openCode?chatButton:codexChatButton);AgentLaunchForm.selection(rightsSlot,gemini?geminiModeButton:claude?claudeModeButton:openCode?aiAccessButton:codexAccessButton);};updateLaunchForm[0].run();
+            updateLaunchForm[0]=()->{boolean gemini=chosenAgent[0].equals("gemini"),claude=chosenAgent[0].equals("claude"),openCode=chosenAgent[0].equals("opencode");if(claude&&!claudeSupportStarted[0]){claudeSupportStarted[0]=true;ClaudePermissions.probe(activity,claudeRights,claudeDraft,claudeControls);}permissionGroup.setVisibility(claude||chosenAgent[0].equals("codex")?View.VISIBLE:View.GONE);claudeRights.setVisibility(claude?View.VISIBLE:View.GONE);claudeControls.refresh.run();AgentLaunchForm.selection(modelSlot,gemini?geminiModelButton:claude?claudeModelButton:openCode?modelButton:codexDefault);AgentLaunchForm.selection(chatSlot,gemini?geminiChatButton:claude?claudeChatButton:openCode?chatButton:codexChatButton);AgentLaunchForm.selection(rightsSlot,gemini?geminiModeButton:claude?claudeModeButton:openCode?aiAccessButton:codexAccessButton);};updateLaunchForm[0].run();
         }
         final boolean separatePermissions=existing!=null&&isAgent(existing);
         if(separatePermissions){
-            for(View control:new View[]{geminiModeButton,geminiAccessDetails,geminiFields.findViewWithTag("agent-unavailable-scope"),claudeModeButton,claudeAccessDetails,claudeFields.findViewWithTag("agent-unavailable-scope"),aiAccessButton,aiAccessDescription,aiProjectScope,aiScopeHint,modeButton,modeDescription,codexAccessButton,codexAccessDescription,codexScope,codexScopeNote,codexConfirm,codexApprovalHint,codexTechnical,codexFields.findViewWithTag("codex-launch-details-toggle")})if(control!=null&&control.getParent() instanceof ViewGroup)((ViewGroup)control.getParent()).removeView(control);
+            for(View control:new View[]{geminiModeButton,geminiAccessDetails,geminiFields.findViewWithTag("agent-unavailable-scope"),claudeModeButton,claudeAccessDetails,claudeFields.findViewWithTag("agent-unavailable-scope"),aiAccessButton,aiAccessDescription,aiProjectScope,aiScopeHint,modeButton,modeDescription,codexAccessButton,codexAccessDescription,codexScope,codexScopeNote,codexConfirm,codexApprovalHint})if(control!=null&&control.getParent() instanceof ViewGroup)((ViewGroup)control.getParent()).removeView(control);
         }
         AlertDialog dialog = WorkspaceDialogs.builder(activity).setTitle(existing == null ? launchAfterSave&&initialEnvironment.equals("codex")?tr("Создать чат","Create chat"):WorkspaceText.tr(launchAfterSave ? "Создать сессию" : "Создать пресет") : WorkspaceText.tr("Настройки сессии"))
             .setView(formScroll(form)).setPositiveButton(existing == null && launchAfterSave ? tr("Создать и открыть","Create and open") : WorkspaceText.tr("Сохранить"), null).setNegativeButton(createAgent?tr("Назад","Back"):WorkspaceText.tr("Отмена"), null).create();
@@ -1822,6 +1819,7 @@ public final class WorkspaceController {
         AgentPermissionsUi.show(activity,p,active,scopeOnly,()->!closed&&store.isWritable()&&store.sessions.contains(p)&&WorkspaceRestart.sameRun(p,run),owner->store.save());
     }
     private void showAgentPermissions(WorkspaceStore.Session p){
+        if(p.claudeAgent){showLaunchPermissions(p,false);return;}
         TerminalSession live=liveFor(p);if(live==null||!live.isRunning()||(!p.claudeAgent&&!p.geminiAgent&&!p.aiAgent.equals("opencode"))){showLaunchPermissions(p,false);return;}
         selectedAction(p,()->{if(p.claudeAgent)claudeLiveUi.showPermissions(p);else if(p.geminiAgent)geminiLiveUi.showPermissions(p);else new OpenCodeStatusUi(activity,p,store::save,null).launchPermissions(()->showLaunchPermissions(p,true)).showPermissions();});
     }
