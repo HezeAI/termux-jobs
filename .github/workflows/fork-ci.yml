@@ -59,6 +59,7 @@ jobs:
           printf 'android.aapt2FromMavenOverride=%s\n' "$PWD/.tools/sdk/build-tools/35.0.0/aapt2" > .tools/gradle-home/gradle.properties
       - name: Prepare verified ARM64 X11 inputs
         run: |
+          set -euo pipefail
           export FORK_X11_CLANG="$PWD/.tools/sdk/ndk/22.1.7171670/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
           python3 ../ci-driver/scripts/prepare-x11.py --root "$PWD" | tee .verification/ci/x11-preparation.log
       - name: Java 11 for Gradle and Android project
