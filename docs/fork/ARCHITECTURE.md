@@ -1,3 +1,8 @@
+> 2.1.7: RTK output accounting matches supported literal/quoted and sequential
+> calls and final yielded-command receipts. Unconfirmed bases remain unknown.
+> This updates the app observer, not RTK execution or permission rules. See
+> [release validation](VALIDATION-v2.1.7.md).
+
 # RTK and offline chat resources
 
 RtkMode drives a cancellable per-window installer inside the selected Ubuntu AI.

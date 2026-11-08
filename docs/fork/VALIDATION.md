@@ -1,3 +1,7 @@
+# Current stable release: 2.1.7 /1536
+
+See [2.1.7 validation](VALIDATION-v2.1.7.md). Earlier results below are historical.
+
 # Current release validation — 2.1.6 /1533
 
 [Release validation](VALIDATION-v2.1.6.md) records the retained phone-accepted

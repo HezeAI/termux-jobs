@@ -1,3 +1,10 @@
+# Stable 2.1.7 /1536 — accepted RTK accounting fixes
+
+Build with TERMUX_APP_VERSION_NAME=2.1.7 and TERMUX_APK_VERSION_TAG=v2.1.7-arm64.
+Production code is unchanged from the accepted 2.1.7-test2/1535 candidate.
+Same com.termux signer/schema; Components unchanged. No automatic installation.
+[Validation](docs/fork/VALIDATION-v2.1.7.md).
+
 # Private 2.1.7-test2 /1535 — RTK statistics observer
 
 Build with TERMUX_APP_VERSION_NAME=2.1.7-test2 and

@@ -1,3 +1,14 @@
+## 2.1.7 (1536) — 2026-11-08 — stable
+
+- Fix native RTK measurement matching for supported single, quoted-pattern,
+  sequential and yielded/background calls. Unconfirmed baselines stay unknown.
+- Keep recall separate; exclude recall help/list from future recovered-output counts.
+- Fix safe removal of the residual sealed Arch Wayland endpoint.
+- Recover disconnected agent-chat restarts from the validated local conversation ID.
+- Based on the developer-tested candidate with release metadata only. Same package,
+  signer and data formats; no reset. RTK jobs.1 binary unchanged. No rollback APK.
+- [Release notes](docs/fork/RELEASE-v2.1.7.md) · [Validation](docs/fork/VALIDATION-v2.1.7.md).
+
 ## 2.1.7-test2 (1535) — 2026-11-08 — private
 
 - Fix native RTK statistics matching for quoted search patterns and measurable

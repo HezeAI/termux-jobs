@@ -1,3 +1,8 @@
+> 2.1.7: RTK output accounting matches supported literal/quoted and sequential
+> calls and final yielded-command receipts. Unconfirmed bases remain unknown.
+> This updates the app observer, not RTK execution or permission rules. See
+> [release validation](VALIDATION-v2.1.7.md).
+
 # Current RTK and stopped-chat access
 
 Limits and context offers mutually exclusive RTK Lite / RTK native choices for

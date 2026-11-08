@@ -8,7 +8,7 @@
 Linux environments, agent chats and server tools. Commands execute in the selected
 Termux session, environment or server.
 
-**[Скачать APK / Download APK — v2.1.6](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.6/Termux-Jobs-v2.1.6-arm64.apk)**
+**[Скачать APK / Download APK — v2.1.7](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.7/Termux-Jobs-v2.1.7-arm64.apk)**
 · [Установка / Installation](#installation-and-compatibility)
 · [Релизы / Releases](https://github.com/HezeAI/termux-jobs/releases)
 · [Безопасность и данные / Security and data](SECURITY.md)
@@ -27,28 +27,14 @@ from OpenAI Codex; not affiliated with or endorsed by the Termux team.
 - **AI-чаты / Agent chats:** Codex, Claude Code, Gemini and OpenCode, with attachments and action approvals supported by each CLI.
 - **Серверы / Servers:** SSH connections and commands in the selected remote environment.
 
-## Current release — 2.1.6 /1533
+## Current release — 2.1.7 /1536
 
-Includes selected-environment error details, safe removal of the sealed Arch
-systemd placeholder, and verified Components download fallback.
+Fixes native RTK measurement matching for supported single, sequential and yielded
+command calls. Unknown baselines remain unknown. Also fixes removal of a residual
+Arch Wayland directory and recovery of disconnected agent chats through restart.
+RTK jobs.1 is unchanged. No data reset or environment reinstall is required.
+[Release notes](docs/fork/RELEASE-v2.1.7.md) · [Validation](docs/fork/VALIDATION-v2.1.7.md).
 
-Refined chats and sidebar cards, black selected session rows, compact message
-bubbles, gentler action arrivals and manual-scroll indication. Optional per-chat
-**RTK Lite** / **RTK native** (RU: **RTK штатный**) reduce supported command output
-for Codex/Claude in Ubuntu AI. Exact byte accounting keeps head/tail windows,
-recall and unknown baselines separate; displayed tokens remain estimates.
-
-RTK jobs.1 downloads from [Components](https://github.com/HezeAI/termux-jobs-components/releases/tag/rtk-1.1.0-jobs.1),
-with revision/SHA-256 checks; no RTK binary archive is embedded. Native mode has
-explicit command-rule/approval caveats; it does not disable every CLI restriction.
-Saved stopped chats can browse files/attachments/Git and last-known limits.
-
-This release preserves the phone-tested chat/RTK code and adds the authorized
-environment deletion and download fixes. Code1533 exceeds main1520 and rollback1521. No reset or environment reinstall is
-required; actual phone installation over rollback is not separately verified.
-No rollback APK is added; previous release assets remain unchanged.
-
-[Release notes](docs/fork/RELEASE-v2.1.6.md) · [Validation](docs/fork/VALIDATION-v2.1.6.md) · [CHANGELOG](CHANGELOG.md)
 
 ## Historical v2.1.5 — Redesigned workspace
 

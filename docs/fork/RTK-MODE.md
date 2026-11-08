@@ -1,3 +1,8 @@
+> 2.1.7 /1536 updates the app-owned measurement observer. The jobs.1 binary is
+> unchanged. Quoted patterns and supported sequential/final yielded calls match
+> measured receipts; pipelines and unconfirmed bases remain unknown. Existing
+> counters and recall remain. [Verification](VALIDATION-v2.1.7.md).
+
 > Current release: 2.1.6/1532, based on accepted test10/1531. Downloads the pinned jobs.1 component from
 > [Components](https://github.com/HezeAI/termux-jobs-components/releases/tag/rtk-1.1.0-jobs.1).
 > No embedded RTK archive. Separate revision, SHA-256 and runtime checks distinguish

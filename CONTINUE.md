@@ -1,3 +1,12 @@
+# Active: stable2.1.7 /1536 release authorized
+
+User accepted test2/1535 on phone. Preserve its production code; metadata only.
+Code1536 ensures in-app update from1535. No Components publication or APK install.
+Local build/Lint running; CI/source push and final APK/updater/public checks pending.
+Evidence .verification/release-v2.1.7; old releases/assets must remain unchanged.
+
+---
+
 # Active: private2.1.7-test2 /1535 — RTK receipt matching
 
 User authorized fixes, live checks and test APK; app release waits phone confirmation.
