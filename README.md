@@ -1,14 +1,24 @@
 # Termux Job’s
 
-**RU:** Терминал с интерфейсом для повседневной работы: сохраняйте команды и
-заметки, организуйте проекты и файлы, запускайте Linux-окружения и общайтесь
-с AI-агентами. Команды выполняются в выбранном Termux, окружении или на сервере.
+**RU: Программируйте с AI-агентами прямо на телефоне.**
+Termux Job’s объединяет терминал, Linux-окружения и удобный интерфейс работы
+с Codex, Claude Code, Gemini и OpenCode. Обсуждайте задачи, работайте с файлами
+проекта, просматривайте изменения и запускайте сборки на Android. Сохраняйте
+команды и заметки, управляйте сессиями и подключайтесь к серверам.
 
-**EN:** A terminal workspace for saved commands and notes, projects and files,
-Linux environments, agent chats and server tools. Commands execute in the selected
-Termux session, environment or server.
+**EN: Code with AI agents directly on your phone.**
+Termux Job’s brings together a terminal, Linux environments and a convenient
+interface for Codex, Claude Code, Gemini and OpenCode. Discuss tasks, work with
+project files, review changes and run builds on Android. Save commands and notes,
+manage sessions and connect to servers.
 
-**[Скачать APK / Download APK — v2.1.5](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.5/Termux-Jobs-v2.1.5-arm64.apk)**
+**Создано на телефоне / Built on a phone:** этот форк создан и развивается
+на Android-телефоне с помощью AI-агентов. Разработчик использует Termux Job’s
+для работы над самим проектом.
+This fork was created and continues to be developed on an Android phone with
+AI assistance. Its developer uses Termux Job’s to work on the project itself.
+
+**[Скачать APK / Download APK — v2.1.7](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.7/Termux-Jobs-v2.1.7-arm64.apk)**
 · [Установка / Installation](#installation-and-compatibility)
 · [Релизы / Releases](https://github.com/HezeAI/termux-jobs/releases)
 · [Безопасность и данные / Security and data](SECURITY.md)
@@ -24,12 +34,36 @@ from OpenAI Codex; not affiliated with or endorsed by the Termux team.
 - **Команды и заметки / Commands and notes:** saved commands, aliases and launch presets.
 - **Проекты и файлы / Projects and files:** files and project instructions alongside the terminal.
 - **Linux-окружения / Linux environments:** terminal and X11 desktop workflows.
-- **AI-чаты / Agent chats:** Codex, Claude Code, Gemini and OpenCode, with attachments and action approvals supported by each CLI.
+- **Программирование с AI / AI-assisted coding:** Codex, Claude Code, Gemini and OpenCode; project files, attachments, action timelines and approvals supported by each CLI.
 - **Серверы / Servers:** SSH connections and commands in the selected remote environment.
 
-## v2.1.5 — Redesigned workspace
+## v2.1.7 — RTK accounting and recovery fixes
 
-Changes since the last published stable release, v2.1.4.
+**RU:** Исправлен учёт вывода RTK для поддерживаемых одиночных, последовательных
+и фоновых вызовов после получения итогового результата. Вывод recall учитывается
+отдельно; неподтверждённая база остаётся неизвестной. Также исправлены удаление
+остаточного каталога Wayland в старом Arch и перезапуск чата при потере связи.
+Бинарник RTK jobs.1 не изменился. После обновления откройте «Лимиты и контекст»,
+чтобы обновить обработчик приложения.
+
+**EN:** RTK output accounting now matches supported single, sequential and yielded
+calls when their final result arrives. Recall output is tracked separately;
+unconfirmed baselines remain unknown. This release also fixes removal of a
+residual Wayland directory in old Arch environments and restarting disconnected
+agent chats. The RTK jobs.1 binary is unchanged. Open **Limits and context** after
+updating to refresh the application's observer.
+
+Android 8+, ARM64; versionCode **1536**. No environment reinstall or data reset is
+required. No rollback APK is included in this release. RTK figures describe command
+output, not subscription quota or the entire context.
+
+[Release notes](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.7) ·
+[Validation](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/VALIDATION-v2.1.7.md) ·
+[Current changelog](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/CHANGELOG.md)
+
+## Исторический выпуск / Historical release: v2.1.5 — Redesigned workspace
+
+Historical changes in v2.1.5 compared with v2.1.4; not new v2.1.7 changes.
 
 - New chat/terminal/sidebar/settings design, nested project and session actions.
 - Centered creation forms, smooth page transitions and preserved drafts/reading position.
@@ -44,21 +78,24 @@ reproduced without this UI; the remote closing component was not established.
 This release does not fix it. Auto's real-model classifier is unverified; Bypass is
 unavailable under root in Ubuntu/PRoot.
 
-**In-app updates install the new interface, code 1520.** A separate manual old-interface
+**In v2.1.5, in-app updates installed the new interface, code 1520.** A separate manual old-interface
 rollback APK (1521) is available in the release. Disable Auto/Bypass in every saved Claude
 profile first. Device rollback/data retention is unverified. After rollback, returning
-to the new interface requires a future main APK above code 1521; do not uninstall.
+to the new interface requires a main APK above code 1521; current v2.1.7 has code 1536. Do not uninstall.
 
 [Release notes](docs/fork/RELEASE-v2.1.5.md) · [Validation](docs/fork/VALIDATION-v2.1.5.md)
 · [CHANGELOG](CHANGELOG.md)
 · [AI instructions ZIP](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.5/AI-INSTRUCTIONS.zip)
 
-## Проверки и ограничения / Checks and limitations
+## Проверки v2.1.5 и ограничения / v2.1.5 checks and limitations
+
+Исторический отчёт v2.1.5 приведён ниже; результаты текущего релиза —
+в [отчёте v2.1.7](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/VALIDATION-v2.1.7.md).
+The v2.1.5 checks below are historical; use the v2.1.7 report for current release validation.
 
 **RU:** Для v2.1.5 опубликованы результаты автоматических проверок, проверки
 подписанного APK и сценариев, принятых разработчиком на телефоне. Эти результаты
 разделены в [отчёте выпуска](docs/fork/VALIDATION-v2.1.5.md).
-Независимый аудит безопасности этой версии не подтверждён.
 
 - Накопление вложений и связанные обрывы чатов остаются неисправленными.
 - Низкоуровневые проверки передачи ключа и аварийного восстановления Gemini
@@ -71,8 +108,7 @@ to the new interface requires a future main APK above code 1521; do not uninstal
   историю и снимки проектов. [Состав и ограничения копий](docs/fork/BACKUP-RESTORE.md).
 
 **EN:** [Release validation](docs/fork/VALIDATION-v2.1.5.md) distinguishes automated
-checks, signed-APK verification and developer-reported phone acceptance. No
-independent security audit of this version is confirmed. Attachment accumulation
+checks, signed-APK verification and developer-reported phone acceptance. Attachment accumulation
 and disconnections remain unfixed. Low-level Android key handoff/crash and device
 backup export/restore checks have not been performed; MCP/plugins are outside the audit.
 A working directory, instructions and approvals alone do not provide filesystem
@@ -134,12 +170,13 @@ limited coverage; OpenCode connection data is a separate optional component.
 
 - [Contributing](CONTRIBUTING.md) and [architecture](docs/fork/ARCHITECTURE.md).
 - [Build notes](FORK.md), [testing policy](docs/fork/TESTING.md) and [release procedure](docs/fork/RELEASING.md).
-- [Release evidence](docs/fork/VALIDATION-v2.1.5.md) and [audit scope/results](docs/fork/SECURITY-AUDIT-STAGE2.md).
+- [Current release evidence](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/VALIDATION-v2.1.7.md) and [audit scope/results](docs/fork/SECURITY-AUDIT-STAGE2.md).
 - [AGENTS.md](AGENTS.md): repository instructions for coding agents; not the user guide.
 
 ## Лицензия и благодарности / License and acknowledgements
 
-Developed by HezeAI. Based on [Termux](https://github.com/termux/termux-app) and the
+Developed by HezeAI. Thanks to the original Termux authors and contributors.
+Based on [Termux](https://github.com/termux/termux-app) and the
 upstream components documented in this repository. See [LICENSE.md](LICENSE.md)
 and component notices for applicable licenses. Graphics components and their
 sources/licenses are listed in [termux-jobs-components](https://github.com/HezeAI/termux-jobs-components).
@@ -159,6 +196,10 @@ rights; component distribution does not imply official endorsement.
 
 AI development assistance: OpenAI Codex
 
+
+## Исторические тестовые сборки / Historical test builds
+
+These notes describe earlier private builds, not the current release.
 
 Private test19 restores standalone image-view actions, corrects empty input history and makes the Stop square red. The reported Claude original-preview failure remains under investigation; diagnostic messages are more specific. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test19.md).
 
