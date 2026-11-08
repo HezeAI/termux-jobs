@@ -2,7 +2,13 @@
 
 User accepted test2/1535 on phone. Preserve its production code; metadata only.
 Code1536 ensures in-app update from1535. No Components publication or APK install.
-Local build/Lint running; CI/source push and final APK/updater/public checks pending.
+Local release APK/Lint complete; 16 final updater tests pass. Full CI42475835531
+on a00bbcc5 failed one stale AgentComposerControllerTest assertion (ended agent
+restart expected hidden). Production behavior intentionally changed in accepted test1.
+Test-only expectation corrected; full CI retry pending. APK is unchanged. Final artifact SHA256:
+f321c19652d80dd91cf96a46e4fcefffd1f309faebb61e3cc64ab4f0fe5bbebb.
+Pending: CI result, final docs commit/tag, release creation/upload/public verification.
+No v2.1.7 tag or release has been created yet.
 Evidence .verification/release-v2.1.7; old releases/assets must remain unchanged.
 
 ---

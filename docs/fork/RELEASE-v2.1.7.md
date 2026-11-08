@@ -6,7 +6,7 @@ This update fixes RTK output accounting and improves recovery when removing an o
 
 ## Changes since 2.1.6
 
-- **RTK statistics:** measurements now match supported single commands, quoted search patterns, sequential shell commands and yielded/background calls when their final result is received. Unconfirmed baselines remain unknown; commands are not rerun to estimate savings.
+- **Native RTK statistics:** measurements now match supported single commands, quoted search patterns, sequential shell commands and yielded/background calls when their final result is received. Unconfirmed baselines remain unknown; commands are not rerun to estimate savings.
 - Recall output is counted separately. Recall help and list commands do not count as recovered output. Existing statistics and recovery files remain available.
 - **Arch removal:** handle the residual, sealed `run/termux-jobs-wayland` directory while retaining path checks, active-environment protection and checks that protect neighbouring environments. Nonempty directories still cause a clear refusal.
 - **Agent restart:** the restart button can recover a disconnected chat using its validated local conversation ID and the existing replacement path. Repeated/stale requests are guarded; other chats and existing conversation data are preserved.

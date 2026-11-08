@@ -6,8 +6,24 @@ and versionCode change. Published release2.1.6/1533 is the change baseline.
 
 ## Checked anew
 
-Final signed APK, full Modern Lint and updater metadata checks are in progress.
-GitHub CI will be recorded before publication. No publication is complete yet.
+Final signed release APK: com.termux, 2.1.7 / versionCode 1536, ARM64 only,
+non-debuggable; ZIP, signature, DEX/runtime/assets and all seven ELF files checked.
+Size: 40,675,217 bytes. SHA-256:
+`f321c19652d80dd91cf96a46e4fcefffd1f309faebb61e3cc64ab4f0fe5bbebb`.
+Signer: `dd37d983cd2496ebe49c7e88ddbc0088f311d38b8a8503e4392c81b48a11a644`.
+Full Modern Lint 7.4.2: all five modules, 0 errors, 290 warnings, no infrastructure
+failures. Compile SDK 35 exceeds the Lint/AGP tested level; warning retained.
+Final update.json generated from this APK; 16 local debug JVM updater/package
+installation tests passed with no failures or skips, including final RU/EN metadata.
+All packaged assets/native libraries match the developer-tested APK. Production
+source identity comparison is preserved in accepted-comparison.json.
+Initial CI [42475835531](https://github.com/HezeAI/termux-jobs/actions/runs/42475835531)
+failed one stale test assertion: AgentComposerControllerTest expected no restart
+button after an agent exited. The accepted recovery fix intentionally retains it.
+Only that test expectation was corrected to require the clickable restart button;
+production code and the signed APK are unchanged. Full CI is being repeated.
+The original failure and skipped downstream debug build are retained in the evidence.
+No release publication is complete yet.
 
 ## Reused after source identity verification
 
