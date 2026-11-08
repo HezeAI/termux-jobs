@@ -105,7 +105,7 @@ def metric_update(profile,key,**values):
 
 def recall_mode(value,profile):
     inp=value.get('tool_input',{});tool=value.get('tool_name');words=literal_words(inp.get('command','')) if tool=='Bash' else None
-    if words and len(words)>2 and words[:2]==['rtk','recall'] and '--list' not in words:return 'advanced'
+    if words and len(words)>2 and words[:2]==['rtk','recall'] and not any(x in words for x in ('--list','--help','-h')):return 'advanced'
     paths=words[1:] if words and words[0] in ('cat','head','tail','sed') else [inp.get('file_path','')] if tool=='Read' else []
     root=str(chat(profile)/'originals')+'/'
     if any(isinstance(p,str) and p.startswith(root) and re.fullmatch(r'[a-f0-9]{32}\.txt',p[len(root):]) for p in paths):return 'basic'
@@ -125,8 +125,94 @@ def response_bytes(value):
         return response['stdout'].encode('utf-8'),response.get('stderr','').encode('utf-8')
     return None,None
 
+def native_plan(command):
+    """Observe literal sequential commands, without evaluating shell syntax.
+
+    Quoted grep patterns/globs are literal argv. Pipes, redirects, expansions,
+    background jobs and shell control flow require a different measurement scope.
+    This parser NEVER changes the executed command or the permission decision.
+    """
+    if not isinstance(command,str) or len(command)>16384:return None
+    groups=[];part=[];quote=None;escaped=False
+    for c in command:
+        if escaped:
+            part.append(c);escaped=False;continue
+        if c=='\\' and quote!="'":
+            part.append(c);escaped=True;continue
+        if quote:
+            if c==quote:quote=None
+            elif quote=='"' and c in '$`':return None
+            part.append(c);continue
+        if c in "'\"":quote=c;part.append(c);continue
+        if c in '|&<>$`(){}*?[]~#\x00\r':return None
+        if c in ';\n':
+            if ''.join(part).strip():groups.append(''.join(part));part=[]
+        else:part.append(c)
+    if quote or escaped:return None
+    if ''.join(part).strip():groups.append(''.join(part))
+    if not groups or len(groups)>32:return None
+    plan=[]
+    for group in groups:
+        try:words=shlex.split(group)
+        except ValueError:return None
+        if not words or words[0] in ('if','then','else','fi','for','while','until','do','done','case','esac','function','eval','exec','source','.') or '=' in words[0]:return None
+        if words[0]=='rtk':
+            if len(words)<2 or words[1]=='recall':return None
+            plan.append(hashlib.sha256(json.dumps(words[1:],separators=(',',':')).encode()).hexdigest())
+    return plan or None
+
+def native_sequence_measurement(profile,run,event,body,key):
+    plan=event.get('nativePlan')
+    if not plan:return None
+    root=directory(chat(profile)/'native-bytes-v1');candidates=[]
+    for meta in root.glob('*.meta.json'):
+        try:
+            m=read(meta,{})
+            if m.get('run')!=run or m.get('argsHash') not in plan or m.get('createdAt',0)<event.get('startedAt',0) or m.get('consumedBy') not in (None,key):continue
+            r=read(meta.with_name(meta.name.replace('.meta.json','.result.json')), {})
+            if not all(type(r.get(k)) is int and 0<=r[k]<=MAX_OUTPUT*2 for k in ('inputBytes','outputBytes')):continue
+            candidates.append((meta,m,r))
+        except (ValueError,OSError):continue
+    # Require a unique receipt placement for every invocation. Unknown/truncated
+    # RTK output is never replaced by a file size or a guessed token ratio.
+    used=[];cursor=0;delta=0;hash_budget=32*1024*1024
+    for index,fingerprint in enumerate(plan):
+        matches=[]
+        for meta,m,r in candidates:
+            if meta in used or m['argsHash']!=fingerprint:continue
+            size=r['outputBytes']
+            if size==0:continue # An empty result cannot identify a location safely.
+            for offset in range(cursor,len(body)-size+1):
+                hash_budget-=size
+                if hash_budget<0:return None
+                if hashlib.sha256(body[offset:offset+size]).hexdigest()==r.get('outputHash'):
+                    matches.append((meta,m,r,offset,size,r['inputBytes']))
+                    if len(matches)>1:break
+            if index==len(plan)-1:
+                # CLI trimming affects only the final segment of the combined
+                # result. Match its measured normalization, never an arbitrary
+                # shortened prefix (which could be output-limit truncation).
+                for offset in range(max(cursor,len(body)-size),len(body)):
+                    tail=body[offset:];hash_budget-=len(tail)
+                    if hash_budget<0:return None
+                    h=hashlib.sha256(tail).hexdigest()
+                    if h==r.get('outputHash'):continue
+                    bases={v.get('inputBytes') for v in r.get('normalizations',[]) if v.get('hash')==h}
+                    if len(bases)==1 and type(next(iter(bases))) is int and next(iter(bases))>=0:
+                        matches.append((meta,m,r,offset,len(tail),next(iter(bases))))
+                        if len(matches)>1:break
+            if len(matches)>1:break
+        if len(matches)!=1:return None
+        meta,m,r,offset,size,before=matches[0];used.append(meta);cursor=offset+size;delta+=before-size
+    for meta,m,r in candidates:
+        if meta in used:
+            m['consumedBy']=key;write(meta,m)
+    return len(body)+delta
+
 def native_measurement(profile,run,event,stdout,stderr,key):
-    if stdout is None or not event.get('nativeArgsHash'):return None
+    if stdout is None:return None
+    if not event.get('nativeArgsHash'):
+        return native_sequence_measurement(profile,run,event,stdout+(stderr or b''),key)
     body=stdout+(stderr or b'');digest_body=hashlib.sha256(body).hexdigest();matches=[]
     root=directory(chat(profile)/'native-bytes-v1')
     for meta in root.glob('*.meta.json'):
@@ -366,12 +452,17 @@ def hook(value,profile,run,agent):
             if result.returncode:raise ValueError('NATIVE_HOOK_FAILED')
             rewritten=json.loads(result.stdout) if result.stdout.strip() else {}
             updated=rewritten.get('hookSpecificOutput',{}).get('updatedInput',{}).get('command')
-            original=value.get('tool_input',{}).get('command','');words=literal_words(original)
-            if updated or words and words[0]=='rtk' and (len(words)<2 or words[1]!='recall'):
+            original=value.get('tool_input',{}).get('command','')
+            if updated or native_plan(original):
                 try:
-                    args=literal_words(updated or original)
-                    fingerprint=hashlib.sha256(json.dumps(args[1:],separators=(',',':')).encode()).hexdigest() if args and args[0]=='rtk' else ''
-                    metric_update(profile,event_key(value,run),mode='advanced',verbatimWindow=native_window(original,updated or ''),nativeArgsHash=fingerprint,startedAt=time.time_ns())
+                    plan=native_plan(updated or original)
+                    # Single RTK invocation with no surrounding command keeps the
+                    # exact whole-result/normalization matcher. A sequence needs
+                    # evidence for every RTK invocation inside the delivered body.
+                    try:simple=shlex.split(updated or original) if plan and len(plan)==1 and not any(c in (updated or original) for c in ';\n') else []
+                    except ValueError:simple=[]
+                    fingerprint=plan[0] if simple and simple[0]=='rtk' else ''
+                    metric_update(profile,event_key(value,run),mode='advanced',verbatimWindow=native_window(original,updated or ''),nativeArgsHash=fingerprint,nativePlan=plan,startedAt=time.time_ns())
                 except Exception:pass
             return rewritten
         except Exception as e:

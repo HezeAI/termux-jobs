@@ -91,4 +91,48 @@ class Statistics(unittest.TestCase):
   with self.assertRaises(ValueError):m.statistics(other)
  def test_native_recall_without_rewrite_and_off_mode_counts(self):
   q=self.event('native-recall','rtk recall --full abcd1234','full\n');m.hook(q,self.profile,self.run,'codex');s=self.stats('advanced');self.assertEqual(s['recallBytes'],5);self.assertEqual(s['commands'],0)
+ def test_native_quoted_patterns_are_literal_but_expansion_is_unknown(self):
+  self.assertEqual(m.native_plan("rtk rg 'a|b' --glob '*.py' ."),m.native_plan('rtk rg "a|b" --glob "*.py" .'))
+  self.assertIsNotNone(m.native_plan("rtk rg 'a;b' file"))
+  for command in ['rtk rg x *.py','rtk read "$HOME/f"','rtk ls | head -5','rtk ls &','rtk ls > out','rtk ls && rtk ls','rtk ls; eval other','rtk ls; X=1 command']:
+   self.assertIsNone(m.native_plan(command),command)
+ def sequence(self,output='prefix\nsmall\nend\n',other_run=False,ambiguous=False,missing=False):
+  plan=m.native_plan('printf prefix; rtk read sample; printf end')
+  event=self.event(command='ignored',output=output);key=m.event_key(event,self.run)
+  m.metric_update(self.profile,key,mode='advanced',nativePlan=plan,nativeArgsHash='',startedAt=1)
+  root=m.directory(m.chat(self.profile)/'native-bytes-v1')
+  for name in ['one','two'] if ambiguous else ['one']:
+   m.write(root/(name+'.meta.json'),dict(run='other' if other_run else self.run,argsHash=plan[0],createdAt=2))
+   if not missing:m.write(root/(name+'.result.json'),dict(inputBytes=100,outputBytes=6,outputHash=hashlib.sha256(b'small\n').hexdigest()))
+  with patch.object(m.subprocess,'run',side_effect=AssertionError('must not execute commands')):m.observe_result(event,self.profile,self.run)
+  return event
+ def test_sequence_matches_delivered_segment_once_including_unchanged_gaps(self):
+  e=self.sequence();s=self.stats('advanced');self.assertEqual((s['inputBytes'],s['outputBytes'],s['commands']),(111,17,1))
+  m.observe_result(e,self.profile,self.run);self.assertEqual(self.stats('advanced'),s)
+ def test_sequence_rejects_other_run(self):
+  self.sequence(other_run=True);self.assertEqual(self.stats('advanced')['unknownBaselineCommands'],1)
+ def test_sequence_rejects_ambiguous_receipts(self):
+  self.sequence(ambiguous=True);self.assertEqual(self.stats('advanced')['unknownBaselineCommands'],1)
+ def test_sequence_rejects_truncated_and_missing_measurement(self):
+  self.sequence(output='prefix\nsmal');self.assertEqual(self.stats('advanced')['unknownBaselineCommands'],1)
+ def test_sequence_rejects_repeated_output_placement(self):
+  self.sequence(output='small\nsmall\n');self.assertEqual(self.stats('advanced')['unknownBaselineCommands'],1)
+ def test_recall_help_does_not_count_as_recovered_output(self):
+  for command in ['rtk recall --help','rtk recall -h','rtk recall --list']:
+   m.hook(self.event(command=command,output='help'),self.profile,self.run,'codex')
+  self.assertEqual(self.stats('advanced')['recallCommands'],0)
+ def test_sequence_final_cli_newline_normalization(self):
+  plan=m.native_plan('rtk read a; rtk read b');e=self.event(output='a\nb');key=m.event_key(e,self.run)
+  m.metric_update(self.profile,key,mode='advanced',nativePlan=plan,nativeArgsHash='',startedAt=1)
+  root=m.directory(m.chat(self.profile)/'native-bytes-v1')
+  for i,(raw,base) in enumerate([(b'a\n',10),(b'b\n',20)]):
+   m.write(root/(str(i)+'.meta.json'),dict(run=self.run,argsHash=plan[i],createdAt=2))
+   m.write(root/(str(i)+'.result.json'),dict(inputBytes=base,outputBytes=len(raw),outputHash=hashlib.sha256(raw).hexdigest(),normalizations=[dict(hash=hashlib.sha256(raw.rstrip(b'\n')).hexdigest(),inputBytes=base-1)]))
+  m.observe_result(e,self.profile,self.run);s=self.stats('advanced');self.assertEqual((s['inputBytes'],s['outputBytes']),(29,3))
+ def test_explicit_native_command_with_quoted_glob_gets_receipt_key(self):
+  m.write(m.chat(self.profile)/'mode.json',{'enabled':True,'mode':'advanced'})
+  command="rtk rg 'x|y' --glob '*.py' .";e=self.event(command=command);e['hook_event_name']='PreToolUse'
+  class Result: returncode=0;stdout='{}'
+  with patch.object(m,'digest',return_value=m.PIN['binarySha256']),patch.object(m.subprocess,'run',return_value=Result()):m.hook(e,self.profile,self.run,'codex')
+  record=m.read(m.metric_file(self.profile,m.event_key(e,self.run)));self.assertEqual(record['nativeArgsHash'],m.native_plan(command)[0])
 if __name__=='__main__':unittest.main()

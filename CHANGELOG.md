@@ -1,3 +1,14 @@
+## 2.1.7-test2 (1535) — 2026-11-08 — private
+
+- Fix native RTK statistics matching for quoted search patterns and measurable
+  sequential shell commands. Preserve unknown baselines for pipelines and incomplete evidence.
+- Exclude recall help/list from future recovered-output counts. Keep existing data.
+- Verified search reduction, unchanged head, compound/background final receipts
+  and separate recall in the live Codex chat. RTK jobs.1 binary/download unchanged.
+- Includes test1 Arch/offline-restart fixes. Same com.termux signer and schemas;
+  phone installation/visual acceptance pending. No release or automatic installation.
+- [Validation and limitations](docs/fork/VALIDATION-2.1.7-test2.md).
+
 # 2.1.7-test1 / versionCode 1534 — 2026-11-08 (private phone test)
 
 - Handles the exact residual `run/termux-jobs-wayland` mode-000 endpoint from

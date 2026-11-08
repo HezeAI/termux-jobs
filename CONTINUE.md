@@ -1,3 +1,22 @@
+# Active: private2.1.7-test2 /1535 — RTK receipt matching
+
+User authorized fixes, live checks and test APK; app release waits phone confirmation.
+Observer patched;61testsPASS. Live current Codex chat: search120480→14612B,
+head225→225, sequence1350→1350, yielded sleep/cat1125→1125, recall+800.
+Pipeline remains unknown. Binary jobs.1 unchanged; do not republish component.
+Temporary profile-scoped installed bridge is no longer active: current helper hash
+matches original backup. Old event records preserved. No sessions restarted.
+Final APK and Download copy verified. ModernLint0errors/290warnings,505finalJava/XML
+inputs match;638APKsource files match;all7ELFsARM64;same signer/com.termux.
+APK /sdcard/Download/Termux-Jobs-v2.1.7-test2-arm64.apk
+SHA256 39b13ee632b1d326657d2a7f9a58f4c501f87c18f19956bd4fe7553d1d13909c
+Claude2.1.296 SDK synthetic provider: search23781→1526, sequence17294→17294,
+other RTK-off profile unaffected. Not a cloud-Claude test.
+Evidence .verification/rtk-current-audit. Await phone verification. No push/release/install.
+Docs: docs/fork/VALIDATION-2.1.7-test2.md. Original216→242 diagnosis in same evidence.
+
+---
+
 # Активно: частный 2.1.7-test1 /1534, проверка телефона ожидается
 
 После2.1.6 пользователь сообщил остаточный run/termux-jobs-wayland mode000 и

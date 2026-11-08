@@ -1,3 +1,9 @@
+# Private 2.1.7-test2 /1535 — RTK statistics observer
+
+Build with TERMUX_APP_VERSION_NAME=2.1.7-test2 and
+TERMUX_APK_VERSION_TAG=v2.1.7-test2-arm64. Same package/signer; RTK jobs.1 unchanged.
+No release or auto-install. [Validation](docs/fork/VALIDATION-2.1.7-test2.md).
+
 # Private 2.1.7-test1 /1534 — Arch residual endpoint and offline restart
 
 Build with TERMUX_APP_VERSION_NAME=2.1.7-test1 and
