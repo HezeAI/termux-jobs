@@ -95,6 +95,32 @@ jobs:
         with:
           distribution: temurin
           java-version: '11'
+      - name: Seed the unchanged Gradle wrapper archive with verified bytes
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, json, pathlib, urllib.request
+          source='https://services.gradle.org/distributions/gradle-7.2-all.zip'
+          api='https://api.github.com/repos/gradle/gradle-distributions/releases/assets/127702768'
+          expected='a8da5b02437a60819cad23e10fc7e9cf32bcb57029d9cb277e26eeff76ce014b'
+          properties=pathlib.Path('gradle/wrapper/gradle-wrapper.properties').read_text()
+          if 'distributionUrl='+source.replace(':',r'\:') not in properties:
+              raise SystemExit('Review wrapper pin before downloading a different toolchain')
+          # The checked-in wrapper uses unsigned MD5 -> base36 for its cache key.
+          number=int.from_bytes(hashlib.md5(source.encode()).digest(),'big');key=''
+          while number:
+              number,index=divmod(number,36);key='0123456789abcdefghijklmnopqrstuvwxyz'[index]+key
+          destination=pathlib.Path('.tools/gradle-home/wrapper/dists/gradle-7.2-all')/key/'gradle-7.2-all.zip'
+          destination.parent.mkdir(parents=True,exist_ok=True)
+          temp=destination.with_suffix('.download');digest=hashlib.sha256();size=0
+          request=urllib.request.Request(api,headers={'Accept':'application/octet-stream'})
+          with urllib.request.urlopen(request,timeout=60) as response,temp.open('xb') as out:
+              while chunk:=response.read(1024*1024):
+                  digest.update(chunk);size+=len(chunk);out.write(chunk)
+          if size!=157058280 or digest.hexdigest()!=expected:
+              raise SystemExit('Gradle archive integrity mismatch')
+          temp.replace(destination)
+          pathlib.Path('.verification/ci/gradle-input.json').write_text(json.dumps(dict(originalUrl=source,downloadUrl=api,sha256=expected,size=size,version='7.2',wrapperUnchanged=True),indent=2)+'\n')
+          PYTHON
       - name: Verify pinned X11 inputs
         run: |
           source scripts/build-env.sh

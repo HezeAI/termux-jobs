@@ -40,6 +40,6 @@ def main():
     if size!=files[name]['size']or h.hexdigest()!=files[name]['sha256']:raise ValueError('Package identity mismatch')
     seen.add(name)
    if seen!=set(files):raise ValueError('Missing package')
-  result={'passed':True,'scope':'Actual canonical public downloads and all packaged dependencies; no install/GUI test','downloads':results,'packageFilesVerified':len(files),'runtimeMusl':[n for n in files if n.startswith('musl-')],'ciHeaderPackageIncluded':'musl-dev-1.2.6-r2.apk'in files}
+  result={'passed':True,'scope':'Production public downloader with verified API fallback and all packaged dependencies; no install/GUI test','downloads':results,'packageFilesVerified':len(files),'runtimeMusl':[n for n in files if n.startswith('musl-')],'ciHeaderPackageIncluded':'musl-dev-1.2.6-r2.apk'in files}
   args.output.write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result))
 if __name__=='__main__':main()
