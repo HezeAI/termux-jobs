@@ -1,3 +1,19 @@
+# Опубликовано: стабильная 2.1.6 /1533
+
+https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.6
+Tag ->217310be741108a369dda62bccaa5ad2927143b8; CI42470194304 success.
+APK SHA256 3ada4628499f765bbd3842b3bf96cc8686ded68a2aa0d6801c97e5ff74183f6c.
+Published four assets, no rollback/buildheaders. Old37releases/141assets preserved.
+Public unsigned API downloads match all prepared bytes. Downloaded APK signature/
+package/code/ABI pass. Direct SHA URL works; direct APK/update/validation URLs504
+on this route, including native Termux update.json check. Updater parser accepts
+metadata; actual updater network download is NOT confirmed. Do not claim it passed.
+No automatic APK install. Full scope: docs/fork/VALIDATION-v2.1.6.md publication section.
+Draft temporary tag association corrected to existing v2.1.6; final latest/tag checked.
+No tags or binaries to replace. Any later docs commit does not move release tag.
+
+---
+
 # Активно: релиз 2.1.6 /1533, проверки завершены — публикация
 
 Пользователь разрешил исправления Arch/загрузок и публикацию после успешных проверок.

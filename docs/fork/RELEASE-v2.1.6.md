@@ -43,6 +43,7 @@ measured output statistics. Changes below are relative to the published v2.1.5.
 - Lite keeps stderr and exit codes, with unsupported calls following the ordinary path. Its Gradle support is a captured-output preview, not a dedicated native Gradle parser. Native streaming/complex paths and CLI-truncated results can have an unknown comparison baseline.
 - Claude Auto availability remains version/account dependent; acceptance of the CLI setting does not verify the real-model classifier. Bypass remains unavailable when Claude rejects root inside Ubuntu/PRoot. Filesystem sandboxing is not implied by a working directory or approval mode.
 - The known image-history Codex WebSocket issue is not fixed. See [upstream #55730](https://github.com/openai/codex/issues/55730) and [HezeAI’s published diagnostic report](https://github.com/openai/codex/issues/55730#issuecomment-6645086819). The reproduced direct-CLI failure did not require this interface; the remote closing component and a universal size boundary were not established.
+- Publication checks saw HTTP 504 for ordinary asset URLs on the tested route. Anonymous public asset API downloads matched the release hashes. Updater metadata is valid; successful end-to-end updater download on that route is not confirmed.
 - Low-level Android permission/key-handoff, crash recovery and backup restore gaps remain documented. No independent security certification or real-cloud-model RTK coverage is claimed.
 
 <details>

@@ -107,3 +107,32 @@ release or asset is replaced. The upload contains the APK, SHA256SUMS, localized
 no rollback or build-header archive. Public download/hash and updater consistency
 checks follow publication. Evidence: `.verification/release-v2.1.6/`;
 earlier baseline evidence: `.verification/release-v2.1.6-test10/`.
+
+## Publication verification
+
+Published as latest stable [v2.1.6](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.6),
+release ID438132321, draft=false/prerelease=false. Annotated tag resolves to
+`217310be741108a369dda62bccaa5ad2927143b8`; later report-only commits do not move it.
+The signed APK, SHA256SUMS, update.json and validation.json were downloaded
+anonymously and matched the prepared bytes. Downloaded APK package/code1533,
+ARM64 ABI and certificate were independently rechecked. All37 older releases and
+141 assets retain their IDs, names, sizes, digests and URLs. Components' prior
+9 releases/142 assets also remain; the new build-header component is separate.
+
+The ordinary SHA256SUMS URL succeeded. Ordinary APK/update/validation URLs returned
+HTTP504 on the tested route, so those exact bytes were independently fetched via
+the public asset API. Native Termux UID10620/TracerPid0 also received504 for the
+ordinary update.json URL. The production updater parser accepts the final metadata
+and latest stable identity, but successful end-to-end updater download on this
+route is **not confirmed**. This is a transport observation, not proof of its remote
+cause or a universal GitHub outage. No APK was installed automatically.
+
+The draft API response briefly associated this release with a temporary untagged
+name. The association was corrected to the already verified v2.1.6 tag; final
+latest/tag/asset URLs are checked. No prior tag or binary was replaced. Published
+validation.json remains the immutable pre-upload snapshot; this section records
+the subsequent checks and their limitations.
+
+Evidence: `public-download-verification.json`, `native-public-check.json`,
+`public/signature.txt`, `public/badging.txt`, `old-releases-preserved.json`,
+`components-preserved-final.json` under `.verification/release-v2.1.6/`.
