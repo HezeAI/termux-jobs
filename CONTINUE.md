@@ -1,3 +1,17 @@
+# Release reproduction check — 2026-11-08
+
+v2.1.7 source/payload verification complete locally: all1140 ZIP entries match;
+unsigned container exactly equals the published APK after removing only its8192B
+signing block and fixing the central-directory offset. Own4native libraries rebuilt;
+glycin requires historical GCC recipe, not tag default Clang recipe. External3libs
+not rebuilt. No signing key copied, no APK installed, no release/assets changed.
+Report/procedure: docs/fork/REPRODUCIBILITY-v2.1.7.md.
+Evidence: .verification/release-reproduction-v2.1.7.
+Private vulnerability reporting enabled; APIreadback true. SECURITY retains original
+2026-11-04 audit scope. Publication of report/procedure and SECURITY authorized.
+
+---
+
 # Published stable 2.1.7 /1536 — complete
 
 Release: https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.7

@@ -1,0 +1,6 @@
+{
+  "returncode": 1,
+  "stdout": "",
+  "stderr": "DOES NOT VERIFY\nERROR: Missing META-INF/MANIFEST.MF\n",
+  "expected": "unsigned artifact, not for installation"
+}

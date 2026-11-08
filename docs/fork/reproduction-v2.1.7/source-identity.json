@@ -1,0 +1,8 @@
+{
+  "tag": "v2.1.7",
+  "commit": "f3f57668fca31302062bf46f3be6a20d885ede1d",
+  "sourceArchiveSha256": "bd3b2d3370d7d202f94275da5554f4be94dd72d7304ae92788ab66ca95b91f59",
+  "releaseKeyPresent": false,
+  "sysroot": "/data/data/com.termux/files/home/Android/Sdk/ndk/28.1.13356709/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
+  "compiler": "clang version 21.1.8\nTarget: aarch64-unknown-linux-android24\nThread model: posix\nInstalledDir: /data/data/com.termux/files/usr/bin\n"
+}

@@ -1,0 +1,80 @@
+[
+  {
+    "path": "/data/data/com.termux/files/usr/bin/clang",
+    "resolved": "/data/data/com.termux/files/usr/bin/clang-21",
+    "size": 121040,
+    "sha256": "3599a121ecc11b433d23bc43545bc0441f9a8ffcc587ea18e312d88188fcf282"
+  },
+  {
+    "path": "/data/data/com.termux/files/usr/bin/ld.lld",
+    "resolved": "/data/data/com.termux/files/usr/bin/lld",
+    "size": 5871888,
+    "sha256": "7a0e3dad3eaeaf7ec0e85337ab1047470141e95aae11e4b51eb12c749c1a561a"
+  },
+  {
+    "path": "/data/data/com.termux/files/usr/bin/aapt2",
+    "resolved": "/data/data/com.termux/files/usr/bin/aapt2",
+    "size": 3594152,
+    "sha256": "7ef533e21738c2abe7319e52b756fc8c4023ff66d03da01d9177ce73786b9f2a"
+  },
+  {
+    "path": "/usr/bin/gcc",
+    "resolved": "/usr/bin/aarch64-linux-gnu-gcc-15",
+    "size": 1251912,
+    "sha256": "5b06a5b85cab901e2af3e8f351a6d4e8e6a93af24797bd8c01e5391ac6b4e63b"
+  },
+  {
+    "path": "/usr/bin/ld",
+    "resolved": "/usr/bin/aarch64-linux-gnu-ld.bfd",
+    "size": 2500216,
+    "sha256": "95d27d6b6dc53580345a26f2be30ec0f967633d24d9e475ab323ac81711eb4b5"
+  },
+  {
+    "path": ".tools/jdk/usr/lib/jvm/java-11-openjdk-arm64/bin/java",
+    "resolved": "/root/termux-fork/.tools/jdk/usr/lib/jvm/java-11-openjdk-arm64/bin/java",
+    "size": 67832,
+    "sha256": "9473ed8a65876a1f05cbe18758ef82dd087af761f8c37eaf5412cdaee640e405"
+  },
+  {
+    "path": ".tools/jdk/usr/lib/jvm/java-11-openjdk-arm64/release",
+    "resolved": "/root/termux-fork/.tools/jdk/usr/lib/jvm/java-11-openjdk-arm64/release",
+    "size": 1254,
+    "sha256": "a613e193f979d6f52ff1449f890b49ef90188d94e5f7eed740d883047702b3d4"
+  },
+  {
+    "path": ".tools/gradle-7.2/lib/gradle-launcher-7.2.jar",
+    "resolved": "/root/termux-fork/.tools/gradle-7.2/lib/gradle-launcher-7.2.jar",
+    "size": 498657,
+    "sha256": "9aa98590c168c8470dee04799ee9d21619cf7735c01426bb2c4b87f70c27544f"
+  },
+  {
+    "path": ".tools/sdk/platforms/android-35/android.jar",
+    "resolved": "/root/termux-fork/.verification/rollback-live-actions/source/.tools/sdk/platforms/android-35/android.jar",
+    "size": 27092450,
+    "sha256": "4566663c3876e022b4fa4ced8c8697c4ab1688267f090114fd92d027b32e619b"
+  },
+  {
+    "path": "/data/data/com.termux/files/home/Android/Sdk/ndk/28.1.13356709/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/24/crtbegin_so.o",
+    "resolved": "/data/data/com.termux/files/home/Android/Sdk/ndk/28.1.13356709/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/24/crtbegin_so.o",
+    "size": 3648,
+    "sha256": "0fe08e6ac778ca0d8b6327c054fdb8b5c3db1d4469ad19b2c28cd661b9232568"
+  },
+  {
+    "path": "/data/data/com.termux/files/home/Android/Sdk/ndk/28.1.13356709/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/24/crtend_so.o",
+    "resolved": "/data/data/com.termux/files/home/Android/Sdk/ndk/28.1.13356709/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/24/crtend_so.o",
+    "size": 840,
+    "sha256": "60ac71634f21a7b2ba70e0c60deaaeee2058f4aa06b7000dc63677771a87c3b6"
+  },
+  {
+    "path": "/data/data/com.termux/files/home/Android/Sdk/ndk/28.1.13356709/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/24/libc.so",
+    "resolved": "/data/data/com.termux/files/home/Android/Sdk/ndk/28.1.13356709/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/24/libc.so",
+    "size": 200080,
+    "sha256": "3751ff3d8b61db86ca69d8ae5c646c8346750e83433fe1abd17885c48b47efea"
+  },
+  {
+    "path": "/data/data/com.termux/files/home/Android/Sdk/ndk/28.1.13356709/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/24/libdl.so",
+    "resolved": "/data/data/com.termux/files/home/Android/Sdk/ndk/28.1.13356709/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/aarch64-linux-android/24/libdl.so",
+    "size": 12512,
+    "sha256": "be8fd669d4afe85483da999e7d56ea5e01a9d01d8315b402a70e3bac858cf6a3"
+  }
+]

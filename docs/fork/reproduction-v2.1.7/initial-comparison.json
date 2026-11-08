@@ -1,0 +1,17 @@
+{
+  "published": {
+    "sha256": "f321c19652d80dd91cf96a46e4fcefffd1f309faebb61e3cc64ab4f0fe5bbebb",
+    "size": 40675217
+  },
+  "rebuilt": {
+    "sha256": "b5a30ab9f9326765d83c0b5b8581ac68781ccf819097dfa1118ee22990b50daf",
+    "size": 40666373
+  },
+  "onlyPublished": [],
+  "onlyRebuilt": [],
+  "changed": [
+    "assets/x11-fedora-glycin.so",
+    "classes2.dex"
+  ],
+  "sameCount": 1138
+}

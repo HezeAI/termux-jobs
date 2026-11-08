@@ -5,7 +5,8 @@ performed on **2026-11-04 for v2.1.3**; that date and scope are not extended by 
 new release. This documentation reconciliation compared the named source paths
 with v2.1.7 and its reports; it did not repeat a full security audit or phone tests.
 [Original audit scope](docs/fork/SECURITY-AUDIT-STAGE2.md) ·
-[2.1.7 verification](docs/fork/VALIDATION-v2.1.7.md).
+[2.1.7 verification](docs/fork/VALIDATION-v2.1.7.md) ·
+[Separate release APK/source comparison](docs/fork/REPRODUCIBILITY-v2.1.7.md).
 
 ## Changes and evidence since the original review
 
@@ -168,12 +169,12 @@ backup HOME или окружения может включать CLI-автор
 Источники и границы проверок указаны выше. Открытый код, число тестов
 и совпадение сертификата не заменяют проверку конкретного поведения.
 
-Подтверждённый канал связи — [GitHub Issues проекта](https://github.com/HezeAI/termux-jobs/issues).
-Настройка GitHub private vulnerability reporting проверена через API 2026-11-08: выключена; отдельный закрытый
-адрес не опубликован. Для чувствительной проблемы оставьте только несекретное
-уведомление и запросите у HezeAI закрытый способ передачи подробностей. Не публикуйте
-ключи, приватные журналы, архивы окружений, чужие данные или чувствительные детали
-эксплуатации в Issues. Этот документ не выдумывает приватный канал.
+Закрытые сообщения об уязвимостях: [GitHub private vulnerability reporting](https://github.com/HezeAI/termux-jobs/security/advisories/new).
+Функция включена 2026-11-08; повторный запрос GitHub API подтвердил `enabled: true`.
+Доставка пробного сообщения не проверялась. Для обычных ошибок используйте
+[GitHub Issues](https://github.com/HezeAI/termux-jobs/issues).
+Не публикуйте ключи, приватные журналы, архивы окружений, чужие данные или
+чувствительные детали эксплуатации в открытых Issues.
 
 ## English
 
@@ -282,12 +283,11 @@ from HezeAI's named phone checks. Source availability, test counts and a matchin
 signer do not replace verification of specific behavior. Historical reports retain their original scope; consult the
 current release report for active limits.
 
-The existing contact is [project GitHub Issues](https://github.com/HezeAI/termux-jobs/issues).
-GitHub private vulnerability reporting was checked through the API on 2026-11-08 and is disabled;
-no separate confidential address is published. For sensitive findings, post only a
-non-sensitive notification and ask HezeAI for a private handoff before sharing
-technical details. Do not publish keys, private logs, environment archives, other
-people's data or sensitive exploit details. No private address is invented here.
+Report sensitive vulnerabilities through [GitHub private vulnerability reporting](https://github.com/HezeAI/termux-jobs/security/advisories/new).
+Enabled on 2026-11-08 and confirmed by a subsequent GitHub API query (`enabled: true`).
+Delivery of a test report was not exercised. Use [GitHub Issues](https://github.com/HezeAI/termux-jobs/issues)
+for ordinary bugs. Do not post keys, private logs, environment archives, other
+people's data or sensitive exploit details in public issues.
 
 ## Implementation paths from the dated review / Пути исходного обзора
 

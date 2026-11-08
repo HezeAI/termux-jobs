@@ -1,0 +1,18 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v3.2 scheme (APK Signature Scheme v3.2): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+V2 Signer: certificate DN: CN=Termux Fork Development, OU=Local Testing
+V2 Signer: certificate SHA-256 digest: dd37d983cd2496ebe49c7e88ddbc0088f311d38b8a8503e4392c81b48a11a644
+V2 Signer: certificate SHA-1 digest: 044f24f52487c5e7fbbf187127514945eaf35092
+V2 Signer: certificate MD5 digest: 8659d90ccfa7a0c4d61706727d8d142a
+V2 Signer: key algorithm: RSA
+V2 Signer: key size (bits): 3072
+V2 Signer: public key SHA-256 digest: 1727f517a8e7c6739f9eb7d05adbdacba35cadb736a3bdec31ae8a6387e9d3b7
+V2 Signer: public key SHA-1 digest: 1a449e16ef86728858044cb53375a3e84515a50a
+V2 Signer: public key MD5 digest: 71085a987bdb79610d36c073e7f90380

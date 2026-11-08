@@ -1,0 +1,34 @@
+[
+  {
+    "path": "lib/arm64-v8a/libtermux.so",
+    "published": "5e5e7244bf48903cbb0241f1bc2f65eebb1e3fb18f43c93bd4c8054d7382fc6b",
+    "rebuilt": "5e5e7244bf48903cbb0241f1bc2f65eebb1e3fb18f43c93bd4c8054d7382fc6b",
+    "same": true,
+    "publishedBytes": 11872,
+    "rebuiltBytes": 11872
+  },
+  {
+    "path": "lib/arm64-v8a/libtermux-bootstrap.so",
+    "published": "3ba427c04950d2611603e7781fdb0f8df0ddce21076d9de2831e399c233d526a",
+    "rebuilt": "3ba427c04950d2611603e7781fdb0f8df0ddce21076d9de2831e399c233d526a",
+    "same": true,
+    "publishedBytes": 29394464,
+    "rebuiltBytes": 29394464
+  },
+  {
+    "path": "assets/x11-alpine-compat.so",
+    "published": "8d894105fc8e326b7c2dd9a2baaab869218b4a9c5f3b4b063dd5f09db07cfe17",
+    "rebuilt": "8d894105fc8e326b7c2dd9a2baaab869218b4a9c5f3b4b063dd5f09db07cfe17",
+    "same": true,
+    "publishedBytes": 4080,
+    "rebuiltBytes": 4080
+  },
+  {
+    "path": "assets/x11-fedora-glycin.so",
+    "published": "1caad510d1f79e0d7823621191c294b64f3e105a228ccc23e7a1ab5631ddac61",
+    "rebuilt": "10b2f2a8daf295eb20d5bf51cde4bdde15250b33d740339ccff35337efdb9fb9",
+    "same": false,
+    "publishedBytes": 67656,
+    "rebuiltBytes": 3624
+  }
+]
