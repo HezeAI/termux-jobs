@@ -15,6 +15,22 @@ class PrepareX11Tests(unittest.TestCase):
      with self.assertRaises(ValueError):m.verified_file('input',record)
      self.assertFalse((Path(d)/'.tools/termux-x11-downloads/input').exists())
     self.assertFalse(list(Path(d).rglob('*.partial')))
+ def test_gateway_fallback_keeps_the_exact_pinned_asset(self):
+  import json,urllib.error
+  data=b'input';url='https://github.com/HezeAI/termux-jobs-components/releases/download/pin/file.tar'
+  record=dict(url=url,size=len(data),sha256=hashlib.sha256(data).hexdigest())
+  asset=dict(id=123,name='file.tar',browser_download_url=url,size=len(data),digest='sha256:'+record['sha256'])
+  metadata=dict(tag_name='pin',draft=False,assets=[asset])
+  for wrong in (False,True):
+   if wrong:asset['digest']='sha256:'+'0'*64
+   calls=[urllib.error.HTTPError(url,504,'gateway',{},None),io.BytesIO(json.dumps(metadata).encode()),io.BytesIO(data)]
+   with patch.object(m.urllib.request,'urlopen',side_effect=calls) as fetch:
+    if wrong:
+     with self.assertRaises(ValueError):m.open_input(record)
+     self.assertEqual(2,fetch.call_count)
+    else:
+     with m.open_input(record) as response:self.assertEqual(data,response.read())
+     req=fetch.call_args.args[0];self.assertEqual('https://api.github.com/repos/HezeAI/termux-jobs-components/releases/assets/123',req.full_url);self.assertEqual('application/octet-stream',req.get_header('Accept'))
  def test_corrupt_cache_is_not_accepted_or_silently_replaced(self):
   with tempfile.TemporaryDirectory(dir=ROOT/'.verification') as d,patch.object(m,'ROOT',Path(d)),patch.object(m.urllib.request,'urlopen') as fetch:
    p=Path(d)/'.tools/termux-x11-downloads/input';p.parent.mkdir(parents=True);p.write_bytes(b'bad')
