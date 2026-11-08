@@ -20,6 +20,16 @@ public class WorkspaceUpdatesTest {
         WorkspaceUpdates.Release ru=new WorkspaceUpdates.Release(manifest(),"v1.0.19",true),en=new WorkspaceUpdates.Release(manifest(),"v1.0.19",false);
         assertEquals(1056,ru.code);assertTrue(ru.notes.contains("Обновления"));assertTrue(en.notes.contains("Updates"));
     }
+    @Test public void finalReleaseManifestAcceptsBothLanguagesAndPreviousInstall()throws Exception{
+        String file=System.getenv("JOBS_RELEASE_MANIFEST"),tag=System.getenv("JOBS_RELEASE_TAG");
+        org.junit.Assume.assumeTrue("Set manifest/tag to verify the final release artifact",file!=null&&tag!=null);
+        JSONObject m=new JSONObject(new String(java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(file)),java.nio.charset.StandardCharsets.UTF_8));
+        WorkspaceUpdates.Release ru=new WorkspaceUpdates.Release(m,tag,true),en=new WorkspaceUpdates.Release(m,tag,false);
+        assertEquals(m.getLong("versionCode"),ru.code);assertEquals(m.getString("versionName"),en.name);assertFalse(ru.notes.isEmpty());assertFalse(en.notes.isEmpty());
+        assertTrue(WorkspaceUpdates.validAsset(WorkspaceUpdates.DOWNLOAD+tag+"/update.json",tag,"update.json"));
+        PackageInfo installed=pkg((int)ru.code-1),apk=pkg((int)ru.code);apk.versionName=ru.name;apk.applicationInfo.minSdkVersion=ru.minSdk;
+        WorkspaceUpdates.validatePackage("com.termux",installed,apk,ru,35);
+    }
     private void rejected(JSONObject m)throws Exception{try{new WorkspaceUpdates.Release(m,"v1.0.19",false);fail("Accepted unsafe manifest");}catch(java.io.IOException expected){}}
     @Test public void rejectWrongPackageTagAbiHashAndOversizedDownload()throws Exception{
         rejected(manifest().put("packageId","other.app"));rejected(manifest().put("versionName","1.0.20"));

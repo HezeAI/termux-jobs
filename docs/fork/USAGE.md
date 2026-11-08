@@ -1,3 +1,17 @@
+# Current RTK and stopped-chat access
+
+Limits and context offers mutually exclusive RTK Lite / RTK native choices for
+Codex/Claude in Ubuntu AI. Lite is limited verified handling; native delegates to
+RTK with an explicit permission warning. Prepare/install with progress and cancel;
+for a stopped chat the saved choice applies on launch. A running chat restarts
+only with consent. Component files stay installed when modes are off.
+
+Saved stopped chats can browse project files, attachments/originals, Download and
+Git changes. Cached limits show last-known time; compaction needs a running chat.
+RTK summary tokens are estimates of command output, not subscription quota.
+Details holds exact bytes, additional recall and command counts. Recovery remains
+available. [Modes and limits](RTK-MODE.md).
+
 # v2.1.5 navigation
 
 Use the nested sidebar for each chat's Project and Chat management actions.

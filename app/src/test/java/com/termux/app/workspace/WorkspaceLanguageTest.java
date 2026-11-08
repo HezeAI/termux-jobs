@@ -82,7 +82,7 @@ public class WorkspaceLanguageTest {
             java.io.File files=java.nio.file.Files.createTempDirectory("language-shell").toFile();
             WorkspaceStore.Session profile=new WorkspaceStore.Session();profile.id="local-language";profile.codexSocketId="lang";profile.environment="codex";profile.codexEnvironment="termux";profile.directory="/tmp/a project";
             String codex=CodexSessionShell.command(files,profile);
-            assertTrue(codex.contains("codex-launch-v1.cjs"));assertTrue(codex.contains("'danger-full-access' 'never'"));
+            assertTrue(codex.contains("codex-launch-v2.cjs"));assertTrue(codex.contains("'danger-full-access' 'never'"));
             java.io.File script=new java.io.File(files,"syntax.sh");java.nio.file.Files.write(script.toPath(),codex.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             Process syntax=new ProcessBuilder("/bin/bash","-n",script.getAbsolutePath()).redirectErrorStream(true).start();
             assertTrue(syntax.waitFor(5,java.util.concurrent.TimeUnit.SECONDS));assertEquals(0,syntax.exitValue());

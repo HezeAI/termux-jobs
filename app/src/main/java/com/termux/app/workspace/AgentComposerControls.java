@@ -17,7 +17,7 @@ final class AgentComposerControls {
     final ComposerLimits limits;
     private final ComposerActionLayout tools;
     private final LinearLayout fieldLine;
-    private final ComposerActionLayout toggles;
+    private final TerminalModeRow toggles;
     final LinearLayout card;
     private View transcriptHost,status,stop;
     private int terminalAbove;
@@ -37,8 +37,8 @@ final class AgentComposerControls {
         limits=new ComposerLimits(c);
         tools=new ComposerActionLayout(c);pair.addView(tools,new LinearLayout.LayoutParams(-1,-2));
         fieldLine=new LinearLayout(c);fieldLine.setGravity(Gravity.TOP);fieldLine.setMinimumHeight(dp(44));fieldLine.setBaselineAligned(false);
-        toggles=new ComposerActionLayout(c);toggles.setTag("terminal-inline-controls");
-        interactive=new Switch(c);extra=new Switch(c);for(Switch b:new Switch[]{interactive,extra}){b.setTextSize(11);b.setTextColor(WorkspaceDialogs.TEXT);b.setMinHeight(dp(44));b.setSwitchMinWidth(dp(30));b.setSwitchPadding(dp(7));b.setPadding(0,0,dp(12),0);b.setThumbTintList(ColorStateList.valueOf(WorkspaceDialogs.ACCENT));b.setTrackTintList(new ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{0xff777872,WorkspaceDialogs.LINE}));toggles.addView(b);}
+        toggles=new TerminalModeRow(c);toggles.setTag("terminal-inline-controls");
+        interactive=new Switch(c);extra=new Switch(c);for(Switch b:new Switch[]{interactive,extra}){b.setSingleLine(false);b.setTextSize(11);b.setTextColor(WorkspaceDialogs.TEXT);b.setMinHeight(dp(44));b.setSwitchMinWidth(dp(30));b.setSwitchPadding(dp(7));b.setPadding(0,0,dp(12),0);b.setThumbTintList(ColorStateList.valueOf(WorkspaceDialogs.ACCENT));b.setTrackTintList(new ColorStateList(new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},new int[]{0xff777872,WorkspaceDialogs.LINE}));toggles.addView(b);}
         interactive.setOnCheckedChangeListener((b,on)->{if(!updating)interactiveAction.accept(on);});extra.setOnCheckedChangeListener((b,on)->{if(!updating)extraAction.accept(on);});
         notes=action("",()->star.performClick());queue=action("",()->queueAction.run());actionClearance=new View(c);actionClearance.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);actionClearance.setTag("composer-action-clearance");
         notes.setTag("agent-notes-input");notes.setTextSize(12.65f);
@@ -89,5 +89,5 @@ final class AgentComposerControls {
     void stopAvailable(boolean available){stopAvailable=available;updateStop();}
     private void updateStop(){if(stop!=null){stop.setVisibility(agent?(stopAvailable?View.VISIBLE:View.INVISIBLE):View.GONE);stop.setEnabled(agent&&stopAvailable);}}
     private View separator(){TextView v=new TextView(context);v.setText("/");v.setTextSize(12);v.setTextColor(WorkspaceDialogs.MUTED);v.setPadding(dp(8),0,dp(8),0);v.setGravity(Gravity.CENTER);v.setMinHeight(dp(44));return v;}
-    void labels(){star.setContentDescription(agent?t("Заметки","Notes"):t("Команды","Commands"));commands.setContentDescription(t("Вставить сохранённую команду","Insert saved command"));interactive.setContentDescription(t("Интерактивный ввод","Interactive input"));extra.setContentDescription(t("Дополнительные клавиши","Extra keys"));notes.setText(t("Заметки","Notes"));notes.setContentDescription(t("Заметки","Notes"));queue.setText(t("Очередь","Queue"));commands.setText(t("Команды","Commands"));terminalNotes.setText(t("Заметки","Notes"));interactive.setText(t("Интерактивный ввод","Interactive input"));extra.setText(t("Дополнительные клавиши","Extra keys"));attachment.setContentDescription(t("Прикрепить файл","Attach file"));send.setContentDescription(agent?t("Отправить сообщение","Send message"):t("Отправить в активный терминал","Send to active terminal"));}
+    void labels(){star.setContentDescription(agent?t("Заметки","Notes"):t("Команды","Commands"));commands.setContentDescription(t("Вставить сохранённую команду","Insert saved command"));interactive.setContentDescription(t("Интерактивный ввод","Interactive input"));extra.setContentDescription(t("Дополнительные клавиши","Extra keys"));notes.setText(t("Заметки","Notes"));notes.setContentDescription(t("Заметки","Notes"));queue.setText(t("Очередь","Queue"));commands.setText(t("Команды","Commands"));terminalNotes.setText(t("Заметки","Notes"));interactive.setText(t("Интерактивный ввод","Interactive input"));toggles.labels(t("Дополнительные клавиши","Extra keys"),t("Доп. клавиши","Extra keys"));attachment.setContentDescription(t("Прикрепить файл","Attach file"));send.setContentDescription(agent?t("Отправить сообщение","Send message"):t("Отправить в активный терминал","Send to active terminal"));}
 }

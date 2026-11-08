@@ -1,3 +1,12 @@
+# Stable 2.1.6 /1532 — metadata-only rebuild of accepted test10
+
+Functional code, resources and helpers match the phone-accepted test10 /1531.
+Only versionCode1532/versionName2.1.6 change. Build variables:
+TERMUX_APP_VERSION_NAME=2.1.6 and TERMUX_APK_VERSION_TAG=v2.1.6-arm64.
+Code1532 exceeds published main1520/rollback1521 and accepted test10 1531.
+Stable updater metadata uses the final signed APK. No rollback APK is added.
+[Validation](docs/fork/VALIDATION-v2.1.6.md). Earlier notes are historical.
+
 > Stable release: v2.1.5 /1520, compared with v2.1.4.
 > Optional manual legacy-interface rollback: 2.1.5-rollback /1521, separate source tag.
 > Same com.termux/certificate, ARM64, schema8, min26/target28/compile35.

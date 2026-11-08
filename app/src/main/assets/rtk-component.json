@@ -1,0 +1,31 @@
+{
+  "id": "rtk-oss",
+  "version": "1.1.0-jobs.1",
+  "environment": "ubuntu-ai",
+  "architecture": "aarch64",
+  "url": "https://github.com/HezeAI/termux-jobs-components/releases/download/rtk-1.1.0-jobs.1/rtk-oss-1.1.0-jobs.1-aarch64-unknown-linux-gnu.tar.gz",
+  "size": 5621920,
+  "sha256": "8a43d2bfc4bb54bd55f43ace6c39068f0e033518c5f594b969856b33a5577716",
+  "binarySha256": "3b8c5b69791e86222db36b104bce10da2975b92adaaa86f82e1c893ae3035619",
+  "license": "Apache-2.0",
+  "source": "https://github.com/HezeAI/termux-jobs-components/tree/rtk-1.1.0-jobs.1/sets/rtk-1.1.0-jobs.1",
+  "licenseSha256": "33f694a31d9f9df3e292a9413a3cdb0113fa72698e2c719f657ff6b53165dcc4",
+  "noticesSha256": "40e5895dcde0194badf450fa43d1bc6b6eabfd90412587711c96c94dcfefba80",
+  "previous": {
+    "id": "rtk-oss",
+    "version": "1.1.0",
+    "environment": "ubuntu-ai",
+    "architecture": "aarch64",
+    "url": "https://github.com/rtk-ai/rtk/releases/download/v1.1.0/rtk-oss-aarch64-unknown-linux-gnu.tar.gz",
+    "size": 5305145,
+    "sha256": "57a4fac13d18da77f0577ea8b68def7934b934bf76d0a6e161f0bfd06b1e1078",
+    "binarySha256": "d4f0134696665b772dee21c8f8d8f58318ed560dae416d6048249765945d920a",
+    "license": "Apache-2.0",
+    "source": "https://github.com/rtk-ai/rtk/tree/v1.1.0",
+    "licenseSha256": "33f694a31d9f9df3e292a9413a3cdb0113fa72698e2c719f657ff6b53165dcc4"
+  },
+  "measurementProtocol": 1,
+  "upstreamVersion": "1.1.0",
+  "componentRevision": "jobs.1",
+  "minimumGlibc": "2.39"
+}

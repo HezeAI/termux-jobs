@@ -11,7 +11,7 @@ final class AgentStopButton extends View {
     private final Path[] spark=new Path[]{new Path(),new Path(),new Path(),new Path()};
     private final Matrix geometry=new Matrix();
     private float sparkRadius=-1;
-    private long time;
+    private long time,pulseStart;
     private boolean compact;
     void compact(boolean value){compact=value;invalidate();}
     boolean compact(){return compact;}
@@ -19,11 +19,18 @@ final class AgentStopButton extends View {
     private String agent="Codex";
     private AgentIndicatorState.State state=AgentIndicatorState.State.IDLE;
     AgentStopButton(Context c){super(c);setClickable(true);setFocusable(true);setEnabled(false);}
-    void indicator(String name,AgentIndicatorState.State next){if(agent.equals(name)&&state==next)return;agent=name;state=next;invalidate();}
+    void indicator(String name,AgentIndicatorState.State next){if(agent.equals(name)&&state==next)return;agent=name;state=next;if(!animated()){time=0;pulseStart=0;}invalidate();}
     AgentIndicatorState.State state(){return state;}
-    boolean animated(){return !compact&&(state==AgentIndicatorState.State.WORKING||state==AgentIndicatorState.State.WAITING||state==AgentIndicatorState.State.RECONNECTING);}
+    boolean animated(){return compact?state==AgentIndicatorState.State.WORKING:(state==AgentIndicatorState.State.WORKING||state==AgentIndicatorState.State.WAITING||state==AgentIndicatorState.State.RECONNECTING);}
     float circleRadius(){float d=getResources().getDisplayMetrics().density;return Math.max(1,Math.min(Math.min(getWidth(),getHeight())/2f-3*d,18*d));}
-    void frame(long nanos,float ignored){long next=animated()?nanos:0;if(time!=next){time=next;invalidate();}}
+    void frame(long nanos,float ignored){long next=animated()&&(!compact||getVisibility()==VISIBLE)&&android.animation.ValueAnimator.areAnimatorsEnabled()?nanos:0;if(next==0)pulseStart=0;else if(pulseStart==0)pulseStart=next;if(time!=next){time=next;invalidate();}}
+    int compactBorderColor(){
+        if(time==0||state!=AgentIndicatorState.State.WORKING||!android.animation.ValueAnimator.areAnimatorsEnabled())return WorkspaceDialogs.LINE;
+        double phase=((time-pulseStart)%2500000000L)/2500000000d;
+        float amount=(float)(.5-.5*Math.cos(phase*2*Math.PI));int from=WorkspaceDialogs.LINE,to=0xff9a9a9a;
+        return Color.rgb(Math.round(Color.red(from)+(Color.red(to)-Color.red(from))*amount),Math.round(Color.green(from)+(Color.green(to)-Color.green(from))*amount),Math.round(Color.blue(from)+(Color.blue(to)-Color.blue(from))*amount));
+    }
+    @Override protected void onVisibilityChanged(View changed,int visibility){super.onVisibilityChanged(changed,visibility);if(!isShown()){time=0;pulseStart=0;}}
     @Override public CharSequence getAccessibilityClassName(){return android.widget.Button.class.getName();}
     @Override protected void drawableStateChanged(){super.drawableStateChanged();invalidate();}
 
@@ -79,7 +86,7 @@ final class AgentStopButton extends View {
         if(compact){float d=getResources().getDisplayMetrics().density,cx=getWidth()/2f,cy=getHeight()/2f;
             paint.setShader(null);paint.setStyle(Paint.Style.FILL);paint.setColor(WorkspaceDialogs.SURFACE);paint.setAlpha(isEnabled()?255:100);
             c.drawRoundRect(cx-16.5f*d,cy-12.5f*d,cx+16.5f*d,cy+12.5f*d,8*d,8*d,paint);
-            paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(d);paint.setColor(WorkspaceDialogs.LINE);c.drawRoundRect(cx-16.5f*d,cy-12.5f*d,cx+16.5f*d,cy+12.5f*d,8*d,8*d,paint);
+            paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(d);paint.setColor(compactBorderColor());c.drawRoundRect(cx-16.5f*d,cy-12.5f*d,cx+16.5f*d,cy+12.5f*d,8*d,8*d,paint);
             paint.setStyle(Paint.Style.FILL);paint.setColor(0xffff5252);c.drawRoundRect(cx-4.5f*d,cy-4.5f*d,cx+4.5f*d,cy+4.5f*d,2*d,2*d,paint);paint.setAlpha(255);return;}
         float d=getResources().getDisplayMetrics().density,r=circleRadius();
         boolean idle=state==AgentIndicatorState.State.IDLE,waiting=state==AgentIndicatorState.State.WAITING,reconnect=state==AgentIndicatorState.State.RECONNECTING,error=state==AgentIndicatorState.State.ERROR;

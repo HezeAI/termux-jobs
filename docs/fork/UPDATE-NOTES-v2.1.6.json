@@ -1,0 +1,38 @@
+{
+  "ru": [
+    "Обновлённый интерфейс: сворачиваемые карточки бокового меню, компактные облачка сообщений, спокойное появление действий и чёрная выбранная строка.",
+    "RTK Lite и RTK штатный: отдельный выбор и статистика каждого чата Codex/Claude в Ubuntu AI.",
+    "RTK 1.1.0-jobs.1 загружается из Components с проверкой SHA-256. Встроенный тестовый архив удалён.",
+    "Точные объёмы вывода до и после сокращения без повторного запуска команды. Head/tail учитывают выбранные строки; recall считается отдельно.",
+    "Краткая оценка токенов относится только к выводу команд. Неизвестная база не заменяется размером файла.",
+    "Файлы, вложения, Git и последние известные лимиты доступны у сохранённого незапущенного чата.",
+    "Выбор RTK можно подготовить до запуска чата. Работающие чаты не перезапускаются автоматически.",
+    "RTK штатный может менять применение запретов исходной команды и некоторых Bash-подтверждений; перед включением показано предупреждение.",
+    "WebSocket-сбой Codex с историей изображений не исправлен. Ограничение Bypass Claude при root/Ubuntu сохраняется."
+  ],
+  "en": [
+    "Refined interface: collapsible sidebar cards, compact user bubbles, gentle action arrivals and black selected session rows.",
+    "Per-chat RTK Lite and RTK native modes for Codex/Claude in Ubuntu AI.",
+    "RTK 1.1.0-jobs.1 downloads from Components with pinned SHA-256; no embedded test archive.",
+    "Measured output before/after filtering without rerunning commands. Head/tail use the requested window; recall is counted separately.",
+    "Estimated tokens describe command output only. Unknown baselines are never replaced with whole-file sizes.",
+    "Saved stopped chats can open files, attachments, Git changes and last-known limits.",
+    "RTK can be prepared before launch. Working chats never restart automatically.",
+    "Native RTK can change original-command forbids and some Bash approval behavior; the enable dialog explains this.",
+    "The Codex image-history WebSocket issue is not fixed. Claude root/Ubuntu Bypass restrictions remain."
+  ],
+  "compatibility": {
+    "ru": [
+      "Android 8+, ARM64, прежние com.termux и подпись. Code 1532 выше main 1520, rollback 1521 и test10 1531; стабильная версия для встроенного обновления.",
+      "Сброс данных и переустановка сред не требуются; схема хранения не изменена. Установка поверх rollback на телефоне отдельно не проверена.",
+      "RTK jobs.1 требует Ubuntu AI ARM64/glibc ≥2.39. Режимы, статистика и recall сохраняются; для новых hooks нужен явный перезапуск выбранного чата.",
+      "В новом релизе нет rollback-APK. Старые релизы сохранены. Auto Claude зависит от версии/аккаунта; принятый CLI-параметр не доказывает работу классификатора."
+    ],
+    "en": [
+      "Android 8+, ARM64, same com.termux package/certificate. Code 1532 exceeds main 1520, rollback 1521 and test10 1531; stable version for the in-app updater.",
+      "No data reset or environment reinstall required; storage schema unchanged. Phone installation over rollback is not separately verified.",
+      "RTK jobs.1 requires Ubuntu AI ARM64/glibc >=2.39. Modes, statistics and recall remain; new hooks require explicit restart of the selected chat.",
+      "No rollback APK in this release; old releases remain. Claude Auto depends on version/account; CLI acceptance does not verify its classifier."
+    ]
+  }
+}

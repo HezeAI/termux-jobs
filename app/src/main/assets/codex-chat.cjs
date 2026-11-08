@@ -1,4 +1,5 @@
 'use strict';
+const rtk=require('./rtk-agent.cjs');
 const {fileReferences}=require('./agent-attachments.cjs');
 const {CompletionTimes,RequestClock,instant}=require('./agent-completion-times.cjs');
 // Android presentation of the native app-server protocol. No auth-file reads or policy overrides.
@@ -103,7 +104,7 @@ class CodexChat {
   }
  }
  expected(){return this.access==='full'?'dangerFullAccess':this.access==='read'?'readOnly':'workspaceWrite';}
- params(){return {cwd:this.cwd,approvalPolicy:this.approval,sandbox:this.access==='full'?'danger-full-access':this.access==='read'?'read-only':'workspace-write'};}
+ params(){return {...(this.rtkConfig?{config:this.rtkConfig}:{}),cwd:this.cwd,approvalPolicy:this.approval,sandbox:this.access==='full'?'danger-full-access':this.access==='read'?'read-only':'workspace-write'};}
  verify(r){if(normalize(r.cwd)!==normalize(this.cwd)||r.approvalPolicy!==this.approval||r.sandbox?.type!==this.expected())throw Error('Codex did not confirm the requested directory and permissions');}
  async start(){
   if(this.starting)return this.starting;
@@ -115,13 +116,14 @@ class CodexChat {
   this.authRequired=account.requiresOpenaiAuth===true&&!account.account;
   if(this.authRequired){this.ready=false;return;}if(this.closed)return;
   let r;
+  try{this.rtkConfig=await rtk.codexConfig(this.rpc,this.cwd);}catch{this.rtkConfig=null;}
   if(this.chat==='id'){
    if(!valid(this.requested))throw Error('Choose a specific chat ID');
    const metadata=(await this.rpc.call('thread/read',{threadId:this.requested,includeTurns:false})).thread;
    if(!metadata?.cwd||(normalize(metadata.cwd)!==normalize(this.cwd)&&(!this.confirmed||normalize(metadata.cwd)!==normalize(this.confirmed))))throw Error('The chat directory changed. Confirm its original folder in session settings.');
    r=await this.rpc.call('thread/resume',{threadId:this.requested,excludeTurns:true,...this.params()});
   }else if(this.chat==='new')r=await this.rpc.call('thread/start',this.params());else throw Error('Choose a specific chat or create a new chat');
-  this.verify(r);if(!valid(r.thread?.id))throw Error('Codex returned an invalid chat');this.thread=r.thread.id;this.model=text(r.model);this.effort=text(r.reasoningEffort);this.receipts=new ReceiptStore(path.join(this.root,this.thread+'.codex-receipts.json'),'X');this.completions=new CompletionTimes(this.root,'codex',this.thread);this.restoreContext();if(this.earlyUsage?.threadId===this.thread)this.acceptUsage(this.earlyUsage.tokenUsage);this.earlyUsage=null;if(r.thread?.status?.type==='active')this.busy=true;
+  this.verify(r);if(!valid(r.thread?.id))throw Error('Codex returned an invalid chat');this.thread=r.thread.id;if(this.rtkConfig)try{await rtk.confirmCodex(this.rpc,this.thread);}catch{}this.model=text(r.model);this.effort=text(r.reasoningEffort);this.receipts=new ReceiptStore(path.join(this.root,this.thread+'.codex-receipts.json'),'X');this.completions=new CompletionTimes(this.root,'codex',this.thread);this.restoreContext();if(this.earlyUsage?.threadId===this.thread)this.acceptUsage(this.earlyUsage.tokenUsage);this.earlyUsage=null;if(r.thread?.status?.type==='active')this.busy=true;
   if(this.chat==='id')try{await this.history();}catch{if(this.disconnected)return;this.historySupported=false;this.error('The current Codex cannot load paginated history. Open its native terminal to view older messages.');}if(this.disconnected||this.closed)return;this.ready=true;this.refresh();
  }
  error(body){this.failure=text(body);const id='error_'+crypto.randomUUID();this.put('local',{id,type:'localError',text:this.failure});}

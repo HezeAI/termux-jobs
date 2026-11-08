@@ -1,3 +1,174 @@
+# 2.1.6 / versionCode 1532 — 2026-11-08 (published application release)
+
+Changes since published v2.1.5 /1520. The phone-accepted test10 functional code is retained; only
+version metadata changes for the stable rebuild and in-app updater. Private-build
+entries below remain historical preparation evidence.
+
+- Refined interface: four collapsible sidebar cards with persistent choices,
+  black selected chat/terminal rows, right-aligned content-sized user bubbles,
+  calm action/image arrivals that retain progress, manual-only scroll indication,
+  and a pulsing Stop outline respecting reduced motion.
+- Optional per-chat RTK Lite / RTK native for Codex and Claude in Ubuntu AI,
+  component installation/update with cancellation, scoped recovery and explicit
+  permission caveats. Published jobs.1 downloads with SHA-256 verification;
+  the test archive is absent from the APK.
+- Measured command-output bytes and separate recall accounting, selected head/tail
+  windows, unknown-base handling, no command reruns and no Lite double counting.
+  Estimated-token summary and collapsed Details do not claim subscription savings.
+- Saved stopped chats can browse project files/attachments/Git and last-known
+  context/limits, and prepare RTK without starting an agent. Terminal switches
+  retain one row; close-session text no longer offers the misleading history option.
+- Same package/certificate/schema; no reset or environment reinstall required.
+  Code1532 exceeds published rollback1521. No rollback APK in this release.
+  Actual device installation over rollback remains unverified. RTK requires glibc>=2.39.
+- [Release notes](docs/fork/RELEASE-v2.1.6.md) · [Release validation](docs/fork/VALIDATION-v2.1.6.md).
+
+# 2.1.6-test10 / versionCode 1531 — 2026-11-08 (private test build)
+
+- RTK1.1.0-jobs.1 downloads from the published Termux Job’s Components release,
+  with pinned archive/binary/license SHA-256, architecture and runtime checks.
+  Removes the private embedded archive and its installation branch.
+- Explicit versioned update from upstream1.1.0 keeps the old binary and per-chat
+  modes, statistics and recovery files. Compatible jobs.1 is reused. Failed download
+  leaves the working installation intact; working chats require consent to restart.
+- RTK Lite retains its captured-output measurement without native double counting.
+  Original commands are not repeated; recall remains separate from base output.
+- Selected sidebar chat/terminal fill now shares the chat’s black color resource.
+  Borders, corners, labels and selection behavior remain unchanged.
+- Includes test9; same com.termux/signer, increasing versionCode, unchanged state schema.
+  No automatic installation or application release. Ubuntu AI ARM64/glibc>=2.39
+  required for jobs.1. Device update and visual checks remain separate.
+- [Verification and limitations](docs/fork/VALIDATION-2.1.6-test10.md).
+
+# 2.1.6-test9 / versionCode 1530 — 2026-11-08 (private test build)
+
+- RTK OSS upstream1.1.0, component revision jobs.1, measures bytes inside its
+  captured runner before filtering and after emission. No repeated command and
+  no recall-size baseline. Native ls, normal Git status/diff/log, captured search and full reads now have
+  measured before/after statistics;
+  verified head/tail windows stay unchanged. Other unmeasured paths stay unknown.
+- Native results are matched to returned tool text by run/arguments/output hash;
+  recall remains separate. Ambiguous, transformed and unsupported results remain unknown.
+- Offers an update from upstream1.1.0 using a separate version directory. Existing
+  running commands, modes, statistics and recall remain. Update-only does not change
+  selected RTK mode; the dialog warns that a working chat needs an explicit restart.
+- Private APK bundles the SHA-verified candidate archive while component publication
+  awaits approval. It shows local preparation progress. The versioned GitHub URL
+  is prepared; public download is not claimed tested. Stable update metadata is unchanged.
+- A mixed history shows the known measured portion explicitly; old unknown results
+  are retained and never fabricated retroactively.
+- RTK Details hide the measurement start date and old estimates. Stored counters
+  and old data are retained. Includes test8 changes; same com.termux/signer, schema unchanged.
+- [Verification, component artifacts and limits](docs/fork/VALIDATION-2.1.6-test9.md).
+
+# 2.1.6-test8 / versionCode 1529 — 2026-11-08 (private test build)
+
+- RTK shows connection state, an estimated-token summary for the selected mode,
+  and a short description. Detailed byte/recall/command counters, both modes,
+  measurement date, legacy estimates and mode explanations move into collapsed Details.
+- Unknown or partial baselines never produce an overall reduction percentage.
+  Token conversion is display-only; command processing and stored counters are unchanged.
+- Includes test7; same package/signer, no data schema changes. No automatic install/publication.
+- [Checks and limitations](docs/fork/VALIDATION-2.1.6-test8.md).
+
+# 2.1.6-test7 / versionCode 1528 — 2026-11-08 (private test build)
+
+- RTK dialog action and cancel buttons now wrap their text and remain centered,
+  with 16 dp horizontal /8 dp vertical padding and a minimum 48 dp touch height.
+  Large text wraps; progress bars retain full width. Connection, installation,
+  confirmation and saved-selection behavior remain unchanged.
+- Includes test6 fixes; same package/signer, no data format changes. No automatic
+  installation or publication. Device font wrapping still requires visual checking.
+- [Verification](docs/fork/VALIDATION-2.1.6-test7.md).
+
+# 2.1.6-test6 / versionCode 1527 — 2026-11-08 (private test build)
+
+- RTK Lite and RTK native now show separate versioned tool-output byte metrics:
+  measured before/after, additional recall text, processed commands, unchanged
+  commands and unknown baselines. Previous statistics remain a separate estimate.
+- Lite measures the original command's captured output, including its line windows
+  and filters. No original command is rerun for statistics. Native head/tail windows
+  remain zero-reduction when unchanged; unverified native baselines show unknown.
+- Recall counts returned tool text, not merely saving a recovery file. New accounting
+  requires the new scoped post-tool hook on the next chat start; no automatic restart.
+- The Stop button's gray outline gently pulses on a 2.5-second cycle during work.
+  Its red square and geometry stay unchanged; system animation disabling stays static.
+- Includes test5 sidebar fill and arrival continuity fixes. Same package/signer;
+  code1527 exceeds test5. No automatic installation or publication.
+- [Verification and limitations](docs/fork/VALIDATION-2.1.6-test6.md).
+
+# 2.1.6-test5 / versionCode 1526 — 2026-11-08 (private test build)
+
+- Sidebar section cards now use the exact sidebar background color. Borders,
+  corners, spacing, active-session highlighting and section preferences remain.
+- Transcript rows reorder without detaching retained cards. Timeline height
+  transitions remain independent of the ongoing arrival animation.
+- Standalone tool/image-view actions and agent attachments now share the gentle
+  arrival. Late attachment size changes ease without resetting arrival progress.
+- Same package, signer and workspace schema; versionCode1526 exceeds test4.
+  No installation/publication. Phone visual acceptance remains pending.
+- [Checks and limitations](docs/fork/VALIDATION-2.1.6-test5.md).
+
+# 2.1.6-test4 / versionCode 1525 — 2026-11-08 (private test build)
+
+- Four sidebar cards follow the approved Cards mockup. Section choices persist;
+  opening the menu expands only the on-screen session's section without overwriting
+  the user's choice. Status refreshes preserve a manual collapse.
+- User messages use content-sized right-aligned bubbles, capped at85% of chat width.
+  Delivery status, selection, copy and attachment actions remain available.
+- New messages and timelines use a gentle520ms arrival. Timeline updates retain
+  the arrival progress; height changes ease independently. History does not replay.
+- Chat scroll indicators appear only for manual drag/wheel scrolling and inertia;
+  automatic scrolling, history restoration and content updates do not show them.
+- Same package, signer and workspace schema; versionCode1525 exceeds test3.
+  No installation/publication. [Checks and limitations](docs/fork/VALIDATION-2.1.6-test4.md).
+
+# 2.1.6-test3 / versionCode 1524 — 2026-11-08 (private test build)
+
+- Saved stopped agent chats can open project files, attachments, Git changes and
+  limits/context without starting the agent. Cached metrics show their timestamp.
+  Compaction requires a running chat. Unavailable native histories show a reason.
+- RTK Lite is the app's limited verified integration. RTK native («RTK штатный»)
+  delegates rewriting to RTK OSS 1.1.0, with an agent-specific permission warning.
+  Both modes retain recovery; native recovery and estimated statistics are per chat.
+- RTK can be prepared and selected before starting a saved chat. The UI distinguishes
+  saved selection from confirmed connection. Choices are mutually exclusive.
+- Same package, signing certificate and workspace schema; code1524 exceeds test2.
+  No installation, publication or automatic restart of working chats.
+- [Verification and limitations](docs/fork/VALIDATION-2.1.6-test3.md).
+
+# 2.1.6-test2 / versionCode 1523 — 2026-11-08 (private test build)
+
+- RTK remains a partial integration. Adds literal search/read commands and selected
+  test runners. Original commands remain visible to native permission checks.
+- Gradle uses RTK's captured-output preview plus the final build lines; this is not
+  the dedicated RTK Gradle parser. Diagnostics fall back to full stdout; stderr and
+  command exit status stay native. Unsupported/compound commands are unchanged.
+- Opening RTK settings refreshes the installed app bridge atomically, retaining
+  the pinned RTK binary, chat settings and measurements. Full-output reads bypass RTK.
+- Same package/signer/schema; code1523 exceeds test1. No automatic install/restart.
+  Phone update and actual cloud models remain unverified for this build.
+- [Coverage and verification](docs/fork/VALIDATION-2.1.6-test2.md).
+
+# 2.1.6-test1 / versionCode 1522 — 2026-11-07 (private test build)
+
+- Optional RTK Mode for Claude and Codex in Ubuntu AI: pinned RTK OSS 1.1.0,
+  verified download, per-chat activation and measured stdout byte reduction.
+  Initial command coverage: literal `git status`, `git diff`, `git log` variants.
+  Unsupported commands and stderr retain their ordinary path. No quota-saving claim.
+- One environment installation; independent chat settings, cancellation and
+  explicit consent before restarting the selected chat when binding requires it.
+- Terminal mode switches stay in one row; the extra-keys label shortens according
+  to measured width, without reducing text size or touch targets.
+- Terminal closing uses “Save and close”; the history checkbox is removed.
+  Launch settings and existing shell/CLI history retention are preserved.
+- Package/signing identity and workspace schema remain unchanged; versionCode
+  exceeds stable1520 and manual rollback1521. No automatic installation/publication.
+- Limits: real-model and phone checks are separate from native CLI fixture tests;
+  sandboxed Codex execution encountered the fixture environment's bubblewrap error.
+  See [RTK behavior](docs/fork/RTK-MODE.md) and
+  [validation](docs/fork/VALIDATION-2.1.6-test1.md) for actual results and remaining checks.
+
 # 2.1.5 · versionCode 1520 · 2026-11-07
 
 Изменения относительно стабильного v2.1.4: новый интерфейс чатов, терминалов,

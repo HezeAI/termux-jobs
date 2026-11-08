@@ -24,7 +24,7 @@ final class ClaudeCode {
         File dir=directory(context.getFilesDir());
         if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create Claude controls");
         protect(dir);
-        for(String asset:new String[]{"agent-download.sh","claude-bootstrap.sh","claude-control.js","claude-control-v2.js","claude-chat.cjs","claude-permissions.cjs","claude-history.cjs","claude-subscription.cjs","claude-native-hook.cjs","agent-receipts.cjs","agent-action-preview.cjs","agent-completion-times.cjs","agent-context.cjs","agent-delivery-status.cjs","agent-attachments.cjs"}) {
+        for(String asset:new String[]{"rtk-agent.cjs","agent-download.sh","claude-bootstrap.sh","claude-control.js","claude-control-v2.js","claude-chat.cjs","claude-permissions.cjs","claude-history.cjs","claude-subscription.cjs","claude-native-hook.cjs","agent-receipts.cjs","agent-action-preview.cjs","agent-completion-times.cjs","agent-context.cjs","agent-delivery-status.cjs","agent-attachments.cjs"}) {
             File temporary=File.createTempFile("claude-",".tmp",dir);
             try {
                 try(InputStream in=context.getAssets().open(asset);OutputStream out=new FileOutputStream(temporary)) {
@@ -43,7 +43,7 @@ final class ClaudeCode {
         if(!ClaudePermissions.valid(s.claudeMode))throw new IllegalArgumentException(WorkspaceText.tr("Выбранный режим разрешений не поддерживается. Запуск остановлен; полный доступ не включён."));
         if(!valid(s))throw new IllegalArgumentException("Invalid Claude profile");
         return "( set -e; export JOBS_CLAUDE_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")
-            +"; export JOBS_CLAUDE_EFFORT="+SessionShell.quote(s.claudeEffort)
+            +RtkMode.environment(s,s.claudeSocketId)+"; export JOBS_CLAUDE_EFFORT="+SessionShell.quote(s.claudeEffort)
             +"; source "+SessionShell.quote(GUEST+"/claude-bootstrap.sh")
             +"; exec \"$JOBS_CLAUDE_NODE\" "+SessionShell.quote(GUEST+"/claude-control-v2.js")+" run "
             +SessionShell.quote(GUEST+"/"+s.claudeSocketId+".sock")+" "+SessionShell.quote(s.claudeModel)+" "+SessionShell.quote(s.claudeMode)+" "+SessionShell.quote(s.claudeChat)+" "+SessionShell.quote(s.claudeThread)+" )";

@@ -959,3 +959,25 @@ replaced or relicensed here. See docs/fork/THIRD-PARTY.md for source/build detai
 This notice inventory does not claim a complete independent legal/security audit.
 Unresolved exact-source coverage for older mirrored distro/XFCE/bootstrap packages
 must remain visible in the dated license review rather than being declared compliant.
+
+## RTK OSS 1.1.0 — component revision jobs.1
+
+RTK is developed by the rtk-ai contributors, independently of Termux Job’s.
+Exact upstream source: https://github.com/rtk-ai/rtk/tree/753a3b0e939f2e4490fc24e3a1984010f40a103c .
+HezeAI’s separate 1.1.0-jobs.1 build adds optional exact byte measurements inside
+RTK’s captured runner. It is built with `--no-default-features`; engine code is not linked.
+License: Apache-2.0. The unchanged license remains in third-party/rtk/LICENSE,
+assets/rtk-LICENSE.txt and the component archive LICENSE. The component archive also
+contains THIRD_PARTY_NOTICES.txt with dependency copyright/license texts.
+
+The binary and exact corresponding-source archives are published separately at
+https://github.com/HezeAI/termux-jobs-components/releases/tag/rtk-1.1.0-jobs.1 .
+The application downloads the pinned binary archive on explicit request; no RTK
+binary archive is embedded in this APK. Sources, patch, build instructions,
+Apache-2.0 license and dependency notices remain available with the component.
+The checked upstream commit has no separate root NOTICE.
+The official previous binary remains available and is not replaced in place.
+Archive/binary/license/notices SHA-256 values, upstream version, component revision,
+and minimum glibc are pinned in app/src/main/assets/rtk-component.json.
+This private integration does not modify stable application update metadata,
+shared instructions or authentication and does not run rtk init.
