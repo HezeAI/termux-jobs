@@ -1,14 +1,16 @@
-# Active: stable 2.1.7 /1536 — gates passed, publication authorized
+# Published stable 2.1.7 /1536 — complete
 
-User accepted test2/1535; functional production files remain identical. Only
-versionName/code changed. Source/workflow997ceb4d fullCI42476694520 PASS:
-1940passed/9skips (8SFTP +finalmanifest env; latter passed local). FirstCI42475835531
-failed stale ended-agent restart visibility assertion; test-only correction, APK unchanged.
-Local ModernLint0errors/290warnings;16updater tests;22composer/restart regression testsPASS.
+Release: https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.7
+Tag commit: f3f57668fca31302062bf46f3be6a20d885ede1d; release ID 438213343, latest stable, no prerelease/rollback.
 APK SHA256 f321c19652d80dd91cf96a46e4fcefffd1f309faebb61e3cc64ab4f0fe5bbebb.
-Pending: final docs commit/tag/push, .verification/release-v2.1.7/publish.py,
-public download/source links/old assets verification. No Components publication,
-rollback APK or automatic installation. Preserve all older releases and files.
+Public ordinary-URL downloads of all4assets match; downloaded signature/package/ABI,
+metadata and5taggedsource/docfiles verified. Old38releases/145assets preserved.
+CI42476694520 on997ceb4d PASS:1940passed/9skips; firstCI42475835531 stale test
+expectation failed, corrected onlytest. Signed functionalcode matches phone-accepted
+2.1.7-test2. LocalModernLint0errors/290warnings;16updater and22regression testsPASS.
+No Components publication, no auto-install, no user chat/environment stop/delete.
+Evidence .verification/release-v2.1.7; docs/fork/VALIDATION-v2.1.7.md.
+Do not move tag or replace released APK/update.json. Future changes need nextrelease.
 
 ---
 

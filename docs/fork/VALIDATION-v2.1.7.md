@@ -47,3 +47,23 @@ cloud-Claude validation is claimed. Unknown pipeline/ambiguous/truncated bases r
 unknown. No user environment or session is deleted or stopped during release work.
 No new phone installation is performed by the assistant. Final APK differs from
 the phone-tested candidate only in release metadata and resulting build/signature bytes.
+
+## Publication verification
+
+Published latest stable [v2.1.7](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.7), release ID 438213343,
+draft=false/prerelease=false. Annotated tag resolves to `f3f57668fca31302062bf46f3be6a20d885ede1d`.
+Only four assets: signed APK, SHA256SUMS, update.json and validation.json.
+All four were downloaded anonymously through their ordinary browser_download_url,
+without API fallback, and matched the prepared files byte for byte. Downloaded
+APK package/version/ABI/signature were checked again. Five public tagged source/
+documentation files matched local bytes. The updater's final RU/EN metadata and
+package tests passed locally; no automatic phone installation was performed.
+All 38 older releases and 145 existing assets retain their IDs, names, URLs, sizes
+and digests. RTK Components was not republished. The verified APK is also saved in
+`/sdcard/Download/Termux-Jobs-v2.1.7-arm64.apk`.
+
+The initial draft lookup through releases/tags/v2.1.7 returned404 even though the
+release-list response showed the correct tag_name and four uploaded assets.
+The draft was verified by release ID, then published with explicit tag_name and
+make_latest. No duplicate release was created and no existing asset was replaced.
+Postpublication report commits do not move the tag or replace published files.
