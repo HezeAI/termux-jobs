@@ -54,12 +54,25 @@ agent chats. The RTK jobs.1 binary is unchanged. Open **Limits and context** aft
 updating to refresh the application's observer.
 
 Android 8+, ARM64; versionCode **1536**. No environment reinstall or data reset is
-required. No rollback APK is included in this release. RTK figures describe command
+required. RTK figures describe command
 output, not subscription quota or the entire context.
 
 [Release notes](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.7) ·
 [Validation](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/VALIDATION-v2.1.7.md) ·
 [Current changelog](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/CHANGELOG.md)
+
+## Известные ограничения / Known limitations
+
+- **Codex WebSocket:** большая история изображений может вызывать повторные подключения и обрывы. В 2.1.7 это не исправлено; компонент, закрывающий соединение, не установлен. Image-heavy histories can cause retries and disconnections; the closing component is not established. [Upstream issue](https://github.com/openai/codex/issues/55730) · [Диагностика / Diagnostic report](https://github.com/openai/codex/issues/55730#issuecomment-6645086819).
+- **RTK:** не все команды сокращаются или имеют достоверную базу сравнения. Неоднозначные, обрезанные результаты и неподдерживаемые конвейеры сохраняют неизвестную базу. Штатное преобразование может менять применение запретов по префиксу Codex и правил Bash Claude. Not every command is reduced or measurable. Ambiguous, truncated and unsupported pipeline results keep an unknown baseline. Native rewriting can affect Codex prefix rules and Claude Bash rules; the enable dialog warns about this. [Охват / Scope](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/RTK-MODE.md).
+- **Claude:** Auto зависит от версии CLI и аккаунта; принятие параметра не подтверждает работу классификатора модели. Bypass недоступен, если Claude отклоняет root внутри Ubuntu/PRoot. Auto depends on CLI/account support; accepting the option does not validate the model classifier. Bypass is unavailable when Claude rejects root execution in Ubuntu/PRoot.
+- **Данные и права / Data and permissions:** рабочая папка и подтверждения не создают файловую песочницу. Агенты могут передавать доступные данные своему провайдеру. A working directory and approvals do not create filesystem isolation. Agents can send accessible data to their providers. [Подробнее / Details](SECURITY.md).
+- **Резервные копии / Backups:** архивы не зашифрованы и могут содержать авторизацию, историю и снимки проектов. Они не сохраняют работающие процессы. Archives are unencrypted and may contain credentials, history and project snapshots; running processes are not preserved. [Состав и ограничения / Coverage and limitations](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/BACKUP-RESTORE.md).
+
+**Границы проверок:** проверки RTK для Claude использовали настоящий CLI с фиктивным локальным провайдером, а не облачную модель Anthropic. Все режимы прав не проверены. Низкоуровневая передача ключей и аварийное восстановление Gemini на Android, экспорт/восстановление копий через интерфейс телефона остаются непроверенными; MCP и плагины не входили в соответствующий аудит. Это границы проверки, а не подтверждённые дефекты.
+
+**Verification scope:** Claude RTK checks used the real CLI with a synthetic local provider, not Anthropic's cloud model. Not all permission modes were tested. Low-level Android Gemini key handoff and crash recovery, and backup export/restore through the phone UI remain unverified; MCP/plugins were outside that audit. These are verification gaps, not confirmed defects.
+[Проверки 2.1.7 / 2.1.7 validation](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/VALIDATION-v2.1.7.md) · [Границы аудита / Audit scope](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/SECURITY-AUDIT-STAGE2.md).
 
 ## Installation and compatibility
 
@@ -92,6 +105,8 @@ A native acknowledgement does not prove that a model has incorporated a message.
 No claim is made that another phone's transport interruptions are fixed.
 
 ## Пользователям / For users
+
+- [CHANGELOG](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/CHANGELOG.md) · [Releases](https://github.com/HezeAI/termux-jobs/releases): история изменений и опубликованные версии / change history and published versions.
 
 - [Usage](docs/fork/USAGE.md): terminals, presets, commands, files and agent controls.
 - [Agent instructions](docs/fork/AGENT-INSTRUCTIONS.md): actual sources, import,
@@ -138,83 +153,3 @@ rights; component distribution does not imply official endorsement.
 в отчёте; полное соблюдение всех условий заранее не заявляется.
 
 AI development assistance: OpenAI Codex
-
-<details>
-<summary>История изменений / Change history</summary>
-
-## Исторический выпуск / Historical release: v2.1.5 — Redesigned workspace
-
-Historical changes in v2.1.5 compared with v2.1.4; not new v2.1.7 changes.
-
-- New chat/terminal/sidebar/settings design, nested project and session actions.
-- Centered creation forms, smooth page transitions and preserved drafts/reading position.
-- Updated input rows and extra keys, compact action/file windows and attachment Download export.
-- Original-image opening, action timelines, input history and saved-chat closing improvements.
-- Claude Auto/Bypass preferences, availability checks and explicit next-launch behavior.
-
-**Known issue:** image-heavy Codex cold replay can retry/disconnect. The failure was
-reproduced without this UI; the remote closing component was not established.
-[Upstream issue](https://github.com/openai/codex/issues/55730) ·
-[Published HezeAI report](https://github.com/openai/codex/issues/55730#issuecomment-6645086819).
-This release does not fix it. Auto's real-model classifier is unverified; Bypass is
-unavailable under root in Ubuntu/PRoot.
-
-**In v2.1.5, in-app updates installed the new interface, code 1520.** A separate manual old-interface
-rollback APK (1521) is available in the release. Disable Auto/Bypass in every saved Claude
-profile first. Device rollback/data retention is unverified. After rollback, returning
-to the new interface requires a main APK above code 1521; current v2.1.7 has code 1536. Do not uninstall.
-
-[Release notes](docs/fork/RELEASE-v2.1.5.md) · [Validation](docs/fork/VALIDATION-v2.1.5.md)
-· [CHANGELOG](CHANGELOG.md)
-· [AI instructions ZIP](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.5/AI-INSTRUCTIONS.zip)
-
-## Проверки v2.1.5 и ограничения / v2.1.5 checks and limitations
-
-Исторический отчёт v2.1.5 приведён ниже; результаты текущего релиза —
-в [отчёте v2.1.7](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/VALIDATION-v2.1.7.md).
-The v2.1.5 checks below are historical; use the v2.1.7 report for current release validation.
-
-**RU:** Для v2.1.5 опубликованы результаты автоматических проверок, проверки
-подписанного APK и сценариев, принятых разработчиком на телефоне. Эти результаты
-разделены в [отчёте выпуска](docs/fork/VALIDATION-v2.1.5.md).
-
-- Накопление вложений и связанные обрывы чатов остаются неисправленными.
-- Низкоуровневые проверки передачи ключа и аварийного восстановления Gemini
-  на Android, а также экспорт/восстановление копий на устройстве не выполнены.
-  Точный непроверенный объём указан в [плане аудита](docs/fork/SECURITY-AUDIT-STAGE2.md).
-- MCP и плагины исключены из проведённого этапа аудита.
-- Рабочая папка, инструкции и подтверждения действий сами по себе не создают
-  файловую песочницу. Агент может передавать доступные ему данные своему провайдеру.
-- Архивы резервных копий не зашифрованы и могут содержать авторизацию,
-  историю и снимки проектов. [Состав и ограничения копий](docs/fork/BACKUP-RESTORE.md).
-
-**EN:** [Release validation](docs/fork/VALIDATION-v2.1.5.md) distinguishes automated
-checks, signed-APK verification and developer-reported phone acceptance. Attachment accumulation
-and disconnections remain unfixed. Low-level Android key handoff/crash and device
-backup export/restore checks have not been performed; MCP/plugins are outside the audit.
-A working directory, instructions and approvals alone do not provide filesystem
-isolation. Agents can send accessible data to their providers. Backup archives are
-unencrypted and can include credentials, history and project snapshots.
-
-Source availability, test counts and a valid signature are not safety guarantees.
-[Data flows, permission limits and reporting / Данные, права и сообщения о проблемах](SECURITY.md).
-
-## Исторические тестовые сборки / Historical test builds
-
-These notes describe earlier private builds, not the current release.
-
-Private test19 restores standalone image-view actions, corrects empty input history and makes the Stop square red. The reported Claude original-preview failure remains under investigation; diagnostic messages are more specific. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test19.md).
-
-Private test18 removes the secondary toolbar input page, adds a tall vector Enter after PgUp/PgDn and renames input history. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test18.md).
-
-Previous Private test17 centers terminal Notes, moves Enter before PgUp/PgDn, highlights active modifiers in yellow and refines general settings. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test17.md).
-
-Previous Private test16 preserves chat insets across terminal transitions, refines typography/creation controls and adds Enter above PgUp. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test16.md).
-
-Previous Private test15 keeps chat behind its sliding terminal, shares limit data, updates composer/menu sizes and centers agent creation. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test15.md).
-
-Previous Private test14 adds grouped sidebar branches, uniform80% content sizing and caption-fitted panel width; attachment-menu items are reduced. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test14.md).
-
-Previous private test13 removes voice input and its models/permission, restores the clockwise terminal-attention segment, adds desktop-stop feedback, shows current model/reasoning values and enlarges attachment-menu items. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test13.md).
-
-</details>
