@@ -131,6 +131,35 @@ jobs:
         run: |
           mkdir -p ../ci-driver/.verification
           python3 -B -m unittest discover -s ../ci-driver/scripts/tests -p test_prepare_x11.py -v
+      - name: Fetch unchanged pinned Termux bootstraps through public API
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, json, pathlib, re, urllib.request
+          build=pathlib.Path('app/build.gradle').read_text()
+          version='2025.03.28-r1+apt-android-7'
+          if 'def version = "'+version+'"' not in build:
+              raise SystemExit('Review changed bootstrap version')
+          pins={'aarch64':(241441633,29388903),'arm':(241441637,26514603),'i686':(241441642,28646097),'x86_64':(241441643,29472482)}
+          results=[]
+          for arch,(asset,size) in pins.items():
+              match=re.search(r'downloadBootstrap\("'+arch+r'",\s*"([0-9a-f]{64})", version\)',build)
+              if not match: raise SystemExit('Missing bootstrap checksum: '+arch)
+              expected=match.group(1)
+              target=pathlib.Path('app/src/main/cpp')/('bootstrap-'+arch+'.zip')
+              if target.exists(): raise SystemExit('Unexpected bootstrap cache: '+str(target))
+              target.parent.mkdir(parents=True,exist_ok=True)
+              temp=target.with_suffix('.download');digest=hashlib.sha256();received=0
+              url='https://api.github.com/repos/termux/termux-packages/releases/assets/'+str(asset)
+              request=urllib.request.Request(url,headers={'Accept':'application/octet-stream'})
+              with urllib.request.urlopen(request,timeout=60) as response,temp.open('xb') as out:
+                  while chunk:=response.read(1024*1024):
+                      received+=len(chunk);digest.update(chunk);out.write(chunk)
+              if received!=size or digest.hexdigest()!=expected:
+                  raise SystemExit('Bootstrap integrity mismatch: '+arch)
+              temp.replace(target)
+              results.append(dict(arch=arch,version=version,url=url,size=size,sha256=expected))
+          pathlib.Path('.verification/ci/bootstrap-inputs.json').write_text(json.dumps(results,indent=2)+'\n')
+          PYTHON
       - name: Unit tests
         run: |
           source scripts/build-env.sh
