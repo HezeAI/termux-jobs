@@ -153,7 +153,7 @@ final class ProjectFiles implements AutoCloseable {
     }
     private void run(String script,OutputStream out,long max) throws Exception {run(script,out,max,null);}
     private void run(String script,OutputStream out,long max,byte[] input) throws Exception {run(script,out,max,input,90);}
-    private void run(String script,OutputStream out,long max,byte[] input,int timeoutSeconds) throws Exception {
+    void run(String script,OutputStream out,long max,byte[] input,int timeoutSeconds) throws Exception {
         if(closed||serverKnownHosts!=null&&ServerConnection.disconnected(activity,profile.id))throw new IOException(WorkspaceText.tr("Окно закрыто"));
         String invocation=command(profile,script);
         if(serverKnownHosts!=null&&environment(profile).equals("ssh"))invocation=invocation.replaceFirst("ssh -T",java.util.regex.Matcher.quoteReplacement("ssh -T -o "+SessionShell.quote("UserKnownHostsFile="+serverKnownHosts.getAbsolutePath())+" -o GlobalKnownHostsFile=/dev/null"));

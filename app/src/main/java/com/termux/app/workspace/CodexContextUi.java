@@ -47,7 +47,7 @@ final class CodexContextUi extends LinearLayout {
         String returned=value.optString("thread");
         if(returned.isEmpty()){status=new JSONObject();render();result.setText(t("Контекст не передан этим помощником CLI.","This CLI helper did not report context data."));return;}
         if(!CodexSessionShell.validThread(returned)||!thread.isEmpty()&&!thread.equals(returned)){status=new JSONObject();result.setText(t("Чат изменился. Откройте его статус заново.","The chat changed. Reopen its status."));render();return;}
-        thread=returned;status=value;render();
+        thread=returned;status=value;AgentOfflineData.remember(activity,owner,"context",value.optJSONObject("context"),System.currentTimeMillis());render();
     }
     private void render(){
         JSONObject context=status.optJSONObject("context"),tokens=context==null?null:context.optJSONObject("usage");Long used=count(tokens,"used"),capacity=count(tokens,"capacity");boolean known=used!=null&&capacity!=null&&capacity>0;

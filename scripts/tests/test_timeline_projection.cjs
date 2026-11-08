@@ -3,7 +3,7 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const root=require('./fixture-paths.cjs').fixture('timeline');
 const assets=path.resolve(__dirname,'../../app/src/main/assets'),at=1793870400000;
-for(const n of ['codex-chat.cjs','agent-attachments.cjs','agent-receipts.cjs','agent-action-preview.cjs','agent-completion-times.cjs'])fs.copyFileSync(path.join(assets,n),path.join(root,n));
+for(const n of ['rtk-agent.cjs','codex-chat.cjs','agent-attachments.cjs','agent-receipts.cjs','agent-action-preview.cjs','agent-completion-times.cjs'])fs.copyFileSync(path.join(assets,n),path.join(root,n));
 fs.copyFileSync(path.join(assets,'codex-control.js'),path.join(root,'codex-wire-v0.2.22.js'));
 const {ReceiptStore}=require(path.join(assets,'agent-receipts.cjs'));
 const specs=[['read','completed'],['edit','completed'],['bad','failed'],['retry','completed'],['no','failed'],['cancel','cancelled'],['abort','aborted'],['unknown','completed']];

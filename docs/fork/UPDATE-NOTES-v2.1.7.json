@@ -1,0 +1,30 @@
+{
+  "ru": [
+    "Исправлен учёт RTK для поддерживаемых одиночных, составных и фоновых вызовов Codex и Claude. Неподтверждённая база остаётся неизвестной.",
+    "Шаблоны поиска в кавычках и последовательные команды корректно сопоставляются с измерениями. Recall учитывается отдельно; его справка не считается восстановленным выводом.",
+    "Исправлено удаление Arch с остаточным каталогом run/termux-jobs-wayland с правами 000. Проверки пути, занятости и соседних окружений сохранены.",
+    "Кнопка перезапуска агентского чата использует подтверждённый локальный ID при недоступном соединении. История и настройки сохраняются.",
+    "Бинарник RTK 1.1.0-jobs.1 не изменён; повторная загрузка компонента не требуется."
+  ],
+  "en": [
+    "Fix RTK accounting for supported single, sequential and yielded/background Codex and Claude command calls. Unconfirmed baselines remain unknown.",
+    "Quoted search patterns and sequential commands now match measurements correctly. Recall is separate; recall help is not recovered output.",
+    "Fix Arch removal with a residual mode-000 run/termux-jobs-wayland directory, preserving path, busy-environment and neighbour checks.",
+    "Agent-chat restart can use the validated local conversation ID when the connection is unavailable. Existing history and settings remain.",
+    "The RTK 1.1.0-jobs.1 binary is unchanged; no component redownload is required."
+  ],
+  "compatibility": {
+    "ru": [
+      "Android 8+, ARM64; прежние com.termux и сертификат. VersionCode 1536 выше 2.1.6/1533 и проверенной тестовой сборки/1535.",
+      "Сброс данных и переустановка окружений не требуются. Форматы настроек и статистики не изменены; recall сохраняется.",
+      "После обновления откройте «Лимиты и контекст» для обновления обработчика. Работающие чаты автоматически не перезапускаются.",
+      "Конвейеры и другие вызовы без достоверного сопоставления остаются с неизвестной базой. Ограничения прав RTK штатного, Claude root/Ubuntu и известный WebSocket-сбой Codex не изменены."
+    ],
+    "en": [
+      "Android 8+, ARM64; same com.termux package and signer. VersionCode 1536 exceeds 2.1.6/1533 and the accepted test build/1535.",
+      "No data reset or environment reinstall required. Settings/statistics formats are unchanged; recall remains available.",
+      "Open Limits and context after updating to refresh the observer. Working chats are not restarted automatically.",
+      "Pipelines and other calls without reliable matching retain an unknown baseline. Native RTK permission caveats, Claude root/Ubuntu restrictions and the known Codex WebSocket issue are unchanged."
+    ]
+  }
+}

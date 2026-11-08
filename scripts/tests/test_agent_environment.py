@@ -12,6 +12,14 @@ class EnvironmentRemovalTests(unittest.TestCase):
   (self.root/'etc/os-release').write_text('ID=ubuntu\n');(self.root/'var/lib/dpkg/status').write_text('Package: fixture\nStatus: install ok installed\n')
   self.secret=self.root/'root/projects/key';self.secret.write_bytes(b'synthetic-fixture-not-a-real-key');self.secret.chmod(0o600)
   self.r=m.Runtime(str(self.base),progress=lambda **kw:None)
+ def hardlink(self,source,target):
+  if hasattr(os,'link'):os.link(source,target);return
+  # Android Python omits os.link; exercise the same real kernel link via libc.
+  import ctypes
+  libc=ctypes.CDLL(None,use_errno=True)
+  if libc.link(os.fsencode(source),os.fsencode(target))!=0:
+   if ctypes.get_errno() in (1,13):self.skipTest('Android denies native hardlinks; covered separately on Linux/PRoot')
+   raise OSError(ctypes.get_errno(),'fixture link failed')
  def tearDown(self):self.tmp.cleanup()
  def token(self):return self.r.plan()['token']
  def test_access_diagnostics_identify_scan_without_disclosing_private_path(self):
@@ -65,7 +73,7 @@ class EnvironmentRemovalTests(unittest.TestCase):
  def test_cleanup_can_open_sealed_directories_without_touching_link_targets(self):
   name='.jobs-delete-'+'a'*32;trash=self.base/name;sealed=trash/'sealed';sealed.mkdir(parents=True);(sealed/'payload').write_text('delete')
   outside=self.base/'outside';outside.mkdir();kept=outside/'keep';kept.write_text('keep');outside.chmod(0o500);(trash/'link').symlink_to(outside)
-  os.link(kept,trash/'hard');kept.chmod(0o600);sealed.chmod(0);trash.chmod(0)
+  self.hardlink(kept,trash/'hard');kept.chmod(0o600);sealed.chmod(0);trash.chmod(0)
   parent=os.open(self.base,m.DIR)
   try:m.remove_tree(parent,name)
   finally:os.close(parent)
@@ -106,6 +114,62 @@ class EnvironmentRemovalTests(unittest.TestCase):
   try:self.r.remove('ubuntu',self.token())
   finally:os.close(fd)
   self.assertFalse(self.source.exists());self.assertTrue((self.base/'containers/ubuntu-ai/rootfs/root/projects/key').exists())
+
+ def sealed(self,content=False):
+  self.source.rename(self.source.with_name('archlinux'));self.source=self.source.with_name('archlinux');self.root=self.source/'rootfs'
+  sealed=self.root/'run/systemd/dissect-root';sealed.mkdir(parents=True)
+  if content:(sealed/'keep').write_text('must survive')
+  sealed.chmod(0)
+  neighbour=self.base/'containers/ubuntu/rootfs';neighbour.mkdir(parents=True);(neighbour/'keep').write_text('neighbour')
+  return sealed,neighbour
+ def test_arch_empty_sealed_placeholder_is_reported_and_removed_without_chmod(self):
+  sealed,other=self.sealed();plan=self.r.plan('archlinux')
+  self.assertEqual('archlinux',plan['alias']);self.assertEqual('containers/archlinux',plan['container'])
+  self.assertEqual([m.SEALED_SYSTEMD_DIRECTORY],plan['unscanned']);self.assertEqual(0,sealed.stat().st_mode&0o777)
+  with patch.object(m.os,'chmod',side_effect=AssertionError('must not chmod')),patch.object(m.os,'fchmod',side_effect=AssertionError('must not chmod')):
+   self.r.remove('archlinux',plan['token'])
+  self.assertFalse(self.source.exists());self.assertEqual('neighbour',(other/'keep').read_text())
+ def test_arch_nonempty_sealed_placeholder_restores_alias_without_deleting_files(self):
+  sealed,other=self.sealed(True);plan=self.r.plan('archlinux')
+  with self.assertRaisesRegex(m.Refused,'SEALED_DIRECTORY_NOT_EMPTY'):self.r.remove('archlinux',plan['token'])
+  self.assertTrue(self.source.is_dir());self.assertEqual(0,sealed.stat().st_mode&0o777);self.assertEqual('neighbour',(other/'keep').read_text())
+  self.assertFalse(list(self.source.parent.glob('.jobs-delete-*')))
+  # Restore this test fixture's permission solely for assertion/cleanup.
+  sealed.chmod(0o700);self.assertEqual('must survive',(sealed/'keep').read_text())
+ def test_cancel_arch_scan_retains_both_environments_and_modes(self):
+  sealed,other=self.sealed();self.r.cancel=lambda:True
+  with self.assertRaises(m.Cancelled):self.r.plan('archlinux')
+  self.assertTrue(self.source.exists());self.assertTrue(other.exists());self.assertEqual(0,sealed.stat().st_mode&0o777)
+  sealed.chmod(0o700)
+ def test_other_denied_directory_is_not_excluded(self):
+  sealed,other=self.sealed();original=m.os.open
+  def deny(name,*args,**kwargs):
+   if name=='projects':raise PermissionError(13,'fixture')
+   return original(name,*args,**kwargs)
+  with patch.object(m.os,'open',side_effect=deny),self.assertRaises(PermissionError):self.r.plan('archlinux')
+  self.assertTrue(other.exists());sealed.chmod(0o700)
+
+
+ def test_legacy_wayland_endpoint_is_empty_only_and_restores_prior_placeholder(self):
+  systemd,other=self.sealed();wayland=self.root/'run/termux-jobs-wayland';wayland.mkdir();(wayland/'keep').write_text('must survive');wayland.chmod(0)
+  plan=self.r.plan('archlinux');self.assertEqual({m.SEALED_SYSTEMD_DIRECTORY,m.LEGACY_WAYLAND_DIRECTORY},set(plan['unscanned']))
+  with self.assertRaisesRegex(m.Refused,'SEALED_DIRECTORY_NOT_EMPTY'):self.r.remove('archlinux',plan['token'])
+  self.assertTrue(self.source.is_dir());self.assertEqual(0,systemd.stat().st_mode&0o777);self.assertEqual(0,wayland.stat().st_mode&0o777)
+  self.assertEqual('neighbour',(other/'keep').read_text());wayland.chmod(0o700);self.assertEqual('must survive',(wayland/'keep').read_text())
+  (wayland/'keep').unlink();wayland.chmod(0);plan=self.r.plan('archlinux')
+  with patch.object(m.os,'chmod',side_effect=AssertionError('must not chmod')),patch.object(m.os,'fchmod',side_effect=AssertionError('must not chmod')):self.r.remove('archlinux',plan['token'])
+  self.assertFalse(self.source.exists());self.assertEqual('neighbour',(other/'keep').read_text())
+ def test_legacy_wayland_symlink_never_follows_or_changes_bind_source(self):
+  sealed,other=self.sealed();outside=self.base/'runtime';outside.mkdir();(outside/'keep').write_text('keep')
+  (self.root/'run/termux-jobs-wayland').symlink_to(outside)
+  plan=self.r.plan('archlinux');self.assertNotIn(m.LEGACY_WAYLAND_DIRECTORY,plan['unscanned'])
+  self.r.remove('archlinux',plan['token']);self.assertEqual('keep',(outside/'keep').read_text())
+ def test_readable_wayland_contents_are_scanned_and_not_excluded(self):
+  sealed,other=self.sealed();wayland=self.root/'run/termux-jobs-wayland';wayland.mkdir();(wayland/'file').write_text('payload')
+  plan=self.r.plan('archlinux');self.assertNotIn(m.LEGACY_WAYLAND_DIRECTORY,plan['unscanned']);self.assertGreaterEqual(plan['bytes'],7)
+  (wayland/'file').write_text('changed')
+  with self.assertRaisesRegex(m.Refused,'SOURCE_CHANGED'):self.r.remove('archlinux',plan['token'])
+  self.assertTrue(self.source.exists());sealed.chmod(0o700)
 
 class RemovedMigrationContract(unittest.TestCase):
  def test_no_rootfs_clone_or_preparation_api(self):

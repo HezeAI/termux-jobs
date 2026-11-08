@@ -29,7 +29,7 @@ final class CodexActionsView extends LinearLayout {
     private boolean onlyShell;
 
     CodexActionsView(AgentChatView owner,Consumer<JSONObject> open) {
-        super(owner.getContext());this.owner=owner;this.open=open;
+        super(owner.getContext());this.owner=owner;this.open=open;size=new AgentCardSize(this,owner);
         setOrientation(VERTICAL);
         summaryCard=new LinearLayout(getContext());summaryCard.setOrientation(VERTICAL);summaryCard.setPadding(owner.dp(4),owner.dp(3),owner.dp(4),owner.dp(4));summaryCard.setTag("timeline-summary-hit");summaryCard.setBackground(WorkspaceRipple.background(getContext(),null,12));summaryCard.setOnClickListener(v->{expanded=!expanded;owner.rememberActions(data.values(),expanded);refreshHeading();});addView(summaryCard,new LayoutParams(-1,-2));
         GradientDrawable background=new GradientDrawable();background.setColor(0xff232426);
@@ -45,6 +45,15 @@ final class CodexActionsView extends LinearLayout {
         steps=new LinearLayout(getContext());steps.setOrientation(VERTICAL);steps.setPadding(owner.dp(4),0,owner.dp(4),owner.dp(4));steps.setVisibility(GONE);addView(steps,new LayoutParams(-1,-2));
         LinearLayout.LayoutParams layout=new LinearLayout.LayoutParams(-1,-2);layout.setMargins(0,owner.dp(4),0,owner.dp(6));setLayoutParams(layout);
     }
+
+    boolean sharesActions(JSONObject group){JSONArray next=group.optJSONArray("steps");if(next==null)return false;Set<String> ids=new HashSet<>();for(JSONObject row:data.values())ids.add(owner.choiceKey(row));for(int i=0;i<next.length();i++)if(next.optJSONObject(i)!=null&&ids.contains(owner.choiceKey(next.optJSONObject(i))))return true;return false;}
+    void seedCardHeight(int height){size.seed(height);}
+    boolean smoothResize;
+    private final AgentCardSize size;
+    @Override protected void onMeasure(int width,int height){
+        super.onMeasure(width,height);size.enabled=smoothResize;setMeasuredDimension(getMeasuredWidth(),size.measure(getMeasuredHeight()));
+    }
+    @Override protected void onDetachedFromWindow(){size.detached();super.onDetachedFromWindow();}
 
     void update(JSONObject group) {
         JSONArray rows=group.optJSONArray("steps");if(rows==null)return;skillName=group.optString("skillName");

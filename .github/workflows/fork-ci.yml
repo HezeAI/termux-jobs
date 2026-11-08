@@ -57,16 +57,70 @@ jobs:
           sdkmanager --sdk_root="$PWD/.tools/sdk" "platforms;android-35" "build-tools;30.0.3" "build-tools;35.0.0" "ndk;22.1.7171670"
           mkdir -p .tools/gradle-home
           printf 'android.aapt2FromMavenOverride=%s\n' "$PWD/.tools/sdk/build-tools/35.0.0/aapt2" > .tools/gradle-home/gradle.properties
+      - name: Fetch unchanged pinned musl build headers
+        run: |
+          # Alpine removed r2. Preserve the exact original build input from Components.
+          curl --fail --location --retry 3 --retry-all-errors --header 'Accept: application/octet-stream' 'https://api.github.com/repos/HezeAI/termux-jobs-components/releases/assets/723443781' --output "$RUNNER_TEMP/musl-build-headers.tar.gz"
+          python3 - <<'PYTHON'
+          import hashlib, os, pathlib, tarfile
+          archive=pathlib.Path(os.environ['RUNNER_TEMP'])/'musl-build-headers.tar.gz'
+          if hashlib.sha256(archive.read_bytes()).hexdigest()!='bb06e5670c50a87cebd3d7d1446909567f5165ee717f880e723515f697f5d765':
+              raise SystemExit('Build-header archive SHA-256 mismatch')
+          with tarfile.open(archive) as tar:
+              data=tar.extractfile('musl-dev-1.2.6-r2.apk').read()
+          if len(data)!=2539434 or hashlib.sha256(data).hexdigest()!='ca72b84f4eb3c36bbbec04d919eb10159d414c7a43413cc2253841d301fa9486':
+              raise SystemExit('Pinned musl package identity mismatch')
+          target=pathlib.Path('.tools/termux-x11-downloads/musl-dev-1.2.6-r2.apk')
+          target.parent.mkdir(parents=True,exist_ok=True)
+          with target.open('xb') as f: f.write(data)
+          PYTHON
       - name: Prepare verified ARM64 X11 inputs
         run: |
           set -euo pipefail
           export FORK_X11_CLANG="$PWD/.tools/sdk/ndk/22.1.7171670/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
           python3 ../ci-driver/scripts/prepare-x11.py --root "$PWD" | tee .verification/ci/x11-preparation.log
+      - name: Python for production archive downloader verification
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check pinned Alpine installation archives and dependencies
+        run: python3 scripts/check-alpine-install-inputs.py --output .verification/ci/alpine-install-inputs.json
+      - name: Environment removal and downloader regression tests
+        run: |
+          python3 -B -m unittest discover -s scripts/tests -p test_agent_environment.py -v
+          python3 -B -m unittest discover -s scripts/tests -p 'test_environment_image*.py' -v
+          python3 -B -m unittest discover -s scripts/tests -p test_environment_install.py -v
       - name: Java 11 for Gradle and Android project
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '11'
+      - name: Seed the unchanged Gradle wrapper archive with verified bytes
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, json, pathlib, urllib.request
+          source='https://services.gradle.org/distributions/gradle-7.2-all.zip'
+          api='https://api.github.com/repos/gradle/gradle-distributions/releases/assets/127702768'
+          expected='a8da5b02437a60819cad23e10fc7e9cf32bcb57029d9cb277e26eeff76ce014b'
+          properties=pathlib.Path('gradle/wrapper/gradle-wrapper.properties').read_text()
+          if 'distributionUrl='+source.replace(':',r'\:') not in properties:
+              raise SystemExit('Review wrapper pin before downloading a different toolchain')
+          # The checked-in wrapper uses unsigned MD5 -> base36 for its cache key.
+          number=int.from_bytes(hashlib.md5(source.encode()).digest(),'big');key=''
+          while number:
+              number,index=divmod(number,36);key='0123456789abcdefghijklmnopqrstuvwxyz'[index]+key
+          destination=pathlib.Path('.tools/gradle-home/wrapper/dists/gradle-7.2-all')/key/'gradle-7.2-all.zip'
+          destination.parent.mkdir(parents=True,exist_ok=True)
+          temp=destination.with_suffix('.download');digest=hashlib.sha256();size=0
+          request=urllib.request.Request(api,headers={'Accept':'application/octet-stream'})
+          with urllib.request.urlopen(request,timeout=60) as response,temp.open('xb') as out:
+              while chunk:=response.read(1024*1024):
+                  digest.update(chunk);size+=len(chunk);out.write(chunk)
+          if size!=157058280 or digest.hexdigest()!=expected:
+              raise SystemExit('Gradle archive integrity mismatch')
+          temp.replace(destination)
+          pathlib.Path('.verification/ci/gradle-input.json').write_text(json.dumps(dict(originalUrl=source,downloadUrl=api,sha256=expected,size=size,version='7.2',wrapperUnchanged=True),indent=2)+'\n')
+          PYTHON
       - name: Verify pinned X11 inputs
         run: |
           source scripts/build-env.sh
@@ -77,6 +131,35 @@ jobs:
         run: |
           mkdir -p ../ci-driver/.verification
           python3 -B -m unittest discover -s ../ci-driver/scripts/tests -p test_prepare_x11.py -v
+      - name: Fetch unchanged pinned Termux bootstraps through public API
+        run: |
+          python3 - <<'PYTHON'
+          import hashlib, json, pathlib, re, urllib.request
+          build=pathlib.Path('app/build.gradle').read_text()
+          version='2025.03.28-r1+apt-android-7'
+          if 'def version = "'+version+'"' not in build:
+              raise SystemExit('Review changed bootstrap version')
+          pins={'aarch64':(241441633,29388903),'arm':(241441637,26514603),'i686':(241441642,28646097),'x86_64':(241441643,29472482)}
+          results=[]
+          for arch,(asset,size) in pins.items():
+              match=re.search(r'downloadBootstrap\("'+arch+r'",\s*"([0-9a-f]{64})", version\)',build)
+              if not match: raise SystemExit('Missing bootstrap checksum: '+arch)
+              expected=match.group(1)
+              target=pathlib.Path('app/src/main/cpp')/('bootstrap-'+arch+'.zip')
+              if target.exists(): raise SystemExit('Unexpected bootstrap cache: '+str(target))
+              target.parent.mkdir(parents=True,exist_ok=True)
+              temp=target.with_suffix('.download');digest=hashlib.sha256();received=0
+              url='https://api.github.com/repos/termux/termux-packages/releases/assets/'+str(asset)
+              request=urllib.request.Request(url,headers={'Accept':'application/octet-stream'})
+              with urllib.request.urlopen(request,timeout=60) as response,temp.open('xb') as out:
+                  while chunk:=response.read(1024*1024):
+                      received+=len(chunk);digest.update(chunk);out.write(chunk)
+              if received!=size or digest.hexdigest()!=expected:
+                  raise SystemExit('Bootstrap integrity mismatch: '+arch)
+              temp.replace(target)
+              results.append(dict(arch=arch,version=version,url=url,size=size,sha256=expected))
+          pathlib.Path('.verification/ci/bootstrap-inputs.json').write_text(json.dumps(results,indent=2)+'\n')
+          PYTHON
       - name: Unit tests
         run: |
           source scripts/build-env.sh

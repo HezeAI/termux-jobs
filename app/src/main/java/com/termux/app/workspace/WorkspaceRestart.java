@@ -18,6 +18,9 @@ final class WorkspaceRestart {
             &&p.geminiSocketId.equals(s.geminiSocketId)&&p.aiSocketId.equals(s.aiSocketId);
     }
     static boolean bindRecorded(WorkspaceStore.Session p){
+        // Codex assigns a new conversation remotely. A previous field value in
+        // "new" mode is not evidence that this run belongs to that conversation.
+        if(p.environment.equals("codex")&&!p.codexChat.equals("id"))return false;
         String id=p.claudeAgent?p.claudeThread:p.geminiAgent?p.geminiThread:p.aiAgent.equals("opencode")?(!p.aiSavedThread.isEmpty()?p.aiSavedThread:p.aiThread):p.codexThread;
         try{return bind(p,new JSONObject().put("nativeChat",true).put("session",id));}catch(org.json.JSONException impossible){return false;}
     }

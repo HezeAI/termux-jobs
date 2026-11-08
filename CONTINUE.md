@@ -1,3 +1,380 @@
+# Published stable 2.1.7 /1536 — complete
+
+Release: https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.7
+Tag commit: f3f57668fca31302062bf46f3be6a20d885ede1d; release ID 438213343, latest stable, no prerelease/rollback.
+APK SHA256 f321c19652d80dd91cf96a46e4fcefffd1f309faebb61e3cc64ab4f0fe5bbebb.
+Public ordinary-URL downloads of all4assets match; downloaded signature/package/ABI,
+metadata and5taggedsource/docfiles verified. Old38releases/145assets preserved.
+CI42476694520 on997ceb4d PASS:1940passed/9skips; firstCI42475835531 stale test
+expectation failed, corrected onlytest. Signed functionalcode matches phone-accepted
+2.1.7-test2. LocalModernLint0errors/290warnings;16updater and22regression testsPASS.
+No Components publication, no auto-install, no user chat/environment stop/delete.
+Evidence .verification/release-v2.1.7; docs/fork/VALIDATION-v2.1.7.md.
+Do not move tag or replace released APK/update.json. Future changes need nextrelease.
+
+---
+
+# Active: private2.1.7-test2 /1535 — RTK receipt matching
+
+User authorized fixes, live checks and test APK; app release waits phone confirmation.
+Observer patched;61testsPASS. Live current Codex chat: search120480→14612B,
+head225→225, sequence1350→1350, yielded sleep/cat1125→1125, recall+800.
+Pipeline remains unknown. Binary jobs.1 unchanged; do not republish component.
+Temporary profile-scoped installed bridge is no longer active: current helper hash
+matches original backup. Old event records preserved. No sessions restarted.
+Final APK and Download copy verified. ModernLint0errors/290warnings,505finalJava/XML
+inputs match;638APKsource files match;all7ELFsARM64;same signer/com.termux.
+APK /sdcard/Download/Termux-Jobs-v2.1.7-test2-arm64.apk
+SHA256 39b13ee632b1d326657d2a7f9a58f4c501f87c18f19956bd4fe7553d1d13909c
+Claude2.1.296 SDK synthetic provider: search23781→1526, sequence17294→17294,
+other RTK-off profile unaffected. Not a cloud-Claude test.
+Evidence .verification/rtk-current-audit. Await phone verification. No push/release/install.
+Docs: docs/fork/VALIDATION-2.1.7-test2.md. Original216→242 diagnosis in same evidence.
+
+---
+
+# Активно: частный 2.1.7-test1 /1534, проверка телефона ожидается
+
+После2.1.6 пользователь сообщил остаточный run/termux-jobs-wayland mode000 и
+неработающий restart при потере связи. Исправления в текущем checkout; публикация
+запрещена до проверки пользователем. Рабочие среды/чаты не удалять и не останавливать.
+Диагноз/границы: docs/fork/VALIDATION-2.1.7-test1.md; evidence .verification/fix-1534.
+Native Arch fixture: active bind blocked; normal exit removes placeholder;
+residual seeded from observed state, old1533fails13, new cancel/remove/neighboursPASS.
+Native helper21passed/1hardlinkskip; local22pass. ModernLint0errors/290warnings.
+APK completed: /sdcard/Download/Termux-Jobs-v2.1.7-test1-arm64.apk, 40673809 bytes.
+SHA256 74bc0096420fdcbf5f52f65a5f1c128da1b9aa159473f0021ebf4dd421b50564.
+Final APK gate PASS;40JVM passed; native launcher fixture PASS; locale PASS.
+No install/push/release. Await user's phone verification; do not claim GUI acceptance.
+
+---
+
+# Опубликовано: стабильная 2.1.6 /1533
+
+https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.6
+Tag ->217310be741108a369dda62bccaa5ad2927143b8; CI42470194304 success.
+APK SHA256 3ada4628499f765bbd3842b3bf96cc8686ded68a2aa0d6801c97e5ff74183f6c.
+Published four assets, no rollback/buildheaders. Old37releases/141assets preserved.
+Public unsigned API downloads match all prepared bytes. Downloaded APK signature/
+package/code/ABI pass. Direct SHA URL works; direct APK/update/validation URLs504
+on this route, including native Termux update.json check. Updater parser accepts
+metadata; actual updater network download is NOT confirmed. Do not claim it passed.
+No automatic APK install. Full scope: docs/fork/VALIDATION-v2.1.6.md publication section.
+Draft temporary tag association corrected to existing v2.1.6; final latest/tag checked.
+No tags or binaries to replace. Any later docs commit does not move release tag.
+
+---
+
+# Активно: релиз 2.1.6 /1533, проверки завершены — публикация
+
+Пользователь разрешил исправления Arch/загрузок и публикацию после успешных проверок.
+Финальный APK собран, Modern Lint 0 errors/290 warnings, final APK gate PASS.
+APK /sdcard/Download/Termux-Jobs-v2.1.6-arm64.apk, 40673325 bytes,
+SHA256 3ada4628499f765bbd3842b3bf96cc8686ded68a2aa0d6801c97e5ff74183f6c.
+Не установлен. App draft ID438132321 ещё не опубликован; тег v2.1.6 ещё не создан.
+
+Arch SCAN_ACCESS_DENIED/13 воспроизведён helper из опубликованного v2.1.5 APK:
+это прежний дефект; Ubuntu — hardcoded текст, alias archlinux передаётся правильно.
+Native Termux через same-UID app TermuxService: UID10620, TracerPid0, mode000.
+Узкий fix только точный sealed systemd path; unscanned warning, rmdir только пустого,
+nonempty восстанавливает alias. Другие отказы не скрыты. Native tests18 pass/1 skip
+(запрет Android hardlinks), Linux/PRoot19 pass. Real Arch sealed reproduction PASS.
+Все10окружений: install/shell/cancel/remove/neighbour PASS в isolated-prefix.
+Рабочие среды/чаты не изменены. Телефонный GUI финальных диалогов не проверен.
+Downloads всех10: production fallback + API size/SHA PASS; direct-only8 вернули504,
+Debian/Alpine direct PASS. Cancel+disconnect live Alpine stream/resume206/SHA PASS.
+39 image tests (есть inherited duplicates),11 native/local supervisor,5 prep tests PASS.
+19 final JVM/updater cases PASS; final update.json generated with1533/SHA.
+635/638 production files unchanged vs test10; only environment-image.py,
+agent-environment.py,AgentEnvironmentManager.java changed. 95nativeinputs match.
+
+CI source 050c7a7 passed env tests but Gradle original URL timeout (attempts1/2).
+Source75d8329c adds verified Gradle7.2-all cache seed from official public API,
+SHA a8da5b02437a60819cad23e10fc7e9cf32bcb57029d9cb277e26eeff76ce014b.
+Run42469611398 passed Gradle download but failed bootstrap primaryURL504.
+Source d22ab5d0f7cffda5b78f852860c3e67701924370 seeds exact original bootstrap
+ZIPs through public API; checked against app/build.gradle hashes.
+Run42470194304 SUCCESS. 1943cases:1934passed/9skipped/0errors.
+8SFTP fixture skips,1updater env skip (final local updater12passed).
+Debug APK assembly PASS. No APK production change.
+Prior cancellation timer assertion was ambiguous: corrected barrier proves no
+writes after cancellation returns; old timing wrote0.08s after request, before4.1s return.
+Production supervisor unchanged (matchesv2.1.5). Preserve old failures.
+
+Gh credential wrapper .verification/release-v2.1.6/gh.py works; always explicit -R.
+Git push needs ephemeral GH_TOKEN + git -c credential.helper= -c
+'credential.helper=!gh auth git-credential' (capture credential in memory, never print).
+Do not use short source_ref for actions/checkout; use full40char SHA.
+Build headers remain only Components, published x11-build-headers-musl-1.2.6-r2;
+inner APK exactly previous ca72..., outer bb06...; API asset723443781.
+RTK jobs.1 remains published, loader unchanged, no embedded archive.
+
+Next: CI reports downloaded/validated, validation.json generated.
+Finalize publication snapshot and link checks,
+commit docs only, prove source/artifact/CI identity, tag/push, uploadAPK/SHA/update/
+validation to draft438132321, publish latest stable, public downloads/checksums/
+updater/old-assets preservation. No rollbackAPK, no dependencyarchive appasset.
+Do not repeat already passed native/fullLint/build without meaningful source changes.
+Main evidence .verification/release-v2.1.6 and environment-audit subdirectory.
+Earlier paused/1532 notes below are historical, not current instructions.
+
+---
+
+# ПАУЗА — пользователь меняет модель
+
+Не продолжать без возобновления. Точное состояние и следующие шаги:
+`.verification/release-v2.1.6/PAUSED.txt`.
+Релиз приложения не опубликован; локальный тест загрузки остановлен.
+В исходниках начато исправление резервной загрузки Components и code1533; APK1533 ещё не собран.
+
+---
+
+# Текущая публикация — stable2.1.6 /1532
+
+Пользователь принял test10 /1531 на телефоне; позднее разрешил только metadata-only
+пересборку в2.1.6 /1532 для совместимости WorkspaceUpdates. Функциональные638файлов
+совпадают,135assets/nativeentries совпали с test10. Новый APK SHA
+060a12de8e1d8d15f60dd7acac4617e5535bd730f5a68efbcaa34878db650ad7,40671985B.
+Артефакты .verification/release-v2.1.6/. ModernLint0errors/290warnings PASS;
+finalAPKgate PASS; targetedactualmanifest updater PASS. FullJVM initial обнаружил
+устаревшие4ожидания вUi1504/AgentContextMeter/WorkspaceDocumentation; исправлены толькотесты.
+User explicitly asks CItoo: сейчасготовится commit/push наwork/redesign-v35-1494,
+workflow_dispatch сsource_ref черезfork/base. ПослеCI/локальныхпроверок финализировать
+доки/commit/tagv2.1.6, publishlatestAPK+SHA+update+validation. БезrollbackAPK/auto-install;
+старые releases/APK ирезерв1499 сохранить. RTKjobs.1 ужеопубликован, SHAпроверен,
+встроенногоархиванет. Исторические записи ниже не текущие инструкции.
+
+---
+
+# Готов test10 /1531 — RTK из Components и чёрная выбранная строка
+
+Выдан /sdcard/Download/Termux-Jobs-v2.1.6-test10-arm64.apk,40671881B.
+SHAfbea07c7149fa0fb89995e74bdcd0b34dd5da918108e22c48fbef684d66a33e6.
+Отчёт docs/fork/VALIDATION-2.1.6-test10.md; доказательства .verification/rtk-remote/.
+Компонент опубликован с разрешения пользователя (commitc882d44):
+https://github.com/HezeAI/termux-jobs-components/releases/tag/rtk-1.1.0-jobs.1
+Публичная загрузка/установка/SHA/runtime проверены;8старых releases/132assets сохранены.
+В APK нет встроенного архива/частной ветки; revisionjobs.1 и SHA отличают upstream1.1.0.
+25Python installation/state/upgrade,15statistics,3Lite families,2real-binary integrations PASS;
+19JVM, ModernLint0errors/290warnings, finalAPK gate/copySHA PASS.
+Lite capturedstdout: grep160893→1308,head470→470,recall+525,нетdoublecount.
+Native ls4410→1056,head25→25,recall+600;изоляция/циклon-off-on PASS.
+Selected sidebar fill и chat background используют общий workspace_chat_background (#000000).
+Настройки/счётчики/recall сохраняются; старый бинарник не заменяется во время команды.
+На телефоне ещё проверить установку/RTKupdate/перезапуск выбранного чата/чёрную заливку.
+APK не устанавливался автоматически, apprelease/update.json не публиковались/не менялись.
+Публикацию самого приложения выполнять только после проверки пользователя.
+
+---
+
+# Исторические записи ниже — не текущие инструкции или разрешения
+
+
+# Готов test9 /1530 — RTK jobs.1, ожидается проверка пользователя
+
+Пользователь сообщил об обновлении. В текущем рабочем чате проверены runtime1.1.0-jobs.1
+и modeadvanced. Живые команды: grep61892→1730B; head5 310→310B; recall+4109B/1call.
+Доказательство .verification/rtk-user-check/result.json; это проверка рабочего чата,
+а не fake provider. Визуальное состояние окна на телефоне помощник не проверял.
+
+Выдан /sdcard/Download/Termux-Jobs-v2.1.6-test9-arm64.apk.
+SHAe43ba011e1a63cd910a8d57be92f0c4a987a608535f762a88a2a4f09ada3fc6d.
+Итоговый отчёт docs/fork/VALIDATION-2.1.6-test9.md; артефакты .verification/rtk-native-bytes/.
+Нативный компонент upstream1.1.0/revisionjobs.1, binarySHA3b8c5b69791e86222db36b104bce10da2975b92adaaa86f82e1c893ae3035619.
+Точные LS/Git/search/read/head/tail байты, recall отдельно; unknown для неподдержанных/обрезанных CLI результатов.
+Native tests12cases, реальные CLI с fake provider12пар+untrusted, Python15/34/23/3,
+JVM12 и Modern Lint0errors/290warnings PASS. Final APK gate и copy checksum PASS.
+Benchmark final: read3430000B official45.22ms/custom_off44.32/custom_on66.93 (+22.61ms).
+Проверены симлинк/descriptor ownership и многозахватный отказ, SHA variants5case.
+Старый unsafe кандидат не выдавался; rejected-sidecar/ и pre-* APK сохранены.
+
+Только тестовый APK содержит архив .bin: APK46267932B, +5598123B к test8.
+Финальный вариант должен скачивать из существующего HezeAI/termux-jobs-components.
+URL/версия/ревизия/хеши загрузчика готовы; публикация и реальное публичное скачивание НЕ выполнены.
+Компонентный repo clone: .verification/rtk-native-bytes/components, только README/catalog/newset изменены.
+Публикация после предоставленного отчёта/подтверждения; ничего не push/tag/release/install автоматически.
+Следующие шаги: проверка test9 на телефоне, подтверждение публикации компонента,
+commit/tag/Release binary+sources+SHA/patch/licenses, публичный download/hash check,
+убрать private-test канал и встроенный .bin из финального APK, проверить реальную загрузку.
+Рабочие чаты/авторизация/установленный RTK не менялись; старые режимы/статистика/recall сохраняются.
+
+---
+
+# Актуальная задача RTK — читать LATEST.txt
+
+Текущие цель, разрешения, состояние сборок и все следующие шаги подробно:
+`.verification/rtk-native-bytes/LATEST.txt` (новее PLAN.txt и старых записей ниже).
+Последний запрос: расширить точные байты Git/search/read и измерить задержку
+upstream vs custom на больших данных. Rust build-release-candidate.log (session27620)
+после финальных расширений/notice-комментариев; benchmark.py запускать после сборки.
+Тестовый APK test9/1530 ещё НЕ выдан. Пересобрать с финальным компонентом и новой SHA.
+Публикация/установка/рабочие перезапуски не выполнялись и пока не разрешены.
+
+---
+
+# Важное текущее состояние RTK — private test9 /1530 (не выдан)
+
+Публикация только после отчёта/подтверждения; использовать HezeAI/termux-jobs-components.
+Обнаружен дефект изолированного измерителя: в PRoot O_NOFOLLOW не защитил synthetic symlink.
+Пользовательских файлов не касалось. Старый кандидат НЕ выдавать; архивы в rejected-sidecar/,
+APK .pre-symlink сохранён. Новый Rust измеритель: create_new + held descriptor, сейчас build-verified.log
+(session66107). Все актуальные пути/проверки/следующие шаги — .verification/rtk-native-bytes/PLAN.txt,
+обязательно читать перед продолжением. Нужна повторная проверка бинарника/обновления/моделей/APK.
+Никаких установок/публикаций/рабочих перезапусков не было.
+
+---
+
+# Текущая задача — RTK 1.1.0-jobs.1, точные измерения и компонент
+
+Пользователь разрешил собственную сборку и измерение внутри RTK без повторного запуска.
+Последнее: использовать существующий HezeAI/termux-jobs-components; сначала проверить
+структуру, подготовить отдельный versioned component и показать результаты ДО публикации.
+Публикацию пока не выполнять. Старые компоненты/работающие чаты/авторизацию не менять.
+Текущий подробный план: .verification/rtk-native-bytes/PLAN.txt.
+Сборка Rust: .verification/rtk-native-bytes/build-local.sh, build.log; session98503.
+Исходники + патч внутри .verification/rtk-native-bytes/rtk-753a3b0e939f2e4490fc24e3a1984010f40a103c.
+App backend экспериментально изменён (ещё не APK): sidecar measurements → matching post tool.
+UI date/legacy скрыты, данные не удалены. JVM/Lint до backend-изменений PASS.
+Следующее: закончить сборку/достоверные тесты, installer/versioned upgrade+preservation,
+сохранить исходники/патч/лицензии/build recipe в components clone sets/rtk-1.1.0-jobs.1.
+
+---
+
+# Текущая задача — краткий блок RTK, test8 /1529
+
+Только RtkMode/RtkStatistics UI: состояние, summary выбранного режима,
+короткое описание; байты/recall/оба режима/legacy и различия в Details (default GONE).
+Оценочные токены bytes/4 только для отображения; unknown/partial не дают процент.
+Backend/счётчики не изменены. Предупреждение штатного RTK сохранено.
+Готов /sdcard/Download/Termux-Jobs-v2.1.6-test8-arm64.apk /1529.
+7 JVM PASS, Modern Lint0/290, final APK gate PASS.
+Отчёт docs/fork/VALIDATION-2.1.6-test8.md; .verification/rtk-summary.
+На телефоне не проверено; не install/publish.
+
+---
+
+# Текущая задача — компактные кнопки диалогов RTK
+
+RtkMode.dialogButton применяется к action/cancel всех этапов одного диалога.
+WRAP_CONTENT, CENTER_HORIZONTAL, padding16/8dp, minHeight48dp, minWidth0,
+multiline без ellipsize; progress MATCH_PARENT сохранён. Backend не изменён.
+Проверки: .verification/rtk-compact-buttons/REPORT.txt; 4 JVM PASS, Modern Lint 0/290.
+На телефоне перенос текста не проверен; Robolectric не подтверждает реальные font metrics.
+Готов 2.1.6-test7 /1528: /sdcard/Download/Termux-Jobs-v2.1.6-test7-arm64.apk.
+Final APK gate PASS; отчёт docs/fork/VALIDATION-2.1.6-test7.md. Не install/publish.
+
+---
+
+# Текущая задача — test6 /1527, статистика RTK и пульсация Стоп
+
+Реализован statistics-v2: captured Lite stdout + сопоставленный PostToolUse,
+stock native base unknown кроме доказанного byte-exact head/tail defaultnone.
+Claude trimEnd сопоставляется по хешу и применяется к обеим сторонам.
+Recall измеряется на выходе tool result; bytes подтверждены captured provider body.
+Старые measurements/history.db сохранены, legacy snapshot отдельно; новыйepoch.
+Новый scoped PostToolUse требует следующего запуска; текущие чаты не перезапускать.
+Stop compact gray outline использует общий clock, cosine2500ms, красный квадрат прежний.
+8 nativeCLI scenarios/12 command results passed с synthetic local provider+guard,
+10 stats units,34 state/install units,3 filter-family tests и Claude unit прошли.
+38 JVM tests PASS; final Stop/clock recheck PASS; full Modern Lint 0 errors/290 warnings.
+Final signed APK gate PASS; .verification/rtk-statistics. Не install/publish.
+APK: /sdcard/Download/Termux-Jobs-v2.1.6-test6-arm64.apk.
+Отчёт: docs/fork/VALIDATION-2.1.6-test6.md. Следующий шаг — проверка на телефоне.
+Test5 APK уже сохранён отдельно; телефонная проверка обеих сборок не выполнена.
+
+---
+
+# Текущая задача — test5 /1526, заливка меню и появление карточек
+
+Заливка Section теперь WorkspaceDialogs.BG, как drawer; оформление и prefs сохранены.
+Новая задача пользователя: не обрывать появление при быстрых обновлениях/миниатюрах.
+Перестановка retained rows через detach/attach внутри родителя, без window detach.
+Общий AgentCardSize для timeline, вложений и отдельных действий; не меняет arrival.
+Расширен список появляющихся карточек, pivot сверху для меняющейся высоты.
+Test5 готов:58 JVM PASS, Modern Lint0/290, финальный APK gate PASS.
+APK /sdcard/Download/Termux-Jobs-v2.1.6-test5-arm64.apk. Доказательства .verification/chat-card-arrival.
+Не устанавливать и не публиковать. Телефонная визуальная проверка ещё не проведена.
+
+---
+
+# Текущая задача — карточки меню, облачка, анимации и ручной индикатор
+
+Следующий test4/1525 после выданного test3/1524. Макет: /root/artifacts/sidebar-sections-v2/sidebar-sections.html, вариант cards.
+Четыре раздела с persisted user expansion; active section override только при открытии,
+без перезаписи выбора, background sessions не active. Manual collapse переживает refresh.
+Облачка user wrap-content END max85%, сохранить delivery/attachments/selection.
+520ms мягкое появление, отдельная высота timeline без повторного появления.
+Индикатор только touch/wheel/inertia; programmatic/layout/reopen не показывают.
+Тестовый APK1525 готов и скопирован в /sdcard/Download/Termux-Jobs-v2.1.6-test4-arm64.apk.
+137 целевых JVM проверок прошли с focused rechecks; Modern Lint0/289; final APK gate прошёл.
+Ожидается ручная визуальная проверка телефона; отчёт docs/fork/VALIDATION-2.1.6-test4.md.
+Доказательства .verification/sidebar-cards. No install/publish. Phone checks не выполнены.
+
+---
+
+# Текущая задача — тестовый APK 2.1.6-test3 /1524
+
+Реализованы offline Files/attachments/Git и Limits/context для сохранённого чата.
+Нет запуска агента при открытии. Native readonly journal projection + cache refs.
+Последние лимиты/контекст сохраняются с временем; compaction disabled offline.
+RTK Lite/basic и RTK штатный/advanced взаимоисключающие; offline preparation сохраняет
+выбор до запуска. Native hooks делегируют OSS1.1.0, recovery включён, per-chat DB/config.
+Предупреждения Codex/Claude сохранены; permission UI этой задачей не меняется.
+Для старого процесса без chat-bin dispatcher требуется явное согласие на restart.
+Рабочие чаты/авторизация/правила не менялись. No install/publish.
+
+JVM и Modern Lint прошли; Python state/install/cancel/deferred и readonly histories прошли.
+Production native paired tests:4 сценария/24 хода + Codex untrusted approval check.
+Это CLI с фиктивным провайдером, НЕ настоящая модель. Телефон ещё не проверен.
+Доказательства .verification/rtk-offline; отчёт docs/fork/VALIDATION-2.1.6-test3.md.
+Финальный APK gate прошёл после Gemini short-ID fix. APK скопирован в /sdcard/Download/Termux-Jobs-v2.1.6-test3-arm64.apk; SHA в .verification/rtk-offline/artifact.json. Ожидается ручная проверка телефона; установка/публикация не выполнялись.
+Предыдущие APK1523 и резерв1499 сохраняются.
+
+---
+
+# Текущая задача — расширение частичного RTK, test2 /1523
+
+Пользователь подтвердил работу первого этапа в текущем чате и потребовал расширить
+Git-only покрытие. Добавлены literal поиск/чтение/тесты и Gradle stdout preview.
+Это не полный RTK и не dedicated Gradle parser. Перенаправления/compound не меняются.
+Сохранены исходный argv, stderr, pipefail, prefix rules. Существующий установленный
+helper обновляется атомарно при открытии настройки; режимы/статистика не сбрасываются.
+
+Проверены Python coverage/state и native Claude/Codex с synthetic provider.
+Gradle под guard не запускает daemon (нет usable local IP), поэтому отдельно
+реальный локальный Gradle и replay его stdout через native CLI. Не смешивать проверки.
+Тестовая сборка1523 готова; финальный APK gate, Modern Lint (0/287), Java3, Python26+3 прошли. Публикация/установка не выполнялись. Следующий шаг — телефонная проверка новой матрицы и обновления установленного helper.
+Доказательства .verification/rtk-expand; отчёт docs/fork/VALIDATION-2.1.6-test2.md.
+
+---
+
+# Текущая выдача — RTK Mode, 2.1.6-test1 /1522
+
+Тестовый APK собран и проверен; установка, публикация и рабочие перезапуски не выполнялись.
+Пользователь разрешил только реализацию, изолированные проверки и тестовую сборку.
+RTK OSS1.1.0: одна установка в Ubuntu AI, независимые настройки/статистика чатов.
+Начальное покрытие — простые literal git status/diff/log. Claude SDK и Codex hooks
+передают сокращённый stdout до провайдера; stderr остаётся обычным путём.
+
+Последнее требование пользователя заменило прежний opt-in обхода: финальный pipeline
+без 2>&1 сохранил проверенные prefix rules, предупреждение об обходе убрано.
+Правила, approval и sandbox не меняются. Native CLI + synthetic provider проверили
+запреты, untrusted decline/accept и цикл включить/выключить/включить. Это не модель.
+Read-only/workspace-write пока не подтверждены: bubblewrap mount error стенда.
+
+TerminalModeRow сокращает подпись по фактической ширине без уменьшения шрифта.
+В закрытии терминала убрана галочка; сохранён прежний default сохранения истории.
+Кнопка — «Сохранить и закрыть», рабочие процессы не сохраняет.
+
+Финальный Modern Lint: 0 ошибок /287 предупреждений, все пять модулей.
+Java51 и повторные3 RTK после lifecycle fix прошли; Python26 и Node-регрессии прошли.
+Финальный APK gate прошёл; точные SHA и ограничения в
+[VALIDATION-2.1.6-test1.md](docs/fork/VALIDATION-2.1.6-test1.md).
+Доказательства .verification/rtk-mode. Следующий шаг — ручная проверка телефона
+и настоящих моделей; не выдавать fixture за такие проверки. Никаких автоустановок.
+
+---
+
 # Опубликован стабильный v2.1.5 /1520 и ручной rollback /1521
 
 Релиз: https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.5

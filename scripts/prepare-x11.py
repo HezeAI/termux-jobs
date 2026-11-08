@@ -1,11 +1,31 @@
 #!/usr/bin/env python3
 """Fetch pinned X11 build inputs into repo-local caches; never install packages."""
 from pathlib import Path, PurePosixPath
-import argparse, hashlib, io, json, os, re, subprocess, tarfile, urllib.request, zipfile
+import argparse, hashlib, io, json, os, re, subprocess, tarfile, urllib.request, urllib.error, zipfile
 DRIVER_ROOT=Path(__file__).resolve().parents[1]
 ROOT=DRIVER_ROOT
 BUILD_INPUTS=json.loads((DRIVER_ROOT/'scripts/x11-build-inputs.json').read_text())
 COMPONENTS=ROOT/'.tools/x11-components'
+def open_input(record):
+    try:return urllib.request.urlopen(record['url'],timeout=60)
+    except urllib.error.HTTPError as error:
+        if error.code not in (500,502,503,504):raise
+        match=re.fullmatch(r'https://github\.com/HezeAI/(termux-jobs(?:-components)?)/releases/download/([A-Za-z0-9._+-]+)/([A-Za-z0-9._+-]+)',record['url'])
+        if not match:raise
+        repo,tag,name=match.groups()
+        api='https://api.github.com/repos/HezeAI/'+repo+'/releases/'
+        with urllib.request.urlopen(urllib.request.Request(api+'tags/'+tag,headers={'Accept':'application/vnd.github+json'}),timeout=30) as response:
+            raw=response.read(2*1024*1024+1)
+            if len(raw)>2*1024*1024:raise ValueError('Oversized release metadata')
+            release=json.loads(raw)
+        if not isinstance(release,dict) or release.get('draft') or release.get('tag_name')!=tag or not isinstance(release.get('assets'),list):raise ValueError('Invalid release identity')
+        for asset in release['assets']:
+            if not isinstance(asset,dict):continue
+            ident=asset.get('id')
+            if type(ident)is int and ident>0 and asset.get('name')==name and asset.get('browser_download_url')==record['url'] and asset.get('size')==record['size'] and asset.get('digest')in(None,'sha256:'+record['sha256']):
+                return urllib.request.urlopen(urllib.request.Request(api+'assets/'+str(ident),headers={'Accept':'application/octet-stream'}),timeout=60)
+        raise ValueError('No release asset matches the pinned build input') from error
+
 def verified_file(name,record):
     cache=ROOT/'.tools/termux-x11-downloads';cache.mkdir(parents=True,exist_ok=True)
     file=cache/name
@@ -13,7 +33,7 @@ def verified_file(name,record):
         print('Fetching verified X11 input: '+name,flush=True)
         temp=file.with_suffix('.partial')
         try:
-            with urllib.request.urlopen(record['url'],timeout=60) as src,temp.open('wb') as dst:
+            with open_input(record) as src,temp.open('wb') as dst:
                 while chunk:=src.read(1024*1024):dst.write(chunk)
             if temp.stat().st_size!=record['size'] or hashlib.sha256(temp.read_bytes()).hexdigest()!=record['sha256']:raise ValueError('Pinned '+name+' checksum mismatch; upstream nightly may have changed')
             temp.replace(file)

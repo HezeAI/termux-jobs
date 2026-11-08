@@ -6,18 +6,18 @@ public class WorkspaceRestartUiTest {
  @Implements(value=TerminalSession.class,isInAndroidSdk=false) public static class FakeTerminal {
   @org.robolectric.annotation.RealObject TerminalSession real;
   @Implementation protected int getPid(){return 12345;}
-  @Implementation protected boolean isRunning(){return true;}
+  @Implementation protected boolean isRunning(){return !ended.contains(real.mHandle);}
   @Implementation protected void finishIfRunning(){finished.add(real.mHandle);}
  }
  @Implements(value=ClaudeCode.class,isInAndroidSdk=false) public static class NoClaudeStop {@Implementation protected static void stop(android.content.Context context,String run,String environment){assertTrue(ClaudeCode.validThread(run));}}
  @Implements(value=GeminiCli.class,isInAndroidSdk=false) public static class NoGeminiStop {@Implementation protected static void stop(android.content.Context context,String run,String environment){assertTrue(GeminiCli.validThread(run));}}
  @Implements(value=CodexRpc.class,isInAndroidSdk=false) public static class NoCodexStop {@Implementation protected static Runnable ownedStop(java.io.File files,WorkspaceStore.Session profile){return ()->{};}}
  @Implements(value=AiAgents.class,isInAndroidSdk=false) public static class NoOpenCodeStop {@Implementation protected static org.json.JSONObject call(android.content.Context context,String connection,WorkspaceStore.Session profile,org.json.JSONObject request)throws Exception{assertEquals("stop",request.getString("op"));return new org.json.JSONObject().put("ok",true);}}
- static List<String> finished=new ArrayList<>();TermuxActivity a;WorkspaceController ui;WorkspaceStore store;WorkspaceStore.Session p,peer;TerminalSession terminal,other;
+ static Set<String> ended=new HashSet<>();static List<String> finished=new ArrayList<>();TermuxActivity a;WorkspaceController ui;WorkspaceStore store;WorkspaceStore.Session p,peer;TerminalSession terminal,other;
  static void set(Object o,String name,Object value)throws Exception{Field f=o.getClass().getDeclaredField(name);f.setAccessible(true);f.set(o,value);}
  static Object get(Object o,String name)throws Exception{Field f=o.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(o);}
  @Before public void setup()throws Exception{
-  finished.clear();a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.setContentView(R.layout.activity_termux);set(a,"mTerminalView",a.findViewById(R.id.terminal_view));ui=new WorkspaceController(a);store=(WorkspaceStore)get(ui,"store");store.sessions.clear();TermuxService service=new TermuxService();set(a,"mTermuxService",service);
+  ended.clear();finished.clear();a=Robolectric.buildActivity(TermuxActivity.class).get();a.setTheme(R.style.Theme_Termux_Black);a.setContentView(R.layout.activity_termux);set(a,"mTerminalView",a.findViewById(R.id.terminal_view));ui=new WorkspaceController(a);store=(WorkspaceStore)get(ui,"store");store.sessions.clear();TermuxService service=new TermuxService();set(a,"mTermuxService",service);
   Constructor<TermuxSession> c=TermuxSession.class.getDeclaredConstructor(TerminalSession.class,ExecutionCommand.class,TermuxSession.TermuxSessionClient.class,boolean.class);c.setAccessible(true);
   terminal=new TerminalSession("fixture","fixture",new String[0],new String[0],null,null);other=new TerminalSession("fixture","fixture",new String[0],new String[0],null,null);
   for(TerminalSession t:new TerminalSession[]{terminal,other}){service.getTermuxSessions().add(c.newInstance(t,new ExecutionCommand(),null,false));WorkspaceStore.Session s=new WorkspaceStore.Session();s.saved=true;s.handle=t.mHandle;store.sessions.add(s);}p=store.sessions.get(0);peer=store.sessions.get(1);a.getTerminalView().mTermSession=other;
@@ -69,6 +69,10 @@ public class WorkspaceRestartUiTest {
   Method header=WorkspaceController.class.getDeclaredMethod("renderHeader");header.setAccessible(true);java.lang.reflect.Field screen=WorkspaceController.class.getDeclaredField("screen");screen.setAccessible(true);Object terminalScreen=java.lang.Enum.valueOf((Class)screen.getType(),"TERMINAL");screen.set(ui,terminalScreen);header.invoke(ui);
   android.view.ViewGroup heading=(android.view.ViewGroup)get(ui,"header");android.view.ViewGroup top=(android.view.ViewGroup)heading.getChildAt(0);assertFalse(top.getChildAt(1).hasOnClickListeners());assertNotNull(heading.findViewWithTag("workspace-header-restart"));assertTrue(finished.isEmpty());
  }
+ @Test public void endedAgentStillShowsHeaderRestartButton()throws Exception{
+  p.environment="codex";p.codexChat="id";p.codexThread="12345678-1234-1234-1234-123456789012";a.getTerminalView().mTermSession=terminal;ended.add(terminal.mHandle);
+  Method header=WorkspaceController.class.getDeclaredMethod("renderHeader");header.setAccessible(true);header.invoke(ui);android.view.ViewGroup heading=(android.view.ViewGroup)get(ui,"header");assertNotNull(heading.findViewWithTag("workspace-header-restart"));assertTrue(finished.isEmpty());
+ }
  @Test public void libraryWindowsKeepCurrentSessionAndSeparateTheirLists()throws Exception{
   Method open=WorkspaceController.class.getDeclaredMethod("openLibraryWindow",int.class);open.setAccessible(true);Object screen=get(ui,"screen");
   for(int section:new int[]{-1,0,1,2}){
@@ -85,6 +89,36 @@ public class WorkspaceRestartUiTest {
  }
  @Test public void cancelAndStaleConfirmationDoNotStopAnyRun()throws Exception{AlertDialog d=ask();d.cancel();assertTrue(finished.isEmpty());d=ask();p.handle="changed";d.getButton(-1).performClick();assertTrue(finished.isEmpty());assertTrue(((Map<?,?>)get(ui,"pendingRestarts")).isEmpty());assertSame(other,a.getCurrentSession());}
  @Test public void confirmationStopsOnlyCapturedTerminalAndRetainsBothRecords()throws Exception{ask().getButton(-1).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals(Collections.singletonList(terminal.mHandle),finished);assertSame(p,((Map<?,?>)get(ui,"pendingRestarts")).get(terminal.mHandle));assertEquals(2,store.sessions.size());assertSame(other,a.getCurrentSession());assertSame(peer,store.sessions.get(1));ask().getButton(-1).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals(1,finished.size());}
+ @Test public void disconnectedAgentRestartsFromRecordedIdOnlyOnceAndKeepsPeerAndFiles()throws Exception{
+  for(String agent:new String[]{"codex","claude","gemini","opencode"}){
+   finished.clear();((Map<?,?>)get(ui,"pendingRestarts")).clear();p.environment=agent.equals("codex")?"codex":"ubuntu";p.claudeAgent=agent.equals("claude");p.geminiAgent=agent.equals("gemini");p.aiAgent=agent.equals("opencode")?"opencode":"";
+   String id=agent.equals("opencode")?"sesFixture123":"12345678-1234-1234-1234-123456789012";p.codexThread=p.claudeThread=p.geminiThread=id;p.aiThread=p.aiSavedThread=id;
+   p.codexChat=p.claudeChat=p.geminiChat="id";p.aiChat="resume";
+   java.io.File file=new java.io.File(SessionShell.directory(a.getFilesDir(),p.id),"attachment.txt");file.getParentFile().mkdirs();java.nio.file.Files.write(file.toPath(),"keep attachment/history".getBytes());
+   ui.chatSnapshot=captured->{assertEquals(p.id,captured.id);throw new java.io.IOException("fixture connection failure");};
+   AlertDialog first=ask(),second=ask();first.getButton(-1).performClick();second.getButton(-1).performClick();
+   for(int n=0;n<300&&finished.isEmpty();n++){Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();Thread.sleep(5);}
+   assertEquals(agent,Collections.singletonList(terminal.mHandle),finished);assertSame(p,((Map<?,?>)get(ui,"pendingRestarts")).get(terminal.mHandle));assertEquals(2,store.sessions.size());assertTrue(p.saved);assertSame(other,a.getCurrentSession());assertEquals("keep attachment/history",new String(java.nio.file.Files.readAllBytes(file.toPath())));
+  }
+ }
+ @Test public void missingLocalAndRemoteIdNeverStopsAnotherOrInventsConversation()throws Exception{
+  p.environment="codex";p.codexThread="";ui.chatSnapshot=captured->{throw new java.io.IOException("offline");};ask().getButton(-1).performClick();
+  for(int n=0;n<100;n++){Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();Thread.sleep(5);}
+  assertTrue(finished.isEmpty());assertTrue(((Map<?,?>)get(ui,"pendingRestarts")).isEmpty());assertEquals("",p.codexThread);assertEquals(2,store.sessions.size());
+ }
+ @Test public void endedChatCanRetryFailedLaunchAndStaleConfirmationCannotLaunchTwice()throws Exception{
+  p.environment="codex";p.codexChat="id";p.codexThread="12345678-1234-1234-1234-123456789012";ended.add(terminal.mHandle);final int[] launches={0};
+  ui.chatSnapshot=captured->{throw new AssertionError("ended run does not need transport");};
+  ui.restartEnded=(profile,old)->{assertSame(p,profile);assertSame(terminal,old);launches[0]++;};
+  ask().getButton(-1).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals(1,launches[0]);assertEquals(terminal.mHandle,p.handle);assertEquals(2,store.sessions.size());
+  ui.restartEnded=(profile,old)->{launches[0]++;profile.handle="replacement-run";};AlertDialog first=ask(),stale=ask();first.getButton(-1).performClick();stale.getButton(-1).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertEquals(2,launches[0]);assertTrue(finished.isEmpty());assertSame(other,a.getCurrentSession());assertEquals("12345678-1234-1234-1234-123456789012",p.codexThread);
+ }
+ @Test public void processEndingDuringSnapshotStillUsesTheSameRestartPath()throws Exception{
+  p.environment="codex";p.codexChat="id";p.codexThread="12345678-1234-1234-1234-123456789012";final int[] launches={0};
+  ui.chatSnapshot=captured->{ended.add(terminal.mHandle);throw new java.io.IOException("run ended");};ui.restartEnded=(profile,old)->{assertSame(p,profile);assertSame(terminal,old);launches[0]++;};
+  ask().getButton(-1).performClick();for(int n=0;n<200&&launches[0]==0;n++){Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();Thread.sleep(5);}
+  assertEquals(1,launches[0]);assertTrue(finished.isEmpty());assertTrue(((Map<?,?>)get(ui,"pendingRestarts")).isEmpty());assertSame(other,a.getCurrentSession());
+ }
  @Test public void baseRestartKeepsTheSameProtectedRecord()throws Exception{p.id=WorkspaceStore.BASE_TERMINAL_ID;ask().getButton(-1).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertSame(p,((Map<?,?>)get(ui,"pendingRestarts")).get(terminal.mHandle));assertEquals(2,store.sessions.size());assertSame(p,store.sessions.get(0));assertEquals(Collections.singletonList(terminal.mHandle),finished);}
  @Test public void baseHasNoSessionSettingsAndSidebarLibrariesKeepDisclosure()throws Exception{p.id=WorkspaceStore.BASE_TERMINAL_ID;a.getTerminalView().mTermSession=terminal;Method make=WorkspaceController.class.getDeclaredMethod("createSidebar");make.setAccessible(true);WorkspaceSidebar sidebar=(WorkspaceSidebar)make.invoke(ui);sidebar.show();android.widget.LinearLayout base=sidebar.body.findViewWithTag("sidebar-session-"+p.id),actions=(android.widget.LinearLayout)base.getChildAt(1);for(int i=0;i<actions.getChildCount();i++)if(actions.getChildAt(i) instanceof android.widget.TextView)assertNotEquals("Настройки сессии",((android.widget.TextView)actions.getChildAt(i)).getText().toString());for(int section=-1;section<3;section++){Method open=WorkspaceController.class.getDeclaredMethod("openLibraryWindow",int.class);open.setAccessible(true);open.invoke(ui,section);assertTrue(sidebar.dialog.isShowing());assertEquals(android.view.View.VISIBLE,actions.getVisibility());AlertDialog window=ShadowAlertDialog.getLatestAlertDialog();assertEquals(android.view.Gravity.CENTER,window.getWindow().getAttributes().gravity);assertEquals(0,window.getWindow().getAttributes().flags&android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);window.cancel();assertTrue(sidebar.dialog.isShowing());assertEquals(android.view.View.VISIBLE,actions.getVisibility());}assertTrue(finished.isEmpty());}
 

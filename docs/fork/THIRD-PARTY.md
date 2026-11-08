@@ -1,3 +1,12 @@
+# RTK OSS component jobs.1
+
+RTK is developed by rtk-ai contributors (Apache-2.0); Termux Job’s jobs.1 adds
+optional exact byte measurements to upstream1.1.0. The component release includes
+binary and exact corresponding-source archives, patch, build recipe, LICENSE and
+dependency notices. The app downloads the pinned binary separately; it is not
+embedded in the APK. This does not change other existing component/source gaps.
+[Component and sources](https://github.com/HezeAI/termux-jobs-components/releases/tag/rtk-1.1.0-jobs.1) · [RTK notes](RTK-MODE.md).
+
 # Current notices and source coverage — 2026-11-03
 
 See [THIRD_PARTY_NOTICES](../../THIRD_PARTY_NOTICES.md) for exact release dependency

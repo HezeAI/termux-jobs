@@ -1,3 +1,23 @@
+> 2.1.7: RTK output accounting matches supported literal/quoted and sequential
+> calls and final yielded-command receipts. Unconfirmed bases remain unknown.
+> This updates the app observer, not RTK execution or permission rules. See
+> [release validation](VALIDATION-v2.1.7.md).
+
+# RTK and offline chat resources
+
+RtkMode drives a cancellable per-window installer inside the selected Ubuntu AI.
+rtk-component.json pins component revision/archive/binary SHA-256. rtk-mode.py
+owns per-profile modes/metrics and verifies runtime readiness; rtk-agent.cjs adds
+scoped native callbacks/trust entries without replacing foreign hooks/auth.
+Lite preserves the original command pipeline and measures captured stdout;
+native delegates rewriting and uses the jobs.1 byte protocol with receipt hashes.
+Full recovery is enabled, and returned recall bytes are separate counters.
+
+AgentOfflineData/OfflineProjectChat read saved environment/project settings without
+starting an agent. Stale metrics remain labelled; missing resources have reasons.
+Storage schema remains unchanged. [RTK limits](RTK-MODE.md) and
+[release checks](VALIDATION-v2.1.6.md) bound these claims.
+
 # v2.1.5 changes
 
 AgentCreationSteps owns both creation pages in one window. AgentTerminalScreen

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fetch only APK-pinned rootfs archives; extraction belongs to native proot-distro."""
 import http.client
-import fcntl,hashlib,json,os,re,stat,sys,time,urllib.error,urllib.request
+import fcntl,hashlib,json,os,re,stat,sys,time,urllib.error,urllib.request,urllib.parse
 from pathlib import Path
 RELEASE='rootfs-arm64-20261028'
 RELEASES={'ubuntu-ai':'ubuntu-ai-base-arm64-20261102'}
@@ -43,6 +43,25 @@ def directory(base,name):
  info=p.lstat()
  if not stat.S_ISDIR(info.st_mode) or info.st_uid!=os.getuid():raise ValueError('IMAGE_CACHE_DIRECTORY')
  return p
+def github_asset(url,sha,size,opener):
+ # Resolve only the pinned Components repository. Never trust an API-supplied URL.
+ match=re.fullmatch(r'https://github\.com/HezeAI/termux-jobs-components/releases/download/([A-Za-z0-9._+-]+)/([A-Za-z0-9._+-]+)',url)
+ if not match:return None
+ tag,name=match.groups()
+ metadata='https://api.github.com/repos/HezeAI/termux-jobs-components/releases/tags/'+urllib.parse.quote(tag,safe='')
+ with opener.open(urllib.request.Request(metadata,headers={'Accept':'application/vnd.github+json'}),timeout=15) as response:
+  if not response.geturl().startswith('https://'):raise ValueError('IMAGE_INSECURE_RESPONSE')
+  raw=response.read(2*1024*1024+1)
+  if len(raw)>2*1024*1024:raise ValueError('IMAGE_METADATA_SIZE')
+  release=json.loads(raw)
+ if not isinstance(release,dict) or release.get('draft') or release.get('tag_name')!=tag:return None
+ if not isinstance(release.get('assets'),list):return None
+ for asset in release.get('assets',[]):
+  if not isinstance(asset,dict):continue
+  ident=asset.get('id')
+  if asset.get('name')==name and asset.get('browser_download_url')==url and type(ident)is int and ident>0 and asset.get('size')==size and asset.get('digest')in (None,'sha256:'+sha):
+   return 'https://api.github.com/repos/HezeAI/termux-jobs-components/releases/assets/'+str(ident)
+ return None
 def download(path,url,sha,size,opener=None):
  if path.is_symlink():raise ValueError('IMAGE_UNSAFE_FILE')
  print('STAGE:checking-image-cache',file=sys.stderr,flush=True)
@@ -51,14 +70,16 @@ def download(path,url,sha,size,opener=None):
  part=path.with_name(path.name+'.part')
  if part.exists() or part.is_symlink():regular(part)
  opener=opener or urllib.request.build_opener(HttpsOnly())
+ source_url=url
  for attempt in range(3):
   offset=regular(part).st_size if part.exists() else 0
   if offset and matches(part,sha,size):os.replace(part,path);return path
   if offset>=size:part.unlink();offset=0
   headers={'Range':'bytes='+str(offset)+'-'} if offset else {}
+  if source_url!=url:headers['Accept']='application/octet-stream'
   try:
    print('STAGE:connecting-image-download',file=sys.stderr,flush=True)
-   with opener.open(urllib.request.Request(url,headers=headers),timeout=30) as response:
+   with opener.open(urllib.request.Request(source_url,headers=headers),timeout=30) as response:
     if not response.geturl().startswith('https://'):raise ValueError('IMAGE_INSECURE_RESPONSE')
     status=response.status
     if status==206:
@@ -93,6 +114,9 @@ def download(path,url,sha,size,opener=None):
    os.replace(part,path);return path
   except (urllib.error.URLError,TimeoutError,OSError,http.client.HTTPException) as error:
    if attempt==2:raise ValueError('IMAGE_DOWNLOAD_NETWORK') from error
+   if source_url==url and isinstance(error,urllib.error.HTTPError) and error.code in (500,502,503,504):
+    try:source_url=github_asset(url,sha,size,opener) or url
+    except (ValueError,OSError,http.client.HTTPException):pass
    print('STAGE:reconnecting-image-download',file=sys.stderr,flush=True);time.sleep(1)
  raise ValueError('IMAGE_DOWNLOAD_FAILED')
 def main():

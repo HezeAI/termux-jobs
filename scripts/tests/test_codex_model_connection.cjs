@@ -2,7 +2,7 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const cp=require('node:child_process');for(const name of ['spawn','spawnSync','exec','execFile','execSync','execFileSync','fork'])cp[name]=()=>{throw Error('Real processes are forbidden in this fake-RPC fixture');};process.kill=()=>{throw Error('Real signals are forbidden in this fake-RPC fixture');};
 const root=require('./fixture-paths.cjs').fixture('cxlink'),assets=path.resolve('app/src/main/assets');
-for(const f of ['codex-chat.cjs','agent-receipts.cjs','agent-attachments.cjs','agent-action-preview.cjs','agent-completion-times.cjs'])fs.copyFileSync(path.join(assets,f),path.join(root,f));
+for(const f of ['rtk-agent.cjs','codex-chat.cjs','agent-receipts.cjs','agent-attachments.cjs','agent-action-preview.cjs','agent-completion-times.cjs'])fs.copyFileSync(path.join(assets,f),path.join(root,f));
 fs.copyFileSync(path.join(assets,'codex-control.js'),path.join(root,'codex-wire-v0.2.22.js'));
 const {CodexChat}=require(path.join(root,'codex-chat.cjs'));
 const rpc=()=>({call:async()=>({}),send(){},close(){}});

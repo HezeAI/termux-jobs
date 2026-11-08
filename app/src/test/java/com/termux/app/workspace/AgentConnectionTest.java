@@ -41,7 +41,7 @@ public class AgentConnectionTest {
     @Test public void profileStartupIncludesWrapperOnlyInItsSelectedGuest()throws Exception{
         File files=Files.createTempDirectory("ac").toFile();WorkspaceStore.Session p=profile();p.id="fixture";p.codexSocketId="fixture";p.agentConnectionCommand="/root/launcher";p.codexChat="id";p.codexThread="preserved-thread";
         SessionShell.prepare(files,p);String guest=new String(Files.readAllBytes(new File(SessionShell.directory(files,p.id),"ubuntu-bashrc").toPath()),StandardCharsets.UTF_8);
-        assertTrue(guest.contains("/root/launcher"));assertTrue(guest.contains("preserved-thread"));assertTrue(guest.contains("codex-launch-v1.cjs"));assertTrue(guest.matches("(?s).*danger-full-access.*never.*"));
+        assertTrue(guest.contains("/root/launcher"));assertTrue(guest.contains("preserved-thread"));assertTrue(guest.contains("codex-launch-v2.cjs"));assertTrue(guest.matches("(?s).*danger-full-access.*never.*"));
         String host=new String(Files.readAllBytes(new File(SessionShell.directory(files,p.id),"bashrc").toPath()),StandardCharsets.UTF_8);assertTrue(host.contains("'ubuntu-ai'"));assertFalse(host.contains("HTTPS_PROXY"));assertFalse(guest.contains("203.0.113.188"));
     }
 }

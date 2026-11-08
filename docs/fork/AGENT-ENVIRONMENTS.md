@@ -130,3 +130,14 @@ current migration UI or the composition of a future APK.
 - Вывод: перед pkg нужен отдельный этап; фиксированный протокол должен быть согласован между shell allowlist, AgentPreparationOutput и EnvironmentSetupStatus. Смена этапа не должна теряться из-за ограничения частоты уведомлений. Общий failure-marker должен сохранять предшествующий точный этап. Готовность отдельного CLI не означает готовность всей операции, особенно Gemini + Vertex.
 - Условия: не возвращать stdout/stderr в состояние, ошибки или журнал; измеренные bytes и неопределённые остальные этапы сохраняются. Операции Gemini API и Vertex имеют разные ключи, но общий последовательный executor: нельзя использовать результат активного API-job как готовность Vertex.
 - Подтверждение: локальный c92df2a2, test2 / 1478; 115 целевых JVM, 35 искусственных real-child случаев пяти вариантов, 6 shared-host фикстур и 9 local TLS/queue сценариев. Нет реальной установки или новой приёмки телефона. См. docs/fork/VALIDATION-2.1.3-test2.md активного checkout.
+
+## Stable 2.1.6: selected environment and sealed deletion path
+
+Deletion plans validate the selected alias and `containers/<alias>` identity.
+Error messages name that environment. The deletion-only scan reports the exact
+mode-000 `rootfs/run/systemd/dissect-root` directory as unscanned; other access
+errors remain fatal. Removal uses kernel `rmdir` to verify emptiness without chmod.
+A nonempty directory restores the original container before recursive deletion.
+See [native Termux evidence and v2.1.5 reproduction](VALIDATION-2.1.6-environments.md).
+Pinned image downloads may use the public Components asset API after gateway
+errors; archive identity, size and SHA-256 remain mandatory on both routes.

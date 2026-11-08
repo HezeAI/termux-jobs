@@ -1,3 +1,20 @@
+> 2.1.7: RTK output accounting matches supported literal/quoted and sequential
+> calls and final yielded-command receipts. Unconfirmed bases remain unknown.
+> This updates the app observer, not RTK execution or permission rules. See
+> [release validation](VALIDATION-v2.1.7.md).
+
+# Current sidebar and chat presentation
+
+Four bordered sidebar section cards share the sidebar background resource.
+Section preferences persist; only explicit opening expands the on-screen session.
+Manual collapse survives refresh. Selected session rows share the exact black
+workspace_chat_background resource with AgentChatView; their borders remain.
+User bubbles fit content up to85% width. Retained arrival and independent size
+animations cover timelines, tool/image cards and attachments. Scroll indicators
+follow manual gestures/inertia; automatic layout/scrolling does not reveal them.
+System-disabled animations remain static. The developer accepted test10 on a phone;
+individual multi-device scenarios are not claimed. [Validation](VALIDATION-v2.1.6.md).
+
 # v2.1.5 interface
 
 Native Android UI: compact nested sidebar, centered creation pages in one dimmed

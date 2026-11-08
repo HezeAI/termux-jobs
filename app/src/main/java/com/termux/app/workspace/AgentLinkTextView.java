@@ -11,6 +11,10 @@ import androidx.appcompat.widget.AppCompatTextView;
 /** Short link taps coexist with Android's selectable-text movement method. */
 final class AgentLinkTextView extends AppCompatTextView {
     private AgentTextReveal reveal;
+    private AgentCardSize cardSize;
+    void smoothSize(AgentChatView owner,boolean enabled){if(cardSize==null)cardSize=new AgentCardSize(this,owner);cardSize.enabled=enabled;}
+    void seedCardHeight(int height){if(cardSize!=null)cardSize.seed(height);}
+    @Override protected void onMeasure(int width,int height){super.onMeasure(width,height);if(cardSize!=null)setMeasuredDimension(getMeasuredWidth(),cardSize.measure(getMeasuredHeight()));}
     private boolean animateNext;
     private java.util.function.Function<String,Runnable> local;
     void localLinks(java.util.function.Function<String,Runnable> resolver){local=resolver;}
@@ -90,6 +94,7 @@ final class AgentLinkTextView extends AppCompatTextView {
 
     @Override protected void onDetachedFromWindow() {
         if(reveal!=null)reveal.finish();
+        if(cardSize!=null)cardSize.detached();
         downLink = null; pendingLink = null; downText = null;
         super.onDetachedFromWindow();
     }

@@ -1,8 +1,39 @@
 # Security, data and trust / Безопасность, данные и границы доверия
 
-Applies to Termux Job’s v2.1.3. Updated on 2026-11-04 against the release source
-and APK checks; current first-party audit scope is [recorded separately](docs/fork/SECURITY-AUDIT-STAGE2.md). This describes implementation and known limits, not a security
-certification. Earlier dated validation reports describe their named versions.
+Current release: **2.1.7 /1536**. The implementation/security review below was
+performed on **2026-11-04 for v2.1.3**; that date and scope are not extended by a
+new release. This documentation reconciliation compared the named source paths
+with v2.1.7 and its reports; it did not repeat a full security audit or phone tests.
+[Original audit scope](docs/fork/SECURITY-AUDIT-STAGE2.md) ·
+[2.1.7 verification](docs/fork/VALIDATION-v2.1.7.md).
+
+## Changes and evidence since the original review
+
+- Updater/package checks, Gemini/SSH vaults, backup engine/helper, diagnostic
+  collector and the named server/skill/preparation classes retain identical
+  source blobs between v2.1.3 and v2.1.7. This is source identity, not a new
+  device check of credentials, crash recovery or backup restore.
+- Chat adapters/UI, attachments, file viewer, environment image helper and Android
+  manifest changed. Their newer checks are scoped in the version reports; the
+  original review does not attest these changes. See [2.1.6](docs/fork/VALIDATION-v2.1.6.md)
+  and [2.1.7](docs/fork/VALIDATION-v2.1.7.md).
+- RTK is now optional per chat. Native rewriting may affect Codex command-prefix
+  bans and Claude Bash deny/approval matching. Stored rules remain; the enable
+  dialog warns about the limitation. Full-output recovery files may retain command
+  data locally. Saving a recovery file does not itself send it to a model;
+  explicit recall sends additional text. [RTK scope](docs/fork/RTK-MODE.md).
+- Live Codex RTK evidence and Claude synthetic-provider CLI checks are distinct.
+  The latter do not establish real Anthropic model behavior or all permission
+  modes. Claude Auto availability depends on CLI/account support; root/Ubuntu
+  Bypass restrictions remain. These are not blanket disablement of all controls.
+- The image-history Codex WebSocket failure remains open. It was reproduced
+  without this UI, but the closing remote component was not established.
+  [Diagnostic report](https://github.com/openai/codex/issues/55730#issuecomment-6645086819).
+
+«Не проверено» означает границу доказательств, а не подтверждённый дефект.
+Android key handoff/crash recovery and backup restore phone scenarios remain
+unverified in the documented scope. No previous phone acceptance is expanded
+by this documentation update.
 
 ## Русский
 
@@ -98,8 +129,8 @@ UID, повреждённой ОС, инструментов агента или
 - Справочник/WebView/браузер открывают выбранные сайты; поиск документации передаёт
   запрос сайту поиска. HTTP(S)-ссылки и внешние страницы могут загружать ресурсы
   сторонних сайтов. SSH/серверные инструменты подключаются к указанному серверу,
-  проверяют соединение и передают выбранные команды/файлы. Загрузчики медиа,
-  моделей и графических компонентов обращаются к выбранным источникам.
+  проверяют соединение и передают выбранные команды/файлы. Загрузчики медиа
+  и графических компонентов обращаются к выбранным источникам.
 - Локальный HTML/GIF-предпросмотр чата использует отдельный WebView: нет app bridge,
   доступа к произвольным файлам, file chooser или разрешений страницы; запросы
   ограничены одним виртуальным документом. Это не описание обычного веб-браузера.
@@ -134,11 +165,11 @@ backup HOME или окружения может включать CLI-автор
 
 Автотесты, Lint, ревью кода и проверка APK описаны в отчёте релиза. Проверки HezeAI
 на телефоне отмечены отдельно и распространяются на названные сценарии.
-Подтверждённого независимого аудита безопасности этой версии нет. Открытый код,
-число тестов и совпадение сертификата не гарантируют безопасность.
+Источники и границы проверок указаны выше. Открытый код, число тестов
+и совпадение сертификата не заменяют проверку конкретного поведения.
 
 Подтверждённый канал связи — [GitHub Issues проекта](https://github.com/HezeAI/termux-jobs/issues).
-На 2026-11-03 private vulnerability reporting в GitHub выключен; отдельный закрытый
+Настройка GitHub private vulnerability reporting проверена через API 2026-11-08: выключена; отдельный закрытый
 адрес не опубликован. Для чувствительной проблемы оставьте только несекретное
 уведомление и запросите у HezeAI закрытый способ передачи подробностей. Не публикуйте
 ключи, приватные журналы, архивы окружений, чужие данные или чувствительные детали
@@ -218,7 +249,7 @@ GitHub. Agent provider/OAuth/CLI features have additional network behavior.
 
 Documentation search, websites and ordinary browser WebViews contact their sites
 and may load third-party resources. SSH/server tools connect to the chosen server
-and transfer selected commands/files. Media/model/graphics downloads contact their
+and transfer selected commands/files. Media/graphics downloads contact their
 selected sources. Local chat HTML/GIF preview is a separate restricted WebView,
 serving one virtual document with no app bridge, arbitrary-file access, file chooser
 or page permissions; that is not a claim about the general web browser.
@@ -247,19 +278,18 @@ a project folder does not remove its copies from native history. See
 ### Evidence and reporting
 
 Release validation distinguishes automated tests/Lint/code and artifact review
-from HezeAI's named phone checks. There is no confirmed independent security audit
-of this version. Source availability, test counts and a matching signer are not
-security guarantees. Historical reports retain their original scope; consult the
+from HezeAI's named phone checks. Source availability, test counts and a matching
+signer do not replace verification of specific behavior. Historical reports retain their original scope; consult the
 current release report for active limits.
 
 The existing contact is [project GitHub Issues](https://github.com/HezeAI/termux-jobs/issues).
-GitHub private vulnerability reporting was disabled when checked on2026-11-03;
+GitHub private vulnerability reporting was checked through the API on 2026-11-08 and is disabled;
 no separate confidential address is published. For sensitive findings, post only a
 non-sensitive notification and ask HezeAI for a private handoff before sharing
 technical details. Do not publish keys, private logs, environment archives, other
 people's data or sensitive exploit details. No private address is invented here.
 
-## Reviewed implementation / Проверенные пути кода
+## Implementation paths from the dated review / Пути исходного обзора
 
 - [WorkspaceUpdates](app/src/main/java/com/termux/app/workspace/WorkspaceUpdates.java),
   [UpdateConnection](app/src/main/java/com/termux/app/workspace/UpdateConnection.java): update queries/download and package/signer checks.
