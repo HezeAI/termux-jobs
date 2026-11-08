@@ -57,6 +57,25 @@ jobs:
           sdkmanager --sdk_root="$PWD/.tools/sdk" "platforms;android-35" "build-tools;30.0.3" "build-tools;35.0.0" "ndk;22.1.7171670"
           mkdir -p .tools/gradle-home
           printf 'android.aapt2FromMavenOverride=%s\n' "$PWD/.tools/sdk/build-tools/35.0.0/aapt2" > .tools/gradle-home/gradle.properties
+      - name: Fetch unchanged pinned musl build headers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Alpine removed r2. Preserve the exact original build input.
+          gh api -H 'Accept: application/octet-stream' repos/HezeAI/termux-jobs/releases/assets/723420119 > "$RUNNER_TEMP/musl-build-headers.tar.gz"
+          python3 - <<'PYTHON'
+          import hashlib, os, pathlib, tarfile
+          archive=pathlib.Path(os.environ['RUNNER_TEMP'])/'musl-build-headers.tar.gz'
+          if hashlib.sha256(archive.read_bytes()).hexdigest()!='bb06e5670c50a87cebd3d7d1446909567f5165ee717f880e723515f697f5d765':
+              raise SystemExit('Build-header archive SHA-256 mismatch')
+          with tarfile.open(archive) as tar:
+              data=tar.extractfile('musl-dev-1.2.6-r2.apk').read()
+          if len(data)!=2539434 or hashlib.sha256(data).hexdigest()!='ca72b84f4eb3c36bbbec04d919eb10159d414c7a43413cc2253841d301fa9486':
+              raise SystemExit('Pinned musl package identity mismatch')
+          target=pathlib.Path('.tools/termux-x11-downloads/musl-dev-1.2.6-r2.apk')
+          target.parent.mkdir(parents=True,exist_ok=True)
+          with target.open('xb') as f: f.write(data)
+          PYTHON
       - name: Prepare verified ARM64 X11 inputs
         run: |
           set -euo pipefail
