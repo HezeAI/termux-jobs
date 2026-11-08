@@ -52,7 +52,11 @@ def open_dir(path):
   return fd
  except BaseException:os.close(fd);raise
 
-def walk(fd,prefix=''):
+SEALED_SYSTEMD_DIRECTORY='rootfs/run/systemd/dissect-root'
+def sealed_systemd(path,info):
+ return path==SEALED_SYSTEMD_DIRECTORY and stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode)==0
+
+def walk(fd,prefix='',sealed=None):
  if prefix.count('/')>256:raise Refused('TREE_TOO_DEEP')
  try:names=sorted(os.listdir(fd))
  except OSError as e:
@@ -63,13 +67,16 @@ def walk(fd,prefix=''):
   except OSError as e:
    e.scan_path=p;e.scan_operation='stat';raise
   yield p,s
+  if sealed is not None and sealed_systemd(p,s):
+   sealed.append(p)
+   continue
   if stat.S_ISDIR(s.st_mode) and not mount_placeholder(p):
    try:child=os.open(n,DIR,dir_fd=fd)
    except OSError as e:
     e.scan_path=p;e.scan_operation='open-directory';raise
    try:
     if identity(os.fstat(child))!=identity(s):raise Refused('SOURCE_CHANGED')
-    yield from walk(child,p+'/')
+    yield from walk(child,p+'/',sealed)
    finally:os.close(child)
 
 def at(root,path):
@@ -180,9 +187,9 @@ class Runtime:
    except (FileNotFoundError,ProcessLookupError):continue
    except PermissionError as e:raise Refused('PROCESS_CHECK_DENIED') from e
  @access_stage('SCAN_ACCESS_DENIED')
- def snapshot(self,fd):
+ def snapshot(self,fd,sealed=None):
   result={};size=0
-  for p,s in walk(fd):
+  for p,s in walk(fd,sealed=sealed):
    self.tick('scan',size,0,len(result))
    if stat.S_ISREG(s.st_mode):size+=s.st_size
    elif not (stat.S_ISDIR(s.st_mode) or stat.S_ISLNK(s.st_mode) or stat.S_ISSOCK(s.st_mode)):raise Refused('UNSUPPORTED_SPECIAL_FILE')
@@ -198,8 +205,8 @@ class Runtime:
    try:
     src=os.open(alias,DIR,dir_fd=parent)
     try:
-     entries,size,token=self.snapshot(src)
-     return dict(event='plan',alias=alias,bytes=size,files=len(entries),token=token,free=os.fstatvfs(parent).f_bavail*os.fstatvfs(parent).f_frsize)
+     sealed=[];entries,size,token=self.snapshot(src,sealed)
+     return dict(event='plan',alias=alias,container='containers/'+alias,unscanned=sealed,bytes=size,files=len(entries),token=token,free=os.fstatvfs(parent).f_bavail*os.fstatvfs(parent).f_frsize)
     finally:os.close(src)
    finally:os.close(parent)
  @access_stage('ENVIRONMENT_ACCESS_DENIED')
@@ -212,7 +219,8 @@ class Runtime:
     src=os.open(alias,DIR,dir_fd=parent)
     try:
      original=os.fstat(src)
-     if self.snapshot(src)[2]!=token:raise Refused('SOURCE_CHANGED')
+     sealed=[]
+     if self.snapshot(src,sealed)[2]!=token:raise Refused('SOURCE_CHANGED')
      self.idle(alias)
      self.tick('delete')
      name='.jobs-delete-'+uuid.uuid4().hex;rename_new(parent,alias,name);os.fsync(parent)
@@ -220,6 +228,20 @@ class Runtime:
      if (moved.st_dev,moved.st_ino)!=(original.st_dev,original.st_ino):
       rename_new(parent,name,alias)
       raise Refused('SOURCE_CHANGED')
+     # The only unscanned directory is a sealed systemd mount placeholder.
+     # rmdir verifies emptiness in the kernel without reading or chmod. If it
+     # contains anything, restore the original container before any tree removal.
+     try:
+      for path in sealed:
+       directory,leaf=at(src,path)
+       try:
+        if not sealed_systemd(path,os.stat(leaf,dir_fd=directory,follow_symlinks=False)):raise Refused('SOURCE_CHANGED')
+        os.rmdir(leaf,dir_fd=directory)
+       finally:os.close(directory)
+     except (OSError,Refused) as error:
+      rename_new(parent,name,alias);os.fsync(parent)
+      if isinstance(error,OSError) and error.errno in (errno.ENOTEMPTY,errno.EEXIST):raise Refused('SEALED_DIRECTORY_NOT_EMPTY') from error
+      raise
      # Deletion is non-cancellable after quarantine. Never follow guest symlinks.
      try:remove_tree(parent,name)
      except OSError as e:raise Refused('DELETE_INCOMPLETE') from e

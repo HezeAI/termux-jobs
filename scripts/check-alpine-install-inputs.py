@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only network/integrity check of pinned Alpine install archives; no installation."""
 from pathlib import Path
-import argparse, hashlib, json, tarfile, tempfile, urllib.request, time
+import argparse, hashlib, importlib.util, json, tarfile, tempfile, urllib.request, time
 ROOT=Path(__file__).resolve().parents[1]
 def sha(path):
  h=hashlib.sha256()
@@ -12,22 +12,10 @@ def sha(path):
    h.update(b)
  return h.hexdigest()
 def fetch(record,destination):
- for attempt in range(3):
-  try:
-   h=hashlib.sha256();size=0
-   with urllib.request.urlopen(record['url'],timeout=45)as response,destination.open('wb')as output:
-    if not response.geturl().startswith('https://'):raise ValueError('Insecure redirect')
-    while True:
-     b=response.read(1024*1024)
-     if not b:break
-     size+=len(b)
-     if size>record['size']:raise ValueError('Oversized archive')
-     h.update(b);output.write(b)
-   if size!=record['size']or h.hexdigest()!=record['sha256']:raise ValueError('Archive identity mismatch')
-   return {'url':record['url'],'bytes':size,'sha256':h.hexdigest(),'checked':True}
-  except Exception:
-   if attempt==2:raise
-   time.sleep(1)
+ spec=importlib.util.spec_from_file_location('archive_downloader',ROOT/'app/src/main/assets/environment-image.py')
+ module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+ module.download(destination,record['url'],record['sha256'],record['size'])
+ return {'url':record['url'],'bytes':destination.stat().st_size,'sha256':sha(destination),'checked':True,'productionDownloader':True}
 def main():
  parser=argparse.ArgumentParser();parser.add_argument('--output',type=Path,required=True);args=parser.parse_args()
  image=next(x for x in json.loads((ROOT/'app/src/main/assets/environment-images.json').read_text())['images']if x['alias']=='alpine')

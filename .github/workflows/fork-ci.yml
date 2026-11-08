@@ -60,7 +60,7 @@ jobs:
       - name: Fetch unchanged pinned musl build headers
         run: |
           # Alpine removed r2. Preserve the exact original build input from Components.
-          curl --fail --location --retry 3 --retry-all-errors 'https://github.com/HezeAI/termux-jobs-components/releases/download/x11-build-headers-musl-1.2.6-r2/x11-musl-build-headers-1.2.6-r2-aarch64.tar.gz' --output "$RUNNER_TEMP/musl-build-headers.tar.gz"
+          curl --fail --location --retry 3 --retry-all-errors --header 'Accept: application/octet-stream' 'https://api.github.com/repos/HezeAI/termux-jobs-components/releases/assets/723443781' --output "$RUNNER_TEMP/musl-build-headers.tar.gz"
           python3 - <<'PYTHON'
           import hashlib, os, pathlib, tarfile
           archive=pathlib.Path(os.environ['RUNNER_TEMP'])/'musl-build-headers.tar.gz'
@@ -79,8 +79,17 @@ jobs:
           set -euo pipefail
           export FORK_X11_CLANG="$PWD/.tools/sdk/ndk/22.1.7171670/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
           python3 ../ci-driver/scripts/prepare-x11.py --root "$PWD" | tee .verification/ci/x11-preparation.log
+      - name: Python for production archive downloader verification
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Check pinned Alpine installation archives and dependencies
         run: python3 scripts/check-alpine-install-inputs.py --output .verification/ci/alpine-install-inputs.json
+      - name: Environment removal and downloader regression tests
+        run: |
+          python3 -B -m unittest discover -s scripts/tests -p test_agent_environment.py -v
+          python3 -B -m unittest discover -s scripts/tests -p 'test_environment_image*.py' -v
+          python3 -B -m unittest discover -s scripts/tests -p test_environment_install.py -v
       - name: Java 11 for Gradle and Android project
         uses: actions/setup-java@v4
         with:
