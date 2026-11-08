@@ -3,7 +3,7 @@
 A refined chat and sidebar interface, optional per-chat RTK output reduction, and
 measured output statistics. Changes below are relative to the published v2.1.5.
 
-**[Download APK — versionCode 1532](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.6/Termux-Jobs-v2.1.6-arm64.apk)**
+**[Download APK — versionCode 1533](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.6/Termux-Jobs-v2.1.6-arm64.apk)**
 
 ## Updated interface
 
@@ -22,12 +22,19 @@ measured output statistics. Changes below are relative to the published v2.1.5.
 - Full-output recovery stays available. Additional recall text is counted separately; merely saving a recovery file is not counted as model input. Lite does not double count native measurements.
 - A short selected-mode summary uses estimated tokens for display. Exact bytes, recall and command counters remain in collapsed Details. This measures command output, not total context or subscription quota savings. Old saved estimates are retained without displaying them as current measurements.
 
+## Environment fixes
+
+- Environment errors identify the selected system and its container ID instead of always naming Ubuntu.
+- Fixes a pre-existing v2.1.5 Arch deletion failure for the sealed `run/systemd/dissect-root` directory. The scan explicitly reports its unscanned contents; deletion only removes this placeholder when the kernel confirms it is empty. A nonempty placeholder stops deletion and restores the original container path. No recursive permission workaround was added.
+- Pinned Components downloads can recover from gateway errors through the public GitHub asset API, with the same archive size and SHA-256. No source archive or checksum was changed.
+- CI uses the preserved original musl headers from Components and a pinned-input download fallback. Build-only headers are not installed into Alpine and are not included in this application release.
+
 ## Saved chats and compatibility
 
 - Saved, stopped chats can open project files, attachments/originals, Download export, Git changes, and Limits and context without starting the agent. Cached limits are labelled with their time; compaction requires a running chat. RTK can be prepared for the next launch.
 - Android 8+ application, ARM64, same `com.termux` package and signing certificate. X11 retains its Android 11+ requirement. RTK jobs.1 requires Ubuntu AI ARM64 with glibc 2.39 or newer.
-- Code 1532 exceeds published main code 1520 and manual rollback code 1521. No data reset or environment reinstall is required by this update; no storage schema migration was added. Actual installation over rollback and every historical profile combination have not been tested on a phone. Do not uninstall or clear data as an update workaround.
-- This release rebuilds the developer-tested application code with stable version metadata only. No rollback APK is included. Previous releases remain available.
+- Code 1533 exceeds published main code 1520 and manual rollback code 1521. No data reset or environment reinstall is required by this update; no storage schema migration was added. Actual installation over rollback and every historical profile combination have not been tested on a phone. Do not uninstall or clear data as an update workaround.
+- This release retains the developer-tested chat/RTK code and adds the separately authorized environment deletion and download fixes. No rollback APK is included. Previous releases remain available.
 - Existing chats need an explicit restart to load changed adapters/hooks. A saved RTK choice is distinct from a confirmed connection. Other chats are not restarted.
 
 ## Known limitations
@@ -42,9 +49,9 @@ measured output statistics. Changes below are relative to the published v2.1.5.
 <summary>Exact APK, sources, checks and device acceptance</summary>
 
 The developer confirmed phone acceptance of 2.1.6-test10 /1531 and authorized
-a stable rebuild with version metadata changed to 2.1.6 /1532 only. Individual phone scenarios were
+a stable release, followed by the environment fixes and isolated checks described above. Individual phone scenarios were
 not enumerated; this is not a claim of complete multi-device coverage. The assistant
-did not install an APK automatically. Functional source inputs match the accepted file.
+did not install an APK automatically. Chat/RTK inputs match the accepted file; the changed environment helpers and error UI have separate checks. The final APK was not automatically installed.
 
 - APK SHA-256 and final size are recorded in the release validation and SHA256SUMS.
 - ARM64 only, non-debuggable, existing certificate.

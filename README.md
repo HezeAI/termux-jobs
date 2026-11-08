@@ -27,7 +27,10 @@ from OpenAI Codex; not affiliated with or endorsed by the Termux team.
 - **AI-чаты / Agent chats:** Codex, Claude Code, Gemini and OpenCode, with attachments and action approvals supported by each CLI.
 - **Серверы / Servers:** SSH connections and commands in the selected remote environment.
 
-## Current release — 2.1.6 /1532
+## Current release — 2.1.6 /1533
+
+Includes selected-environment error details, safe removal of the sealed Arch
+systemd placeholder, and verified Components download fallback.
 
 Refined chats and sidebar cards, black selected session rows, compact message
 bubbles, gentler action arrivals and manual-scroll indication. Optional per-chat
@@ -40,8 +43,8 @@ with revision/SHA-256 checks; no RTK binary archive is embedded. Native mode has
 explicit command-rule/approval caveats; it does not disable every CLI restriction.
 Saved stopped chats can browse files/attachments/Git and last-known limits.
 
-This release preserves the phone-tested application code and changes only version metadata.
-Code1532 exceeds main1520 and rollback1521. No reset or environment reinstall is
+This release preserves the phone-tested chat/RTK code and adds the authorized
+environment deletion and download fixes. Code1533 exceeds main1520 and rollback1521. No reset or environment reinstall is
 required; actual phone installation over rollback is not separately verified.
 No rollback APK is added; previous release assets remain unchanged.
 
@@ -194,7 +197,7 @@ Previous Private test14 adds grouped sidebar branches, uniform80% content sizing
 
 Previous private test13 removes voice input and its models/permission, restores the clockwise terminal-attention segment, adds desktop-stop feedback, shows current model/reasoning values and enlarges attachment-menu items. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test13.md).
 
-### Private RTK test build
+### Historical RTK test builds
 
 The private 2.1.6-test2 build expands partial, per-chat RTK Mode in Ubuntu AI.
 The 2.1.6-test3 UI calls this integration **RTK Lite** and the native integration
@@ -225,8 +228,8 @@ estimated-token summary. Exact byte counters, recall and mode explanations remai
 in collapsed Details. [Checks](docs/fork/VALIDATION-2.1.6-test8.md).
 Private test9/1530 adds RTK OSS1.1.0 component revision jobs.1 with measured native
 ls/Git/search/read output, versioned upgrade preservation and display-only legacy
-cleanup. This private APK embeds the verified candidate archive; the final loader
-will download it from Termux Job’s Components after publication.
+cleanup. That historical APK embedded the candidate archive. Test10 and stable
+2.1.6 instead download the published component; they contain no RTK archive.
 [Validation and timings](docs/fork/VALIDATION-2.1.6-test9.md).
 
 Private test10/1531 downloads RTK 1.1.0-jobs.1 from the published

@@ -1,16 +1,16 @@
-# Stable 2.1.6 /1532 — metadata-only rebuild of accepted test10
+# Stable 2.1.6 /1533 — accepted test10 plus authorized environment fixes
 
-Functional code, resources and helpers match the phone-accepted test10 /1531.
-Only versionCode1532/versionName2.1.6 change. Build variables:
-TERMUX_APP_VERSION_NAME=2.1.6 and TERMUX_APK_VERSION_TAG=v2.1.6-arm64.
-Code1532 exceeds published main1520/rollback1521 and accepted test10 1531.
-Stable updater metadata uses the final signed APK. No rollback APK is added.
-Cold X11 preparation needs original musl headers after Alpine removed r2.
-[Components build-header archive](https://github.com/HezeAI/termux-jobs-components/releases/tag/x11-build-headers-musl-1.2.6-r2) preserves this input.
-Verify archive SHA bb06e5670c50a87cebd3d7d1446909567f5165ee717f880e723515f697f5d765;
-place the verified musl-dev-1.2.6-r2.apk member in .tools/termux-x11-downloads/.
-Its SHA remains ca72b84f4eb3c36bbbec04d919eb10159d414c7a43413cc2253841d301fa9486.
-CI fetches these same bytes. This is not an Android installer or a runtime update.
+Chat/RTK inputs retain test10 behavior. The environment scan/removal helper,
+selected-environment error UI and pinned-download fallback changed after approval.
+Build variables: TERMUX_APP_VERSION_NAME=2.1.6 and
+TERMUX_APK_VERSION_TAG=v2.1.6-arm64. Code1533 exceeds main1520/rollback1521/test10 1531.
+No rollback APK is added. No automatic installation or working-chat restart.
+
+Cold X11 preparation uses the unchanged musl-dev1.2.6-r2 input from
+[Components](https://github.com/HezeAI/termux-jobs-components/releases/tag/x11-build-headers-musl-1.2.6-r2).
+Outer SHA: bb06e5670c50a87cebd3d7d1446909567f5165ee717f880e723515f697f5d765.
+Inner APK SHA: ca72b84f4eb3c36bbbec04d919eb10159d414c7a43413cc2253841d301fa9486.
+These are build headers only; they are not an Alpine runtime update or app asset.
 [Validation](docs/fork/VALIDATION-v2.1.6.md). Earlier notes are historical.
 
 > Stable release: v2.1.5 /1520, compared with v2.1.4.

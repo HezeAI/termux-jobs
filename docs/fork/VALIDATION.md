@@ -1,13 +1,13 @@
-# Current release validation — 2.1.6 /1532
+# Current release validation — 2.1.6 /1533
 
-[Release validation](VALIDATION-v2.1.6.md) records a version-only rebuild of
-the phone-accepted test10 functional code, current source identity, signed-file checks,
+[Release validation](VALIDATION-v2.1.6.md) records the retained phone-accepted
+test10 chat/RTK code, authorized environment fixes, source identity, signed-file checks,
 local/CI boundaries and RTK limitations. It exceeds published rollback1521; no new
 rollback asset is included. Earlier reports remain historical evidence.
 
 ---
 
-# Current release validation — v2.1.5
+# Historical release validation — v2.1.5
 
 See [VALIDATION-v2.1.5.md](VALIDATION-v2.1.5.md) for the new-interface APK, manual
 rollback, local/CI checks, retained warnings and device limitations. The updater

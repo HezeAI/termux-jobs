@@ -1,7 +1,7 @@
-# 2.1.6 / versionCode 1532 — 2026-11-08 (published application release)
+# 2.1.6 / versionCode 1533 — 2026-11-08 (stable release)
 
-Changes since published v2.1.5 /1520. The phone-accepted test10 functional code is retained; only
-version metadata changes for the stable rebuild and in-app updater. Private-build
+Changes since published v2.1.5 /1520. The phone-accepted test10 chat/RTK code is retained. Authorized environment
+fixes and stable version metadata are added. Private-build
 entries below remain historical preparation evidence.
 
 - Refined interface: four collapsible sidebar cards with persistent choices,
@@ -18,8 +18,13 @@ entries below remain historical preparation evidence.
 - Saved stopped chats can browse project files/attachments/Git and last-known
   context/limits, and prepare RTK without starting an agent. Terminal switches
   retain one row; close-session text no longer offers the misleading history option.
+- Environment errors now identify the selected system. Sealed systemd deletion
+  checks emptiness without a permission workaround and reports unscanned contents.
+  This corrects a reproduced v2.1.5 defect, not a new regression.
+- Components downloads retain size/SHA pins across the public API fallback.
+  CI build headers remain in Components, outside the app release.
 - Same package/certificate/schema; no reset or environment reinstall required.
-  Code1532 exceeds published rollback1521. No rollback APK in this release.
+  Code1533 exceeds published rollback1521. No rollback APK in this release.
   Actual device installation over rollback remains unverified. RTK requires glibc>=2.39.
 - [Release notes](docs/fork/RELEASE-v2.1.6.md) · [Release validation](docs/fork/VALIDATION-v2.1.6.md).
 

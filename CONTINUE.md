@@ -1,3 +1,67 @@
+# Активно: релиз 2.1.6 /1533, проверки завершены — публикация
+
+Пользователь разрешил исправления Arch/загрузок и публикацию после успешных проверок.
+Финальный APK собран, Modern Lint 0 errors/290 warnings, final APK gate PASS.
+APK /sdcard/Download/Termux-Jobs-v2.1.6-arm64.apk, 40673325 bytes,
+SHA256 3ada4628499f765bbd3842b3bf96cc8686ded68a2aa0d6801c97e5ff74183f6c.
+Не установлен. App draft ID438132321 ещё не опубликован; тег v2.1.6 ещё не создан.
+
+Arch SCAN_ACCESS_DENIED/13 воспроизведён helper из опубликованного v2.1.5 APK:
+это прежний дефект; Ubuntu — hardcoded текст, alias archlinux передаётся правильно.
+Native Termux через same-UID app TermuxService: UID10620, TracerPid0, mode000.
+Узкий fix только точный sealed systemd path; unscanned warning, rmdir только пустого,
+nonempty восстанавливает alias. Другие отказы не скрыты. Native tests18 pass/1 skip
+(запрет Android hardlinks), Linux/PRoot19 pass. Real Arch sealed reproduction PASS.
+Все10окружений: install/shell/cancel/remove/neighbour PASS в isolated-prefix.
+Рабочие среды/чаты не изменены. Телефонный GUI финальных диалогов не проверен.
+Downloads всех10: production fallback + API size/SHA PASS; direct-only8 вернули504,
+Debian/Alpine direct PASS. Cancel+disconnect live Alpine stream/resume206/SHA PASS.
+39 image tests (есть inherited duplicates),11 native/local supervisor,5 prep tests PASS.
+19 final JVM/updater cases PASS; final update.json generated with1533/SHA.
+635/638 production files unchanged vs test10; only environment-image.py,
+agent-environment.py,AgentEnvironmentManager.java changed. 95nativeinputs match.
+
+CI source 050c7a7 passed env tests but Gradle original URL timeout (attempts1/2).
+Source75d8329c adds verified Gradle7.2-all cache seed from official public API,
+SHA a8da5b02437a60819cad23e10fc7e9cf32bcb57029d9cb277e26eeff76ce014b.
+Run42469611398 passed Gradle download but failed bootstrap primaryURL504.
+Source d22ab5d0f7cffda5b78f852860c3e67701924370 seeds exact original bootstrap
+ZIPs through public API; checked against app/build.gradle hashes.
+Run42470194304 SUCCESS. 1943cases:1934passed/9skipped/0errors.
+8SFTP fixture skips,1updater env skip (final local updater12passed).
+Debug APK assembly PASS. No APK production change.
+Prior cancellation timer assertion was ambiguous: corrected barrier proves no
+writes after cancellation returns; old timing wrote0.08s after request, before4.1s return.
+Production supervisor unchanged (matchesv2.1.5). Preserve old failures.
+
+Gh credential wrapper .verification/release-v2.1.6/gh.py works; always explicit -R.
+Git push needs ephemeral GH_TOKEN + git -c credential.helper= -c
+'credential.helper=!gh auth git-credential' (capture credential in memory, never print).
+Do not use short source_ref for actions/checkout; use full40char SHA.
+Build headers remain only Components, published x11-build-headers-musl-1.2.6-r2;
+inner APK exactly previous ca72..., outer bb06...; API asset723443781.
+RTK jobs.1 remains published, loader unchanged, no embedded archive.
+
+Next: CI reports downloaded/validated, validation.json generated.
+Finalize publication snapshot and link checks,
+commit docs only, prove source/artifact/CI identity, tag/push, uploadAPK/SHA/update/
+validation to draft438132321, publish latest stable, public downloads/checksums/
+updater/old-assets preservation. No rollbackAPK, no dependencyarchive appasset.
+Do not repeat already passed native/fullLint/build without meaningful source changes.
+Main evidence .verification/release-v2.1.6 and environment-audit subdirectory.
+Earlier paused/1532 notes below are historical, not current instructions.
+
+---
+
+# ПАУЗА — пользователь меняет модель
+
+Не продолжать без возобновления. Точное состояние и следующие шаги:
+`.verification/release-v2.1.6/PAUSED.txt`.
+Релиз приложения не опубликован; локальный тест загрузки остановлен.
+В исходниках начато исправление резервной загрузки Components и code1533; APK1533 ещё не собран.
+
+---
+
 # Текущая публикация — stable2.1.6 /1532
 
 Пользователь принял test10 /1531 на телефоне; позднее разрешил только metadata-only

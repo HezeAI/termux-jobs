@@ -74,3 +74,19 @@ source and workflow commits. A rerun is not a rewrite of historical CI status.
 - Вывод: записывать отдельно коммит исходников и workflow. Новый успешный запуск не исправляет прежний красный статус. Debug-тесты/assembleDebug не подтверждают опубликованный release APK; его локальный аудит и публичное скачивание указывать отдельно. По прямому решению пользователя debug остаётся внутренним этапом CI, без требования выдавать его при каждом релизе; основной барьер выпуска — release и окончательный подписанный APK. Порядок закреплён в docs/fork/RELEASING.md.
 - Условия: исходники и runtime-пины неизменны. Чистому x86_64 runner нужны подготовка ARM64-входов, явный target/LLD, совместимый с API35 AAPT2 и короткий реальный каталог JVM-фикстур. Символическая ссылка на длинный tmp ломает проверки канонических путей; не менять ради неё проверки защиты.
 - Подтверждение: самостоятельно скачаны отчёты успешных запусков41581707240 (source c0073b46/workflow f343be8f) и41581706401. По1598 JVM-кейсов:1590 прошли,8 условных SFTP-пропусков,0 ошибок;4 теста загрузчика прошли. См. docs/fork/CI-X11.md и .verification/ci-x11/REPORT.md активного checkout. Release APK и Components не заменены.
+
+## 2.1.6 dependency-download recovery
+
+The old Alpine musl-dev 1.2.6-r2 URL no longer serves the pinned build input.
+CI now reads the identical archived package from
+[Components](https://github.com/HezeAI/termux-jobs-components/releases/tag/x11-build-headers-musl-1.2.6-r2),
+checking both archive and package SHA-256. This archive is build-only; the Alpine
+installer continues using its existing Components rootfs/XFCE packages.
+
+Gateway errors also affected unchanged X11, Gradle and Termux bootstrap assets.
+The workflow uses verified public release-asset API transfers for those same
+bytes. Gradle remains 7.2-all with the checked-in wrapper; bootstrap remains
+2025.03.28-r1+apt-android-7 with the four hashes in app/build.gradle. The standard
+Gradle bootstrap verifier still runs. No download error is converted into a pass,
+and no dependency version or final release payload is changed by this preparation.
+Run identities, failures and final results: [2.1.6 validation](VALIDATION-v2.1.6.md).
