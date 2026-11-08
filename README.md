@@ -61,63 +61,6 @@ output, not subscription quota or the entire context.
 [Validation](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/VALIDATION-v2.1.7.md) ·
 [Current changelog](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/CHANGELOG.md)
 
-## Исторический выпуск / Historical release: v2.1.5 — Redesigned workspace
-
-Historical changes in v2.1.5 compared with v2.1.4; not new v2.1.7 changes.
-
-- New chat/terminal/sidebar/settings design, nested project and session actions.
-- Centered creation forms, smooth page transitions and preserved drafts/reading position.
-- Updated input rows and extra keys, compact action/file windows and attachment Download export.
-- Original-image opening, action timelines, input history and saved-chat closing improvements.
-- Claude Auto/Bypass preferences, availability checks and explicit next-launch behavior.
-
-**Known issue:** image-heavy Codex cold replay can retry/disconnect. The failure was
-reproduced without this UI; the remote closing component was not established.
-[Upstream issue](https://github.com/openai/codex/issues/55730) ·
-[Published HezeAI report](https://github.com/openai/codex/issues/55730#issuecomment-6645086819).
-This release does not fix it. Auto's real-model classifier is unverified; Bypass is
-unavailable under root in Ubuntu/PRoot.
-
-**In v2.1.5, in-app updates installed the new interface, code 1520.** A separate manual old-interface
-rollback APK (1521) is available in the release. Disable Auto/Bypass in every saved Claude
-profile first. Device rollback/data retention is unverified. After rollback, returning
-to the new interface requires a main APK above code 1521; current v2.1.7 has code 1536. Do not uninstall.
-
-[Release notes](docs/fork/RELEASE-v2.1.5.md) · [Validation](docs/fork/VALIDATION-v2.1.5.md)
-· [CHANGELOG](CHANGELOG.md)
-· [AI instructions ZIP](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.5/AI-INSTRUCTIONS.zip)
-
-## Проверки v2.1.5 и ограничения / v2.1.5 checks and limitations
-
-Исторический отчёт v2.1.5 приведён ниже; результаты текущего релиза —
-в [отчёте v2.1.7](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/VALIDATION-v2.1.7.md).
-The v2.1.5 checks below are historical; use the v2.1.7 report for current release validation.
-
-**RU:** Для v2.1.5 опубликованы результаты автоматических проверок, проверки
-подписанного APK и сценариев, принятых разработчиком на телефоне. Эти результаты
-разделены в [отчёте выпуска](docs/fork/VALIDATION-v2.1.5.md).
-
-- Накопление вложений и связанные обрывы чатов остаются неисправленными.
-- Низкоуровневые проверки передачи ключа и аварийного восстановления Gemini
-  на Android, а также экспорт/восстановление копий на устройстве не выполнены.
-  Точный непроверенный объём указан в [плане аудита](docs/fork/SECURITY-AUDIT-STAGE2.md).
-- MCP и плагины исключены из проведённого этапа аудита.
-- Рабочая папка, инструкции и подтверждения действий сами по себе не создают
-  файловую песочницу. Агент может передавать доступные ему данные своему провайдеру.
-- Архивы резервных копий не зашифрованы и могут содержать авторизацию,
-  историю и снимки проектов. [Состав и ограничения копий](docs/fork/BACKUP-RESTORE.md).
-
-**EN:** [Release validation](docs/fork/VALIDATION-v2.1.5.md) distinguishes automated
-checks, signed-APK verification and developer-reported phone acceptance. Attachment accumulation
-and disconnections remain unfixed. Low-level Android key handoff/crash and device
-backup export/restore checks have not been performed; MCP/plugins are outside the audit.
-A working directory, instructions and approvals alone do not provide filesystem
-isolation. Agents can send accessible data to their providers. Backup archives are
-unencrypted and can include credentials, history and project snapshots.
-
-Source availability, test counts and a valid signature are not safety guarantees.
-[Data flows, permission limits and reporting / Данные, права и сообщения о проблемах](SECURITY.md).
-
 ## Installation and compatibility
 
 **RU:** Релизный APK — ARM64, приложение Android8+, X11 Android11+.
@@ -196,6 +139,65 @@ rights; component distribution does not imply official endorsement.
 
 AI development assistance: OpenAI Codex
 
+<details>
+<summary>История изменений / Change history</summary>
+
+## Исторический выпуск / Historical release: v2.1.5 — Redesigned workspace
+
+Historical changes in v2.1.5 compared with v2.1.4; not new v2.1.7 changes.
+
+- New chat/terminal/sidebar/settings design, nested project and session actions.
+- Centered creation forms, smooth page transitions and preserved drafts/reading position.
+- Updated input rows and extra keys, compact action/file windows and attachment Download export.
+- Original-image opening, action timelines, input history and saved-chat closing improvements.
+- Claude Auto/Bypass preferences, availability checks and explicit next-launch behavior.
+
+**Known issue:** image-heavy Codex cold replay can retry/disconnect. The failure was
+reproduced without this UI; the remote closing component was not established.
+[Upstream issue](https://github.com/openai/codex/issues/55730) ·
+[Published HezeAI report](https://github.com/openai/codex/issues/55730#issuecomment-6645086819).
+This release does not fix it. Auto's real-model classifier is unverified; Bypass is
+unavailable under root in Ubuntu/PRoot.
+
+**In v2.1.5, in-app updates installed the new interface, code 1520.** A separate manual old-interface
+rollback APK (1521) is available in the release. Disable Auto/Bypass in every saved Claude
+profile first. Device rollback/data retention is unverified. After rollback, returning
+to the new interface requires a main APK above code 1521; current v2.1.7 has code 1536. Do not uninstall.
+
+[Release notes](docs/fork/RELEASE-v2.1.5.md) · [Validation](docs/fork/VALIDATION-v2.1.5.md)
+· [CHANGELOG](CHANGELOG.md)
+· [AI instructions ZIP](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.5/AI-INSTRUCTIONS.zip)
+
+## Проверки v2.1.5 и ограничения / v2.1.5 checks and limitations
+
+Исторический отчёт v2.1.5 приведён ниже; результаты текущего релиза —
+в [отчёте v2.1.7](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/VALIDATION-v2.1.7.md).
+The v2.1.5 checks below are historical; use the v2.1.7 report for current release validation.
+
+**RU:** Для v2.1.5 опубликованы результаты автоматических проверок, проверки
+подписанного APK и сценариев, принятых разработчиком на телефоне. Эти результаты
+разделены в [отчёте выпуска](docs/fork/VALIDATION-v2.1.5.md).
+
+- Накопление вложений и связанные обрывы чатов остаются неисправленными.
+- Низкоуровневые проверки передачи ключа и аварийного восстановления Gemini
+  на Android, а также экспорт/восстановление копий на устройстве не выполнены.
+  Точный непроверенный объём указан в [плане аудита](docs/fork/SECURITY-AUDIT-STAGE2.md).
+- MCP и плагины исключены из проведённого этапа аудита.
+- Рабочая папка, инструкции и подтверждения действий сами по себе не создают
+  файловую песочницу. Агент может передавать доступные ему данные своему провайдеру.
+- Архивы резервных копий не зашифрованы и могут содержать авторизацию,
+  историю и снимки проектов. [Состав и ограничения копий](docs/fork/BACKUP-RESTORE.md).
+
+**EN:** [Release validation](docs/fork/VALIDATION-v2.1.5.md) distinguishes automated
+checks, signed-APK verification and developer-reported phone acceptance. Attachment accumulation
+and disconnections remain unfixed. Low-level Android key handoff/crash and device
+backup export/restore checks have not been performed; MCP/plugins are outside the audit.
+A working directory, instructions and approvals alone do not provide filesystem
+isolation. Agents can send accessible data to their providers. Backup archives are
+unencrypted and can include credentials, history and project snapshots.
+
+Source availability, test counts and a valid signature are not safety guarantees.
+[Data flows, permission limits and reporting / Данные, права и сообщения о проблемах](SECURITY.md).
 
 ## Исторические тестовые сборки / Historical test builds
 
@@ -214,3 +216,5 @@ Previous Private test15 keeps chat behind its sliding terminal, shares limit dat
 Previous Private test14 adds grouped sidebar branches, uniform80% content sizing and caption-fitted panel width; attachment-menu items are reduced. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test14.md).
 
 Previous private test13 removes voice input and its models/permission, restores the clockwise terminal-attention segment, adds desktop-stop feedback, shows current model/reasoning values and enlarges attachment-menu items. [Checks and phone acceptance limits](docs/fork/VALIDATION-2.1.5-test13.md).
+
+</details>
