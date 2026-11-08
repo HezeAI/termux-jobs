@@ -1,3 +1,9 @@
+# Private 2.1.7-test1 /1534 — Arch residual endpoint and offline restart
+
+Build with TERMUX_APP_VERSION_NAME=2.1.7-test1 and
+TERMUX_APK_VERSION_TAG=v2.1.7-test1-arm64. Same package/signing certificate/schema.
+No public release or automatic installation. [Validation](docs/fork/VALIDATION-2.1.7-test1.md).
+
 # Stable 2.1.6 /1533 — accepted test10 plus authorized environment fixes
 
 Chat/RTK inputs retain test10 behavior. The environment scan/removal helper,

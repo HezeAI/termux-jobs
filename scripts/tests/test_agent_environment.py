@@ -149,6 +149,28 @@ class EnvironmentRemovalTests(unittest.TestCase):
   with patch.object(m.os,'open',side_effect=deny),self.assertRaises(PermissionError):self.r.plan('archlinux')
   self.assertTrue(other.exists());sealed.chmod(0o700)
 
+
+ def test_legacy_wayland_endpoint_is_empty_only_and_restores_prior_placeholder(self):
+  systemd,other=self.sealed();wayland=self.root/'run/termux-jobs-wayland';wayland.mkdir();(wayland/'keep').write_text('must survive');wayland.chmod(0)
+  plan=self.r.plan('archlinux');self.assertEqual({m.SEALED_SYSTEMD_DIRECTORY,m.LEGACY_WAYLAND_DIRECTORY},set(plan['unscanned']))
+  with self.assertRaisesRegex(m.Refused,'SEALED_DIRECTORY_NOT_EMPTY'):self.r.remove('archlinux',plan['token'])
+  self.assertTrue(self.source.is_dir());self.assertEqual(0,systemd.stat().st_mode&0o777);self.assertEqual(0,wayland.stat().st_mode&0o777)
+  self.assertEqual('neighbour',(other/'keep').read_text());wayland.chmod(0o700);self.assertEqual('must survive',(wayland/'keep').read_text())
+  (wayland/'keep').unlink();wayland.chmod(0);plan=self.r.plan('archlinux')
+  with patch.object(m.os,'chmod',side_effect=AssertionError('must not chmod')),patch.object(m.os,'fchmod',side_effect=AssertionError('must not chmod')):self.r.remove('archlinux',plan['token'])
+  self.assertFalse(self.source.exists());self.assertEqual('neighbour',(other/'keep').read_text())
+ def test_legacy_wayland_symlink_never_follows_or_changes_bind_source(self):
+  sealed,other=self.sealed();outside=self.base/'runtime';outside.mkdir();(outside/'keep').write_text('keep')
+  (self.root/'run/termux-jobs-wayland').symlink_to(outside)
+  plan=self.r.plan('archlinux');self.assertNotIn(m.LEGACY_WAYLAND_DIRECTORY,plan['unscanned'])
+  self.r.remove('archlinux',plan['token']);self.assertEqual('keep',(outside/'keep').read_text())
+ def test_readable_wayland_contents_are_scanned_and_not_excluded(self):
+  sealed,other=self.sealed();wayland=self.root/'run/termux-jobs-wayland';wayland.mkdir();(wayland/'file').write_text('payload')
+  plan=self.r.plan('archlinux');self.assertNotIn(m.LEGACY_WAYLAND_DIRECTORY,plan['unscanned']);self.assertGreaterEqual(plan['bytes'],7)
+  (wayland/'file').write_text('changed')
+  with self.assertRaisesRegex(m.Refused,'SOURCE_CHANGED'):self.r.remove('archlinux',plan['token'])
+  self.assertTrue(self.source.exists());sealed.chmod(0o700)
+
 class RemovedMigrationContract(unittest.TestCase):
  def test_no_rootfs_clone_or_preparation_api(self):
   self.assertFalse(hasattr(m.Runtime,'clone'))

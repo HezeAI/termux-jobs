@@ -1,3 +1,18 @@
+# 2.1.7-test1 / versionCode 1534 — 2026-11-08 (private phone test)
+
+- Handles the exact residual `run/termux-jobs-wayland` mode-000 endpoint from
+  the removed Wayland launcher. The deletion plan lists unscanned paths; kernel
+  rmdir must confirm emptiness. Nonempty paths stop deletion and restore the
+  container and previously removed empty placeholders. Other access errors remain.
+- Agent restart can recover a disconnected selected run using its recorded native
+  conversation ID. Reuses the existing owned stop/finished-session replacement path.
+  Finished chats retain their restart button. Repeated/stale confirmations do not
+  schedule a second replacement; missing IDs are not guessed.
+- Same package, signing certificate and data schema; code1534 exceeds stable1533.
+  History/settings/attachments are retained. No automatic APK installation or
+  new public release. Phone GUI acceptance is pending.
+- [Checks and phone scenarios](docs/fork/VALIDATION-2.1.7-test1.md).
+
 # 2.1.6 / versionCode 1533 — 2026-11-08 (stable release)
 
 Changes since published v2.1.5 /1520. The phone-accepted test10 chat/RTK code is retained. Authorized environment

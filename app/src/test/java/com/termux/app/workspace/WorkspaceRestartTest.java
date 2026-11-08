@@ -2,6 +2,7 @@ package com.termux.app.workspace;
 import org.junit.*;import org.junit.runner.RunWith;import org.robolectric.*;import org.robolectric.annotation.Config;import android.app.Application;import org.json.JSONObject;import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class) @Config(sdk=28,application=Application.class)
 public class WorkspaceRestartTest {
+ @Test public void aStaleCodexIdInNewModeIsNotUsedForRecovery(){WorkspaceStore.Session p=AgentEnvironmentsTest.profile("codex");p.codexChat="new";p.codexThread="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";assertFalse(WorkspaceRestart.bindRecorded(p));assertEquals("new",p.codexChat);}
  @Test public void unknownEndedChatCannotSilentlyBecomeANewConversation(){for(String agent:new String[]{"codex","claude","gemini","opencode"}){WorkspaceStore.Session p=AgentEnvironmentsTest.profile(agent);p.codexThread="";p.claudeThread="";p.geminiThread="";p.aiThread="";assertFalse(agent,WorkspaceRestart.bindRecorded(p));}}
  @Test public void onlyConfirmedNativeIdentityCanBindEachAgentAndSnapshotKeepsItsRun()throws Exception{
   for(String agent:new String[]{"codex","claude","gemini","opencode"}){

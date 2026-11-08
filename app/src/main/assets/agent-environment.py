@@ -53,8 +53,11 @@ def open_dir(path):
  except BaseException:os.close(fd);raise
 
 SEALED_SYSTEMD_DIRECTORY='rootfs/run/systemd/dissect-root'
-def sealed_systemd(path,info):
- return path==SEALED_SYSTEMD_DIRECTORY and stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode)==0
+# The removed v2.0.5 Wayland launcher bound its private runtime here. Handle
+# its observed residual mode-000 endpoint only; never exclude arbitrary /run trees.
+LEGACY_WAYLAND_DIRECTORY='rootfs/run/termux-jobs-wayland'
+def sealed_placeholder(path,info):
+ return path in (SEALED_SYSTEMD_DIRECTORY,LEGACY_WAYLAND_DIRECTORY) and stat.S_ISDIR(info.st_mode) and stat.S_IMODE(info.st_mode)==0
 
 def walk(fd,prefix='',sealed=None):
  if prefix.count('/')>256:raise Refused('TREE_TOO_DEEP')
@@ -67,7 +70,7 @@ def walk(fd,prefix='',sealed=None):
   except OSError as e:
    e.scan_path=p;e.scan_operation='stat';raise
   yield p,s
-  if sealed is not None and sealed_systemd(p,s):
+  if sealed is not None and sealed_placeholder(p,s):
    sealed.append(p)
    continue
   if stat.S_ISDIR(s.st_mode) and not mount_placeholder(p):
@@ -228,17 +231,23 @@ class Runtime:
      if (moved.st_dev,moved.st_ino)!=(original.st_dev,original.st_ino):
       rename_new(parent,name,alias)
       raise Refused('SOURCE_CHANGED')
-     # The only unscanned directory is a sealed systemd mount placeholder.
+     # Only the explicitly identified sealed placeholders are unscanned.
      # rmdir verifies emptiness in the kernel without reading or chmod. If it
      # contains anything, restore the original container before any tree removal.
+     removed_sealed=[]
      try:
       for path in sealed:
        directory,leaf=at(src,path)
        try:
-        if not sealed_systemd(path,os.stat(leaf,dir_fd=directory,follow_symlinks=False)):raise Refused('SOURCE_CHANGED')
-        os.rmdir(leaf,dir_fd=directory)
+        if not sealed_placeholder(path,os.stat(leaf,dir_fd=directory,follow_symlinks=False)):raise Refused('SOURCE_CHANGED')
+        os.rmdir(leaf,dir_fd=directory);removed_sealed.append(path)
        finally:os.close(directory)
      except (OSError,Refused) as error:
+      # Restore any earlier empty endpoint if a later one refuses removal.
+      for path in removed_sealed:
+       directory,leaf=at(src,path)
+       try:os.mkdir(leaf,0,dir_fd=directory)
+       finally:os.close(directory)
       rename_new(parent,name,alias);os.fsync(parent)
       if isinstance(error,OSError) and error.errno in (errno.ENOTEMPTY,errno.EEXIST):raise Refused('SEALED_DIRECTORY_NOT_EMPTY') from error
       raise

@@ -1,3 +1,19 @@
+# Активно: частный 2.1.7-test1 /1534, проверка телефона ожидается
+
+После2.1.6 пользователь сообщил остаточный run/termux-jobs-wayland mode000 и
+неработающий restart при потере связи. Исправления в текущем checkout; публикация
+запрещена до проверки пользователем. Рабочие среды/чаты не удалять и не останавливать.
+Диагноз/границы: docs/fork/VALIDATION-2.1.7-test1.md; evidence .verification/fix-1534.
+Native Arch fixture: active bind blocked; normal exit removes placeholder;
+residual seeded from observed state, old1533fails13, new cancel/remove/neighboursPASS.
+Native helper21passed/1hardlinkskip; local22pass. ModernLint0errors/290warnings.
+APK completed: /sdcard/Download/Termux-Jobs-v2.1.7-test1-arm64.apk, 40673809 bytes.
+SHA256 74bc0096420fdcbf5f52f65a5f1c128da1b9aa159473f0021ebf4dd421b50564.
+Final APK gate PASS;40JVM passed; native launcher fixture PASS; locale PASS.
+No install/push/release. Await user's phone verification; do not claim GUI acceptance.
+
+---
+
 # Опубликовано: стабильная 2.1.6 /1533
 
 https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.6
