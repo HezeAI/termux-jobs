@@ -58,11 +58,9 @@ jobs:
           mkdir -p .tools/gradle-home
           printf 'android.aapt2FromMavenOverride=%s\n' "$PWD/.tools/sdk/build-tools/35.0.0/aapt2" > .tools/gradle-home/gradle.properties
       - name: Fetch unchanged pinned musl build headers
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          # Alpine removed r2. Preserve the exact original build input.
-          gh api -H 'Accept: application/octet-stream' repos/HezeAI/termux-jobs/releases/assets/723420119 > "$RUNNER_TEMP/musl-build-headers.tar.gz"
+          # Alpine removed r2. Preserve the exact original build input from Components.
+          curl --fail --location --retry 3 --retry-all-errors 'https://github.com/HezeAI/termux-jobs-components/releases/download/x11-build-headers-musl-1.2.6-r2/x11-musl-build-headers-1.2.6-r2-aarch64.tar.gz' --output "$RUNNER_TEMP/musl-build-headers.tar.gz"
           python3 - <<'PYTHON'
           import hashlib, os, pathlib, tarfile
           archive=pathlib.Path(os.environ['RUNNER_TEMP'])/'musl-build-headers.tar.gz'
@@ -81,6 +79,8 @@ jobs:
           set -euo pipefail
           export FORK_X11_CLANG="$PWD/.tools/sdk/ndk/22.1.7171670/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
           python3 ../ci-driver/scripts/prepare-x11.py --root "$PWD" | tee .verification/ci/x11-preparation.log
+      - name: Check pinned Alpine installation archives and dependencies
+        run: python3 scripts/check-alpine-install-inputs.py --output .verification/ci/alpine-install-inputs.json
       - name: Java 11 for Gradle and Android project
         uses: actions/setup-java@v4
         with:

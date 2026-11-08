@@ -6,7 +6,7 @@ TERMUX_APP_VERSION_NAME=2.1.6 and TERMUX_APK_VERSION_TAG=v2.1.6-arm64.
 Code1532 exceeds published main1520/rollback1521 and accepted test10 1531.
 Stable updater metadata uses the final signed APK. No rollback APK is added.
 Cold X11 preparation needs original musl headers after Alpine removed r2.
-The release's x11-musl-build-headers-1.2.6-r2-aarch64.tar.gz preserves this input.
+[Components build-header archive](https://github.com/HezeAI/termux-jobs-components/releases/tag/x11-build-headers-musl-1.2.6-r2) preserves this input.
 Verify archive SHA bb06e5670c50a87cebd3d7d1446909567f5165ee717f880e723515f697f5d765;
 place the verified musl-dev-1.2.6-r2.apk member in .tools/termux-x11-downloads/.
 Its SHA remains ca72b84f4eb3c36bbbec04d919eb10159d414c7a43413cc2253841d301fa9486.
