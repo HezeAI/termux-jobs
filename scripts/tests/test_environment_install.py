@@ -2,6 +2,7 @@
 from pathlib import Path
 import os
 import signal
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -44,11 +45,21 @@ class EnvironmentInstallTests(unittest.TestCase):
         self.cancel.touch();p=self.start('touch "$PREFIX/started"\n');out=p.communicate(timeout=5)[0]
         self.assertEqual(130,p.returncode,out);self.assertFalse((self.root/'started').exists())
     def test_cancel_owns_only_its_installer_group(self):
-        unrelated=subprocess.Popen(['/bin/sleep','20'],env={k:v for k,v in os.environ.items() if k not in {'LD_LIBRARY_PATH','LD_PRELOAD'}});self.processes.append(unrelated)
-        p=self.start('(sleep 2;touch "$PREFIX/escaped") &\ntouch "$PREFIX/started"\nwait\n')
-        self.wait_file('started');self.cancel.touch();out=p.communicate(timeout=6)[0]
+        unrelated=subprocess.Popen([shutil.which('sleep'),'20'],env={k:v for k,v in os.environ.items() if k not in {'LD_LIBRARY_PATH','LD_PRELOAD'}});self.processes.append(unrelated)
+        # A cancellation intentionally gives the installer a cleanup grace period.
+        # Distinguish a write during that period from a survivor after return.
+        p=self.start('(sleep 2;date +%s.%N > "$PREFIX/during-cancel"; '
+                     'for ((i=0;i<500;i++)); do '
+                     'if [[ -e "$PREFIX/release-after-return" ]]; then touch "$PREFIX/escaped"; break; fi; '
+                     'sleep .02; done) &\ntouch "$PREFIX/started"\nwait\n')
+        self.wait_file('started');cancel_at=time.time();self.cancel.touch();out=p.communicate(timeout=6)[0];returned_at=time.time()
         self.assertEqual(130,p.returncode,out);self.assertIn(b'INSTALL_CANCELLED',out)
-        self.assertIsNone(unrelated.poll());time.sleep(2.1);self.assertFalse((self.root/'escaped').exists())
+        self.assertIsNone(unrelated.poll());(self.root/'release-after-return').touch();time.sleep(2.1)
+        during=self.root/'during-cancel';wrote_at=float(during.read_text())if during.exists()else None
+        timing=dict(cancelAt=cancel_at,returnedAt=returned_at,duringCancellationWrite=wrote_at)
+        print('Cancellation timing:',timing,flush=True)
+        self.assertFalse((self.root/'escaped').exists(),repr(timing))
+        if wrote_at is not None:self.assertLessEqual(wrote_at,returned_at,repr(timing))
     def test_supervisor_sigterm_stops_installer(self):
         p=self.start('touch "$PREFIX/started"; sleep 20\n');self.wait_file('started');p.send_signal(signal.SIGTERM)
         p.communicate(timeout=6);self.assertEqual(130,p.returncode)
