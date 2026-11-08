@@ -21,9 +21,15 @@ Initial CI [42475835531](https://github.com/HezeAI/termux-jobs/actions/runs/4247
 failed one stale test assertion: AgentComposerControllerTest expected no restart
 button after an agent exited. The accepted recovery fix intentionally retains it.
 Only that test expectation was corrected to require the clickable restart button;
-production code and the signed APK are unchanged. Full CI is being repeated.
+production code and the signed APK are unchanged. The repeated full CI [42476694520](https://github.com/HezeAI/termux-jobs/actions/runs/42476694520)
+passed all stages, including debug APK assembly. Source and workflow commit:
+`997ceb4d3a9a601d0bf92d96433a22f2023839e2`. 1,949 cases: 1,940 passed, 9 skipped,
+0 failures/errors. Eight SFTP fixture cases are skipped; the final-release manifest
+case lacks its environment in CI and passed separately in the 16 local updater tests.
+The corrected composer test plus 21 restart tests also passed locally.
 The original failure and skipped downstream debug build are retained in the evidence.
-No release publication is complete yet.
+The stable release publishes only the signed APK, SHA256SUMS, update.json and
+validation.json. No rollback APK, debug APK or component archive is included.
 
 ## Reused after source identity verification
 

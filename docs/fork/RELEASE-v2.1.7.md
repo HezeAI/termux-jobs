@@ -26,7 +26,17 @@ No rollback APK is included. Previous releases and their assets remain available
 <details>
 <summary>Verification and build details</summary>
 
-The signed ARM64 release APK is built and verified locally with the established release key. Checks cover version/package, signature, ABI, ZIP integrity, runtime/DEX/assets, SHA-256 and updater metadata. Debug CI is a separate check and does not provide the published signing key.
+The signed ARM64 release APK is built and verified locally with the established release key. Checks cover version/package, signature, ABI, ZIP integrity, runtime/DEX/assets, SHA-256 and updater metadata. [Debug CI](https://github.com/HezeAI/termux-jobs/actions/runs/42476694520) passed:
+1,940 tests passed, 9 skipped. It is separate from the signed release APK checks.
+Full local Modern Lint: 0 errors and 290 warnings. Sixteen local updater tests
+validated the final metadata and package checks.
+
+An initial CI run failed a stale test expectation that the restart button disappears
+after an agent exits. The test now checks the accepted recovery behaviour; no
+production code or APK bytes changed for this correction. Skips and the original
+failure are documented in the validation report.
+
+APK SHA-256: `f321c19652d80dd91cf96a46e4fcefffd1f309faebb61e3cc64ab4f0fe5bbebb`.
 
 The accepted code includes live Codex checks for search reduction, unchanged head, sequential and yielded commands, recall and unknown baselines. Claude CLI fixture results and phone-check attribution are separated in the reports. No new cloud-Claude or all-permission-mode claim is made.
 

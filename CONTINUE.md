@@ -1,15 +1,14 @@
-# Active: stable2.1.7 /1536 release authorized
+# Active: stable 2.1.7 /1536 — gates passed, publication authorized
 
-User accepted test2/1535 on phone. Preserve its production code; metadata only.
-Code1536 ensures in-app update from1535. No Components publication or APK install.
-Local release APK/Lint complete; 16 final updater tests pass. Full CI42475835531
-on a00bbcc5 failed one stale AgentComposerControllerTest assertion (ended agent
-restart expected hidden). Production behavior intentionally changed in accepted test1.
-Test-only expectation corrected; full CI retry pending. APK is unchanged. Final artifact SHA256:
-f321c19652d80dd91cf96a46e4fcefffd1f309faebb61e3cc64ab4f0fe5bbebb.
-Pending: CI result, final docs commit/tag, release creation/upload/public verification.
-No v2.1.7 tag or release has been created yet.
-Evidence .verification/release-v2.1.7; old releases/assets must remain unchanged.
+User accepted test2/1535; functional production files remain identical. Only
+versionName/code changed. Source/workflow997ceb4d fullCI42476694520 PASS:
+1940passed/9skips (8SFTP +finalmanifest env; latter passed local). FirstCI42475835531
+failed stale ended-agent restart visibility assertion; test-only correction, APK unchanged.
+Local ModernLint0errors/290warnings;16updater tests;22composer/restart regression testsPASS.
+APK SHA256 f321c19652d80dd91cf96a46e4fcefffd1f309faebb61e3cc64ab4f0fe5bbebb.
+Pending: final docs commit/tag/push, .verification/release-v2.1.7/publish.py,
+public download/source links/old assets verification. No Components publication,
+rollback APK or automatic installation. Preserve all older releases and files.
 
 ---
 
