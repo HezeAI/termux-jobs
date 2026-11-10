@@ -4,7 +4,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.Arrays;
 
-/** Bounded presentation of supplied events only; no IO, command parsing or model operations. */
+/** Bounded presentation of supplied events only; no IO, execution or model operations. */
 final class AgentTimelineSummary {
     enum Kind { READ, EDIT, COMMAND, OTHER }
     static Kind kind(JSONObject row){
@@ -30,7 +30,9 @@ final class AgentTimelineSummary {
         JSONArray files=preview.optJSONArray("files");if(p.isEmpty()&&files!=null&&files.optJSONObject(0)!=null)p=files.optJSONObject(0).optString("path");
     }return p;}
     static String title(JSONObject row,boolean ru){
-        if(kind(row)==Kind.COMMAND){String cmd=row.optString("command");if(!cmd.isEmpty())return shortText(cmd.split("\\r?\\n",2)[0],120);}
+        String description=row.optString("actionDescription").trim();if(!description.isEmpty())return shortText(description,120);
+        if(kind(row)==Kind.COMMAND)return AgentCommandTitle.title(row,ru);
+        if(kind(row)==Kind.READ)return ru?"Чтение файла":"Reading file";
         String p=path(row);if(!p.isEmpty()){String name=p.substring(p.lastIndexOf('/')+1);if(!name.isEmpty()){JSONObject preview=AgentActionPresentation.preview(row);int n=preview==null?0:preview.optInt("count");return shortText(name,200)+(n>1?(ru?" · ещё ":" · more: ")+(n-1):"");}}
         if(kind(row)==Kind.OTHER&&!knownOther(row)){String nativeName=row.optString("toolName");if(nativeName.isEmpty())nativeName=row.optString("title");return shortText(nativeName.isEmpty()?(ru?"Действие":"Action"):nativeName,200);}
         String friendly=CodexActionLabels.title(row,ru);return shortText(friendly.isEmpty()?(ru?"Действие":"Action"):friendly,200);

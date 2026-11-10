@@ -1,3 +1,46 @@
+## 2.1.8 (1540) — 2026-11-10 — stable
+
+- Timeline action cards show a short action name and the actual command below it.
+  Tap for command/output and completion details; supplied descriptions take priority
+  over conservative local classification. No extra model requests.
+- Sidebar states distinguish running/stopped chats and terminals using color only
+  on the status text. The base terminal is labelled Base.
+- Permissions and approvals uses an outlined shield with an exclamation mark.
+- Notifications use Termux Job’s and Desktop. Idle X11 control services clear their
+  notification after work finishes, while active desktop work remains protected.
+- Android 8+, ARM64; same package/signer, no reset or environment reinstall required.
+  Finish important operations before an Android package update.
+- [Release notes](docs/fork/RELEASE-v2.1.8.md) · [Validation](docs/fork/VALIDATION-v2.1.8.md).
+
+## 2.1.8-test3 (1539) — 2026-11-10 — private
+
+- Action cards show a short action title and the actual command underneath in
+  smaller muted monospace text, limited to two lines. Details retain command,
+  output, duration, status and supplied exit code.
+- Native descriptions take priority; a conservative local classifier labels known
+  commands. Unknown or compound commands receive generic labels without model calls.
+- Permissions and approvals now uses an outlined shield in the sidebar.
+- Same package/signer and data formats; no reset. Phone visual validation pending.
+- [Scope and checks](docs/fork/VALIDATION-TIMELINE-ACTIONS.md).
+
+## 2.1.8-test2 (1538) — 2026-11-10 — private
+
+- Sidebar: running/stopped agent and terminal status is colored only on the status
+  text. Terminal rows use «Запущена» / «Не запущена» instead of Open/Saved.
+  The base terminal uses the neutral «Базовая» / Base label.
+- Includes the notification fixes from test1. Same package/signer and data formats;
+  no reset. The user accepted test2 on the phone on 2026-11-10.
+- [Scope and checks](docs/fork/VALIDATION-SIDEBAR-STATUS.md).
+
+## 2.1.8-test1 (1537) — 2026-11-09 — private
+
+- Rename the X11 notification to “Рабочий стол” / “Desktop” and use the
+  application name for the normal terminal service notification.
+- Release idle X11 control notifications/services after work completes and UI
+  clients detach; preserve active desktop work and private-process guards.
+- Same package and signer as 2.1.7; no data-format changes or reset. Phone validation pending.
+- [Diagnostic evidence and verification scope](docs/fork/VALIDATION-X11-NOTIFICATIONS.md).
+
 ## 2.1.7 (1536) — 2026-11-08 — stable
 
 - Fix native RTK measurement matching for supported single, quoted-pattern,

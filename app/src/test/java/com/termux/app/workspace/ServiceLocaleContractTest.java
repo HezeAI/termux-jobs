@@ -29,6 +29,8 @@ public class ServiceLocaleContractTest {
         TermuxService service=Robolectric.buildService(TermuxService.class).get();
         java.lang.reflect.Method method=TermuxService.class.getDeclaredMethod("buildNotification");method.setAccessible(true);
         Notification n=(Notification)method.invoke(service);assertNotNull(n);
+        assertEquals(service.getString(com.termux.R.string.application_name),n.extras.getCharSequence(Notification.EXTRA_TITLE).toString());
+        assertEquals("Termux Job’s",n.extras.getCharSequence(Notification.EXTRA_TITLE).toString());
         org.robolectric.shadows.ShadowPendingIntent content=Shadows.shadowOf(n.contentIntent);
         assertEquals(PendingIntent.FLAG_IMMUTABLE,content.getFlags()&PendingIntent.FLAG_IMMUTABLE);
         assertEquals(TermuxActivity.class.getName(),content.getSavedIntent().getComponent().getClassName());

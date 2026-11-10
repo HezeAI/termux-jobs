@@ -1,12 +1,16 @@
 # Security, data and trust / Безопасность, данные и границы доверия
 
-Current release: **2.1.7 /1536**. The implementation/security review below was
+Current release: **2.1.8 /1540**. The implementation/security review below was
 performed on **2026-11-04 for v2.1.3**; that date and scope are not extended by a
 new release. This documentation reconciliation compared the named source paths
 with v2.1.7 and its reports; it did not repeat a full security audit or phone tests.
 [Original audit scope](docs/fork/SECURITY-AUDIT-STAGE2.md) ·
 [2.1.7 verification](docs/fork/VALIDATION-v2.1.7.md) ·
 [Separate release APK/source comparison](docs/fork/REPRODUCIBILITY-v2.1.7.md).
+
+The 2.1.8 release changes action presentation, adapter display metadata, session
+labels and notification lifecycle. It does not repeat the original security audit.
+[2.1.8 validation](docs/fork/VALIDATION-v2.1.8.md) scopes the checks and phone acceptance.
 
 ## Changes and evidence since the original review
 

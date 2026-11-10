@@ -43,6 +43,24 @@ public class X11Service extends Service {
     private final Binder binder=new LocalBinder();
     private final Runnable notify=()->{for(Runnable r:new ArrayList<>(listeners))r.run();};
     private boolean ownProcess,started,ready,preparingExtras;
+    private boolean boundClient,foregroundShown;
+    private final Runnable foregroundWatch=new Runnable(){@Override public void run(){
+        if(stopping)return;
+        if(hasForegroundWork()){
+            if(!foregroundShown)foreground();
+        }else{
+            if(foregroundShown){stopForeground(true);foregroundShown=false;}
+            // A control-only service can outlive the Activity that checked components.
+            // Release only this idle private service; a running desktop stays alive.
+            if(!boundClient){requestStop();return;}
+        }
+        main.postDelayed(this,1000);
+    }};
+    private boolean hasForegroundWork(){
+        return started||ready||retiring||preparingExtras||phase.equals("preparing")||phase.equals("checking")
+            ||phase.equals("installing")||phase.equals("cancelling")||phase.equals("stopping")
+            ||child!=null||programs!=null&&programs.busy();
+    }
     private volatile boolean stopping,retiring;
     private volatile String status="";
     private volatile long keys,clicks,motions;
@@ -269,9 +287,10 @@ public class X11Service extends Service {
         try(FileInputStream in=new FileInputStream("/proc/self/cmdline")){byte[] bytes=new byte[256];int n=in.read(bytes),end=0;while(end<n&&bytes[end]!=0)end++;return new String(bytes,0,end,java.nio.charset.StandardCharsets.UTF_8);}catch(IOException e){return "";}
     }
     @Override public int onStartCommand(Intent intent,int flags,int id){
-        if(intent!=null&&STOP.equals(intent.getAction())){requestStop();return START_NOT_STICKY;}
+        if(intent==null||STOP.equals(intent.getAction())){requestStop();return START_NOT_STICKY;}
         foreground();
-        if(intent!=null&&intent.getBooleanExtra("controlOnly",false))return START_NOT_STICKY;
+        main.removeCallbacks(foregroundWatch);main.postDelayed(foregroundWatch,1000);
+        if(intent.getBooleanExtra("controlOnly",false))return START_NOT_STICKY;
         if(!started){started=true;setStatus("Подготовка встроенного X11…","Preparing embedded X11…");
             worker.execute(()->{try{X11Runtime prepared=X11Runtime.prepare(this);main.post(()->{if(!stopping&&!retiring&&!phase.equals("stopping"))startServer(prepared);});}catch(Exception e){main.post(()->{if(!stopping)finishDesktop("error","Не удалось подготовить X11: "+safe(e),"X11 preparation failed: "+safe(e));});}});
         }
@@ -282,8 +301,8 @@ public class X11Service extends Service {
         String channel="workspace-x11";manager.createNotificationChannel(new NotificationChannel(channel,"X11",NotificationManager.IMPORTANCE_LOW));
         PendingIntent open=PendingIntent.getActivity(this,0,getPackageManager().getLaunchIntentForPackage(getPackageName()),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         PendingIntent stop=PendingIntent.getService(this,environment().display,new Intent(this,getClass()).setAction(STOP),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        Notification notification=new Notification.Builder(this,channel).setSmallIcon(android.R.drawable.ic_menu_view).setContentTitle("Termux Job’s · "+"X11"+" · "+environment().target).setContentText(tr("Проверочная графическая сессия","Graphical test session")).setOngoing(true).setContentIntent(open).addAction(new Notification.Action.Builder(null,tr("Остановить графический рабочий стол","Stop graphical desktop"),stop).build()).build();
-        startForeground(NOTIFICATION+environment().display,notification);
+        Notification notification=new Notification.Builder(this,channel).setSmallIcon(android.R.drawable.ic_menu_view).setContentTitle("Termux Job’s · "+"X11"+" · "+environment().target).setContentText(tr("Рабочий стол","Desktop")).setOngoing(true).setContentIntent(open).addAction(new Notification.Action.Builder(null,tr("Остановить графический рабочий стол","Stop graphical desktop"),stop).build()).build();
+        startForeground(NOTIFICATION+environment().display,notification);foregroundShown=true;
     }
     private void startServer(X11Runtime prepared){
         runtime=prepared;startupStep=1;foreground();
@@ -370,7 +389,12 @@ public class X11Service extends Service {
         // Bound activities otherwise defer Service.onDestroy after stopSelf.
         shutdownOwnProcess();
     }
-    @Override public IBinder onBind(Intent intent){return binder;}
+    @Override public IBinder onBind(Intent intent){boundClient=true;return binder;}
+    @Override public boolean onUnbind(Intent intent){
+        boundClient=false;
+        if(!hasForegroundWork())requestStop();
+        return false;
+    }
     @Override public void onDestroy(){
         super.onDestroy();scaleJob.close();shutdownOwnProcess();
     }
@@ -378,7 +402,7 @@ public class X11Service extends Service {
         if(stopping)return;stopping=true;scaleJob.close();started=false;ready=false;desktopReady=false;textFocus=false;desktopOwner="";desktopUsers.clear();generation++;if(programs!=null)programs.close();DesktopProcess owned=child;if(owned!=null)owned.close();if(Build.VERSION.SDK_INT>=30&&embedded!=null)embedded.release();ready=false;listeners.clear();main.removeCallbacksAndMessages(null);worker.shutdownNow();
         LocalSocket socket=testSocket;if(socket!=null)try{socket.close();}catch(IOException ignored){}
         if(discoveryGuard!=null)try{Os.close(discoveryGuard);}catch(Exception ignored){}
-        stopForeground(true);
+        stopForeground(true);foregroundShown=false;
         // Upstream has no restart/teardown API: terminate ONLY this dedicated VM.
         // Double-check exact process identity; no PID from a profile/user input.
         if(ownProcess&&environment().owns(processName(),getPackageName()))android.os.Process.killProcess(android.os.Process.myPid());

@@ -1,0 +1,28 @@
+{
+  "ru": [
+    "В хронологии появились короткие названия действий: чтение файла, поиск, проверка изменений, запуск тестов и сборка.",
+    "Фактическая команда показана ниже названия в той же карточке. По нажатию доступны команда, вывод и сведения о завершении.",
+    "В боковом меню запущенные чаты и терминалы отмечаются зелёным, незапущенные — красным. Базовая терминальная вкладка обозначена «Базовая».",
+    "У пункта «Права и подтверждения» появился значок щита с восклицательным знаком.",
+    "Уведомления используют название Termux Job’s и подпись «Рабочий стол». Исправлена очистка уведомления простаивающей графической службы."
+  ],
+  "en": [
+    "Timeline actions have short names for reading files, searching, checking changes, running tests and building.",
+    "The actual command appears below its title in the same card. Tap to view the command, output and completion details.",
+    "Running chats and terminals have green status labels; stopped sessions have red labels. The base terminal is labelled Base.",
+    "Permissions and approvals has a shield icon with an exclamation mark.",
+    "Notifications use Termux Job’s and Desktop. Idle graphics-service notification cleanup is fixed."
+  ],
+  "compatibility": {
+    "ru": [
+      "Android 8+, ARM64. Прежние package ID и сертификат; versionCode 1540.",
+      "Сброс данных и переустановка окружений не требуются. Компонент RTK не изменён.",
+      "Перед установкой завершите важные операции: обновление Android-приложения может остановить его процессы."
+    ],
+    "en": [
+      "Android 8+, ARM64. Same package ID and signer; versionCode 1540.",
+      "No data reset or environment reinstall required. The RTK component is unchanged.",
+      "Finish important work before installing: an Android application update can stop its processes."
+    ]
+  }
+}

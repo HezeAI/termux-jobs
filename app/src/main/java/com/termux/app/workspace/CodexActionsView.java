@@ -21,7 +21,7 @@ final class CodexActionsView extends LinearLayout {
     final LinearLayout summaryCard;
     private final AgentChatView owner;
     private final Consumer<JSONObject> open;
-    private final Map<String,TextView> entries=new HashMap<>();
+    private final Map<String,ActionRow> entries=new HashMap<>();
     private final Map<String,JSONObject> data=new HashMap<>();
     private boolean expanded;
     private String skillName="";
@@ -65,18 +65,17 @@ final class CodexActionsView extends LinearLayout {
             if(CodexActionTimeline.running(row)||java.util.Arrays.asList("awaiting_approval","pending","scheduled").contains(CodexActionTimeline.status(row))){active++;if(current.isEmpty())current=caption(row)+" · "+state(row);}
             if(CodexActionTimeline.failed(row)){errors++;String status=CodexActionTimeline.status(row);if(status.equals("declined"))declined++;else if(AgentTimelineSummary.cancelled(row))cancelled++;else if(status.equals("aborted"))interrupted++;else failures++;}
             String key=row.optString("key");present.add(key);data.put(key,row);
-            TextView item=entries.get(key);
-            if(item==null){item=owner.label("",12);item.setMinHeight(owner.dp(48));item.setSingleLine(false);item.setMaxLines(Integer.MAX_VALUE);item.setEllipsize(null);item.setFocusable(true);entries.put(key,item);
+            ActionRow item=entries.get(key);
+            if(item==null){item=new ActionRow(owner);item.setMinimumHeight(owner.dp(48));item.setFocusable(true);entries.put(key,item);
                 android.graphics.drawable.StateListDrawable outline=new android.graphics.drawable.StateListDrawable();
                 for(boolean pressed:new boolean[]{true,false}){GradientDrawable bg=new GradientDrawable();bg.setColor(pressed?WorkspaceDialogs.TINT:0xff232426);bg.setCornerRadius(owner.dp(8));bg.setStroke(owner.dp(1),0xff393a3c);outline.addState(pressed?new int[]{android.R.attr.state_pressed}:new int[]{},bg);}item.setBackground(outline);
                 LinearLayout.LayoutParams itemLayout=new LinearLayout.LayoutParams(-1,-2);itemLayout.setMargins(owner.dp(6),owner.dp(3),owner.dp(6),owner.dp(3));item.setLayoutParams(itemLayout);
                 final String id=key;item.setOnClickListener(v->{JSONObject original=data.get(id);if(original!=null)open.accept(original);});}
             String state=state(row),command=caption(row);String type=AgentTimelineSummary.type(row,WorkspaceLanguage.code(getContext()).equals("ru"));
             String marker=AgentTimelineSummary.neutral(row)?"○ ":CodexActionTimeline.failed(row)?"! ":CodexActionTimeline.running(row)?"● ":CodexActionTimeline.status(row).equals("completed")?"✓ ":"○ ";
-            String caption=marker+command+"\n"+state+"\n"+type;
-            long start=AgentTimelineSummary.start(row);if(start>0)caption+="\n"+owner.tr("Начало: ","Started: ")+AgentMessageTime.timelineTime(start);
-            if(!item.getText().toString().equals(caption)){android.text.SpannableString shown=new android.text.SpannableString(caption);int kindAt=caption.indexOf("\n"+type)+1;shown.setSpan(new android.text.style.ForegroundColorSpan(0xffa5a5a2),kindAt,kindAt+type.length(),0);item.setText(shown);}
-            item.setTextColor(CodexActionTimeline.failed(row)&&!AgentTimelineSummary.neutral(row)?0xffffb08f:0xfff0f0ee);
+            String meta=state+"\n"+type;
+            long start=AgentTimelineSummary.start(row);if(start>0)meta+="\n"+owner.tr("Начало: ","Started: ")+AgentMessageTime.timelineTime(start);
+            item.update(marker+command,row.optString("command",AgentTimelineSummary.path(row)),meta,CodexActionTimeline.failed(row)&&!AgentTimelineSummary.neutral(row)?0xffffb08f:0xfff0f0ee);
             item.setContentDescription(command+". "+state+". "+owner.tr("Открыть действие и подробности","Open action and details"));
             if(item.getParent()==null)steps.addView(item,i);else if(steps.indexOfChild(item)!=i){steps.removeView(item);steps.addView(item,i);}
         }
@@ -91,9 +90,27 @@ final class CodexActionsView extends LinearLayout {
         refreshHeading();
     }
 
-    int stepTop(String key){TextView entry=entries.get(key);return steps.getVisibility()!=VISIBLE||entry==null?-1:steps.getTop()+entry.getTop();}
-    String readingStep(int y){if(steps.getVisibility()!=VISIBLE||y<steps.getTop())return null;for(int i=0;i<steps.getChildCount();i++){TextView item=(TextView)steps.getChildAt(i);if(steps.getTop()+item.getBottom()>y)for(Map.Entry<String,TextView> e:entries.entrySet())if(e.getValue()==item)return e.getKey();}return null;}
+    int stepTop(String key){ActionRow entry=entries.get(key);return steps.getVisibility()!=VISIBLE||entry==null?-1:steps.getTop()+entry.getTop();}
+    String readingStep(int y){if(steps.getVisibility()!=VISIBLE||y<steps.getTop())return null;for(int i=0;i<steps.getChildCount();i++){ActionRow item=(ActionRow)steps.getChildAt(i);if(steps.getTop()+item.getBottom()>y)for(Map.Entry<String,ActionRow> e:entries.entrySet())if(e.getValue()==item)return e.getKey();}return null;}
 
+    static final class ActionRow extends LinearLayout {
+        final TextView title,command,meta;
+        ActionRow(AgentChatView owner){
+            super(owner.getContext());setOrientation(VERTICAL);
+            title=owner.label("",13);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);title.setTag("timeline-action-title");title.setPadding(owner.dp(10),owner.dp(8),owner.dp(10),owner.dp(2));
+            command=owner.label("",11);command.setTag("timeline-action-command");command.setTypeface(Typeface.MONOSPACE);command.setTextColor(WorkspaceDialogs.MUTED);command.setPadding(owner.dp(10),0,owner.dp(10),owner.dp(4));command.setMaxLines(2);command.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            meta=owner.label("",11);meta.setTextColor(WorkspaceDialogs.MUTED);meta.setPadding(owner.dp(10),0,owner.dp(10),owner.dp(8));
+            addView(title,new LayoutParams(-1,-2));addView(command,new LayoutParams(-1,-2));addView(meta,new LayoutParams(-1,-2));
+        }
+        void update(String name,String cmd,String state,int color){
+            if(!title.getText().toString().equals(name))title.setText(name);
+            if(!command.getText().toString().equals(cmd))command.setText(cmd);
+            command.setVisibility(cmd.isEmpty()?GONE:VISIBLE);
+            if(!meta.getText().toString().equals(state))meta.setText(state);
+            title.setTextColor(color);
+        }
+        CharSequence text(){return title.getText()+"\n"+command.getText()+"\n"+meta.getText();}
+    }
     private String caption(JSONObject row){return AgentTimelineSummary.title(row,WorkspaceLanguage.code(getContext()).equals("ru"));}
 
     private String state(JSONObject row) {return AgentActionPresentation.state(row,WorkspaceLanguage.code(getContext()).equals("ru"));}

@@ -309,7 +309,7 @@ final class AgentChatUi {
         if(row.optString("kind").equals("tool")&&!compactContext){actionDetails(row);return;}
         if(!selected())return;if(row.optString("kind").equals("attachment")&&row.optJSONObject("attachment")!=null){attachments.open(row.optJSONObject("attachment"));return;}if(details!=null)details.dismiss();thinkingBody=null;thinkingScroll=null;thinkingKey="";LinearLayout box=new LinearLayout(activity);box.setOrientation(LinearLayout.VERTICAL);TextView body=view.label(row.optString("body"),14);body.setTextIsSelectable(true);if(compactContext){
             body.setPadding(view.dp(20),view.dp(14),view.dp(20),view.dp(18));
-            details=WorkspaceDialogs.builder(activity).setTitle(CodexActionLabels.title(row,WorkspaceLanguage.code(activity).equals("ru"))).setView(body).create();details.setCanceledOnTouchOutside(true);details.show();
+            details=WorkspaceDialogs.builder(activity).setTitle(AgentTimelineSummary.title(row,WorkspaceLanguage.code(activity).equals("ru"))).setView(body).create();details.setCanceledOnTouchOutside(true);details.show();
             int width=Math.min(Math.round(activity.getResources().getDisplayMetrics().widthPixels*.94f),Math.max(view.dp(240),Math.round(body.getPaint().measureText(row.optString("body")))+view.dp(64)));
             details.getWindow().setLayout(width,android.view.ViewGroup.LayoutParams.WRAP_CONTENT);return;
         }
@@ -328,7 +328,7 @@ final class AgentChatUi {
     private void actionDetails(JSONObject row){
         if(!selected())return;if(details!=null)details.dismiss();thinkingBody=null;thinkingScroll=null;thinkingKey="";
         AgentActionDetailsView panel=new AgentActionDetailsView(view,row,attachments::thumbnail,attachments::open);actionDetails=panel;actionManual=false;actionLiveLoading=false;actionLiveStamp="";
-        AlertDialog.Builder builder=WorkspaceDialogs.builder(activity).setTitle(CodexActionLabels.title(row,WorkspaceLanguage.code(activity).equals("ru"))).setView(panel);
+        AlertDialog.Builder builder=WorkspaceDialogs.builder(activity).setTitle(AgentTimelineSummary.title(row,WorkspaceLanguage.code(activity).equals("ru"))).setView(panel);
         if(!panel.compactPreview())builder.setPositiveButton(tr("Назад","Back"),null);
         AlertDialog dialog=builder.create();details=dialog;
         dialog.setOnDismissListener(d->{if(actionDetails==panel){actionDetails=null;actionLiveLoading=false;actionLiveStamp="";}});dialog.setCanceledOnTouchOutside(true);dialog.show();dialog.getWindow().setLayout(Math.round(activity.getResources().getDisplayMetrics().widthPixels*.94f),panel.compactPreview()?android.view.ViewGroup.LayoutParams.WRAP_CONTENT:Math.round(activity.getResources().getDisplayMetrics().heightPixels*.72f));
@@ -343,7 +343,7 @@ final class AgentChatUi {
     }
     private void refreshActionDetails(){
         AgentActionDetailsView panel=actionDetails;AlertDialog dialog=details;if(panel==null||dialog==null||!dialog.isShowing())return;JSONObject row=rows.get(panel.key());if(row==null)return;
-        panel.update(row);dialog.setTitle(CodexActionLabels.title(row,WorkspaceLanguage.code(activity).equals("ru")));
+        panel.update(row);dialog.setTitle(AgentTimelineSummary.title(row,WorkspaceLanguage.code(activity).equals("ru")));
         JSONObject preview=AgentActionPresentation.preview(row);if(actionManual||actionLiveLoading||!row.optBoolean("more")||preview!=null||!panel.followsOutput())return;
         long length=row.optLong("bodyLength",row.optString("body").length());if(length<0||length>2000000)return;String stamp=row.optString("body")+":"+length+":"+row.optString("status");if(stamp.equals(actionLiveStamp))return;
         actionLiveLoading=true;int offset=(int)Math.max(0,length-24000);final int g=generation;final WorkspaceStore.Session p=snapshot();final String session=nativeSession;JSONObject request=detailRequest(p,row,offset,session);

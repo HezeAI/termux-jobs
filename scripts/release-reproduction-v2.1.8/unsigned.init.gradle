@@ -1,0 +1,40 @@
+// Verification-only unsigned clone. Production release tasks and signer gate are untouched.
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+
+gradle.beforeProject { p ->
+    if (p.path == ':app') {
+        p.afterEvaluate {
+            if (p.rootProject.file('.signing').exists()) throw new GradleException('Signing material forbidden in reproduction root')
+            def release = p.android.buildTypes.getByName('release')
+            def copy = p.android.buildTypes.create('reproduction')
+            copy.initWith(release)
+            copy.signingConfig = null
+            copy.matchingFallbacks = ['release']
+            copy.buildConfigField 'String', 'BUILD_TYPE', '"release"'
+            ['debuggable','jniDebuggable','minifyEnabled','shrinkResources','zipAlignEnabled','pseudoLocalesEnabled'].each { key ->
+                if (copy."$key" != release."$key") throw new GradleException('Release setting changed: '+key)
+            }
+            // Reject unhandled variant-specific inputs instead of silently losing them.
+            if (p.file('src/release').exists()) throw new GradleException('Review release-specific source set before reproduction')
+            ['releaseImplementation','releaseRuntimeOnly','releaseCompileOnly'].each { name ->
+                def c = p.configurations.findByName(name)
+                if (c != null && !c.dependencies.empty) throw new GradleException('Review '+name+' before reproduction')
+            }
+        }
+    }
+}
+gradle.taskGraph.whenReady { graph ->
+    if (!graph.hasTask(':app:assembleReproduction')) throw new GradleException('Use only assembleReproduction')
+    if (graph.hasTask(':app:assembleRelease') || graph.hasTask(':app:verifyReleaseSigner')) throw new GradleException('Production signing path forbidden')
+    def p=gradle.rootProject.project(':app')
+    if (p.android.buildTypes.reproduction.signingConfig != null || p.android.buildTypes.reproduction.debuggable) throw new GradleException('Not an unsigned release-equivalent build')
+    def records=[]
+    gradle.rootProject.allprojects.each { project ->
+        def config=project.configurations.findByName(project.path==':app'?'reproductionRuntimeClasspath':'releaseRuntimeClasspath')
+        if (config!=null) config.incoming.artifactView { componentFilter { id -> id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier } }.artifacts.artifacts.each { a ->
+            records << [project:project.path,coordinate:a.id.componentIdentifier.toString(),file:a.file.name,sha256:MessageDigest.getInstance('SHA-256').digest(a.file.bytes).encodeHex().toString()]
+        }
+    }
+    new File(System.getenv('REPRO_EVIDENCE'),'resolved-dependencies.json').text=JsonOutput.prettyPrint(JsonOutput.toJson(records))+'\n'
+}

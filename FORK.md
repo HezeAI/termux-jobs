@@ -1,10 +1,10 @@
 # Building Termux Job’s
 
-Current stable source: **v2.1.7 / versionCode 1536**. `fork/base` includes this
-release line and current documentation. Use tag `v2.1.7` for the exact published
+Current stable source: **v2.1.8 / versionCode 1540**. `fork/base` includes this
+release line and current documentation. Use tag `v2.1.8` for the exact published
 release source; later documentation/CI commits do not replace that APK.
-[Release](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.7) ·
-[Artifact and validation](docs/fork/VALIDATION-v2.1.7.md).
+[Release](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.8) ·
+[Artifact and validation](docs/fork/VALIDATION-v2.1.8.md).
 
 ## Toolchain and isolation
 
@@ -15,7 +15,7 @@ working environments or a shared SDK. No APK is installed by these instructions.
 
 - Gradle wrapper **7.2**, project JDK **11**. CI uses Java **17** for Android SDK
   tools, then switches to Java 11 for the project.
-- Compile SDK **35**, Build Tools **30.0.3 / 35.0.0**, NDK **22.1.7171670**.
+- Compile SDK **35**, Build Tools **30.0.3 / 35.0.0**, NDK **22.1.8171670**.
   The workflow overrides aapt2 with Build Tools 35.0.0. ARM64 hosts require a
   compatible aapt2 and clang/lld; do not run x86 SDK executables on ARM64.
 - App min SDK **26**, target SDK **28**, published APK **ARM64**.
@@ -60,14 +60,14 @@ existing read-only Android NDK sysroot and set `FORK_NATIVE_CLANG`, `FORK_NATIVE
 and `FORK_AAPT2` to compatible tools. Then run:
 
 ```sh
-TERMUX_APP_VERSION_NAME=2.1.7 bash scripts/build-local-arm64.sh
+TERMUX_APP_VERSION_NAME=2.1.8 bash scripts/build-local-arm64.sh
 ```
 
-This sets the APK tag to `v2.1.7-arm64`; the output is
-`build/apk/Termux-Jobs-v2.1.7-arm64.apk`. Set the version explicitly: the script's
+This sets the APK tag to `v2.1.8-arm64`; the output is
+`build/apk/Termux-Jobs-v2.1.8-arm64.apk`. Set the version explicitly: the script's
 legacy fallback is not the current release version. VersionCode comes from
 [app/build.gradle](app/build.gradle). A new release needs its own authorized
-metadata and checks; never overwrite the published 2.1.7 artifact.
+metadata and checks; never overwrite the published 2.1.8 artifact.
 
 ## Signing and publication
 

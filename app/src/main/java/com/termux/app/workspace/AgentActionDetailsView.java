@@ -48,7 +48,11 @@ final class AgentActionDetailsView extends LinearLayout {
     void update(JSONObject next){
         boolean following=followsOutput();
         int y=scroll.getScrollY(),heldInteraction=interaction;String previous=row==null?"":row.optString("body")+row.optLong("bodyLength");row=next;
-        String state=AgentActionPresentation.state(row,ru());long started=AgentTimelineSummary.start(row);if(started>0)state+=" · "+t("Начало: ","Started: ")+AgentMessageTime.full(getContext(),started);if(!status.getText().toString().equals(state))status.setText(state);status.setTextColor(AgentTimelineSummary.neutral(row)?0xffa5a5a2:CodexActionTimeline.failed(row)?0xffffb08f:0xffecece5);
+        String state=AgentActionPresentation.state(row,ru());
+        if(AgentTimelineSummary.kind(row)==AgentTimelineSummary.Kind.COMMAND){
+            if(row.has("exitCode")&&!row.isNull("exitCode")&&row.optInt("exitCode")==0)state+=t("\nКод 0: команда завершилась успешно; результат всей проверки зависит от вывода.","\nExit 0: the command succeeded; the overall check depends on its output.");
+            else if(!row.has("exitCode")||row.isNull("exitCode"))state+=t("\nКод завершения не передан.","\nExit code not supplied.");
+        }long started=AgentTimelineSummary.start(row);if(started>0)state+=" · "+t("Начало: ","Started: ")+AgentMessageTime.full(getContext(),started);if(!status.getText().toString().equals(state))status.setText(state);status.setTextColor(AgentTimelineSummary.neutral(row)?0xffa5a5a2:CodexActionTimeline.failed(row)?0xffffb08f:0xffecece5);
         JSONObject p=AgentActionPresentation.preview(row);String stamp=String.valueOf(p);if(!previewStamp.equals(stamp)){previewStamp=stamp;renderPreview(p);}
         LayoutParams viewport=(LayoutParams)scroll.getLayoutParams();int height=compactPreview()?LayoutParams.WRAP_CONTENT:0;float weight=compactPreview()?0:1;
         if(viewport.height!=height||viewport.weight!=weight){viewport.height=height;viewport.weight=weight;scroll.setLayoutParams(viewport);}

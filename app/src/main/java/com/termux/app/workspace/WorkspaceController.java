@@ -476,7 +476,7 @@ public final class WorkspaceController {
             for(WorkspaceStore.Session p:profiles){
                 if(isAgent(p)!=agent||(!WorkspaceStore.isBase(p)&&!p.saved&&liveFor(p)==null))continue;
                 TerminalSession live=liveFor(p);boolean active=screen==Screen.TERMINAL&&(desktopUi==null||!desktopUi.showing())&&live!=null&&live==activity.getCurrentSession();
-                java.util.function.Supplier<String> subtitle=()->{TerminalSession running=liveFor(p);boolean started=running!=null&&running.isRunning();return (agent?AgentPreparation.agent(p):ProjectFiles.environmentLabel(p))+" · "+compact(p.directory)+" · "+(agent?(started?tr("Запущен","Running"):tr("Не запущен","Not running")):(started?tr("Открыта","Open"):tr("Сохранена","Saved")));};
+                java.util.function.Supplier<String> subtitle=()->(agent?AgentPreparation.agent(p):ProjectFiles.environmentLabel(p))+" · "+compact(p.directory);
                 LinearLayout actions=menu.session(p.id,()->p.name,subtitle,WorkspaceStore.isBase(p),p.saved,active,agent,()->{TerminalSession running=liveFor(p);return running!=null&&running.isRunning();},()->p.saved,()->saveSessionProfile(p),()->unsaveSession(p),()->closeSession(p));
                 sidebarTransition(menu,actions,agent?(live!=null&&live.isRunning()&&!active?tr("Вернуться в этот чат","Return to this chat"):tr("Открыть чат","Open chat")):(active&&desktopUi!=null&&desktopUi.showing()?tr("Вернуться в терминал","Return to terminal"):tr("Открыть терминал","Open terminal")),agent?R.drawable.workspace_chat:R.drawable.workspace_terminal,()->{if(!agent&&desktopUi!=null)desktopUi.terminal(p);launch(p);});
                 if(agent){
@@ -486,7 +486,7 @@ public final class WorkspaceController {
                     sidebarAction(menu,project,tr("Навыки агента","Agent skills"),R.drawable.workspace_library,()->AgentSkillsUi.showForSession(activity,p));
                     LinearLayout management=menu.group(actions,tr("Управление чатом","Chat management"),"chat-management");
                     sidebarAction(menu,management,tr("Лимиты и контекст","Limits and context"),R.drawable.workspace_library,()->{TerminalSession running=liveFor(p);if(running==null||!running.isRunning())AgentOfflineData.showLimits(activity,p);else selectedAction(p,()->showAgentLimits(p));});
-                    sidebarAction(menu,management,tr("Права и подтверждения","Permissions and approvals"),R.drawable.workspace_settings,()->showAgentPermissions(p));
+                    sidebarAction(menu,management,tr("Права и подтверждения","Permissions and approvals"),R.drawable.workspace_shield,()->showAgentPermissions(p));
                     sidebarAction(menu,management,tr("Настройки сессии","Session settings"),R.drawable.workspace_settings,()->editSession(p));
                 }else{
                     if(desktopUi!=null){

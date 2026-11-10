@@ -18,7 +18,7 @@ manage sessions and connect to servers.
 This fork was created and continues to be developed on an Android phone with
 AI assistance. Its developer uses Termux Job’s to work on the project itself.
 
-**[Скачать APK / Download APK — v2.1.7](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.7/Termux-Jobs-v2.1.7-arm64.apk)**
+**[Скачать APK / Download APK — v2.1.8](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.8/Termux-Jobs-v2.1.8-arm64.apk)**
 · [Установка / Installation](#installation-and-compatibility)
 · [Релизы / Releases](https://github.com/HezeAI/termux-jobs/releases)
 · [Безопасность и данные / Security and data](SECURITY.md)
@@ -37,42 +37,37 @@ from OpenAI Codex; not affiliated with or endorsed by the Termux team.
 - **Программирование с AI / AI-assisted coding:** Codex, Claude Code, Gemini and OpenCode; project files, attachments, action timelines and approvals supported by each CLI.
 - **Серверы / Servers:** SSH connections and commands in the selected remote environment.
 
-## v2.1.7 — RTK accounting and recovery fixes
+## v2.1.8 — clearer actions and session states
 
-**RU:** Исправлен учёт вывода RTK для поддерживаемых одиночных, последовательных
-и фоновых вызовов после получения итогового результата. Вывод recall учитывается
-отдельно; неподтверждённая база остаётся неизвестной. Также исправлены удаление
-остаточного каталога Wayland в старом Arch и перезапуск чата при потере связи.
-Бинарник RTK jobs.1 не изменился. После обновления откройте «Лимиты и контекст»,
-чтобы обновить обработчик приложения.
+**RU:** В карточках хронологии — короткое название действия и фактическая команда
+ниже. По нажатию доступны вывод и сведения о завершении. Боковое меню показывает
+цветные состояния чатов и терминалов; у прав появился щит с «!». Уточнены названия
+уведомлений и исправлена очистка уведомления простаивающей графической службы.
 
-**EN:** RTK output accounting now matches supported single, sequential and yielded
-calls when their final result arrives. Recall output is tracked separately;
-unconfirmed baselines remain unknown. This release also fixes removal of a
-residual Wayland directory in old Arch environments and restarting disconnected
-agent chats. The RTK jobs.1 binary is unchanged. Open **Limits and context** after
-updating to refresh the application's observer.
+**EN:** Timeline cards show a short action name with the actual command below it.
+Tap for output and completion details. The sidebar has colored session states and
+a shield icon for permissions. Notifications use the application name and Desktop;
+idle graphics-service notification cleanup is fixed.
 
-Android 8+, ARM64; versionCode **1536**. No environment reinstall or data reset is
-required. RTK figures describe command
-output, not subscription quota or the entire context.
+Android 8+, ARM64; versionCode **1540**. No environment reinstall or data reset is
+required. Finish important work before installing an Android package update.
 
-[Release notes](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.7) ·
-[Validation](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/VALIDATION-v2.1.7.md) ·
-[Current changelog](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/CHANGELOG.md)
+[Release notes](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.8) ·
+[Validation](https://github.com/HezeAI/termux-jobs/blob/v2.1.8/docs/fork/VALIDATION-v2.1.8.md) ·
+[Current changelog](https://github.com/HezeAI/termux-jobs/blob/v2.1.8/CHANGELOG.md)
 
 ## Известные ограничения / Known limitations
 
-- **Codex WebSocket:** большая история изображений может вызывать повторные подключения и обрывы. В 2.1.7 это не исправлено; компонент, закрывающий соединение, не установлен. Image-heavy histories can cause retries and disconnections; the closing component is not established. [Upstream issue](https://github.com/openai/codex/issues/55730) · [Диагностика / Diagnostic report](https://github.com/openai/codex/issues/55730#issuecomment-6645086819).
-- **RTK:** не все команды сокращаются или имеют достоверную базу сравнения. Неоднозначные, обрезанные результаты и неподдерживаемые конвейеры сохраняют неизвестную базу. Штатное преобразование может менять применение запретов по префиксу Codex и правил Bash Claude. Not every command is reduced or measurable. Ambiguous, truncated and unsupported pipeline results keep an unknown baseline. Native rewriting can affect Codex prefix rules and Claude Bash rules; the enable dialog warns about this. [Охват / Scope](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/RTK-MODE.md).
+- **Codex WebSocket:** большая история изображений может вызывать повторные подключения и обрывы. В 2.1.8 это не исправлено; компонент, закрывающий соединение, не установлен. Image-heavy histories can cause retries and disconnections; the closing component is not established. [Upstream issue](https://github.com/openai/codex/issues/55730) · [Диагностика / Diagnostic report](https://github.com/openai/codex/issues/55730#issuecomment-6645086819).
+- **RTK:** не все команды сокращаются или имеют достоверную базу сравнения. Неоднозначные, обрезанные результаты и неподдерживаемые конвейеры сохраняют неизвестную базу. Штатное преобразование может менять применение запретов по префиксу Codex и правил Bash Claude. Not every command is reduced or measurable. Ambiguous, truncated and unsupported pipeline results keep an unknown baseline. Native rewriting can affect Codex prefix rules and Claude Bash rules; the enable dialog warns about this. [Охват / Scope](https://github.com/HezeAI/termux-jobs/blob/v2.1.8/docs/fork/RTK-MODE.md).
 - **Claude:** Auto зависит от версии CLI и аккаунта; принятие параметра не подтверждает работу классификатора модели. Bypass недоступен, если Claude отклоняет root внутри Ubuntu/PRoot. Auto depends on CLI/account support; accepting the option does not validate the model classifier. Bypass is unavailable when Claude rejects root execution in Ubuntu/PRoot.
 - **Данные и права / Data and permissions:** рабочая папка и подтверждения не создают файловую песочницу. Агенты могут передавать доступные данные своему провайдеру. A working directory and approvals do not create filesystem isolation. Agents can send accessible data to their providers. [Подробнее / Details](SECURITY.md).
-- **Резервные копии / Backups:** архивы не зашифрованы и могут содержать авторизацию, историю и снимки проектов. Они не сохраняют работающие процессы. Archives are unencrypted and may contain credentials, history and project snapshots; running processes are not preserved. [Состав и ограничения / Coverage and limitations](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/BACKUP-RESTORE.md).
+- **Резервные копии / Backups:** архивы не зашифрованы и могут содержать авторизацию, историю и снимки проектов. Они не сохраняют работающие процессы. Archives are unencrypted and may contain credentials, history and project snapshots; running processes are not preserved. [Состав и ограничения / Coverage and limitations](https://github.com/HezeAI/termux-jobs/blob/v2.1.8/docs/fork/BACKUP-RESTORE.md).
 
 **Границы проверок:** проверки RTK для Claude использовали настоящий CLI с фиктивным локальным провайдером, а не облачную модель Anthropic. Все режимы прав не проверены. Низкоуровневая передача ключей и аварийное восстановление Gemini на Android, экспорт/восстановление копий через интерфейс телефона остаются непроверенными; MCP и плагины не входили в соответствующий аудит. Это границы проверки, а не подтверждённые дефекты.
 
 **Verification scope:** Claude RTK checks used the real CLI with a synthetic local provider, not Anthropic's cloud model. Not all permission modes were tested. Low-level Android Gemini key handoff and crash recovery, and backup export/restore through the phone UI remain unverified; MCP/plugins were outside that audit. These are verification gaps, not confirmed defects.
-[Проверки 2.1.7 / 2.1.7 validation](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/VALIDATION-v2.1.7.md) · [Границы аудита / Audit scope](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/SECURITY-AUDIT-STAGE2.md).
+[Проверки 2.1.8 / 2.1.8 validation](https://github.com/HezeAI/termux-jobs/blob/v2.1.8/docs/fork/VALIDATION-v2.1.8.md) · [Границы аудита / Audit scope](https://github.com/HezeAI/termux-jobs/blob/v2.1.8/docs/fork/SECURITY-AUDIT-STAGE2.md).
 
 ## Installation and compatibility
 
@@ -106,7 +101,7 @@ No claim is made that another phone's transport interruptions are fixed.
 
 ## Пользователям / For users
 
-- [CHANGELOG](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/CHANGELOG.md) · [Releases](https://github.com/HezeAI/termux-jobs/releases): история изменений и опубликованные версии / change history and published versions.
+- [CHANGELOG](https://github.com/HezeAI/termux-jobs/blob/v2.1.8/CHANGELOG.md) · [Releases](https://github.com/HezeAI/termux-jobs/releases): история изменений и опубликованные версии / change history and published versions.
 
 - [Usage](docs/fork/USAGE.md): terminals, presets, commands, files and agent controls.
 - [Agent instructions](docs/fork/AGENT-INSTRUCTIONS.md): actual sources, import,
@@ -128,7 +123,7 @@ limited coverage; OpenCode connection data is a separate optional component.
 
 - [Contributing](CONTRIBUTING.md) and [architecture](docs/fork/ARCHITECTURE.md).
 - [Build notes](FORK.md), [testing policy](docs/fork/TESTING.md) and [release procedure](docs/fork/RELEASING.md).
-- [Current release evidence](https://github.com/HezeAI/termux-jobs/blob/v2.1.7/docs/fork/VALIDATION-v2.1.7.md) and [audit scope/results](docs/fork/SECURITY-AUDIT-STAGE2.md).
+- [Current release evidence](https://github.com/HezeAI/termux-jobs/blob/v2.1.8/docs/fork/VALIDATION-v2.1.8.md) and [audit scope/results](docs/fork/SECURITY-AUDIT-STAGE2.md).
 - [AGENTS.md](AGENTS.md): repository instructions for coding agents; not the user guide.
 
 ## Лицензия и благодарности / License and acknowledgements

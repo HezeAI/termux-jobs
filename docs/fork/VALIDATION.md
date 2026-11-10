@@ -1,6 +1,6 @@
-# Current stable release: 2.1.7 /1536
+# Current stable release: 2.1.8 /1540
 
-See [2.1.7 validation](VALIDATION-v2.1.7.md). Earlier results below are historical.
+See [2.1.8 validation](VALIDATION-v2.1.8.md). Earlier results below are historical.
 
 # Current release validation — 2.1.6 /1533
 
