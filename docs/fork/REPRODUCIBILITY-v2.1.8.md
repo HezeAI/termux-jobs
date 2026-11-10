@@ -36,7 +36,7 @@ reproducibility is made. See [external libraries](reproduction-v2.1.8/external-l
 [toolchain hashes](reproduction-v2.1.8/toolchain.json),
 [native recipe](reproduction-v2.1.8/native-commands.json) and
 [GCC recipe](reproduction-v2.1.8/glycin-historical-recipe.json).
-Tools: Gradle 7.2, AGP 7.0.4, local OpenJDK 11, Clang/LLD 21.1.8,
+Tools: Gradle 7.2, AGP 4.2.2, local OpenJDK 11, Clang/LLD 21.1.8,
 GCC 15 and existing Android 35 platform/NDK 28.1 sysroot for the JNI recipe.
 The exact resolved paths and hashes above take precedence over tool-family names.
 
