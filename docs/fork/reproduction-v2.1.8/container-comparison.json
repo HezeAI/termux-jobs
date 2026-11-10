@@ -1,0 +1,10 @@
+{
+  "signingBlockBytes": 8192,
+  "ids": [
+    "0x7109871a",
+    "0x504b4453",
+    "0x42726577"
+  ],
+  "publishedWithoutSigningBlockSha256": "4c0fc5086e76b4ea45ce86be24b835833eecee92d7b40cc51c9b9dcc49a0c0de",
+  "equalsRebuilt": true
+}

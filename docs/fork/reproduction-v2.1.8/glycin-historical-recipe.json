@@ -1,0 +1,18 @@
+{
+  "argv": [
+    "cc",
+    "-fPIC",
+    "-shared",
+    "-nostdlib",
+    "-O2",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-Wl,-z,now,-z,relro,-z,noexecstack",
+    "-Wl,-soname,x11-fedora-glycin.so",
+    "/root/termux-fork/.verification/rollback-live-actions/source/.verification/release-reproduction-v2.1.8/source/x11/src/main/cpp/x11-fedora-glycin.c",
+    "-o",
+    "/root/termux-fork/.verification/rollback-live-actions/source/.verification/release-reproduction-v2.1.8/glycin-gcc.so"
+  ],
+  "sha256": "1caad510d1f79e0d7823621191c294b64f3e105a228ccc23e7a1ab5631ddac61"
+}

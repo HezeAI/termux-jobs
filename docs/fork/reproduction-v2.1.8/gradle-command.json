@@ -1,0 +1,16 @@
+[
+  "/root/termux-fork/.verification/rollback-live-actions/source/.tools/gradle-7.2/bin/gradle",
+  "--offline",
+  "--no-daemon",
+  "--no-build-cache",
+  "--rerun-tasks",
+  "--max-workers=2",
+  "-Dorg.gradle.jvmargs=-Xmx1536m -Duser.home=/root/termux-fork/.verification/rollback-live-actions/source/.verification/release-reproduction-v2.1.8/java-home",
+  "-Pandroid.aapt2FromMavenOverride=/data/data/com.termux/files/usr/bin/aapt2",
+  "-Pandroid.builder.sdkDownload=false",
+  "-I",
+  "/root/termux-fork/.verification/rollback-live-actions/source/.verification/release-reproduction-v2.1.8/unsigned.init.gradle",
+  "-x",
+  ":app:downloadBootstraps",
+  ":app:assembleReproduction"
+]

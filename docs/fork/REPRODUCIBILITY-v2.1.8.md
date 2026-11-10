@@ -1,7 +1,49 @@
 # Release reproducibility — v2.1.8
 
-Separate local release reproduction is being prepared. No CI reproduction or third-party
-security audit is claimed. Results and exact source identity will be filled before publication.
+Checked locally on 2026-11-10, Ubuntu/PRoot ARM64. This is source/build
+reproduction, not third-party verification or an independent security audit.
+
+## Result
+
+All **1,141 ZIP entries** match byte-for-byte. No entry was excluded, added or removed.
+The complete unsigned container also matches after removing only the validated
+8,192-byte APK signing block and adjusting the ZIP central-directory offset in memory.
+The signed release APK was not modified. A signing key was never copied into the
+reproduction source/build tree. Full signed-APK byte reproduction is not claimed.
+
+[Comparison](reproduction-v2.1.8/comparison.json) ·
+[Container comparison](reproduction-v2.1.8/container-comparison.json) ·
+[Every payload SHA-256](reproduction-v2.1.8/payload-sha256.json).
+
+Signed APK SHA-256: `3a2198eb0bf6f69d5f00d63cba65229042aee2b0189013f4d473ee712cc344a7`.
+Unsigned APK SHA-256: `4c0fc5086e76b4ea45ce86be24b835833eecee92d7b40cc51c9b9dcc49a0c0de`.
+
+Exact source snapshot: `0468c0b4`, recorded in full in
+[source identity](reproduction-v2.1.8/source-identity.json). Later release commits
+only add validation/documentation; the tag must retain identical production inputs.
+The source tree and project outputs were clean; Gradle used --no-build-cache and
+--rerun-tasks. Downloaded dependency caches and existing tools were reused, not prior
+project object files, libraries, classes or DEX. SDK files were exposed read-only by
+local path convention; this was isolated source/output storage, not a separate machine.
+
+Our JNI libraries and Alpine/Fedora shims were rebuilt. The Fedora glycin shim uses
+the documented historical GCC recipe; its SHA-256 was verified before staging.
+External Xlorie, codec libraries, keyboard data and bootstrap packages were pinned
+binary inputs, not rebuilt from their upstream sources. No claim of their source
+reproducibility is made. See [external libraries](reproduction-v2.1.8/external-libraries.json),
+[X11 input hashes](reproduction-v2.1.8/x11-preparation.json),
+[resolved dependencies](reproduction-v2.1.8/resolved-dependencies.json),
+[toolchain hashes](reproduction-v2.1.8/toolchain.json),
+[native recipe](reproduction-v2.1.8/native-commands.json) and
+[GCC recipe](reproduction-v2.1.8/glycin-historical-recipe.json).
+Tools: Gradle 7.2, AGP 7.0.4, local OpenJDK 11, Clang/LLD 21.1.8,
+GCC 15 and existing Android 35 platform/NDK 28.1 sysroot for the JNI recipe.
+The exact resolved paths and hashes above take precedence over tool-family names.
+
+All 112 reproduction tasks executed. No source/content mismatch occurred.
+SDK metadata/platform-tools warnings remain in the local build log; no emulator/device
+execution was part of this comparison. Debug CI is separate; CI release reproduction
+is not implemented.
 
 ## Repeatable procedure
 

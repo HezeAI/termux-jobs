@@ -1,0 +1,52 @@
+{
+  "commit": "fa3a8b430e2896a19f44c99a9cb056254615ae06",
+  "nativeSha256": "8ad76408710c21b9a61d3db07900e5bb4e3f88efb1670ac0ff3a2166f403567d",
+  "keyboardSha256": "d88d8879538a5e8370977f20411043598b0e4f784a718e38a87d91b33b99c140",
+  "keyboardFiles": 294,
+  "downloadedInputs": {
+    "gstreamer1.0-plugins-bad_1.26.2-3+deb13u3_arm64.deb": {
+      "size": 2841904,
+      "sha256": "c5f1fba98072aee17e064348c9586951a506f4e0c2bff1fea3603a86e16e5590"
+    },
+    "jobs-v2.1.2-keyboard-source.apk": {
+      "size": 40452595,
+      "sha256": "2f8b97b2d9083a5b7dcc3966eca54ea6d843fec3e253ba6e279c123921eeddab"
+    },
+    "libc6-dev-arm64-cross_2.36-8cross1_all.deb": {
+      "size": 1423640,
+      "sha256": "5e4cf6abf0e89e89c4b3006bb8b7dc47aa831df25d94df9134929b8b968cacb4"
+    },
+    "libopenh264-8_2.6.0+dfsg-2_arm64.deb": {
+      "size": 335852,
+      "sha256": "dd40ffeeb006af3a610e015881340c704b8bb38627434a150b7d9e39e657dfbe"
+    },
+    "linux-libc-dev-arm64-cross_6.1.4-1cross1_all.deb": {
+      "size": 1815380,
+      "sha256": "66457f015d16b7d372db6591cff38db0da928362ff2ea1fa75491e28f6904d81"
+    },
+    "musl-dev-1.2.6-r2.apk": {
+      "size": 2539434,
+      "sha256": "ca72b84f4eb3c36bbbec04d919eb10159d414c7a43413cc2253841d301fa9486"
+    },
+    "termux-x11-universal-debug.apk": {
+      "size": 14693944,
+      "sha256": "64995746d1887a0e70bc8977d4a9c5ea56e3e00eadd4a6eeab32ae6048ba733a"
+    },
+    "x11-style.zip": {
+      "size": 1830990,
+      "sha256": "6bc19721d09cb5d16b5ee5df6f2758da9653a88e0211dd81ef5fcb408386aec0"
+    }
+  },
+  "compiledInputs": {
+    "x11-alpine-compat.c": {
+      "sourceSha256": "761e8d3d98886ccb300cff0cc448b409a03431ef6a1ffcb7f76d7c1aa5643bec",
+      "outputSha256": "8d894105fc8e326b7c2dd9a2baaab869218b4a9c5f3b4b063dd5f09db07cfe17"
+    },
+    "x11-fedora-glycin.c": {
+      "sourceSha256": "e191c92bf74113fd4451482412ac4c5e79939df0fc91872d6aba30fa7b176f33",
+      "outputSha256": "10b2f2a8daf295eb20d5bf51cde4bdde15250b33d740339ccff35337efdb9fb9"
+    }
+  },
+  "compiler": "clang version 21.1.8",
+  "compileFlags": "--target=aarch64-linux-{musl,gnu} -fuse-ld=lld -fPIC -shared -nostdlib -O2 -Wall -Wextra -Werror -Wl,-z,now,-z,relro,-z,noexecstack; soname=output basename; pinned target headers"
+}

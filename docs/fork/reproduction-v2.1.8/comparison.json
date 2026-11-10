@@ -1,0 +1,14 @@
+{
+  "published": {
+    "sha256": "3a2198eb0bf6f69d5f00d63cba65229042aee2b0189013f4d473ee712cc344a7",
+    "size": 40677933
+  },
+  "rebuilt": {
+    "sha256": "4c0fc5086e76b4ea45ce86be24b835833eecee92d7b40cc51c9b9dcc49a0c0de",
+    "size": 40669741
+  },
+  "onlyPublished": [],
+  "onlyRebuilt": [],
+  "changed": [],
+  "sameCount": 1141
+}

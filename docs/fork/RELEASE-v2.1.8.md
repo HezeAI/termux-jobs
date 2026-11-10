@@ -31,9 +31,15 @@ The exclamation mark inside the shield was added afterward; it is covered by res
 checks, not a separate phone acceptance. Full Android desktop lifecycle recovery remains
 outside that reported phone check; local lifecycle fixtures are documented separately.
 
-The signed release APK is built and checked locally. Debug CI and local release checks
-are separate. See the version report for exact results, artifact hashes and limitations.
-Release reproduction is a source/build comparison, not an independent security audit.
+The signed release APK passed local artifact checks, 188 targeted JVM tests, seven Node
+suites and full Modern Lint (0 errors, 291 warnings). Debug CI is separate; its exact
+run accompanies the release in [validation.json](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.8/validation.json).
+
+Local release reproduction matched all 1,141 files and the complete APK container after
+removing only the signing block. Our native code was rebuilt; external libraries remained
+pinned binary inputs. This is not CI reproduction or an independent security audit.
+
+APK SHA-256: `3a2198eb0bf6f69d5f00d63cba65229042aee2b0189013f4d473ee712cc344a7`.
 
 [Validation](https://github.com/HezeAI/termux-jobs/blob/v2.1.8/docs/fork/VALIDATION-v2.1.8.md) ·
 [Reproduction procedure and results](https://github.com/HezeAI/termux-jobs/blob/v2.1.8/docs/fork/REPRODUCIBILITY-v2.1.8.md) ·
