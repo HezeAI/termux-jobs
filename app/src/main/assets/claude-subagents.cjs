@@ -100,7 +100,8 @@ class ClaudeSubagents {
   const record=this.entry(block.id);
   const id=record.taskId||block.id;
   const prompt=blockText(block.input?.prompt,messageLimit);
-  const output=blockText(result?.body||record.summary,messageLimit);
+  const internal=result?.asyncLaunch||result?.body?.startsWith('Async agent launched successfully. (This tool result is internal metadata');
+  const output=blockText(record.summary||(internal||block.input?.run_in_background===true?'':result?.body),messageLimit);
   const status=record.status;
   const type=blockText(block.input?.subagent_type,120);
   return {

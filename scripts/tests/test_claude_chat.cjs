@@ -47,6 +47,11 @@ const b=new ClaudeChat({socket:path.join(root,session+'.sock'),binary:'/not-used
  const findAgent=project=>project.snapshot().rows.find(r=>r.part==='tool:'+parent);
  const initialAgent=findAgent(b);assert.equal(initialAgent.status,'running');assert.equal(initialAgent.toolType,'collabAgentToolCall');
  assert.equal(JSON.parse(initialAgent.body).prompt,'Review the fixture');
+ const launchMessage={type:'user',session_id:session,uuid:'parent-launch',toolUseResult:{status:'async_launched'},message:{content:[
+  {type:'tool_result',tool_use_id:parent,content:'ASYNC_PROTOCOL_METADATA_EXCLUDED'}
+ ]}};
+ b.event(launchMessage);
+ assert(!JSON.stringify(findAgent(b)).includes('ASYNC_PROTOCOL_METADATA_EXCLUDED'));
  b.event(child('response-2','b'.repeat(14000)));
  b.event(child('response-3','c'.repeat(14000)));
  b.event({type:'system',subtype:'task_notification',session_id:session,task_id:'wrong-task',tool_use_id:parent,status:'failed',summary:'MISMATCH_EXCLUDED'});
@@ -68,7 +73,7 @@ const b=new ClaudeChat({socket:path.join(root,session+'.sock'),binary:'/not-used
  assert.equal(childDetails.sourceHistoryAvailable,false);
  assert.deepEqual(childDetails.receiverThreadIds,['task_child']);
  assert.deepEqual(childDetails.agentParticipants,[{id:'task_child',type:'reviewer'}]);
- assert.equal(childDetails.agentsStates.task_child.message,'Parent tool result');
+ assert.equal(childDetails.agentsStates.task_child.message,'Finished child review');
  const childHistory=childDetails.agentHistory.task_child;
  assert.equal(childHistory.relationVerified,true);assert.equal(childHistory.complete,false);
  assert.deepEqual(childHistory.messages.map(row=>row.id),['response-1','response-2','response-3']);
