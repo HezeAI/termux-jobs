@@ -2,18 +2,18 @@
 
 ## Current goal
 
-Prepare and verify the stable **2.1.9 / 1549** release on the published
-fork/base ancestry. The [release candidate](docs/fork/VALIDATION-v2.1.9.md)
-has a signed ARM64 APK and its RU/EN update metadata. The Git setup and path
-fix keep the exact directory selected in the project browser. The signed APK,
-update metadata and local verification logs are under
-`.verification/release-v2.1.9/`.
+Verify the **2.1.9 / 1549** release and its update channel.
+[Release notes](docs/fork/RELEASE-v2.1.9.md) cover the final compact timeline,
+subagent details for Codex, Claude and Antigravity, managed CLI updates and
+new project Git. The final ARM64 APK and RU/EN updater metadata passed their
+local checks. Independent reproduction matched the signed artifact.
+[Verification](docs/fork/VALIDATION-v2.1.9.md).
 
-Before publishing, verify release test results, the clean unsigned comparison
-and the exact source commit. After publication, verify the public downloads,
-updater metadata, tag ancestry and final fork/base CI. The previous stable
-release remains active until the new release is published. Phone installation
-requires its own authorization.
+Use the release and CI links in the verification report. Check the public
+downloads, updater metadata, tag ancestry and fork/base CI before considering
+publication complete. Device acceptance still covers clean Ubuntu AI setup,
+the repaired directory-selection path, real provider sign-in and subagent
+details. Phone installation requires separate authorization.
 
 ## Source and earlier builds
 

@@ -1,0 +1,26 @@
+{
+  "changedEntries": [],
+  "container": {
+    "equalsUnsigned": true,
+    "signedUnregisteredBytes": 0,
+    "signedWithoutSigningBlockSha256": "93eae96a28687f745739a7240dba5e4f6812b384c73d673fb746c2c866a05312",
+    "signingBlockBytes": 8192,
+    "signingBlockRecordIds": [
+      "0x7109871a",
+      "0x504b4453",
+      "0x42726577"
+    ],
+    "unsignedUnregisteredBytes": 0
+  },
+  "identicalEntries": 1145,
+  "onlySigned": [],
+  "onlyUnsigned": [],
+  "signed": {
+    "sha256": "04b532d9c592c18abb2c3213e96ba9c5c6a56aa3923331d464094dc9aaf44271",
+    "size": 40705872
+  },
+  "unsigned": {
+    "sha256": "93eae96a28687f745739a7240dba5e4f6812b384c73d673fb746c2c866a05312",
+    "size": 40697680
+  }
+}

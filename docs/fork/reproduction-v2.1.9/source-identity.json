@@ -1,0 +1,27 @@
+{
+  "checkedFrozenFiles": 1057,
+  "checkedProductionFiles": 748,
+  "differencesOutsideAssembly": [],
+  "excludedUnusedHistoricalArtifacts": [
+    {
+      "path": "app/dev_keystore.jks",
+      "reason": "Unreferenced historical development signing fixture",
+      "verifiedHistoricalBlob": "174cc95acd605bf557f9e63983f55fadc5ae44bd"
+    }
+  ],
+  "finalAssetsStagedBeforeMerge": [
+    {
+      "path": "app/src/main/assets/claude-chat.cjs",
+      "previousSha256": "c0885051cc344830ac4ea1591f918d9e1a0555d5f1d59051562fa623afa9698a",
+      "stagedSha256": "cf486d70711ef65f6790f00b8e5f11a62863b025d2ceb361f09776d9ed529e7c"
+    },
+    {
+      "path": "app/src/main/assets/claude-subagents.cjs",
+      "previousSha256": "9ce1b112a58f93610d7f1173eeb5c635d3a58c574b2f3ca6abb05479714ca9a7",
+      "stagedSha256": "42e9bc23e6f55ece86b2e87f8dd2e7755ad6cfef74f129741a7b9a0da8d74bdc"
+    }
+  ],
+  "frozenManifestSha256": "d69f2676a2ddb766505abc25737b1076d4a19e9edf60f79f38f3a3f89c6d7b54",
+  "productionCommit": "91b45863ac4f97dccdac73a31748258c08acfcd1",
+  "productionInputDifferences": []
+}

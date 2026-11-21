@@ -12,7 +12,7 @@ HezeAI maintains this independent Termux fork.
   conversation pages are accessible from the chat.
 - Open subagent details from the parent action. Codex can read linked child
   history. Claude shows text directly linked by the CLI to that action and
-  preserves bounded excerpts. Antigravity shows reported participant names,
+  preserves bounded excerpts. Antigravity shows reported participant types,
   roles and identifiers. Full native child history is unavailable in the
   Claude and Antigravity bridges.
 - Check and install Codex, Claude and Antigravity CLI updates from **Chat
@@ -43,7 +43,18 @@ directory can reselect the original folder.
 <details>
 <summary>Verification and build details</summary>
 
+The signed ARM64 APK passed metadata, signing, ZIP and runtime checks.
+Modern Lint completed across all five modules with zero errors and 299
+warnings. The independent unsigned build matched all 1,145 APK entries and
+the signature-normalized ZIP. Local JVM tests used the final update metadata.
+Claude's linked child response was checked with a real CLI and a synthetic
+provider. Antigravity child events were checked with a protocol fixture.
+These checks leave clean-phone startup and live provider behavior unverified.
+
+APK SHA-256 `04b532d9c592c18abb2c3213e96ba9c5c6a56aa3923331d464094dc9aaf44271`.
+
 [Release validation](https://github.com/HezeAI/termux-jobs/blob/v2.1.9/docs/fork/VALIDATION-v2.1.9.md)
+· [Reproducibility](https://github.com/HezeAI/termux-jobs/blob/v2.1.9/docs/fork/REPRODUCIBILITY-v2.1.9.md)
 · [Source](https://github.com/HezeAI/termux-jobs/tree/v2.1.9)
 · [Checksums](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.9/SHA256SUMS)
 

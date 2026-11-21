@@ -1,0 +1,406 @@
+{
+  "downloads/gradle-7.2-bin.zip": {
+    "sha256": "f581709a9c35e9cb92e16f585d2c4bc99b2b1a5f85d2badbd3dc6bff59e1e6dd",
+    "size": 114352742
+  },
+  "gradle-7.2/bin/gradle": {
+    "sha256": "594a088265eae922403c87e6bf15b91044299692d83caaa09c35496b3682359e",
+    "size": 8060
+  },
+  "gradle-7.2/lib/gradle-launcher-7.2.jar": {
+    "sha256": "9aa98590c168c8470dee04799ee9d21619cf7735c01426bb2c4b87f70c27544f",
+    "size": 498657
+  },
+  "jdk11/usr/lib/jvm/java-11-openjdk-arm64/bin/java": {
+    "sha256": "4f26f3f804c08d91a330fa463bcae58fbae3e87dd612a40949d72583a349a41c",
+    "size": 67832
+  },
+  "jdk11/usr/lib/jvm/java-11-openjdk-arm64/bin/javac": {
+    "sha256": "2aa62a8505e22f6cc5d36122214113117dc59dab4c67d90d7325a345e5866d24",
+    "size": 67864
+  },
+  "jdk11/usr/lib/jvm/java-11-openjdk-arm64/release": {
+    "sha256": "40add7fb83dde2f9873082d83a73986510fede237f6d30d9d12b1db9cb893893",
+    "size": 1256
+  },
+  "maven/com.android.tools.build/gradle/4.2.2/gradle-4.2.2.jar": {
+    "sha256": "6877441af1ad27acb2f68613dae556d9620ef7a5705d73b1412a49755038b3e6",
+    "size": 6849329
+  },
+  "maven/com.android.tools/r8/8.9.35/r8-8.9.35.jar": {
+    "sha256": "204b2fc2b0f4e888dc0ef748b58090def1bf4185068d36abbb94841dbc7107a8",
+    "size": 18012736
+  },
+  "native-aapt/aapt2": {
+    "sha256": "9342875c766b4c2838a8527306f614918fd481ad61895eb69f1d04b6c8faefe1",
+    "size": 3595544
+  },
+  "native-aapt/libabsl_base.so": {
+    "sha256": "846fa0bf53c2712411d1b6529230f85718fa933138f53edc1e8b2d9847f8951a",
+    "size": 43320
+  },
+  "native-aapt/libabsl_city.so": {
+    "sha256": "eee1889d5260355d2e270ad6b08e3e906913838f3fb06c6b722935217b4a2472",
+    "size": 6568
+  },
+  "native-aapt/libabsl_cord.so": {
+    "sha256": "cec4ded8ad2bc8af87d2b9f46824ae179f357b9c678b26c41fedd6ad8352edee",
+    "size": 113296
+  },
+  "native-aapt/libabsl_cord_internal.so": {
+    "sha256": "46da04c78d0902bf5a68395d06b62ec4ca4bf229b36584760a450a01643eb6d3",
+    "size": 86448
+  },
+  "native-aapt/libabsl_cordz_functions.so": {
+    "sha256": "f1fd1de0c067ffde7b32c263b849d5a52589f923ae5a82ab46db3dc285ddb12e",
+    "size": 6056
+  },
+  "native-aapt/libabsl_cordz_handle.so": {
+    "sha256": "8163eab443fa8a87761f4db5318065000e02ddc7fe224b7eed3b19203e7c8d07",
+    "size": 38320
+  },
+  "native-aapt/libabsl_cordz_info.so": {
+    "sha256": "789072b5d6ce06e84a0283e0cfce5a50f284f2be72785406287c053074f916f2",
+    "size": 43944
+  },
+  "native-aapt/libabsl_crc32c.so": {
+    "sha256": "c457d15547cc5ea92a09d6049768c7039dba7e9028556ecaf76b6521264a67c8",
+    "size": 40080
+  },
+  "native-aapt/libabsl_crc_cord_state.so": {
+    "sha256": "33c86dba1a54bfb0918b2dc8352f26c9b13e41de0d66c843a340db141331b6e7",
+    "size": 46984
+  },
+  "native-aapt/libabsl_crc_internal.so": {
+    "sha256": "c5c1c2fc69bdbf788105cf5549cad65d32f7787b11fc96f4c3732033d05b2ba1",
+    "size": 41936
+  },
+  "native-aapt/libabsl_die_if_null.so": {
+    "sha256": "c9a054baac874147d3c47727e3c3b6a62306e059ea294f7a1a24d5ffab5b6413",
+    "size": 6192
+  },
+  "native-aapt/libabsl_examine_stack.so": {
+    "sha256": "f82c7bd0d74ab70de994fc97fcc9945d057ff6c6bf69b69ae4930a26ba85cc40",
+    "size": 6920
+  },
+  "native-aapt/libabsl_exponential_biased.so": {
+    "sha256": "16f934ed3161165edae386d1ac3c1c56896ac718dffbfd98783f544f508058df",
+    "size": 7344
+  },
+  "native-aapt/libabsl_hash.so": {
+    "sha256": "cbafad452df570bec7b491f7dbde21861d315f3995f43bfdeef5c2b1321bbc4e",
+    "size": 6544
+  },
+  "native-aapt/libabsl_hashtablez_sampler.so": {
+    "sha256": "a21afdcf383a232f2203680b3c0eb471be7a37144391fb8a6de9f25e8601f67e",
+    "size": 44032
+  },
+  "native-aapt/libabsl_int128.so": {
+    "sha256": "11930f5a4e0116617d8dcba63590f7f884a10d22f1400c577b7b1a6ed30a2704",
+    "size": 44984
+  },
+  "native-aapt/libabsl_kernel_timeout_internal.so": {
+    "sha256": "a2fdf7166426fd39e3ed406398b09b8fd866ce3b4c8ba6c1d91777188fbbbbaf",
+    "size": 9440
+  },
+  "native-aapt/libabsl_leak_check.so": {
+    "sha256": "c54ca0a5ecd66bb2102551f76f376921ed81cbbcce2cdbad3d66b16f4463abf2",
+    "size": 4896
+  },
+  "native-aapt/libabsl_log_globals.so": {
+    "sha256": "f677be18aa22800e0353f2f291e7e98e31bdc4b5ead0fb13f322df3e2c012315",
+    "size": 41768
+  },
+  "native-aapt/libabsl_log_internal_check_op.so": {
+    "sha256": "1ecfc0acf7c973b03cb2a0c1e71d01eeac6fc428de6d61ca5b9c8dd88faa3277",
+    "size": 53624
+  },
+  "native-aapt/libabsl_log_internal_conditions.so": {
+    "sha256": "f4649ec767be0aa4d763411f70afd832eb31358fd505a57eb87903bdc0903dc7",
+    "size": 7176
+  },
+  "native-aapt/libabsl_log_internal_format.so": {
+    "sha256": "bed346fe322cf3adb15e99c9f5b451744d41638a634a56c25694885a68dbd576",
+    "size": 9256
+  },
+  "native-aapt/libabsl_log_internal_globals.so": {
+    "sha256": "94ac3ab0cf9ca8352aeb44927f1f8cb71b56575ef49271b54138611fccbdeacf",
+    "size": 8808
+  },
+  "native-aapt/libabsl_log_internal_log_sink_set.so": {
+    "sha256": "36263d53339066d35535728ecbe590a533db58fa47d1f5ce3b7bad1de3cfc968",
+    "size": 45336
+  },
+  "native-aapt/libabsl_log_internal_message.so": {
+    "sha256": "37bd675822c51ad5baa7c4c21452636a9554d4dcf74b542065838e6f5ffdf6b9",
+    "size": 78264
+  },
+  "native-aapt/libabsl_log_internal_nullguard.so": {
+    "sha256": "c83b2ee942a41e18044897df4a7f6551d2b85a4bb5391be5095ed922af2ad270",
+    "size": 4312
+  },
+  "native-aapt/libabsl_log_internal_proto.so": {
+    "sha256": "5a745bc33b6966f4a06bb5e14cc165261a906d0bd2e8a3de2d0904a67bfec665",
+    "size": 7464
+  },
+  "native-aapt/libabsl_log_internal_structured_proto.so": {
+    "sha256": "4dd4647a6a023008c899412061298693346befa943b1b77262b582b3fd934b5e",
+    "size": 7272
+  },
+  "native-aapt/libabsl_log_sink.so": {
+    "sha256": "b390b2d52206633c9b9581a22801e981ddf960df8bf8debbff71675fbf6c7889",
+    "size": 5072
+  },
+  "native-aapt/libabsl_malloc_internal.so": {
+    "sha256": "efd6e5223eaaa462b388e2318ddc1c35826c8742b2578ebdd9ad91a4de9d2ebd",
+    "size": 46136
+  },
+  "native-aapt/libabsl_raw_hash_set.so": {
+    "sha256": "a2f256ce1cc641399071fe17fcb9dc2ef3617b85da42b55f0023e6b2ff9e1f3f",
+    "size": 33328
+  },
+  "native-aapt/libabsl_raw_logging_internal.so": {
+    "sha256": "5c9374d0a3a35cf3aaf97d9b1072deb9f65a1187e7ff1810fb442441d6fb5ed8",
+    "size": 36320
+  },
+  "native-aapt/libabsl_spinlock_wait.so": {
+    "sha256": "e823048560fd3c549f70d9cd69893aa62223331e4f4a5920e2c763a5a826977e",
+    "size": 34256
+  },
+  "native-aapt/libabsl_stacktrace.so": {
+    "sha256": "35eb8ad6d428d8c7be04867f2f44b54b5ae11189387e818aa5a17f87968c8454",
+    "size": 6856
+  },
+  "native-aapt/libabsl_status.so": {
+    "sha256": "96a0cb933d157e4e4873ef8de05f50957c2e4e6096bc5b90bee36fe2b2e27c22",
+    "size": 72312
+  },
+  "native-aapt/libabsl_statusor.so": {
+    "sha256": "e1644e88fba10411a61f0d6a2a64113af3173bc4e0cd1dac0ebcaa3638d1454e",
+    "size": 43312
+  },
+  "native-aapt/libabsl_str_format_internal.so": {
+    "sha256": "1ccf391a192e2fd60a2a220f0b5736bbc429ab7be9453b14f7d2110e62ca06a2",
+    "size": 132312
+  },
+  "native-aapt/libabsl_strerror.so": {
+    "sha256": "278fd5217b3a5329c47f9536244e710f442d27c8135853e9b34d96d0cc4a6a02",
+    "size": 34736
+  },
+  "native-aapt/libabsl_strings.so": {
+    "sha256": "6de74beee387260802b4b54b51394ef429badf3a900131ddf00ec39fe5a226e2",
+    "size": 162416
+  },
+  "native-aapt/libabsl_strings_internal.so": {
+    "sha256": "b39e110251392cc0519bcb5c3ccb6f22f45548e118c9a60842fdbdc314224d18",
+    "size": 38120
+  },
+  "native-aapt/libabsl_symbolize.so": {
+    "sha256": "ae3199874e9328dfb73ebd09cf90c45a2c44c8bcfa71a389d9c6d662593dd73a",
+    "size": 5080
+  },
+  "native-aapt/libabsl_synchronization.so": {
+    "sha256": "56f0ea2bbba8978098d3a939a501b860b194168f460f46ee3eca14082a8f8086",
+    "size": 85552
+  },
+  "native-aapt/libabsl_throw_delegate.so": {
+    "sha256": "25545b88f33ba40ba5e654f44686a6e43ac2e164abeb9a534bae5f94e256bf19",
+    "size": 42040
+  },
+  "native-aapt/libabsl_time.so": {
+    "sha256": "60f6fe76ecadc20bbdf1bea9315d28e8ef59abb6bf4bf98aaa96ed62df720724",
+    "size": 92680
+  },
+  "native-aapt/libabsl_time_zone.so": {
+    "sha256": "ec3f8dc0c604f335e47c7f41e13990caec1ddcc1298e675baba9e80cda900e6c",
+    "size": 138664
+  },
+  "native-aapt/libabsl_tracing_internal.so": {
+    "sha256": "dfa39d40c1d83addc59fd3c64ca38b043a90a60e03cd88f519a761bb299f6cdf",
+    "size": 4352
+  },
+  "native-aapt/libc++_shared.so": {
+    "sha256": "05bef9d3901910c3ff8ab450b03bc8b28383d363a2290f2f7b9aed7331ea6ff7",
+    "size": 1423696
+  },
+  "native-aapt/libexpat_1.so": {
+    "sha256": "da6894d1589bdf260102d5e15f4d0caff0480d5898d36030bedf8ae69229bc54",
+    "size": 146032
+  },
+  "native-aapt/libfmt.so": {
+    "sha256": "56951f7d74a602342b93157a842050ddae6e91f60ea8f26ccc93121aac87f213",
+    "size": 166608
+  },
+  "native-aapt/libpng16.so": {
+    "sha256": "69a6552d49b3abe79b658242e195c7dda6326d3ceba95b35ab0ce5173ccf68a9",
+    "size": 178248
+  },
+  "native-aapt/libprotobuf.so": {
+    "sha256": "28e748a8d83c0e6090d914d00b2a64e2460327ebe1b2c9ba6a3aef02e1205d91",
+    "size": 2997784
+  },
+  "native-aapt/libtool_aapt2.so": {
+    "sha256": "9342875c766b4c2838a8527306f614918fd481ad61895eb69f1d04b6c8faefe1",
+    "size": 3595544
+  },
+  "native-aapt/libutf8_validity.so": {
+    "sha256": "b1b285ff2274dbc2ae917eaac72ad57fbf6208d0accbcc93bf22753a4c23236a",
+    "size": 7088
+  },
+  "native-aapt/libz_1.so": {
+    "sha256": "ed8912bdba0c5fc195235b440436634ec9d8b83e788af6f1c6d8885a33e38c75",
+    "size": 72880
+  },
+  "sdk/build-tools/30.0.3/NOTICE.txt": {
+    "sha256": "c0ad9bfbab4402b8d30b797ebbd0e20fb08655fcebd90b11c5dc23f1059a3d4a",
+    "size": 766452
+  },
+  "sdk/build-tools/30.0.3/aapt": {
+    "sha256": "2a328bb9776d06c03208e3db6378b760f3f13da20f4e37c93e7e6797f60113f7",
+    "size": 1543856
+  },
+  "sdk/build-tools/30.0.3/aapt2": {
+    "sha256": "e6fa8d811d05f71f585667cf947773464fb731d1739904eaf4996a7c42f3b240",
+    "size": 5833176
+  },
+  "sdk/build-tools/30.0.3/aarch64-linux-android-ld": {
+    "sha256": "5c7847596d256c5baeb406d3dcdd70e50e45c059b81b01cb6b673369099d47d2",
+    "size": 343
+  },
+  "sdk/build-tools/30.0.3/aidl": {
+    "sha256": "2f04c4a70c46854587a3407b3082c813fc1838943f668ceddef6fc9623cb6ed2",
+    "size": 3599152
+  },
+  "sdk/build-tools/30.0.3/apksigner": {
+    "sha256": "b47549e373b895ce6ca620d0c7887e674d9615ffa837a86ac601dcfd04adb0f0",
+    "size": 2959
+  },
+  "sdk/build-tools/30.0.3/arm-linux-androideabi-ld": {
+    "sha256": "5c7847596d256c5baeb406d3dcdd70e50e45c059b81b01cb6b673369099d47d2",
+    "size": 343
+  },
+  "sdk/build-tools/30.0.3/bcc_compat": {
+    "sha256": "43089983f446c45d9390a37718c2e660e0eb7db65d2b9d95c43c12b99b9d109e",
+    "size": 39488
+  },
+  "sdk/build-tools/30.0.3/core-lambda-stubs.jar": {
+    "sha256": "b370525f81bd8da7a6f9bb37958963ad469f1517813a20632eaf51c6f0cdee93",
+    "size": 18159
+  },
+  "sdk/build-tools/30.0.3/d8": {
+    "sha256": "d30e6d3332cc3f85ca03e6031d55da21e7716cb508114e8a1f275351521948a9",
+    "size": 2598
+  },
+  "sdk/build-tools/30.0.3/dexdump": {
+    "sha256": "ac2e88b00ec52cbea7dba79f46f1d5d0494a7704c37810cf631dd0d42e75d9e7",
+    "size": 4097872
+  },
+  "sdk/build-tools/30.0.3/dx": {
+    "sha256": "c92940e8cbf8155a172d98832b99990ead22d37a3cdf4b578e8c504bb7e870b2",
+    "size": 2577
+  },
+  "sdk/build-tools/30.0.3/i686-linux-android-ld": {
+    "sha256": "5c7847596d256c5baeb406d3dcdd70e50e45c059b81b01cb6b673369099d47d2",
+    "size": 343
+  },
+  "sdk/build-tools/30.0.3/lld": {
+    "sha256": "a4d5291a75bfa2350de74a00a3aa5099f190fd6bc86c581bb38215720884fc15",
+    "size": 647
+  },
+  "sdk/build-tools/30.0.3/llvm-rs-cc": {
+    "sha256": "ca926724b950ec298031c60692d906b3eb82176113f5d26736896420d2abe23a",
+    "size": 1093784
+  },
+  "sdk/build-tools/30.0.3/mainDexClasses": {
+    "sha256": "b0bc57af550264bd3049236d51866a523deb741d979293d1fb0908a2c3874db7",
+    "size": 4732
+  },
+  "sdk/build-tools/30.0.3/mainDexClasses.rules": {
+    "sha256": "82a0b4b0d1911ccea00b914766a4c4750257521dc5799739837ceb3a2614d8fc",
+    "size": 758
+  },
+  "sdk/build-tools/30.0.3/mainDexClassesNoAapt.rules": {
+    "sha256": "6b171e26c7b63cc54ab2314166fb0b1ec97c54e157679b2b95b2a778f66faec1",
+    "size": 310
+  },
+  "sdk/build-tools/30.0.3/mipsel-linux-android-ld": {
+    "sha256": "5c7847596d256c5baeb406d3dcdd70e50e45c059b81b01cb6b673369099d47d2",
+    "size": 343
+  },
+  "sdk/build-tools/30.0.3/package.xml": {
+    "sha256": "41cd9f4b56a297046b66a9be446852c4d55e5eba05c6b5897cc880df3052ec56",
+    "size": 816
+  },
+  "sdk/build-tools/30.0.3/runtime.properties": {
+    "sha256": "5c317bc7dfb52abf6e18b49ee439864869c1359f38c265fd7966b1e03578785d",
+    "size": 17
+  },
+  "sdk/build-tools/30.0.3/source.properties": {
+    "sha256": "615acc6b54a12b078860cd6c0f3d40da05c05b93824ee6ea808c7f5ec2638b52",
+    "size": 63
+  },
+  "sdk/build-tools/30.0.3/split-select": {
+    "sha256": "b1a2f493271d4a2c8233b5aecfb235974bc6f7fc0b19f62cdcead4bc327e525d",
+    "size": 1502920
+  },
+  "sdk/build-tools/30.0.3/x86_64-linux-android-ld": {
+    "sha256": "5c7847596d256c5baeb406d3dcdd70e50e45c059b81b01cb6b673369099d47d2",
+    "size": 343
+  },
+  "sdk/build-tools/30.0.3/zipalign": {
+    "sha256": "54761471b7e93650b7f0e6c0fe49e104849a6c87db7c76fe004fb5183b88cf59",
+    "size": 232120
+  },
+  "sdk/platforms/android-35/android.jar": {
+    "sha256": "4566663c3876e022b4fa4ced8c8697c4ab1688267f090114fd92d027b32e619b",
+    "size": 27092450
+  },
+  "termux/bin/clang": {
+    "sha256": "3599a121ecc11b433d23bc43545bc0441f9a8ffcc587ea18e312d88188fcf282",
+    "size": 121040
+  },
+  "termux/bin/ld.lld": {
+    "sha256": "7a0e3dad3eaeaf7ec0e85337ab1047470141e95aae11e4b51eb12c749c1a561a",
+    "size": 5871888
+  },
+  "termux/lib/libLLVM.so": {
+    "sha256": "ae20f8a19dcd84740bb3b3c7cc5845ec44f5143cbf7dab44a64160a4b7f21fa0",
+    "size": 133597776
+  },
+  "termux/lib/libc++_shared.so": {
+    "sha256": "05bef9d3901910c3ff8ab450b03bc8b28383d363a2290f2f7b9aed7331ea6ff7",
+    "size": 1423696
+  },
+  "termux/lib/libclang-cpp.so": {
+    "sha256": "1f2f35ec08f3e24ff23bfa6c0e1a8f2cd2c818fa2c772268b26aff123aacd4d4",
+    "size": 62972824
+  },
+  "termux/lib/libz.so.1": {
+    "sha256": "df5e95e3ea1ffb8f2e0dcebfc43a6c0824b6aebec11752ad8f8764123e24f8a6",
+    "size": 74056
+  },
+  "termux/lib/libzstd.so.1": {
+    "sha256": "1677d5e828c1839f111f0261697c08f99a5e4e80434659ab88e5ff859a1374f7",
+    "size": 820840
+  },
+  "ubuntu/usr/bin/aarch64-linux-gnu-as": {
+    "sha256": "f967655af3cf9006cb745fc40d9048157281f3bcddd8af2f2dc705dded76eaae",
+    "size": 530008
+  },
+  "ubuntu/usr/bin/aarch64-linux-gnu-gcc-15": {
+    "sha256": "5b06a5b85cab901e2af3e8f351a6d4e8e6a93af24797bd8c01e5391ac6b4e63b",
+    "size": 1251912
+  },
+  "ubuntu/usr/bin/aarch64-linux-gnu-ld.bfd": {
+    "sha256": "95d27d6b6dc53580345a26f2be30ec0f967633d24d9e475ab323ac81711eb4b5",
+    "size": 2500216
+  },
+  "ubuntu/usr/libexec/gcc/aarch64-linux-gnu/15/cc1": {
+    "sha256": "4b4806b78c3921f2cefece2531a68e6b0280fb2b3a135a3cff66f298c182fccf",
+    "size": 34495664
+  },
+  "ubuntu/usr/libexec/gcc/aarch64-linux-gnu/15/collect2": {
+    "sha256": "8bf651c6364db9f58bea29d8782c6436555f919201eb1f06aa24e090eae34442",
+    "size": 528144
+  }
+}

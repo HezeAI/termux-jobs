@@ -50,6 +50,11 @@ with an index of all entries from that period. Use it as historical evidence.
   historical. Retain backup 1499 and obtain a separate request for any new
   rollback. [Signer gate][signer], [release rules][releasing],
   [decision history][backuphistory].
+- **2026-11-21 — Gallery tests on ARM64 OpenJDK 11.** The local Linux
+  JDK's JPEG plugin depends on the Ubuntu ARM64 libjpeg.so.8. In Ubuntu AI,
+  supply the verified library from a project-local directory to the test
+  process. The unchanged gallery-copy test then passes. The Android APK does
+  not need this host library. [Release validation](docs/fork/VALIDATION-v2.1.9.md).
 - **2026-11-20 — Local ARM64 build tools.** In Ubuntu on aarch64, the old system
   AAPT2 failed to read the SDK 35 resource table. Android AAPT2 from the
   verified DevKit source kit built successfully with its complete set of
