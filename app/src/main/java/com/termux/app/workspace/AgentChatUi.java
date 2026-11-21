@@ -84,6 +84,7 @@ final class AgentChatUi {
     AgentChatUi(TermuxActivity a,Supplier<WorkspaceStore.Session> c,BooleanSupplier v,Transport t){
         activity=a;current=c;visible=v;transport=t;surface=a.findViewById(R.id.workspace_terminal_surface);
         view=new AgentChatView(a,this::details,this::older,()->{},this::terminal,this::interrupt);
+        view.copyMessage=this::copyMessage;
         attachments=new ChatAttachmentUi(a,view);view.thumbnail=attachments::thumbnail;
         view.assistantName("OpenCode");
         view.setVisibility(View.GONE);surface.addView(view,new FrameLayout.LayoutParams(-1,-1));handler.post(poll);
@@ -92,7 +93,7 @@ final class AgentChatUi {
     private boolean eligible(){WorkspaceStore.Session p=current.get();return !closed&&p!=null&&(p.aiAgent.equals("opencode")||p.geminiAgent||p.claudeAgent||CodexChatControl.enabled(activity.getFilesDir(),p));}
     private boolean selected(){return eligible()&&visible.getAsBoolean();}
     private String key(WorkspaceStore.Session p){return p.id+":"+(p.environment.equals("codex")?"codex:"+p.codexSocketId:p.claudeAgent?"claude:"+p.claudeSocketId+":"+p.claudeThread:p.geminiAgent?p.geminiSocketId+":"+p.geminiThread:p.aiSocketId+":"+p.aiThread)+":"+p.handle;}
-    private WorkspaceStore.Session snapshot(){WorkspaceStore.Session p=current.get();WorkspaceStore.Session s=new WorkspaceStore.Session();s.environment=p.environment;s.codexEnvironment=p.codexEnvironment;s.codexSocketId=p.codexSocketId;s.id=p.id;s.name=p.name;s.directory=p.directory;s.aiThread=p.aiThread;s.aiSocketId=p.aiSocketId;s.aiAgent=p.aiAgent;s.aiConnection=p.aiConnection;s.aiModel=p.aiModel;s.aiVariant=p.aiVariant;s.geminiAgent=p.geminiAgent;s.geminiSocketId=p.geminiSocketId;s.geminiThread=p.geminiThread;s.geminiModel=p.geminiModel;s.claudeAgent=p.claudeAgent;s.claudeSocketId=p.claudeSocketId;s.claudeThread=p.claudeThread;s.claudeModel=p.claudeModel;s.claudeMode=p.claudeMode;return s;}
+    private WorkspaceStore.Session snapshot(){WorkspaceStore.Session p=current.get();WorkspaceStore.Session s=new WorkspaceStore.Session();s.environment=p.environment;s.codexEnvironment=p.codexEnvironment;s.codexSocketId=p.codexSocketId;s.codexSpeed=p.codexSpeed;s.id=p.id;s.name=p.name;s.directory=p.directory;s.aiThread=p.aiThread;s.aiSocketId=p.aiSocketId;s.aiAgent=p.aiAgent;s.aiConnection=p.aiConnection;s.aiModel=p.aiModel;s.aiVariant=p.aiVariant;s.geminiAgent=p.geminiAgent;s.geminiSocketId=p.geminiSocketId;s.geminiThread=p.geminiThread;s.geminiModel=p.geminiModel;s.claudeAgent=p.claudeAgent;s.claudeSocketId=p.claudeSocketId;s.claudeThread=p.claudeThread;s.claudeModel=p.claudeModel;s.claudeMode=p.claudeMode;return s;}
     boolean terminalBack(){if(terminal==null)return false;terminal.dismiss();return true;}
     boolean terminalVisible(){return terminal!=null&&terminal.isShowing();}
     boolean handlesComposer(){return terminal==null&&keepsChatPresentation();}
@@ -100,7 +101,7 @@ final class AgentChatUi {
     private java.util.function.Consumer<ComposerLimits> terminalLimits=limits->limits.unavailable();
     private ComposerLimits openTerminalLimits;
     void terminalLimits(java.util.function.Consumer<ComposerLimits> update){terminalLimits=update;}
-    String name(){WorkspaceStore.Session p=current.get();return p!=null&&p.environment.equals("codex")?"Codex":p!=null&&p.claudeAgent?"Claude":p!=null&&p.geminiAgent?"Gemini":"OpenCode";}
+    String name(){WorkspaceStore.Session p=current.get();return p!=null&&p.environment.equals("codex")?"Codex":p!=null&&p.claudeAgent?"Claude":p!=null&&p.geminiAgent?(GeminiCli.antigravity(p)?"Antigravity":"Gemini"):"OpenCode";}
     boolean structured(){return selected()&&nativeChat;}
     boolean terminalAvailable(){return selected();}
     boolean authenticationRequired(){return selected()&&codexAuthRequired;}
@@ -112,13 +113,70 @@ final class AgentChatUi {
     boolean canInterrupt(){return !closed&&selected()&&nativeChat&&busy;}
     boolean canShowStop(){return canInterrupt()&&!stopToken.isEmpty()&&owner.equals(key(current.get()));}
     void stopCurrent(){if(canInterrupt())interrupt();}
-    private void mergeHistoryRows(JSONObject r,boolean previous,WorkspaceStore.Session p){
-                java.util.Set<String> known=null;if((p.geminiAgent||p.claudeAgent||p.environment.equals("codex")||p.aiAgent.equals("opencode"))&&r.has("knownMessages")&&!r.optBoolean("partialHistory")){known=new java.util.HashSet<>();JSONArray ids=r.optJSONArray("knownMessages");if(ids!=null)for(int i=0;i<ids.length();i++)known.add(ids.optString(i));}
-                JSONArray replaced=r.optJSONArray("replacedMessages");if(replaced!=null){Set<String> removed=new HashSet<>();for(int i=0;i<replaced.length();i++)removed.add(replaced.optString(i));rows.entrySet().removeIf(e->removed.contains(e.getValue().optString("message")));}
-                JSONArray list=r.optJSONArray("rows");LinkedHashMap<String,JSONObject> updated=new LinkedHashMap<>();if(previous&&list!=null)for(int i=0;i<list.length();i++){JSONObject row=list.optJSONObject(i);if(row!=null&&!rows.containsKey(row.optString("key")))updated.put(row.optString("key"),row);}if(previous)updated.putAll(rows);else{Set<String> partialMessages=new HashSet<>();JSONArray partial=r.optJSONArray("partialMessages");if(partial!=null)for(int i=0;i<partial.length();i++)partialMessages.add(partial.optString(i));Set<String> refreshed=new HashSet<>();if(list!=null)for(int i=0;i<list.length();i++)refreshed.add(list.optJSONObject(i).optString("message"));for(Map.Entry<String,JSONObject> e:rows.entrySet())if((known==null||known.contains(e.getValue().optString("message")))&&(!refreshed.contains(e.getValue().optString("message"))||partialMessages.contains(e.getValue().optString("message")))&&!e.getValue().optBoolean("queued"))updated.put(e.getKey(),e.getValue());}
-                if(!previous&&list!=null)for(int i=0;i<list.length();i++){JSONObject row=list.optJSONObject(i);if(row!=null)updated.put(row.optString("key"),row);}
-                rows.clear();rows.putAll(updated);if(previous||older.isEmpty()&&!historyExhausted){Object cursor=r.opt("older");older=cursor instanceof String?(String)cursor:"";if(previous)historyExhausted=older.isEmpty();}historyRefreshRequired=false;
-                AgentOfflineData.files(activity,p,new ArrayList<>(rows.values()),historyExhausted);
+    private void mergeHistoryRows(JSONObject result,boolean previous,WorkspaceStore.Session profile){
+        JSONArray list=result.optJSONArray("rows");
+        LinkedHashMap<String,JSONObject> incoming=new LinkedHashMap<>();
+        if(list!=null)for(int i=0;i<list.length();i++){
+            JSONObject row=list.optJSONObject(i);
+            if(row!=null&&!row.optString("key").isEmpty())incoming.put(row.optString("key"),row);
+        }
+        Set<String> replaced=historyIds(result.optJSONArray("replacedMessages"));
+        rows.entrySet().removeIf(entry->replaced.contains(entry.getValue().optString("message")));
+        LinkedHashMap<String,JSONObject> updated;
+        if(previous)updated=mergeOrderedHistory(rows,incoming);
+        else{
+            Set<String> known=result.has("knownMessages")&&!result.optBoolean("partialHistory")?
+                historyIds(result.optJSONArray("knownMessages")):null;
+            Set<String> partial=historyIds(result.optJSONArray("partialMessages"));
+            Set<String> refreshed=new HashSet<>();
+            for(JSONObject row:incoming.values())refreshed.add(row.optString("message"));
+            LinkedHashMap<String,JSONObject> retained=new LinkedHashMap<>();
+            for(Map.Entry<String,JSONObject> entry:rows.entrySet()){
+                JSONObject row=entry.getValue();
+                String message=row.optString("message");
+                if(incoming.containsKey(entry.getKey())||(known==null||known.contains(message))&&
+                    (!refreshed.contains(message)||partial.contains(message))&&!row.optBoolean("queued")){
+                    retained.put(entry.getKey(),row);
+                }
+            }
+            updated=mergeOrderedHistory(incoming,retained);
+        }
+        rows.clear();rows.putAll(updated);
+        if(previous||older.isEmpty()&&!historyExhausted){
+            Object cursor=result.opt("older");older=cursor instanceof String?(String)cursor:"";
+            if(previous)historyExhausted=older.isEmpty();
+        }
+        historyRefreshRequired=false;
+        AgentOfflineData.files(activity,profile,new ArrayList<>(rows.values()),historyExhausted);
+    }
+    private static Set<String> historyIds(JSONArray ids){
+        Set<String> result=new HashSet<>();
+        if(ids!=null)for(int i=0;i<ids.length();i++)result.add(ids.optString(i));
+        return result;
+    }
+    // Both sources are chronological. Keep overlap in the preferred order and
+    // retain otherwise missing rows next to the closest common transcript row.
+    static LinkedHashMap<String,JSONObject> mergeOrderedHistory(Map<String,JSONObject> preferred,Map<String,JSONObject> retained){
+        Map<String,List<Map.Entry<String,JSONObject>>> preceding=new HashMap<>();
+        List<Map.Entry<String,JSONObject>> pending=new ArrayList<>();
+        String lastShared=null;
+        for(Map.Entry<String,JSONObject> entry:retained.entrySet()){
+            String key=entry.getKey();
+            if(preferred.containsKey(key)){
+                if(!pending.isEmpty()){preceding.put(key,pending);pending=new ArrayList<>();}
+                lastShared=key;
+            }else pending.add(entry);
+        }
+        LinkedHashMap<String,JSONObject> result=new LinkedHashMap<>();
+        if(lastShared==null)for(Map.Entry<String,JSONObject> entry:pending)result.put(entry.getKey(),entry.getValue());
+        for(Map.Entry<String,JSONObject> preferredRow:preferred.entrySet()){
+            String key=preferredRow.getKey();
+            List<Map.Entry<String,JSONObject>> earlier=preceding.get(key);
+            if(earlier!=null)for(Map.Entry<String,JSONObject> entry:earlier)result.put(entry.getKey(),entry.getValue());
+            result.put(key,preferredRow.getValue());
+            if(key.equals(lastShared))for(Map.Entry<String,JSONObject> entry:pending)result.put(entry.getKey(),entry.getValue());
+        }
+        return result;
     }
     private final java.util.Set<AgentProjectPanel.Chat> projectReaders=new java.util.HashSet<>();
     private String projectFilesStamp="";
@@ -185,11 +243,11 @@ final class AgentChatUi {
     }
     private void savePresentation(){
         if(!resolved&&!nativeChat)return;
-        AgentChatCache.State state=new AgentChatCache.State();state.indicator=indicator;state.requestTiming=requestTiming;state.modelConnection=modelConnection;state.rows.putAll(rows);state.timelineExpansion.putAll(view.timelineExpansion);state.historyExhausted=historyExhausted;state.older=older;state.model=currentModel;state.session=nativeSession;state.notice=actionNotice;state.nativeChat=nativeChat;state.resolved=resolved;state.busy=busy;state.directShell=directShell;state.needsTerminal=requiresTerminal||codexAuthRequired;state.connected=connected;state.failed=transportFailed;state.position=view.position();cache.put(owner,state);
+        AgentChatCache.State state=new AgentChatCache.State();state.indicator=indicator;state.requestTiming=requestTiming;state.modelConnection=modelConnection;state.rows.putAll(rows);state.timelineExpansion.putAll(view.timelineExpansion);state.historyExhausted=historyExhausted;state.older=older;state.model=currentModel;state.session=nativeSession;state.notice=actionNotice;state.nativeChat=nativeChat;state.resolved=resolved;state.busy=busy;state.directShell=directShell;state.needsTerminal=requiresTerminal||codexAuthRequired;state.connected=connected;state.failed=transportFailed;state.position=view.position();state.historyFirst=view.historyFirst();state.historyPinned=view.historyPinned();cache.put(owner,state);
     }
     private void restorePresentation(AgentChatCache.State state){
         indicator=state.indicator;requestTiming=state.requestTiming;modelConnection=state.modelConnection;modelConnectionView();rows.putAll(state.rows);historyRefreshRequired=state.trimmed;historyExhausted=state.historyExhausted&&!state.trimmed;older=state.trimmed?"":state.older;currentModel=state.model;nativeSession=state.session;actionNotice=state.notice;nativeChat=state.nativeChat;resolved=state.resolved;busy=state.busy;directShell=state.directShell;requiresTerminal=state.needsTerminal;connected=state.connected;transportFailed=state.failed;
-        view.timelineExpansion.putAll(state.timelineExpansion);view.rows(new ArrayList<>(rows.values()),!older.isEmpty());if(transportFailed)connectionFailure();else{JSONObject status=op("chat-snapshot");try{status.put("connected",connected).put("needsTerminal",requiresTerminal);}catch(JSONException impossible){throw new IllegalStateException(impossible);}connectionState(status);}view.restorePosition(state.position);
+        view.timelineExpansion.putAll(state.timelineExpansion);view.restoreHistory(new ArrayList<>(rows.values()),!older.isEmpty(),state.historyFirst,state.historyPinned);if(transportFailed)connectionFailure();else{JSONObject status=op("chat-snapshot");try{status.put("connected",connected).put("needsTerminal",requiresTerminal);}catch(JSONException impossible){throw new IllegalStateException(impossible);}connectionState(status);}view.restorePosition(state.position);
         // Pending permissions/forms are intentionally rebuilt only from a fresh native snapshot.
     }
     private void connectionFailure(){if(vertexSetup())return;view.connection(tr("Нет связи с сессией. Повторяем подключение автоматически.\nЕсли ожидание затянулось, откройте терминал этого чата и проверьте запуск агента. Нажмите здесь, чтобы проверить снова.","No connection to the session. Retrying automatically.\nIf this persists, open this chat’s terminal and check that the agent started. Tap here to check again."),this::retryConnection);}
@@ -226,15 +284,66 @@ final class AgentChatUi {
         stopConfirmation=dialog;dialog.setOnDismissListener(d->{if(stopConfirmation==dialog)stopConfirmation=null;});dialog.setCanceledOnTouchOutside(true);dialog.show();
     }
     private String tr(String ru,String en){return WorkspaceLanguage.code(activity).equals("ru")?ru:en;}
+    // Codex can return only one native turn for a cursor. Collect short pages
+    // off the UI thread so "Earlier messages" can still add a useful window.
+    private JSONObject readOlderWindow(WorkspaceStore.Session profile,JSONObject firstRequest,String session)throws Exception{
+        JSONObject first=null;
+        LinkedHashMap<String,JSONObject> accumulated=new LinkedHashMap<>();
+        Set<String> messages=new HashSet<>(),cursors=new HashSet<>(),replaced=new LinkedHashSet<>();
+        String cursor=firstRequest.optString("cursor");
+        long limit=android.os.SystemClock.elapsedRealtime()+2000;
+        int chars=0;
+        for(int page=0;page<25&&cursors.add(cursor);page++){
+            JSONObject request=page==0?firstRequest:op("chat-snapshot").put("cursor",cursor);
+            JSONObject value;
+            try{value=transport.request(profile,request);}catch(Exception failure){if(first==null)throw failure;break;}
+            if(value==null||!value.optBoolean("nativeChat")||value.optBoolean("historyReset")
+                ||!session.equals(value.optString("session",value.optString("thread",session)))){
+                if(first==null)return value;
+                break;
+            }
+            JSONArray list=value.optJSONArray("rows");
+            if(list==null){if(first==null)return value;break;}
+            int size=list.toString().length();
+            if(first!=null&&chars+size>1536*1024)break;
+            LinkedHashMap<String,JSONObject> earlier=new LinkedHashMap<>();
+            for(int n=0;n<list.length();n++){
+                JSONObject row=list.optJSONObject(n);
+                if(row==null||row.optString("key").isEmpty())continue;
+                earlier.put(row.optString("key"),row);
+                String message=row.optString("message");
+                messages.add(message.isEmpty()?row.optString("key"):message);
+            }
+            accumulated=mergeOrderedHistory(accumulated,earlier);
+            replaced.addAll(historyIds(value.optJSONArray("replacedMessages")));
+            chars+=size;
+            if(first==null)first=value;
+            cursor=value.opt("older") instanceof String?value.optString("older"):"";
+            if(cursor.isEmpty()||messages.size()>=AgentChatView.HISTORY_PAGE||android.os.SystemClock.elapsedRealtime()>=limit)break;
+        }
+        if(first==null)return null;
+        return first.put("rows",new JSONArray(accumulated.values())).put("older",cursor.isEmpty()?JSONObject.NULL:cursor)
+            .put("replacedMessages",new JSONArray(replaced));
+    }
     private void load(boolean previous){
-        if(!selected()||loading)return;loading=true;if(previous){olderLoading=true;view.olderState(true,null);}final int g=generation;final WorkspaceStore.Session p=snapshot();final JSONObject q=op("chat-snapshot");
+        if(!selected()||loading)return;loading=true;if(previous){olderLoading=true;view.olderState(true,null);}final int g=generation;final WorkspaceStore.Session p=snapshot();final JSONObject q=op("chat-snapshot");final String session=nativeSession;
         try{if(previous)q.put("cursor",older);}catch(JSONException ignored){}
-        reads.execute(()->{JSONObject result=null;try{result=transport.request(p,q);}catch(Exception ignored){try{JSONObject status=transport.request(p,op("status"));if(status.optBoolean("ok")&&!status.optBoolean("nativeChat"))result=status;}catch(Exception unavailable){}}final JSONObject r=result;
-            handler.post(()->{if(closed||g!=generation)return;loading=false;olderLoading=false;try{if(previous&&r!=null&&r.optBoolean("historyReset")){Object cursor=r.opt("older");older=cursor instanceof String?(String)cursor:"";historyExhausted=older.isEmpty();view.rows(new ArrayList<>(rows.values()),!older.isEmpty());view.olderState(false,tr("История обновилась. Загрузить предыдущие","History refreshed. Load earlier"));return;}if(previous&&(r==null||!r.optBoolean("nativeChat"))){view.olderState(false,tr("Не удалось загрузить. Повторить","Could not load. Retry"));return;}if(r==null||!r.optBoolean("nativeChat")){if(r!=null){resolved=true;nativeChat=false;connected=false;sync();}if(r==null){transportFailed=true;connected=false;connectionFailure();}else view.connection("");return;}
-                if(!previous)indicator=AgentIndicatorState.from(r,false);boolean authChanged=codexAuthRequired!=r.optBoolean("authRequired");codexAuthRequired=r.optBoolean("authRequired");transportFailed=false;attachmentsSupported=r.optBoolean("attachmentsSupported");connected=r.optBoolean("connected");String actualSession=r.optString("session");if((p.geminiAgent||p.claudeAgent||p.environment.equals("codex")||p.aiAgent.equals("opencode"))&&!actualSession.equals(nativeSession)){view.historyBaseline();if(!nativeSession.isEmpty()){generation++;olderQueued=false;view.olderState(false,null);actionNotice="";rows.clear();older="";historyExhausted=false;requestStamp="";view.clear();if(details!=null)details.dismiss();if(formDialog!=null)formDialog.dismiss();if(vertexDialog!=null)vertexDialog.dismiss();}nativeSession=actualSession;modelConnection=null;}
-                if(!previous){modelConnection=r.optJSONObject("modelConnection");modelConnectionView();}
+        reads.execute(()->{JSONObject result=null;try{result=previous?readOlderWindow(p,q,session):transport.request(p,q);}catch(Exception ignored){try{JSONObject status=transport.request(p,op("status"));if(status.optBoolean("ok")&&!status.optBoolean("nativeChat"))result=status;}catch(Exception unavailable){}}final JSONObject r=result;
+            handler.post(()->{if(closed||g!=generation)return;loading=false;olderLoading=false;try{if(previous&&r!=null&&r.optBoolean("historyReset")){Object cursor=r.opt("older");older=cursor instanceof String?(String)cursor:"";historyExhausted=older.isEmpty();view.rows(new ArrayList<>(rows.values()),!older.isEmpty());view.olderState(false,tr("История обновилась. Загрузить предыдущие","History refreshed. Load earlier"));return;}if(previous){
+                    if(r==null||!r.optBoolean("nativeChat")||r.optJSONArray("rows")==null||
+                        !nativeSession.equals(r.optString("session",r.optString("thread",nativeSession)))){
+                        view.olderState(false,tr("Не удалось загрузить. Повторить","Could not load. Retry"));return;
+                    }
+                    mergeHistoryRows(r,true,p);
+                    view.olderRows(new ArrayList<>(rows.values()),!older.isEmpty());
+                    view.olderState(false,null);
+                    notifyProjectFilesIfChanged();
+                    return;
+                }if(r==null||!r.optBoolean("nativeChat")){if(r!=null){resolved=true;nativeChat=false;connected=false;sync();}if(r==null){transportFailed=true;connected=false;connectionFailure();}else view.connection("");return;}
+                indicator=AgentIndicatorState.from(r,false);boolean authChanged=codexAuthRequired!=r.optBoolean("authRequired");codexAuthRequired=r.optBoolean("authRequired");transportFailed=false;attachmentsSupported=r.optBoolean("attachmentsSupported");connected=r.optBoolean("connected");String actualSession=r.optString("session");if((p.geminiAgent||p.claudeAgent||p.environment.equals("codex")||p.aiAgent.equals("opencode"))&&!actualSession.equals(nativeSession)){view.historyBaseline();if(!nativeSession.isEmpty()){generation++;olderQueued=false;view.olderState(false,null);actionNotice="";rows.clear();older="";historyExhausted=false;requestStamp="";view.clear();if(details!=null)details.dismiss();if(formDialog!=null)formDialog.dismiss();if(vertexDialog!=null)vertexDialog.dismiss();}nativeSession=actualSession;modelConnection=null;}
+                modelConnection=r.optJSONObject("modelConnection");modelConnectionView();
                 String model=AiAgentsUi.sessionModelLabel(p,r.optJSONObject("model"));boolean modelChanged=!model.equals(currentModel);currentModel=model;boolean changed=!stopToken.equals(r.optString("stopToken"))||authChanged||modelChanged||busy!=r.optBoolean("busy")||requiresTerminal!=r.optBoolean("needsTerminal");requiresTerminal=r.optBoolean("needsTerminal");nativeChat=true;resolved=true;busy=r.optBoolean("busy");if(stopAwaiting&&!busy){stopAwaiting=false;actionNotice=tr("Агент больше не выполняет запрос.","The agent is no longer running a request.");}stopToken=r.optString("stopToken");requestTiming=r.optJSONObject("requestTiming");directShell=r.optBoolean("directShell");sync();layoutChatKeys();syncExtraKeys();if(changed)visibilityChanged.run();
-                mergeHistoryRows(r,previous,p);connectionState(r);if(previous){view.olderRows(new ArrayList<>(rows.values()),!older.isEmpty());view.olderState(false,null);}else view.liveRows(new ArrayList<>(rows.values()),!older.isEmpty(),busy);requests(r.optJSONObject("permission"),r.optJSONArray("forms"),r.optBoolean("needsTerminal"),r.optString("questionSupport"));if(p.environment.equals("codex")&&codexLoginTerminal&&!codexAuthRequired&&connected&&terminal!=null)terminal.dismissImmediately();
+                mergeHistoryRows(r,false,p);connectionState(r);view.liveRows(new ArrayList<>(rows.values()),!older.isEmpty(),busy);requests(r.optJSONObject("permission"),r.optJSONArray("forms"),r.optBoolean("needsTerminal"),r.optString("questionSupport"));if(p.environment.equals("codex")&&codexLoginTerminal&&!codexAuthRequired&&connected&&terminal!=null)terminal.dismissImmediately();
                 notifyProjectFilesIfChanged();
                 refreshActionDetails();
                 JSONObject thought=rows.get(thinkingKey);if(details!=null&&details.isShowing()&&thinkingBody!=null&&thought!=null&&!thought.optBoolean("more")&&thinkingBody.getSelectionStart()==thinkingBody.getSelectionEnd()&&!thinkingBody.getText().toString().equals(thought.optString("body"))){boolean bottom=thinkingBody.getHeight()-thinkingScroll.getHeight()-thinkingScroll.getScrollY()<view.dp(48);thinkingBody.setText(thought.optString("body"));if(bottom){ScrollView held=thinkingScroll;held.post(()->held.fullScroll(View.FOCUS_DOWN));}}
@@ -252,6 +361,11 @@ final class AgentChatUi {
     private void connectionState(JSONObject r){
         if(current.get().environment.equals("codex")&&r.optBoolean("authRequired")){
             view.connection(r.optBoolean("loginPending")?tr("Вход ожидает подтверждения в браузере. Нажмите, чтобы открыть окно входа.","Sign-in awaits browser confirmation. Tap to open sign-in."):r.optBoolean("loginError")?tr("Вход не завершён. Нажмите, чтобы повторить вход в Codex.","Sign-in did not complete. Tap to retry Codex sign-in."):tr("Войти в Codex — нажмите для подключения аккаунта.","Sign in to Codex — tap to connect your account."),this::nativeTerminal);return;
+        }
+        if(GeminiCli.antigravity(current.get())&&r.optBoolean("authRequired")){
+            view.connection(tr("Войдите в Google через Antigravity CLI. Нажмите, чтобы открыть терминал справа.",
+                "Sign in to Google through Antigravity CLI. Tap to open the terminal on the right."),this::nativeTerminal);
+            return;
         }
         if(current.get().geminiAgent&&current.get().geminiAuth.equals("api")&&r.optBoolean("authError")){view.connection(tr("Не удалось войти в Gemini. Проверьте API-ключ в настройках сессии/пресета и перезапустите её. Нажмите для просмотра терминала.","Could not sign in to Gemini. Check the API key in session/preset settings and restart the session. Tap to inspect the terminal."),this::terminal);return;}
         if(r.optBoolean("needsTerminal")){if((current.get().claudeAgent||current.get().environment.equals("codex"))&&!r.optString("connectionNotice").isEmpty()){String notice=r.optString("connectionNotice");view.connection(notice.length()>600?notice.substring(0,600):notice);return;}view.connection(tr("Требуется действие в терминале. Откройте терминал этого чата в шапке.","An action is needed in the terminal. Open this chat’s terminal in the header."));return;}
@@ -272,7 +386,7 @@ final class AgentChatUi {
         if(kind.equals("message")&&attachments.busy()){Toast.makeText(activity,tr("Дождитесь подготовки вложения.","Wait for the attachment to finish preparing."),Toast.LENGTH_SHORT).show();return;}
         final JSONArray refs=kind.equals("message")?attachments.references():new JSONArray();final String attachmentOwner=owner;
         if(refs.length()>0&&!attachmentsSupported){Toast.makeText(activity,tr("Эта сессия ещё не поддерживает вложения. Перезапустите её с сохранением чата.","This session does not support attachments yet. Restart it with the existing chat."),Toast.LENGTH_LONG).show();return;}WorkspaceStore.Session p=snapshot();final String k=owner+":"+((p.geminiAgent||p.claudeAgent||p.environment.equals("codex")||p.aiAgent.equals("opencode"))?nativeSession+":":"")+kind+":"+text+":"+refs;String id=sendIDs.get(k);if(id==null){id="msg_"+UUID.randomUUID().toString().replace("-","");sendIDs.put(k,id);}
-        JSONObject q=op("chat-send");try{q.put("text",text).put("kind",kind).put("id",id);if(refs.length()>0)q.put("attachments",refs);if(p.geminiAgent||p.claudeAgent||p.environment.equals("codex")||p.aiAgent.equals("opencode"))q.put("session",nativeSession);}catch(JSONException ignored){}
+        JSONObject q=op("chat-send");try{q.put("text",text).put("kind",kind).put("id",id);if(refs.length()>0)q.put("attachments",refs);if(p.environment.equals("codex")&&kind.equals("message"))q.put("speed",p.codexSpeed);if(p.geminiAgent||p.claudeAgent||p.environment.equals("codex")||p.aiAgent.equals("opencode"))q.put("session",nativeSession);}catch(JSONException ignored){}
         if(refs.length()>0)attachments.submitted(refs);
         sendOperation(q,()->{sendIDs.remove(k);if(refs.length()>0)attachments.accepted(attachmentOwner,refs);view.followAfterSend();accepted.run();});
     }
@@ -295,6 +409,39 @@ final class AgentChatUi {
         (q.optString("op").equals("chat-form")?reads:actions).execute(()->{if(closed||g!=generation){if(settled!=null)handler.post(settled);return;}boolean ok=false;String error="";try{JSONObject r=transport.request(p,q);ok=r.optBoolean("ok");error=r.optString("error");}catch(Exception ignored){}final boolean done=ok;final String failureCode=error;
             handler.post(()->{if(settled!=null)settled.run();if(closed||g!=generation)return;if(done){stopAwaiting=q.optString("op").equals("chat-interrupt");actionNotice=q.optString("op").equals("chat-interrupt")?tr("Запрос остановки принят. Ожидается фактический статус агента.","Stop request accepted. Waiting for the agent’s actual status."):"";if(success!=null)success.run();requestStamp="";if(!loading)load(false);}else {actionNotice=tr("Агент не подтвердил действие. Проверьте терминал и фактическое состояние перед повтором. Автоматического повтора нет.","The agent did not confirm the action. Check the terminal and actual state before retrying. There is no automatic retry.");if(q.optString("op").equals("chat-interrupt")){actionNotice=failureCode.equals("STALE_REQUEST")?tr("Запрос уже завершился или сменился. Старое подтверждение отклонено; новый запрос не остановлен.","The request finished or changed. The stale confirmation was rejected; the new request was not stopped."):tr("Остановка не подтверждена. Проверьте фактический статус или штатный терминал агента.","Stop was not confirmed. Check the agent's actual status or native terminal.");if(!loading)load(false);}view.connection(actionNotice);if(failure!=null)failure.run();}});});
     }
+    private static final int MAX_COPY_MESSAGE=2_000_000;
+    private void copyMessage(JSONObject row){
+        if(!selected())return;
+        if(!row.optBoolean("more")){view.copyText(row.optString("body"));return;}
+        final int g=generation;
+        final WorkspaceStore.Session profile=snapshot();
+        final String session=nativeSession;
+        reads.execute(()->{
+            String value=null;
+            try{
+                StringBuilder body=new StringBuilder();
+                int offset=0;
+                for(;;){
+                    if(closed||g!=generation)return;
+                    JSONObject part=transport.request(profile,detailRequest(profile,row,offset,session));
+                    if(part==null||!part.optBoolean("ok")||!(part.opt("body") instanceof String)||!part.has("next"))break;
+                    String chunk=part.getString("body");
+                    if(chunk.length()>MAX_COPY_MESSAGE-body.length())break;
+                    body.append(chunk);
+                    if(part.isNull("next")){value=body.toString();break;}
+                    int next=part.optInt("next",-1);
+                    if(next<=offset||next>MAX_COPY_MESSAGE)break;
+                    offset=next;
+                }
+            }catch(Exception unavailable){/* The clipboard should contain only a complete message. */}
+            final String complete=value;
+            handler.post(()->{
+                if(closed||g!=generation||!selected()||!session.equals(nativeSession))return;
+                if(complete!=null)view.copyText(complete);
+                else Toast.makeText(activity,tr("Не удалось скопировать полное сообщение.","Could not copy the complete message."),Toast.LENGTH_SHORT).show();
+            });
+        });
+    }
     private void details(JSONObject row){
         if(row.optString("kind").equals("completionTime")){
             long time=row.optJSONObject("requestSummary")==null?0:row.optJSONObject("requestSummary").optLong("completedAt");if(time<=0)return;
@@ -306,7 +453,7 @@ final class AgentChatUi {
         }
 
         boolean compactContext=(row.optString("toolType").equals("contextCompaction")||row.optString("part").equals("context"))&&!row.optBoolean("more");
-        if(row.optString("kind").equals("tool")&&!compactContext){actionDetails(row);return;}
+        if(row.optString("kind").equals("tool")){actionDetails(row);return;}
         if(!selected())return;if(row.optString("kind").equals("attachment")&&row.optJSONObject("attachment")!=null){attachments.open(row.optJSONObject("attachment"));return;}if(details!=null)details.dismiss();thinkingBody=null;thinkingScroll=null;thinkingKey="";LinearLayout box=new LinearLayout(activity);box.setOrientation(LinearLayout.VERTICAL);TextView body=view.label(row.optString("body"),14);body.setTextIsSelectable(true);if(compactContext){
             body.setPadding(view.dp(20),view.dp(14),view.dp(20),view.dp(18));
             details=WorkspaceDialogs.builder(activity).setTitle(AgentTimelineSummary.title(row,WorkspaceLanguage.code(activity).equals("ru"))).setView(body).create();details.setCanceledOnTouchOutside(true);details.show();
@@ -323,27 +470,31 @@ final class AgentChatUi {
             reads.execute(()->{JSONObject r=null;try{r=transport.request(p,q);}catch(Exception ignored){}final JSONObject result=r;handler.post(()->{if(closed||g!=generation||!dialog.isShowing())return;next.setEnabled(true);if(result==null||!result.optBoolean("ok")){next.setVisibility(View.VISIBLE);next.setText(tr("Повторить загрузку","Retry loading"));return;}if(offset[0]==0)body.setText((row.optString("kind").equals("receipt")?tr("Разрешение не означает успешного выполнения.\n\n","Permission does not mean successful execution.\n\n"):"")+result.optString("body"));else body.append(result.optString("body"));if(markdownBody!=null)markdownBody.update(name(),body.getText().toString(),null);offset[0]=result.isNull("next")?-1:result.optInt("next",-1);next.setVisibility(offset[0]<0?View.GONE:View.VISIBLE);next.setText(tr("Далее","More"));});});};next.setOnClickListener(v->page[0].run());page[0].run();
     }
     private JSONObject detailRequest(WorkspaceStore.Session p,JSONObject row,int offset,String session){
-        JSONObject q=op("chat-detail");try{if(p.geminiAgent||p.claudeAgent||p.environment.equals("codex")||p.aiAgent.equals("opencode"))q.put("session",session);q.put("message",row.optString("message")).put("part",row.optString("part")).put("offset",offset);}catch(JSONException impossible){throw new IllegalStateException(impossible);}return q;
+        JSONObject q=op("chat-detail");try{if(p.geminiAgent||p.claudeAgent||p.environment.equals("codex")||p.aiAgent.equals("opencode"))q.put("session",session);q.put("message",row.optString("message")).put("part",row.optString("part")).put("offset",offset);if(AgentSubagentPresentation.matches(row))q.put("subagent",true);}catch(JSONException impossible){throw new IllegalStateException(impossible);}return q;
     }
     private void actionDetails(JSONObject row){
         if(!selected())return;if(details!=null)details.dismiss();thinkingBody=null;thinkingScroll=null;thinkingKey="";
         AgentActionDetailsView panel=new AgentActionDetailsView(view,row,attachments::thumbnail,attachments::open);actionDetails=panel;actionManual=false;actionLiveLoading=false;actionLiveStamp="";
-        AlertDialog.Builder builder=WorkspaceDialogs.builder(activity).setTitle(AgentTimelineSummary.title(row,WorkspaceLanguage.code(activity).equals("ru"))).setView(panel);
-        if(!panel.compactPreview())builder.setPositiveButton(tr("Назад","Back"),null);
+        panel.setPadding(view.dp(12),view.dp(8),view.dp(12),view.dp(12));
+        AlertDialog.Builder builder=WorkspaceDialogs.builder(activity).setTitle(AgentTimelineSummary.title(row,WorkspaceLanguage.code(activity).equals("ru"))).setView(panel)
+            .setNeutralButton(tr("Копировать","Copy"),(d,w)->panel.copyOrExport()).setPositiveButton(tr("Закрыть","Close"),null);
         AlertDialog dialog=builder.create();details=dialog;
-        dialog.setOnDismissListener(d->{if(actionDetails==panel){actionDetails=null;actionLiveLoading=false;actionLiveStamp="";}});dialog.setCanceledOnTouchOutside(true);dialog.show();dialog.getWindow().setLayout(Math.round(activity.getResources().getDisplayMetrics().widthPixels*.94f),panel.compactPreview()?android.view.ViewGroup.LayoutParams.WRAP_CONTENT:Math.round(activity.getResources().getDisplayMetrics().heightPixels*.72f));
+        dialog.setOnDismissListener(d->{if(actionDetails==panel){actionDetails=null;actionLiveLoading=false;actionLiveStamp="";}});dialog.setCanceledOnTouchOutside(true);WorkspaceDialogs.centerLibrary(dialog);dialog.show();
         final WorkspaceStore.Session p=snapshot();final String session=nativeSession;final int g=generation;final int[] offset={0};final StringBuilder buffer=new StringBuilder();
         Runnable[] page=new Runnable[1];page[0]=()->{actionManual=true;panel.more.setEnabled(false);JSONObject request=detailRequest(p,row,offset[0],session);
             reads.execute(()->{JSONObject r=null;try{r=transport.request(p,request);}catch(Exception ignored){}JSONObject result=r;handler.post(()->{
                 if(closed||g!=generation||actionDetails!=panel||!dialog.isShowing())return;panel.more.setEnabled(true);
-                if(result==null||!result.optBoolean("ok",true)||!(result.opt("body") instanceof String)){panel.more.setVisibility(View.VISIBLE);panel.more.setText(tr("Повторить загрузку","Retry loading"));return;}
-                String chunk=result.optString("body");int next=result.isNull("next")?-1:result.optInt("next",-1);if(chunk.length()>30000||buffer.length()+chunk.length()>2000000||next>=0&&(next<=offset[0]||next>2000000)){panel.more.setText(tr("Достигнут лимит просмотра","Preview limit reached"));panel.more.setEnabled(false);return;}
-                if(offset[0]==0)buffer.setLength(0);buffer.append(chunk);panel.nativeText(buffer.toString(),next<0);JSONObject latest=rows.get(panel.key());if(next<0&&latest!=null&&CodexActionTimeline.running(latest))actionManual=false;offset[0]=Math.max(0,next);panel.more.setVisibility(next<0?View.GONE:View.VISIBLE);panel.more.setText(tr("Далее","More"));
-            });});};panel.more.setOnClickListener(v->page[0].run());refreshActionDetails();
+                if(result==null||!result.optBoolean("ok",true)||!(result.opt("body") instanceof String)){panel.more.setVisibility(View.VISIBLE);panel.more.setText(tr("Повторить загрузку","Retry loading"));if(AgentSubagentPresentation.matches(row))panel.historyFailure();return;}
+                String chunk=result.optString("body");int next=result.isNull("next")?-1:result.optInt("next",-1);if(chunk.length()>30000||buffer.length()+chunk.length()>(AgentSubagentPresentation.matches(row)?8*1024*1024:2000000)||next>=0&&(next<=offset[0]||next>(AgentSubagentPresentation.matches(row)?8*1024*1024:2000000))){panel.more.setText(tr("Достигнут лимит просмотра","Preview limit reached"));panel.more.setEnabled(false);return;}
+                if(offset[0]==0)buffer.setLength(0);buffer.append(chunk);if(!AgentSubagentPresentation.matches(row)||next<0)panel.nativeText(buffer.toString(),next<0);JSONObject latest=rows.get(panel.key());if(next<0&&latest!=null&&CodexActionTimeline.running(latest))actionManual=false;offset[0]=Math.max(0,next);panel.more.setVisibility(next<0?View.GONE:View.VISIBLE);panel.more.setText(tr("Далее","More"));
+                if(AgentSubagentPresentation.matches(row)&&next>=0)page[0].run();
+            });});};panel.more.setOnClickListener(v->page[0].run());
+        if(AgentSubagentPresentation.matches(row))page[0].run();else refreshActionDetails();
     }
     private void refreshActionDetails(){
         AgentActionDetailsView panel=actionDetails;AlertDialog dialog=details;if(panel==null||dialog==null||!dialog.isShowing())return;JSONObject row=rows.get(panel.key());if(row==null)return;
         panel.update(row);dialog.setTitle(AgentTimelineSummary.title(row,WorkspaceLanguage.code(activity).equals("ru")));
+        if(AgentSubagentPresentation.matches(row))return;
         JSONObject preview=AgentActionPresentation.preview(row);if(actionManual||actionLiveLoading||!row.optBoolean("more")||preview!=null||!panel.followsOutput())return;
         long length=row.optLong("bodyLength",row.optString("body").length());if(length<0||length>2000000)return;String stamp=row.optString("body")+":"+length+":"+row.optString("status");if(stamp.equals(actionLiveStamp))return;
         actionLiveLoading=true;int offset=(int)Math.max(0,length-24000);final int g=generation;final WorkspaceStore.Session p=snapshot();final String session=nativeSession;JSONObject request=detailRequest(p,row,offset,session);
@@ -438,7 +589,7 @@ final class AgentChatUi {
             handler.post(()->{if(closed||g!=generation)return;if(result!=null&&result.optBoolean("ok")){actionNotice="";if(opened!=null&&terminal==opened)opened.dismiss();requestStamp="";if(!loading)load(false);}else {String notice=result!=null&&result.optString("error").equals("NATIVE_BUSY")?tr("Агент выполняет запрос. Дождитесь завершения и нажмите ещё раз.","The agent is running a request. Wait for completion and tap again."):tr("Не удалось вернуть управление чату. Завершите действие в терминале и повторите.","Could not return control to chat. Finish the terminal action and retry.");if(opened!=null&&terminal==opened)activity.showToast(notice,true);else view.connection(notice);}});
         });
     }
-    void terminal(){terminal(false);}
+    void terminal(){terminal(GeminiCli.antigravity(current.get()));}
     private int composerCardHeight(){View root=activity.findViewById(com.termux.R.id.activity_termux_root_relative_layout);View card=root==null?null:root.findViewWithTag("composer-card");return card==null?0:card.getHeight();}
     private void nativeTerminal(){terminal(true);}
     private void terminal(boolean prepareNative){

@@ -9,13 +9,13 @@ public class AgentArrivalTest {
  void tick(int ms){Shadows.shadowOf(Looper.getMainLooper()).idleFor(ms,TimeUnit.MILLISECONDS);}
  View item(String key){Map<String,View> views=ReflectionHelpers.getField(view,"views");return views.get(key);}
  @After public void end(){if(view!=null)view.clear();if(a!=null)a.finish();}
- @Test public void newUserAndTimelineLandOnceForAllFourAgentsWithoutChangingReadingAnchor()throws Exception{
+ @Test public void newUserAndActionLandOnceForAllFourAgentsWithoutChangingReadingAnchor()throws Exception{
   for(String agent:new String[]{"Codex","Claude","Gemini","OpenCode"}){
    create(agent);List<JSONObject> rows=new ArrayList<>();for(int i=0;i<25;i++)rows.add(row("old"+i,"user","old message\nsecond line\nthird line"));view.liveRows(rows,true,false);layout();tick(300);view.scroll.scrollTo(0,300);AgentChatView.Position before=view.position();
    rows.add(row("new","user","new message"));rows.add(row("action","tool","command output").put("title","Shell").put("tool","Bash"));view.liveRows(rows,true,true);
-   View user=item("new"),group=item("codex-actions:action");assertNotNull(group);for(View v:new View[]{user,group}){assertEquals(0,v.getAlpha(),.001f);assertEquals(view.dp(10),v.getTranslationY(),.001f);}
+   View user=item("new"),action=item("action");assertTrue(action instanceof AgentCompactActionView);for(View v:new View[]{user,action}){assertEquals(0,v.getAlpha(),.001f);assertEquals(view.dp(10),v.getTranslationY(),.001f);}
    layout();Map<View,android.animation.ValueAnimator> animations=ReflectionHelpers.getField(view,"landings");android.animation.ValueAnimator moving=animations.get(user);assertNotNull(moving);assertEquals(520,moving.getDuration());moving.setCurrentPlayTime(130);assertTrue("intermediate alpha="+user.getAlpha(),user.getAlpha()>0&&user.getAlpha()<1);assertTrue(user.getTranslationY()>0);assertEquals(before.anchor,view.position().anchor);assertEquals(before.offset,view.position().offset);
-   rows.get(rows.size()-1).put("body","more output");float alpha=user.getAlpha();view.liveRows(rows,true,true);assertEquals(alpha,user.getAlpha(),.001f);for(android.animation.ValueAnimator animation:new ArrayList<>(animations.values()))animation.end();assertEquals(1,user.getAlpha(),.001f);assertEquals(0,group.getTranslationY(),.001f);
+   rows.get(rows.size()-1).put("body","more output");float alpha=user.getAlpha();view.liveRows(rows,true,true);assertEquals(alpha,user.getAlpha(),.001f);for(android.animation.ValueAnimator animation:new ArrayList<>(animations.values()))animation.end();assertEquals(1,user.getAlpha(),.001f);assertEquals(0,action.getTranslationY(),.001f);
    view.liveRows(rows,true,false);assertSame(user,item("new"));assertEquals(1,user.getAlpha(),.001f);
    List<JSONObject> earlier=new ArrayList<>();earlier.add(row("earlier","user","old history"));earlier.addAll(rows);view.olderRows(earlier,true);assertEquals(1,item("earlier").getAlpha(),.001f);layout();assertEquals(before.anchor,view.position().anchor);
    view.clear();view.liveRows(earlier,true,false);assertEquals(1,item("new").getAlpha(),.001f);view.clear();a.finish();
@@ -42,15 +42,23 @@ public class AgentArrivalTest {
   assertEquals("Reordering must not detach an appearing card",0,detached[0]);assertEquals(height,card.getMeasuredHeight());
   assertSame(arrival,animations.get(card));assertEquals(120,arrival.getCurrentPlayTime());assertEquals(alpha,card.getAlpha(),.001f);assertEquals(y,card.getTranslationY(),.001f);assertEquals(scale,card.getScaleY(),.001f);
  }
- @Test public void lateImageMetadataSplitsGroupWithoutResettingEitherArrival()throws Exception{
+ @Test public void lateImageMetadataReplacesCompactCardWithoutResettingEitherArrival()throws Exception{
   create("Claude");view.liveRows(Collections.emptyList(),false,false);
   JSONObject first=row("read-image","tool","pending").put("actionId","image-read").put("title","Read").put("status","running");
   JSONObject second=row("next-tool","tool","pending").put("title","Read");List<JSONObject> rows=Arrays.asList(first,second);
-  view.liveRows(rows,false,true);layout();View original=item("codex-actions:read-image");Map<View,android.animation.ValueAnimator> animations=ReflectionHelpers.getField(view,"landings");android.animation.ValueAnimator moving=animations.get(original);assertNotNull(moving);moving.setCurrentPlayTime(120);
-  float alpha=original.getAlpha(),scale=original.getScaleY(),y=original.getTranslationY();
+  view.liveRows(rows,false,true);layout();View original=item("read-image"),next=item("next-tool");
+  assertTrue(original instanceof AgentCompactActionView);assertTrue(next instanceof AgentCompactActionView);
+  Map<View,android.animation.ValueAnimator> animations=ReflectionHelpers.getField(view,"landings");
+  android.animation.ValueAnimator moving=animations.get(original),nextMoving=animations.get(next);
+  assertNotNull(moving);assertNotNull(nextMoving);assertNotSame(moving,nextMoving);
+  moving.setCurrentPlayTime(120);nextMoving.setCurrentPlayTime(190);
+  float alpha=original.getAlpha(),scale=original.getScaleY(),y=original.getTranslationY(),nextAlpha=next.getAlpha();
   first.put("status","completed").put("actionPreview",new JSONObject().put("kind","image").put("image",new JSONObject().put("type","image").put("path","/fixture.png")));
-  view.liveRows(rows,false,true);layout();View image=item("read-image"),group=item("codex-actions:next-tool");assertNotNull(image);assertNotNull(group);
-  for(View part:new View[]{image,group}){assertSame(moving,animations.get(part));assertEquals(alpha,part.getAlpha(),.001f);assertEquals(scale,part.getScaleY(),.001f);assertEquals(y,part.getTranslationY(),.001f);}assertEquals(120,moving.getCurrentPlayTime());moving.end();assertTrue(animations.isEmpty());
+  view.liveRows(rows,false,true);layout();View image=item("read-image");
+  assertTrue(image instanceof AgentImageActionView);assertNotSame(original,image);assertSame(next,item("next-tool"));
+  assertSame(moving,animations.get(image));assertEquals(alpha,image.getAlpha(),.001f);assertEquals(scale,image.getScaleY(),.001f);assertEquals(y,image.getTranslationY(),.001f);assertEquals(120,moving.getCurrentPlayTime());
+  assertSame(nextMoving,animations.get(next));assertEquals(nextAlpha,next.getAlpha(),.001f);assertEquals(190,nextMoving.getCurrentPlayTime());
+  moving.end();nextMoving.end();assertTrue(animations.isEmpty());
  }
  @Test public void userAttachmentLandsWithoutOpeningOrLoadingOriginal()throws Exception{
   create("OpenCode");view.thumbnail=(file,image)->{};view.liveRows(Collections.emptyList(),false,false);

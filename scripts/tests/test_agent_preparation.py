@@ -1,6 +1,6 @@
 """Isolated shell fixtures; never run APT, pkg, Cloud auth or network commands."""
 from pathlib import Path
-import subprocess,tempfile,os,json
+import hashlib,shlex,subprocess,tempfile,os,json
 root=Path(__file__).resolve().parents[2];assets=root/'app/src/main/assets';base=root/'.verification/agent-setup-v1.5.30';base.mkdir(exist_ok=True,parents=True)
 fixture=Path(tempfile.mkdtemp(prefix='shell-',dir=base));env={k:os.environ[k] for k in ['PATH','LD_LIBRARY_PATH','TMPDIR','LANG'] if k in os.environ};env['HOME']=str(fixture/'home');Path(env['HOME']).mkdir();env['CLOUDSDK_CONFIG']=str(fixture/'cloud');env.pop('GOOGLE_API_KEY',None)
 def run(name,text,ok=True):
@@ -35,13 +35,62 @@ run('blocked',"apt-get(){ printf bad > apt-called; }; export JOBS_AGENT_SETUP_AL
 run('base-install',r'''
 command(){ if [[ $1 == -v && $2 == curl && ! -e installed-marker ]]; then return 1;fi;builtin command "$@"; }
 apt-get(){ printf '%s\n' "$*" >> apt-log; [[ $1 != install ]] || touch installed-marker;return 0; }
-jobs_agent_base_prepare claude api
+JOBS_AGENT_SETUP_ALLOWED=1 jobs_agent_base_prepare claude api
 ''');calls=(fixture/'apt-log').read_text();assert calls.startswith('update\n') and 'install -y --no-install-recommends' in calls and calls.rstrip().endswith('curl') and 'upgrade' not in calls
 run('apt-failed',r'''
 command(){ if [[ $1 == -v && $2 == curl ]]; then return 1;fi;builtin command "$@"; }
 apt-get(){ printf '%s\n' "$*" >> failed-apt;return 71; }
-jobs_agent_base_prepare claude api
+JOBS_AGENT_SETUP_ALLOWED=1 jobs_agent_base_prepare claude api
 ''',False);assert (fixture/'failed-apt').read_text()=='update\n'
+
+# Model a clean Ubuntu AI PATH, with local stand-ins for both Git and APT.
+git_bin=fixture/'git-bin';git_bin.mkdir()
+pinned_git=fixture/'pinned git';pinned_git.write_text('#!/bin/bash\nprintf "git version 2.53.0\\n"\n');pinned_git.chmod(0o700)
+git_digest=hashlib.sha256(pinned_git.read_bytes()).hexdigest()
+git_fixture=f'export PATH={shlex.quote(str(git_bin))}:"$PATH" JOBS_AGENT_UBUNTU=ubuntu-ai\n'+r'''
+command() {
+    if [[ $1 == -v && ${2:-} == git && ! -x $PWD/git-bin/git ]]; then return 1; fi
+    builtin command "$@"
+}
+apt-get() {
+    printf '%s\n' "$*" >> git-apt-log
+    if [[ $1 == install ]]; then cp -- "$PWD/pinned git" "$PWD/git-bin/git"; fi
+}
+'''
+for agent,auth in [('codex','api'),('claude','api'),('gemini','antigravity')]:
+ r=run('git-required-'+agent,git_fixture+f'jobs_agent_check {agent} {auth}\n')
+ assert 'MISSING:git' in r.stdout.splitlines()
+for environment,agent,auth in [('ubuntu','codex','api'),('ubuntu','claude','api'),('ubuntu-ai','gemini','api'),('ubuntu-ai','opencode','api')]:
+ r=run('git-optional-'+environment+'-'+agent,git_fixture+f'JOBS_AGENT_UBUNTU={environment} jobs_agent_check {agent} {auth}\n')
+ assert not {'MISSING:git','READY:git'}.intersection(r.stdout.splitlines())
+git_fallback=f'export JOBS_PROJECT_GIT_EXECUTABLE={shlex.quote(str(pinned_git))} JOBS_PROJECT_GIT_SHA256={git_digest}\n'
+r=run('git-pinned',git_fixture+git_fallback+'jobs_agent_check claude api\njobs_agent_base_prepare claude api\n')
+assert 'READY:git' in r.stdout.splitlines() and not (fixture/'git-apt-log').exists()
+bad_git_hash='JOBS_PROJECT_GIT_SHA256='+'0'*64+' '
+r=run('git-altered-hash',git_fixture+git_fallback+bad_git_hash+'jobs_agent_check claude api\n')
+assert 'MISSING:git' in r.stdout.splitlines()
+git_link=fixture/'pinned-git-link';git_link.symlink_to(pinned_git)
+r=run('git-linked-fallback',git_fixture+git_fallback+f'JOBS_PROJECT_GIT_EXECUTABLE={shlex.quote(str(git_link))} jobs_agent_check claude api\n')
+assert 'MISSING:git' in r.stdout.splitlines()
+run('git-apt-refused',git_fixture+'JOBS_AGENT_SETUP_ALLOWED=0 jobs_agent_prepare claude api\n',False)
+assert not (fixture/'git-apt-log').exists()
+run('git-apt-inventory-race',git_fixture+r'''
+jobs_agent_check() { printf '%s\n' READY:git CHECK:done; }
+JOBS_AGENT_SETUP_ALLOWED=0 jobs_agent_prepare claude api
+''',False)
+assert not (fixture/'git-apt-log').exists()
+r=run('git-apt-approved',git_fixture+r'''
+JOBS_AGENT_SETUP_ALLOWED=1 jobs_agent_prepare claude api || exit $?
+jobs_agent_check claude api || exit $?
+jobs_agent_base_prepare claude api
+''')
+assert 'READY:git' in r.stdout.splitlines()
+assert (fixture/'git-apt-log').read_text().splitlines()==[
+ 'update','install -y --no-install-recommends -o Dpkg::Options::=--force-confold git',
+]
+r=run('git-path-first',git_fixture+git_fallback+bad_git_hash+'jobs_agent_check claude api\n')
+assert 'READY:git' in r.stdout.splitlines()
+
 # A checksum failure must stop before tar/move, even when called under || return.
 run('codex-bad-hash',r'''
 command(){ if [[ $1 == -v && $2 == codex ]]; then return 1;fi;builtin command "$@"; }
@@ -80,9 +129,10 @@ command(){ if [[ $1 == -v && $2 == python3 ]];then return 1;fi;builtin command "
 JOBS_AGENT_UBUNTU=ubuntu jobs_agent_check codex api
 ''');assert 'MISSING:python3' not in r.stdout
 run('codex-ai-python-plan',r'''
+export PATH="$PWD/git-bin:$PATH"
 command(){ if [[ $1 == -v && $2 == python3 ]];then return 1;fi;builtin command "$@"; }
 apt-get(){ printf '%s\n' "$*" >> python-apt-log; }
-JOBS_AGENT_UBUNTU=ubuntu-ai jobs_agent_base_prepare codex api
+JOBS_AGENT_UBUNTU=ubuntu-ai JOBS_AGENT_SETUP_ALLOWED=1 jobs_agent_base_prepare codex api
 ''');assert (fixture/'python-apt-log').read_text().splitlines()==['update','install -y --no-install-recommends -o Dpkg::Options::=--force-confold python3']
 # Existing compatible/newer Codex is not replaced by the pinned fallback.
 run('codex-existing-preserved',r'''

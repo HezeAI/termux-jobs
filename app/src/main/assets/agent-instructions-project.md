@@ -1,140 +1,127 @@
-# Инструкции проекта
+# Project instructions
 
-## Назначение
+## Purpose
 
-- Проект: [название].
-- Задача: [что делает проект].
-- Рабочий каталог: [путь].
-- Основные исходники: [путь].
-- Готовые результаты: [путь].
-- Память проекта: LEARNING.md.
+- Project: [name].
+- Objective: [what the project does].
+- Working directory: [path].
+- Main sources: [path].
+- Deliverables: [path].
+- Project memory: LEARNING.md.
 
-Перед работой прочитай LEARNING.md, если он существует.
-Применяй общие инструкции среды. Здесь находятся дополнительные
-требования конкретного проекта.
+Read LEARNING.md before working if it exists.
+Follow the environment's general instructions. This file adds requirements specific to the project.
 
-## Документация
+## Documentation
 
-Читай документы по затронутой задаче:
+Read the documents relevant to the task:
 
-- README.md — устройство проекта и запуск.
-- [документ проверок] — перед изменением соответствующих функций.
-- RELEASING.md — перед подготовкой выпуска или публикацией.
+- README.md — project structure and how to run it.
+- [verification document] — before changing the relevant features.
+- RELEASING.md — before preparing or publishing a release.
 
-Указывай только существующие документы.
-Не создавай дополнительные документы без необходимости.
+List only existing documents. Create additional documentation only when necessary.
 
-## Начало работы
+## Starting work
 
-1. Проверь текущую ветку и незакоммиченные изменения.
-2. Изучи код и документы затронутой функции.
-3. Установи подходящие проверки.
-4. Сохраняй существующую работу пользователя.
+1. Check the current branch and uncommitted changes.
+2. Review the source and documentation for the affected feature.
+3. Identify the applicable checks.
+4. Preserve the user's existing work.
 
-Не считай изменения в рабочем каталоге своими автоматически.
-Не включай посторонние изменения в коммит.
+Do not assume existing changes in the working tree are yours.
+Keep unrelated changes out of your commits.
 
-## Git: локальная работа
+## Local Git workflow
 
-Локальные ветки и коммиты разрешены в рамках порученной задачи.
-Они не означают разрешение на push или публикацию.
+Local branches and commits are allowed within the assigned task.
+These actions do not grant permission to push or publish.
 
-- Используй существующий репозиторий.
-- Если Git не настроен, предложи его подключение.
-- Продолжай подходящую рабочую ветку.
-- Для независимой или рискованной задачи используй отдельную ветку.
-- Перед созданием ветки проверь, какие изменения уже находятся
-  в рабочем каталоге: новая ветка сама по себе их не изолирует.
-- Сохраняй логически законченные изменения отдельными коммитами.
-- Перед коммитом проверь diff и состав подготовленных файлов.
-- Сообщение коммита должно объяснять конкретное изменение.
-- Не смешивай исправление, посторонний рефакторинг и форматирование.
-- Не переписывай существующую историю без отдельного разрешения.
+- Use the existing repository.
+- If Git is not configured, offer to set it up.
+- Continue on a suitable working branch.
+- Use a separate branch for independent or risky work.
+- Before creating a branch, check what is already in the working tree. A new branch alone does not isolate those changes.
+- Commit each logically complete change separately.
+- Before committing, review the diff and the staged files.
+- Use a commit message that describes the specific change.
+- Keep fixes, unrelated refactoring, and formatting separate.
+- Do not rewrite existing history without separate permission.
 
-Не сохраняй в Git секреты, авторизацию, приватные ключи,
-рабочие журналы, кеши и временные файлы.
+Keep secrets, credentials, private keys, working logs, caches, and temporary files out of Git.
 
-Готовые бинарные файлы добавляй только по принятому в проекте
-порядку. .gitignore не удаляет ранее закоммиченные данные.
+Add built binaries only according to the project's established procedure. The .gitignore file does not remove data already committed.
 
-## Push и публикация
+## Pushing and publishing
 
-Push, слияние в общую ветку, создание релизного тега,
-развёртывание и публикация — отдельные действия.
+Pushing, merging into a shared branch, creating a release tag, deploying, and publishing are separate actions.
 
-Выполняй их при наличии разрешения пользователя,
-включая уже данное разрешение в текущей задаче.
-Не запрашивай одно разрешение повторно без новой причины.
+Proceed only with user permission, including permission already granted for the current task.
+Do not ask for the same permission again without a new reason.
 
-Перед push:
-1. Проверь адрес репозитория и целевую ветку.
-2. Проверь состав отправляемых коммитов.
-3. Выполни необходимые проверки.
-4. После отправки проверь удалённую ветку.
+Before pushing:
+1. Check the repository URL and target branch.
+2. Check which commits will be sent.
+3. Run the required checks.
+4. After pushing, verify the remote branch.
 
-Не используй force push и не переноси опубликованные теги
-без отдельного явного разрешения.
+Do not force-push or move published tags without separate explicit permission.
 
-Push исходников не означает публикацию готового продукта.
+Pushing source code does not publish the built product.
 
-## Восстановление и откат
+## Recovery and rollback
 
-Перед рискованным изменением зафиксируй исходное состояние:
-ветку, коммит и имеющиеся незакоммиченные изменения.
+Before a risky change, record the starting branch, commit, and existing uncommitted changes.
 
-- Для отмены опубликованного изменения предпочитай git revert.
-- Не применяй reset --hard, git clean и восстановление файлов
-  поверх чужой работы без соответствующего разрешения.
-- Отдельно учитывай исходники, готовые файлы и пользовательские данные.
-- Откат кода не означает откат базы данных или настроек.
-- До необратимой миграции подготовь проверенный способ восстановления.
+- Prefer git revert to undo a published change.
+- Do not use reset --hard, git clean, or restore files over someone else's work without the applicable permission.
+- Account for source, built files, and user data separately.
+- Rolling back the code does not roll back the database or settings.
+- Prepare and verify a recovery method before an irreversible migration.
 
-Локальный Git не заменяет резервную копию.
-Не называй данные сохранёнными вне устройства без проверки.
+Local Git does not replace a backup.
+Verify that data exists off-device before claiming it is backed up there.
 
-## Изменения и проверки
+## Changes and checks
 
-Сохраняй совместимость, если задача не требует её изменения.
-Не меняй несвязанные части проекта.
+Preserve compatibility unless the task requires changing it.
+Leave unrelated parts of the project alone.
 
-Команды проверок:
-- [команда проверки].
-- [команда сборки, если применимо].
+Verification commands:
+- [verification command].
+- [build command, if applicable].
 
-Проверяй затронутые функции и их зависимости.
-Для операций с состоянием учитывай ошибку, отмену и повторный запуск.
+Check the affected features and their dependencies.
+For operations that change state, cover failure, cancellation, and retry.
 
-Разделяй:
-- проверено заново;
-- переиспользовано с подтверждённым совпадением входов;
-- не проверено.
+Distinguish results:
+- Checked anew.
+- Reused after confirming that the inputs match.
+- Not checked.
 
-Не выдавай стенд за проверку реального устройства или сервиса.
-Если проверка недоступна, укажи причину и оставшийся шаг.
+Do not present a test fixture as verification on a real device or service.
+If a check is unavailable, state why and identify the remaining step.
 
-## Готовые результаты
+## Deliverables
 
-Перед выдачей проверь, что результат соответствует
-указанным исходникам и версии.
+Before handing over a deliverable, verify that it matches the stated source and version.
 
-При необходимости фиксируй:
-- коммит исходников;
-- версию результата;
-- условия сборки;
-- контрольную сумму файла.
+Record when applicable:
+- The source commit.
+- The deliverable version.
+- The build conditions.
+- The file checksum.
 
-Не называй результат собранным из чистого коммита,
-если в него вошли незакоммиченные изменения.
+If the build included uncommitted changes, disclose them.
 
-## Завершение задачи
+## Finishing the task
 
-Кратко сообщи:
-1. Что изменено.
-2. Что проверено и какие ограничения остались.
-3. Где находится результат.
-4. Ветка и коммиты.
-5. Выполнялись ли push, установка или публикация.
+Briefly report:
+1. What changed.
+2. What was checked and what limitations remain.
+3. Where the result is located.
+4. The branch and commits.
+5. Whether anything was pushed, installed, or published.
 
-Оцени, появился ли подтверждённый урок для LEARNING.md.
-Не записывай туда секреты, неподтверждённые предположения
-или полный журнал работы.
+Assess whether there is a confirmed lesson to add to LEARNING.md.
+Keep secrets, unconfirmed assumptions, and full activity logs out of that file.

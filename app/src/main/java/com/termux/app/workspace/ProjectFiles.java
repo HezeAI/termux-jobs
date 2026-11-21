@@ -1,6 +1,7 @@
 package com.termux.app.workspace;
 
 import android.app.Activity;
+import com.termux.BuildConfig;
 import com.termux.shared.shell.TermuxShellUtils;
 import com.termux.shared.termux.TermuxConstants;
 import java.io.*;
@@ -130,6 +131,11 @@ final class ProjectFiles implements AutoCloseable {
         return new String(out.toByteArray(),StandardCharsets.UTF_8);
     }
     byte[] readOnly(String script,int max)throws Exception{return bytes(script,max);}
+    byte[] readGit(String script,int max)throws Exception{
+        ByteArrayOutputStream out=new ByteArrayOutputStream();
+        run(script,out,max,null,90,true);
+        return out.toByteArray();
+    }
     private byte[] bytes(String script,int max) throws Exception {ByteArrayOutputStream out=new ByteArrayOutputStream();run(script,out,max);return out.toByteArray();}
     static String attachmentMount(WorkspaceStore.Session s,File files){
         if(!ChatAttachments.supported(s))return "";
@@ -151,11 +157,44 @@ final class ProjectFiles implements AutoCloseable {
         options+=s.sshAuth.equals("key")&&!s.sshEncryptedPassword.isEmpty()?" -o BatchMode=no":s.sshAuth.equals("password")?" -o BatchMode=no -o PreferredAuthentications=password -o PubkeyAuthentication=no -o KbdInteractiveAuthentication=no -o NumberOfPasswordPrompts=1":" -o BatchMode=yes";
         return "ssh -T"+options+" -p "+s.sshPort+" -l "+SessionShell.quote(s.sshUser)+" -- "+SessionShell.quote(s.sshHost)+" "+SessionShell.quote(bash);
     }
+    static boolean usesProjectGit(WorkspaceStore.Session profile){
+        if(!environment(profile).equals("proot:ubuntu-ai"))return false;
+        String agent=AgentPreparation.agent(profile);
+        return agent.equals("codex")||agent.equals("claude")||AgentPreparation.antigravity(profile);
+    }
+    static boolean startsNewProjectGit(WorkspaceStore.Session profile){
+        if(!usesProjectGit(profile))return false;
+        String chat=profile.claudeAgent?profile.claudeChat:profile.geminiAgent?profile.geminiChat:profile.codexChat;
+        return chat.equals("new");
+    }
+    static String gitCommand(WorkspaceStore.Session profile,String script,String binary,String sha256){
+        String selection=usesProjectGit(profile)?ProjectChanges.gitSelection(binary,sha256):ProjectChanges.gitSelection("","");
+        return command(profile,selection+script);
+    }
+    static String gitStartup(WorkspaceStore.Session profile){
+        if(!usesProjectGit(profile))return "";
+        String binary=BuildConfig.JOBS_PROJECT_GIT_EXECUTABLE;
+        if(binary.isEmpty()&&!profile.initializeProjectGit)return "";
+        String path=ProjectChanges.gitSelection(binary,BuildConfig.JOBS_PROJECT_GIT_SHA256);
+        if(!binary.isEmpty()){
+            String binDirectory=binary.substring(0,binary.lastIndexOf('/'));
+            path+="if [ \"$jobs_git_executable\" = "+SessionShell.quote(binary)
+                +" ]; then export PATH=\"$PATH\":"+SessionShell.quote(binDirectory)+"; fi; ";
+        }
+        if(profile.initializeProjectGit){
+            path+="if [ \"$(cd -- "+target(profile.directory)+" 2>/dev/null && pwd -P)\" = \"$(pwd -P)\" ]; then "
+                +ProjectChanges.initializeScript("")+"; fi\n";
+        }
+        return path;
+    }
     private void run(String script,OutputStream out,long max) throws Exception {run(script,out,max,null);}
     private void run(String script,OutputStream out,long max,byte[] input) throws Exception {run(script,out,max,input,90);}
     void run(String script,OutputStream out,long max,byte[] input,int timeoutSeconds) throws Exception {
+        run(script,out,max,input,timeoutSeconds,false);
+    }
+    private void run(String script,OutputStream out,long max,byte[] input,int timeoutSeconds,boolean git) throws Exception {
         if(closed||serverKnownHosts!=null&&ServerConnection.disconnected(activity,profile.id))throw new IOException(WorkspaceText.tr("Окно закрыто"));
-        String invocation=command(profile,script);
+        String invocation=git?gitCommand(profile,script,BuildConfig.JOBS_PROJECT_GIT_EXECUTABLE,BuildConfig.JOBS_PROJECT_GIT_SHA256):command(profile,script);
         if(serverKnownHosts!=null&&environment(profile).equals("ssh"))invocation=invocation.replaceFirst("ssh -T",java.util.regex.Matcher.quoteReplacement("ssh -T -o "+SessionShell.quote("UserKnownHostsFile="+serverKnownHosts.getAbsolutePath())+" -o GlobalKnownHostsFile=/dev/null"));
         ProcessBuilder builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c","exec "+invocation);
         builder.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));builder.environment().clear();

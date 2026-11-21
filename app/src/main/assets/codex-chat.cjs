@@ -1,5 +1,5 @@
 'use strict';
-const rtk=require('./rtk-agent.cjs');
+const {contextOptions,speedOptions,serviceTierForTurn}=require('./codex-model-catalog.cjs');
 const {fileReferences}=require('./agent-attachments.cjs');
 const {CompletionTimes,RequestClock,instant}=require('./agent-completion-times.cjs');
 // Android presentation of the native app-server protocol. No auth-file reads or policy overrides.
@@ -54,15 +54,67 @@ function attachmentManifest(root,id,thread){
 }
 function actionStatus(item){return item.error||item.result?.isError===true?'failed':['failed','error','declined','aborted','cancelled','canceled'].includes(item.status)?item.status:item._jobsStatus||item.status||'';}
 function itemPhase(item,status){if(!status)return item;const value={...item};Object.defineProperty(value,'_jobsStatus',{value:status});return value;}
+const subagentItem=item=>['collabAgentToolCall','subAgentActivity'].includes(item?.type);
+function subagentBody(item){
+ const fields=item.type==='subAgentActivity'?['kind','agentPath','agentThreadId','model','reasoningEffort']:['tool','senderThreadId','receiverThreadIds','model','reasoningEffort','prompt','agentsStates'];
+ return Object.fromEntries(fields.filter(k=>Object.hasOwn(item,k)).map(k=>[k,item[k]]));
+}
+// Read only explicitly referenced children, verifying the parent before reading content.
+async function subagentHistory(rpc,parent,original){
+ const body=structuredClone(original);
+ if(body.senderThreadId&&body.senderThreadId!==parent)throw Error('FOREIGN_EVENT');
+ const ids=[...new Set([body.agentThreadId,...(Array.isArray(body.receiverThreadIds)?body.receiverThreadIds:[])].filter(id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,256}$/.test(id)&&id!==parent))];
+ const snapshots=Object.create(null);let total=0;
+ const relation=thread=>thread?.id&&((thread.parentThreadId&&thread.parentThreadId!=='null'?thread.parentThreadId:thread.source?.subAgent?.thread_spawn?.parent_thread_id)===parent);
+ for(const id of ids.slice(0,16)){
+  const snapshot={threadId:id,readAt:Date.now()};snapshots[id]=snapshot;
+  try{
+   const metadata=(await rpc.call('thread/read',{threadId:id,includeTurns:false})).thread;
+   if(metadata?.id!==id||!relation(metadata))throw Error('UNVERIFIED_CHILD');
+   snapshot.relationVerified=true;if(metadata.status)snapshot.state=metadata.status;
+   const messages=[];snapshot.messages=messages;const seen=new Set(),cursors=new Set();let cursor;
+   const append=items=>{for(const entry of items){const item=entry.item||entry;if(!['userMessage','agentMessage'].includes(item.type)||typeof item.id!=='string'||seen.has(item.id))continue;
+    const value=item.type==='agentMessage'?item.text:(item.content||[]).filter(p=>p.type==='text'&&typeof p.text==='string').map(p=>p.text).join('\n');
+    if(typeof value!=='string'||!value)continue;seen.add(item.id);messages.push({id:item.id,role:item.type,text:clean(value),...(entry.turnId?{turnId:entry.turnId}:{})});total+=value.length;
+   }};
+   for(let page=0;page<50;page++){
+    let response;
+    try{response=await rpc.call('thread/items/list',{threadId:id,limit:20,sortDirection:'asc',...(cursor!==undefined?{cursor}:{})});}
+    catch(error){if(error.rpcCode!==-32601)throw error;
+     const thread=(await rpc.call('thread/read',{threadId:id,includeTurns:true})).thread;
+     if(thread?.id!==id||!relation(thread)||!Array.isArray(thread.turns))throw Error('UNVERIFIED_CHILD');
+     for(const turn of thread.turns)append(turn.items||[]);snapshot.complete=true;snapshot.source='thread/read';break;
+    }
+    if(!Array.isArray(response.data))throw Error('INVALID_HISTORY');append(response.data);
+    if(response.nextCursor==null){snapshot.complete=true;break;}
+    cursor=response.nextCursor;const token=JSON.stringify(cursor);if(cursors.has(token))throw Error('REPEATED_CURSOR');cursors.add(token);
+    if(total>4*1024*1024||page===49){snapshot.complete=false;break;}
+   }
+  }catch{snapshot.unavailable=true;}
+  const prior=body.agentHistory?.[id];
+  if(snapshot.unavailable&&prior?.relationVerified){snapshots[id]={...prior,refreshUnavailable:true};}
+  if(total>4*1024*1024){body.agentHistoryLimited=true;break;}
+ }
+ if(ids.length>16)body.agentHistoryLimited=true;
+ body.agentHistory=snapshots;return body;
+}
 function processTree(root){const all=new Map();for(const id of fs.readdirSync('/proc'))if(/^\d+$/.test(id))try{const raw=fs.readFileSync('/proc/'+id+'/stat','utf8'),f=raw.slice(raw.lastIndexOf(')')+2).split(' ');all.set(Number(id),{parent:Number(f[1]),start:f[19],state:f[0]});}catch{}const owned=new Map();if(!all.has(root))return owned;owned.set(root,all.get(root));let changed=true;while(changed){changed=false;for(const [id,v]of all)if(!owned.has(id)&&owned.has(v.parent)){owned.set(id,v);changed=true;}}return owned;}
 function sameProcess(id,start){try{const raw=fs.readFileSync('/proc/'+id+'/stat','utf8'),f=raw.slice(raw.lastIndexOf(')')+2).split(' ');return f[19]===start&&f[0]!=='Z';}catch{return false;}}
 async function terminateTree(p){if(!p||p.exitCode!==null||p.signalCode!==null)return;const members=processTree(p.pid);if(!members.has(p.pid))return;for(const [id,v]of [...members].reverse())if(sameProcess(id,v.start))try{process.kill(id,'SIGTERM');}catch{}for(let i=0;i<30&&[...members].some(([id,v])=>sameProcess(id,v.start));i++)await pause(50);for(const [id,v]of [...members].reverse())if(sameProcess(id,v.start))try{process.kill(id,'SIGKILL');}catch{}await Promise.race([new Promise(r=>p.exitCode!==null||p.signalCode!==null?r():p.once('exit',r)),pause(1000)]);}
 
+function contextOverrides(window,threshold){
+ if(window===0&&threshold===0)return null;
+ const limit=Math.floor(window/10)*9+Math.floor((window%10)*9/10);
+ if(!Number.isSafeInteger(window)||!Number.isSafeInteger(threshold)||window<=0||threshold<=0||threshold>limit)throw Error('Invalid Codex context settings');
+ return {model_context_window:window,model_auto_compact_token_limit:threshold};
+}
+
 class CodexChat {
  constructor(connection,options={}){
   this.rpc=connection;this.endpoint=options.endpoint;this.root=path.dirname(options.endpoint);this.access=options.access;this.approval=options.approval;this.cwd=options.cwd;this.confirmed=options.confirmed;this.chat=options.chat;this.requested=options.thread;this.language=options.language||'en';
+  this.contextWindow=options.contextWindow??0;this.compactThreshold=options.compactThreshold??0;this.activeServiceTier=null;this.serviceTierSupported=false;
   this.requestClock=new RequestClock();this.contextUsage=null;this.contextStale=true;this.compaction=null;this.compactSupported=false;this.initialized=false;this.authRequired=false;this.loginId='';this.loginRequest=null;this.loginError=false;this.writeLogin=options.writeLogin||((value)=>process.stdout.write(value));
-  this.mediaCache=new WeakMap();this.thread='';this.turn='';this.busy=false;this.ready=false;this.closed=false;this.setting=false;this.model='';this.effort='';this.turns=new Map();this.pending=new Map();this.formAdmissions=new Map();this.sent=new Map();this.receipts=new ReceiptStore(null,'X');this.full=new Map();this.historyWindows=new Map();this.historyWindowChars=0;this.older='';this.failure='';this.native=null;this.historySupported=true;
+  this.mediaCache=new WeakMap();this.thread='';this.turn='';this.busy=false;this.ready=false;this.closed=false;this.setting=false;this.model='';this.effort='';this.turns=new Map();this.pending=new Map();this.formAdmissions=new Map();this.sent=new Map();this.receipts=new ReceiptStore(null,'X');this.full=new Map();this.subagentDetails=new Map();this.historyWindows=new Map();this.historyWindowChars=0;this.older='';this.failure='';this.native=null;this.historySupported=true;
   this.rpc.onMessage=m=>this.event(m);this.rpc.onFailure=e=>{this.modelConnection={state:'unknown',turn:this.turn,reason:'Local Codex connection closed; model connection state is unknown.',details:''};this.disconnected=true;this.requestClock.stop();this.ready=false;this.busy=false;this.contextStale=true;if(this.compactRunning()){this.compaction.phase='unknown';this.compaction.error='Codex disconnected; compaction completion is unconfirmed.';this.saveContext();}this.clearRequests();const reason=e?.message==='Message too large'?' The native history or event exceeded the local size limit.':e?.message==='Connection timeout'?' The local connection timed out.':'';this.error('Codex disconnected.'+reason+' Restart this session with its chat history.');};
  }
  compactRunning(){return ['starting','running','unknown'].includes(this.compaction?.phase);}
@@ -84,6 +136,7 @@ class CodexChat {
   this.contextUsage=Number.isSafeInteger(used)&&used>=0&&Number.isSafeInteger(capacity)&&capacity>0?{used,capacity,updated:Date.now(),model:this.usageModel||this.model}:null;
   this.contextStale=false;this.saveContext();this.refresh();
  }
+ contextFits(model){return contextOptions(model).maximumWindow>=this.contextWindow;}
  contextState(){return {usage:this.contextUsage,stale:this.contextStale||!this.ready||this.modelPending===true,compaction:this.compaction,compactSupported:this.compactSupported,canCompact:this.ready&&!this.closed&&!this.busy&&!this.native&&!this.setting&&!this.compactRunning()&&this.pending.size===0&&this.compactSupported};}
  async compact(q){
   if(q.session!==this.thread)return {ok:false,error:'STALE_REQUEST'};
@@ -104,26 +157,32 @@ class CodexChat {
   }
  }
  expected(){return this.access==='full'?'dangerFullAccess':this.access==='read'?'readOnly':'workspaceWrite';}
- params(){return {...(this.rtkConfig?{config:this.rtkConfig}:{}),cwd:this.cwd,approvalPolicy:this.approval,sandbox:this.access==='full'?'danger-full-access':this.access==='read'?'read-only':'workspace-write'};}
+ params(){const config=contextOverrides(this.contextWindow,this.compactThreshold);return {...(config?{config}:{}),cwd:this.cwd,approvalPolicy:this.approval,sandbox:this.access==='full'?'danger-full-access':this.access==='read'?'read-only':'workspace-write'};}
  verify(r){if(normalize(r.cwd)!==normalize(this.cwd)||r.approvalPolicy!==this.approval||r.sandbox?.type!==this.expected())throw Error('Codex did not confirm the requested directory and permissions');}
  async start(){
   if(this.starting)return this.starting;
   this.starting=this.connect().finally(()=>{this.starting=null;});return this.starting;
  }
  async connect(){
-  if(!this.initialized){const info=await this.rpc.initialize();this.compactSupported=/(?:^|[/\s])0\.166\.0\b/.test(info?.userAgent||this.rpc.serverInfo?.userAgent||'');this.initialized=true;}
+  if(!this.initialized){
+   const info=await this.rpc.initialize(),agent=info?.userAgent||this.rpc.serverInfo?.userAgent||'';
+   const version=/^(?:termux_jobs_control|codex(?:[-_]cli(?:[-_]rs)?)?)\/(\d+)\.(\d+)\.(\d+)\b/.exec(agent);
+   this.serviceTierSupported=!!version&&(Number(version[1])>0||Number(version[2])>=168);
+   this.compactSupported=/(?:^|[/\s])0\.166\.0\b/.test(agent);
+   this.initialized=true;
+  }
   const account=await this.rpc.call('account/read',{refreshToken:false});
   this.authRequired=account.requiresOpenaiAuth===true&&!account.account;
   if(this.authRequired){this.ready=false;return;}if(this.closed)return;
   let r;
-  try{this.rtkConfig=await rtk.codexConfig(this.rpc,this.cwd);}catch{this.rtkConfig=null;}
   if(this.chat==='id'){
    if(!valid(this.requested))throw Error('Choose a specific chat ID');
    const metadata=(await this.rpc.call('thread/read',{threadId:this.requested,includeTurns:false})).thread;
    if(!metadata?.cwd||(normalize(metadata.cwd)!==normalize(this.cwd)&&(!this.confirmed||normalize(metadata.cwd)!==normalize(this.confirmed))))throw Error('The chat directory changed. Confirm its original folder in session settings.');
    r=await this.rpc.call('thread/resume',{threadId:this.requested,excludeTurns:true,...this.params()});
   }else if(this.chat==='new')r=await this.rpc.call('thread/start',this.params());else throw Error('Choose a specific chat or create a new chat');
-  this.verify(r);if(!valid(r.thread?.id))throw Error('Codex returned an invalid chat');this.thread=r.thread.id;if(this.rtkConfig)try{await rtk.confirmCodex(this.rpc,this.thread);}catch{}this.model=text(r.model);this.effort=text(r.reasoningEffort);this.receipts=new ReceiptStore(path.join(this.root,this.thread+'.codex-receipts.json'),'X');this.completions=new CompletionTimes(this.root,'codex',this.thread);this.restoreContext();if(this.earlyUsage?.threadId===this.thread)this.acceptUsage(this.earlyUsage.tokenUsage);this.earlyUsage=null;if(r.thread?.status?.type==='active')this.busy=true;
+  this.verify(r);if(!valid(r.thread?.id))throw Error('Codex returned an invalid chat');this.thread=r.thread.id;this.model=text(r.model);this.effort=text(r.reasoningEffort);this.receipts=new ReceiptStore(path.join(this.root,this.thread+'.codex-receipts.json'),'X');this.completions=new CompletionTimes(this.root,'codex',this.thread);this.restoreContext();if(this.earlyUsage?.threadId===this.thread)this.acceptUsage(this.earlyUsage.tokenUsage);this.earlyUsage=null;if(r.thread?.status?.type==='active')this.busy=true;
+  if(this.contextWindow&&!this.contextFits(this.model))throw Error('The saved Codex context window exceeds this model’s maximum or its catalog is unavailable. Reset the context settings and reconnect.');
   if(this.chat==='id')try{await this.history();}catch{if(this.disconnected)return;this.historySupported=false;this.error('The current Codex cannot load paginated history. Open its native terminal to view older messages.');}if(this.disconnected||this.closed)return;this.ready=true;this.refresh();
  }
  error(body){this.failure=text(body);const id='error_'+crypto.randomUUID();this.put('local',{id,type:'localError',text:this.failure});}
@@ -148,6 +207,7 @@ class CodexChat {
   if(!this.thread&&m.method==='thread/tokenUsage/updated'&&p.threadId===this.requested)this.earlyUsage=p;
   if(m.method&&m.id!==undefined){this.request(m);return;}
   if(p.threadId!==this.thread||!this.thread)return;
+  if(m.method==='turn/started')this.activeServiceTier=typeof p.turn?.serviceTier==='string'?p.turn.serviceTier:null;
   this.compactEvent(m.method,p);
   if(m.method==='thread/tokenUsage/updated'){this.acceptUsage(p.tokenUsage);return;}
   if(m.method==='serverRequest/resolved'){
@@ -217,7 +277,7 @@ class CodexChat {
   if(last)this.completions?.finish(turn.id,key(turn.id+':'+last.id),{completedAt:turn.completedAt,durationMs:turn.durationMs,startedAt:turn.startedAt},received);
  }
  groups(turns=this.turns){
-  const groups=[];for(const [turn,entries]of turns){let skillContext='';for(const [id,item]of entries){const message=key(turn+':'+id),rows=[];const add=(part,kind,body,title='')=>{body=text(body);if(!body)return;const k=message+':'+part;this.full.delete(k);this.full.set(k,body);rows.push({messageSender:item.type==='userMessage'?'user':'agent',fileReferences:['user','text'].includes(kind)?fileReferences(body,item.type==='userMessage'?'user':'agent'):[],key:k,message,part,kind,title,body:body.slice(0,12000),bodyLength:body.length,more:body.length>12000});};
+  const groups=[];for(const [turn,entries]of turns){let skillContext='';for(const [id,item]of entries){const message=key(turn+':'+id),rows=[];const add=(part,kind,body,title='')=>{body=subagentItem(item)?clean(String(body||'')):text(body);if(!body)return;const k=message+':'+part;this.full.delete(k);this.full.set(k,body);rows.push({messageSender:item.type==='userMessage'?'user':'agent',fileReferences:['user','text'].includes(kind)?fileReferences(body,item.type==='userMessage'?'user':'agent'):[],key:k,message,part,kind,title,body:body.slice(0,12000),bodyLength:body.length,more:body.length>12000});};
    for(const receipt of this.receipts.rows.filter(r=>r.key.startsWith(item.id+':')))add('receipt:'+receipt.token,'receipt',receipt.body,this.receipts.label(receipt,this.language==='ru'));
    if(item.type==='userMessage'){
     const skills=(item.content||[]).filter(input=>input.type==='skill'&&text(input.name));skillContext=skills.length===1?text(skills[0].name).slice(0,120):'';
@@ -261,6 +321,10 @@ class CodexChat {
     add('command','tool',[item.command,item.aggregatedOutput,item.exitCode!=null?'Exit: '+item.exitCode:''].filter(Boolean).join('\n'),'Shell · '+(item.status||'running'));
     const read=skillRead(item.command);if(read)skillContext=['inProgress','running'].includes(item.status)||item.status==='completed'&&item.exitCode===0?read:'';
     const row=rows.at(-1);if(row?.part==='command')Object.assign(row,{...(read?{skillName:read,skillSource:'read'}:{}),actionType:'shell',outputTail:outputTail(text(item.aggregatedOutput)),turn,status:actionStatus(item)||'inProgress',command:text(item.command).slice(0,2000),commandTruncated:text(item.command).length>2000,actionDescription:text(item.description).slice(0,500),exitCode:Number.isInteger(item.exitCode)?item.exitCode:null,durationMs:Number.isSafeInteger(item.durationMs)&&item.durationMs>=0?item.durationMs:null});
+   }
+   else if(subagentItem(item)){
+    add('subagent','tool',JSON.stringify(subagentBody(item)),item.type);
+    const row=rows.at(-1);if(row)Object.assign(row,{toolType:item.type,toolName:item.type==='subAgentActivity'?item.kind:item.tool,status:item.type==='subAgentActivity'?(item.kind==='interrupted'?'interrupted':'completed'):actionStatus(item)||'inProgress'});
    }
    else if(item.type==='fileChange')add('files','tool',JSON.stringify(item.changes||[],null,2),'Files · '+item.status);
    else if(item.type==='plan')add('plan','tool',item.text,'Plan');
@@ -321,6 +385,13 @@ class CodexChat {
   if(this.sent.size>=2000)return {ok:false,delivery:'rejected',error:'SEND_LIMIT'};
   if(this.shellRunning||q.kind==='shell'&&(this.busy||this.pending.size))return {ok:false,delivery:'rejected',error:'MODE_BUSY'};
   if(q.kind==='message'&&q.text.trim().startsWith('/')){this.error('Slash commands belong in the native Codex terminal. Open the robot button; ordinary messages are sent here.');return {ok:false,delivery:'rejected',error:'NATIVE_COMMAND'};}
+  let tier;
+  if(q.kind==='message'&&!this.busy){
+   const model=this.choiceModel||this.model;
+   if(this.contextWindow&&!this.contextFits(model))return {ok:false,delivery:'rejected',error:'CONTEXT_LIMIT'};
+   if(q.speed==='fast'&&!this.serviceTierSupported)return {ok:false,delivery:'rejected',error:'FAST_UNAVAILABLE'};
+   try{if(this.serviceTierSupported||q.speed!==undefined&&q.speed!=='normal')tier=serviceTierForTurn(model,q.speed);}catch(error){return {ok:false,delivery:'rejected',error:error.message==='FAST_UNAVAILABLE'?'FAST_UNAVAILABLE':'INVALID_SPEED'};}
+  }
   let attachments=[];const input=q.text.trim()?[{type:'text',text:q.text,text_elements:[]}]:[];
   try{
    if(q.attachments!==undefined&&(!Array.isArray(q.attachments)||q.attachments.length>4||q.kind!=='message'))throw Error('INVALID_ATTACHMENT');
@@ -339,17 +410,18 @@ class CodexChat {
   if(q.kind==='shell'){method='thread/shellCommand';params={threadId:this.thread,command:q.text};}
   else if(this.busy&&this.turn){method='turn/steer';params={threadId:this.thread,expectedTurnId:this.turn,input,clientUserMessageId:q.id};}
   else if(this.busy)return {ok:false,delivery:'rejected',error:'MODE_BUSY'};
-  else{method='turn/start';params={threadId:this.thread,input,clientUserMessageId:q.id,...(this.choiceModel?{model:this.choiceModel,effort:this.choiceEffort}:{})};}
+  else{method='turn/start';params={threadId:this.thread,input,clientUserMessageId:q.id,...(tier===undefined?{}:{serviceTierForTurn:tier}),...(this.choiceModel?{model:this.choiceModel,effort:this.choiceEffort}:{})};}
   if(params.model&&params.model!==this.model){this.contextUsage=null;this.contextStale=true;this.usageModel=params.model;this.saveContext();}
-  const oldBusy=this.busy;this.busy=true;if(q.kind==='shell')this.shellRunning=true;
+  const oldBusy=this.busy;this.busy=true;if(method==='turn/start')this.activeServiceTier=null;if(q.kind==='shell')this.shellRunning=true;
   const admission={digest,result:null,promise:null};
-  const promise=this.rpc.call(method,params).then(r=>{if(method==='turn/start'&&r.turn?.id){this.turn=r.turn.id;if(this.compaction?.phase==='unknown')this.recoveryTurn=r.turn.id;if(params.model){this.model=params.model;this.effort=params.effort;this.modelPending=false;this.usageModel='';this.saveContext();this.refresh();}}return {ok:true,accepted:true,delivery:method==='turn/steer'?'current':method==='turn/start'?'started':'shell',ack:method};}).catch(()=>{if(!oldBusy&&!this.turn){this.busy=false;this.shellRunning=false;}this.error('Codex did not confirm delivery. The admission ID remains reserved; retrying it will return the stored result without resending. Check the terminal/history before creating a different request.');return {ok:false,delivery:'unconfirmed',error:'SEND_UNCONFIRMED'};}).then(r=>{admission.result=r;return r;});admission.promise=promise;this.sent.set(q.id,admission);return promise;
+  const promise=this.rpc.call(method,params).then(r=>{if(method==='turn/start'&&r.turn?.id){this.turn=r.turn.id;if(typeof r.turn.serviceTier==='string')this.activeServiceTier=r.turn.serviceTier;if(this.compaction?.phase==='unknown')this.recoveryTurn=r.turn.id;if(params.model){this.model=params.model;this.effort=params.effort;this.modelPending=false;this.usageModel='';this.saveContext();this.refresh();}}return {ok:true,accepted:true,delivery:method==='turn/steer'?'current':method==='turn/start'?'started':'shell',ack:method};}).catch(()=>{if(!oldBusy&&!this.turn){this.busy=false;this.shellRunning=false;}this.error('Codex did not confirm delivery. The admission ID remains reserved; retrying it will return the stored result without resending. Check the terminal/history before creating a different request.');return {ok:false,delivery:'unconfirmed',error:'SEND_UNCONFIRMED'};}).then(r=>{admission.result=r;return r;});admission.promise=promise;this.sent.set(q.id,admission);return promise;
  }
  async changeModel(q){
   if(!this.ready||this.native||this.busy||this.setting||this.compactRunning())return {ok:false,error:'MODE_BUSY'};
   if(!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(q.model||'')||!['none','minimal','low','medium','high','xhigh','max','ultra'].includes(q.effort))return {ok:false,error:'INVALID_MODEL'};
   this.setting=true;try{
    const models=(await this.rpc.call('model/list',{includeHidden:false,limit:100})).data||[];const model=models.find(m=>m.model===q.model);if(!model||!(model.supportedReasoningEfforts||[]).some(e=>e.reasoningEffort===q.effort))return {ok:false,error:'INVALID_MODEL'};
+   if(this.contextWindow&&!this.contextFits(q.model))return {ok:false,error:'CONTEXT_LIMIT'};
    this.choiceModel=q.model;this.choiceEffort=q.effort;this.modelPending=true;this.refresh();return {ok:true,pending:true};
   }finally{this.setting=false;}
  }
@@ -392,23 +464,47 @@ class CodexChat {
  }
  async handle(q){
   if(q.op==='chat-compact')return this.compact(q);
-  if(q.op==='chat-snapshot')return this.snapshot(q);if(q.op==='status')return {ok:true,nativeChat:true,connected:this.ready,thread:this.thread,activeAccess:this.ready?this.access:null,activeApproval:this.ready?this.approval:null,activeCwd:this.ready?this.cwd:null,model:this.choiceModel||this.model,effort:this.choiceEffort||this.effort,pending:!!this.modelPending,busy:this.busy,context:this.contextState()};
+  if(q.op==='chat-snapshot')return this.snapshot(q);if(q.op==='status')return {ok:true,nativeChat:true,connected:this.ready,thread:this.thread,activeAccess:this.ready?this.access:null,activeApproval:this.ready?this.approval:null,activeCwd:this.ready?this.cwd:null,model:this.choiceModel||this.model,effort:this.choiceEffort||this.effort,pending:!!this.modelPending,busy:this.busy,context:this.contextState(),contextOptions:contextOptions(this.choiceModel||this.model),activeContextSettings:{window:this.contextWindow,threshold:this.compactThreshold},speedOptions:{...speedOptions(this.choiceModel||this.model),supported:this.serviceTierSupported},activeServiceTier:this.activeServiceTier};
   if(q.op==='chat-send')return this.send(q);if(q.op==='answer'||q.op==='chat-form')return this.answer(q);if(q.op==='model')return this.changeModel(q);
   if(q.op==='terminal-open')return this.openTerminal();if(q.op==='terminal-close')return {ok:true};if(q.op==='terminal-exit')return this.closeTerminal();
   if(q.op==='chat-interrupt'){if(q.stopToken!==undefined&&(!this.busy||!this.turn||q.stopToken!==this.turn||q.session!==this.thread))return {ok:false,error:'STALE_REQUEST'};if(this.turn&&q.session===this.thread)await this.rpc.call('turn/interrupt',{threadId:this.thread,turnId:this.turn});else return {ok:false,error:'STOP_UNAVAILABLE'};return {ok:true};}
+  if(q.op==='chat-detail'&&q.subagent===true){
+   if(q.session!==this.thread||this.closed||!Number.isInteger(q.offset)||q.offset<0)return {ok:false,error:'NOT_FOUND'};
+   const row=this.groups().flatMap(g=>g.rows).find(r=>r.message===q.message&&r.part===q.part&&['collabAgentToolCall','subAgentActivity'].includes(r.toolType));
+   if(!row)return {ok:false,error:'NOT_FOUND'};
+   const id=row.key,raw=this.full.get(id);let cached=this.subagentDetails.get(id);
+   if(q.offset===0){
+    let original;try{original=JSON.parse(raw);}catch{return {ok:false,error:'NOT_FOUND'};}
+    const identity=value=>JSON.stringify([value.senderThreadId,value.agentThreadId,value.receiverThreadIds]);
+    if(cached&&cached.identity===identity(original))original.agentHistory=cached.histories;
+    let loaded;try{loaded=await subagentHistory(this.rpc,this.thread,original);}catch{return {ok:false,error:'HISTORY_UNAVAILABLE'};}
+    if(this.closed||q.session!==this.thread)return {ok:false,error:'NOT_FOUND'};
+    // Merge only the history. A live completion may have changed status, prompt or response while reading.
+    const latest=this.groups().flatMap(g=>g.rows).find(r=>r.key===id);if(!latest)return {ok:false,error:'NOT_FOUND'};
+    let current;try{current=JSON.parse(this.full.get(id));}catch{return {ok:false,error:'NOT_FOUND'};}
+    if(identity(current)!==identity(original))return {ok:false,error:'NOT_FOUND'};
+    const body=JSON.stringify({...current,agentHistory:loaded.agentHistory,...(loaded.agentHistoryLimited?{agentHistoryLimited:true}:{})});
+    cached={body,histories:loaded.agentHistory,identity:identity(current)};this.subagentDetails.delete(id);this.subagentDetails.set(id,cached);
+    let chars=0;for(const value of this.subagentDetails.values())chars+=value.body.length;
+    while(this.subagentDetails.size>1&&(this.subagentDetails.size>16||chars>8*1024*1024)){const first=this.subagentDetails.keys().next().value;chars-=this.subagentDetails.get(first).body.length;this.subagentDetails.delete(first);}
+   }
+   if(!cached||q.offset>cached.body.length)return {ok:false,error:'NOT_FOUND'};
+   return {ok:true,body:cached.body.slice(q.offset,q.offset+30000),next:q.offset+30000<cached.body.length?q.offset+30000:null};
+  }
   if(q.op==='chat-detail'){this.groups();const body=this.full.get(q.message+':'+q.part);if(body===undefined||q.session!==this.thread||!Number.isInteger(q.offset)||q.offset<0||q.offset>body.length)return {ok:false,error:'NOT_FOUND'};return {ok:true,body:body.slice(q.offset,q.offset+30000),next:q.offset+30000<body.length?q.offset+30000:null};}
   return {ok:false,error:'UNSUPPORTED'};
  }
  async close(){this.closed=true;await this.cancelLogin();this.clearRequests();this.rpc.onMessage=null;this.rpc.onFailure=null;this.rpc.close();await terminateTree(this.native);}
 }
 async function run(){
- const [endpoint,access,chat,thread,cwd,confirmed,approval,language]=process.argv.slice(3);
+ const [endpoint,access,chat,thread,cwd,confirmed,approval,language,window='0',threshold='0']=process.argv.slice(3);
+ const contextWindow=Number(window),compactThreshold=Number(threshold);contextOverrides(contextWindow,compactThreshold);
  if(!endpoint||!path.isAbsolute(endpoint)||!['full','project','read'].includes(access)||!['new','id'].includes(chat)||!['never','on-request','untrusted'].includes(approval)||!path.isAbsolute(cwd))throw Error('Invalid Codex chat launch');
- const rpc=new Connection(endpoint,{largeHistory:true}),controller=new CodexChat(rpc,{endpoint,access,chat,thread,cwd,confirmed,approval,language});const socket=endpoint+'.chat';
+ const rpc=new Connection(endpoint,{largeHistory:true}),controller=new CodexChat(rpc,{endpoint,access,chat,thread,cwd,confirmed,approval,language,contextWindow,compactThreshold});const socket=endpoint+'.chat';
  const peers=new Set();const server=net.createServer(peer=>{peers.add(peer);peer.on('error',()=>{});peer.once('close',()=>peers.delete(peer));peer.setTimeout(15000,()=>peer.destroy());let buffer='',done=false;peer.setEncoding('utf8');peer.on('data',data=>{if(done)return;buffer+=data;if(Buffer.byteLength(buffer)>65536){done=true;peer.destroy();return;}if(!buffer.includes('\n'))return;done=true;let q;try{q=JSON.parse(buffer.slice(0,buffer.indexOf('\n')));}catch{peer.end('{"ok":false}\n');return;}Promise.resolve(controller.handle(q)).catch(()=>({ok:false,error:'CONTROL_FAILED'})).then(r=>{if(!peer.destroyed)peer.end(JSON.stringify(r)+'\n');});});});
  await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(socket,()=>{fs.chmodSync(socket,0o600);resolve();});});
  let closing=false;const close=async()=>{if(closing)return;closing=true;for(const peer of peers)peer.destroy();server.close();await controller.close();try{fs.unlinkSync(socket);}catch{}process.exit(0);};for(const s of ['SIGINT','SIGTERM','SIGHUP'])process.on(s,close);
  controller.start().catch(e=>{controller.ready=false;controller.error(e.message);});
 }
 if(require.main===module)run().catch(e=>{process.stderr.write('Termux Jobs: '+text(e.message)+'\n');process.exit(1);});
-module.exports={CodexChat,valid,normalize,processTree,terminateTree,skillRead};
+module.exports={CodexChat,valid,normalize,processTree,terminateTree,skillRead,subagentBody,subagentHistory};

@@ -3,7 +3,7 @@
 > This updates the app observer, not RTK execution or permission rules. See
 > [release validation](VALIDATION-v2.1.7.md).
 
-# RTK and offline chat resources
+# Historical RTK integration through v2.1.8
 
 RtkMode drives a cancellable per-window installer inside the selected Ubuntu AI.
 rtk-component.json pins component revision/archive/binary SHA-256. rtk-mode.py
@@ -13,10 +13,14 @@ Lite preserves the original command pipeline and measures captured stdout;
 native delegates rewriting and uses the jobs.1 byte protocol with receipt hashes.
 Full recovery is enabled, and returned recall bytes are separate counters.
 
+Version 2.1.9 no longer installs or activates RTK. It preserves earlier
+component installations, mode files, statistics, and recovery data in Ubuntu AI.
+
+# Offline chat resources
+
 AgentOfflineData/OfflineProjectChat read saved environment/project settings without
 starting an agent. Stale metrics remain labelled; missing resources have reasons.
-Storage schema remains unchanged. [RTK limits](RTK-MODE.md) and
-[release checks](VALIDATION-v2.1.6.md) bound these claims.
+The [v2.1.6 release checks](VALIDATION-v2.1.6.md) describe earlier coverage.
 
 # v2.1.5 changes
 

@@ -41,46 +41,33 @@
 старые профили загружаются с выключенным опросом вне выбранной вкладки и включённым
 обычным журналом. Формат библиотеки команд/пресетов остаётся прежним.
 
-# Локальные файлы телефона и доступ инструментов
+## Phone files and tool access
 
-Codex работает локально в Termux или Ubuntu/proot. Не считай его удалённым чатом
-без доступа к файловой системе. Фактический доступ зависит от песочницы сессии,
-доступных инструментов, разрешений Android и монтирований proot; этот файл не
-предоставляет разрешения и не обходит ни одно из этих ограничений.
+Identify the active Termux or Ubuntu AI/PRoot environment before accessing phone
+files. Available tools, sandbox policy, Android permissions and PRoot mounts
+control access. This guide grants no additional access.
 
-На этом телефоне общее хранилище было доступно для чтения из Ubuntu через
-`/sdcard`. Полезные пути:
+On this phone, Ubuntu AI can read shared Android storage through `/sdcard`.
+Verify the path in the active session. The same path may have different access
+on other phones. Termux-private files require their own accessible mount and
+app permissions.
 
-- Скриншоты: `/sdcard/Pictures/Screenshots`.
-- Загрузки и запрошенная пользователем выдача APK/PNG: `/sdcard/Download`.
-- Возможный псевдоним общего хранилища: `/storage/emulated/0`.
+- Screenshots are under `/sdcard/Pictures/Screenshots`.
+- Downloads, including requested APK or PNG deliveries, are under `/sdcard/Download`.
+- `/storage/emulated/0` may be another path to the same shared storage.
 
-Проверяй пути в текущей среде, прежде чем на них полагаться. Приватные пути Termux
-не обязательно видны непосредственно в Ubuntu. На других телефонах могут отличаться
-монтирования или разрешения Android. Не заявляй об отсутствии доступа, не попробовав
-подходящий инструмент только для чтения; при ошибке сообщай её фактический текст.
+For the latest screenshot, find the newest suitable image by modification time
+and exclude video files. For an exact filename, use that file. Check access
+with a read-only command and report the actual error if it fails. Use the image
+viewer for visual inspection. Report a missing viewer separately from a file
+access failure. Ask the user to attach the image when the required file access
+or viewer is unavailable.
 
-При просьбе посмотреть последний скриншот выведи список каталога скриншотов по
-времени изменения, выбери самое новое изображение (не видео) и открой доступным
-инструментом просмотра изображений. Для точного имени ищи именно это имя, не
-подменяя его другим недавним изображением. Пример списка только для чтения:
-
-```sh
-ls -t /sdcard/Pictures/Screenshots | head -10
-```
-
-Используй инструменты команд/файлов для разрешённого локального осмотра, изменения
-исходников и изолированных сборок, а инструменты изображений — для скриншотов.
-Сохраняй приведённые выше границы рабочей области. Если инструмент изображений
-недоступен, укажи это отдельно от доступности самого файла для чтения. Проси
-пользователя прикрепить изображение только когда необходимый доступ или инструмент
-просмотра действительно недоступны.
-
-Доступ только для чтения не разрешает изменения. Даже сессии с полным доступом
-должны соблюдать указания пользователя; без разрешения задачи не устанавливай
-APK, не меняй работающие сессии, не отправляй сообщения и не публикуй изменения.
-Не выводи токены, приватные ключи или содержимое файлов авторизации в отчёты.
-
+Use the shell and file tools for authorized local inspection, project changes
+and isolated builds. Read access grants no permission to change files. APK
+installation, changes to working sessions, external messages and publication
+require applicable user authorization. Keep tokens, private keys and the contents
+of authorization files out of reports.
 
 ## Открытие проектных инструкций / Opening project instructions
 

@@ -7,6 +7,6 @@ final class AgentBubble extends LinearLayout {
     AgentBubble(Context context){super(context);setOrientation(VERTICAL);}
     @Override protected void onMeasure(int widthSpec,int heightSpec){
         int mode=View.MeasureSpec.getMode(widthSpec),width=View.MeasureSpec.getSize(widthSpec);
-        super.onMeasure(mode==View.MeasureSpec.UNSPECIFIED?widthSpec:View.MeasureSpec.makeMeasureSpec(Math.max(1,(int)Math.floor(width*.85f)),View.MeasureSpec.AT_MOST),heightSpec);
+        super.onMeasure(mode==View.MeasureSpec.UNSPECIFIED?widthSpec:View.MeasureSpec.makeMeasureSpec(Math.max(1,(int)Math.floor(width*.88f)),View.MeasureSpec.AT_MOST),heightSpec);
     }
 }

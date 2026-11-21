@@ -9,7 +9,7 @@ function run(script){fs.writeFileSync(path.join(bin,'codex'),'#!/bin/sh\n'+scrip
 (async()=>{
  // Runtime policy refusal/mismatch must stop before turn/start, without retrying never.
  const assets=path.resolve('app/src/main/assets');
- for(const name of ['rtk-agent.cjs','codex-chat.cjs','agent-receipts.cjs','agent-attachments.cjs','agent-action-preview.cjs','agent-completion-times.cjs'])fs.copyFileSync(path.join(assets,name),path.join(root,name));
+ for(const name of ['codex-model-catalog.cjs','codex-chat.cjs','agent-receipts.cjs','agent-attachments.cjs','agent-action-preview.cjs','agent-completion-times.cjs'])fs.copyFileSync(path.join(assets,name),path.join(root,name));
  fs.copyFileSync(path.join(assets,'codex-control.js'),path.join(root,'codex-wire-v0.2.22.js'));
  const {CodexChat}=require(path.join(root,'codex-chat.cjs'));
  for(const fail of ['rejected','mismatch']){
@@ -21,5 +21,5 @@ function run(script){fs.writeFileSync(path.join(bin,'codex'),'#!/bin/sh\n'+scrip
  c=run('exit 0\n');assert.equal(await new Promise(r=>c.once('exit',r)),0);
  const files=fs.readdirSync(root);assert(!files.some(f=>/\.(log|stderr|stdout)$/.test(f)));
  const unrelated=spawn('/bin/sleep',['60']);
- c=run('trap \'printf STOPPED > \"'+path.join(root,'stopped')+'\"; exit 0\' TERM\nprintf \'%s\\n\' \"$$\" > \"'+path.join(root,'pid')+'\"\nwhile :; do /bin/sleep 1; done\n');for(let i=0;!fs.existsSync(path.join(root,'pid'));i++){assert(i<100);await new Promise(r=>setTimeout(r,20));}const pid=Number(fs.readFileSync(path.join(root,'pid'),'utf8'));c.kill('SIGTERM');assert.equal(await new Promise(r=>c.once('exit',r)),130);assert(fs.existsSync(path.join(root,'stopped')));assert.throws(()=>process.kill(pid,0),{code:'ESRCH'});assert.equal(unrelated.exitCode,null);assert.equal(unrelated.signalCode,null);unrelated.kill('SIGTERM');await new Promise(r=>unrelated.once('exit',r));console.log('PASS owned launcher: supported bootstrap args, unchanged legacy args, invalid input rejection, safe classified stderr, no raw output/files, exit/retry');
+ c=run('trap \'printf STOPPED > \"$HOME/stopped\"; exit 0\' TERM\nprintf \'%s\\n\' \"$$\" > \"$HOME/pid\"\nwhile :; do /bin/sleep 1; done\n');for(let i=0;!fs.existsSync(path.join(root,'pid'));i++){assert(i<100);await new Promise(r=>setTimeout(r,20));}const pid=Number(fs.readFileSync(path.join(root,'pid'),'utf8'));c.kill('SIGTERM');assert.equal(await new Promise(r=>c.once('exit',r)),130);assert(fs.existsSync(path.join(root,'stopped')));assert.throws(()=>process.kill(pid,0),{code:'ESRCH'});assert.equal(unrelated.exitCode,null);assert.equal(unrelated.signalCode,null);unrelated.kill('SIGTERM');await new Promise(r=>unrelated.once('exit',r));console.log('PASS owned launcher: supported bootstrap args, unchanged legacy args, invalid input rejection, safe classified stderr, no raw output/files, exit/retry');
 })().catch(e=>{console.error(e);process.exitCode=1;});

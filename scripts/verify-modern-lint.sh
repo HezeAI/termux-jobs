@@ -20,7 +20,7 @@ rm -f "$FORK_LINT_STAGE/app/build/reports/lint-results-release.xml" "$FORK_LINT_
 cd "$FORK_LINT_STAGE"
 FORK_LINT_STATUS=0
 "$FORK_LINT_GRADLE" --no-daemon --no-watch-fs --max-workers=2 -Dorg.gradle.jvmargs=-Xmx1536m \
-    -Pandroid.aapt2FromMavenOverride=/data/data/com.termux/files/usr/bin/aapt2 \
+    -Pandroid.aapt2FromMavenOverride="${FORK_AAPT2:-/data/data/com.termux/files/usr/bin/aapt2}" \
     -x :app:downloadBootstraps :app:lintRelease > "$FORK_LINT_REPORT/run.log" 2>&1 || FORK_LINT_STATUS=$?
 if [[ -f app/build/reports/lint-results-release.xml ]]; then
     cp app/build/reports/lint-results-release.xml "$FORK_LINT_REPORT/lint.xml"

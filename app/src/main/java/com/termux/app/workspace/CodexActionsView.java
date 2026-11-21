@@ -76,6 +76,7 @@ final class CodexActionsView extends LinearLayout {
             String meta=state+"\n"+type;
             long start=AgentTimelineSummary.start(row);if(start>0)meta+="\n"+owner.tr("Начало: ","Started: ")+AgentMessageTime.timelineTime(start);
             item.update(marker+command,row.optString("command",AgentTimelineSummary.path(row)),meta,CodexActionTimeline.failed(row)&&!AgentTimelineSummary.neutral(row)?0xffffb08f:0xfff0f0ee);
+            ((AgentActionTextView)item.title).present(marker+command,CodexActionTimeline.running(row));
             item.setContentDescription(command+". "+state+". "+owner.tr("Открыть действие и подробности","Open action and details"));
             if(item.getParent()==null)steps.addView(item,i);else if(steps.indexOfChild(item)!=i){steps.removeView(item);steps.addView(item,i);}
         }
@@ -97,17 +98,25 @@ final class CodexActionsView extends LinearLayout {
         final TextView title,command,meta;
         ActionRow(AgentChatView owner){
             super(owner.getContext());setOrientation(VERTICAL);
-            title=owner.label("",13);title.setTypeface(Typeface.DEFAULT,Typeface.BOLD);title.setTag("timeline-action-title");title.setPadding(owner.dp(10),owner.dp(8),owner.dp(10),owner.dp(2));
+            title=new AgentActionTextView(getContext());title.setTextSize(13);title.setTypeface(Typeface.DEFAULT,Typeface.NORMAL);title.setSingleLine(true);title.setEllipsize(android.text.TextUtils.TruncateAt.END);title.setTag("timeline-action-title");title.setPadding(owner.dp(8),owner.dp(10),owner.dp(8),owner.dp(10));
             command=owner.label("",11);command.setTag("timeline-action-command");command.setTypeface(Typeface.MONOSPACE);command.setTextColor(WorkspaceDialogs.MUTED);command.setPadding(owner.dp(10),0,owner.dp(10),owner.dp(4));command.setMaxLines(2);command.setEllipsize(android.text.TextUtils.TruncateAt.END);
             meta=owner.label("",11);meta.setTextColor(WorkspaceDialogs.MUTED);meta.setPadding(owner.dp(10),0,owner.dp(10),owner.dp(8));
-            addView(title,new LayoutParams(-1,-2));addView(command,new LayoutParams(-1,-2));addView(meta,new LayoutParams(-1,-2));
+            addView(title,new LayoutParams(-1,-2));command.setVisibility(GONE);meta.setVisibility(GONE);
         }
         void update(String name,String cmd,String state,int color){
-            if(!title.getText().toString().equals(name))title.setText(name);
+            // The live label applies text and transitions after status is known.
             if(!command.getText().toString().equals(cmd))command.setText(cmd);
             command.setVisibility(cmd.isEmpty()?GONE:VISIBLE);
             if(!meta.getText().toString().equals(state))meta.setText(state);
             title.setTextColor(color);
+        }
+        void icon(JSONObject row){
+            int resource=AgentTimelineSummary.kind(row)==AgentTimelineSummary.Kind.COMMAND?com.termux.R.drawable.workspace_terminal:
+                AgentTimelineSummary.kind(row)==AgentTimelineSummary.Kind.READ?com.termux.R.drawable.workspace_server_file:
+                AgentTimelineSummary.knownOther(row)?com.termux.R.drawable.workspace_search:com.termux.R.drawable.workspace_server_file;
+            android.graphics.drawable.Drawable icon=getContext().getDrawable(resource).mutate();icon.setTint(WorkspaceDialogs.MUTED);
+            int size=(int)(18*getResources().getDisplayMetrics().density+.5f);icon.setBounds(0,0,size,size);
+            title.setCompoundDrawables(icon,null,null,null);title.setCompoundDrawablePadding(size/2);
         }
         CharSequence text(){return title.getText()+"\n"+command.getText()+"\n"+meta.getText();}
     }

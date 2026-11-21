@@ -11,6 +11,14 @@ final class CodexStatus {
     long updated;boolean modelPending;Boolean materialized;
     JSONArray models = new JSONArray();
     JSONObject limits = new JSONObject(), context = new JSONObject();
+    private JSONObject speedOptions;
+    String activeServiceTier="";
+    boolean supportsSpeed() {
+        return speedOptions!=null&&!model.isEmpty()&&model.equals(speedOptions.opt("model"))&&Boolean.TRUE.equals(speedOptions.opt("supported"));
+    }
+    boolean supportsFast() {
+        return supportsSpeed()&&Boolean.TRUE.equals(speedOptions.opt("fastAvailable"));
+    }
     static CodexStatus fromFile(java.io.File file) throws Exception {
         if (!file.isFile()) throw new java.io.IOException("Status helper has not started");
         if (file.length()>65536) throw new java.io.IOException("Invalid status size");
@@ -38,6 +46,9 @@ final class CodexStatus {
         if(!state.isFile()) {CodexStatus pending=new CodexStatus();pending.error=WorkspaceText.tr("Помощник статуса ещё не запущен. Для сессии, созданной до v0.2.13, откройте новый терминал Codex с тем же ID чата.");return pending;}
         CodexStatus result=fromFile(state);
         if(CodexChatControl.enabled(files,profile))try{JSONObject choice=CodexChatControl.request(files,profile,new JSONObject().put("op","status"));if(choice.optString("thread").equals(result.thread)&&!result.thread.isEmpty()){if(choice.optJSONObject("context")!=null)result.context=choice.optJSONObject("context");result.model=choice.optString("model",result.model);result.effort=choice.optString("effort",result.effort);result.modelPending=choice.optBoolean("pending");if(choice.optBoolean("connected")){
+            result.speedOptions=choice.optJSONObject("speedOptions");
+            Object tier=choice.opt("activeServiceTier");
+            if(tier instanceof String&&((String)tier).matches("[A-Za-z][A-Za-z0-9_-]{0,127}"))result.activeServiceTier=(String)tier;
             String access=choice.optString("activeAccess");result.activeAccess=java.util.Arrays.asList("full","project","read").contains(access)?access:"";
             String approval=choice.optString("activeApproval");result.activeApproval=java.util.Arrays.asList("never","on-request").contains(approval)?approval:"";
             String cwd=choice.optString("activeCwd");if(cwd.startsWith("/")&&cwd.indexOf('\0')<0)result.cwd=cwd;

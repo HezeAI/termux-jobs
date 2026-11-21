@@ -54,6 +54,8 @@ public final class WorkspaceStore {
         public String sshAuth = "auto", sshIdentity = "", sshEncryptedPassword = "";
         public String codexEnvironment = "ubuntu", codexAccess = "full", codexChat = "new", codexThread = "", codexThreadName = "", codexSocketId = UUID.randomUUID().toString();
         public String codexSourceDirectory = "";
+        public String codexSpeed = "normal";
+        public long codexContextWindow, codexCompactThreshold;
         /** Old live run must not overwrite an explicitly edited next-launch chat. */
         public String codexBindingBlockedRun = "";
         public boolean codexUntrustedApproval; // Only explicitly created new profiles; absent legacy field stays false.
@@ -69,6 +71,7 @@ public final class WorkspaceStore {
         public String claudeEffort="default";
         public String claudeModel="", claudeMode="manual", claudeOrdinaryMode="manual", claudeChat="new", claudeThread=UUID.randomUUID().toString(), claudeSocketId=UUID.randomUUID().toString();
         public transient boolean agentSetupAllowed;
+        transient boolean initializeProjectGit;
         public boolean geminiAgent;
         public boolean extendedDebug;
         public boolean extendedDebugEnabled(){return extendedDebug&&AgentPreparation.agent(this).isEmpty();}
@@ -90,6 +93,7 @@ public final class WorkspaceStore {
             s.extendedDebug=extendedDebugEnabled();s.agentConnectionCommand=agentConnectionCommand; s.name = name + WorkspaceText.tr(" — копия"); s.directory = directory; s.startup = startup; s.startup2 = startup2; s.startup3 = startup3; s.environment = environment;s.prootAlias=prootAlias;s.prootIsolated=prootIsolated;
             s.sshHost = sshHost; s.sshUser = sshUser; s.sshPort = sshPort; s.sshKeepOpen = sshKeepOpen; s.sshAuth = sshAuth; s.sshIdentity = sshIdentity; // Password is bound to the original profile ID.
             s.codexUntrustedApproval=codexUntrustedApproval;s.codexConfirmActions=codexConfirmActions; s.aiProjectOnly=aiProjectOnly; s.codexEnvironment = codexEnvironment; s.codexAccess = codexAccess; s.codexChat = codexChat; s.codexThread = codexThread; s.codexThreadName = codexThreadName; s.codexSourceDirectory=codexSourceDirectory;
+            s.codexSpeed=codexSpeed;s.codexContextWindow=codexContextWindow;s.codexCompactThreshold=codexCompactThreshold;
             s.aiAgent=aiAgent; s.aiConnection=aiConnection; s.aiModel=aiModel; s.aiVariant=aiVariant; s.aiMode=aiMode; s.aiAccess=aiAccess;
             s.claudeEffort=claudeEffort;s.claudeAgent=claudeAgent; s.claudeModel=claudeModel; s.claudeMode=claudeMode;s.claudeOrdinaryMode=claudeOrdinaryMode;
             s.geminiCloudProject=geminiCloudProject;s.geminiCloudLocation=geminiCloudLocation;s.geminiThinking=geminiThinking;s.geminiAgent=geminiAgent; s.geminiAuth=geminiAuth; s.geminiModel=geminiModel; s.geminiMode=geminiMode;
@@ -173,11 +177,18 @@ public final class WorkspaceStore {
             .put("directory", s.directory).put("prootAlias",s.prootAlias).put("prootIsolated",s.prootIsolated).put("prootStartup",s.prootAlias.isEmpty()?JSONObject.NULL:new JSONArray(Arrays.asList(s.startup,s.startup2,s.startup3))).put("startup", s.prootAlias.isEmpty()?s.startup:WorkspaceEnvironments.OLD_READER_GUARD).put("startup2", s.prootAlias.isEmpty()?s.startup2:"").put("startup3", s.prootAlias.isEmpty()?s.startup3:"").put("sshAuth", s.sshAuth).put("sshIdentity", s.sshIdentity).put("sshEncryptedPassword", s.sshEncryptedPassword).put("sshHost", s.sshHost).put("sshUser", s.sshUser).put("sshPort", s.sshPort).put("sshKeepOpen", s.sshKeepOpen).put("environment", s.environment).put("handle", s.handle)
             .put("codexUntrustedApproval",s.codexUntrustedApproval).put("codexConfirmActions",s.codexConfirmActions==null?JSONObject.NULL:s.codexConfirmActions).put("aiProjectOnly",s.aiProjectOnly)
             .put("codexEnvironment", s.codexEnvironment).put("codexAccess", s.codexAccess).put("codexChat", s.codexChat).put("codexThread", s.codexThread).put("codexThreadName", s.codexThreadName).put("codexSocketId", s.codexSocketId).put("codexSourceDirectory",s.codexSourceDirectory).put("codexBindingBlockedRun",s.codexBindingBlockedRun)
+            .put("codexSpeed",s.codexSpeed).put("codexContextWindow",s.codexContextWindow).put("codexCompactThreshold",s.codexCompactThreshold)
             .put("aiAgent",s.aiAgent).put("aiConnection",s.aiConnection).put("aiSocketId",s.aiSocketId).put("aiModel",s.aiModel).put("aiVariant",s.aiVariant).put("aiMode",s.aiMode).put("aiAccess",s.aiAccess).put("aiChat",s.aiChat).put("aiThread",s.aiThread).put("aiSavedThread",s.aiSavedThread)
             .put("claudeEffort",s.claudeEffort).put("claudeAgent",s.claudeAgent).put("claudeModel",s.claudeModel).put("claudeMode",s.claudeMode).put("claudeOrdinaryMode",s.claudeOrdinaryMode).put("claudeChat",s.claudeChat).put("claudeThread",s.claudeThread).put("claudeSocketId",s.claudeSocketId)
             .put("keepHistory",s.keepHistory)
             .put("geminiEncryptedKey",s.geminiEncryptedKey).put("geminiCloudProject",s.geminiCloudProject).put("geminiCloudLocation",s.geminiCloudLocation).put("geminiThinking",s.geminiThinking).put("geminiAuth",s.geminiAuth).put("geminiAgent",s.geminiAgent).put("geminiModel",s.geminiModel).put("geminiMode",s.geminiMode).put("geminiChat",s.geminiChat).put("geminiThread",s.geminiThread).put("geminiSocketId",s.geminiSocketId)
             .put("agentConnectionCommand",s.agentConnectionCommand).put("restoreReview",s.restoreReview).put("extendedDebug",s.extendedDebugEnabled()).put("updated", s.updated).put("saved", s.saved);
+    }
+    private static long contextCount(JSONObject object,String key) {
+        Object value=object.opt(key);
+        if(!(value instanceof Integer)&&!(value instanceof Long))return 0;
+        long count=((Number)value).longValue();
+        return count>0&&count<=9007199254740991L?count:0;
     }
     JSONObject encode() throws JSONException {
         JSONObject root = new JSONObject().put("version", 8);
@@ -255,6 +266,9 @@ public final class WorkspaceStore {
             if (s.environment.equals("codex") && (version < 8 || !(AgentEnvironments.ubuntu(s.codexEnvironment) || s.codexEnvironment.equals("termux"))
                 || !(s.codexAccess.equals("full") || s.codexAccess.equals("project") || s.codexAccess.equals("read"))
                 || !(s.codexChat.equals("new") || s.codexChat.equals("last") || s.codexChat.equals("choose") || (s.codexChat.equals("id") && CodexSessionShell.validThread(s.codexThread))))) throw new JSONException("Invalid Codex profile");
+            s.codexSpeed="fast".equals(o.opt("codexSpeed"))?"fast":"normal";
+            s.codexContextWindow=contextCount(o,"codexContextWindow");
+            s.codexCompactThreshold=contextCount(o,"codexCompactThreshold");
             s.codexSourceDirectory=o.optString("codexSourceDirectory","");
             if(!s.codexSourceDirectory.isEmpty()&&(!s.codexSourceDirectory.startsWith("/")||CodexProjects.directory(s.codexEnvironment,s.codexSourceDirectory).isEmpty()))throw new JSONException("Invalid confirmed chat directory");
             if(o.has("keepHistory")&&!(o.get("keepHistory") instanceof Boolean))throw new JSONException("Invalid history flag");

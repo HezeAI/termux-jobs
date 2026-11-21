@@ -82,7 +82,6 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
     TermuxService mTermuxService;
 
     private com.termux.app.workspace.WorkspaceController mWorkspace;
-    public void restartWorkspaceAgentForRtk(String id){if(mWorkspace!=null)mWorkspace.restartAgentForRtk(id);}
 
     public boolean prepareWorkspaceKeyboardWindow() {
         if (mWorkspace == null) return false;

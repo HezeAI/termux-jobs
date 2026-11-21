@@ -32,7 +32,35 @@ unrelated-process survival and error/cancel races. A small diff does not reduce
 these obligations. Known critical regressions or unresolved termination safety
 block completion.
 
+For chat shutdown changes, verify that closing one chat stops its own agent and
+dedicated SSH tunnel while other chats and shared sessions or tunnels keep
+running. Exercise stale identities and shutdown races where applicable. Use
+captured ownership, PID and start time to check the targets at signal time.
+Intercept signal APIs in fixtures and assert the selected targets and the absence
+of signals when ownership is uncertain.
+
+## Source and build stages
+
+From the repository root, review `git status --short` and the working-tree and
+staged diffs before editing. Inspect relevant untracked files separately.
+Preserve unrelated changes. For a commit in scope, review the staged file list
+and full `git diff --cached`, and run `git diff --cached --check`. Keep private
+data, signing material, APKs, tool caches and temporary build outputs out of the
+commit. Publishing and rewriting history require applicable authorization.
+
+Keep source edits in the checkout. When using an isolated build or analysis
+stage, synchronize task files through the established staging path. Compare
+relative paths and file hashes against the checkout for the source inputs used
+by the build and checks. Include modified, new and deleted inputs. Record
+expected stage-specific transformations and generated inputs, and resolve
+unexpected differences before relying on the result.
+
 ## Intermediate checks and static analysis
+
+When a failure comes only from the test environment, preserve the first failure
+and fix the relevant test configuration. Rerun the failed check and the checks
+that depend on the changed script or configuration. Run the full applicable
+suite when a common mechanism changes or when release rules require it.
 
 | Change | Minimum scope to assess and record |
 | --- | --- |
@@ -52,6 +80,22 @@ Before every public release, run the full compatible modern Lint gate described
 in [LINT.md](LINT.md), including all five modules, dependency analysis and report
 infrastructure checks. Targeted intermediate analysis and old Lint reports do
 not replace this gate. Preserve warnings and toolchain limitations in the report.
+
+## Native tools and packaging alignment
+
+Before declaring a native tool supported, check the executable's ABI, interpreter
+and dependency closure in the environment that will run it. Inspect ELF metadata
+and verify that the loader can resolve required libraries, including indirect
+dependencies. Account for Android/Bionic and Ubuntu/glibc separately. Run a small
+representative operation in the selected environment and check its exit status
+and expected output. Record the tool identity, environment and any unavailable
+checks.
+
+On the final APK, verify applicable ZIP data-offset alignment for stored
+entries. Inspect packaged ELF `LOAD` segments against applicable page-size
+requirements. Also verify the required ZIP page alignment for uncompressed
+native libraries loaded directly from the APK. Apply 16 KiB checks where
+required by the target and packaging mode. Record ELF and ZIP results separately.
 
 ## Reusing evidence
 
@@ -74,20 +118,22 @@ When significant inputs cannot be established, rerun the affected check or recor
 the gap. Never copy a successful result into a new run as though it executed.
 Use these separate labels in every validation summary:
 
-- **Проверено заново / Checked anew:** check, tested input identity, result.
-- **Переиспользовано / Reused:** original evidence, compared significant inputs
+- **Checked anew:** check, tested input identity, result.
+- **Reused:** original evidence, compared significant inputs
   and conditions, equality proof, and limits of the carried result.
-- **Не проверено / Not checked:** missing/omitted check, reason and smallest
+- **Not checked:** missing/omitted check, reason and smallest
   remaining check. An out-of-scope check is not a failure or an implied success.
 
 ## Every delivered APK
 
 Verify the actual final APK after its last packaging/signing operation, including
 intermediate builds: archive integrity, package ID, versionName/versionCode, ABI,
-debug status, signing certificate and signature, SHA-256, and applicable packaged
-runtime/DEX/native/asset requirements. Compare package/certificate and increasing
-versionCode for an update. Inspect for unintended private data and credentials.
-Functional evidence for unchanged components does not waive this final-file gate.
+debug status, signing certificate and signature, SHA-256, applicable packaged
+runtime/DEX/native/asset requirements, and applicable
+[ELF and ZIP alignment](#native-tools-and-packaging-alignment). Compare
+package/certificate and increasing versionCode for an update. Inspect for
+unintended private data and credentials. Functional evidence for unchanged
+components does not waive this final-file gate.
 
 `scripts/verify-apk-runtime.py` inventories DEX definitions/references and reviewed
 optional types; it does not verify all APK identity/signing properties or prove
@@ -128,78 +174,80 @@ compact input hashes, commands, tool versions, check results, artifact identity
 and essential failure excerpts. Preserve existing evidence, generated files and
 user data; do not run cleanup or stage/output deletion merely to apply this policy.
 
-# Чистая установка как основа для каждого окружения
+<a id="чистая-установка-как-основа-для-каждого-окружения"></a>
 
-Разработчик требует, чтобы логика установки ориентировалась на чистое приложение/
-bootstrap и новый экземпляр каждого выбранного окружения. Никогда не определяй
-обязательные компоненты по тому, что случайно установлено на телефоне разработчика
-или в существующей rootfs. Поддерживай явные обязательные пакеты рабочего стола/
-runtime для каждой поддерживаемой цели, включая компоненты, отсутствующие в
-метапакете дистрибутива. Запрашивай весь обязательный набор в транзакции пакетного
-менеджера, даже если часть пакетов уже установлена; определение установленного
-состояния и зависимостей оставляй менеджеру. Зависимости необязательных приложений
-держи в установке соответствующего приложения.
+# Clean installation as the baseline for every environment
 
-Проверки должны отвергать отсутствие обязательного исполняемого компонента
-рабочего стола, а не считать установку завершённой лишь по наличию метапакета,
-панели или оконного менеджера. Покрывай пути отсутствующих компонентов
-изолированными тестами. Успешные прогоны на настроенном телефоне считай только
-доказательствами отсутствия регрессии; установку на новом устройстве и проверку
-GUI описывай отдельно. Не очищай данные пользователя и не меняй установленные
-окружения ради имитации чистой установки без разрешения.
+The developer requires installers to start from a clean app and bootstrap and
+a new instance of each selected environment. Determine required components from
+that baseline, regardless of what happens to be installed on the developer's
+phone or in an existing rootfs. Maintain an explicit set of required desktop and
+runtime packages for every supported target, including components absent from the
+distribution metapackage. Request the entire required set in the package manager
+transaction even if some packages are already installed. Let the package manager
+determine installed state and resolve dependencies. Keep optional application
+dependencies in the installer for the corresponding application.
 
-# Сквозные проверки нового поведения установки
+Fail verification when a required desktop executable is missing. The presence of
+a metapackage, panel or window manager is insufficient. Cover missing components
+in isolated tests. Successful runs on an already configured phone establish
+regression coverage only. Report installation on a fresh device and GUI testing
+separately. Clearing user data or changing installed environments to simulate a
+clean installation requires authorization.
 
-Новые пути установки окружений/компонентов требуют успешных реальных транзакций
-пакетного менеджера в одноразовых, исходно чистых фикстурах проекта, а не только
-проверки архивов, симуляции зависимостей, моков или отрицательных тестов. Проверяй
-пустые кеши загрузки наряду с установкой из кеша, обязательные исполняемые
-компоненты, повторный запуск, отмену и продолжение. Не используй установленную
-rootfs телефона или пакеты разработки как доказательство чистой основы.
-Явно различай проверку фикстур/пакетов и GUI на новом устройстве; недоступные
-проверки фиксируй до выдачи результата.
+# End-to-end checks for new installation behavior
 
-# Регрессионные проверки интеграции X11
+New environment or component installation paths require successful real package
+manager transactions in disposable, initially clean project fixtures. Archive
+checks, dependency simulations, mocks and negative tests alone are insufficient.
+Check both empty download caches and cached installs, required executables,
+reruns, cancellation and resumption. An installed phone rootfs or development
+packages cannot serve as evidence of a clean baseline. Distinguish fixture and
+package checks from GUI checks on a fresh device. Record unavailable checks
+before delivering the result.
 
-Помощники необязательных компонентов должны принимать допустимые псевдонимы
-приватного каталога Android (`/data/data` и `/data/user/0`) по идентичности файловой
-системы, отвергая другой каталог с тем же базовым именем. Перед выдачей APK проверяй
-реальную точку входа помощника с путями-псевдонимами; тесты кеша репозитория сами
-по себе не покрывают различия Android Context.filesDir/PREFIX.
+<a id="регрессионные-проверки-интеграции-x11"></a>
 
-Удаление драйвера проверяй на использовавшемся каталоге драйвера со вспомогательными
-файлами и вложенными кешами runtime, а не только на свежем импорте библиотек и
-метаданных. Сохраняй проверки защищённого пресета, блокировок рабочего стола для
-каждого окружения и удаления без перехода по ссылкам. Проверяй сохранность внешних
-целей символьных ссылок, других драйверов и исходных ZIP на телефоне.
+# X11 integration regression checks
 
-Проверки живого изменения масштаба XFCE должны включать восстановление исходных
-листовых свойств с XML-типом `empty` (не задано), включая DPI и размер курсора.
-Проверяй 75/100/150/100 на реальном изолированном xfconf, а не только на допускающем
-всё моке; восстанавливай пустой лист как незаданный скаляр, не очищая рекурсивно
-другие свойства.
+Optional component helpers must accept valid Android private directory aliases
+(`/data/data` and `/data/user/0`) by filesystem identity and reject a different
+directory with the same basename. Before delivering an APK, check the actual
+helper entry point with aliased paths. Repository cache tests alone do not cover
+Android `Context.filesDir` and `PREFIX` differences.
 
-Изменения поворота должны покрывать конфигурацию, пришедшую до layout, промежуточные
-размеры встроенного/полноэкранного вида, задержанные callbacks поверхности, оба
-направления поворота и обрезку IME. Применяй логический режим вместе с геометрией
-хоста; не пересчитывай новую ориентацию по прежнему размеру поверхности. Отменяй
-ожидающие callbacks геометрии при отсоединении/закрытии хоста. Запрошенный пробный
-режим только для одного окружения ограничивай этим окружением и в Activity, и в
-его выделенном сервисе до проверки на устройстве.
+Check driver removal against a previously used driver directory containing helper
+files and nested runtime caches, in addition to a fresh import of libraries and
+metadata. Preserve checks for the protected preset, desktop locks in every
+environment, and deletion without following symlinks. Verify that external
+symlink targets, other drivers and original ZIP files on the phone are preserved.
 
-Объединение изменений геометрии не доказывает готовность X11-кадра после поворота.
-При изменении полноэкранного представления считай события View attach/detach,
-проверяй непрерывность parent/window-token и восстанавливай layout/политику окна
-при Back, возврате в вертикальную ориентацию, переключении и закрытии. Неудачный
-тест на устройстве считай неудачным, даже если unit-тесты прошли; тайминги нативных
-поверхностей/буферов по-прежнему требуют отдельной проверки на устройстве.
+Live XFCE scaling checks must restore the original leaf properties with XML type
+`empty` (unset), including DPI and cursor size. Check 75/100/150/100 with a real
+isolated xfconf rather than relying solely on a permissive mock. Restore an empty
+leaf as an unset scalar and preserve other properties without recursive clearing.
 
-Изменения переиспользования поверхности должны отличать callbacks только размера
-от замены идентичности Surface/control или формата. Используй публичные API и
-консервативно перепривязывай поверхность, если её идентичность неизвестна.
-Проверяй перепривязку при замене и после потери поверхности, сохраняй синхронное
-освобождение нативных ресурсов при suspend/destroy, а окружения вне пробного
-режима оставляй на прежнем пути до принятия ограниченного теста на устройстве.
+Rotation changes must cover configuration events received before layout,
+intermediate embedded and fullscreen sizes, delayed surface callbacks, rotation
+in both directions and IME clipping. Apply the logical mode together with host
+geometry. Use the new surface dimensions when computing the new orientation.
+Cancel pending geometry callbacks when the host detaches or closes. Restrict a
+requested single-environment trial to that environment in both the Activity and
+its dedicated service until device verification.
+
+Coalescing geometry changes alone cannot establish X11 frame readiness after
+rotation. When changing fullscreen presentation, count View attach/detach
+events, verify parent and window token continuity, and restore layout and window
+policy on Back, return to portrait, switching and closing. A failed device test
+remains a failure even when unit tests pass. Native surface and buffer timing
+still requires separate device verification.
+
+Surface reuse changes must distinguish resize-only callbacks from replacement of
+the Surface or control identity or a change of format. Use public APIs and
+conservatively rebind when surface identity is unknown. Check rebinding on
+replacement and after surface loss. Preserve synchronous release of native
+resources on suspend and destroy. Keep environments outside the trial on the
+existing path until the limited trial passes device acceptance.
 
 ## Native agent permission chains (explicit security check)
 
@@ -229,232 +277,397 @@ the failed early isolation probe, limits and the device checklist. This is not a
 filesystem sandbox, a complete traffic audit, or proof of phone behavior.
 
 
-## Урок: 2026-11-02 — Не смешивать нативные индикаторы разных состояний CLI
+## Lesson from 2026-11-02 — Native CLI indicators represent different states
 
-Перенесено 2026-11-04 без изменения исторических результатов. Это доказательства
-на дату проверки; актуальный статус — в [основном плане](SECURITY-AUDIT-STAGE2.md).
+Moved on 2026-11-04 with the historical results intact. The evidence reflects
+conditions on the check date. See the [main plan](SECURITY-AUDIT-STAGE2.md) for
+current status.
 
-### 2026-11-02 — Не смешивать нативные индикаторы разных состояний CLI
+### 2026-11-02 — Native CLI indicators represent different states
 
-- Контекст: исследование штатных индикаторов для кнопки агента, без замены рабочего интерфейса.
-- Вывод: в Codex0.166.0 рабочая строка использует точку/перелив текста; Braille из loading_glyph — другой путь. В Gemini CLI0.64.0/0.65.0 цветной GeminiRespondingSpinner ограничен Responding без активного hook, а не любым busy. При адаптации сохранять смысл события или явно обозначать изменённую семантику.
-- Применимость: указанные версии и проверенные стандартные компоненты; иные версии/настройки требуют сверки. Штатный символ не доказывает наличие официальной анимации логотипа.
-- Подтверждение: самостоятельно прочитаны официальные исходники точных тегов; компоненты Gemini обеих версий побайтно совпали. Ссылки/хеши и ограничения предпросмотра: `.verification/agent-native-previews/README.md`, `sources.json`, `validation.json` в актуальном checkout. Это анализ источников, не проверка интеграции на телефоне.
-- Решение пользователя: предпросмотры штатных CLI-индикаторов из `.verification/agent-native-previews` отклонены как оформление текущего обновления. Не считать их согласованным дизайном кнопки; технические сведения выше остаются справочными.
-
-
-## Урок: 2026-11-02 — Готовый HTML/GIF не доказывает открытие ссылки в чате
-
-Перенесено 2026-11-04 без изменения исторических результатов. Это доказательства
-на дату проверки; актуальный статус — в [основном плане](SECURITY-AUDIT-STAGE2.md).
-
-### 2026-11-02 — Готовый HTML/GIF не доказывает открытие ссылки в чате
-
-- Контекст: локальные анимированные макеты и установленный Termux Job’s test29/1464.
-- Вывод: в этой версии подчёркнутый абсолютный путь получает URLSpan, но AgentMarkdown пропускает только HTTP(S) и молча отбрасывает локальный путь. Отдельная карточка не равна интерактивному просмотру: выходной HTML Codex имеет тип binary, а GIF показывается через статичный Bitmap. При выдаче таких результатов проверять весь путь открытия, а не только существование файла и его содержимое.
-- Применимость: подтверждённое ограничение test29; до соответствующего исправления не обещать работу анимации по локальной ссылке. В test30 маршрут и просмотрщики изменены; модельная проверка описана ниже, приёмка Android WebView на телефоне остаётся отдельной.
-- Подтверждение: самостоятельная сверка установленного APK, реальных файлов Ubuntu AI,4 изолированных JVM-кейсов и повторного тапа с выделяемым текстом, плюс проекционный код с0вызовов CLI. `.verification/local-file-link-diagnosis/REPORT.md` в актуальном checkout. Аппаратный тап не инструментировался; на этапе этого отчёта исправление ещё не выполнялось.
-
-- Уточнение test30: локальный URLSpan и карточку нужно связывать с копией профиля при рендере, а не искать среду текущего чата в позднем обработчике. Общий просмотрщик использует независимый файловый транспорт; HTML/GIF получают только один виртуальный документ без app bridge/file access. Загрузку WebView начинать после ненулевого viewport. Проверены изолированные ссылки и карточки всех четырёх агентов, смена профиля, ошибки и освобождение WebView; JavaScript/анимацию на телефоне эта проверка не подтверждает. Подтверждение: самостоятельно выполненные проверки и отчёт `docs/fork/VALIDATION-test30-local-files.md` в актуальном checkout. Исторические выводы test29 выше не означают сохранение прежнего ограничения в новом коде.
-
-
-## Урок: 2026-11-02 — Возврат с верхней опоры требует выхода к краю
-
-Перенесено 2026-11-04 без изменения исторических результатов. Это доказательства
-на дату проверки; актуальный статус — в [основном плане](SECURITY-AUDIT-STAGE2.md).
-
-### 2026-11-02 — Возврат с верхней опоры требует выхода к краю
-
-- Контекст: автономный макет перемещающегося робота Codex; это ещё не реализация в приложении.
-- Вывод: при прерывании уборки нельзя прыгать напрямую с внутренней точки верхней плашки на нижнюю. Параболическая траектория пересекает верхнюю плашку. Сначала пройти по её краю к безопасному спуску, затем спускаться; новый запрос при этом активируется сразу.
-- Применимость: маршруты по DOM/View-опорам и последующее внедрение при сохранении такой геометрии. Не считать модельную проверку доказательством всех коллизий на телефоне.
-- Подтверждение: самостоятельно выполнены `collision guard rejects diagonal descent through a tab but permits edge-first return` и прерывания walking/wiping в `.verification/codex-roaming-robot/check.cjs`; отчёт README и checks.json в актуальном checkout.
+- **Context.** The investigation examined built-in indicators for the agent
+  button while keeping the working interface in place.
+- **Finding.** In Codex 0.166.0, the working status line uses a dot and a text
+  shimmer. The Braille indicator from `loading_glyph` follows a separate code
+  path. In Gemini CLI 0.64.0 and 0.65.0, the colored `GeminiRespondingSpinner`
+  appears only in `Responding` when no hook is active. When adapting an
+  indicator, preserve what the event means or explicitly label the change in
+  meaning.
+- **Applicability.** This applies to the listed versions and the built-in
+  components reviewed. Compare the source for other versions or configurations.
+  A built-in glyph alone leaves the existence of an official logo animation
+  unverified.
+- **Evidence.** The assistant read the official sources at the exact tags. The
+  Gemini components matched byte for byte across both versions. The links,
+  hashes, and preview limitations are in
+  `.verification/agent-native-previews/README.md`, `sources.json`, and
+  `validation.json` in the checkout. The check covered source analysis. Phone
+  integration remained unverified.
+- **User decision.** The user rejected the built-in CLI indicator previews in
+  `.verification/agent-native-previews` as the design for this update. The
+  findings serve as technical reference. Treat the previews as a rejected
+  proposal for the button design.
 
 
-## Урок: 2026-11-03 — частичные снимки Claude и открытие формы после чтения
+## Lesson from 2026-11-02 — Verify that HTML and GIF links open from chat
 
-Перенесено 2026-11-04 без изменения исторических результатов. Это доказательства
-на дату проверки; актуальный статус — в [основном плане](SECURITY-AUDIT-STAGE2.md).
+Moved on 2026-11-04 with the historical results intact. The evidence reflects
+conditions on the check date. See the [main plan](SECURITY-AUDIT-STAGE2.md) for
+current status.
 
-## 2026-11-03 — частичные снимки Claude и открытие формы после чтения
+### 2026-11-02 — Verify that HTML and GIF links open from chat
 
-- Контекст: история Claude исчезала после обновления, а «Создание инструкций проекта» иногда не открывалась.
-- Вывод: ограниченный снимок нельзя выдавать общему AgentChatUi как полный knownMessages. Нужны partialHistory и курсоры для скрытых строк, включая части одного сообщения. Полное тело старого ответа восстанавливается из нативного JSONL, а не из ограниченного live-кеша. Для Claude ключ записи — native uuid; provider message.id может повторяться. Общие прокрутка/кеш/просмотр остаются теми же, что у Codex.
-- Условия: основной путь Claude2.1.296 с parentUuid и same-file logicalParentUuid. Не восстанавливать неизвестные межфайловые связи выдумыванием. Нативные файлы не изменять.
-- Подтверждение: самостоятельно проверены большие JSONL-фикстуры, файл более64МиБ, полный Unicode-ответ, реальный изолированный CLI с локальным провайдером и сравнение52нативных записей/14сообщений без пропусков. Общие Claude/Codex тесты удерживают anchor/offset при prepend/stream/reopen. См. docs/fork/VALIDATION-test39-history-instructions.md в активном checkout.
-- Форма: подтверждённый ранний тап терялся из-за busy-return. Очередь одного запроса привязывается к агенту/среде/проекту, а ссылка на открытый дочерний диалог исключает повторную форму. В тестах Android-кнопки требуют выполнения очереди главного потока; это не основание добавлять задержки в продукт. Мигание и открытие на телефоне всё ещё требуют отдельной приёмки.
+- **Context.** The investigation covered local animated mockups and the
+  installed Termux Job’s test29 / 1464.
+- **Finding.** In test29, an underlined absolute path receives a `URLSpan`, but
+  `AgentMarkdown` accepts only HTTP(S) and silently drops the local path. An
+  attachment card can still lack interactive viewing. Codex HTML output has
+  type `binary`, and a GIF displays as a static `Bitmap`. When delivering a
+  result like this, check the full path from the tap to the viewer, including
+  the file's existence and contents.
+- **Applicability.** The confirmed limitation applies to test29. A claim that
+  animation works from a local link requires a corresponding fix. Test30
+  changed the route and viewers. The fixture checks are described below.
+  Acceptance of Android WebView behavior still requires a phone check.
+- **Evidence.** The assistant inspected the installed APK and actual Ubuntu AI
+  files, ran four isolated JVM cases, checked a repeat tap with selectable
+  text, and examined projection code that made zero CLI calls. The report is
+  `.verification/local-file-link-diagnosis/REPORT.md` in the checkout. The
+  physical tap was not instrumented. The report predates the fix.
 
-
-## Урок: 2026-11-03 — Существующий проектный файл отличается от формы создания
-
-Перенесено 2026-11-04 без изменения исторических результатов. Это доказательства
-на дату проверки; актуальный статус — в [основном плане](SECURITY-AUDIT-STAGE2.md).
-
-### 2026-11-03 — Существующий проектный файл отличается от формы создания
-
-- Контекст: в последнем видео Codex уже показывал существующий AGENTS.md, а Claude открывал форму для отсутствующего CLAUDE.md. Пользователь подтвердил это объяснение.
-- Вывод: подпись действия должна соответствовать наличию базового файла, включая просмотр override/local. Для существующего файла показывать «Редактировать», фокусировать редактор без добавления строки статуса. Для отсутствующего — открывать форму создания. Не диагностировать закрытие несуществовавшего окна как установленную причину.
-- Применимость: общий AgentInstructionsUi и ответы agent-instructions.py. Черновик и редакция записи привязаны к исходному контексту. Голосовой ввод по прямому решению пользователя удалён; не восстанавливать его из исторических отчётов.
-- Подтверждение: самостоятельно сопоставлены последнее видео, ветвление Java и read-only вызов реального Python backend: корневой AGENTS.md существует, CLAUDE.md отсутствует, AGENTS.md не изменён. Доказательства в .verification/instruction-window-trace/ актуального checkout; это анализ наблюдаемого поведения, а не проверка нового APK на телефоне.
-
-
-## Урок: 2026-11-03 — Инкрементальная упаковка может сохранять неиспользуемые ZIP-записи
-
-Перенесено 2026-11-04 без изменения исторических результатов. Это доказательства
-на дату проверки; актуальный статус — в [основном плане](SECURITY-AUDIT-STAGE2.md).
-
-### 2026-11-03 — Инкрементальная упаковка может сохранять неиспользуемые ZIP-записи
-
-- Контекст: добавление обязательных уведомлений к кандидату стабильного APK.
-- Вывод: после изменения DEX размер APK вырос на3МБ при почти неизменном списке файлов. Измерение смещений обнаружило3 096 057байт между активными записями с сигнатурой старого локального ZIP-заголовка. Список ZIP/DEX сам по себе не доказывает отсутствие таких остатков. Сохранив только принадлежащие задаче packageRelease state/output, повторили упаковку в свежий output. Финальный APK40 452 595байт, неизменные payload-хеши проверены заново.
-- Применимость: AGP4.2.2 incremental packaging в этой среде. Это не доказательство исполнения старого DEX или утечки секрета. Не чистить весь SDK, кеши или пользовательские данные; сохранять исходные доказательства и проверять точные финальные байты.
-- Подтверждение: .verification/release-v2.1.2/incremental-zip-gaps.json, before-fresh-packaging и fresh-packaging.log; итоговый аудит и docs/fork/VALIDATION-v2.1.2.md в активном checkout.
+- **Test30 follow-up.** Bind the local `URLSpan` and card to a copy of the
+  profile during rendering so a deferred handler uses the original chat
+  environment. The shared viewer uses independent file transport. HTML and
+  GIF each get a single virtual document with the app bridge and file access
+  disabled. Start loading the WebView once it has a nonzero viewport. The
+  assistant checked isolated links and cards for all four agents, profile
+  switching, errors, and WebView cleanup. JavaScript and animation on a phone
+  remained unverified. The report is `docs/fork/VALIDATION-test30-local-files.md`
+  in the checkout. The test29 findings describe the old implementation.
 
 
-## Урок: 2026-11-03 — Снимок Gemini не задаёт время старого действия
+## Lesson from 2026-11-02 — Reach the edge of the upper platform before descending
 
-Перенесено 2026-11-04 без изменения исторических результатов. Это доказательства
-на дату проверки; актуальный статус — в [основном плане](SECURITY-AUDIT-STAGE2.md).
+Moved on 2026-11-04 with the historical results intact. The evidence reflects
+conditions on the check date. See the [main plan](SECURITY-AUDIT-STAGE2.md) for
+current status.
 
-### 2026-11-03 — Снимок Gemini не задаёт время старого действия
+### 2026-11-02 — Reach the edge of the upper platform before descending
 
-- Контекст: часы HH:mm только в заголовках групп хронологии 2.1.3-test3.
-- Вывод: первый observe может содержать пустую историю до её восстановления. Не отмечать все новые для следующего снимка tool IDs текущим временем. Для наблюдаемого времени нужен прежний готовый baseline и активный ответ; сохранённая отметка не меняется при обновлении или перезапуске. Неизвестные старые отметки скрываются.
-- Применимость: существующая проекция React history Gemini и приватное хранилище timing metadata; это не доказательство наличия нативного времени у всех CLI.
-- Подтверждение: scripts/tests/test_action_event_times.cjs, четыре агента, отдельный idle-loaded baseline; CodexActionTimelineTest проверяет timezone/обновление/узкие заголовки. См. docs/fork/VALIDATION-2.1.3-test3.md в активном checkout; проверка телефона остаётся отдельной.
-
-
-## Урок: 2026-11-03 — Подключение и рабочий контекст проверять раздельно
-
-Перенесено 2026-11-04 без изменения исторических результатов. Это доказательства
-на дату проверки; актуальный статус — в [основном плане](SECURITY-AUDIT-STAGE2.md).
-
-### 2026-11-03 — Подключение и рабочий контекст проверять раздельно
-
-- Контекст: продолжение настройки второго телефона по прямому поручению. Установлен официальный Codex0.166.0 рядом с0.163.0; npm integrity проверена, основной бинарник совпал с работающим на первом телефоне. Bootstrap предпочитает найденный в PATH codex, поэтому штатный /usr/local/bin/codex выбирается раньше приватного fallback0.163.0 без замены старого каталога.
-- Два независимых запускателя Hysteria/SSH используют прежний provider=openai. Hysteria с пользовательским VPN получила timeout/no recent network activity; без VPN заработала. Оба маршрута без VPN прошли по два настоящих последовательных ответа. Это ограниченное наблюдение, не универсальный запрет совмещать VPN и Hysteria.
-- Большая история не завершила первые SSH-пробы за180с. При успешной прямой VPN-пробе Codex автоматически выполнил compaction; первоначальное сообщение «не пришлось сокращать» оказалось неточным и исправлено. Затем штатный compact/start через Hysteria завершился, ответ в том же чате занял6.75с. Новый процесс через SSH продолжил тот же чат и завершил ответ за20.57с вместе с запуском. Не отделено влияние маршрута, версии и контекста; изображения не объявлены единственной доказанной причиной.
-- Compaction не удаляет старую переписку в проверенном legacy JSONL0.166.0:32761712байт прежнего префикса побайтно сохранились; добавлена запись с replacement history. Новый размер JSONL не равен размеру запроса модели. Возраст чата и размер локальных ZIP/STL-ссылок не определяют объём модельного контекста; результаты просмотра изображений учитывать отдельно.
-- Реальные тесты аккаунта запускать только по разрешению пользователя, с коротким диагностическим вводом, без проектных инструментов. Проверку stdio app-server не выдавать за приёмку UI. Сохранённый старый бинарник сам по себе не гарантирует обратную совместимость базы после обновления.
-- Доказательства: `.verification/wife-route-20261103/phone-fix/REPORT.txt`, compaction-timeline.json, final-history-preservation.json, model-*-two-turns.jsonl, model-ssh-postcompact.jsonl. Все десять тестовых туннелей завершились; общие службы сервера сохранили идентичность. Ключи аккаунта диагностическим кодом не читались.
+- **Context.** This was a standalone mockup of the roaming Codex robot. App
+  integration had yet to begin.
+- **Finding.** If cleaning is interrupted, a jump from an interior point on
+  the upper tab directly to the lower one creates a parabolic path that
+  intersects the upper tab. Move along its edge to a safe descent point
+  before descending. The new request activates immediately.
+- **Applicability.** This applies to routes across DOM or View platforms and
+  any later integration with the same geometry. Checking all collisions on a
+  phone requires separate verification.
+- **Evidence.** The assistant ran `collision guard rejects diagonal descent through a tab but permits edge-first return`
+  and interruption checks for walking and wiping in
+  `.verification/codex-roaming-robot/check.cjs`. The README and `checks.json`
+  in the checkout record the results.
 
 
-## Урок: 2026-11-03 — Проверка сети CLI требует ограничения системных вызовов
+## Lesson from 2026-11-03 — Partial Claude snapshots and opening the form after a read
 
-Перенесено 2026-11-04 без изменения исторических результатов. Это доказательства
-на дату проверки; актуальный статус — в [основном плане](SECURITY-AUDIT-STAGE2.md).
+Moved on 2026-11-04 with the historical results intact. The evidence reflects
+conditions on the check date. See the [main plan](SECURITY-AUDIT-STAGE2.md) for
+current status.
 
-### 2026-11-03 — Проверка сети CLI требует ограничения системных вызовов
+### 2026-11-03 — Partial Claude snapshots and opening the form after a read
 
-- Контекст: продолжение второго этапа аудита. Ранняя фикстура OpenCode неверно задала legacy provider/settings и получила внешний provider HTTP 403. Тело, точный URL/IP и полный file-open trace не сохранены; нельзя утверждать минимальный состав передачи. Разбор не читал настоящие credentials.
-- Подтверждение этой среды: unshare --user --map-root-user --net завершился кодом 0, но namespace остался прежним и child достиг sentinel родителя. Не распространять это наблюдение на все системы.
-- Решение для тестов: explicit runner scripts/test-native-permission-chain.sh применяет seccomp notification/ADDFD к дереву CLI. Он разрешает только собственные зарегистрированные loopback/abstract endpoints; прямые syscall, IPv6, UDP/packet, SCTP-like stream, Fast Open и exec-потомки проверены отрицательными пробами. Host firewall и настройки приложения не меняются. Это не файловая изоляция и не независимый аудит против враждебного процесса того же UID.
-- Подтверждение: 25 native-сценариев, 18 реальных нажатий UI в Robolectric; Source/outputs-up-to-date для такого теста недостаточно. Отдельный init запрещает reuse/cache explicit native task. В guard наблюдались и блокировались дополнительные localhost-пробы OpenCode 1234/11434/8000. См. docs/fork/SECURITY-AUDIT-STAGE2.md и .verification/security-stage2-followup активного checkout.
-
-
-## Проектные требования проверок — перенос из AGENTS.md 2026-11-04
-
-Перенесено 2026-11-04 без изменения исторических результатов. Это доказательства
-на дату проверки; актуальный статус — в [основном плане](SECURITY-AUDIT-STAGE2.md).
-
-# Проверки соразмерно изменениям
-
-До редактирования определи затронутые функции, вызывающий код, общие помощники,
-зависимости и значимые риски, включая косвенные последствия. Запиши краткий план
-проверок. Выполняй относящиеся к изменению проверки поведения и ошибок; полный
-применимый набор нужен при широких изменениях, изменении общих механизмов или
-зависимостей, границы которых нельзя уверенно определить. Не запускай X11,
-установку окружений, интеграционные проверки драйверов или компонентов только
-потому, что изменён редактор инструкций или оформление чата. До исключения этих
-проверок проследи общие пути layout, хранения, разрешений и выполнения.
-
-Приведённые ниже требования к чистой установке и X11-регрессиям применяются,
-когда затронуто соответствующее поведение или его зависимости. Проверка входных
-данных/хешей APK отличается от запуска графики или установки гостевых систем.
-Сохраняй все применимые проверки принадлежности процессов, безопасности, отмены
-и восстановления; не сокращай их из-за малого diff. Нерешённая безопасность
-остановки процессов по-прежнему блокирует завершение.
-
-Переиспользуй прежние результаты только при подтверждённом совпадении значимых
-производственных и тестовых исходников, конфигурации, фактически выбранных версий зависимостей,
-инструментария/входных данных сборки и относящихся к проверке условий выполнения.
-Учитывай изменённые и новые файлы. Старого успешного лога, ID коммита или сообщения
-UP-TO-DATE недостаточно. Отдельно отмечай **Проверено заново / Checked anew**,
-**Переиспользовано / Reused** (с доказательствами совпадения) и
-**Не проверено / Not checked** (с причиной и оставшейся проверкой).
-
-Каждый выдаваемый APK, включая промежуточные сборки, должен пройти проверки
-именно финального файла: целостность ZIP, package ID, versionName/versionCode,
-ABI, статус debug, подпись/сертификат, SHA-256 и применимые проверки включённых
-runtime/DEX/native/assets. Переиспользование функциональных результатов не
-отменяет этот барьер. Для обновлений сравнивай package/подписанта и проверяй рост
-versionCode; ищи случайно включённые приватные данные.
-
-Для промежуточных сборок явно выбирай и обосновывай статические проверки:
-компиляцию, относящиеся к изменению проверки синтаксиса/локализаций/ресурсов и
-совместимый целевой Lint при понятном покрытии либо полный современный Lint при
-широком или неясном влиянии. Отсутствующая или пропущенная проверка не является
-PASS. Полный современный Lint всех пяти модулей остаётся обязательным перед
-публичным релизом. Изменения только документации требуют проверки текста, ссылок
-и diff, а не пересборки APK или запуска Lint исключительно ради текста.
-
-До выбора точек входа изучи существующие скрипты. Если точка входа безусловно
-делает постороннюю работу, предложи минимальное разделение подготовки, выбранных
-тестов, упаковки, аудита финального файла и релизного Lint. Не добавляй общие
-skip-флаги, фиктивные PASS или сложную систему проверок. Переиспользуй существующие
-локальные SDK, инструменты и кеши; не копируй целиком SDK или окружения для каждого
-прогона. Храни компактные идентификаторы входных данных и результаты. Без
-разрешения не удаляй существующие доказательства, созданные файлы или данные
-пользователя. См. [область проверок и аудит скриптов](docs/fork/TESTING.md),
-[Lint](docs/fork/LINT.md) и [выпуск релизов](docs/fork/RELEASING.md).
-
-# Доказательства завершения рефакторинга
-
-Перед объявлением рефакторинга завершённым оцени три независимые области:
-
-- Относящиеся к изменению тесты: проверь изменённое поведение и значимые ошибки.
-  Один успешный существующий набор не доказывает покрытие нового пути.
-- Ревью кода: проверь регрессии, обработку секретов, границы разрешений и доверия,
-  влияние на посторонние терминальные сессии и процессы.
-- Логическая проверка: проследи применимые пути вызовов, переходы состояний, запуск,
-  переключение, закрытие, отмену, обработку ошибок и восстановление.
-
-Не выдумывай числовой процент уверенности. Если запрошена оценка, можно использовать
-40/30/30 для тестирования/ревью/логической проверки как качественные приоритеты,
-а не калиброванную вероятность или замену доказательствам.
-
-Известная критическая регрессия, раскрытие секрета или нерешённая безопасность
-остановки затронутых процессов блокирует завершение независимо от числа других
-успешных проверок. Если доказательств недостаточно, сообщи, что проверено, каковы
-основные пробелы и минимальные следующие проверки. Различай проверку исходников/
-сборки и устройства: клавиатуру, жесты и другое зависящее от устройства поведение
-нельзя объявлять проверенными на телефоне только на основании мок-тестов UI.
-Выбирай проверки соразмерно изменению; не добавляй избыточные тесты или широкий
-посторонний рефакторинг ради улучшения оценки. Разрешения пользователя на установку
-APK или публикацию остаются отдельными от технических проверок.
+- **Context.** Claude history disappeared after a refresh, and the Create
+  project instructions form (`Создание инструкций проекта`) sometimes failed
+  to open.
+- **Finding.** Pass a limited snapshot to the shared `AgentChatUi` as
+  `partialHistory` and include cursors for hidden rows, including hidden parts
+  of a single message. Reserve complete `knownMessages` for full snapshots.
+  Recover the full body of an old response from the native JSONL because the
+  live cache is limited. Claude uses its native `uuid` as the record key
+  because the provider `message.id` can repeat. Claude and Codex share the
+  same scrolling, cache, and viewing behavior.
+- **Conditions.** This covers the main Claude 2.1.296 path with `parentUuid`
+  and same-file `logicalParentUuid`. Leave unknown cross-file relationships
+  unresolved and preserve native files.
+- **Evidence.** The assistant checked large JSONL fixtures, a file larger than
+  64 MiB, a full Unicode response, and the real CLI in isolation with a local
+  provider. The comparison covered 52 native records and 14 messages with no
+  omissions. Shared Claude and Codex tests preserved the anchor and offset
+  when prepending, streaming, and reopening. The report is
+  `docs/fork/VALIDATION-test39-history-instructions.md` in the checkout.
+- **Form.** An early tap was lost because the busy path returned immediately.
+  Bind the single queued request to the agent, environment, and project. Keep
+  a reference to the open child dialog to prevent a duplicate form. Android
+  button tests must run the main-thread queue. That test requirement supplies
+  no basis for adding product delays. Opening the form and checking for
+  flicker still require phone acceptance.
 
 
-## Реорганизация рабочего контекста — 2026-11-04
+## Lesson from 2026-11-03 — Existing project files open in the editor
 
-По поручению разработчика AGENTS.md сокращён до обязательных ограничений, путей
-и условного навигатора. Единственная память остаётся `/root/termux-fork/LEARNING.md`;
-она обновлена на месте вне checkout и не добавляется вторым файлом в Git.
-58 блоков исторических результатов и уроков перенесены без изменения содержания
-в существующие тематические документы; подробные требования проверок сохранены
-выше. Текущий план аудита отделён от истории, CONTINUE описывает актуальную цель.
-Сокращение не означает измеренную экономию токенов или времени.
+Moved on 2026-11-04 with the historical results intact. The evidence reflects
+conditions on the check date. See the [main plan](SECURITY-AUDIT-STAGE2.md) for
+current status.
 
-| Файл | До, байт | После, байт |
+### 2026-11-03 — Existing project files open in the editor
+
+- **Context.** In the latest video, Codex was already showing an existing
+  `AGENTS.md`, while Claude opened the form for a missing `CLAUDE.md`. The user
+  confirmed this explanation.
+- **Finding.** Match the action label to whether the base file exists, including
+  when viewing an override or local file. For an existing file, show Edit
+  (`Редактировать`) and focus the editor without adding a status line. For a
+  missing file, open the creation form. The evidence established which screen
+  opened and did not establish a window closing.
+- **Applicability.** This applies to the shared `AgentInstructionsUi` and the
+  responses from `agent-instructions.py`. The draft and write revision are
+  tied to the original context. The user explicitly directed the removal of
+  voice input. Historical reports grant no basis for restoring it.
+- **Evidence.** The assistant compared the latest video, Java branching, and a
+  read-only call to the real Python backend. The root `AGENTS.md` existed and
+  remained untouched. `CLAUDE.md` was absent. The evidence in
+  `.verification/instruction-window-trace/` documents the observed behavior.
+  Phone verification of a new APK was outside that check.
+
+
+## Lesson from 2026-11-03 — Incremental packaging can retain unused ZIP records
+
+Moved on 2026-11-04 with the historical results intact. The evidence reflects
+conditions on the check date. See the [main plan](SECURITY-AUDIT-STAGE2.md) for
+current status.
+
+### 2026-11-03 — Incremental packaging can retain unused ZIP records
+
+- **Context.** Required notices were being added to a stable APK candidate.
+- **Finding.** After the DEX changed, the APK grew by 3 MB while its file list
+  changed very little. An offset check found a 3,096,057-byte gap between
+  active entries with the signature of an old local ZIP header. Verify gaps
+  between entries in addition to inspecting the ZIP and DEX listings. The assistant
+  preserved only the task-owned `packageRelease` state and output before
+  packaging again in a fresh output directory. The final APK measured
+  40,452,595 bytes. The payload hashes were rechecked and remained the same.
+- **Applicability.** This occurred with AGP 4.2.2 incremental packaging in the
+  checked environment. Execution of old DEX or exposure of a secret was never
+  established. Preserve the original evidence, leave the SDK, caches, and user
+  data in place, and verify the exact final bytes.
+- **Evidence.** See `.verification/release-v2.1.2/incremental-zip-gaps.json`,
+  `before-fresh-packaging`, `fresh-packaging.log`, the final audit, and
+  `docs/fork/VALIDATION-v2.1.2.md` in the checkout.
+
+
+## Lesson from 2026-11-03 — An initial Gemini snapshot can leave old action times unknown
+
+Moved on 2026-11-04 with the historical results intact. The evidence reflects
+conditions on the check date. See the [main plan](SECURITY-AUDIT-STAGE2.md) for
+current status.
+
+### 2026-11-03 — An initial Gemini snapshot can leave old action times unknown
+
+- **Context.** Version 2.1.3-test3 displayed `HH:mm` only in timeline group
+  headings.
+- **Finding.** The first `observe` can contain empty history before the CLI
+  restores it. Assign observed times only after establishing a ready baseline
+  and while a response is active. This avoids marking all tool IDs that first
+  appear in the next snapshot with the current time. Keep saved timestamps on
+  refresh and restart. Hide old timestamps when their values are unknown.
+- **Applicability.** This covers the existing Gemini React history projection
+  and private timing metadata store. Native action times for other CLIs need
+  independent evidence.
+- **Evidence.** `scripts/tests/test_action_event_times.cjs` covers four agents
+  and a separate idle-loaded baseline. `CodexActionTimelineTest` checks time
+  zones, refresh, and narrow headings. The report is
+  `docs/fork/VALIDATION-2.1.3-test3.md` in the checkout. A phone check remains
+  separate.
+
+
+## Lesson from 2026-11-03 — Check connectivity and working context separately
+
+Moved on 2026-11-04 with the historical results intact. The evidence reflects
+conditions on the check date. See the [main plan](SECURITY-AUDIT-STAGE2.md) for
+current status.
+
+### 2026-11-03 — Check connectivity and working context separately
+
+- **Context.** At the user's request, setup continued on a second phone. The
+  official Codex 0.166.0 was installed alongside 0.163.0. npm integrity was
+  checked, and the main binary matched the one working on the first phone.
+  Bootstrap prefers `codex` on `PATH`, so the standard `/usr/local/bin/codex`
+  takes priority over the private 0.163.0 fallback. The old directory remained
+  intact.
+- The independent Hysteria and SSH launchers used the existing
+  `provider=openai`. Hysteria produced `timeout/no recent network activity`
+  with the user's VPN and worked with the VPN off. Both routes completed two
+  genuine successive responses with the VPN off. That observation applies to
+  the tested setup.
+- The first SSH probes on the large history did not finish within 180 seconds.
+  Codex ran compaction automatically during a successful direct VPN probe.
+  The initial statement that compaction was unnecessary (`не пришлось сокращать`)
+  was inaccurate and was corrected. The normal compact and start sequence over
+  Hysteria then finished, and the response in the same chat took 6.75 seconds.
+  A new process over SSH resumed the same chat and completed its response in
+  20.57 seconds including startup. The effects of route, version, and context
+  were not isolated. The role of images remained unresolved.
+- Compaction preserved the old conversation in the checked Codex 0.166.0
+  legacy JSONL. The original 32,761,712-byte prefix remained byte-for-byte
+  identical, and compaction appended a record with replacement history. Measure
+  the model request separately from the new JSONL size. Chat age and the sizes
+  of locally linked ZIP or STL files do not determine the model's context size.
+  Track image-view results separately.
+- Run live account tests only with the user's permission, using short
+  diagnostic input and no project tools. The stdio `app-server` check covers
+  the protocol path. The UI requires separate acceptance. Keeping the old
+  binary leaves database compatibility after an upgrade unverified.
+- **Evidence.** See `.verification/wife-route-20261103/phone-fix/REPORT.txt`,
+  `compaction-timeline.json`, `final-history-preservation.json`,
+  `model-*-two-turns.jsonl`, and `model-ssh-postcompact.jsonl`. All ten test
+  tunnels ended, and the shared server services retained their identities.
+  The diagnostic code did not read account keys.
+
+
+## Lesson from 2026-11-03 — CLI network checks require system call restrictions
+
+Moved on 2026-11-04 with the historical results intact. The evidence reflects
+conditions on the check date. See the [main plan](SECURITY-AUDIT-STAGE2.md) for
+current status.
+
+### 2026-11-03 — CLI network checks require system call restrictions
+
+- **Context.** During the second audit stage, an early OpenCode fixture
+  configured the legacy provider and settings incorrectly and received an
+  external provider's HTTP 403. The request body, exact URL or IP address, and
+  full file-open trace were not retained. The transmitted data is therefore
+  unknown. The investigation did not read real credentials.
+- **Evidence for this environment.** `unshare --user --map-root-user --net`
+  exited with status 0, but the namespace remained the same and the child
+  reached the parent's sentinel. This observation applies to the checked
+  environment.
+- **Fixture setup.** The explicit runner `scripts/test-native-permission-chain.sh`
+  applies seccomp notification and `ADDFD` to the CLI process tree. It allows
+  only the runner's registered loopback and abstract endpoints. Negative probes
+  covered direct system calls, IPv6, UDP and packet sockets, SCTP-like streams,
+  Fast Open, and descendants launched via `exec`. The host firewall and app
+  settings stayed in place. The fixture leaves file isolation and resistance
+  to a hostile same-UID process unverified.
+- **Evidence.** The checks covered 25 native scenarios and 18 actual UI taps
+  in Robolectric. Source and output freshness alone is insufficient. A separate
+  init script disables reuse and caching for the explicit native task. The
+  guard observed and blocked additional OpenCode probes to localhost ports
+  1234, 11434, and 8000. See `docs/fork/SECURITY-AUDIT-STAGE2.md` and
+  `.verification/security-stage2-followup` in the checkout.
+
+## Project verification requirements moved from AGENTS.md on 2026-11-04
+
+This material was moved on 2026-11-04 with its historical results intact. The
+results apply to the dates of the checks. See the
+[main audit plan](SECURITY-AUDIT-STAGE2.md) for current status.
+
+# Verification in proportion to the change
+
+Before editing, identify affected functions, callers, shared helpers,
+dependencies, and significant risks, including indirect effects. Write a short
+verification plan. Run the relevant behavior and error checks. Run the full
+applicable suite for broad changes, changes to shared mechanisms, or changes to
+dependencies whose scope you cannot confidently determine. A change limited to
+the instructions editor or chat styling does not by itself require starting X11, installing
+environments, or running driver or component integration checks. Trace shared
+layout, storage, permission, and execution paths before ruling out these checks.
+
+Apply the clean installation and X11 regression requirements when the change
+affects the corresponding behavior or its dependencies. Checking APK
+inputs and hashes is a separate step from starting graphics or installing guest
+systems. Keep all applicable checks for process ownership, safety, cancellation,
+and recovery, even for a small diff. Unresolved process-stop safety still blocks
+completion.
+
+Reuse earlier results only after confirming that the relevant production and
+test sources, configuration, resolved dependency versions, build tools and
+inputs, and execution conditions match. Account for changed and new files. An
+old successful log, commit ID, or `UP-TO-DATE` message alone is insufficient.
+Report **Checked anew**, **Reused** (with evidence that the relevant inputs and
+conditions match), and **Not checked** (with the reason and the remaining check)
+separately.
+
+For every delivered APK, including interim builds, verify the final file's ZIP
+integrity, package ID, `versionName` and `versionCode`, ABI, debug status,
+signature and certificate, SHA-256, and applicable checks for the included
+runtime, DEX, native libraries, and assets. These checks remain mandatory when
+reusing functional results. For updates, compare the package ID and signer and
+verify that `versionCode` increases. Check for inadvertently included private data.
+
+For interim builds, explicitly select and justify the static checks. Include
+compilation and any relevant syntax, localization, and resource checks. Use
+compatible targeted Lint when coverage is clear, or full modern Lint when the
+impact is broad or unclear. Count only completed, successful checks as passes.
+Full modern Lint for all five modules is mandatory before a public release. For
+documentation-only changes, check the text, links, and diff. The text alone
+requires neither an APK rebuild nor a Lint run.
+
+Review the existing scripts before choosing an entry point. If an entry point
+always performs unrelated work, propose the smallest separation of preparation,
+selected tests, packaging, final-file audit, and release Lint. Keep broad skip
+flags, fictitious passes, and complex verification infrastructure out of the
+project. Reuse the existing local SDKs, tools, and caches without copying whole
+SDKs or environments for each run. Keep compact records of input identifiers
+and results. Obtain permission before deleting existing evidence, generated
+files, or user data. See [verification scope and script review](TESTING.md), [Lint](LINT.md), and
+[the release procedure](RELEASING.md).
+
+# Evidence for completing a refactor
+
+Before declaring a refactor complete, assess each of these areas independently.
+
+- Run tests for the changed behavior and significant error cases. A passing
+  existing suite alone leaves coverage of the new path unproven.
+- Review code for regressions, handling of secrets, permission and trust
+  boundaries, and effects on unrelated terminal sessions and processes.
+- Trace the applicable call paths and state transitions. Cover startup,
+  switching, closing, cancellation, error handling, and recovery.
+
+Do not invent a numerical confidence percentage. When asked for an assessment,
+use 40/30/30 if helpful as qualitative priorities for tests, code review, and
+tracing behavior. These weights carry no calibrated probability and do not
+substitute for evidence.
+
+A known critical regression, exposure of a secret, or unresolved safety issue
+when stopping an affected process blocks completion regardless of how many other
+checks passed. If evidence is insufficient, report what you checked, the main
+gaps, and the smallest remaining checks. Report source and build checks
+separately from device checks. UI mocks alone cannot verify keyboard behavior,
+gestures, or other device-dependent behavior on a phone. Choose checks in
+proportion to the change. Avoid redundant tests and broad unrelated refactors
+undertaken solely to improve the assessment. User authorization for APK
+installation or publication remains separate from technical verification.
+
+
+<a id="реорганизация-рабочего-контекста--2026-11-04"></a>
+
+## Working context reorganization on 2026-11-04
+
+At the developer's direction, `AGENTS.md` was shortened to the mandatory
+restrictions, paths, and a guide that specifies when to read each document.
+The sole memory file remained `/root/termux-fork/LEARNING.md`. It was updated
+in place outside the checkout and was not added to Git as a second copy.
+The reorganization moved 58 blocks of historical results and lessons into
+existing topical documents without changing their contents. The detailed
+verification requirements remain above. The current audit plan was separated
+from the historical record. `CONTINUE.md` describes the active goal. Token and
+time savings were not measured.
+
+| File | Before (bytes) | After (bytes) |
 | --- | ---: | ---: |
 | AGENTS.md | 19,535 | 15,214 |
 | LEARNING.md | 92,904 | 25,144 |
 | SECURITY-AUDIT-STAGE2.md | 187,778 | 17,013 |
 | CONTINUE.md | 1,564 | 5,119 |
 
-Проверки помощника: побайтовое включение всех 58 перенесённых блоков, 83 ссылки
-текущих входных документов, исправление двух входящих якорных ссылок, git diff --check.
-Доказательства: `.verification/context-organization/{before.json,relocations.json,check.json}`.
-Сохранены обязательное чтение памяти, ограничения среды/процессов/секретов,
-авторизация, финальный APK/Lint, X11/чистая установка, updater/совместимость,
-CHANGELOG/RU/EN/авторство и условное чтение RELEASING. Пороговые правила размеров
-общего шаблона не отменены. Память не заменяет актуальный статус аудита.
+The assistant verified byte-for-byte inclusion of all 58 moved blocks, checked
+83 links in the current entry documents, fixed two incoming anchor links, and
+ran `git diff --check`. The evidence is in
+`.verification/context-organization/{before.json,relocations.json,check.json}`.
+The reorganization retained mandatory memory reading, restrictions on the
+environment, processes, and secrets, authorization, final APK and Lint checks,
+X11 and clean installation requirements, updater and compatibility requirements,
+CHANGELOG, RU/EN, and attribution requirements, and the conditions for reading
+`RELEASING.md`. The general template's size thresholds still apply. The audit
+plan remains the source for current audit status.

@@ -111,10 +111,14 @@ final class AgentPreparationOperation {
     static AgentPreparation.Plan prepare(Context context,WorkspaceStore.Session p,Consumer<String> output)throws Exception{
         AgentPreparation.prepare(context);
         String source=SessionShell.quote(new File(AgentPreparation.directory(context.getFilesDir()),"agent-host-setup.sh").getAbsolutePath());
-        String guest="set -eE; export JOBS_AGENT_UBUNTU="+SessionShell.quote(AgentEnvironments.alias(p))+" JOBS_AGENT_SETUP_ALLOWED=1 JOBS_AGENT_COMPONENTS_ONLY=1 JOBS_AGENT_LANGUAGE="+AgentPreparation.language(context)+"; source "+SessionShell.quote(AgentPreparation.GUEST+"/agent-dependencies.sh")+"; trap 'jobs_agent_stage_failure' ERR; jobs_agent_prepare "+SessionShell.quote(AgentPreparation.agent(p))+" "+SessionShell.quote(p.geminiAgent?p.geminiAuth:"api")+"; ";
+        String guest="set -eE; export JOBS_AGENT_UBUNTU="+SessionShell.quote(AgentEnvironments.alias(p))+" JOBS_AGENT_SETUP_ALLOWED=1 JOBS_AGENT_COMPONENTS_ONLY=1 JOBS_AGENT_LANGUAGE="+AgentPreparation.language(context)+"; "+AgentPreparation.projectGitEnvironment(p)+"source "+SessionShell.quote(AgentPreparation.GUEST+"/agent-dependencies.sh")+"; trap 'jobs_agent_stage_failure' ERR; jobs_agent_prepare "+SessionShell.quote(AgentPreparation.agent(p))+" "+SessionShell.quote(p.geminiAgent?p.geminiAuth:"api")+"; ";
         switch(AgentPreparation.agent(p)){
             case "claude":guest+="source "+SessionShell.quote(AgentPreparation.GUEST+"/claude-bootstrap.sh")+"; ";break;
-            case "gemini":guest+="source "+SessionShell.quote(AgentPreparation.GUEST+"/gemini-bootstrap.sh")+"; ";if(p.geminiAuth.equals("vertex"))guest+="export JOBS_AGENT_COMPONENTS_ONLY=1; source "+SessionShell.quote(AgentPreparation.GUEST+"/vertex-bootstrap.sh")+"; ";break;
+            case "gemini":
+                if ("antigravity".equals(p.geminiAuth)) break;
+                guest+="source "+SessionShell.quote(AgentPreparation.GUEST+"/gemini-bootstrap.sh")+"; ";
+                if (p.geminiAuth.equals("vertex")) guest+="export JOBS_AGENT_COMPONENTS_ONLY=1; source "+SessionShell.quote(AgentPreparation.GUEST+"/vertex-bootstrap.sh")+"; ";
+                break;
             case "opencode":guest+="source "+SessionShell.quote(AgentPreparation.GUEST+"/ai-agents-bootstrap.sh")+"; ";break;
             default:break;
         }
@@ -177,14 +181,22 @@ final class AgentPreparationOperation {
         ProgressBar progress=new ProgressBar(a,null,android.R.attr.progressBarStyleHorizontal);progress.setTag("preparation-stage-progress");body.addView(progress,new LinearLayout.LayoutParams(-1,WorkspaceDialogs.dp(a,12)));progress.setMax(100);
         ScrollView scroll=new ScrollView(a);scroll.addView(body);
         AlertDialog dialog=WorkspaceDialogs.builder(a).setTitle(title(a,"Проверка среды запуска","Launch environment check")).setView(scroll).setNegativeButton(title(a,"Закрыть","Close"),null).setPositiveButton(title(a,"Повторить проверку","Retry check"),null).create();
+        dialog.setCanceledOnTouchOutside(false);
         boolean[] delivered={false};Runnable update=()->{if(a.isFinishing()||a.isDestroyed())return;
             PlanProgress plan=job.plan;overallText.setText(overall(job,a));overallBar.setIndeterminate(plan==null);overallBar.setMax(plan==null?1:plan.total());overallBar.setProgress(plan==null?0:plan.completed);overallBar.setContentDescription(overallText.getText());
             found.setText(job.inventory==null?title(a,"Проверка выбранной среды…","Checking the selected environment…"):AgentPreparation.summary(a,job.result==null?job.inventory:job.result));phase.setText(stage(job,a));item.setText(job.component);item.setVisibility(job.component.isEmpty()?android.view.View.GONE:android.view.View.VISIBLE);
             progress.setIndeterminate(job.percent<0);progress.setProgress(Math.max(0,job.percent));progress.setVisibility(job.active?android.view.View.VISIBLE:android.view.View.GONE);
             amount.setText(job.total>0?String.format(Locale.ROOT,title(a,"%d / %d байт · %d%%","%d / %d bytes · %d%%"),job.received,job.total,job.percent):"");
-            if(dialog.getButton(-1)!=null){dialog.getButton(-1).setEnabled(!job.active);dialog.getButton(-1).setVisibility(job.active?android.view.View.GONE:android.view.View.VISIBLE);}
-            if(!job.active&&job.result!=null&&job.result.ready()&&!delivered[0]&&dialog.isShowing()){delivered[0]=true;if(completion!=null)completion.accept(job.result);}
+            boolean ready=!job.active&&job.result!=null&&job.result.ready();
+            boolean retry=!job.active&&!ready;
+            dialog.setCancelable(!job.active);
+            Button retryButton=dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            if(retryButton!=null){
+                retryButton.setEnabled(retry);
+                retryButton.setVisibility(retry?android.view.View.VISIBLE:android.view.View.GONE);
+            }
+            if(ready&&!delivered[0]&&dialog.isShowing()){delivered[0]=true;if(completion!=null)completion.accept(job.result);}
         };
-        job.observers.add(update);dialog.setOnDismissListener(d->job.observers.remove(update));dialog.show();dialog.getButton(-1).setOnClickListener(v->{if(job.active)return;dialog.dismiss();start(a,job.session,AgentPreparationOperation::prepare);show(a,job.session,completion);});update.run();
+        job.observers.add(update);dialog.setOnDismissListener(d->job.observers.remove(update));dialog.show();dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{if(!v.isEnabled())return;dialog.dismiss();start(a,job.session,AgentPreparationOperation::prepare);show(a,job.session,completion);});update.run();
     }
 }

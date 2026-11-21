@@ -10,13 +10,16 @@ import java.util.concurrent.TimeUnit;
 final class GeminiCli {
     static final String GUEST="/tmp/termux-jobs-gemini";
     private GeminiCli() {}
+    static final String ANTIGRAVITY="antigravity";
+    static boolean antigravity(WorkspaceStore.Session profile){return profile!=null&&profile.geminiAgent&&ANTIGRAVITY.equals(profile.geminiAuth);}
     static File directory(File files) {return new File(files,".gemini-control");}
     static boolean validThread(String id) {return id!=null && id.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");}
     static boolean validCloudProject(String value){return value!=null&&(value.isEmpty()||value.matches("[a-z][a-z0-9-]{4,28}[a-z0-9]|[0-9]{6,20}"));}
     static boolean validCloudLocation(String value){return value!=null&&(value.isEmpty()||value.length()<=63&&value.matches("global|[a-z]+(?:-[a-z0-9]+){1,4}"));}
     static boolean valid(WorkspaceStore.Session s) {
         return s.geminiAgent && s.environment.equals("ubuntu") && AgentEnvironments.ubuntu(s.codexEnvironment) && s.aiAgent.isEmpty() && !s.claudeAgent
-            && java.util.Arrays.asList("auto","google","api","vertex").contains(s.geminiAuth)
+            && (antigravity(s)?s.codexEnvironment.equals("ubuntu-ai")&&s.geminiModel.isEmpty()&&s.geminiMode.equals("default")&&!s.geminiChat.equals("choose")
+                :java.util.Arrays.asList("auto","google","api","vertex").contains(s.geminiAuth))
             && validCloudProject(s.geminiCloudProject)&&validCloudLocation(s.geminiCloudLocation)
             && java.util.Arrays.asList("","auto","flash","pro").contains(s.geminiModel)
             && java.util.Arrays.asList("default","auto_edit","plan").contains(s.geminiMode)
@@ -24,11 +27,12 @@ final class GeminiCli {
             && java.util.Arrays.asList("new","choose","id").contains(s.geminiChat)
             && validThread(s.id) && validThread(s.geminiThread) && validThread(s.geminiSocketId);
     }
-    static void prepare(Context context) throws IOException {
+    static void prepare(Context context,WorkspaceStore.Session profile) throws IOException {
         File dir=directory(context.getFilesDir());
         if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create Gemini controls");
         protect(dir);
-        for(String asset:new String[]{"agent-download.sh","gemini-bootstrap.sh","gemini-control.js","gemini-live.cjs","gemini-thinking.cjs","gemini-live-loader.mjs","gemini-chat.cjs","agent-receipts.cjs","agent-action-preview.cjs","agent-completion-times.cjs","agent-context.cjs","agent-delivery-status.cjs","agent-attachments.cjs"}) {
+        String[] assets=antigravity(profile)?new String[]{"agy-chat.cjs","agent-delivery-status.cjs","agent-completion-times.cjs","agent-receipts.cjs"}:new String[]{"agent-download.sh","gemini-bootstrap.sh","gemini-control.js","gemini-live.cjs","gemini-thinking.cjs","gemini-live-loader.mjs","gemini-chat.cjs","agent-receipts.cjs","agent-action-preview.cjs","agent-completion-times.cjs","agent-context.cjs","agent-delivery-status.cjs","agent-attachments.cjs"};
+        for(String asset:assets) {
             File temporary=File.createTempFile("gemini-",".tmp",dir);
             try {
                 try(InputStream in=context.getAssets().open(asset);OutputStream out=new FileOutputStream(temporary)) {
@@ -46,6 +50,10 @@ final class GeminiCli {
     static String command(File files,WorkspaceStore.Session s) {
         if(!java.util.Arrays.asList("default","auto_edit","plan").contains(s.geminiMode))throw new IllegalArgumentException(WorkspaceText.tr("Выбранный режим разрешений не поддерживается. Запуск остановлен; полный доступ не включён."));
         if(!valid(s))throw new IllegalArgumentException("Invalid Gemini profile");
+        if(antigravity(s))return "export AGY_CLI_DISABLE_AUTO_UPDATE=true; "+AgentInstructions.initialization(files,s)
+            +"exec \"$JOBS_AGY_NODE\" "+SessionShell.quote(GUEST+"/agy-chat.cjs")+" run-chat "
+            +SessionShell.quote(GUEST+"/agy-history")+" "+SessionShell.quote(GUEST+"/"+s.geminiSocketId+".sock")+" "
+            +SessionShell.quote(s.geminiThread)+" \"$JOBS_AGY_BIN\"";
         return "( set -e; "
             +(s.geminiAuth.equals("api")&&!s.geminiEncryptedKey.isEmpty()?"export JOBS_GEMINI_KEY_SOCKET="+SessionShell.quote(GeminiKeyBroker.address(s.geminiSocketId))+"; ":"")
             +"export JOBS_GEMINI_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")
@@ -53,7 +61,8 @@ final class GeminiCli {
             +"; export JOBS_GEMINI_THINKING="+SessionShell.quote(s.geminiThinking)
             +"; export JOBS_GEMINI_DEBUG="+(s.extendedDebugEnabled()?"1":"0")
             +"; source "+SessionShell.quote(GUEST+"/gemini-bootstrap.sh")
-            +"; exec \"$JOBS_GEMINI_NODE\" "+SessionShell.quote(GUEST+"/gemini-control-v2.js")+" run "
+            +"; "+AgentInstructions.initialization(files,s)
+            +"exec \"$JOBS_GEMINI_NODE\" "+SessionShell.quote(GUEST+"/gemini-control-v2.js")+" run "
             +SessionShell.quote(GUEST+"/"+s.geminiSocketId+".sock")+" "+SessionShell.quote(s.geminiModel)+" "+SessionShell.quote(s.geminiMode)+" "+SessionShell.quote(s.geminiChat)+" "+SessionShell.quote(s.geminiThread)+" "+SessionShell.quote(s.geminiAuth)+" )";
     }
     private static WorkspaceStore.Session profile(String environment){WorkspaceStore.Session p=new WorkspaceStore.Session();p.codexEnvironment=environment;return p;}

@@ -1,5 +1,6 @@
 """Agent first-launch routing; all executables/storage are isolated repository fixtures."""
 import subprocess
+import sys
 import unittest
 from scripts.tests import test_environment_runtime as fixture
 ROOT=fixture.ROOT
@@ -9,6 +10,7 @@ class AgentHostEnvironmentTests(unittest.TestCase):
     tearDown=fixture.EnvironmentRuntimeTests.tearDown
     def setUp(self):
         fixture.EnvironmentRuntimeTests.setUp(self)
+        (self.prefix/'bin/python3').symlink_to(sys.executable)
         # Exercise the real host/runtime routing with isolated downloader/install boundaries.
         assets=ROOT/'app/src/main/assets'
         for name in ('agent-host-setup.sh','environment-runtime.sh','agent-preparation-status.sh'):
@@ -17,6 +19,7 @@ class AgentHostEnvironmentTests(unittest.TestCase):
         self.stub('proot-distro', '''printf '%s\\n' "$*" >> "$FIXTURE_LOG"
 if [ "$1" = login ];then
  [ "${FIXTURE_LOGIN_FAIL:-0}" != 1 ] || exit 23
+ printf '<%s>\\n' "$@" > "$FIXTURE_LOG.argv"
  printf 'CHECK:done\\n'
  exit 0
 fi
@@ -29,11 +32,11 @@ if [ "$2" = --override-alias ];then alias=$3;fi
 mkdir -p "$PREFIX/var/lib/proot-distro/containers/$alias/rootfs/bin"
 cp /bin/sh "$PREFIX/var/lib/proot-distro/containers/$alias/rootfs/bin/sh"
 ''')
-    def run_host(self, alias=None, check=False):
+    def run_host(self, alias=None, check=False, git_pin=()):
         env=dict(self.env)
         if alias is not None:env['JOBS_AGENT_UBUNTU']=alias
         script=self.root/'agent-host-setup.sh'
-        cmd=['/bin/bash',str(script),'check','gemini','api',alias or 'ubuntu-ai'] if check else ['/bin/bash','--noprofile','--norc','-c','source "$1"; jobs_agent_host_prepare','fixture',str(script)]
+        cmd=['/bin/bash',str(script),'check','gemini','api',alias or 'ubuntu-ai',*git_pin] if check else ['/bin/bash','--noprofile','--norc','-c','source "$1"; jobs_agent_host_prepare','fixture',str(script)]
         return subprocess.run(cmd,env=env,text=True,capture_output=True,timeout=10)
     def installed(self,alias,legacy=False):
         p=self.prefix/'var/lib/proot-distro'/('installed-rootfs' if legacy else 'containers')/alias
@@ -78,6 +81,14 @@ cp /bin/sh "$PREFIX/var/lib/proot-distro/containers/$alias/rootfs/bin/sh"
         self.installed('ubuntu-ai');self.env['FIXTURE_LOGIN_FAIL']='1'
         r=self.run_host(check=True);self.assertNotEqual(0,r.returncode)
         self.assertNotIn('MISSING:ubuntu',r.stdout);self.assertNotIn('install ',self.log.read_text())
+    def test_inventory_passes_git_pin_as_two_guest_environment_arguments(self):
+        self.installed('ubuntu-ai')
+        pin=("/root/owner's project/bin/git","a"*64)
+        r=self.run_host(check=True,git_pin=pin)
+        self.assertEqual(0,r.returncode,r.stderr)
+        arguments=self.log.with_name(self.log.name+'.argv').read_text().splitlines()
+        index=arguments.index('</usr/bin/env>')
+        self.assertEqual([f'<JOBS_PROJECT_GIT_EXECUTABLE={pin[0]}>',f'<JOBS_PROJECT_GIT_SHA256={pin[1]}>','</bin/bash>'],arguments[index+1:index+4])
     def test_invalid_alias_rejected(self):
         self.assertNotEqual(0,self.run_host('../ubuntu').returncode);self.assertFalse(self.log.exists())
     def test_ai_uses_private_installer_even_with_legacy_system_help(self):

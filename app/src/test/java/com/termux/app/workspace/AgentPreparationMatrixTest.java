@@ -46,15 +46,38 @@ public class AgentPreparationMatrixTest {
             AgentPreparation.Plan missing=plan("MISSING:proot-distro\nMISSING:ubuntu");
             AgentPreparationOperation.Job j=AgentPreparationOperation.start(a,p,(c,s)->missing,(c,s,o)->{o.accept("PREPARATION:preparing-termux-packages");entered.countDown();assertTrue(release.await(20,TimeUnit.SECONDS));return plan("READY:ubuntu");});assertTrue(entered.await(3,TimeUnit.SECONDS));
             try{
-                AgentPreparationOperation.show(a,p,ignored->launched.incrementAndGet());AlertDialog check=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();idle();assertTrue(AgentPreparationOperation.stage(j,a).contains("Termux packages"));check.dismiss();idle();assertTrue(j.active);assertTrue(j.observers.isEmpty());
+                AgentPreparationOperation.show(a,p,ignored->launched.incrementAndGet());AlertDialog check=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();idle();assertTrue(AgentPreparationOperation.stage(j,a).contains("Termux packages"));
+                android.view.MotionEvent outside=android.view.MotionEvent.obtain(0,0,android.view.MotionEvent.ACTION_OUTSIDE,0,0,0);
+                try{check.onTouchEvent(outside);check.onBackPressed();idle();assertTrue(check.isShowing());}finally{outside.recycle();}
+                assertEquals(android.view.View.GONE,check.getButton(AlertDialog.BUTTON_POSITIVE).getVisibility());
+                check.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();idle();assertFalse(check.isShowing());assertTrue(j.active);assertTrue(j.observers.isEmpty());
                 AgentPreparation.beforeLaunch(a,p,(c,s)->missing,ignored->launched.incrementAndGet());
                 AlertDialog consent=null;for(int n=0;n<200;n++){idle();consent=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();if(consent.getButton(-1)!=null&&consent.getButton(-1).getText().toString().equals("Prepare and launch"))break;Thread.sleep(5);}
                 assertNotNull(consent);assertEquals("Prepare and launch",consent.getButton(-1).getText().toString());consent.getButton(-1).performClick();idle();
                 AlertDialog preparation=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertSame(j,AgentPreparationOperation.jobs.get(AgentPreparationOperation.key(p)));assertTrue(preparation.isShowing());assertEquals(0,launched.get());assertFalse(preparation.getButton(-1).isEnabled());
                 preparation.dismiss();idle();assertTrue(j.active);AgentPreparationOperation.show(a,p,ignored->launched.incrementAndGet());AlertDialog reopened=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertSame(j,AgentPreparationOperation.jobs.get(AgentPreparationOperation.key(p)));
-                release.countDown();finish(j);assertEquals(1,launched.get());reopened.dismiss();
+                release.countDown();finish(j);assertEquals(1,launched.get());
+                assertEquals(android.view.View.GONE,reopened.getButton(AlertDialog.BUTTON_POSITIVE).getVisibility());
+                assertFalse(reopened.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled());
+                assertEquals(android.view.View.VISIBLE,reopened.getButton(AlertDialog.BUTTON_NEGATIVE).getVisibility());
+                reopened.dismiss();
             }finally{release.countDown();finish(j);a.finish();}
         }
+    }
+    @Test public void failedPreparationKeepsTheExplicitRetry()throws Exception{
+        Activity a=Robolectric.buildActivity(Activity.class).setup().get();WorkspaceStore.Session p=profile("claude");
+        AgentPreparationOperation.jobs.clear();
+        AgentPreparationOperation.Job job=AgentPreparationOperation.start(a,p,(c,s)->plan("MISSING:claude-cli"),(c,s,o)->{
+            throw new AgentPreparationOperation.PreparationFailure("CLI_STARTUP_FAILED",1);
+        });
+        try{
+            finish(job);
+            AgentPreparationOperation.show(a,p,ignored->fail("A failed preparation did not launch an agent"));
+            AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+            assertEquals(android.view.View.VISIBLE,dialog.getButton(AlertDialog.BUTTON_POSITIVE).getVisibility());
+            assertTrue(dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled());
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();idle();assertFalse(dialog.isShowing());
+        }finally{a.finish();}
     }
     @Test public void allFiveVariantsSerializeWithDistinctApiAndVertexJobs()throws Exception{
         AgentPreparationOperation.jobs.clear();CountDownLatch entered=new CountDownLatch(1),release=new CountDownLatch(1);AtomicInteger active=new AtomicInteger(),maximum=new AtomicInteger(),calls=new AtomicInteger();java.util.List<AgentPreparationOperation.Job> jobs=new java.util.ArrayList<>();

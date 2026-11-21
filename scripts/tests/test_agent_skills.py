@@ -2,6 +2,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import subprocess
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -102,7 +103,14 @@ class SkillsTests(unittest.TestCase):
         (self.source/'linked').symlink_to(self.root/'absent')
         with self.assertRaisesRegex(s.SkillError,'UNSAFE_LINK'):self.prepare()
     def test_hardlink(self):
-        outside=self.root/'outside';outside.write_text('leave');os.link(outside,self.source/'hard')
+        outside = self.root/'outside'
+        outside.write_text('leave')
+        linked = self.source/'hard'
+        if hasattr(os, 'link'):
+            os.link(outside, linked)
+        else:
+            subprocess.run(['ln', str(outside), str(linked)], check=True)
+        self.assertEqual(2, outside.stat().st_nlink)
         with self.assertRaisesRegex(s.SkillError,'UNSAFE_FILE'):self.prepare()
     def test_sensitive(self):
         (self.source/'auth.json').write_text('not read')
@@ -220,6 +228,64 @@ class SkillsTests(unittest.TestCase):
             return original(path)
         with patch.object(Path,'exists',exists):
             self.call('list')
+
+    def test_antigravity_writes_only_the_canonical_root_for_each_scope(self):
+        self.base.update(agent='gemini', geminiRuntime='antigravity')
+        for scope, root in (('user', self.home/'.gemini/config/skills'),
+                            ('project', self.project/'.agents/skills')):
+            with self.subTest(scope=scope):
+                self.base['scope'] = scope
+                preview = self.prepare()
+                target = root/'sample'
+                self.assertEqual(str(target), preview['candidates'][0]['path'])
+                self.assertFalse(target.exists())
+                installed = self.install(preview)
+                self.assertEqual(str(target), installed['path'])
+                self.assertTrue((target/'SKILL.md').is_file())
+                self.assertTrue(self.row()['managed'])
+                self.assertEqual('unconfirmed', self.row()['discovery'])
+        self.assertFalse((self.home/'.gemini/skills').exists())
+        self.assertFalse((self.home/'.gemini/antigravity-cli/skills').exists())
+        self.assertFalse((self.project/'.gemini').exists())
+
+    def test_antigravity_reads_compatibility_and_repository_skills_without_plugins(self):
+        self.base.update(agent='gemini')
+        self.skill(self.home/'.gemini/skills/sample', 'sample', 'shared')
+        self.skill(self.home/'.gemini/antigravity-cli/skills/cli', 'cli', 'global CLI')
+        plugin = self.home/'.gemini/config/plugins/p/skills/plugin'
+        self.skill(plugin, 'plugin', 'plugin')
+        self.skill(self.project/'.agents/skills/sample', 'sample', 'project')
+        self.skill(self.project/'.gemini/skills/old', 'old', 'legacy Gemini project')
+        self.skill(self.root/'.agents/skills/outside', 'outside', 'outside repository')
+        self.assertEqual({'sample', 'cli'}, {row['name'] for row in self.call('list')['skills']})
+        shared = self.home/'.gemini/skills/sample'
+        with self.assertRaisesRegex(s.SkillError, 'STALE_PREVIEW'):
+            self.call('delete', name='sample', path=str(shared), revision='unowned')
+        self.assertTrue((shared/'SKILL.md').is_file())
+        with self.assertRaisesRegex(s.SkillError, 'INVALID_SOURCE'):
+            self.call('inspect', path=str(plugin))
+        self.base.update(scope='project', project=str(self.project/'nested'))
+        (self.project/'nested').mkdir()
+        row = self.row()
+        self.assertEqual('ancestor', row['scope'])
+        self.assertFalse(row['managed'])
+        self.assertEqual([str(self.home/'.gemini/skills/sample')], row['nameConflicts'])
+        self.assertEqual('sample', self.call('inspect', path=row['path'])['name'])
+        self.assertEqual(['sample'], [entry['name'] for entry in self.call('list')['skills']])
+
+    def test_antigravity_blocks_other_routes_and_symlinked_targets(self):
+        self.base.update(agent='gemini')
+        for route in ({'geminiRuntime': 'legacy'}, {'environment': 'ubuntu'}):
+            with self.subTest(route=route), self.assertRaisesRegex(s.SkillError, 'INVALID_AGENT'):
+                self.call('list', **route)
+        outside = self.root/'outside'
+        self.skill(outside/'sample', 'sample', 'preserve')
+        (self.home/'.gemini/config').mkdir(parents=True)
+        (self.home/'.gemini/config/skills').symlink_to(outside)
+        with self.assertRaisesRegex(s.SkillError, 'UNSAFE_LINK'):
+            self.prepare()
+        self.assertEqual('preserve', (outside/'sample/SKILL.md').read_text().splitlines()[-1])
+        self.assertFalse((self.home/'.gemini/config/.termux-jobs-skills').exists())
 
     def test_delete_link_conflict_preserves_outside(self):
         r=self.install();target=Path(r['path']);outside=self.root/'outside';outside.mkdir();(outside/'keep').write_text('safe');(target/'link').symlink_to(outside)

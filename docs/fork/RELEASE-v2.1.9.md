@@ -1,0 +1,46 @@
+# Termux Job’s 2.1.9
+
+Termux Job’s 2.1.9 updates agent timelines, adds CLI management in the
+sidebar, and prepares Git for new chat projects in Ubuntu AI.
+HezeAI maintains this independent Termux fork.
+
+**[Download APK](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.9/Termux-Jobs-v2.1.9-arm64.apk)**
+
+## Changes since 2.1.8
+
+- Agent timelines show compact action rows and detailed output on tap. Codex
+  child-agent results and earlier conversation pages are accessible from the chat.
+- Check and install Codex, Claude and Antigravity CLI updates from **Chat
+  management** in Ubuntu AI. Installations require confirmation. A running
+  chat picks up the new CLI at its next launch.
+- New Gemini chats on Ubuntu AI use Antigravity and show the sign-in prompt
+  before the first message. Gemini has instruction and skill forms. App-provided
+  common instruction templates preserve files that users already created.
+- New Codex, Claude and Antigravity chats can initialize Git in the selected
+  project folder. Setup requests confirmation for a missing Git package.
+  The Changes tab works before the first commit, and exact project paths
+  remain intact when selecting a folder.
+- The app removes its built-in RTK integration. Existing histories, runtime
+  files and user-owned hooks remain in place.
+
+## Compatibility
+
+Android 8 or later, ARM64, version code 1549. The Android package and signing
+certificate match v2.1.8. This update requests no data reset or environment
+reinstall. Android may stop running app processes during installation.
+
+Existing Gemini profiles retain their connection. A new Antigravity profile
+uses its own Google sign-in. Committing in a project requires write permission
+and an author name and email. Profiles previously saved with a truncated
+directory can reselect the original folder.
+
+<details>
+<summary>Verification and build details</summary>
+
+[Release validation](https://github.com/HezeAI/termux-jobs/blob/v2.1.9/docs/fork/VALIDATION-v2.1.9.md)
+· [Source](https://github.com/HezeAI/termux-jobs/tree/v2.1.9)
+· [Checksums](https://github.com/HezeAI/termux-jobs/releases/download/v2.1.9/SHA256SUMS)
+
+</details>
+
+AI development assistance: OpenAI Codex

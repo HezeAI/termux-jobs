@@ -5,7 +5,7 @@ jobs_agent_download() {
     local component=$1 target=$2 url=$3
     local connect=45 idle=180 budget=7200 attempts=3 delay=2
     local attempt code=1 pause
-    case $component in codex-cli|claude-cli|gemini-cli|opencode-cli|node|gcloud) ;; *) printf 'ERROR:COMPONENT_DOWNLOAD_FAILED\n' >&2;return 1;; esac
+    case $component in codex-cli|claude-cli|gemini-cli|agy-cli|opencode-cli|node|gcloud) ;; *) printf 'ERROR:COMPONENT_DOWNLOAD_FAILED\n' >&2;return 1;; esac
     [[ -n $target && $url == https://* ]] || { printf 'ERROR:COMPONENT_DOWNLOAD_FAILED\n' >&2;return 1; }
     for ((attempt=1;attempt<=attempts;attempt++)); do
         if ((attempt==1)); then printf 'STAGE:download-agent-component\n'; else printf 'STAGE:retry-agent-component\n';fi

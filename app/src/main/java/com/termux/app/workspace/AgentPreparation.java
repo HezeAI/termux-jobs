@@ -1,14 +1,16 @@
 package com.termux.app.workspace;
 
 import android.app.*;import android.content.*;import android.widget.*;
+import com.termux.BuildConfig;
 import com.termux.shared.termux.TermuxConstants;import com.termux.shared.shell.TermuxShellUtils;
 import java.io.*;import java.nio.charset.StandardCharsets;import java.util.*;import java.util.concurrent.*;import java.util.function.*;
 
 /** Read-only inventory before a user-approved launch; installation runs in the new terminal only. */
 final class AgentPreparation {
     static final String GUEST="/tmp/termux-jobs-setup";
-    static final String[] ASSETS={"agent-download.sh","agent-dependencies.sh","agent-host-setup.sh","claude-bootstrap.sh","gemini-bootstrap.sh","ai-agents-bootstrap.sh","agent-preparation-status.sh","ubuntu-ai-installer.py","ubuntu-ai-proot-distro-5.9.0.zip","codex-bootstrap.sh","vertex-bootstrap.sh","vertex-project.sh","environment-runtime.sh","environment-image.py","environment-images.json"};
-    static final Set<String> COMPONENTS=new HashSet<>(Arrays.asList("proot-distro","ubuntu","curl","tar","sha256sum","flock","xz","find","sort","xargs","ca-certificates","node","codex-cli","claude-cli","gemini-cli","opencode-cli","gcloud","python3"));
+    static final String CLI_RESOLVER="agent-cli-resolver.sh";
+    static final String[] ASSETS={"agent-download.sh","agent-dependencies.sh","agent-host-setup.sh","claude-bootstrap.sh","gemini-bootstrap.sh","antigravity-bootstrap.sh","ai-agents-bootstrap.sh","agent-preparation-status.sh","ubuntu-ai-installer.py","ubuntu-ai-proot-distro-5.9.0.zip","codex-bootstrap.sh","vertex-bootstrap.sh","vertex-project.sh","environment-runtime.sh","environment-image.py","environment-images.json",CLI_RESOLVER,"agent-cli-update.sh","agent-cli-update.py"};
+    static final Set<String> COMPONENTS=new HashSet<>(Arrays.asList("proot-distro","ubuntu","curl","tar","sha256sum","sha512sum","timeout","flock","xz","find","sort","xargs","ca-certificates","node","codex-cli","claude-cli","gemini-cli","agy-cli","opencode-cli","gcloud","python3","git"));
     interface Runner {Plan run(Context c,WorkspaceStore.Session p)throws Exception;}
     static final Runner SYSTEM=AgentPreparation::query;
     static final class Plan {
@@ -27,7 +29,8 @@ final class AgentPreparation {
 
     }
     static String agent(WorkspaceStore.Session p){return p.geminiAgent?"gemini":p.claudeAgent?"claude":p.aiAgent.equals("opencode")?"opencode":p.environment.equals("codex")?"codex":"";}
-    static boolean supports(WorkspaceStore.Session p){return !agent(p).isEmpty()&&AgentEnvironments.ubuntu(p.codexEnvironment)&&(p.environment.equals("ubuntu")||p.environment.equals("codex"));}
+    static boolean antigravity(WorkspaceStore.Session p){return p.geminiAgent&&"antigravity".equals(p.geminiAuth);}
+    static boolean supports(WorkspaceStore.Session p){return !agent(p).isEmpty()&&(antigravity(p)?"ubuntu-ai".equals(p.codexEnvironment):AgentEnvironments.ubuntu(p.codexEnvironment))&&(p.environment.equals("ubuntu")||p.environment.equals("codex"));}
     static String key(WorkspaceStore.Session p){return agent(p)+"|"+p.environment+"|"+p.codexEnvironment+"|"+p.geminiAuth+"|"+p.geminiCloudProject+"|"+p.geminiCloudLocation;}
     static File directory(File files){return new File(files,".agent-preparation");}
     static void prepare(Context c)throws IOException{File dir=directory(c.getFilesDir());if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create setup directory");protect(dir);for(String name:ASSETS){File temp=File.createTempFile("setup-",".tmp",dir);try{try(InputStream in=c.getAssets().open(name);OutputStream out=new FileOutputStream(temp)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}protect(temp);if(!temp.renameTo(new File(dir,name)))throw new IOException("Cannot publish setup asset");}finally{temp.delete();}}}
@@ -35,8 +38,13 @@ final class AgentPreparation {
     static String language(Context c){return WorkspaceLanguage.code(c);}
     static String tr(Context c,String ru,String en){return language(c).equals("ru")?ru:en;}
     static String environment(WorkspaceStore.Session p){return "export TERMUX_JOBS_AGENT_ENVIRONMENT="+SessionShell.quote(AgentEnvironments.alias(p))+"; export JOBS_AGENT_UBUNTU="+SessionShell.quote(AgentEnvironments.alias(p))+"; export JOBS_AGENT_SETUP_ALLOWED="+(p.agentSetupAllowed?"1":"0")+"; export JOBS_AGENT_LANGUAGE="+(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")+"; ";}
+    static String projectGitEnvironment(WorkspaceStore.Session p){
+        if(!ProjectFiles.usesProjectGit(p))return "";
+        return "export JOBS_PROJECT_GIT_EXECUTABLE="+SessionShell.quote(BuildConfig.JOBS_PROJECT_GIT_EXECUTABLE)
+            +" JOBS_PROJECT_GIT_SHA256="+SessionShell.quote(BuildConfig.JOBS_PROJECT_GIT_SHA256)+"; ";
+    }
     static String host(File files,WorkspaceStore.Session p){if(!supports(p))return "";return environment(p)+"export JOBS_AGENT_PREPARATION_STATUS="+SessionShell.quote(new File(SessionShell.directory(files,p.id),"agent-preparation-status").getAbsolutePath())+"; source "+SessionShell.quote(new File(directory(files),"agent-host-setup.sh").getAbsolutePath())+"\njobs_agent_host_prepare || return $?\n";}
-    static String wrap(WorkspaceStore.Session p,String command){if(!supports(p))return command;return "( set -eE; "+environment(p)+"export JOBS_AGENT_PREPARATION_STATUS="+SessionShell.quote("/tmp/termux-fork-session-"+p.id+"/agent-preparation-status")+"; source "+SessionShell.quote(GUEST+"/agent-dependencies.sh")+"; trap 'jobs_agent_stage_failure' ERR; jobs_agent_prepare "+SessionShell.quote(agent(p))+" "+SessionShell.quote(p.geminiAgent?p.geminiAuth:"api")+"; "+(p.geminiAgent&&p.geminiAuth.equals("vertex")?"export JOBS_GEMINI_VERTEX_PROJECT="+SessionShell.quote(p.geminiCloudProject)+"; export JOBS_GEMINI_VERTEX_LOCATION="+SessionShell.quote(p.geminiCloudLocation)+"; source "+SessionShell.quote(GUEST+"/vertex-bootstrap.sh")+"; "+VertexConnection.exports(p)+"source "+SessionShell.quote(GUEST+"/vertex-project.sh")+"; ":"")+command+" )";}
+    static String wrap(WorkspaceStore.Session p,String command){if(!supports(p))return command;return "( set -eE; "+environment(p)+projectGitEnvironment(p)+"export JOBS_AGENT_PREPARATION_STATUS="+SessionShell.quote("/tmp/termux-fork-session-"+p.id+"/agent-preparation-status")+"; source "+SessionShell.quote(GUEST+"/agent-dependencies.sh")+"; trap 'jobs_agent_stage_failure' ERR; jobs_agent_prepare "+SessionShell.quote(agent(p))+" "+SessionShell.quote(p.geminiAgent?p.geminiAuth:"api")+"; "+(p.geminiAgent&&p.geminiAuth.equals("vertex")?"export JOBS_GEMINI_VERTEX_PROJECT="+SessionShell.quote(p.geminiCloudProject)+"; export JOBS_GEMINI_VERTEX_LOCATION="+SessionShell.quote(p.geminiCloudLocation)+"; source "+SessionShell.quote(GUEST+"/vertex-bootstrap.sh")+"; "+VertexConnection.exports(p)+"source "+SessionShell.quote(GUEST+"/vertex-project.sh")+"; ":"")+command+" )";}
     private static String readStatus(java.nio.file.Path path)throws IOException{try(InputStream in=java.nio.file.Files.newInputStream(path,java.nio.file.LinkOption.NOFOLLOW_LINKS)){byte[] b=new byte[65];int total=0,n;while(total<b.length&&(n=in.read(b,total,b.length-total))>0)total+=n;return total>64?"":new String(b,0,total,StandardCharsets.UTF_8).trim();}}
     static String status(File files,WorkspaceStore.Session p,boolean ru){
         if(!supports(p))return "";
@@ -61,10 +69,24 @@ final class AgentPreparation {
             default:return "";
             }
     }
-    static String codexPath(){return "if ! command -v node >/dev/null 2>&1 || ! node -e 'process.exit(Number(process.versions.node.split(\".\")[0])>=20?0:1)' >/dev/null 2>&1; then export PATH=\"$HOME/.local/share/termux-jobs/agent-tools/node-v22.22.1-linux-arm64/bin:$PATH\"; fi; if ! command -v codex >/dev/null 2>&1; then export PATH=\"$HOME/.local/share/termux-jobs/codex-cli/0.163.0/vendor/aarch64-unknown-linux-musl/bin:$HOME/.local/share/termux-jobs/codex-cli/0.163.0/vendor/aarch64-unknown-linux-musl/codex-path:$PATH\"; fi; ";}
+    static String cliResolver(String guest,String environment){
+        return "export JOBS_AGENT_UBUNTU="+SessionShell.quote(environment)+"; . "+SessionShell.quote(guest+"/"+CLI_RESOLVER)+" || exit 1; ";
+    }
+    static String codexPath(String guest,String environment){return cliResolver(guest,environment)+"jobs_agent_cli_codex_path; ";}
+    static String cliResolverSource(Context context)throws IOException{
+        try(InputStream in=context.getAssets().open(CLI_RESOLVER);ByteArrayOutputStream out=new ByteArrayOutputStream()){
+            byte[] buffer=new byte[1024];int read;
+            while((read=in.read(buffer))!=-1){
+                if(out.size()+read>8192)throw new IOException("CLI resolver exceeds size limit");
+                out.write(buffer,0,read);
+            }
+            return out.toString("UTF-8");
+        }
+    }
     static Plan query(Context c,WorkspaceStore.Session p)throws Exception{
         prepare(c);File shell=new File(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH,"bash"),timer=new File(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH,"timeout");if(!shell.isFile()||!timer.isFile()){Plan plan=new Plan();plan.error="TERMUX_NOT_READY";return plan;}
         String script="exec "+SessionShell.quote(timer.getAbsolutePath())+" -k 2 25 "+SessionShell.quote(shell.getAbsolutePath())+" --noprofile --norc "+SessionShell.quote(new File(directory(c.getFilesDir()),"agent-host-setup.sh").getAbsolutePath())+" check "+SessionShell.quote(agent(p))+" "+SessionShell.quote(p.geminiAgent?p.geminiAuth:"api")+" "+SessionShell.quote(AgentEnvironments.alias(p));
+        if(ProjectFiles.usesProjectGit(p))script+=" "+SessionShell.quote(BuildConfig.JOBS_PROJECT_GIT_EXECUTABLE)+" "+SessionShell.quote(BuildConfig.JOBS_PROJECT_GIT_SHA256);
         ProcessBuilder pb=new ProcessBuilder(shell.getAbsolutePath(),"--noprofile","--norc","-c",script);pb.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));pb.environment().clear();for(String item:TermuxShellUtils.buildEnvironment(c,false,TermuxConstants.TERMUX_HOME_DIR_PATH)){int i=item.indexOf('=');if(i>0)pb.environment().put(item.substring(0,i),item.substring(i+1));}pb.redirectErrorStream(true);Process process=pb.start();try{Plan result=new Plan();try(Reader in=new InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8)){AgentPreparationOutput.drain(in,result::record);}if(!process.waitFor(3,TimeUnit.SECONDS))throw new IOException("Environment check timeout");result.finish(process.exitValue());result.environment=AgentEnvironments.alias(p);File fs=WorkspaceEnvironments.root(new File(TermuxConstants.TERMUX_PREFIX_DIR_PATH,"var/lib/proot-distro"),result.environment);result.path=fs==null?"":fs.getAbsolutePath();return result;}finally{process.destroy();}
     }
     private static List<String> componentLabels(Plan p,Collection<String> ids){List<String> labels=new ArrayList<>();for(String id:ids)labels.add(id.equals("ubuntu")?AgentEnvironments.label(p.environment):id);return labels;}

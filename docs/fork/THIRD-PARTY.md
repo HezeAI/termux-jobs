@@ -1,4 +1,4 @@
-# RTK OSS component jobs.1
+# Historical RTK OSS component jobs.1
 
 RTK is developed by rtk-ai contributors (Apache-2.0); Termux Job’s jobs.1 adds
 optional exact byte measurements to upstream1.1.0. The component release includes

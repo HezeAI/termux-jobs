@@ -17,9 +17,12 @@ public class AgentEnvironmentsTest {
  static WorkspaceStore.Session profile(String agent){WorkspaceStore.Session p=new WorkspaceStore.Session();p.environment=agent.equals("codex")?"codex":"ubuntu";p.directory="/root/project";p.geminiAgent=agent.equals("gemini");p.claudeAgent=agent.equals("claude");if(agent.equals("opencode"))p.aiAgent="opencode";return p;}
  @Test public void codexHistoryControlAndProjectPathsUseSelectedUbuntu()throws Exception {
   WorkspaceStore.Session p=profile("codex");p.codexEnvironment="ubuntu-ai";
-  assertTrue(CodexSessionShell.historyCommand(p).contains("'ubuntu-ai'"));assertTrue(CodexSessionShell.proxyCommand(new File("/tmp/fixture"),p).contains("'ubuntu-ai'"));
+  File files=new File("/tmp/fixture");String history=CodexSessionShell.historyCommand(files,p);
+  assertTrue(history.contains("'ubuntu-ai'"));assertTrue(history.contains(AgentPreparation.CLI_RESOLVER));
+  String proxy=CodexSessionShell.proxyCommand(files,p);
+  assertTrue(proxy.contains("'ubuntu-ai'"));assertFalse(proxy.contains(AgentPreparation.CLI_RESOLVER));
   assertEquals("/root/work",CodexProjects.directory("ubuntu-ai","~/work"));
-  p.codexEnvironment="termux";assertFalse(AgentPreparation.supports(p));assertFalse(CodexSessionShell.historyCommand(p).contains("proot-distro"));
+  p.codexEnvironment="termux";assertFalse(AgentPreparation.supports(p));assertFalse(CodexSessionShell.historyCommand(files,p).contains("proot-distro"));
  }
  @Test public void storeRoundTripsBothUbuntuNamespacesWithoutChangingOtherData()throws Exception {
   android.content.Context c=RuntimeEnvironment.application;WorkspaceStore s=new WorkspaceStore(c,x->{});s.sessions.clear();

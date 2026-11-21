@@ -15,7 +15,7 @@ final class CodexChatControl {
         if(!p.environment.equals("codex")||!AgentEnvironments.ubuntu(p.codexEnvironment))return;
         if(!CodexSessionShell.validThread(p.codexSocketId))throw new IOException("Invalid Codex run");
         File dir=CodexSessionShell.socketDirectory(c.getFilesDir());if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create Codex controls");
-        for(String asset:new String[]{"rtk-agent.cjs","agent-attachments.cjs","codex-chat.cjs","codex-control.js","agent-receipts.cjs","agent-action-preview.cjs","agent-completion-times.cjs"}){
+        for(String asset:new String[]{"agent-attachments.cjs","codex-model-catalog.cjs","codex-chat.cjs","codex-control.js","agent-receipts.cjs","agent-action-preview.cjs","agent-completion-times.cjs"}){
             String name=asset.equals("codex-control.js")?"codex-wire-v0.2.22.js":asset.equals("codex-chat.cjs")?"codex-chat-v1.cjs":asset;
             File temp=File.createTempFile("codex-chat-",".tmp",dir);try{try(InputStream in=c.getAssets().open(asset);OutputStream out=new FileOutputStream(temp)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}protect(temp);if(!temp.renameTo(new File(dir,name)))throw new IOException("Cannot publish Codex chat helper");}finally{temp.delete();}
         }
@@ -25,7 +25,7 @@ final class CodexChatControl {
     static String command(File files,WorkspaceStore.Session p,String endpoint){
         String home=AgentEnvironments.ubuntu(p.codexEnvironment)?"/root":com.termux.shared.termux.TermuxConstants.TERMUX_HOME_DIR_PATH;
         String cwd=p.directory.isEmpty()||p.directory.equals("~")?home:p.directory;if(cwd.startsWith("~/"))cwd=home+cwd.substring(1);
-        return "node "+SessionShell.quote("/tmp/termux-jobs-codex/codex-chat-v1.cjs")+" run "+SessionShell.quote(endpoint)+" "+SessionShell.quote(p.codexAccess)+" "+SessionShell.quote(p.codexChat)+" "+SessionShell.quote(p.codexThread)+" "+SessionShell.quote(cwd)+" "+SessionShell.quote(p.codexSourceDirectory)+" "+SessionShell.quote(CodexSessionShell.approval(p))+" "+SessionShell.quote(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en");
+        return "node "+SessionShell.quote("/tmp/termux-jobs-codex/codex-chat-v1.cjs")+" run "+SessionShell.quote(endpoint)+" "+SessionShell.quote(p.codexAccess)+" "+SessionShell.quote(p.codexChat)+" "+SessionShell.quote(p.codexThread)+" "+SessionShell.quote(cwd)+" "+SessionShell.quote(p.codexSourceDirectory)+" "+SessionShell.quote(CodexSessionShell.approval(p))+" "+SessionShell.quote(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en")+" "+p.codexContextWindow+" "+p.codexCompactThreshold;
     }
     static JSONObject request(File files,WorkspaceStore.Session p,JSONObject q)throws Exception{
         if(!enabled(files,p))return new JSONObject().put("ok",true).put("nativeChat",false);

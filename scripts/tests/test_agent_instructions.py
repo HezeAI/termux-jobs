@@ -1,6 +1,6 @@
 """Private fixture-only instruction storage tests; no auth or installed environment access."""
 from pathlib import Path
-import importlib.util,json,os,tempfile,unittest,types,concurrent.futures
+import importlib.util,json,os,subprocess,tempfile,unittest,types,concurrent.futures
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[2]
 spec=importlib.util.spec_from_file_location('instructions',ROOT/'app/src/main/assets/agent-instructions.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
@@ -60,9 +60,9 @@ class Instructions(unittest.TestCase):
   self.template.write_text('## Хранение файлов и временных данных\nStorage\n\n## Память проекта — LEARNING.md\nMemory\n')
   e=m.Editor(self.template,self.home,{})
   self.assertIn('Storage',e.storage_addition);self.assertNotIn('Memory',e.storage_addition)
- def test_current_localized_template_storage_preview_excludes_later_sections(self):
+ def test_legacy_and_current_storage_preview_exclude_later_sections(self):
   for filename in ['agent-instructions-ubuntu-ai.md','agent-instructions-ubuntu-ai.en.md']:
-   self.template.write_bytes((ROOT/'app/src/main/assets'/filename).read_bytes())
+   self.template.write_bytes(((ROOT/'scripts/tests/fixtures/legacy-instructions' if filename=='agent-instructions-ubuntu-ai.md' else ROOT/'app/src/main/assets')/filename).read_bytes())
    e=m.Editor(self.template,self.home,{})
    section=e.view({})['storageAddition']
    self.assertTrue(section.startswith('## '));self.assertIn('AGENTS.md',section)
@@ -71,36 +71,21 @@ class Instructions(unittest.TestCase):
    self.assertEqual(1,section.count('## '));self.assertFalse((self.home/'.codex').exists())
  def test_localized_template_requires_reorganization_and_specific_obstacles(self):
   assets=ROOT/'app/src/main/assets'
-  ru=(assets/'agent-instructions-ubuntu-ai.md').read_text();en=(assets/'agent-instructions-ubuntu-ai.en.md').read_text()
-  self.assertIn('20 480 байт',ru);self.assertIn('20,480 bytes',en)
-  for text in [ru,en]:
-   for old in ['30 КБ','30 720','30 KB','30,720','30720','либо укажи конкретную причину отсрочки','Perform a beneficial split or state a specific reason for deferral','Само превышение порога не требует разделения','Exceeding the threshold alone does not require splitting']:
-    self.assertNotIn(old,text)
-  self.assertIn('до завершения задачи выполни реорганизацию без отдельного согласования',ru);self.assertIn('reorganize it before completing the task, without separate approval',en)
-  self.assertIn('не более 15 360 байт',ru);self.assertIn('no more than 15,360 bytes',en)
-  self.assertIn('расположение LEARNING.md',ru);self.assertIn('LEARNING.md location',en)
-  self.assertIn('обязательно прочитать до соответствующей работы',ru);self.assertIn('must be read before the corresponding work',en)
-  self.assertIn('Не возвращай перенесённые разделы',ru);self.assertIn('Do not return relocated sections',en)
-  self.assertIn('Объяснение требуется только при препятствии',ru);self.assertIn('An explanation is required only if there is an obstacle',en)
-  self.assertIn('Сверка уникальных условий безопасности является частью этой работы',ru);self.assertIn('Reconciling unique safety conditions is part of this work',en)
-  self.assertIn('Не переноси обязательные ограничения в документы, которые агент может пропустить',ru);self.assertIn('Do not move mandatory restrictions into documents the agent might skip',en)
-  self.assertIn('недоступность записи либо конкретный конфликт требований',ru);self.assertIn('unavailable write access, or a specific requirements conflict',en)
-  self.assertIn('размер AGENTS.md до и после',ru);self.assertIn('AGENTS.md size before and after',en)
-  self.assertIn('Повторное измерение не требуется, пока файл не изменился.',ru);self.assertIn('Do not measure again while the file is unchanged.',en)
+  ru=(ROOT/'scripts/tests/fixtures/legacy-instructions/agent-instructions-ubuntu-ai.md').read_text();en=(assets/'agent-instructions-ubuntu-ai.en.md').read_text()
+  for text in (ru,en):
+   self.assertIn('AGENTS.md',text);self.assertIn('LEARNING.md',text)
+  for value in ('20 480 байт','не более 15 360 байт','до завершения задачи без отдельного согласования','Не возвращай перенесённые разделы','Не переноси обязательные ограничения','без изменения смысла'):
+   self.assertIn(value,ru)
+  for value in ('20,480 bytes','no more than 15,360 bytes','before completing the task, without separate approval','Do not return relocated sections','Do not move mandatory restrictions','without changing their meaning'):
+   self.assertIn(value,en)
  def test_memory_updates_are_selective_confirmed_and_not_background_training(self):
   assets=ROOT/'app/src/main/assets'
-  ru=(assets/'agent-instructions-ubuntu-ai.md').read_text().split('### Обновление')[1].split('## Как мне объяснять')[0]
+  ru=(ROOT/'scripts/tests/fixtures/legacy-instructions/agent-instructions-ubuntu-ai.md').read_text().split('### Обновление')[1].split('## Как объяснять мне')[0]
   en=(assets/'agent-instructions-ubuntu-ai.en.md').read_text().split('### Updating')[1].split('## How to explain things to me')[0]
-  self.assertIn('Перед завершением проектной задачи обязательно оцени',ru);self.assertIn('Before completing a project task, you must assess',en)
-  self.assertIn('существенно упростит будущую работу',ru);self.assertIn('substantially simplify future work',en)
-  self.assertIn('3D-моделям',ru);self.assertIn('3D models',en)
-  self.assertIn('устойчивое проектное решение пользователя',ru);self.assertIn('lasting project decision made by the user',en)
-  self.assertIn('Отдельное согласование не требуется, если проектные правила это допускают',ru);self.assertIn('Separate approval is not required if project rules permit it',en)
-  self.assertIn('разовые внешние сбои',ru);self.assertIn('one-off external failures',en)
-  self.assertIn('Сообщать об отсутствии урока каждый раз не требуется',ru);self.assertIn('You need not report the absence of a lesson every time',en)
-  for a,b in [('секреты','secrets'),('пересказ чужой проверки','secondhand accounts'),('Не добавляй гипотезы','Do not add hypotheses'),('Устаревший вывод','outdated conclusions'),('не заменяет проверки','not establish current-version readiness'),('Не запускай фоновое самообучение','Do not start background self-training')]:
-   self.assertIn(a,ru);self.assertIn(b,en)
-  self.assertNotIn('В рамках порученной проектной работы разрешено создать',ru);self.assertNotIn('During assigned project work, you may create',en)
+  for value in ('Перед завершением задачи проекта оцени','полезный подтверждённый урок','согласование не требуется','Не сохраняй','персональные данные','Не запускай фоновое самообучение'):
+   self.assertIn(value,ru)
+  for value in ('Before completing a project task, assess','useful, confirmed lesson','Separate approval is not required','Do not store','personal data','Do not start background self-training'):
+   self.assertIn(value,en)
  def test_absent_initial_install_publishes_template_once(self):
   self.assertTrue(self.editor.initialize()['created']);self.assertFalse(self.editor.initialize()['created']);self.assertEqual('TEMPLATE\n',self.read()['text'])
  def test_existing_custom_text_is_preserved_on_upgrade_with_new_template_offer(self):
@@ -165,7 +150,9 @@ class Instructions(unittest.TestCase):
  def test_reject_symlink_hardlink_and_unsafe_file_names(self):
   self.editor.initialize();p=self.home/'.codex/AGENTS.md';p.unlink();sentinel=self.root/'do-not-read';sentinel.write_text('private fixture');p.symlink_to(sentinel)
   with self.assertRaises(m.Refused):self.read()
-  p.unlink();os.link(sentinel,p)
+  p.unlink()
+  if hasattr(os,'link'):os.link(sentinel,p)
+  else:subprocess.check_call(['ln',str(sentinel),str(p)])
   with self.assertRaises(m.Refused):self.read()
   with self.assertRaisesRegex(m.Refused,'INVALID_SCOPE'):self.read(scope='project',name='auth.json',project=str(self.project))
   self.assertEqual('private fixture',sentinel.read_text())
@@ -205,12 +192,12 @@ class Instructions(unittest.TestCase):
   with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:result=list(pool.map(write,('one','two')))
   self.assertEqual(['EDIT_CONFLICT','saved'],sorted(result));self.assertIn(self.read()['text'],('one','two'))
  def test_initialization_does_not_overwrite_external_creator(self):
-  original=os.link
+  original=m.publish_new
   def racing(source,target,**kw):Path(target).write_text('external creator');return original(source,target,**kw)
-  with patch.object(m.os,'link',side_effect=racing):self.assertFalse(self.editor.initialize()['created'])
+  with patch.object(m,'publish_new',side_effect=racing):self.assertFalse(self.editor.initialize()['created'])
   self.assertEqual('external creator',self.read()['text'])
  def test_new_builtin_contains_storage_rules_and_existing_text_is_not_replaced(self):
-  self.template.write_bytes((ROOT/'app/src/main/assets/agent-instructions-ubuntu-ai.md').read_bytes());e=m.Editor(self.template,self.home,{})
+  self.template.write_bytes((ROOT/'scripts/tests/fixtures/legacy-instructions/agent-instructions-ubuntu-ai.md').read_bytes());e=m.Editor(self.template,self.home,{})
   e.initialize();v=e.view({});self.assertIn('## Хранение файлов и временных данных',v['text']);self.assertFalse(v['storageAdditionAvailable'])
   e.save(dict(path=v['path'],revision=v['revision'],text='\ufeffМой текст  \r\n'))
   self.assertFalse(e.initialize()['created']);v=e.view({});self.assertEqual('\ufeffМой текст  \r\n',v['text']);self.assertTrue(v['storageAdditionAvailable'])
@@ -220,13 +207,13 @@ class Instructions(unittest.TestCase):
   self.template.write_bytes((ROOT/'app/src/main/assets/agent-instructions-ubuntu-ai.en.md').read_bytes());e=m.Editor(self.template,self.home,{});v=e.view({});self.assertIn('## File and temporary data storage',v['storageAddition']);self.assertIn('explicitly authorized',v['storageAddition']);self.assertFalse((self.home/'.codex').exists())
  def test_storage_addition_offer_deduplicates_across_both_template_languages(self):
   for selected in ('agent-instructions-ubuntu-ai.md','agent-instructions-ubuntu-ai.en.md'):
-   self.template.write_bytes((ROOT/'app/src/main/assets'/selected).read_bytes());e=m.Editor(self.template,self.home,{})
+   self.template.write_bytes(((ROOT/'scripts/tests/fixtures/legacy-instructions' if selected=='agent-instructions-ubuntu-ai.md' else ROOT/'app/src/main/assets')/selected).read_bytes());e=m.Editor(self.template,self.home,{})
    for existing in ('agent-instructions-ubuntu-ai.md','agent-instructions-ubuntu-ai.en.md'):
-    existing_text=(ROOT/'app/src/main/assets'/existing).read_text();v=e.view({});e.save(dict(path=v['path'],revision=v['revision'],text='Custom rules\n'+existing_text))
+    existing_text=((ROOT/'scripts/tests/fixtures/legacy-instructions' if existing=='agent-instructions-ubuntu-ai.md' else ROOT/'app/src/main/assets')/existing).read_text();v=e.view({});e.save(dict(path=v['path'],revision=v['revision'],text='Custom rules\n'+existing_text))
     self.assertFalse(e.view({})['storageAdditionAvailable'],(selected,existing));self.assertTrue(e.view({})['text'].startswith('Custom rules\n'))
  def test_bilingual_template_and_append_save_history_with_exact_previous_revision(self):
   self.editor.initialize();v=self.read();self.save(v,'User text  \r\n');prior=self.read()['text']
-  ru=(ROOT/'app/src/main/assets/agent-instructions-ubuntu-ai.md').read_text();en=(ROOT/'app/src/main/assets/agent-instructions-ubuntu-ai.en.md').read_text()
+  ru=(ROOT/'scripts/tests/fixtures/legacy-instructions/agent-instructions-ubuntu-ai.md').read_text();en=(ROOT/'app/src/main/assets/agent-instructions-ubuntu-ai.en.md').read_text()
   for value in (ru,en):
    v=self.read();before=v['text'];self.save(v,value);history=self.editor.history({})['history'];self.assertTrue(any(self.editor.previous(dict(id=row['id']))['text']==before for row in history));self.assertEqual(value,self.read()['text'])
   self.assertTrue(any(self.editor.previous(dict(id=row['id']))['text']==prior for row in self.editor.history({})['history']))
@@ -234,7 +221,7 @@ class Instructions(unittest.TestCase):
   self.editor.initialize();self.save(self.read(),'Earlier custom rules\r\n');custom='\ufeffМои правила / My rules  \r\n';self.save(self.read(),custom);history=self.editor.history({})['history'];previous=[self.editor.previous(dict(id=row['id']))['text'] for row in history]
   path=Path(self.read()['path']);before=path.read_bytes();info=path.stat()
   for asset in ('agent-instructions-ubuntu-ai.en.md','agent-instructions-ubuntu-ai.md'):
-   self.template.write_bytes((ROOT/'app/src/main/assets'/asset).read_bytes());e=m.Editor(self.template,self.home,{})
+   self.template.write_bytes(((ROOT/'scripts/tests/fixtures/legacy-instructions' if asset=='agent-instructions-ubuntu-ai.md' else ROOT/'app/src/main/assets')/asset).read_bytes());e=m.Editor(self.template,self.home,{})
    self.assertFalse(e.initialize()['created']);self.assertEqual(custom,e.view({})['text']);self.assertEqual(before,path.read_bytes());self.assertEqual(info.st_ino,path.stat().st_ino);self.assertEqual(history,e.history({})['history']);self.assertEqual(previous,[e.previous(dict(id=row['id']))['text'] for row in history])
  def test_import_project_create_replace_restore_cancel_and_override_are_scoped(self):
   self.editor.initialize();general=self.read();override=self.project/'AGENTS.override.md';override.write_text('Override rules');q=dict(scope='project',name='AGENTS.md',project=str(self.project));v=self.read(**q)

@@ -28,7 +28,7 @@ public class NativePermissionChainTest {
  }
  void check(String agent,String kind,String where,boolean allow)throws Exception{check(agent,kind,where,allow,false);}
  void check(String agent,String kind,String where,boolean allow,boolean rejectScope)throws Exception{
-  String repo=System.getenv("TERMUX_FORK_SOURCE_ROOT");assertNotNull("Run with scripts/build-env.sh",repo);File root=Files.createTempDirectory(new File(repo,".verification/t").toPath(),"approval-chain-").toFile();String run=java.util.UUID.randomUUID().toString();
+  String repo=System.getenv("TERMUX_FORK_SOURCE_ROOT");assertNotNull("Run with scripts/build-env.sh",repo);File root=Files.createTempDirectory(Paths.get(System.getProperty("java.io.tmpdir")),"a").toFile();String run=java.util.UUID.randomUUID().toString();
   String guard=System.getenv("TERMUX_FORK_AUDIT_NET_GUARD");assertNotNull("Native CLI checks require the kernel network guard",guard);ProcessBuilder builder=new ProcessBuilder(guard,new File(root,"network-events.jsonl").getAbsolutePath(),"--","node",new File(repo,"scripts/tests/fixtures/native-permission-chain.cjs").getAbsolutePath(),agent,kind,where,root.getAbsolutePath(),repo,run);String path=System.getenv("PATH");builder.environment().clear();builder.environment().put("PATH",path);builder.environment().put("HOME",new File(root,"home").getAbsolutePath());builder.directory(root);builder.redirectError(new File(root,"fixture.stderr"));Process child=builder.start();int port=-1;GeminiPermissionUi ui=null;boolean succeeded=false;
   BufferedReader stdout=new BufferedReader(new InputStreamReader(child.getInputStream(),StandardCharsets.UTF_8));try{
    java.util.concurrent.ExecutorService reader=java.util.concurrent.Executors.newSingleThreadExecutor();String line;

@@ -20,7 +20,7 @@ final class AgentPreparationOutput {
         "reconnecting-image-download","verifying-image-download","verified-rootfs-sha256","install-environment"));
     private static final Set<String> ERRORS=new HashSet<>(Arrays.asList(
         "COMPONENT_DOWNLOAD_FAILED","COMPONENT_DOWNLOAD_TIMEOUT",
-        "COMPONENT_DOWNLOAD_INTERRUPTED","INSTALL_CANCELLED","IMAGE_CHECKSUM_MISMATCH","IMAGE_DOWNLOAD_NETWORK",
+        "COMPONENT_DOWNLOAD_INTERRUPTED","COMPONENT_INTEGRITY_FAILED","CLI_STARTUP_FAILED","INSTALL_CANCELLED","IMAGE_CHECKSUM_MISMATCH","IMAGE_DOWNLOAD_NETWORK",
         "IMAGE_DOWNLOAD_FAILED","IMAGE_HTTP_STATUS","IMAGE_RANGE_MISMATCH","IMAGE_SIZE_LIMIT",
         "IMAGE_INSECURE_REDIRECT","IMAGE_INSECURE_RESPONSE","IMAGE_UNSAFE_FILE",
         "IMAGE_UNSAFE_LOCK","IMAGE_DOWNLOAD_BUSY","IMAGE_CACHE_DIRECTORY","IMAGE_CACHE_CONTROL",
@@ -52,6 +52,8 @@ final class AgentPreparationOutput {
             case "COMPONENT_DOWNLOAD_TIMEOUT":return ru?"Загрузка компонента остановилась или превысила допустимое время. Повторите проверку.":"Component download stalled or timed out. Retry the check.";
             case "COMPONENT_DOWNLOAD_INTERRUPTED":return ru?"Загрузка компонента прервана. Повторите проверку.":"Component download interrupted. Retry the check.";
             case "COMPONENT_DOWNLOAD_FAILED":return ru?"Не удалось скачать компонент. Проверьте сеть и повторите проверку.":"Component download failed. Check the network and retry.";
+            case "COMPONENT_INTEGRITY_FAILED":return ru?"Компонент не прошёл проверку целостности.":"Component integrity check failed.";
+            case "CLI_STARTUP_FAILED":return ru?"CLI не прошёл проверку запуска.":"CLI startup check failed.";
             case "INSTALL_CANCELLED":return ru?"Подготовка прервана. Повторите проверку.":"Preparation interrupted. Retry the check.";
             case "IMAGE_DOWNLOAD_NETWORK":case "IMAGE_DOWNLOAD_FAILED":case "IMAGE_HTTP_STATUS":
                 return ru?"Не удалось скачать образ. Проверьте сеть и повторите проверку.":"Image download failed. Check the network and retry.";

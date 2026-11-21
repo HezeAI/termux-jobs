@@ -30,7 +30,7 @@ public class GeminiCliTest {
         }
     }
     @Test public void bootstrapAndControlsAreSeparateFromOtherAgents() throws Exception {
-        WorkspaceStore.Session s=profile();GeminiCli.prepare(context);File rc=SessionShell.prepare(context.getFilesDir(),s);
+        WorkspaceStore.Session s=profile();GeminiCli.prepare(context,s);File rc=SessionShell.prepare(context.getFilesDir(),s);
         String text=new String(java.nio.file.Files.readAllBytes(rc.toPath()),java.nio.charset.StandardCharsets.UTF_8);
         assertTrue(text.contains("/tmp/termux-jobs-gemini"));assertTrue(text.contains("--work-dir '/root/project'"));assertFalse(text.contains("termux-jobs-claude"));assertFalse(text.contains("termux-jobs-ai"));assertFalse(text.contains("termux-jobs-codex"));
         String command=GeminiCli.command(context.getFilesDir(),s);assertTrue(command.contains(s.geminiSocketId));assertTrue(command.contains(s.geminiThread));assertFalse(command.contains(".codex"));assertFalse(command.contains("CLAUDE"));assertFalse(command.contains("gemini-code"));assertFalse(command.contains("API_KEY"));
@@ -47,6 +47,17 @@ public class GeminiCliTest {
     }
     @Test public void vertexLaunchIsScopedAndDefaultAvoidsUnavailableGoogle() throws Exception {
         WorkspaceStore.Session s=profile();assertEquals("api",s.geminiAuth);s.geminiAuth="vertex";s.geminiCloudProject="test-cloud-project";s.geminiCloudLocation="global";assertTrue(GeminiCli.valid(s));String command=GeminiCli.command(context.getFilesDir(),s);assertTrue(command.contains("JOBS_GEMINI_VERTEX_PROJECT='test-cloud-project'"));assertTrue(command.contains("JOBS_GEMINI_VERTEX_LOCATION='global'"));assertTrue(command.contains("'vertex'"));assertFalse(command.contains("GOOGLE_API_KEY"));WorkspaceStore.Session copy=s.copy();assertEquals(s.geminiCloudProject,copy.geminiCloudProject);assertEquals(s.geminiCloudLocation,copy.geminiCloudLocation);s.geminiAuth="api";assertFalse(GeminiCli.command(context.getFilesDir(),s).contains("JOBS_GEMINI_VERTEX_PROJECT"));s.geminiCloudProject="x; touch /bad";assertFalse(GeminiCli.valid(s));assertFalse(GeminiCli.validCloudLocation("us-central1\nexport x=1"));assertFalse(GeminiCli.validCloudProject("/root/project"));assertTrue(GeminiCli.validCloudProject(""));assertTrue(GeminiCli.validCloudLocation(""));
+    }
+
+    @Test public void antigravityUsesDedicatedUbuntuAiAndTheScopedBridge() throws Exception {
+        WorkspaceStore.Session s=profile();s.geminiAuth=GeminiCli.ANTIGRAVITY;s.codexEnvironment="ubuntu-ai";
+        assertTrue(GeminiCli.valid(s));store.sessions.add(s);
+        store.decode(store.encode().toString());s=store.sessions.get(0);assertTrue(GeminiCli.antigravity(s));
+        GeminiCli.prepare(context,s);String command=GeminiCli.command(context.getFilesDir(),s);
+        assertTrue(command.contains("agy-chat.cjs"));assertTrue(command.contains(s.geminiThread));
+        assertTrue(command.contains(s.geminiSocketId));assertTrue(command.contains("JOBS_AGY_BIN"));
+        assertFalse(command.contains("gemini-bootstrap.sh"));assertFalse(command.contains("VERTEX"));
+        s.codexEnvironment="ubuntu";assertFalse(GeminiCli.valid(s));
     }
 
 }

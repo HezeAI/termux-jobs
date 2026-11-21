@@ -30,9 +30,10 @@ public class CodexSessionShellTest {
         WorkspaceStore.Session s = new WorkspaceStore.Session(); s.id = "fixture"; s.codexSocketId = "fixture"; s.environment = "codex"; s.directory = "/root/a project";
         File rc = SessionShell.prepare(files, s);
         String content = new String(Files.readAllBytes(rc.toPath()), StandardCharsets.UTF_8);
-        assertTrue(content.contains("--bind '" + CodexSessionShell.socketDirectory(files) + ":/tmp/termux-jobs-codex'"));
+        assertTrue(content.contains("--bind " + SessionShell.quote(
+            CodexSessionShell.socketDirectory(files) + ":/tmp/termux-jobs-codex")));
         String guest = new String(Files.readAllBytes(new File(SessionShell.directory(files,s.id), "ubuntu-bashrc").toPath()), StandardCharsets.UTF_8);
-        assertTrue(guest.contains("codex-launch-v2.cjs")); assertFalse(guest.contains("approval_policy=")); assertTrue(guest.contains("unix:///tmp/termux-jobs-codex/"));
+        assertTrue(guest.contains("codex-launch-v3.cjs")); assertFalse(guest.contains("approval_policy=")); assertTrue(guest.contains("unix:///tmp/termux-jobs-codex/"));
         assertFalse(guest.contains("ws://")); assertFalse(guest.contains("auth.json")); assertTrue(guest.contains("codex features list")); assertTrue(guest.contains("--enable default_mode_request_user_input")); assertFalse(guest.contains("collaborationMode"));
         s.environment = "termux"; s.startup = "printf ordinary";
         content = new String(Files.readAllBytes(SessionShell.prepare(files,s).toPath()), StandardCharsets.UTF_8);

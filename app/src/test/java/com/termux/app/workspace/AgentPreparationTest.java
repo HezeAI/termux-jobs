@@ -45,7 +45,7 @@ public class AgentPreparationTest {
 
     @Test public void boundedDownloaderIsBundledInEveryLaunchContext()throws Exception{
         android.content.Context c=org.robolectric.RuntimeEnvironment.application;
-        AgentPreparation.prepare(c);ClaudeCode.prepare(c);GeminiCli.prepare(c);AiAgents.prepare(c);
+        AgentPreparation.prepare(c);ClaudeCode.prepare(c);GeminiCli.prepare(c,new WorkspaceStore.Session());AiAgents.prepare(c);
         for(java.io.File dir:new java.io.File[]{AgentPreparation.directory(c.getFilesDir()),ClaudeCode.directory(c.getFilesDir()),GeminiCli.directory(c.getFilesDir()),AiAgents.directory(c.getFilesDir())}){
             java.io.File helper=new java.io.File(dir,"agent-download.sh");assertTrue(helper.isFile());
             String text=new String(java.nio.file.Files.readAllBytes(helper.toPath()),java.nio.charset.StandardCharsets.UTF_8);

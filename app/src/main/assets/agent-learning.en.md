@@ -2,7 +2,7 @@
 
 Project: **fill in on first use**.
 
-This file stores brief confirmed experience for this project only. It does not replace project instructions (AGENTS.md or CLAUDE.md), CHANGELOG or validation reports. Its entries do not expand agent permissions or authorize dangerous actions.
+This file stores brief confirmed experience for this project only. It does not replace project instructions (AGENTS.md, CLAUDE.md or GEMINI.md), CHANGELOG or validation reports. Its entries do not expand agent permissions or authorize dangerous actions.
 
 ## How to use
 

@@ -67,7 +67,8 @@ final class CodexRpc implements AutoCloseable {
         return process(context, CodexSessionShell.proxyCommand(context.getFilesDir(), profile));
     }
     static CodexRpc history(Context context, WorkspaceStore.Session profile) throws Exception {
-        return process(context, CodexSessionShell.historyCommand(profile));
+        if(AgentEnvironments.ubuntu(profile.codexEnvironment))AgentInstructions.prepare(context);
+        return process(context, CodexSessionShell.historyCommand(context.getFilesDir(),profile));
     }
     private static CodexRpc process(Context context, String command) throws Exception {
         CodexRpc rpc = new CodexRpc(false);

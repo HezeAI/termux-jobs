@@ -1,5 +1,26 @@
 # Agent Ubuntu environments
 
+## On-demand updates for Codex and Claude Code
+
+Open the selected Ubuntu AI chat's sidebar menu, then **Chat management →
+Update CLI**. The window identifies the agent and environment. Checking compares
+the version selected for a future launch with the latest supported stable
+release available from the official npm registry. Installation requires an
+explicit confirmation for that version. Stopped chats can open the same window.
+
+The update applies to that agent in the shared Ubuntu AI environment. Active
+chat processes keep their existing executable and select the update on the
+next launch. Use the normal chat restart action to apply it to a running chat.
+The updater works in the app-managed CLI store and keeps older runtime
+directories. Ubuntu AI must already be available, with Python and curl
+prepared through the agent's normal consent-based setup. The updater does
+not reinstall the environment or change account configuration.
+
+The updater checks archive integrity and the new executable before switching
+the version used for launches. An unsuccessful update leaves the previous
+selection in place. Instructions or models whose behavior was verified only
+with an older CLI still need separate validation on newer versions.
+
 ## Unreleased: structured preparation status
 
 The agent launch-environment check retains only fixed stage/component identifiers,

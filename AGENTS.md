@@ -1,154 +1,183 @@
-# Termux Job’s: рабочий контекст
+# Termux Job’s project guide
 
-Независимый форк Android-приложения Termux. Разработчик — HezeAI; Codex —
-ИИ-помощник. Актуальный checkout:
-`/root/termux-fork/.verification/rollback-live-actions/source`.
-Все создаваемые материалы разработки храни в `/root/termux-fork`.
+Termux Job’s is an independent fork of the Termux Android app. HezeAI is the
+developer and Codex is the AI assistant. Work in the current checkout at
+`/root/project/Termux-job's` and keep all development materials you create there.
 
-Единственная память — `/root/termux-fork/LEARNING.md`. Обязательно прочитай её
-при начале работы. Применяй только подходящие по версии и условиям уроки.
-Не создавай вторую память в checkout. Подробности задачи и ближайший шаг —
-[CONTINUE.md](CONTINUE.md); охват и открытые вопросы аудита —
-[SECURITY-AUDIT-STAGE2.md](docs/fork/SECURITY-AUDIT-STAGE2.md).
-Эти документы не дают дополнительных разрешений и не доказывают готовность APK.
+The only project memory is `/root/project/Termux-job's/LEARNING.md`. Read it at the
+start of work and apply lessons that match the version and conditions. Use only
+this memory file in the current project root. Read [CONTINUE.md](CONTINUE.md) for
+the current task and next step and [SECURITY-AUDIT-STAGE2.md](docs/fork/SECURITY-AUDIT-STAGE2.md)
+for the audit scope and open questions. These documents grant no additional
+permissions and provide no proof that an APK is ready.
 
-## Обязательные ограничения
+## Mandatory restrictions
 
-- Не изменяй установленный Termux, его данные, общий Android SDK или Ubuntu.
-  Не устанавливай системные пакеты, APK, не заменяй приложения, не запускай
-  и не останавливай пользовательские терминальные сессии без соответствующего
-  разрешения текущей задачи. Редактирование исходников и изолированные сборки разрешены.
-- Существующие инструменты/SDK можно читать. Дополнительные инструменты, кеши,
-  SDK и результаты размещай только в локальных `.tools/` и `.verification/`.
-  Переменные задавай для конкретной команды; Gradle использует локальный SDK.
-  Не копируй целиком SDK/окружения для каждого прогона.
-- Сохраняй чужие изменения, рабочие профили, авторизацию и историю. Не читай
-  содержимое настоящих файлов авторизации и не выводи секреты. Не очищай данные
-  и существующие окружения ради теста. Без разрешения не удаляй доказательства,
-  созданные файлы или пользовательские данные.
-- Останавливай только процессы задачи с проверенной идентичностью; не используй
-  широкие сигналы. В фикстурах перехватывай настоящие сигнальные API.
-  Нерешённая безопасность остановки затронутых процессов, известная критическая
-  регрессия или раскрытие секрета блокируют завершение.
-- Установка APK и публикация требуют соответствующей авторизации пользователя.
-  Правила выпуска сами по себе не разрешают будущую публикацию. Учитывай уже
-  данное разрешение и его условия; повторно его не запрашивай без новой причины.
-- Текущая цель, версии, приёмка и границы авторизации — в [CONTINUE.md](CONTINUE.md).
-  Старые разрешения относятся только к указанным там историческим задачам.
-  Старые APK, включая резерв 1499, опубликованные теги, update.json и бинарные
-  Components сохраняй; не заменяй их без соответствующего отдельного поручения.
-- MCP и плагины исключены. Голосовой ввод удалён; не возвращай его без отдельного
-  поручения. Историческое разрешение v35 заменено последующим решением об удалении:
-  [условия и история](docs/fork/RELEASING.md#общие-правила).
+- Do not modify the installed Termux app, its data, the shared Android SDK or
+  Ubuntu. Installing system packages or APKs, replacing apps, and starting or
+  stopping user terminal sessions require authorization for the current task.
+  Source edits and isolated builds are permitted.
+- You may read existing tools and SDKs. Keep additional tools, caches, SDKs and
+  outputs only in the project's `.tools/` and `.verification/` directories. Set
+  environment variables for the specific command. Gradle uses the local SDK.
+  Do not copy whole SDKs or environments for each run.
+- Preserve other people's changes, working profiles, authorization and history.
+  Do not read the contents of real authorization files or expose secrets. Do
+  not clear data or existing environments for a test. Deleting evidence,
+  generated files or user data requires permission.
+- Stop only processes whose task or chat ownership, PID and start time you
+  have verified before signaling. Chat shutdown may stop its own agent and
+  dedicated SSH tunnel. A group signal requires verified ownership of every
+  target. Obtain current-task authorization before stopping a user session
+  even when its ownership is verified. Leave shared or unidentified processes
+  running. Do not signal by process name, a globally discovered PID alone or a
+  broad selector. Intercept real signal APIs in fixtures. Unresolved
+  process-stop safety for affected processes, a known critical regression or
+  an exposed secret blocks completion.
+- APK installation and publication require the applicable user authorization.
+  Release procedures grant no permission for future publication. Honor existing
+  authorization and its conditions. Ask again only when there is a new reason.
+- Read [CONTINUE.md](CONTINUE.md) for the current objective, versions, acceptance
+  criteria and authorization scope. Earlier permissions apply only to the
+  historical tasks identified there. Preserve old APKs, including backup 1499,
+  published tags, `update.json` and binary Components. Replacing any of them
+  requires a separate applicable request.
+- MCP and plugins are excluded. Voice input was removed and requires a separate
+  request to restore. The later removal decision superseded the historical v35
+  authorization. [Conditions and history](docs/fork/RELEASING.md#общие-правила)
 
-## Проверки и доказательства
+## Checks and evidence
 
-До редактирования проследи затронутые функции, вызывающий код, общие помощники,
-хранение, разрешения, выполнение и косвенные зависимости. Запиши короткий план
-проверок. При широком/неясном влиянии нужен полный применимый набор.
-Сохраняй применимые проверки ошибок, отмены, восстановления, принадлежности
-процессов и изоляции от других сессий независимо от размера diff.
+Review Git status and diffs before editing. Preserve unrelated changes and
+review the staged files and diff before any commit. For Git review and staged
+build source checks, follow [Source and build stages](docs/fork/TESTING.md#source-and-build-stages).
 
-Перед объявлением рефакторинга завершённым оцени отдельно тесты нового пути,
-ревью безопасности/регрессий и логические переходы состояний. Не выдумывай
-числовую уверенность; допустимые качественные приоритеты 40/30/30 не являются
-вероятностью или заменой доказательствам. При пробелах укажи минимальную
-оставшуюся проверку. Не добавляй посторонний рефакторинг ради оценки.
+Before editing, trace affected functions and callers, shared helpers, storage,
+permissions, execution and indirect dependencies. Write a short verification
+plan. Run the full applicable suite when the impact is broad or unclear. Keep
+applicable checks for errors, cancellation, recovery, process ownership and
+isolation from other sessions regardless of the diff size.
 
-Отмечай **Проверено заново / Checked anew**, **Переиспользовано / Reused**
-и **Не проверено / Not checked**. Для reuse сверяй значимые исходники, включая
-новые/изменённые файлы, настройки, разрешённые версии зависимостей, инструменты,
-входы сборки и условия. Старый лог, commit ID и UP-TO-DATE не достаточны.
-Пропуск не является PASS. Проверки модели/UI-фикстур не равны проверке телефона.
-Сообщения разработчика о телефоне приписывай разработчику, а не помощнику.
-Публичные отчёты не должны описывать разработчика как не установившего APK
-из-за того, что помощник его не устанавливал. Не заявляй исчерпывающих проверок.
+Before declaring a refactor complete, assess tests for the new path, the
+security and regression review, and state transitions individually. Do not
+invent numerical confidence. The allowed qualitative priorities of 40/30/30
+do not express probabilities or replace evidence. If gaps remain, identify
+the smallest remaining check. Avoid unrelated refactoring for the sake of
+the assessment.
 
-Каждый выдаваемый APK проходит барьер **финального файла**: ZIP, package ID,
-versionName/versionCode, ABI, debug, подпись/сертификат, SHA-256 и применимые
-runtime/DEX/native/assets, отсутствие случайных приватных данных. Для обновления
-сравни package/подписанта, рост versionCode и совместимость данных.
-Переиспользование функциональных тестов этот барьер не отменяет.
+Label results **Checked anew**, **Reused** and **Not checked**. Before reusing
+evidence, compare relevant sources, including new and changed files, settings,
+resolved dependency versions, tools, build inputs and conditions. A previous
+log, commit ID or `UP-TO-DATE` result alone is insufficient. A skipped check
+cannot count as a pass. Model or UI fixture checks do not verify phone behavior.
+Attribute reports about the phone to the developer when the developer performed
+the check. Public reports must not infer that the developer failed to install
+an APK because the assistant did not install it. Do not claim exhaustive
+verification.
 
-Для промежуточного APK обоснуй компиляцию/синтаксис/ресурсы/RU/EN и целевой
-совместимый Lint при понятном покрытии либо полный современный Lint при широком
-или неясном влиянии. Перед публичным выпуском обязателен полный современный Lint
-всех пяти модулей. Компиляция и пропущенный Lint не являются успешным Lint.
-Для документации проверяй текст/ссылки/diff; не пересобирай APK только ради неё.
+Claim native-tool support only after verifying its ABI, loader, required
+libraries and actual execution in the selected environment.
 
-Не запускай X11, установку сред или драйверы только из-за оформления чата или
-редактора. Сначала проверь общие зависимости. Хеши входов APK проверяются отдельно
-от реальной графики/установки. Не отключай packaging guards и не создавай skip/PASS
-обходы. Перед выбором скрипта изучи его действия; при лишних действиях предложи
-минимальное разделение подготовки/тестов/упаковки/аудита/Lint, без новой инфраструктуры.
+Check the **final file** for every APK you deliver. Verify ZIP integrity, package
+ID, `versionName` and `versionCode`, ABI, debug status, signature and certificate,
+SHA-256, applicable runtime, DEX, native libraries and assets, applicable ELF and
+ZIP alignment, and the absence of inadvertently included private data. For an
+update, compare package ID and signer, verify that `versionCode` increases, and
+check data compatibility. Reusing functional tests leaves these final-file checks
+mandatory.
 
-## CHANGELOG и обновления
+For an interim APK, justify the checks for compilation, syntax, resources and
+RU/EN. Use targeted compatible Lint when coverage is clear and full modern Lint
+when the impact is broad or unclear. Before a public release, run full modern
+Lint for all five modules. Compilation and skipped Lint cannot count as a Lint
+pass. For documentation, verify the text, links and diff. A documentation-only
+change requires no APK rebuild.
 
-Для каждого выдаваемого APK, включая приватный, обновляй CHANGELOG.md: дата,
-точные версии/code, фактические изменения, совместимость, ограничения и ссылка
-на подробный отчёт. Сохраняй старые записи; не создавай дублей текущей версии.
-После APK в ответе дай короткие патчноуты и ссылки на CHANGELOG/проверки.
-Изменения без APK относятся к Unreleased, если не уточняют выпущенную версию.
+Do not start X11, environment installation or drivers solely for chat or editor
+styling. Check shared dependencies first. Check APK input hashes separately
+from actual graphics and installation. Keep packaging guards enabled and do not
+introduce bypasses that skip checks or report a pass. Read what a script does
+before choosing it. If it performs unnecessary actions, propose the smallest
+split between preparation, testing, packaging, audit and Lint without adding
+infrastructure.
 
-Публичные GitHub release notes — английские; встроенное обновление — RU/EN.
-Перед выпуском обновляй README и затронутую документацию по финальной реализации.
-Исторические отчёты помечай как исторические; не переписывай прежний результат.
-Стабильный канал сохраняет совместимый с v1.0.19 update.json из финального APK.
-Совместимость/миграции/потерю или непереносимость данных с причинами указывай
-**и в RU/EN описаниях обновления, и в release notes до установки**. Не очищай
-данные автоматически ради обновления. Не обещай совместимость без проверки.
+## Changelog and updates
 
-## Когда читать тематические документы
+For every APK you deliver, including private builds, update `CHANGELOG.md` with
+the date, exact versions and version codes, actual changes, compatibility,
+limitations and a link to the detailed report. Preserve old entries and avoid
+duplicate entries for the current version. Alongside the APK, give brief patch
+notes and links to the changelog and verification. Changes without an APK go
+under Unreleased unless they clarify an already released version.
 
-Выбирай относящиеся к задаче разделы. При расширении задачи дочитывай нужные
-материалы. Не загружай все отчёты перед каждой задачей и не перечитывай
-неизменённые документы без причины; при сомнении в актуальности проверь файл.
+Write public GitHub release notes in English and in-app update text in Russian
+and English. Before releasing, update the README and affected documentation to
+match the final implementation. Mark historical reports as historical and
+preserve their original results. For the stable channel, keep the
+v1.0.19-compatible `update.json` from the final APK. Document compatibility,
+migrations, and any data loss or inability to transfer data, with reasons,
+**in both RU/EN update descriptions and in the release notes before installation**.
+Do not clear data automatically for an update. Verify compatibility before
+promising it.
 
-- **Перед подготовкой релиза, добавлением/обновлением распространяемых компонентов,
-  публикацией либо публикацией исходников к ним обязательно** прочитай
-  [RELEASING.md](docs/fork/RELEASING.md): состав, версии, совместимость, лицензии,
-  авторство, уведомления/точные исходники, Git, документация, проверки и assets.
-  Порядок не даёт разрешения на публикацию.
-- Перед изменением кода/выбором проверок прочитай относящиеся разделы
-  [TESTING.md](docs/fork/TESTING.md); перед сборкой — [FORK.md](FORK.md),
-  перед Lint — [LINT.md](docs/fork/LINT.md). Подробные требования к доказательствам
-  перенесены в TESTING.md без отмены ограничений выше.
-- При работе с файлами телефона, скриншотами или диагностикой доступа обязательно
-  прочитай [DIAGNOSTICS.md](docs/fork/DIAGNOSTICS.md#локальные-файлы-телефона-и-доступ-инструментов).
-  Перед утверждением об отсутствии доступа проверь его инструментами.
-  Доступ для чтения не разрешает изменение или отправку сообщений.
-- При изменении установки сред/компонентов обязательно прочитай
-  [чистую установку](docs/fork/TESTING.md#чистая-установка-как-основа-для-каждого-окружения).
-  Основа — чистое приложение/bootstrap, а не содержимое телефона разработчика.
-- При изменении X11/связанных путей обязательно прочитай
-  [X11-регрессии](docs/fork/TESTING.md#регрессионные-проверки-интеграции-x11).
-  Сохраняй изоляцию процессов, внешние цели ссылок, другие драйверы и исходные ZIP.
-  Моки не подтверждают GPU, а неудача телефона не отменяется unit-тестом.
-- Перед изменением инструкций/навыков прочитай [AGENT-INSTRUCTIONS.md](docs/fork/AGENT-INSTRUCTIONS.md)
-  или [AGENT-SKILLS.md](docs/fork/AGENT-SKILLS.md); перед изменением backups —
-  [BACKUP-RESTORE.md](docs/fork/BACKUP-RESTORE.md); перед разрешениями/авторизацией —
-  текущую матрицу [аудита](docs/fork/SECURITY-AUDIT-STAGE2.md) и указанные там доказательства.
-- Перед работой с вложениями в следующем цикле прочитай
-  [MEDIA-CONTEXT-INVESTIGATION.md](docs/fork/MEDIA-CONTEXT-INVESTIGATION.md).
+## When to read the topical guides
 
-## Поддержание рабочего контекста
+Read the sections relevant to the task and consult more sections if the scope
+expands. Avoid loading every report for every task or rereading unchanged
+documents without a reason. Check a document when its currency is uncertain.
 
-Обновляй основной CONTINUE.md на месте: одна текущая цель, выполненное, открытые
-вопросы, проверки, ограничения и ближайший шаг. Не дописывай новые «Активно» поверх
-старых. docs/fork/CONTINUE.md — только указатель, без дублирования статусов.
+- **Read before preparing a release, adding or updating distributable
+  components, publishing, or publishing their source code.** The guide covers
+  contents, versions, compatibility, licenses, attribution, notices and exact
+  sources, Git, documentation, checks and assets. The procedure grants no
+  publication permission. [RELEASING.md](docs/fork/RELEASING.md)
+- Read the relevant sections before editing code or choosing checks. The detailed
+  evidence requirements supplement the restrictions above. [TESTING.md](docs/fork/TESTING.md)
+- Read before building. [FORK.md](FORK.md)
+- Read before running Lint. [LINT.md](docs/fork/LINT.md)
+- Read before working with phone files, screenshots or access diagnostics. Verify
+  access with tools before declaring it unavailable. Read access grants no
+  permission to modify anything or send messages.
+  [DIAGNOSTICS.md](docs/fork/DIAGNOSTICS.md#phone-files-and-tool-access)
+- Read before changing environment or component installation. Start with a clean
+  app and bootstrap. The contents of the developer's phone cannot serve as the
+  baseline. [Clean installation](docs/fork/TESTING.md#clean-installation-as-the-baseline-for-every-environment)
+- Read before changing X11 or related paths. Preserve process isolation, external
+  link targets, other drivers and original ZIP files. Mocks do not verify GPU
+  behavior. Passing unit tests do not invalidate a failure observed on the phone.
+  [X11 regression checks](docs/fork/TESTING.md#x11-integration-regression-checks)
+- Read the applicable guide before changing instructions or skills.
+  [AGENT-INSTRUCTIONS.md](docs/fork/AGENT-INSTRUCTIONS.md),
+  [AGENT-SKILLS.md](docs/fork/AGENT-SKILLS.md)
+- Read before changing backups. [BACKUP-RESTORE.md](docs/fork/BACKUP-RESTORE.md)
+- Read the current audit matrix and its cited evidence before working on
+  permissions or authorization. [SECURITY-AUDIT-STAGE2.md](docs/fork/SECURITY-AUDIT-STAGE2.md)
+- Read before working with attachments in the next cycle.
+  [MEDIA-CONTEXT-INVESTIGATION.md](docs/fork/MEDIA-CONTEXT-INVESTIGATION.md)
 
-Завершённые этапы переноси в существующие тематические отчёты; при отсутствии
-подходящего — в явно исторический документ docs/fork/history. Сохраняй доказательства,
-отказы и незавершённые вопросы: архивация не закрывает их и не продлевает разрешения.
+## Keeping the working context current
 
-В единственном LEARNING.md объединяй подтверждённые уроки по теме: дата, условия,
-доказательства; устаревшее помечай заменённым. Подробные журналы — в отчётах,
-правила — в тематических документах без дублей. История не подтверждает готовность APK.
-При переносах проверяй требования, ссылки и чужие изменения. Реорганизуй при
-накоплении повторов или затруднённом поиске, не после каждой задачи. Не подключай
-все справочники автоимпортами; не заявляй экономию времени/токенов без измерений.
+Update the main `CONTINUE.md` in place with one current goal, completed work,
+open questions, checks, restrictions and the next step. Do not append new active
+status sections over stale ones. Keep `docs/fork/CONTINUE.md` as a pointer
+without duplicating status.
 
-Команды проверок: `python3 scripts/check-localization.py`, `bash scripts/verify-java.sh`,
-`bash scripts/verify-modern-lint.sh`. До запуска прочитай скрипт и применимые
-[TESTING](docs/fork/TESTING.md), [FORK](FORK.md), [LINT](docs/fork/LINT.md).
-Документационная правка не требует сборки или тестов приложения.
+Move completed stages to existing topical reports. If none fits, use a document
+in `docs/fork/history` explicitly marked as historical. Preserve evidence,
+refusals and unresolved questions. Archiving neither closes unresolved questions
+nor extends permissions.
+
+Consolidate confirmed lessons by topic in the single `LEARNING.md`. Keep the
+date, conditions and evidence, and mark outdated conclusions as superseded.
+Keep detailed logs in reports and rules in topical documents without
+duplication. Historical records provide no proof that an APK is ready. When
+moving material, check requirements, links and other people's changes.
+Reorganize when duplication builds up or information becomes hard to find.
+Avoid routine reorganization after every task. Do not auto-import all guides
+or claim time or token savings without measurements.
+
+Available checks include `python3 scripts/check-localization.py`,
+`bash scripts/verify-java.sh` and `bash scripts/verify-modern-lint.sh`. Before
+running a check, read its script and the applicable sections of
+[TESTING.md](docs/fork/TESTING.md), [FORK.md](FORK.md) and [LINT.md](docs/fork/LINT.md).
+Documentation-only changes require no app build or app tests.

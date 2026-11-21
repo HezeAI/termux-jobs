@@ -33,7 +33,7 @@ public final class SessionShell {
         if (session.claudeAgent) startup = java.util.Collections.singletonList(ClaudeCode.command(files, session));
         if (session.aiAgent.equals("opencode")) startup = java.util.Collections.singletonList(AiAgents.command(files, session));
         if (session.environment.equals("codex")) startup = java.util.Collections.singletonList(CodexSessionShell.command(files, session));
-        if (AgentPreparation.supports(session)&&!startup.isEmpty())startup=java.util.Collections.singletonList(AgentPreparation.wrap(session,startup.get(0)));
+        if (AgentPreparation.supports(session)&&!startup.isEmpty())startup=java.util.Collections.singletonList(AgentPreparation.wrap(session,ProjectFiles.gitStartup(session)+startup.get(0)));
         if (AgentPreparation.supports(session)&&!startup.isEmpty())startup=java.util.Collections.singletonList(AgentConnection.wrap(session,startup.get(0)));
         if (guest) {
             String mount = "/tmp/termux-fork-session-" + session.id;
@@ -51,6 +51,7 @@ public final class SessionShell {
                 + (AgentPreparation.supports(session)?" --bind "+quote(AgentPreparation.directory(files).getAbsolutePath()+":"+AgentPreparation.GUEST):"")
                 + (session.geminiAgent ? " --bind " + quote(GeminiCli.directory(files).getAbsolutePath() + ":" + GeminiCli.GUEST) : "")
                 + (session.claudeAgent ? " --bind " + quote(ClaudeCode.directory(files).getAbsolutePath() + ":" + ClaudeCode.GUEST) : "")
+                + (session.geminiAgent || session.claudeAgent ? " --bind " + quote(AgentInstructions.launchBind(files)) : "")
                 + (session.aiAgent.equals("opencode") ? " --bind " + quote(AiAgents.directory(files).getAbsolutePath() + ":/tmp/termux-jobs-ai") : "")
                 + (session.environment.equals("codex") ? " --bind " + quote(CodexSessionShell.socketDirectory(files).getAbsolutePath() + ":/tmp/termux-jobs-codex") : "")
                 + " --work-dir " + quote(cwd) + " " + (alias.equals("ubuntu")?"ubuntu":quote(alias)) + " -- "

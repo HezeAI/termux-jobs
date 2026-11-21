@@ -26,6 +26,18 @@ local.properties
 
 # Signing files
 .signing/
+*.jks
+*.keystore
+*.p12
+*.pfx
+
+# Local credentials and Android App Bundles
+.env
+.env.local
+auth.json
+credentials.json
+.credentials.json
+*.aab
 
 # Intellij
 .idea/

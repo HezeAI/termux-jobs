@@ -39,8 +39,21 @@ public class AgentSessionResourcesUiTest {
  }
  @Test public void unsupportedAgentsNeverOpenCodexOrClaudeResources()throws Exception{
   controller=new WorkspaceController(activity);Method menu=WorkspaceController.class.getDeclaredMethod("sessionMenu",WorkspaceStore.Session.class,boolean.class);menu.setAccessible(true);
-  for(String agent:new String[]{"gemini","opencode"}){WorkspaceStore.Session p=profile(agent,"ubuntu-ai");menu.invoke(controller,p,true);AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();for(int i=0;i<d.getListView().getCount();i++)assertFalse(d.getListView().getItemAtPosition(i).toString().contains("SKILL.md"));d.dismiss();assertNull(AgentSessionResourcesUi.show(activity,p,this::backend));assertNull(AgentInstructionsUi.sessionEditor(activity,p,this::backend));}
+  WorkspaceStore.Session p=profile("opencode","ubuntu-ai");menu.invoke(controller,p,true);AlertDialog d=ShadowAlertDialog.getLatestAlertDialog();for(int i=0;i<d.getListView().getCount();i++)assertFalse(d.getListView().getItemAtPosition(i).toString().contains("SKILL.md"));d.dismiss();assertNull(AgentSessionResourcesUi.show(activity,p,this::backend));assertNull(AgentInstructionsUi.sessionEditor(activity,p,this::backend));
   assertTrue(calls.isEmpty());assertNull(AgentSessionResourcesUi.context(activity,profile("codex","unsupported-env")));
+ }
+ @Test public void geminiInstructionsKeepTheOriginalRuntimeAndAntigravitySkillsUseBothScopes()throws Exception{
+  WorkspaceStore.Session p=profile("gemini","ubuntu-ai");p.geminiAuth="google";
+  AgentSessionResourcesUi.Context legacy=AgentSessionResourcesUi.context(activity,p);assertNotNull(legacy);assertFalse(legacy.hasSkills());
+  editor=legacy.editor(this::backend);editor.show();idle();
+  JSONObject read=calls.get(calls.size()-1);assertEquals("GEMINI.md",read.optString("name"));assertEquals("legacy",read.optString("geminiRuntime"));assertEquals("project",read.optString("scope"));
+  editor.dialog.dismiss();editor=null;
+  p.geminiAuth=GeminiCli.ANTIGRAVITY;
+  AgentSessionResourcesUi.Context agy=AgentSessionResourcesUi.context(activity,p);assertTrue(agy.hasSkills());
+  skills=agy.skills(this::backend);skills.scope="user";skills.show();idle();
+  JSONObject shared=calls.get(calls.size()-1);assertEquals("gemini",shared.optString("agent"));assertEquals("antigravity",shared.optString("geminiRuntime"));assertEquals("user",shared.optString("scope"));
+  action(skills.frame.header,"Проектные").performClick();idle();
+  JSONObject project=calls.get(calls.size()-1);assertEquals("project",project.optString("scope"));assertEquals("/session/проект with spaces",project.optString("project"));
  }
  @Test public void actualHubButtonsOpenExistingManagersWithImmutableContext()throws Exception{
   for(String agent:new String[]{"codex","claude"}){WorkspaceStore.Session p=profile(agent,"ubuntu");AlertDialog hub=AgentSessionResourcesUi.show(activity,p,this::backend);assertTrue(text(hub.getWindow().getDecorView()).contains("/session/проект with spaces"));assertTrue(text(hub.getWindow().getDecorView()).contains("Ubuntu"));p.directory="/other-chat";p.codexEnvironment="ubuntu-ai";

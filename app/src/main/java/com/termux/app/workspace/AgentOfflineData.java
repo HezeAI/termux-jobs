@@ -37,7 +37,6 @@ final class AgentOfflineData {
         }
         android.widget.TextView compact=AgentStatusUi.row(body,AgentStatusUi.tr(a,"Сократить контекст","Compact context"),"offline-compact",()->{});compact.setEnabled(false);
         AgentStatusUi.info(body,AgentStatusUi.tr(a,"Доступно после запуска чата","Available after starting the chat"));
-        RtkMode rtk=new RtkMode(a,p,null,true);body.addView(rtk);
-        android.app.AlertDialog dialog=WorkspaceDialogs.builder(a).setTitle(AgentStatusUi.tr(a,"Лимиты и контекст","Limits and context")).setView(AgentStatusUi.scroll(body)).setNegativeButton(AgentStatusUi.tr(a,"Закрыть","Close"),null).create();dialog.setOnDismissListener(d->rtk.close());dialog.show();
+        WorkspaceDialogs.builder(a).setTitle(AgentStatusUi.tr(a,"Лимиты и контекст","Limits and context")).setView(AgentStatusUi.scroll(body)).setNegativeButton(AgentStatusUi.tr(a,"Закрыть","Close"),null).show();
     }
 }

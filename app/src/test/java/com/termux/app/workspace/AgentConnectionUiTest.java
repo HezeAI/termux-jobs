@@ -36,8 +36,72 @@ public class AgentConnectionUiTest {
  @Test public void createChatChooserPrefillsEveryAgentAndCancellationDoesNotPersistOrLaunch()throws Exception{
   Field f=WorkspaceController.class.getDeclaredField("store");f.setAccessible(true);WorkspaceStore store=(WorkspaceStore)f.get(controller);store.sessions.clear();store.save();store.awaitWrites();java.io.File file=new java.io.File(a.getFilesDir(),"workspace-v1.json");byte[] before=java.nio.file.Files.readAllBytes(file.toPath());
   for(String language:new String[]{"ru","en"})for(int agent=0;agent<4;agent++){
-   WorkspaceLanguage.select(a,language);WorkspaceText.resources=WorkspaceLanguage.wrap(a).getResources();Method create=WorkspaceController.class.getDeclaredMethod("createAgentChat");create.setAccessible(true);create.invoke(controller);AlertDialog chooser=ShadowAlertDialog.getLatestAlertDialog();ViewGroup choices=chooser.getWindow().getDecorView().findViewWithTag("agent-chooser-list");assertEquals(4,choices.getChildCount());String label=((TextView)choices.getChildAt(agent)).getText().toString();choices.getChildAt(agent).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();View root=form.getWindow().getDecorView();EditText connection=root.findViewWithTag("agent-connection-command"),directory=root.findViewWithTag("session-working-directory");View group=root.findViewWithTag("agent-connection-fields");assertEquals(View.VISIBLE,group.getVisibility());ViewGroup parent=(ViewGroup)group.getParent();assertEquals(parent.getChildCount()-1,parent.indexOfChild(group));assertEquals("/root",directory.getText().toString());assertTrue(directory.getParent() instanceof LinearLayout);assertEquals(2,((ViewGroup)directory.getParent()).getChildCount());assertEquals(language.equals("ru")?"Создать и открыть":"Create and open",form.getButton(-1).getText().toString());assertEquals(android.view.Gravity.CENTER,form.getWindow().getAttributes().gravity);assertEquals(View.GONE,form.getButton(-1).getVisibility());assertEquals(View.GONE,form.getButton(-2).getVisibility());assertNotNull(root.findViewWithTag("agent-create-submit"));assertEquals(language.equals("ru")?"Назад":"Back",form.getButton(-2).getText().toString());View model=root.findViewWithTag("agent-create-model"),chat=root.findViewWithTag("agent-create-chat"),rights=root.findViewWithTag("agent-create-permissions");assertTrue(parent.indexOfChild(model)<parent.indexOfChild(chat));assertTrue(parent.indexOfChild(chat)<parent.indexOfChild(rights));assertTrue(parent.indexOfChild(rights)<parent.indexOfChild(group));assertNull(root.findViewWithTag("agent-create-details"));for(String tag:new String[]{"agent-create-permission-details"}){View detail=root.findViewWithTag(tag);assertEquals(View.GONE,detail.getVisibility());root.findViewWithTag(tag+"-toggle").performClick();assertEquals(View.VISIBLE,detail.getVisibility());root.findViewWithTag(tag+"-toggle").performClick();assertEquals(View.GONE,detail.getVisibility());}assertNull(root.findViewWithTag("agent-create-environment"));assertNull(root.findViewWithTag("agent-environment-check"));assertNull(root.findViewWithTag("session-launch-environment"));assertEquals((language.equals("ru")?"Новый чат (":"New chat (")+label+")",((TextView)root.findViewWithTag("agent-create-title")).getText().toString());if(label.contains("Claude")){CheckBox auto=root.findViewWithTag("claude-mode-auto");assertNotNull(auto);assertSame(root.findViewWithTag("claude-create-permissions"),auto.getParent());assertTrue(auto.isEnabled());auto.performClick();assertTrue(auto.isChecked());assertFalse(((ViewGroup)rights).getChildAt(0).isEnabled());}connection.setText("/root/artificial/"+label.toLowerCase(java.util.Locale.ROOT));directory.setText("/root/artificial project");root.findViewWithTag("agent-create-back").performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();ViewGroup again=null;for(Dialog candidate:org.robolectric.shadows.ShadowDialog.getShownDialogs()){ViewGroup found=candidate.getWindow().getDecorView().findViewWithTag("agent-chooser-list");if(candidate.isShowing()&&found!=null)again=found;}assertNotNull("visible chooser after reverse transition",again);assertEquals(4,again.getChildCount());again.getChildAt(agent==0?1:agent).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertTrue(form.isShowing());if(agent==0){CheckBox switched=root.findViewWithTag("claude-mode-auto");assertTrue(switched.isEnabled());switched.performClick();assertTrue(switched.isChecked());}if(label.contains("Claude"))assertTrue(((CheckBox)root.findViewWithTag("claude-mode-auto")).isChecked());assertEquals("/root/artificial project",directory.getText().toString());assertEquals("/root/artificial/"+label.toLowerCase(java.util.Locale.ROOT),connection.getText().toString());form.cancel();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertFalse(form.isShowing());assertTrue(store.sessions.isEmpty());assertNull(a.getCurrentSession());assertArrayEquals(before,java.nio.file.Files.readAllBytes(file.toPath()));
+   WorkspaceLanguage.select(a,language);WorkspaceText.resources=WorkspaceLanguage.wrap(a).getResources();Method create=WorkspaceController.class.getDeclaredMethod("createAgentChat");create.setAccessible(true);create.invoke(controller);AlertDialog chooser=ShadowAlertDialog.getLatestAlertDialog();ViewGroup choices=chooser.getWindow().getDecorView().findViewWithTag("agent-chooser-list");assertEquals(4,choices.getChildCount());String label=((TextView)choices.getChildAt(agent)).getText().toString();choices.getChildAt(agent).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();AlertDialog form=ShadowAlertDialog.getLatestAlertDialog();View root=form.getWindow().getDecorView();EditText connection=root.findViewWithTag("agent-connection-command"),directory=root.findViewWithTag("session-working-directory");View group=root.findViewWithTag("agent-connection-fields");assertEquals(View.VISIBLE,group.getVisibility());ViewGroup parent=(ViewGroup)group.getParent();assertEquals(parent.getChildCount()-1,parent.indexOfChild(group));assertEquals("/root",directory.getText().toString());assertTrue(directory.getParent() instanceof LinearLayout);assertEquals(2,((ViewGroup)directory.getParent()).getChildCount());assertEquals(language.equals("ru")?"Создать и открыть":"Create and open",form.getButton(-1).getText().toString());assertEquals(android.view.Gravity.CENTER,form.getWindow().getAttributes().gravity);assertEquals(View.GONE,form.getButton(-1).getVisibility());assertEquals(View.GONE,form.getButton(-2).getVisibility());assertNotNull(root.findViewWithTag("agent-create-submit"));assertEquals(language.equals("ru")?"Назад":"Back",form.getButton(-2).getText().toString());View model=root.findViewWithTag("agent-create-model"),chat=root.findViewWithTag("agent-create-chat"),rights=root.findViewWithTag("agent-create-permissions");assertTrue(parent.indexOfChild(model)<parent.indexOfChild(chat));assertTrue(parent.indexOfChild(chat)<parent.indexOfChild(rights));assertTrue(parent.indexOfChild(rights)<parent.indexOfChild(group));
+   if(agent==2){
+    boolean ru=language.equals("ru");
+    assertLaunchSummary(model,ru?"По умолчанию в CLI":"CLI default");
+    assertLaunchSummary(chat,ru?"Новый чат":"New chat");
+    assertLaunchSummary(rights,ru?"По настройкам Antigravity CLI":"Antigravity CLI settings");
+    java.util.ArrayList<View> updateActions=new java.util.ArrayList<>();
+    root.findViewsWithText(updateActions,ru?"Обновить CLI":"Update CLI",View.FIND_VIEWS_WITH_TEXT);
+    assertTrue(updateActions.isEmpty());
+   }
+   assertNull(root.findViewWithTag("agent-create-details"));for(String tag:new String[]{"agent-create-permission-details"}){View detail=root.findViewWithTag(tag);assertEquals(View.GONE,detail.getVisibility());root.findViewWithTag(tag+"-toggle").performClick();assertEquals(View.VISIBLE,detail.getVisibility());root.findViewWithTag(tag+"-toggle").performClick();assertEquals(View.GONE,detail.getVisibility());}assertNull(root.findViewWithTag("agent-create-environment"));assertNull(root.findViewWithTag("agent-environment-check"));assertNull(root.findViewWithTag("session-launch-environment"));assertEquals((language.equals("ru")?"Новый чат (":"New chat (")+label+")",((TextView)root.findViewWithTag("agent-create-title")).getText().toString());if(label.contains("Claude")){CheckBox auto=root.findViewWithTag("claude-mode-auto");assertNotNull(auto);assertSame(root.findViewWithTag("claude-create-permissions"),auto.getParent());assertTrue(auto.isEnabled());auto.performClick();assertTrue(auto.isChecked());assertFalse(((ViewGroup)rights).getChildAt(0).isEnabled());}connection.setText("/root/artificial/"+label.toLowerCase(java.util.Locale.ROOT));directory.setText("/root/artificial project");root.findViewWithTag("agent-create-back").performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();ViewGroup again=null;for(Dialog candidate:org.robolectric.shadows.ShadowDialog.getShownDialogs()){ViewGroup found=candidate.getWindow().getDecorView().findViewWithTag("agent-chooser-list");if(candidate.isShowing()&&found!=null)again=found;}assertNotNull("visible chooser after reverse transition",again);assertEquals(4,again.getChildCount());again.getChildAt(agent==0?1:agent==2?0:agent).performClick();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertTrue(form.isShowing());
+   if(agent==2)for(View slot:new View[]{model,chat,rights}){
+    View control=((ViewGroup)slot).getChildAt(0);
+    assertEquals(View.VISIBLE,control.getVisibility());
+    assertTrue(control.isClickable());
+   }
+   if(agent==0){CheckBox switched=root.findViewWithTag("claude-mode-auto");assertTrue(switched.isEnabled());switched.performClick();assertTrue(switched.isChecked());}if(label.contains("Claude"))assertTrue(((CheckBox)root.findViewWithTag("claude-mode-auto")).isChecked());assertEquals("/root/artificial project",directory.getText().toString());assertEquals("/root/artificial/"+label.toLowerCase(java.util.Locale.ROOT),connection.getText().toString());form.cancel();Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();assertFalse(form.isShowing());assertTrue(store.sessions.isEmpty());assertNull(a.getCurrentSession());assertArrayEquals(before,java.nio.file.Files.readAllBytes(file.toPath()));
   }
+ }
+
+ @Test public void savedAntigravityChatCanOpenItsCliUpdaterFromTheSidebar()throws Exception{
+  Field field=WorkspaceController.class.getDeclaredField("store");
+  field.setAccessible(true);
+  WorkspaceStore store=(WorkspaceStore)field.get(controller);
+  WorkspaceStore.Session profile=new WorkspaceStore.Session();
+  profile.name="Saved Antigravity chat";
+  profile.environment="ubuntu";
+  profile.codexEnvironment="ubuntu-ai";
+  profile.geminiAgent=true;
+  profile.geminiAuth=GeminiCli.ANTIGRAVITY;
+  profile.saved=true;
+  store.sessions.add(profile);
+
+  Method menu=WorkspaceController.class.getDeclaredMethod("createSidebar");
+  menu.setAccessible(true);
+  WorkspaceSidebar sidebar=(WorkspaceSidebar)menu.invoke(controller);
+  sidebar.show();
+  try{
+   ViewGroup card=sidebar.body.findViewWithTag("sidebar-session-"+profile.id);
+   assertNotNull(card);
+   ((ViewGroup)card.getChildAt(0)).getChildAt(0).performClick();
+   ViewGroup management=card.findViewWithTag("sidebar-group-items-chat-management");
+   assertNotNull(management);
+   TextView update=management.findViewWithTag("sidebar-cli-update-"+profile.id);
+   assertNotNull(update);
+   assertEquals("Update CLI",update.getText().toString());
+   assertTrue(update.isShown());
+   assertTrue(update.performClick());
+   AlertDialog updater=ShadowAlertDialog.getLatestAlertDialog();
+   assertTrue(updater.isShowing());
+   assertTrue(Shadows.shadowOf(updater).getMessage().toString().contains("Antigravity CLI"));
+   assertTrue(updater.getButton(AlertDialog.BUTTON_NEUTRAL).isEnabled());
+   assertFalse(updater.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled());
+   updater.dismiss();
+   assertTrue(sidebar.dialog.isShowing());
+   assertNull(a.getCurrentSession());
+  }finally{sidebar.dispose();}
+ }
+
+ private void assertLaunchSummary(View slot,String expected){
+  ViewGroup row=(ViewGroup)slot;
+  assertEquals(1,row.getChildCount());
+  TextView summary=(TextView)row.getChildAt(0);
+  assertEquals(View.VISIBLE,summary.getVisibility());
+  assertEquals(expected,summary.getText().toString());
+  assertFalse(summary.isClickable());
  }
 
 }

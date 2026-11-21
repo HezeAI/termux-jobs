@@ -34,6 +34,36 @@ public class WorkspaceStoreTest {
         WorkspaceStore reloaded=new WorkspaceStore(context,errors::add);
         for(WorkspaceStore.Session loaded:reloaded.sessions){if(loaded.id.equals(fresh.id))assertEquals("untrusted",CodexSessionShell.approval(loaded));if(loaded.id.equals(legacy.id))assertEquals("never",CodexSessionShell.approval(loaded));if(loaded.id.equals(priorConfirm.id))assertEquals("on-request",CodexSessionShell.approval(loaded));}assertTrue(errors.toString(),errors.isEmpty());reloaded.close();
     }
+    @Test public void codexChoicesSurviveRestoreAndRemainIndependentBetweenProfiles() throws Exception {
+        WorkspaceStore store=new WorkspaceStore(context,errors::add);
+        WorkspaceStore.Session first=new WorkspaceStore.Session(), second=new WorkspaceStore.Session();
+        first.environment=second.environment="codex";
+        first.codexSpeed="fast";
+        first.codexContextWindow=872000;
+        first.codexCompactThreshold=784800;
+        store.sessions.add(first);
+        store.sessions.add(second);
+        store.save();
+        store.awaitWrites();
+        store.close();
+
+        WorkspaceStore loaded=new WorkspaceStore(context,errors::add);
+        WorkspaceStore.Session restored=loaded.sessions.get(0).copy();
+        assertEquals("fast",restored.codexSpeed);
+        assertEquals(872000,restored.codexContextWindow);
+        assertEquals(784800,restored.codexCompactThreshold);
+        org.json.JSONObject legacy=loaded.encode();
+        org.json.JSONObject secondRecord=legacy.getJSONArray("sessions").getJSONObject(1);
+        for(String key:new String[]{"codexSpeed","codexContextWindow","codexCompactThreshold"})secondRecord.remove(key);
+        loaded.decode(legacy.toString());
+        assertEquals("fast",loaded.sessions.get(0).codexSpeed);
+        WorkspaceStore.Session defaultProfile=loaded.sessions.get(1);
+        assertEquals("normal",defaultProfile.codexSpeed);
+        assertEquals(0,defaultProfile.codexContextWindow);
+        assertEquals(0,defaultProfile.codexCompactThreshold);
+        assertTrue(errors.toString(),errors.isEmpty());
+        loaded.close();
+    }
     @Test public void otherAgentPoliciesSurviveSaveReopenAndSecondSave()throws Exception{
         WorkspaceStore store=new WorkspaceStore(context,errors::add);
         WorkspaceStore.Session claude=WorkspaceStore.newProfile();claude.environment="ubuntu";claude.codexEnvironment="ubuntu-ai";claude.claudeAgent=true;

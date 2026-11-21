@@ -30,6 +30,7 @@ final class AgentTimelineSummary {
         JSONArray files=preview.optJSONArray("files");if(p.isEmpty()&&files!=null&&files.optJSONObject(0)!=null)p=files.optJSONObject(0).optString("path");
     }return p;}
     static String title(JSONObject row,boolean ru){
+        if(AgentSubagentPresentation.matches(row))return AgentSubagentPresentation.title(row,ru);
         String description=row.optString("actionDescription").trim();if(!description.isEmpty())return shortText(description,120);
         if(kind(row)==Kind.COMMAND)return AgentCommandTitle.title(row,ru);
         if(kind(row)==Kind.READ)return ru?"Чтение файла":"Reading file";

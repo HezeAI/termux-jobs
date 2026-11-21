@@ -14,11 +14,21 @@ import java.util.concurrent.TimeUnit;
 final class AgentInstructions {
     interface Backend { JSONObject call(JSONObject request) throws Exception; }
     static final String FOLDER="instructions-"+BuildConfig.VERSION_CODE;
-    static String language(Context c){return WorkspaceLanguage.code(c).equals("ru")?"ru":"en";}
-    static String template(String language){return language.equals("ru")?"agent-instructions-ubuntu-ai.md":"agent-instructions-ubuntu-ai.en.md";}
-    static String builtInTemplate(Context context,String language)throws IOException{return builtInTemplate(context,language,"codex");}
-    static String template(String language,String agent){return agent.equals("claude")?(language.equals("ru")?"agent-instructions-claude.md":"agent-instructions-claude.en.md"):template(language);}
-    static String builtInTemplate(Context context,String language,String agent)throws IOException{return readTemplate(context,template(language,agent));}
+    private static String template(String agent){
+        switch(agent){
+            case "claude":return "agent-instructions-claude.en.md";
+            case "gemini":return "agent-instructions-gemini.en.md";
+            default:return "agent-instructions-ubuntu-ai.en.md";
+        }
+    }
+    static boolean supports(String agent,String environment){
+        return agent.equals("codex")?(AgentEnvironments.ubuntu(environment)||environment.equals("termux"))
+            :(agent.equals("claude")||agent.equals("gemini"))&&AgentEnvironments.ubuntu(environment);
+    }
+    static String geminiRuntime(WorkspaceStore.Session profile){
+        return profile!=null&&profile.geminiAgent&&!GeminiCli.antigravity(profile)?"legacy":"antigravity";
+    }
+    static String builtInTemplate(Context context,String agent)throws IOException{return readTemplate(context,template(agent));}
     static String projectTemplate(Context context)throws IOException{return readTemplate(context,"agent-instructions-project.md");}
     private static String readTemplate(Context context,String asset)throws IOException{
         try(InputStream in=context.getAssets().open(asset);ByteArrayOutputStream bytes=new ByteArrayOutputStream()){
@@ -26,25 +36,22 @@ final class AgentInstructions {
             return new String(bytes.toByteArray(),StandardCharsets.UTF_8);
         }
     }
-    static String memoryTemplate(Context context,String language)throws IOException{
-        String file=language.equals("ru")?"agent-learning.md":"agent-learning.en.md";
-        try(InputStream in=context.getAssets().open(file);ByteArrayOutputStream out=new ByteArrayOutputStream()){
-            byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);
-            return new String(out.toByteArray(),StandardCharsets.UTF_8);
-        }
-    }
+    static String memoryTemplate(Context context)throws IOException{return readTemplate(context,"agent-learning.en.md");}
     static boolean hasStorageAddition(String value){return java.util.regex.Pattern.compile("(?m)^## (?:Хранение файлов и временных данных|File and temporary data storage)[ \t]*\r?$").matcher(value).find();}
     static String storageAddition(String value){
         java.util.regex.Matcher section=java.util.regex.Pattern.compile("(?m)^## (?:Хранение файлов и временных данных|File and temporary data storage)[ \t]*\r?$").matcher(value);
         if(!section.find())return "";int start=section.start(),end=value.indexOf("\n## ",start+1);return end<0?value.substring(start):value.substring(start,end+1);
     }
     static String guest(){return "/tmp/termux-jobs-codex/"+FOLDER;}
+    private static String instructionMount(){return "/tmp/termux-jobs-"+FOLDER;}
+    private static File directory(File files){return new File(CodexSessionShell.socketDirectory(files),FOLDER);}
+    static String launchBind(File files){return directory(files).getAbsolutePath()+":"+instructionMount();}
     static void prepare(Context context)throws IOException{
         File root=CodexSessionShell.socketDirectory(context.getFilesDir());
-        File folder=new File(root,FOLDER);
+        File folder=directory(context.getFilesDir());
         if(Files.isSymbolicLink(root.toPath())||Files.isSymbolicLink(folder.toPath()))throw new IOException("UNSAFE_DIRECTORY");
         if(!folder.isDirectory()&&!folder.mkdirs())throw new IOException("PRIVATE_STORAGE");
-        for(String name:new String[]{"agent-skills.py","agent-instructions.py","agent-instructions-ubuntu-ai.md","agent-instructions-ubuntu-ai.en.md","agent-instructions-claude.md","agent-instructions-claude.en.md"}){
+        for(String name:new String[]{"agent-skills.py","agent-instructions.py",AgentPreparation.CLI_RESOLVER,template("codex"),template("claude"),template("gemini")}){
             File file=new File(folder,name);if(Files.isSymbolicLink(file.toPath()))throw new IOException("UNSAFE_FILE");
             // Versioned assets are immutable to already running helpers.
             if(file.isFile())continue;
@@ -59,29 +66,39 @@ final class AgentInstructions {
             }finally{tmp.delete();}
         }
     }
-    static String initialization(WorkspaceStore.Session profile){
-        if(!profile.codexEnvironment.equals("ubuntu-ai"))return "";
-        return "printf '%s' '{\"operation\":\"init\"}' | python3 -I "+SessionShell.quote(guest()+"/agent-instructions.py")
-            +" "+SessionShell.quote(guest()+"/"+template(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en"))
-            +" >/dev/null || printf '%s\\n' 'Ubuntu AI instructions could not be prepared. Open Agent instructions in settings.' >&2\n";
+    static String initialization(File files,WorkspaceStore.Session profile){
+        String agent=AgentPreparation.agent(profile),environment=profile.codexEnvironment;
+        if(!supports(agent,environment))return "";
+        String source=environment.equals("termux")?directory(files).getAbsolutePath()
+            :agent.equals("codex")?guest():instructionMount();
+        String request="{\"operation\":\"init\",\"agent\":\""+agent+"\",\"geminiRuntime\":\""+geminiRuntime(profile)+"\"}";
+        return "printf '%s' "+SessionShell.quote(request)+" | timeout -k 1 10 python3 -I "
+            +SessionShell.quote(source+"/agent-instructions.py")+" "+SessionShell.quote(source+"/"+template(agent))
+            +" >/dev/null 2>/dev/null || printf '%s\\n' "+SessionShell.quote(
+                WorkspaceText.tr("Агент: ").startsWith("Агент")
+                    ?"Не удалось подготовить общие инструкции. Откройте «Инструкции агентов» в настройках."
+                    :"Could not prepare shared instructions. Open Agent instructions in settings.")+" >&2\n";
     }
-    static String command(File files,String language){return command(files,language,"codex","ubuntu-ai");}
-    static String command(File files,String language,String agent,String environment){return command(files,language,agent,environment,"/root");}
-    static String command(File files,String language,String agent,String environment,String project){
-        if(!java.util.Arrays.asList("codex","claude").contains(agent)||!(AgentEnvironments.ubuntu(environment)||environment.equals("termux")&&agent.equals("codex")))throw new IllegalArgumentException("Invalid instruction environment");
+    static String command(File files){return command(files,"codex","ubuntu-ai");}
+    static String command(File files,String agent,String environment){return command(files,agent,environment,"/root");}
+    static String command(File files,String agent,String environment,String project){
+        if(!supports(agent,environment))throw new IllegalArgumentException("Invalid instruction environment");
         if(environment.equals("termux")){
             File folder=new File(CodexSessionShell.socketDirectory(files),FOLDER);
-            String nativeCode="if [ -f \"$HOME/.bashrc\" ];then . \"$HOME/.bashrc\" >/dev/null 2>&1;fi;exec python3 -I "+SessionShell.quote(new File(folder,"agent-instructions.py").getAbsolutePath())+" "+SessionShell.quote(new File(folder,template(language,agent)).getAbsolutePath());
+            String nativeCode="if [ -f \"$HOME/.bashrc\" ];then . \"$HOME/.bashrc\" >/dev/null 2>&1;fi;exec python3 -I "+SessionShell.quote(new File(folder,"agent-instructions.py").getAbsolutePath())+" "+SessionShell.quote(new File(folder,template(agent)).getAbsolutePath());
             return "exec "+SessionShell.quote(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash")+" --noprofile --norc -i -c "+SessionShell.quote(nativeCode);
         }
+        String guest=instructionMount();
+        String runtime=agent.equals("codex")?AgentPreparation.codexPath(guest,environment)
+            :agent.equals("claude")?AgentPreparation.cliResolver(guest,environment)+"JOBS_CLAUDE_MANAGED=$(jobs_agent_cli_managed claude) || JOBS_CLAUDE_MANAGED=; export JOBS_CLAUDE_MANAGED; ":"";
         String code="if [ -f \"$HOME/.bashrc\" ]; then . \"$HOME/.bashrc\" >/dev/null 2>&1; fi; "
-            +(agent.equals("codex")?AgentPreparation.codexPath():"")+"exec python3 -I "+SessionShell.quote(guest()+"/agent-instructions.py")+" "+SessionShell.quote(guest()+"/"+template(language,agent));
-        return "exec proot-distro login --bind "+SessionShell.quote(CodexSessionShell.socketDirectory(files).getAbsolutePath()+":/tmp/termux-jobs-codex")
-            +(agent.equals("claude")?" --work-dir "+SessionShell.quote(project):"")+" "+environment+" -- /bin/bash --noprofile --norc -i -c "+SessionShell.quote(code);
+            +runtime+"exec python3 -I "+SessionShell.quote(guest+"/agent-instructions.py")+" "+SessionShell.quote(guest+"/"+template(agent));
+        return "exec proot-distro login --bind "+SessionShell.quote(launchBind(files))
+            +(!agent.equals("codex")?" --work-dir "+SessionShell.quote(project):"")+" "+environment+" -- /bin/bash --noprofile --norc -i -c "+SessionShell.quote(code);
     }
     static JSONObject request(Context context,JSONObject input)throws Exception{
         prepare(context);
-        ProcessBuilder builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c",command(context.getFilesDir(),language(context),input.optString("agent","codex"),input.optString("environment","ubuntu-ai"),input.optString("project","/root")));
+        ProcessBuilder builder=new ProcessBuilder(TermuxConstants.TERMUX_BIN_PREFIX_DIR_PATH+"/bash","--noprofile","--norc","-c",command(context.getFilesDir(),input.optString("agent","codex"),input.optString("environment","ubuntu-ai"),input.optString("project","/root")));
         builder.directory(new File(TermuxConstants.TERMUX_HOME_DIR_PATH));builder.environment().clear();
         for(String item:TermuxShellUtils.buildEnvironment(context,false,TermuxConstants.TERMUX_HOME_DIR_PATH)){
             int split=item.indexOf('=');if(split>0)builder.environment().put(item.substring(0,split),item.substring(split+1));

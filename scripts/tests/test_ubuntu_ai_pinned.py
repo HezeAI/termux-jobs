@@ -1,11 +1,12 @@
 """Isolated control-flow tests; no network, package manager or working containers."""
-import unittest,tempfile,subprocess,os,hashlib,json
+import unittest,tempfile,subprocess,os,hashlib,json,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2];ASSETS=ROOT/'app/src/main/assets'
 class UbuntuAI(unittest.TestCase):
  def setUp(self):
-  base=ROOT/'.verification/ubuntu-ai-pinned/fixtures';base.mkdir(exist_ok=True)
+  base=ROOT/'.verification/ubuntu-ai-pinned/fixtures';base.mkdir(parents=True,exist_ok=True)
   self.tmp=tempfile.TemporaryDirectory(dir=base);self.p=Path(self.tmp.name);self.prefix=self.p/'usr';(self.prefix/'bin').mkdir(parents=True)
+  (self.prefix/'bin/python3').symlink_to(sys.executable)
   for name in ('environment-runtime.sh','agent-host-setup.sh','agent-preparation-status.sh'):(self.p/name).write_bytes((ASSETS/name).read_bytes())
   (self.p/'environment-image.py').write_text("import os;from pathlib import Path\np=Path(os.environ['PREFIX']).parent;p.joinpath('calls').open('a').write('DOWNLOAD\\n');p.joinpath('image.oci.tar').write_text('fixture');print(p/'image.oci.tar')\n")
   (self.p/'ubuntu-ai-installer.py').write_text("import sys,os;from pathlib import Path\np=Path(os.environ['PREFIX']);assert sys.argv[1]=='install' and sys.argv[3:]==['--name','ubuntu-ai'];p.parent.joinpath('calls').open('a').write('PINNED_INSTALL\\n');root=p/'var/lib/proot-distro/containers/ubuntu-ai/rootfs/bin';root.mkdir(parents=True);root.joinpath('sh').write_text('fixture');root.joinpath('sh').chmod(0o700)\n")

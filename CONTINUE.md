@@ -1,90 +1,87 @@
-# Текущий рабочий контекст — 2026-11-10
+# Current project handoff
 
-## Цель и состояние
+## Current goal
 
-Текущая задача: выпустить стабильную 2.1.8 /1540 относительно v2.1.7.
-Публикация исходников, основной ветки, тега и release разрешена пользователем.
-Установка APK и остановка рабочих процессов не разрешены. Согласован текст
-обновлятора без повторения абзаца о RTK/Claude/WebSocket и коде 0.
-Принятые на телефоне карточки и состояния сохраняются; после test3 добавлен
-только «!» в щит. Локальные gates пройдены: 188 JVM-тестов, 7 Node-наборов, Modern Lint
-0 ошибок /291 предупреждение. Подписанный APK и обновлятор проверены.
-Отдельная пересборка совпала: 1141 payload и контейнер без блока подписи.
-Остались отправка основной ветки, CI и публичная проверка релиза.
-[Отчёт выпуска](docs/fork/VALIDATION-v2.1.8.md).
+Prepare and verify the stable **2.1.9 / 1549** release on the published
+fork/base ancestry. The [release candidate](docs/fork/VALIDATION-v2.1.9.md)
+has a signed ARM64 APK and its RU/EN update metadata. The Git setup and path
+fix keep the exact directory selected in the project browser. The signed APK,
+update metadata and local verification logs are under
+`.verification/release-v2.1.9/`.
 
-Checkout: `/root/termux-fork/.verification/rollback-live-actions/source`.
-Основа HEAD: `f1959f899e1d8d27d100462af24fa5aa3946f55b`.
-Единственная память: `/root/termux-fork/LEARNING.md`.
-Правила и навигатор: [AGENTS.md](AGENTS.md).
+Before publishing, verify release test results, the clean unsigned comparison
+and the exact source commit. After publication, verify the public downloads,
+updater metadata, tag ancestry and final fork/base CI. The previous stable
+release remains active until the new release is published. Phone installation
+requires its own authorization.
 
-## Сохранённый результат приложения
+## Source and earlier builds
 
-Последний известный опубликованный stable: **v2.1.7 / 1536**.
-[Релиз](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.7),
-[проверки](docs/fork/VALIDATION-v2.1.7.md),
-[воспроизводимость](docs/fork/REPRODUCIBILITY-v2.1.7.md).
-Это сохранённый результат; сетевой статус в задаче реорганизации не перепроверялся.
+The patch from `/storage/emulated/0/termux-job's` was applied in the original
+Ubuntu AI build checkout at `/root/project/Termux-job's`. The 117 affected
+paths matched the expected baselines and patch bytes before the targeted
+build fix. The comparison and prior copies are under
+`.verification/next-build-import/`.
 
-Последний подготовленный APK — **2.1.8-test3 / 1539**, карточки действий и щит.
-Предыдущий test2 /1538 с подписями состояний принят пользователем на телефоне.
-Предыдущий test1 / 1537 содержал исправления уведомлений.
-Пользователь подтвердил наличие исправленных уведомлений у себя. Новые подписи
-в test1 не входят; test2 сохраняет исправления уведомлений.
-[Отчёт и телефонный чек-лист](docs/fork/VALIDATION-X11-NOTIFICATIONS.md).
-APK: `/sdcard/Download/Termux-Jobs-v2.1.8-test3-arm64.apk`.
-SHA-256: `cb63f6294e47f5c814aad04b0b3a341f259866b3d6294eae541a63031b1cbeec`.
+Prior private artifacts remain available. See the [test7 verification](docs/fork/VALIDATION-2.1.9-test7.md),
+the [test6 verification](docs/fork/VALIDATION-2.1.9-test6.md),
+the [test5 startup report](docs/fork/VALIDATION-2.1.9-test5.md)
+and the [test4 creation form report](docs/fork/VALIDATION-2.1.9-test4.md).
+The [test3 report](docs/fork/VALIDATION-2.1.9-test3.md)
+records the 17 failures in 237 JVM tests, including chat scroll positioning,
+action dialogs and instruction screens. These areas were outside the test4
+change. See also [test2 validation](docs/fork/VALIDATION-2.1.9-test2-cli-update.md)
+and [test1 validation](docs/fork/VALIDATION-devkit-timeline-2026-11-20.md).
+The last published stable release remains [2.1.8 / 1540](docs/fork/VALIDATION-v2.1.8.md).
 
-В него входят «Рабочий стол» / Desktop, название Termux Job’s в обычном
-уведомлении и очистка простаивающей X11-службы. Работающий desktop сохраняется.
-Прежние результаты: 63 целевых теста прошли; Modern Lint всех пяти модулей —
-0 ошибок, 290 предупреждений; финальный APK и Download-копия проверены.
-В этой задаче эти проверки приложения не повторялись.
+## Earlier phone acceptance
 
-## Открытые вопросы и ограничения
+For the delivered build, check the updater from both agents' Ubuntu AI chat
+menus and confirm that a running chat switches versions only after the next
+launch. Verify Antigravity sign-in on opening a new chat while signed out.
+Check terminal sign-in, the first reply, and the remaining test6 instruction,
+skill and preparation flows. The earlier chat rendering, timeline animation, action details,
+child history and persistence of Codex settings also await phone acceptance.
 
-- Приёмка 2.1.8-test1 на телефоне ожидается. Реальное восстановление приложения,
-  очистка уведомления и сохранение работающего desktop ещё требуют проверки.
-- Наблюдалась живая Arch X11-служба PID 7631, уведомление 8086, без UI-клиентов.
-  Это историческое наблюдение, не текущая идентификация процесса. Принадлежность
-  тестовой сессии и время запуска не подтверждены; сигнал не отправлялся.
-  Старый текст уведомления сам по себе не доказывает тестовое происхождение.
-- Накопление изображений и обрывы Codex не объявлены исправленными:
-  [границы диагностики](docs/fork/MEDIA-CONTEXT-INVESTIGATION.md).
-- Android handoff/Keystore, часть export/restore, реальный Gemini API/Vertex
-  и некоторые legacy/manual пути не проверены в полном согласованном объёме:
-  [матрица аудита](docs/fork/SECURITY-AUDIT-STAGE2.md). Непроверенное не является дефектом.
-- Исторический выход на Android Home при долгой прокрутке не имеет подтверждённой
-  причины/закрытия: [исходный отчёт](docs/fork/VALIDATION-2.1.5-test7.md).
-  Другие незакрытые GPU/телефонные сценарии сохранены в архивах со своими версиями;
-  их актуальность нужно устанавливать перед соответствующей работой.
-- Голосовой ввод удалён позднейшим решением; старые планы его проверки не активны.
-  MCP/плагины исключены. Рабочие окружения, процессы, чаты и авторизация сохраняются.
+## Workspace and environment
 
-## Незакоммиченная работа
+The local Java test entry points now select JDK 11 and a short socket fixture
+directory before Gradle starts. The standard runner supports repeated
+`--tests` filters for focused retries. See [build notes](FORK.md#checks-and-local-builds)
+and local evidence in `.verification/test-toolchain/`.
 
-До реорганизации уже изменены CHANGELOG.md, CONTINUE.md, app/build.gradle,
-TermuxService.java, X11Service.java, ServiceLocaleContractTest.java; добавлены
-X11NotificationLifecycleTest.java и VALIDATION-X11-NOTIFICATIONS.md.
-Эта прежняя работа сохраняется. Текущая задача меняет представление действий,
-метаданные четырёх адаптеров, значок прав, целевые тесты и относящиеся документы.
+The original Linux checkout uses `/root/project/Termux-job's`. Its first local commit records
+the current imported source tree, including the work already present when Git
+was initialized. The original archive and manifest remain the historical
+baseline for comparison. No remote is configured. If Git is missing from PATH,
+run `.tools/git-local/usr/bin/git` from the project root. Follow the
+[project rules](AGENTS.md) and read the sole [project memory](LEARNING.md).
 
-## Ближайший шаг
+The current Ubuntu AI environment has Codex CLI 0.171.0 in `/usr/local/bin`.
+After restarting the chat, `codex --version` resolved to 0.171.0. The launcher
+uses the existing private Node interpreter. The pinned 0.163.0 binary was
+preserved. Version and app-server help were verified with a fresh Ubuntu PATH.
+Live provider integration remains unverified. The [CLI check record](.verification/cli-update/status.json)
+has the details.
 
-Пользователь подтвердил работу карточек test3 и состояния «Выполняется».
-После этого в исходники добавлен «!» внутри щита; в выданный test3 он не входит.
-Правка ресурса проверена компилятором AAPT2; новый APK пока не собран.
-При следующей сборке включить этот значок. На телефоне проверить
-названия, две строки команды, детали, увеличенный шрифт и щит.
-Не публиковать и не устанавливать. Не останавливать Arch без свежего
-подтверждения владельца и идентичности.
+## Open issues and boundaries
 
-## История и доказательства
+- The older X11 notification recovery and active-desktop preservation scenarios
+  still need device checks. The historical Arch X11 process had no confirmed
+  test-session owner. See the [notification report](docs/fork/VALIDATION-X11-NOTIFICATIONS.md).
+- Image accumulation and Codex disconnects remain open in the
+  [media investigation](docs/fork/MEDIA-CONTEXT-INVESTIGATION.md).
+- Android handoff and Keystore, parts of export/restore, live Gemini API/Vertex,
+  and legacy/manual paths have coverage gaps in the
+  [audit matrix](docs/fork/SECURITY-AUDIT-STAGE2.md).
+- The historical exit to Android Home during long scrolling has no confirmed
+  cause or resolution. See the [original report](docs/fork/VALIDATION-2.1.5-test7.md).
+  Check the relevance of older phone and GPU scenarios before acting on them.
+- Preserve working environments, processes, chats, and authentication, as well
+  as prior APKs, published tags, update.json, and Components. Voice input was
+  removed. MCP and plugins are outside scope.
 
-- [История основного контекста](docs/fork/history/HANDOFF-through-2026-11-09.md).
-- [История прежнего docs/fork/CONTINUE](docs/fork/history/HANDOFF-legacy-through-2026-11-09.md).
-- [Исторические записи исследований](docs/fork/history/INVESTIGATION-NOTES-through-2026-11-09.md).
-- [CHANGELOG](CHANGELOG.md) и тематические отчёты содержат версии и проверки.
-
-Архивы заморожены на дату переноса. Слова «активно»/«пауза» внутри них не являются
-текущим статусом; старые разрешения не действуют для новых задач.
+For earlier work, see the [primary handoff archive](docs/fork/history/HANDOFF-through-2026-11-09.md),
+[legacy handoff archive](docs/fork/history/HANDOFF-legacy-through-2026-11-09.md),
+and [investigation history](docs/fork/history/INVESTIGATION-NOTES-through-2026-11-09.md).
+Archive statuses and permissions apply only to their original tasks and dates.

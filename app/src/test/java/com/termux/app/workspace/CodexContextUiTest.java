@@ -40,4 +40,17 @@ public class CodexContextUiTest {
  }
  @Test public void closingConfirmationDoesNotStartOrCancelAnOperation()throws Exception{ui.apply(current);AlertDialog dialog=confirm();ui.close();dialog.getButton(-1).performClick();Shadows.shadowOf(Looper.getMainLooper()).idle();assertEquals(0,starts);}
  @Test public void detachedStatusStopsPollingWithoutSendingCancellation()throws Exception{ui.apply(current);confirm().getButton(-1).performClick();idle();assertEquals(1,starts);assertTrue(current.getJSONObject("context").getJSONObject("compaction").getString("phase").equals("running"));ui.onDetachedFromWindow();assertTrue(ui.closed);assertTrue(ui.worker.isShutdown());assertEquals(1,starts);}
+ @Test public void contextSettingsSaveNextRunAndKeepActualWindowIndependent()throws Exception{
+  ui.settings(profile,(saved,rejected)->saved.run());
+  current.put("contextOptions",new JSONObject().put("defaultWindow",272000).put("maximumWindow",872000));
+  ui.apply(current);
+  EditText window=ui.findViewWithTag("codex-context-window"),threshold=ui.findViewWithTag("codex-compaction-threshold");
+  View apply=ui.findViewWithTag("codex-context-apply");
+  window.setText("872000");assertEquals("784800",threshold.getText().toString());
+  threshold.setText("784801");apply.performClick();assertEquals(0,profile.codexContextWindow);assertNotNull(threshold.getError());
+  threshold.setText("760000");apply.performClick();assertEquals(872000,profile.codexContextWindow);assertEquals(760000,profile.codexCompactThreshold);
+  assertTrue(ui.usage.getText().toString().contains("128 000 / 256 000"));assertEquals(0,starts);
+  window.setText("");apply.performClick();assertEquals(0,profile.codexContextWindow);assertEquals(0,profile.codexCompactThreshold);
+ }
+
 }

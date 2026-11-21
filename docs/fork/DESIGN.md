@@ -1,3 +1,10 @@
+# Agent timeline update — private 2.1.9-test1 / 1541, 2026-11-20
+
+The active agent-chat timeline follows DevKit 0.1.57: individual compact action
+rows, separate web/subagent/context events, expandable image thumbnails and
+centered details. Earlier grouped-timeline descriptions below are historical.
+[Build and source verification](VALIDATION-devkit-timeline-2026-11-20.md).
+
 > 2.1.7: RTK output accounting matches supported literal/quoted and sequential
 > calls and final yielded-command receipts. Unconfirmed bases remain unknown.
 > This updates the app observer, not RTK execution or permission rules. See

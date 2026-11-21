@@ -749,6 +749,58 @@ public class WorkspaceNavigationTest {
         assertNull(activity.getCurrentSession()); assertNull(activity.findViewById(R.id.workspace_codex_status));
         store.awaitWrites(); controller.close();
     }
+    @Test public void codexEditorPreservesTrailingSpaceInSelectedProjectPath() throws Exception {
+        TermuxActivity activity = Robolectric.buildActivity(TermuxActivity.class).get();
+        activity.setTheme(R.style.Theme_Termux_Black);
+        activity.setContentView(R.layout.activity_termux);
+        Field terminalView = TermuxActivity.class.getDeclaredField("mTerminalView");
+        terminalView.setAccessible(true);
+        terminalView.set(activity, activity.findViewById(R.id.terminal_view));
+        WorkspaceController controller = new WorkspaceController(activity);
+        try {
+            call(controller, "editSession",
+                new Class<?>[]{WorkspaceStore.Session.class, boolean.class}, null, false);
+            AlertDialog form = ShadowAlertDialog.getLatestAlertDialog();
+            View decor = form.getWindow().getDecorView();
+            findDescription(decor, "Среда запуска").performClick();
+            ShadowAlertDialog.getLatestAlertDialog().getListView().performItemClick(null, 2, 2);
+            shadowOf(Looper.getMainLooper()).idle();
+            EditText directory = decor.findViewWithTag("session-working-directory");
+            java.io.File selected = new java.io.File(activity.getCacheDir(), "проект ");
+            assertTrue(selected.mkdir());
+            String path = selected.getCanonicalPath();
+            directory.setText(path);
+            form.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            shadowOf(Looper.getMainLooper()).idle();
+
+            Field storeField = WorkspaceController.class.getDeclaredField("store");
+            storeField.setAccessible(true);
+            WorkspaceStore store = (WorkspaceStore) storeField.get(controller);
+            assertEquals(1, store.sessions.size());
+            assertEquals(path, store.sessions.get(0).directory);
+            store.awaitWrites();
+            WorkspaceStore reopened = new WorkspaceStore(activity, message -> fail(message));
+            try {
+                WorkspaceStore.Session profile = reopened.sessions.get(0);
+                assertEquals(path, profile.directory);
+                assertTrue(ProjectFiles.startsNewProjectGit(profile));
+                profile.initializeProjectGit = true;
+                assertTrue(ProjectFiles.gitStartup(profile).contains("cd -- " + SessionShell.quote(path)));
+                // Keep the fixture socket within the platform limit, independent of the Robolectric data path.
+                profile.codexSocketId = "p";
+                java.io.File files = java.nio.file.Files.createTempDirectory("path").toFile();
+                java.io.File rc = SessionShell.prepare(files, profile);
+                String startup = new String(java.nio.file.Files.readAllBytes(rc.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+                assertTrue(startup.contains("--work-dir " + SessionShell.quote(path)));
+                assertTrue(CodexProjects.matches(profile.codexEnvironment, profile.directory, path));
+                assertFalse(CodexProjects.matches(profile.codexEnvironment, profile.directory, path.trim()));
+            } finally {
+                reopened.close();
+            }
+        } finally {
+            controller.close();
+        }
+    }
     @Test public void openCodeEditorStoresIndependentUbuntuProfileWithoutLegacyStartupCommands() throws Exception {
         TermuxActivity activity=Robolectric.buildActivity(TermuxActivity.class).get();activity.setTheme(R.style.Theme_Termux_Black);activity.setContentView(R.layout.activity_termux);
         Field f=TermuxActivity.class.getDeclaredField("mTerminalView");f.setAccessible(true);f.set(activity,activity.findViewById(R.id.terminal_view));WorkspaceController controller=new WorkspaceController(activity);

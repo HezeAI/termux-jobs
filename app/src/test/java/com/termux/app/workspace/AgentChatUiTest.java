@@ -11,6 +11,7 @@ import org.junit.runner.RunWith;
 import org.robolectric.*;
 import org.robolectric.annotation.Config;
 import java.lang.reflect.Field;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import static org.junit.Assert.*;
@@ -103,7 +104,7 @@ public class AgentChatUiTest {
  @Test public void geminiUsesItsOwnRunAndSessionForApiSendsAndPrefix()throws Exception{
   TermuxActivity a=activity();WorkspaceStore.Session selected=profile();selected.aiAgent="";selected.geminiAgent=true;AtomicInteger accepted=new AtomicInteger();AtomicReference<String> sentSession=new AtomicReference<>();
   AgentChatUi ui=new AgentChatUi(a,()->selected,()->true,(p,q)->{assertTrue(p.geminiAgent);assertEquals(selected.geminiSocketId,p.geminiSocketId);if(q.optString("op").equals("chat-send")){sentSession.set(q.optString("session"));assertEquals("message",q.optString("kind"));return new JSONObject().put("ok",true).put("accepted",true);}return result().put("session",selected.geminiThread).put("connected",true).put("rows",new JSONArray().put(new JSONObject().put("key","answer").put("message","msg_answer").put("part","text").put("kind","text").put("body","native answer")));});
-  try{for(int i=0;i<30&&!ui.showing();i++)drain();assertTrue(ui.structured());assertEquals("Gemini",ui.name());FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);assertTrue(hasText(chat,"Gemini: native answer"));ui.send("hello",accepted::incrementAndGet);for(int i=0;i<30&&accepted.get()==0;i++)drain();assertEquals(1,accepted.get());assertEquals(selected.geminiThread,sentSession.get());}finally{ui.close();}
+  try{for(int i=0;i<30&&!ui.showing();i++)drain();assertTrue(ui.structured());assertEquals("Gemini",ui.name());FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);assertTrue(hasText(chat,"Gemini"));assertTrue(hasText(chat,"native answer"));ui.send("hello",accepted::incrementAndGet);for(int i=0;i<30&&accepted.get()==0;i++)drain();assertEquals(1,accepted.get());assertEquals(selected.geminiThread,sentSession.get());}finally{ui.close();}
  }
  @Test public void geminiNativeWindowClosesWithoutStoppingItsRun()throws Exception{
   TermuxActivity a=activity();WorkspaceStore.Session selected=profile();selected.aiAgent="";selected.geminiAgent=true;java.util.List<String> operations=new java.util.concurrent.CopyOnWriteArrayList<>();
@@ -120,7 +121,7 @@ public class AgentChatUiTest {
  @Test public void geminiNativeClearRemovesCachedTranscriptRows()throws Exception{
   TermuxActivity a=activity();WorkspaceStore.Session selected=profile();selected.aiAgent="";selected.geminiAgent=true;AtomicBoolean cleared=new AtomicBoolean();
   AgentChatUi ui=new AgentChatUi(a,()->selected,()->true,(p,q)->{JSONObject r=result().put("session",selected.geminiThread).put("connected",true).put("knownMessages",new JSONArray());if(!cleared.get()){r.put("knownMessages",new JSONArray().put("msg_old"));r.put("rows",new JSONArray().put(new JSONObject().put("key","old").put("message","msg_old").put("part","text").put("kind","text").put("body","old native reply")));}return r;});
-  try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);assertTrue(hasText(chat,"Gemini: old native reply"));cleared.set(true);Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2));for(int i=0;i<30&&hasText(chat,"Gemini: old native reply");i++)drain();assertFalse(hasText(chat,"Gemini: old native reply"));}finally{ui.close();}
+  try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);assertTrue(hasText(chat,"old native reply"));cleared.set(true);Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2));for(int i=0;i<30&&hasText(chat,"old native reply");i++)drain();assertFalse(hasText(chat,"old native reply"));}finally{ui.close();}
  }
 
  @Test public void nativeWindowsBuildLargeKeysWhenHiddenPagerHasNotCreatedThem()throws Exception{
@@ -148,7 +149,7 @@ public class AgentChatUiTest {
   for(boolean gemini:new boolean[]{false,true}){
    TermuxActivity a=activity();WorkspaceStore.Session first=profile();first.geminiAgent=gemini;if(gemini)first.aiAgent="";AtomicReference<WorkspaceStore.Session> selected=new AtomicReference<>(first);AtomicBoolean block=new AtomicBoolean();CountDownLatch release=new CountDownLatch(1);
    AgentChatUi ui=new AgentChatUi(a,selected::get,()->true,(p,q)->{if(block.get())release.await(3,TimeUnit.SECONDS);return result().put("session",first.geminiThread).put("connected",true).put("rows",new JSONArray().put(new JSONObject().put("key","owned").put("message","msg_owned").put("part","text").put("kind","text").put("body","cached reply")));});
-   try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);String text=(gemini?"Gemini":"OpenCode")+": cached reply";assertTrue(hasText(chat,text));block.set(true);WorkspaceStore.Session other=profile();other.aiAgent="";selected.set(other);ui.sync();assertFalse(ui.showing());selected.set(first);ui.sync();assertTrue(ui.showing());assertTrue(hasText(chat,text));assertFalse(chat.connection.getText().toString().contains("Подключение…"));assertFalse(chat.connection.getText().toString().equals("Connecting…"));}finally{release.countDown();ui.close();}
+   try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);String text="cached reply";assertTrue(hasText(chat,text));block.set(true);WorkspaceStore.Session other=profile();other.aiAgent="";selected.set(other);ui.sync();assertFalse(ui.showing());selected.set(first);ui.sync();assertTrue(ui.showing());assertTrue(hasText(chat,text));assertFalse(chat.connection.getText().toString().contains("Подключение…"));assertFalse(chat.connection.getText().toString().equals("Connecting…"));}finally{release.countDown();ui.close();}
   }
  }
  @Test public void cachedRowsNeverRestoreOldPermissionButtons()throws Exception{
@@ -165,13 +166,13 @@ public class AgentChatUiTest {
  @Test public void refreshedGeminiSessionInvalidatesRestoredOldChat()throws Exception{
   TermuxActivity a=activity();WorkspaceStore.Session first=profile();first.aiAgent="";first.geminiAgent=true;AtomicReference<WorkspaceStore.Session> selected=new AtomicReference<>(first);AtomicReference<String> token=new AtomicReference<>(first.geminiThread);
   AgentChatUi ui=new AgentChatUi(a,selected::get,()->true,(p,q)->result().put("session",token.get()).put("connected",true).put("rows",new JSONArray().put(new JSONObject().put("key",token.get()).put("message",token.get()).put("part","text").put("kind","text").put("body",token.get().equals(first.geminiThread)?"old cached chat":"new actual chat"))));
-  try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);assertTrue(hasText(chat,"Gemini: old cached chat"));WorkspaceStore.Session other=profile();other.aiAgent="";selected.set(other);ui.sync();token.set(java.util.UUID.randomUUID().toString());selected.set(first);ui.sync();assertTrue(hasText(chat,"Gemini: old cached chat"));Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(3));for(int i=0;i<30&&!hasText(chat,"Gemini: new actual chat");i++)drain();assertTrue(hasText(chat,"Gemini: new actual chat"));assertFalse(hasText(chat,"Gemini: old cached chat"));}finally{ui.close();}
+  try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);assertTrue(hasText(chat,"old cached chat"));WorkspaceStore.Session other=profile();other.aiAgent="";selected.set(other);ui.sync();token.set(java.util.UUID.randomUUID().toString());selected.set(first);ui.sync();assertTrue(hasText(chat,"old cached chat"));Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(3));for(int i=0;i<30&&!hasText(chat,"new actual chat");i++)drain();assertTrue(hasText(chat,"new actual chat"));assertFalse(hasText(chat,"old cached chat"));}finally{ui.close();}
  }
 
  @Test public void claudeUsesItsOwnRunSessionAndPermissionNonce()throws Exception{
   TermuxActivity a=activity();WorkspaceStore.Session first=profile();first.aiAgent="";first.claudeAgent=true;AtomicReference<JSONObject> answer=new AtomicReference<>();
   AgentChatUi ui=new AgentChatUi(a,()->first,()->true,(p,q)->{assertTrue(p.claudeAgent);assertEquals(first.claudeSocketId,p.claudeSocketId);if(q.optString("op").equals("answer")){answer.set(q);return new JSONObject().put("ok",true).put("accepted",true);}return result().put("session",first.claudeThread).put("connected",true).put("rows",new JSONArray().put(new JSONObject().put("key","claude").put("message","msg_claude").put("part","text").put("kind","text").put("body","native Claude answer"))).put("permission",new JSONObject().put("id","owned_permission").put("nonce","owned_nonce").put("title","Write").put("body","native input"));});
-  try{for(int i=0;i<30&&!ui.showing();i++)drain();assertEquals("Claude",ui.name());FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);assertTrue(hasText(chat,"Claude: native Claude answer"));android.view.View button=findText(chat.requests,"Yes, once");if(button==null)button=findText(chat.requests,"Да, разово");assertNotNull(button);button.performClick();for(int i=0;i<30&&answer.get()==null;i++)drain();assertNotNull(answer.get());assertEquals(first.claudeThread,answer.get().optString("session"));assertEquals("owned_nonce",answer.get().optString("nonce"));assertEquals("proceed_once",answer.get().optString("outcome"));}finally{ui.close();}
+  try{for(int i=0;i<30&&!ui.showing();i++)drain();assertEquals("Claude",ui.name());FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);assertTrue(hasText(chat,"Claude"));assertTrue(hasText(chat,"native Claude answer"));android.view.View button=findText(chat.requests,"Yes, once");if(button==null)button=findText(chat.requests,"Да, разово");assertNotNull(button);button.performClick();for(int i=0;i<30&&answer.get()==null;i++)drain();assertNotNull(answer.get());assertEquals(first.claudeThread,answer.get().optString("session"));assertEquals("owned_nonce",answer.get().optString("nonce"));assertEquals("proceed_once",answer.get().optString("outcome"));}finally{ui.close();}
  }
  private android.view.View findText(android.view.View v,String text){if(v instanceof android.widget.TextView&&((android.widget.TextView)v).getText().toString().equals(text))return v;if(v instanceof android.view.ViewGroup){android.view.ViewGroup g=(android.view.ViewGroup)v;for(int i=0;i<g.getChildCount();i++){android.view.View found=findText(g.getChildAt(i),text);if(found!=null)return found;}}return null;}
  @Test public void fourAgentScreensOnlyChangePresentationAndKeepDrafts()throws Exception{
@@ -193,9 +194,18 @@ public class AgentChatUiTest {
  @Test public void claudeCachedChatAndSendUseClaudeThreadAfterReturningFromGemini()throws Exception{
   TermuxActivity a=activity();WorkspaceStore.Session first=profile();first.aiAgent="";first.claudeAgent=true;AtomicReference<WorkspaceStore.Session> selected=new AtomicReference<>(first);AtomicInteger sent=new AtomicInteger();
   AgentChatUi ui=new AgentChatUi(a,selected::get,()->true,(p,q)->{if(q.optString("op").equals("chat-send")){assertTrue(p.claudeAgent);assertEquals(first.claudeThread,q.optString("session"));sent.incrementAndGet();return new JSONObject().put("ok",true).put("accepted",true);}return result().put("session",p.claudeAgent?p.claudeThread:p.geminiThread).put("connected",true).put("rows",new JSONArray().put(new JSONObject().put("key","answer").put("message","msg_a").put("part","text").put("kind","text").put("body",p.claudeAgent?"Claude cache":"Gemini cache")));});
-  try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);WorkspaceStore.Session other=profile();other.aiAgent="";other.geminiAgent=true;selected.set(other);ui.sync();selected.set(first);ui.sync();assertTrue(hasText(chat,"Claude: Claude cache"));ui.send("hello",()->{});for(int i=0;i<30&&sent.get()==0;i++)drain();assertEquals(1,sent.get());}finally{ui.close();}
+  try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);WorkspaceStore.Session other=profile();other.aiAgent="";other.geminiAgent=true;selected.set(other);ui.sync();selected.set(first);ui.sync();assertTrue(hasText(chat,"Claude cache"));ui.send("hello",()->{});for(int i=0;i<30&&sent.get()==0;i++)drain();assertEquals(1,sent.get());}finally{ui.close();}
  }
 
+ @Test public void overlappingPagesKeepFragmentsInChronologicalOrder()throws Exception{
+  LinkedHashMap<String,JSONObject> newer=new LinkedHashMap<>(),older=new LinkedHashMap<>();
+  JSONObject live=new JSONObject().put("body","current authoritative content");
+  for(String key:new String[]{"shared","new"})newer.put(key,key.equals("shared")?live:new JSONObject());
+  for(String key:new String[]{"old","shared","fragment"})older.put(key,new JSONObject());
+  LinkedHashMap<String,JSONObject> merged=AgentChatUi.mergeOrderedHistory(newer,older);
+  assertEquals(Arrays.asList("old","shared","fragment","new"),new ArrayList<>(merged.keySet()));
+  assertSame(live,merged.get("shared"));
+ }
  @Test public void previousClickDuringPollIsQueuedAndCodexCacheStillReopensImmediately()throws Exception{
   TermuxActivity a=activity();WorkspaceStore.Session first=profile();first.aiAgent="";first.environment="codex";first.codexEnvironment="ubuntu";
   java.io.File marker=CodexChatControl.marker(a.getFilesDir(),first);marker.getParentFile().mkdirs();marker.createNewFile();
@@ -206,11 +216,11 @@ public class AgentChatUiTest {
    return result().put("connected",true).put("session","thread-fixture").put("partialHistory",true).put("knownMessages",new JSONArray().put(id)).put("older",old?JSONObject.NULL:"page-1").put("rows",new JSONArray().put(new JSONObject().put("key",id).put("message",id).put("kind","text").put("body",id+" reply")));
   });
   try{
-   for(int i=0;i<30&&!ui.showing();i++)drain();assertTrue(ui.showing());FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);assertTrue(hasText(chat,"Codex: new reply"));
+   for(int i=0;i<30&&!ui.showing();i++)drain();assertTrue(ui.showing());FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);assertTrue(hasText(chat,"new reply"));
    hold.set(true);java.lang.reflect.Method load=AgentChatUi.class.getDeclaredMethod("load",boolean.class);load.setAccessible(true);load.invoke(ui,false);assertTrue(entered.await(2,TimeUnit.SECONDS));chat.older.performClick();assertFalse(chat.older.isEnabled());assertEquals(0,previous.get());hold.set(false);release.countDown();
-   for(int i=0;i<40&&!hasText(chat,"Codex: old reply");i++)drain();assertEquals(1,previous.get());assertTrue(hasText(chat,"Codex: old reply"));assertTrue(hasText(chat,"Codex: new reply"));assertEquals(android.view.View.GONE,chat.older.getVisibility());
-   load.invoke(ui,false);for(int i=0;i<8;i++)drain();assertTrue(hasText(chat,"Codex: old reply"));assertEquals(android.view.View.GONE,chat.older.getVisibility());
-   WorkspaceStore.Session other=profile();other.aiAgent="";selected.set(other);ui.sync();assertFalse(ui.showing());selected.set(first);ui.sync();assertTrue(ui.showing());assertTrue(hasText(chat,"Codex: old reply"));assertTrue(hasText(chat,"Codex: new reply"));assertEquals(android.view.View.GONE,chat.older.getVisibility());
+   for(int i=0;i<40&&!hasText(chat,"old reply");i++)drain();assertEquals(1,previous.get());assertTrue(hasText(chat,"old reply"));assertTrue(hasText(chat,"new reply"));assertEquals(android.view.View.GONE,chat.older.getVisibility());
+   load.invoke(ui,false);for(int i=0;i<8;i++)drain();assertTrue(hasText(chat,"old reply"));assertEquals(android.view.View.GONE,chat.older.getVisibility());
+   WorkspaceStore.Session other=profile();other.aiAgent="";selected.set(other);ui.sync();assertFalse(ui.showing());selected.set(first);ui.sync();assertTrue(ui.showing());assertTrue(hasText(chat,"old reply"));assertTrue(hasText(chat,"new reply"));assertEquals(android.view.View.GONE,chat.older.getVisibility());
   }finally{release.countDown();ui.close();marker.delete();}
  }
  @Test public void claudePreviousClickDuringPollAndCachedHistoryUseTheSameComponents()throws Exception{
@@ -223,11 +233,11 @@ public class AgentChatUiTest {
    return result().put("connected",true).put("session","thread-fixture").put("partialHistory",true).put("knownMessages",new JSONArray().put(id)).put("older",old?JSONObject.NULL:"page-1").put("rows",new JSONArray().put(new JSONObject().put("key",id).put("message",id).put("kind","text").put("body",id+" reply")));
   });
   try{
-   for(int i=0;i<30&&!ui.showing();i++)drain();assertTrue(ui.showing());FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);assertTrue(hasText(chat,"Claude: new reply"));
+   for(int i=0;i<30&&!ui.showing();i++)drain();assertTrue(ui.showing());FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);assertTrue(hasText(chat,"new reply"));
    hold.set(true);java.lang.reflect.Method load=AgentChatUi.class.getDeclaredMethod("load",boolean.class);load.setAccessible(true);load.invoke(ui,false);assertTrue(entered.await(2,TimeUnit.SECONDS));chat.older.performClick();assertFalse(chat.older.isEnabled());assertEquals(0,previous.get());hold.set(false);release.countDown();
-   for(int i=0;i<40&&!hasText(chat,"Claude: old reply");i++)drain();assertEquals(1,previous.get());assertTrue(hasText(chat,"Claude: old reply"));assertTrue(hasText(chat,"Claude: new reply"));assertEquals(android.view.View.GONE,chat.older.getVisibility());
-   load.invoke(ui,false);for(int i=0;i<8;i++)drain();assertTrue(hasText(chat,"Claude: old reply"));assertEquals(android.view.View.GONE,chat.older.getVisibility());
-   WorkspaceStore.Session other=profile();other.aiAgent="";selected.set(other);ui.sync();assertFalse(ui.showing());selected.set(first);ui.sync();assertTrue(ui.showing());assertTrue(hasText(chat,"Claude: old reply"));assertTrue(hasText(chat,"Claude: new reply"));assertEquals(android.view.View.GONE,chat.older.getVisibility());
+   for(int i=0;i<40&&!hasText(chat,"old reply");i++)drain();assertEquals(1,previous.get());assertTrue(hasText(chat,"old reply"));assertTrue(hasText(chat,"new reply"));assertEquals(android.view.View.GONE,chat.older.getVisibility());
+   load.invoke(ui,false);for(int i=0;i<8;i++)drain();assertTrue(hasText(chat,"old reply"));assertEquals(android.view.View.GONE,chat.older.getVisibility());
+   WorkspaceStore.Session other=profile();other.aiAgent="";selected.set(other);ui.sync();assertFalse(ui.showing());selected.set(first);ui.sync();assertTrue(ui.showing());assertTrue(hasText(chat,"old reply"));assertTrue(hasText(chat,"new reply"));assertEquals(android.view.View.GONE,chat.older.getVisibility());
   }finally{release.countDown();ui.close();marker.delete();}
  }
  @Test public void partialMessagePagesSurviveFreshSnapshotsForCodexAndClaude()throws Exception{
@@ -239,16 +249,16 @@ public class AgentChatUiTest {
     if(!old)rows.put(new JSONObject().put("key",finalNative.get()?"native":"stream").put("message",finalNative.get()?"native-id":"provisional-id").put("kind","text").put("body",finalNative.get()?"final answer":"streaming"));
     return result().put("session","fixture-thread").put("connected",true).put("partialHistory",true).put("partialMessages",new JSONArray().put("same")).put("replacedMessages",finalNative.get()?new JSONArray().put("provisional-id"):new JSONArray()).put("knownMessages",new JSONArray().put("same")).put("older",old?JSONObject.NULL:"previous").put("rows",rows);
    });
-   try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);chat.older.performClick();for(int i=0;i<30&&!hasText(chat,(claude?"Claude":"Codex")+": earlier part");i++)drain();assertTrue(hasText(chat,(claude?"Claude":"Codex")+": earlier part"));
-    java.lang.reflect.Method load=AgentChatUi.class.getDeclaredMethod("load",boolean.class);load.setAccessible(true);finalNative.set(true);load.invoke(ui,false);for(int i=0;i<10;i++)drain();Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));assertTrue(hasText(chat,(claude?"Claude":"Codex")+": earlier part"));assertTrue(hasText(chat,(claude?"Claude":"Codex")+": latest part"));assertFalse(hasText(chat,(claude?"Claude":"Codex")+": streaming"));assertTrue(hasText(chat,(claude?"Claude":"Codex")+": final answer"));
-    WorkspaceStore.Session other=profile();other.aiAgent="";selected.set(other);ui.sync();selected.set(first);ui.sync();assertTrue(hasText(chat,(claude?"Claude":"Codex")+": earlier part"));
+   try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);chat.older.performClick();for(int i=0;i<30&&!hasText(chat,"earlier part");i++)drain();assertTrue(hasText(chat,"earlier part"));
+    java.lang.reflect.Method load=AgentChatUi.class.getDeclaredMethod("load",boolean.class);load.setAccessible(true);finalNative.set(true);load.invoke(ui,false);for(int i=0;i<10;i++)drain();Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));assertTrue(hasText(chat,"earlier part"));assertTrue(hasText(chat,"latest part"));assertFalse(hasText(chat,"streaming"));assertTrue(hasText(chat,"final answer"));
+    WorkspaceStore.Session other=profile();other.aiAgent="";selected.set(other);ui.sync();selected.set(first);ui.sync();assertTrue(hasText(chat,"earlier part"));
    }finally{ui.close();marker.delete();a.finish();}
   }}finally{scale.invoke(null,1f);}
  }
  @Test public void failedOlderRequestKeepsChatAndAllowsRetry()throws Exception{
   TermuxActivity a=activity();WorkspaceStore.Session selected=profile();AtomicInteger tries=new AtomicInteger();
   AgentChatUi ui=new AgentChatUi(a,()->selected,()->true,(p,q)->{if(q.has("cursor")&&tries.incrementAndGet()==1)throw new java.io.IOException("history failed");return result().put("connected",true).put("older",q.has("cursor")?JSONObject.NULL:"page").put("rows",new JSONArray().put(new JSONObject().put("key",q.has("cursor")?"old":"new").put("message",q.has("cursor")?"old":"new").put("kind","text").put("body",q.has("cursor")?"old":"new")));});
-  try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);chat.older.performClick();for(int i=0;i<30&&!chat.older.isEnabled();i++)drain();assertTrue(ui.showing());assertTrue(chat.older.isEnabled());assertTrue(hasText(chat,"OpenCode: new"));chat.older.performClick();for(int i=0;i<30&&!hasText(chat,"OpenCode: old");i++)drain();assertEquals(2,tries.get());assertTrue(hasText(chat,"OpenCode: old"));}finally{ui.close();}
+  try{for(int i=0;i<30&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);chat.older.performClick();for(int i=0;i<30&&!chat.older.isEnabled();i++)drain();assertTrue(ui.showing());assertTrue(chat.older.isEnabled());assertTrue(hasText(chat,"new"));chat.older.performClick();for(int i=0;i<30&&!hasText(chat,"old");i++)drain();assertEquals(2,tries.get());assertTrue(hasText(chat,"old"));}finally{ui.close();}
  }
  @Test public void sharedToolbarCannotReappearInAnAlreadyVisibleChat()throws Exception{
   TermuxActivity a=activity();androidx.viewpager.widget.ViewPager pager=new androidx.viewpager.widget.ViewPager(a);pager.setId(R.id.terminal_toolbar_view_pager);((FrameLayout)a.findViewById(R.id.workspace_terminal_surface)).addView(pager);WorkspaceStore.Session p=profile();AgentChatUi ui=new AgentChatUi(a,()->p,()->true,(profile,q)->result());
@@ -380,7 +390,7 @@ public class AgentChatUiTest {
    if(provider.equals("codex")){p.environment="codex";java.io.File marker=CodexChatControl.marker(a.getFilesDir(),p);marker.getParentFile().mkdirs();java.nio.file.Files.write(marker.toPath(),new byte[]{1});}
    else if(provider.equals("claude"))p.claudeAgent=true;else if(provider.equals("gemini"))p.geminiAgent=true;else p.aiAgent="opencode";
    AtomicInteger phase=new AtomicInteger();AgentChatUi ui=new AgentChatUi(a,()->p,()->true,(selected,q)->{String body="/bin/bash -lc test\n"+(phase.get()==0?"first output":"first output\nfinished output");JSONObject row=new JSONObject().put("key","action").put("message","m").put("part","command").put("kind","tool").put("toolType","Bash").put("title","Shell").put("actionType","shell").put("command","/bin/bash -lc test").put("body",body).put("bodyLength",body.length()).put("status",phase.get()==0?"inProgress":"completed");return result().put("session","active_session").put("connected",true).put("busy",phase.get()==0).put("rows",new JSONArray().put(row));});
-   try{ui.sync();for(int i=0;i<35&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);for(int i=0;i<35&&chat.timeline.getChildCount()<3;i++)drain();CodexActionsView card=(CodexActionsView)chat.timeline.getChildAt(1);assertEquals(android.view.View.GONE,card.steps.getVisibility());card.summaryCard.performClick();card.steps.getChildAt(0).performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();android.widget.TextView state=dialog.findViewById(android.R.id.message);assertTrue(dialog.isShowing());assertTrue(hasText(dialog.getWindow().getDecorView(),"Running…\nExit code not supplied."));assertTrue(hasText(dialog.getWindow().getDecorView(),"/bin/bash -lc test\nfirst output"));
+   try{ui.sync();for(int i=0;i<35&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);AgentCompactActionView card=awaitTimelineAction(chat,AgentCompactActionView.class);assertTrue(card.item.performClick());android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(dialog.isShowing());assertTrue(hasText(dialog.getWindow().getDecorView(),"Running…\nExit code not supplied."));assertTrue(hasText(dialog.getWindow().getDecorView(),"/bin/bash -lc test\nfirst output"));
     phase.set(1);Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));for(int i=0;i<35&&!hasText(dialog.getWindow().getDecorView(),"Completed\nExit code not supplied.");i++)drain();assertTrue(provider,dialog.isShowing());assertTrue(provider,hasText(dialog.getWindow().getDecorView(),"Completed\nExit code not supplied."));assertTrue(provider,hasText(dialog.getWindow().getDecorView(),"/bin/bash -lc test\nfirst output\nfinished output"));
    }finally{ui.close();}
   }
@@ -389,28 +399,102 @@ public class AgentChatUiTest {
  @Test public void openLongRunningOutputRefreshesItsTailAndDismissalStopsDetailReads()throws Exception{
   TermuxActivity a=activity();WorkspaceLanguage.select(a,"en");WorkspaceStore.Session p=profile();AtomicInteger phase=new AtomicInteger(),detailReads=new AtomicInteger();AtomicInteger offset=new AtomicInteger(-1);
   AgentChatUi ui=new AgentChatUi(a,()->p,()->true,(selected,q)->{String full="x".repeat(40000)+"\nlatest-"+phase.get()+"!".repeat(phase.get());if(q.optString("op").equals("chat-detail")){detailReads.incrementAndGet();offset.set(q.optInt("offset"));int start=q.optInt("offset"),end=Math.min(full.length(),start+24000);return new JSONObject().put("ok",true).put("body",full.substring(start,end)).put("next",end<full.length()?end:JSONObject.NULL);}JSONObject row=new JSONObject().put("key","long-action").put("message","m").put("part","command").put("kind","tool").put("toolType","Bash").put("actionType","shell").put("command","long build").put("body",full.substring(0,12000)).put("bodyLength",full.length()).put("more",true).put("status","inProgress");return result().put("session",p.aiThread).put("connected",true).put("busy",true).put("rows",new JSONArray().put(row));});
-  try{ui.sync();for(int i=0;i<40&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);for(int i=0;i<35&&chat.timeline.getChildCount()<3;i++)drain();CodexActionsView card=(CodexActionsView)chat.timeline.getChildAt(1);assertEquals(android.view.View.GONE,card.steps.getVisibility());card.summaryCard.performClick();card.steps.getChildAt(0).performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();for(int i=0;i<35&&detailReads.get()==0;i++)drain();assertTrue(offset.get()>0);phase.set(1);Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));for(int i=0;i<35&&detailReads.get()<2;i++)drain();assertTrue(detailReads.get()>=2);android.view.View full=findText(dialog.getWindow().getDecorView(),"Полный вывод","Full output");assertNotNull(full);full.performClick();int readBefore=detailReads.get();for(int i=0;i<35&&detailReads.get()==readBefore;i++)drain();for(int i=0;i<4;i++)drain();android.view.View more=findText(dialog.getWindow().getDecorView(),"Далее","More");assertNotNull(more);int pageBefore=detailReads.get();more.performClick();for(int i=0;i<35&&detailReads.get()==pageBefore;i++)drain();for(int i=0;i<4;i++)drain();int afterFull=detailReads.get();phase.set(2);Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));for(int i=0;i<35&&detailReads.get()==afterFull;i++)drain();assertTrue("Live detail must resume after the full page",detailReads.get()>afterFull);dialog.dismiss();int before=detailReads.get();phase.set(2);Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2));for(int i=0;i<5;i++)drain();assertEquals(before,detailReads.get());
+  try{ui.sync();for(int i=0;i<40&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);AgentCompactActionView card=awaitTimelineAction(chat,AgentCompactActionView.class);assertTrue(card.item.performClick());android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();for(int i=0;i<35&&detailReads.get()==0;i++)drain();assertTrue(offset.get()>0);phase.set(1);Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));for(int i=0;i<35&&detailReads.get()<2;i++)drain();assertTrue(detailReads.get()>=2);android.view.View full=findText(dialog.getWindow().getDecorView(),"Полный вывод","Full output");assertNotNull(full);full.performClick();int readBefore=detailReads.get();for(int i=0;i<35&&detailReads.get()==readBefore;i++)drain();for(int i=0;i<4;i++)drain();android.view.View more=findText(dialog.getWindow().getDecorView(),"Далее","More");assertNotNull(more);int pageBefore=detailReads.get();more.performClick();for(int i=0;i<35&&detailReads.get()==pageBefore;i++)drain();for(int i=0;i<4;i++)drain();int afterFull=detailReads.get();phase.set(2);Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1));for(int i=0;i<35&&detailReads.get()==afterFull;i++)drain();assertTrue("Live detail must resume after the full page",detailReads.get()>afterFull);dialog.dismiss();int before=detailReads.get();phase.set(2);Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2));for(int i=0;i<5;i++)drain();assertEquals(before,detailReads.get());
   }finally{ui.close();}
  }
- @Test public void imageActionDialogWrapsTheThumbnailHasNoBackButtonAndClosesOutside()throws Exception{
-  TermuxActivity a=activity();WorkspaceStore.Session p=profile();JSONObject row=new JSONObject().put("key","image-action").put("message","m").put("part","image").put("kind","tool").put("toolType","imageView").put("status","completed").put("body","image event").put("actionPreview",new JSONObject().put("kind","image").put("image",new JSONObject().put("type","image").put("path","/no-such-preview.png").put("name","preview.png")));
-  AgentChatUi ui=new AgentChatUi(a,()->p,()->true,(selected,q)->result().put("session",p.aiThread).put("connected",true).put("rows",new JSONArray().put(row)));
-  try{ui.sync();for(int i=0;i<40&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);for(int i=0;i<40&&chat.timeline.getChildCount()<3;i++)drain();android.view.View card=chat.timeline.getChildAt(1);assertTrue(card instanceof android.widget.TextView);card.performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(dialog.isShowing());assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,dialog.getWindow().getAttributes().height);assertTrue(dialog.getButton(-1)==null||dialog.getButton(-1).getVisibility()!=android.view.View.VISIBLE);android.view.MotionEvent outside=android.view.MotionEvent.obtain(0,0,android.view.MotionEvent.ACTION_OUTSIDE,-20,-20,0);try{assertTrue(dialog.onTouchEvent(outside));assertFalse(dialog.isShowing());}finally{outside.recycle();}
+ private android.app.AlertDialog currentActionDialog() {
+  android.app.AlertDialog dialog = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+  assertNotNull(dialog);
+  assertTrue(dialog.isShowing());
+  assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, dialog.getWindow().getAttributes().height);
+  return dialog;
+ }
+ private void dismissActionDialogOutside(android.app.AlertDialog dialog) {
+  android.view.MotionEvent outside = android.view.MotionEvent.obtain(
+    0, 0, android.view.MotionEvent.ACTION_OUTSIDE, -20, -20, 0);
+  try {
+   assertTrue(dialog.onTouchEvent(outside));
+   assertFalse(dialog.isShowing());
+  } finally {
+   outside.recycle();
+  }
+ }
+ private void assertActionDetailControls(android.app.AlertDialog dialog) {
+  assertEquals(android.view.Gravity.CENTER, dialog.getWindow().getAttributes().gravity);
+  assertEquals(android.view.View.VISIBLE, dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL).getVisibility());
+  assertEquals(android.view.View.VISIBLE, dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).getVisibility());
+  assertNotNull(findText(dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL), "Копировать", "Copy"));
+  assertNotNull(findText(dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE), "Закрыть", "Close"));
+ }
+ private JSONObject imageActionRow(WorkspaceStore.Session profile) throws JSONException {
+  return new JSONObject().put("key","image-action").put("message","image-action").put("part","image")
+    .put("kind","tool").put("toolType","imageView").put("status","completed").put("body","image event")
+    .put("actionPreview",new JSONObject().put("kind","image").put("image",
+      new JSONObject().put("type","image").put("path",ChatAttachments.prefix(profile)+"no-such-preview.png")
+        .put("name","preview.png")));
+ }
+ @Test public void imageActionExpandsAndOpensViewerThatClosesOutside()throws Exception{
+  TermuxActivity a=activity();WorkspaceStore.Session p=profile();JSONObject row=imageActionRow(p);
+  AgentChatUi ui=new AgentChatUi(a,()->p,()->true,(selected,q)->result().put("session",p.aiThread)
+    .put("connected",true).put("rows",new JSONArray().put(row)));
+  try {
+   ui.sync();
+   AgentChatView chat=org.robolectric.util.ReflectionHelpers.getField(ui,"view");
+   AgentImageActionView image=awaitTimelineAction(chat,AgentImageActionView.class);
+   assertEquals(android.view.View.GONE, image.image.getVisibility());
+   assertTrue(image.heading.performClick());
+   assertEquals(android.view.View.VISIBLE, image.image.getVisibility());
+   assertTrue(image.image.performClick());
+   android.app.AlertDialog dialog=currentActionDialog();
+   assertTrue(hasText(dialog.getWindow().getDecorView(),"preview.png"));
+   android.widget.Button back=dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE);
+   assertTrue(back==null||back.getVisibility()!=android.view.View.VISIBLE);
+   dismissActionDialogOutside(dialog);
+   assertTrue(image.heading.performClick());
+   assertEquals(android.view.View.GONE,image.image.getVisibility());
   }finally{ui.close();}
  }
- @Test public void fileChangeDialogWrapsTheCardsHasNoBackButtonAndClosesOutside()throws Exception{
+ @Test public void fileChangeDialogShowsExpandableDiffAndClosesOutside()throws Exception{
   TermuxActivity a=activity();WorkspaceStore.Session p=profile();JSONObject row=new JSONObject().put("key","file-action").put("message","m").put("part","files").put("kind","tool").put("toolType","fileChange").put("status","completed").put("body","[]").put("actionPreview",new JSONObject().put("kind","files").put("count",1).put("files",new JSONArray().put(new JSONObject().put("path","main.py").put("operation","modified").put("diff","-old\n+new\n"))));
   AgentChatUi ui=new AgentChatUi(a,()->p,()->true,(selected,q)->result().put("session",p.aiThread).put("connected",true).put("rows",new JSONArray().put(row)));
-  try{ui.sync();for(int i=0;i<40&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);for(int i=0;i<40&&chat.timeline.getChildCount()<3;i++)drain();CodexActionsView card=(CodexActionsView)chat.timeline.getChildAt(1);card.summaryCard.performClick();card.steps.getChildAt(0).performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(dialog.isShowing());assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,dialog.getWindow().getAttributes().height);assertTrue(dialog.getButton(-1)==null||dialog.getButton(-1).getVisibility()!=android.view.View.VISIBLE);android.view.MotionEvent outside=android.view.MotionEvent.obtain(0,0,android.view.MotionEvent.ACTION_OUTSIDE,-20,-20,0);try{assertTrue(dialog.onTouchEvent(outside));assertFalse(dialog.isShowing());}finally{outside.recycle();}
+  try {
+   ui.sync();
+   AgentChatView chat=org.robolectric.util.ReflectionHelpers.getField(ui,"view");
+   AgentCompactActionView card=awaitTimelineAction(chat,AgentCompactActionView.class);
+   assertTrue(card.item.performClick());
+   android.app.AlertDialog dialog=currentActionDialog();
+   assertActionDetailControls(dialog);
+   android.view.View decor=dialog.getWindow().getDecorView();
+   android.view.View file=decor.findViewWithTag("action-file:main.py");
+   assertNotNull(file);
+   android.view.View diff=findText(decor,"-old\n+new\n");
+   assertNotNull(diff);
+   assertEquals(android.view.View.GONE,diff.getVisibility());
+   assertTrue(file.performClick());
+   assertEquals(android.view.View.VISIBLE,diff.getVisibility());
+   dismissActionDialogOutside(dialog);
   }finally{ui.close();}
  }
- @Test public void codexContextCompactionUsesItsCompactTextDialogBeforeTheGenericToolRoute()throws Exception{
+ @Test public void codexContextCompactionOpensRecordedTextWithoutFetchingDetails()throws Exception{
   TermuxActivity a=activity();WorkspaceStore.Session p=profile();p.environment="codex";p.aiAgent="";p.codexSocketId="compact_context_run";
   java.io.File marker=CodexChatControl.marker(a.getFilesDir(),p);marker.getParentFile().mkdirs();java.nio.file.Files.write(marker.toPath(),new byte[]{1});
   String message="Контекст чата сокращён штатным Codex.";JSONObject row=new JSONObject().put("key","context-action").put("message","m").put("part","context").put("kind","tool").put("toolType","contextCompaction").put("title","Codex").put("status","completed").put("body",message);
   AtomicInteger detailReads=new AtomicInteger();AgentChatUi ui=new AgentChatUi(a,()->p,()->true,(selected,q)->{if(q.optString("op").equals("chat-detail"))detailReads.incrementAndGet();return result().put("session","compact_session").put("connected",true).put("rows",new JSONArray().put(row));});
-  try{ui.sync();for(int i=0;i<40&&!ui.showing();i++)drain();FrameLayout host=a.findViewById(R.id.workspace_terminal_surface);AgentChatView chat=(AgentChatView)host.getChildAt(host.getChildCount()-1);for(int i=0;i<40&&chat.timeline.getChildCount()<3;i++)drain();assertTrue(chat.timeline.getChildAt(1) instanceof android.widget.TextView);chat.timeline.getChildAt(1).performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(dialog.isShowing());assertTrue(hasText(dialog.getWindow().getDecorView(),message));assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,dialog.getWindow().getAttributes().height);assertTrue(dialog.getButton(-1)==null||dialog.getButton(-1).getVisibility()!=android.view.View.VISIBLE);assertNull(dialog.getWindow().getDecorView().findViewWithTag("agent-action-status"));assertEquals(0,detailReads.get());android.view.MotionEvent outside=android.view.MotionEvent.obtain(0,0,android.view.MotionEvent.ACTION_OUTSIDE,-20,-20,0);try{assertTrue(dialog.onTouchEvent(outside));assertFalse(dialog.isShowing());}finally{outside.recycle();}
-  }finally{ui.close();}
+  try {
+   ui.sync();
+   AgentChatView chat=org.robolectric.util.ReflectionHelpers.getField(ui,"view");
+   AgentStandaloneActionView card=awaitTimelineAction(chat,AgentStandaloneActionView.class);
+   assertTrue(card.performClick());
+   android.app.AlertDialog dialog=currentActionDialog();
+   assertActionDetailControls(dialog);
+   android.widget.TextView output=dialog.getWindow().getDecorView().findViewWithTag("agent-action-output");
+   assertNotNull(output);
+   assertEquals(android.view.View.VISIBLE,output.getVisibility());
+   assertEquals(message,output.getText().toString());
+   drain();
+   assertEquals(0,detailReads.get());
+   dismissActionDialogOutside(dialog);
+  }finally{ui.close();marker.delete();}
  }
 
 
@@ -449,11 +533,21 @@ public class AgentChatUiTest {
   }finally{replyRelease.countDown();release.countDown();ui.close();marker.delete();}
  }
 
- private CodexActionsView timelineCard(AgentChatView chat){for(int i=0;i<chat.timeline.getChildCount();i++)if(chat.timeline.getChildAt(i)instanceof CodexActionsView)return(CodexActionsView)chat.timeline.getChildAt(i);return null;}
- private void awaitTimeline(AgentChatView chat)throws Exception{for(int i=0;i<40&&timelineCard(chat)==null;i++){Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(250));drain();}assertNotNull("Scheduled native snapshot must arrive",timelineCard(chat));}
+ private <T extends android.view.View> T awaitTimelineAction(AgentChatView chat, Class<T> type)throws Exception {
+  for(int attempt=0;attempt<40;attempt++){
+   for(int i=0;i<chat.timeline.getChildCount();i++){
+    android.view.View row=chat.timeline.getChildAt(i);
+    if(type.isInstance(row))return type.cast(row);
+   }
+   Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(250));
+   drain();
+  }
+  fail("Scheduled snapshot did not render "+type.getSimpleName());
+  return null;
+ }
  private void layoutTimeline(AgentChatView chat){for(int i=0;i<3;i++){android.view.View host=(android.view.View)chat.getParent();host.measure(android.view.View.MeasureSpec.makeMeasureSpec(400,android.view.View.MeasureSpec.EXACTLY),android.view.View.MeasureSpec.makeMeasureSpec(500,android.view.View.MeasureSpec.EXACTLY));host.layout(0,0,400,500);chat.scroll.getViewTreeObserver().dispatchOnPreDraw();Shadows.shadowOf(Looper.getMainLooper()).idle();}}
  private void readTimelineAt(AgentChatView chat,int y){long t=android.os.SystemClock.uptimeMillis();for(int action:new int[]{android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_CANCEL}){android.view.MotionEvent e=android.view.MotionEvent.obtain(t,t,action,10,10,0);chat.scroll.dispatchTouchEvent(e);e.recycle();if(action==android.view.MotionEvent.ACTION_DOWN)chat.scroll.scrollTo(0,y);}}
- @Test public void timelineChoiceFollowsEachAgentThroughControllerSwitchOlderPageAndWindowReopen()throws Exception{
+ @Test public void imageExpansionAndReadingPositionFollowEachChatThroughSwitchPagingAndReopen()throws Exception{
   for(String agent:new String[]{"codex","claude","gemini","opencode"}){
    TermuxActivity a=activity();WorkspaceStore.Session first=profile();first.environment=agent.equals("codex")?"codex":"ubuntu";first.codexEnvironment="ubuntu-ai";first.aiAgent=agent.equals("opencode")?agent:"";first.claudeAgent=agent.equals("claude");first.geminiAgent=agent.equals("gemini");WorkspaceStore.Session second=first.copy();second.id="separate-"+agent;
    java.io.File marker=CodexChatControl.marker(a.getFilesDir(),first),peer=CodexChatControl.marker(a.getFilesDir(),second);marker.getParentFile().mkdirs();marker.createNewFile();peer.getParentFile().mkdirs();peer.createNewFile();AtomicReference<WorkspaceStore.Session> selected=new AtomicReference<>(first);AtomicBoolean visible=new AtomicBoolean(true);AtomicInteger modelOps=new AtomicInteger(),previous=new AtomicInteger();
@@ -461,15 +555,66 @@ public class AgentChatUiTest {
     if(q.optString("op").equals("chat-send")||q.optString("op").contains("compact")){modelOps.incrementAndGet();throw new AssertionError("Timeline must not invoke the model");}
     boolean old=q.has("cursor");if(old)previous.incrementAndGet();JSONArray rows=new JSONArray();if(old)rows.put(new JSONObject().put("key","earlier").put("message","earlier").put("kind","text").put("body","older native message"));else{
      for(int n=0;n<25;n++)rows.put(new JSONObject().put("key","m"+n).put("message","m"+n).put("kind","text").put("body","Synthetic history "+n+"\nsecond line\nthird line"));
-     rows.put(new JSONObject().put("key","read").put("message","read").put("kind","tool").put("toolName","Read").put("toolPath","/synthetic/Native.java").put("status","completed").put("body","native event"));rows.put(new JSONObject().put("key","cmd").put("message","cmd").put("kind","tool").put("actionType","shell").put("command","synthetic command").put("status","running").put("body","native output"));}
+     rows.put(new JSONObject().put("key","read").put("message","read").put("kind","tool").put("toolName","Read").put("toolPath","/synthetic/Native.java").put("status","completed").put("body","native event"));rows.put(new JSONObject().put("key","cmd").put("message","cmd").put("kind","tool").put("actionType","shell").put("command","synthetic command").put("status","running").put("body","native output"));rows.put(imageActionRow(p));}
     return result().put("connected",true).put("session",p.id).put("rows",rows).put("partialHistory",true).put("older",old?JSONObject.NULL:"previous");
    });
    try{
-    ui.sync();AgentChatView chat=org.robolectric.util.ReflectionHelpers.getField(ui,"view");awaitTimeline(chat);CodexActionsView card=timelineCard(chat);assertNotNull(agent,card);assertEquals(agent,2,card.steps.getChildCount());assertEquals(android.view.View.GONE,card.steps.getVisibility());card.summaryCard.performClick();layoutTimeline(chat);readTimelineAt(chat,200);AgentChatView.Position firstPosition=chat.position();assertFalse(agent+" timeline="+chat.timeline.getHeight()+" viewport="+chat.scroll.getHeight()+" y="+chat.scroll.getScrollY()+" anchor="+firstPosition.anchor,firstPosition.bottom);
-    selected.set(second);ui.sync();awaitTimeline(chat);assertEquals("The other chat starts collapsed",android.view.View.GONE,timelineCard(chat).steps.getVisibility());layoutTimeline(chat);readTimelineAt(chat,400);AgentChatView.Position secondPosition=chat.position();assertFalse(secondPosition.bottom);assertNotEquals(firstPosition.y,secondPosition.y);
-    selected.set(first);ui.sync();awaitTimeline(chat);layoutTimeline(chat);card=timelineCard(chat);assertEquals(agent,android.view.View.VISIBLE,card.steps.getVisibility());assertEquals(firstPosition.anchor,chat.position().anchor);assertEquals(firstPosition.offset,chat.position().offset);
-    chat.older.performClick();for(int i=0;i<60&&previous.get()==0;i++)drain();for(int i=0;i<20&&!hasText(chat,(agent.equals("codex")?"Codex":agent.equals("claude")?"Claude":agent.equals("gemini")?"Gemini":"OpenCode")+": older native message");i++)drain();layoutTimeline(chat);assertEquals(firstPosition.anchor,chat.position().anchor);assertEquals(firstPosition.offset,chat.position().offset);card=timelineCard(chat);assertEquals(android.view.View.VISIBLE,card.steps.getVisibility());card.summaryCard.performClick();visible.set(false);ui.sync();visible.set(true);ui.sync();awaitTimeline(chat);assertEquals(android.view.View.GONE,timelineCard(chat).steps.getVisibility());
-    selected.set(second);ui.sync();awaitTimeline(chat);layoutTimeline(chat);assertEquals(secondPosition.anchor,chat.position().anchor);assertEquals(secondPosition.offset,chat.position().offset);assertEquals(android.view.View.GONE,timelineCard(chat).steps.getVisibility());assertEquals(0,modelOps.get());
+    ui.sync();
+    AgentChatView chat=org.robolectric.util.ReflectionHelpers.getField(ui,"view");
+    AgentImageActionView image=awaitTimelineAction(chat,AgentImageActionView.class);
+    int imageIndex=chat.timeline.indexOfChild(image);
+    assertTrue(chat.timeline.getChildAt(imageIndex-2) instanceof AgentCompactActionView);
+    assertTrue(chat.timeline.getChildAt(imageIndex-1) instanceof AgentCompactActionView);
+    assertEquals(android.view.View.GONE,image.image.getVisibility());
+    assertTrue(image.heading.performClick());
+    layoutTimeline(chat);
+    readTimelineAt(chat,200);
+    AgentChatView.Position firstPosition=chat.position();
+    assertFalse(agent,firstPosition.bottom);
+    assertNotNull(firstPosition.anchor);
+
+    selected.set(second);
+    ui.sync();
+    assertEquals("The other chat starts collapsed",android.view.View.GONE,awaitTimelineAction(chat,AgentImageActionView.class).image.getVisibility());
+    layoutTimeline(chat);
+    readTimelineAt(chat,400);
+    AgentChatView.Position secondPosition=chat.position();
+    assertFalse(secondPosition.bottom);
+    assertNotNull(secondPosition.anchor);
+    assertNotEquals(firstPosition.y,secondPosition.y);
+
+    selected.set(first);
+    ui.sync();
+    image=awaitTimelineAction(chat,AgentImageActionView.class);
+    layoutTimeline(chat);
+    assertEquals(agent,android.view.View.VISIBLE,image.image.getVisibility());
+    assertEquals(firstPosition.anchor,chat.position().anchor);
+    assertEquals(firstPosition.offset,chat.position().offset);
+
+    chat.older.performClick();
+    for(int i=0;i<60&&!hasText(chat,"older native message");i++)drain();
+    assertEquals(1,previous.get());
+    assertTrue(hasText(chat,"older native message"));
+    layoutTimeline(chat);
+    assertEquals(firstPosition.anchor,chat.position().anchor);
+    assertEquals(firstPosition.offset,chat.position().offset);
+    image=awaitTimelineAction(chat,AgentImageActionView.class);
+    assertEquals(android.view.View.VISIBLE,image.image.getVisibility());
+    assertTrue(image.heading.performClick());
+    visible.set(false);
+    ui.sync();
+    visible.set(true);
+    ui.sync();
+    assertEquals(android.view.View.GONE,awaitTimelineAction(chat,AgentImageActionView.class).image.getVisibility());
+
+    selected.set(second);
+    ui.sync();
+    image=awaitTimelineAction(chat,AgentImageActionView.class);
+    layoutTimeline(chat);
+    assertEquals(secondPosition.anchor,chat.position().anchor);
+    assertEquals(secondPosition.offset,chat.position().offset);
+    assertEquals(android.view.View.GONE,image.image.getVisibility());
+    assertEquals(0,modelOps.get());
    }finally{ui.close();marker.delete();peer.delete();}
   }
  }

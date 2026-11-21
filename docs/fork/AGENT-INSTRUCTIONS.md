@@ -1,3 +1,47 @@
+# English text supplied to agents
+
+Built-in Codex, Claude Code and Gemini instructions, the shared project
+instructions template, and the LEARNING.md template are in English in both
+interface languages. The project creation form keeps its localized field
+labels and writes English Markdown headings. It preserves entered text.
+
+Preview and save confirmations still use the interface language. Opening a
+preview does not write a file. Applying a template remains explicit and checks
+the existing revision. Existing files, including empty files and previous
+revisions, are preserved during setup. The storage section detector still
+recognizes earlier Russian headings to avoid inserting a duplicate.
+
+## First launch and Gemini files — 2.1.9-test6
+
+The first standard launch seeds the selected agent's **common** instructions
+if its effective instruction root is empty of recognized common rules. The
+helper records successful initialization or the presence of an existing file
+under that agent's instruction root. Deleting the common Markdown file later
+does not trigger reseeding. The editor retains explicit template preview and
+replacement. Rendering a form creates no instructions. Project files and
+LEARNING.md are created only through explicit file actions. Failure to open the
+helper leaves initialization pending and prints a short notice in the terminal.
+
+Gemini has General, Project and Diagnostics in **Agent instructions**. **Project
+instructions** in a Gemini session retains its agent, environment and working
+folder. The general editor targets `~/.gemini/GEMINI.md` for Antigravity, or
+`$GEMINI_CLI_HOME/.gemini/GEMINI.md` when the retained legacy Gemini CLI sets
+that variable. Project edits target `<project>/GEMINI.md`. Existing rules can
+combine with other file sources. Diagnostics reports known files for standard
+launch. [Google customization discovery](https://antigravity.google/docs/customization-discovery/)
+and [Gemini CLI context files](https://geminicli.com/docs/cli/gemini-md/).
+
+The versioned entries below describe earlier implementations.
+
+# Common Codex templates — private 2.1.9-test1 / 1541, 2026-11-20
+
+The RU/EN Codex templates now use the user-supplied DevKit 0.1.57 general prompt,
+adapted for the selected Termux Job’s session environment and project build tools.
+Both templates retain the source’s delegation and explicit medium-reasoning rules.
+Claude templates are unchanged. Existing/empty user files remain preserved;
+preview and explicit save are required.
+[Provenance, checks and limits](VALIDATION-devkit-timeline-2026-11-20.md).
+
 # Следующий тест1500: инструкции выбранного проекта
 
 Меню сессии → «Инструкции проекта» сразу открывает прежний редактор проекта.
@@ -27,7 +71,7 @@ remain required. This does not establish performance or attachment fixes.
 
 ---
 
-# Project instructions template
+# Project instructions template — historical Russian version
 
 Во вкладке **Проектные** Codex и Claude Code появилась плашка
 **Шаблон проектных инструкций**, непосредственно над **Открыть инструкцию проекта**.

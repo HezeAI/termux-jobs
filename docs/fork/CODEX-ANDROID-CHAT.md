@@ -1,3 +1,14 @@
+# DevKit timeline — private 2.1.9-test1 / 1541, 2026-11-20
+
+Agent actions are individual compact rows, matching the active DevKit 0.1.57
+renderer. Web queries/URLs, subagents, context compaction and image inspection
+have distinct rows. Selecting an action opens a centered bounded details dialog.
+Codex child history is read only after verifying the parent relation; full
+messages and unavailable/incomplete history are identified separately.
+[Implementation, provenance and validation](VALIDATION-devkit-timeline-2026-11-20.md).
+
+Versioned descriptions below remain historical where they describe grouped actions.
+
 # Context status and request clocks — private 2.1.4-test2
 
 В свёрнутой плашке Codex ничего не меняется. Внизу раскрытого статуса находится

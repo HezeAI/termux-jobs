@@ -45,7 +45,7 @@ public final class CodexSessionShell {
             + WorkspaceText.tr("command -v node >/dev/null 2>&1 || { printf '%s\\n' 'Для локального управления Codex нужен Node.js в выбранной среде.' >&2; exit 127; }\n")
             + "[ ! -e " + SessionShell.quote(endpoint) + WorkspaceText.tr(" ] || { printf '%s\\n' 'Подключение Codex уже занято.' >&2; exit 1; }\n")
             + (approval(s).equals("untrusted")&&!CodexChatControl.enabled(files,s)?WorkspaceText.tr("printf '%s\\n' 'Для выбранной политики нужен канал чата Codex. Подтверждения не отключены.' >&2; exit 1;\n"):"")
-            + "umask 077\ntrue" + RtkMode.environment(s,s.codexSocketId)+"\n" + AgentInstructions.initialization(s)
+            + "umask 077\n" + AgentInstructions.initialization(files,s)
             + "_jobs_codex_question_args=''\nif codex features list 2>/dev/null | grep -Eq '^default_mode_request_user_input[[:space:]]'; then _jobs_codex_question_args='--enable default_mode_request_user_input'; export JOBS_CODEX_STANDARD_QUESTIONS=1; else export JOBS_CODEX_STANDARD_QUESTIONS=0; fi\n"
             + "node " + SessionShell.quote(launchPath(files,s)) + " " + SessionShell.quote(endpoint) + " " + SessionShell.quote(sandbox(s.codexAccess)) + " " + SessionShell.quote(approval(s)) + " \"$JOBS_CODEX_STANDARD_QUESTIONS\" " + SessionShell.quote(WorkspaceText.tr("Агент: ").startsWith("Агент")?"ru":"en") + " &\n_jobs_codex_pid=$!\n"
             + "trap 'if [ -n \"${_jobs_codex_status_pid:-}\" ]; then kill \"$_jobs_codex_status_pid\" 2>/dev/null; wait \"$_jobs_codex_status_pid\" 2>/dev/null; fi; if [ -n \"${_jobs_codex_watch_pid:-}\" ]; then kill \"$_jobs_codex_watch_pid\" 2>/dev/null; fi; if [ -n \"${_jobs_codex_pid:-}\" ]; then kill \"$_jobs_codex_pid\" 2>/dev/null; wait \"$_jobs_codex_pid\" 2>/dev/null; fi' EXIT\n"
@@ -59,7 +59,7 @@ public final class CodexSessionShell {
     public static synchronized void prepareBridge(android.content.Context context) throws IOException {
         AgentInstructions.prepare(context);
         File directory = socketDirectory(context.getFilesDir()); if (!directory.isDirectory() && !directory.mkdirs()) throw new IOException("Cannot create controls");
-        File launcher = new File(directory,"codex-launch-v2.cjs");
+        File launcher = new File(directory,"codex-launch-v3.cjs");
         if(!launcher.isFile()){
             File temp=File.createTempFile("codex-launch-",".tmp",directory);
             try{try(java.io.InputStream in=context.getAssets().open("codex-launch.cjs");java.io.OutputStream out=new java.io.FileOutputStream(temp)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}CodexChatControl.protect(temp);if(!temp.renameTo(launcher))throw new IOException("Cannot publish Codex launcher");}finally{temp.delete();}
@@ -75,7 +75,7 @@ public final class CodexSessionShell {
             if(!temporary.renameTo(bridge))throw new IOException("Cannot publish Codex helper");
         } finally {temporary.delete();}
     }
-    private static String launchPath(File files,WorkspaceStore.Session s){return AgentEnvironments.ubuntu(s.codexEnvironment)?"/tmp/termux-jobs-codex/codex-launch-v2.cjs":new File(socketDirectory(files),"codex-launch-v2.cjs").getAbsolutePath();}
+    private static String launchPath(File files,WorkspaceStore.Session s){return AgentEnvironments.ubuntu(s.codexEnvironment)?"/tmp/termux-jobs-codex/codex-launch-v3.cjs":new File(socketDirectory(files),"codex-launch-v3.cjs").getAbsolutePath();}
     private static String bridgePath(File files, WorkspaceStore.Session s) {
         return AgentEnvironments.ubuntu(s.codexEnvironment) ? "/tmp/termux-jobs-codex/bridge-v0.2.21.js" : new File(socketDirectory(files), "bridge-v0.2.21.js").getAbsolutePath();
     }
@@ -94,14 +94,18 @@ public final class CodexSessionShell {
     }
     public static String proxyCommand(File files, WorkspaceStore.Session s) {
         String sock = AgentEnvironments.ubuntu(s.codexEnvironment) ? "/tmp/termux-jobs-codex/" + socket(files, s).getName() : socket(files, s).getAbsolutePath();
-        String proxy = (AgentEnvironments.ubuntu(s.codexEnvironment)?AgentPreparation.codexPath():"")+"command -v node >/dev/null 2>&1 || { printf '%s\\n' 'JOBS_CONTROL:NO_NODE' >&2; exit 127; }; "
+        String proxy = (AgentEnvironments.ubuntu(s.codexEnvironment)?"if ! command -v node >/dev/null 2>&1 || ! node -e 'process.exit(Number(process.versions.node.split(\".\")[0])>=20?0:1)' >/dev/null 2>&1; then export PATH=\"$HOME/.local/share/termux-jobs/agent-tools/node-v22.22.1-linux-arm64/bin:$PATH\"; fi; ":"")+"command -v node >/dev/null 2>&1 || { printf '%s\\n' 'JOBS_CONTROL:NO_NODE' >&2; exit 127; }; "
             + "[ -r " + SessionShell.quote(bridgePath(files, s)) + " ] || { printf '%s\\n' 'JOBS_CONTROL:NO_BRIDGE' >&2; exit 2; }; "
             + "[ -S " + SessionShell.quote(sock) + " ] || { printf '%s\\n' 'JOBS_CONTROL:NO_SOCKET' >&2; exit 3; }; "
             + "exec node " + SessionShell.quote(bridgePath(files, s)) + " proxy " + SessionShell.quote(sock);
         return AgentEnvironments.ubuntu(s.codexEnvironment) ? "proot-distro login --bind " + SessionShell.quote(socketDirectory(files).getAbsolutePath() + ":/tmp/termux-jobs-codex") + " "+SessionShell.quote(AgentEnvironments.alias(s))+" -- /bin/sh -c " + SessionShell.quote(proxy)
             : proxy;
     }
-    public static String historyCommand(WorkspaceStore.Session s) {
-        return AgentEnvironments.ubuntu(s.codexEnvironment) ? "proot-distro login "+SessionShell.quote(AgentEnvironments.alias(s))+" -- /bin/sh -c "+SessionShell.quote(AgentPreparation.codexPath()+"exec codex --no-daemon app-server --stdio") : "codex --no-daemon app-server --stdio";
+    public static String historyCommand(File files,WorkspaceStore.Session s) {
+        return AgentEnvironments.ubuntu(s.codexEnvironment) ? "proot-distro login --bind "
+            +SessionShell.quote(socketDirectory(files).getAbsolutePath()+":/tmp/termux-jobs-codex")+" "
+            +SessionShell.quote(AgentEnvironments.alias(s))+" -- /bin/sh -c "
+            +SessionShell.quote(AgentPreparation.codexPath(AgentInstructions.guest(),s.codexEnvironment)+"exec codex --no-daemon app-server --stdio")
+            : "codex --no-daemon app-server --stdio";
     }
 }

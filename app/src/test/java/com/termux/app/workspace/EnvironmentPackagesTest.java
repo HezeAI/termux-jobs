@@ -43,17 +43,19 @@ public class EnvironmentPackagesTest{
   for(String name:new String[]{"apt-get","dpkg-query"})executable(host.resolve(name),"printf WRONG_HOST");
   String[] commands={"apk","dnf","zypper","xbps-query","pacman"};
   String[] expected={"APK","DNF","ZYPPER","XBPS","PACMAN"};
+  String guestPath=SessionShell.quote(EnvironmentPackages.GUEST_PATH);
   for(int i=0;i<commands.length;i++){
-   java.nio.file.Path guest=java.nio.file.Files.createDirectory(fixture.resolve(expected[i]));
+   java.nio.file.Path guest=java.nio.file.Files.createDirectory(fixture.resolve("guest's "+expected[i]));
+   String fixturePath=SessionShell.quote(guest.toString());
    executable(guest.resolve(commands[i]),"printf NATIVE");
-   String script=EnvironmentPackages.nativeCommand(EnvironmentPackages.probe()).replace(EnvironmentPackages.GUEST_PATH,guest.toString());
+   String script=EnvironmentPackages.nativeCommand(EnvironmentPackages.probe()).replace(guestPath,fixturePath);
    ProcessBuilder builder=new ProcessBuilder("/bin/sh","-c",script);builder.environment().put("PATH",host.toString());
    Process probe=builder.start();String result=new String(probe.getInputStream().readAllBytes(),StandardCharsets.UTF_8);assertEquals(0,probe.waitFor());assertEquals(expected[i],result);
-   script=EnvironmentPackages.nativeCommand(commands[i]).replace(EnvironmentPackages.GUEST_PATH,guest.toString());
+   script=EnvironmentPackages.nativeCommand(commands[i]).replace(guestPath,fixturePath);
    builder=new ProcessBuilder("/bin/sh","-c","original=$PATH; "+script+"; [ \"$PATH\" = \"$original\" ]");builder.environment().put("PATH",host.toString());
    Process operation=builder.start();assertEquals("NATIVE",new String(operation.getInputStream().readAllBytes(),StandardCharsets.UTF_8));assertEquals(0,operation.waitFor());
   }
-  String empty=EnvironmentPackages.nativeCommand(EnvironmentPackages.probe()).replace(EnvironmentPackages.GUEST_PATH,fixture.resolve("missing").toString());
+  String empty=EnvironmentPackages.nativeCommand(EnvironmentPackages.probe()).replace(guestPath,SessionShell.quote(fixture.resolve("missing").toString()));
   ProcessBuilder b=new ProcessBuilder("/bin/sh","-c",empty);b.environment().put("PATH",host.toString());Process missing=b.start();assertEquals(2,missing.waitFor());
  }
  private void executable(java.nio.file.Path file,String body)throws Exception{java.nio.file.Files.write(file,("#!/bin/sh\n"+body+"\n").getBytes(StandardCharsets.UTF_8));assertTrue(file.toFile().setExecutable(true));}

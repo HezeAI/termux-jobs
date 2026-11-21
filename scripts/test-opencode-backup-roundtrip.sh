@@ -2,6 +2,7 @@
 # Explicit isolated backup/profile/native check. Never installs components or APKs.
 set -euo pipefail
 source "$(dirname "$0")/build-env.sh"
+fork_configure_java_tests
 cd "$FORK_ROOT"
 verification="$FORK_ROOT/.verification/opencode-backup-roundtrip"
 mkdir -p "$verification"
@@ -24,11 +25,10 @@ python3 scripts/tests/test_workspace_backup.py
 python3 scripts/tests/test_workspace_selection.py
 python3 scripts/prepare-java-verification.py
 cp scripts/tests/native/OpenCodeBackupRoundTripTest.java .verification/source/app/src/test/java/com/termux/app/workspace/
-export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:-} -Djava.io.tmpdir=/root/termux-fork/.verification/t"
 cd .verification/source
 "$FORK_ROOT/.tools/gradle-7.2/bin/gradle" --offline --no-daemon --max-workers=2 \
  -Dorg.gradle.jvmargs=-Xmx1536m \
- -Pandroid.aapt2FromMavenOverride=/data/data/com.termux/files/usr/bin/aapt2 \
+ -Pandroid.aapt2FromMavenOverride="${FORK_AAPT2:-/data/data/com.termux/files/usr/bin/aapt2}" \
  -I "$FORK_ROOT/scripts/tests/native/force-native-execution.gradle" \
  -x :app:downloadBootstraps :app:testDebugUnitTest \
  --tests '*OpenCodeBackupRestoreTest' --tests '*WorkspaceBackup*' --tests '*OpenCodeBackupRoundTripTest'

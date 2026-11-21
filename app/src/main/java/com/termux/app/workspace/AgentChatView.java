@@ -20,6 +20,12 @@ final class AgentChatView extends LinearLayout {
     java.util.function.BiConsumer<JSONObject,ImageView> thumbnail=(a,v)->{};
     java.util.function.BiConsumer<JSONObject,TextView> apkDetails=(a,v)->{};
     final TextView status,older,connection;
+    private final TextView newest;
+    static final int HISTORY_PAGE=50;
+    private List<JSONObject> history=Collections.emptyList();
+    private int historyStart;
+    private boolean historyInitialized,historyPinned,remoteOlder;
+    Consumer<JSONObject> copyMessage=row->copyText(row.optString("body"));
     private String assistant="AI";
     private boolean codexActions,groupAllTools;
     void actionCards(boolean allTools){codexActions=true;groupAllTools=allTools;}
@@ -30,6 +36,8 @@ final class AgentChatView extends LinearLayout {
     private final Map<String,String> values=new HashMap<>();
     private final Map<String,JSONObject> data=new HashMap<>();
     private final Consumer<JSONObject> open;
+    void openAction(JSONObject row){open.accept(AgentTimelineRows.detail(row));}
+    void openImage(JSONObject attachment){try{open.accept(new JSONObject().put("kind","attachment").put("attachment",attachment));}catch(JSONException impossible){throw new IllegalStateException(impossible);}}
     private io.noties.markwon.Markwon markdown;
     java.util.function.Function<String,Runnable> localFileAction=path->null;
     java.util.function.Function<JSONObject,Runnable> fileCardAction=attachment->null;
@@ -67,7 +75,10 @@ final class AgentChatView extends LinearLayout {
     @Override protected void onDetachedFromWindow(){finishArrivals();seenLiveSnapshot=false;super.onDetachedFromWindow();}
     void preserveTimelinePosition(){if(!touchingTimeline&&!((AgentManualScroll)scroll).manualScrolling()&&restoring==null)queuePosition(position());}
     private void revealLayout(){if(!touchingTimeline&&position().bottom){followLayout=true;bottomAfterLayout();}}
-    void liveRows(List<JSONObject> rows,boolean older,boolean busy){boolean animate=seenLiveSnapshot;seenLiveSnapshot=true;rows(rows,older,animate);}
+    void liveRows(List<JSONObject> rows,boolean older,boolean busy){
+        boolean animate=seenLiveSnapshot;seenLiveSnapshot=true;
+        updateHistory(rows,older,animate,false);
+    }
     final AgentProgressView execution;
     private int scalePercent=100;
     int scalePercent(){return scalePercent;}
@@ -104,7 +115,17 @@ final class AgentChatView extends LinearLayout {
     // ScrollView.fullScroll also moves keyboard focus to a transcript child.
     // Streaming must only move the viewport, leaving both composers and IME composition alone.
     void bottomAfterLayout(){queuePosition(new Position(null,0,0,true));}
-    void followAfterSend(){followNextRows=true;followLayout=true;bottomAfterLayout();}
+    void followAfterSend(){
+        if(historyPinned)followNewest();
+        followNextRows=true;followLayout=true;bottomAfterLayout();
+    }
+    private void followNewest(){
+        historyPinned=false;
+        historyStart=historyPageStart(history,history.size(),HISTORY_PAGE);
+        followNextRows=true;
+        renderHistory(false);
+        bottomAfterLayout();
+    }
     AgentChatView(Context c,Consumer<JSONObject> open,Runnable loadOlder,Runnable sendShell,Runnable terminal,Runnable interrupt){
         super(c);this.open=open;setOrientation(VERTICAL);setBackgroundColor(c.getColor(com.termux.R.color.workspace_chat_background));
         status=label("",12);status.setMaxLines(2);status.setEllipsize(android.text.TextUtils.TruncateAt.END);status.setTag("agent-model-connection");status.setVisibility(GONE);status.setBackground(WorkspaceDialogs.background(c,false));
@@ -116,11 +137,33 @@ final class AgentChatView extends LinearLayout {
                 cancelRestore();followNextRows=false;followLayout=false;
                 return super.dispatchTouchEvent(e);
             }
+            @Override protected void onScrollChanged(int l,int t,int oldL,int oldT){
+                super.onScrollChanged(l,t,oldL,oldT);
+                if(newest==null)return;
+                updateNewest();
+                if(historyPinned&&manualScrolling()&&t>oldT&&nearBottom()){
+                    post(()->{if(historyPinned&&nearBottom())followNewest();});
+                }
+            }
         };scroll.setFillViewport(true);
         scroll.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(restoring==null&&followLayout)bottomAfterLayout();});scroll.setSmoothScrollingEnabled(false);
-        timeline=new AgentTimelineLayout(c);timeline.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{if(followLayout){followLayout=false;if(restoring==null)bottomAfterLayout();}});timeline.setPadding(dp(12),dp(4),dp(12),dp(16));scroll.addView(timeline);
-        older=pill(tr("Предыдущие сообщения","Earlier messages"),loadOlder);timeline.addView(older);
-        FrameLayout body=new FrameLayout(c);body.addView(scroll,new FrameLayout.LayoutParams(-1,-1));body.addView(status,new FrameLayout.LayoutParams(-1,-2,Gravity.TOP));status.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->updateHeaderInset());addView(body,new LayoutParams(-1,0,1));footer=new LinearLayout(c);footer.setOrientation(VERTICAL);body.addView(footer,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));footer.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->updateComposerInset());requests=new LinearLayout(c);requests.setOrientation(VERTICAL);requests.setPadding(dp(12),0,dp(12),0);timeline.addView(requests,new LayoutParams(-1,-2));connection=label("",13);connection.setVisibility(GONE);requests.addView(connection);execution=new AgentProgressView(c);timeline.addView(execution,new LayoutParams(-1,-2));
+        timeline=new AgentTimelineLayout(c);timeline.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->{updateNewest();if(followLayout){followLayout=false;if(restoring==null)bottomAfterLayout();}});timeline.setPadding(dp(12),dp(4),dp(12),dp(16));scroll.addView(timeline);
+        older=historyButton(tr("Предыдущие сообщения","Earlier messages"),()->{
+            if(historyStart>0)updateHistory(history,remoteOlder,false,true);
+            else loadOlder.run();
+        });
+        older.setTag("timeline-load-older");
+        LayoutParams olderParams=new LayoutParams(-2,-2);
+        olderParams.gravity=Gravity.CENTER_HORIZONTAL;
+        olderParams.setMargins(0,dp(4),0,dp(10));
+        timeline.addView(older,olderParams);
+        older.setVisibility(GONE);
+        newest=historyButton(tr("Новые сообщения ↓","New messages ↓"),this::followNewest);
+        newest.setTag("timeline-follow-newest");
+        newest.setVisibility(GONE);
+        FrameLayout body=new FrameLayout(c);body.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
+        body.addView(newest,new FrameLayout.LayoutParams(-2,-2,Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL));
+        body.addView(status,new FrameLayout.LayoutParams(-1,-2,Gravity.TOP));status.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->updateHeaderInset());addView(body,new LayoutParams(-1,0,1));footer=new LinearLayout(c);footer.setOrientation(VERTICAL);body.addView(footer,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));footer.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->updateComposerInset());requests=new LinearLayout(c);requests.setOrientation(VERTICAL);requests.setPadding(dp(12),0,dp(12),0);timeline.addView(requests,new LayoutParams(-1,-2));connection=label("",13);connection.setVisibility(GONE);requests.addView(connection);execution=new AgentProgressView(c);timeline.addView(execution,new LayoutParams(-1,-2));
         attachmentDrafts=new LinearLayout(c);attachmentDrafts.setOrientation(VERTICAL);attachmentDrafts.setVisibility(GONE);footer.addView(attachmentDrafts,new LayoutParams(-1,-2));
         folder=new WorkspaceIconButton(c);folder.setIcon(c.getDrawable(com.termux.R.drawable.workspace_paperclip),dp(24));folder.setTextColor(WorkspaceDialogs.ACCENT);folder.setContentDescription(tr("Прикрепить файл","Attach file"));folder.setTooltipText(tr("Прикрепить файл","Attach file"));folder.setVisibility(GONE);
 
@@ -142,6 +185,9 @@ final class AgentChatView extends LinearLayout {
         int padding=dp(16)+composerInset+footer.getHeight();
         FrameLayout.LayoutParams f=(FrameLayout.LayoutParams)footer.getLayoutParams();
         if(f.bottomMargin!=composerInset){f.bottomMargin=composerInset;footer.setLayoutParams(f);}
+        FrameLayout.LayoutParams jump=(FrameLayout.LayoutParams)newest.getLayoutParams();
+        int jumpBottom=composerInset+footer.getHeight()+dp(8);
+        if(jump.bottomMargin!=jumpBottom){jump.bottomMargin=jumpBottom;newest.setLayoutParams(jump);}
         if(timeline.getPaddingBottom()==padding)return;
         Position held=position();timeline.setPadding(timeline.getPaddingLeft(),timeline.getPaddingTop(),timeline.getPaddingRight(),padding);queuePosition(held);
     }
@@ -153,16 +199,125 @@ final class AgentChatView extends LinearLayout {
     int dp(int n){return Math.round(n*getResources().getDisplayMetrics().density);}
     TextView label(String s,int size){TextView t=new AgentLinkTextView(getContext());t.setText(s);t.setTextSize(size);t.setTextColor(0xfff0f0ee);t.setPadding(dp(10),dp(8),dp(10),dp(8));return t;}
     TextView pill(String s,Runnable action){TextView t=label(s,12);GradientDrawable bg=new GradientDrawable();bg.setColor(0xff232426);bg.setCornerRadius(dp(22));bg.setStroke(dp(1),0xff393a3c);t.setBackground(bg);t.setOnClickListener(v->action.run());LayoutParams lp=new LayoutParams(-2,-2);lp.setMargins(dp(3),dp(5),dp(3),dp(5));t.setLayoutParams(lp);t.setMinHeight(dp(36));return t;}
+    private TextView historyButton(String title,Runnable action){
+        TextView button=new TextView(getContext());
+        button.setText(title);button.setTextSize(11);button.setTextColor(WorkspaceDialogs.MUTED);
+        button.setGravity(Gravity.CENTER);button.setMinHeight(dp(44));button.setPadding(dp(8),0,dp(8),0);
+        GradientDrawable background=new GradientDrawable();
+        background.setColor(WorkspaceDialogs.SURFACE);background.setStroke(dp(1),WorkspaceDialogs.LINE);
+        background.setCornerRadius(dp(18));button.setBackground(background);
+        button.setOnClickListener(v->action.run());
+        return button;
+    }
+    void copyText(String value){
+        if(value.length()<=65536){
+            android.content.ClipboardManager clipboard=(android.content.ClipboardManager)getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Termux Job’s",value));
+            Toast.makeText(getContext(),tr("Скопировано","Copied"),Toast.LENGTH_SHORT).show();
+            return;
+        }
+        WorkspaceDialogs.builder(getContext())
+            .setMessage(tr("Полный текст слишком велик для буфера обмена. Сохранить всё содержимое в Download?","The full text is too large for the clipboard. Save the complete content in Download?"))
+            .setNegativeButton(tr("Отмена","Cancel"),null)
+            .setPositiveButton(tr("Сохранить полный текст","Save full text"),(dialog,which)->{
+                Thread worker=new Thread(()->{
+                    java.io.File generated=null;boolean saved=false;
+                    try{
+                        generated=ActionDiffExport.prepare(getContext().getCacheDir(),value,"txt");
+                        ActionDiffExport.publish(getContext(),generated);saved=true;
+                    }catch(Exception unavailable){
+                        // The export result is reported below.
+                    }finally{if(generated!=null)generated.delete();}
+                    final boolean success=saved;
+                    post(()->Toast.makeText(getContext(),success?
+                        tr("Полное содержимое сохранено в Download","Full content saved in Download"):
+                        tr("Не удалось сохранить полное содержимое в Download","Could not save full content in Download"),Toast.LENGTH_LONG).show());
+                },"chat-text-export");
+                worker.setDaemon(true);worker.start();
+            }).show();
+    }
     void olderState(boolean loading,String error){older.setEnabled(!loading);older.setText(loading?tr("Загрузка сообщений…","Loading messages…"):error!=null?error:tr("Предыдущие сообщения","Earlier messages"));}
-    void olderRows(List<JSONObject> rows,boolean hasOlder){boolean fits=timeline.getHeight()<=scroll.getHeight();Position held=position();rows(rows,hasOlder);restorePosition(fits?new Position(null,0,0,false):new Position(held.anchor,held.offset,held.y,false,held.step));}
-    boolean canReveal(String key){return views.containsKey(key);}
-    boolean reveal(String key){if(!views.containsKey(key))return false;restorePosition(new Position(key,headerInset,0,false));return true;}
-    void clear(){((AgentManualScroll)scroll).hideIndicator();finishArrivals();arrivalSeen.clear();arrivalActions.clear();seenLiveSnapshot=false;timelineExpansion.clear();olderState(false,null);cancelRestore();touchingTimeline=false;followNextRows=false;followLayout=false;views.clear();values.clear();data.clear();timeline.removeViews(1,timeline.getChildCount()-1);clearRequests();timeline.addView(requests);timeline.addView(execution);scroll.scrollTo(0,0);}
-    void rows(List<JSONObject> rows,boolean hasOlder){rows(rows,hasOlder,false);}
-    private void rows(List<JSONObject> rows,boolean hasOlder,boolean animate){
+    void olderRows(List<JSONObject> rows,boolean hasOlder){updateHistory(rows,hasOlder,false,true);}
+    private int historyIndex(String key,List<JSONObject> source){
+        if(key==null)return -1;
+        for(int i=0;i<source.size();i++)if(source.get(i).optString("key").equals(key))return i;
+        return -1;
+    }
+    boolean canReveal(String key){return views.containsKey(key)||historyIndex(key,history)>=0;}
+    boolean reveal(String key){
+        if(!views.containsKey(key)){
+            int index=historyIndex(key,history);
+            if(index<0)return false;
+            historyStart=Math.min(historyStart,index);historyPinned=true;renderHistory(false);
+        }
+        if(!views.containsKey(key))return false;
+        restorePosition(new Position(key,headerInset,0,false));return true;
+    }
+    String historyFirst(){return historyStart<history.size()?history.get(historyStart).optString("key"):null;}
+    boolean historyPinned(){return historyPinned;}
+    void restoreHistory(List<JSONObject> rows,boolean hasOlder,String first,boolean pinned){
+        int start=historyIndex(first,rows);
+        if(start<0){updateHistory(rows,hasOlder,false,false);return;}
+        history=rows;historyStart=start;historyPinned=pinned;historyInitialized=true;remoteOlder=hasOlder;
+        renderHistory(false);
+    }
+    void clear(){((AgentManualScroll)scroll).hideIndicator();finishArrivals();arrivalSeen.clear();arrivalActions.clear();seenLiveSnapshot=false;timelineExpansion.clear();olderState(false,null);cancelRestore();touchingTimeline=false;followNextRows=false;followLayout=false;history=Collections.emptyList();historyStart=0;historyInitialized=false;historyPinned=false;remoteOlder=false;older.setVisibility(GONE);newest.setVisibility(GONE);views.clear();values.clear();data.clear();timeline.removeViews(1,timeline.getChildCount()-1);clearRequests();timeline.addView(requests);timeline.addView(execution);scroll.scrollTo(0,0);}
+    void rows(List<JSONObject> rows,boolean hasOlder){updateHistory(rows,hasOlder,false,false);}
+    private static String messageId(JSONObject row){
+        String message=row.optString("message");
+        return message.isEmpty()?row.optString("key"):message;
+    }
+    private static int historyPageStart(List<JSONObject> rows,int end,int messages){
+        String previous=null;
+        for(int i=end-1;i>=0;i--){
+            String message=messageId(rows.get(i));
+            if(!message.equals(previous)){
+                if(messages--==0)return i+1;
+                previous=message;
+            }
+        }
+        return 0;
+    }
+    private static int advanceHistoryPage(List<JSONObject> rows,int start){
+        String previous=null;
+        int messages=0;
+        for(int i=start;i<rows.size();i++){
+            String message=messageId(rows.get(i));
+            if(!message.equals(previous)){
+                if(messages++==HISTORY_PAGE)return i;
+                previous=message;
+            }
+        }
+        return rows.size();
+    }
+    private boolean nearBottom(){return timeline.getHeight()-scroll.getHeight()-scroll.getScrollY()<dp(48);}
+    private void updateNewest(){newest.setVisibility(historyPinned||!nearBottom()?VISIBLE:GONE);}
+    private void updateHistory(List<JSONObject> rows,boolean hasOlder,boolean animate,boolean previous){
+        Position held=position();
+        boolean fits=timeline.getHeight()<=scroll.getHeight();
+        int start=-1;
+        if(historyInitialized){
+            if(historyStart==0&&!previous&&!historyPinned)start=0;
+            else for(int i=historyStart;i<history.size()&&start<0;i++)start=historyIndex(history.get(i).optString("key"),rows);
+        }
+        if(start<0)start=historyPageStart(rows,rows.size(),HISTORY_PAGE);
+        if(previous){start=historyPageStart(rows,start,HISTORY_PAGE);historyPinned=true;}
+        else if(!historyPinned&&held.bottom&&!touchingTimeline&&!((AgentManualScroll)scroll).manualScrolling()){
+            int lastPage=historyPageStart(rows,rows.size(),HISTORY_PAGE);
+            for(int next=advanceHistoryPage(rows,start);next>start&&next<=lastPage;next=advanceHistoryPage(rows,start))start=next;
+        }
+        historyInitialized=!rows.isEmpty();history=rows;historyStart=start;remoteOlder=hasOlder;
+        renderHistory(animate);
+        if(previous)restorePosition(fits?new Position(null,0,0,false):new Position(held.anchor,held.offset,held.y,false,held.step));
+    }
+    private void renderHistory(boolean animate){
+        renderRows(history.subList(historyStart,history.size()),historyStart>0||remoteOlder,animate);
+        updateNewest();
+    }
+    private void renderRows(List<JSONObject> rows,boolean hasOlder,boolean animate){
         rows=AgentMessageTime.captions(rows);
-        if(codexActions)rows=CodexActionTimeline.group(rows,groupAllTools);
-        Position held=position();final boolean bottom=!touchingTimeline&&!((AgentManualScroll)scroll).manualScrolling()&&(followNextRows||held.bottom);
+        if(codexActions)rows=AgentTimelineRows.project(rows);
+        Position held=position();final boolean bottom=!touchingTimeline&&!((AgentManualScroll)scroll).manualScrolling()&&(followNextRows||!historyPinned&&held.bottom);
         Set<String> incomingGroups=new HashSet<>();for(JSONObject row:rows)if(row.optString("kind").equals("actionGroup"))incomingGroups.add(row.optString("key"));
         Map<String,View> priorViews=new HashMap<>(views),priorActions=new HashMap<>();
         for(Map.Entry<String,JSONObject> entry:data.entrySet()){JSONObject row=entry.getValue();View previous=views.get(entry.getKey());if(previous==null)continue;if(row.optString("kind").equals("tool"))priorActions.put(choiceKey(row),previous);JSONArray steps=row.optJSONArray("steps");if(steps!=null)for(int n=0;n<steps.length();n++)if(steps.optJSONObject(n)!=null)priorActions.put(choiceKey(steps.optJSONObject(n)),previous);}
@@ -173,6 +328,26 @@ final class AgentChatView extends LinearLayout {
                 String signature=value+java.util.TimeZone.getDefault().getID()+WorkspaceLanguage.code(getContext())+android.text.format.DateFormat.is24HourFormat(getContext());
                 if(!signature.equals(values.get(key))){changed=true;AgentChatScale.prepare(caption);values.put(key,signature);caption.setText(AgentMessageTime.caption(getContext(),r.optJSONObject("requestSummary")));caption.setTextColor(WorkspaceDialogs.MUTED);caption.setGravity(Gravity.END);caption.setSingleLine(false);caption.setTag("completion-"+r.optString("message"));caption.setContentDescription(tr("Ответ завершён: ","Response completed: ")+AgentMessageTime.full(getContext(),r.optJSONObject("requestSummary").optLong("completedAt")));caption.setOnClickListener(v->open.accept(r));LayoutParams lp=new LayoutParams(-1,-2);lp.setMargins(0,0,0,dp(6));caption.setLayoutParams(lp);}
                 views.put(key,caption);if(caption.getParent()==null){changed=true;timeline.addView(caption,index);}else if(timeline.indexOfChild(caption)!=index){changed=true;((AgentTimelineLayout)timeline).move(caption,index);}index++;continue;
+            }
+            if(codexActions&&r.optString("kind").equals("tool")){
+                View existing=views.get(key),card;
+                String type=r.optString("toolType");
+                if(CodexActionTimeline.image(r)){
+                    AgentImageActionView image=existing instanceof AgentImageActionView?(AgentImageActionView)existing:new AgentImageActionView(this);
+                    if(!value.equals(values.get(key)))image.update(r);card=image;
+                }else if(AgentTimelineRows.web(r)){
+                    AgentWebActionView web=existing instanceof AgentWebActionView?(AgentWebActionView)existing:new AgentWebActionView(this);
+                    if(!value.equals(values.get(key)))web.update(r,r.optString("webLabel"),r.optBoolean("webSearch"));card=web;
+                }else if(AgentSubagentPresentation.matches(r)||type.equals("contextCompaction")||r.optString("part").equals("context")||type.equals("mcpToolCall")){
+                    AgentStandaloneActionView standalone=existing instanceof AgentStandaloneActionView?(AgentStandaloneActionView)existing:new AgentStandaloneActionView(this);
+                    if(!value.equals(values.get(key)))standalone.update(r);card=standalone;
+                }else{
+                    AgentCompactActionView compact=existing instanceof AgentCompactActionView?(AgentCompactActionView)existing:new AgentCompactActionView(this);
+                    if(!value.equals(values.get(key)))compact.update(r);card=compact;
+                }
+                if(!value.equals(values.get(key))||existing!=card){changed=true;values.put(key,value);AgentChatScale.prepare(card);LayoutParams lp=new LayoutParams(-1,-2);lp.setMargins(0,dp(5),0,dp(card instanceof AgentStandaloneActionView||card instanceof AgentImageActionView?20:6));card.setLayoutParams(lp);}
+                if(existing!=null&&existing!=card)timeline.removeView(existing);views.put(key,card);
+                if(card.getParent()==null){changed=true;timeline.addView(card,index);}else if(timeline.indexOfChild(card)!=index){changed=true;((AgentTimelineLayout)timeline).move(card,index);}index++;continue;
             }
             if(r.optString("kind").equals("actionGroup")){
                 value+=java.util.TimeZone.getDefault().getID();
@@ -203,35 +378,46 @@ final class AgentChatView extends LinearLayout {
                 }
                 views.put(key,card);if(card.getParent()==null){changed=true;timeline.addView(card,index);}else if(timeline.indexOfChild(card)!=index){changed=true;((AgentTimelineLayout)timeline).move(card,index);}index++;continue;
             }
-            if(r.optString("kind").equals("text")&&AgentMarkdown.rich(r.optString("body"))){
-                if(markdown==null)markdown=fileMarkdown();View existing=views.get(key);AgentMarkdownView block=existing instanceof AgentMarkdownView?(AgentMarkdownView)existing:new AgentMarkdownView(getContext(),markdown);
-                if(!value.equals(values.get(key))||existing!=block){changed=true;values.put(key,value);AgentChatScale.prepare(block);final String k=key;block.animation(animate,this::revealLayout);block.update(assistant,r.optString("body"),r.optBoolean("more")?()->{JSONObject row=data.get(k);if(row!=null)open.accept(row);}:null);}
-                if(existing!=null&&existing!=block){timeline.removeView(existing);}views.put(key,block);
+            if(r.optString("kind").equals("text")){
+                if(markdown==null)markdown=fileMarkdown();
+                View existing=views.get(key);
+                AgentMarkdownView block=existing instanceof AgentMarkdownView?(AgentMarkdownView)existing:
+                    new AgentMarkdownView(getContext(),markdown,()->{JSONObject row=data.get(key);if(row!=null)copyMessage.accept(row);});
+                if(!value.equals(values.get(key))||existing!=block){
+                    changed=true;values.put(key,value);AgentChatScale.prepare(block);
+                    block.animation(animate,this::revealLayout);
+                    block.update(assistant,r.optString("body"),r.optBoolean("more")?()->{JSONObject row=data.get(key);if(row!=null)open.accept(row);}:null);
+                }
+                if(existing!=null&&existing!=block)timeline.removeView(existing);
+                views.put(key,block);
                 if(block.getParent()==null){changed=true;timeline.addView(block,index);}else if(timeline.indexOfChild(block)!=index){changed=true;((AgentTimelineLayout)timeline).move(block,index);}index++;continue;
             }
             if(r.optString("kind").equals("user")){
                 View old=views.get(key);AgentBubble bubble=old instanceof AgentBubble?(AgentBubble)old:new AgentBubble(getContext());
                 if(!value.equals(values.get(key))||old!=bubble){changed=true;values.put(key,value);AgentChatScale.prepare(bubble);
-                    TextView text=bubble.getChildCount()>0?(TextView)bubble.getChildAt(0):label("",14);if(text.getParent()==null)bubble.addView(text,new LayoutParams(-2,-2));
+                    TextView text=bubble.getChildCount()>0?(TextView)bubble.getChildAt(0):label("",15);
+                    if(text.getParent()==null){
+                        text.setPadding(dp(14),dp(12),dp(14),dp(12));text.setLineSpacing(dp(3),1f);
+                        bubble.addView(text,new LayoutParams(-2,-2));
+                    }
                     String shown=r.optString("body");if(r.optBoolean("queued"))shown=tr("В очереди · ","Queued · ")+shown;else if(r.optString("delivery").equals("cancelled"))shown=tr("Отменено · ","Cancelled · ")+shown;else if(java.util.Arrays.asList("refused","discarded").contains(r.optString("delivery")))shown=tr("Отклонено CLI · ","Rejected by CLI · ")+shown;else if(r.optJSONObject("deliveryReceipt")==null&&java.util.Arrays.asList("started","current","completed").contains(r.optString("delivery")))shown=tr("Принято CLI · ","Accepted by CLI · ")+shown;
                     shown+=r.optBoolean("more")?tr("\nНажмите для полного текста…","\nTap for full text…"):"";if(!shown.contentEquals(text.getText()))text.setText(shown);text.setTextIsSelectable(true);text.setOnClickListener(r.optBoolean("more")?v->{JSONObject latest=data.get(key);if(latest!=null)open.accept(latest);}:null);
                     if(bubble.getChildCount()>1)bubble.removeViewAt(1);if(r.optJSONObject("deliveryReceipt")!=null)bubble.addView(deliveryCaption(r),new LayoutParams(-2,-2));
-                    GradientDrawable bg=new GradientDrawable();bg.setColor(WorkspaceDialogs.USER);bg.setCornerRadius(dp(18));bubble.setBackground(bg);LayoutParams lp=new LayoutParams(-2,-2);lp.gravity=Gravity.END;lp.setMargins(0,dp(6),0,dp(10));bubble.setLayoutParams(lp);
+                    GradientDrawable bg=new GradientDrawable();bg.setColor(WorkspaceDialogs.USER);bg.setCornerRadius(dp(21));bubble.setBackground(bg);LayoutParams lp=new LayoutParams(-2,-2);lp.gravity=Gravity.END;lp.setMargins(0,dp(5),0,dp(20));bubble.setLayoutParams(lp);
                 }
                 if(old!=null&&old!=bubble)timeline.removeView(old);views.put(key,bubble);
                 if(bubble.getParent()==null){changed=true;timeline.addView(bubble,index);}else if(timeline.indexOfChild(bubble)!=index){changed=true;((AgentTimelineLayout)timeline).move(bubble,index);}index++;continue;
             }
             View previous=views.get(key);if(previous!=null&&!(previous instanceof TextView)){timeline.removeView(previous);views.remove(key);values.remove(key);}
             TextView t=(TextView)views.get(key);
-            if(t==null){t=label("",14);views.put(key,t);}if(!r.optString("kind").equals("text"))((AgentLinkTextView)t).smoothSize(this,animate||landings.containsKey(t));
+            if(t==null){t=label("",14);views.put(key,t);}((AgentLinkTextView)t).smoothSize(this,animate||landings.containsKey(t));
             if(!value.equals(values.get(key))){changed=true;values.put(key,value);AgentChatScale.prepare(t);String kind=r.optString("kind");boolean error=kind.equals("error");boolean chip=kind.equals("reasoning")||kind.equals("tool")||kind.equals("receipt");
                 String caption=kind.equals("reasoning")?tr("Рассуждение ▾","Thinking ▾"):kind.equals("receipt")?receiptTitle(r):(codexActions?CodexActionLabels.title(r,WorkspaceLanguage.code(getContext()).equals("ru")):r.optString("title"))+" ▾";
                 String body=r.optString("actionOutcome").equals("user_declined")?tr("Действие отклонено","Action declined"):r.optString("body");if(r.optBoolean("queued"))body=tr("В очереди · ","Queued · ")+body;else if(r.optString("delivery").equals("cancelled"))body=tr("Отменено · ","Cancelled · ")+body;else if(java.util.Arrays.asList("refused","discarded").contains(r.optString("delivery")))body=tr("Отклонено CLI · ","Rejected by CLI · ")+body;else if(java.util.Arrays.asList("started","current","completed").contains(r.optString("delivery")))body=tr("Принято CLI · ","Accepted by CLI · ")+body;String shown=AgentChatErrors.nativeDiagnosticHint(body)?tr("Подробности доступны по нажатию на сообщение об ошибке.","Tap the error message for details."):body;
-                if(!kind.equals("text"))t.setText(error?tr("Ошибка · ","Error · ")+assistant+"\n"+AgentChatErrors.explain(body,WorkspaceLanguage.code(getContext()).equals("ru"))+tr("\nПодробности ▾","\nDetails ▾"):chip?caption:(kind.equals("user")?tr("Вы: ","You: "):kind.equals("text")?assistant+": ":"")+shown+(r.optBoolean("more")?tr("\nНажмите для полного текста…","\nTap for full text…"):""));
+                t.setText(error?tr("Ошибка · ","Error · ")+assistant+"\n"+AgentChatErrors.explain(body,WorkspaceLanguage.code(getContext()).equals("ru"))+tr("\nПодробности ▾","\nDetails ▾"):chip?caption:shown+(r.optBoolean("more")?tr("\nНажмите для полного текста…","\nTap for full text…"):""));
                 t.setTextIsSelectable(!chip&&!error);
-                if(kind.equals("text")){if(markdown==null)markdown=fileMarkdown();android.text.SpannableStringBuilder formatted=new android.text.SpannableStringBuilder(assistant+": ");formatted.append(markdown.toMarkdown(AgentMarkdown.checkboxes(shown)));if(r.optBoolean("more"))formatted.append(tr("\nНажмите для полного текста…","\nTap for full text…"));((AgentLinkTextView)t).animateNextText(animate,this::revealLayout);markdown.setParsedMarkdown(t,formatted);}
                 final String k=key;t.setOnClickListener(error||chip||r.optBoolean("more")?v->{JSONObject row=data.get(k);if(row!=null)open.accept(row);}:null);t.setTextSize(chip?12:14);t.setTypeface(chip?Typeface.DEFAULT:Typeface.DEFAULT);
-                GradientDrawable bg=new GradientDrawable();bg.setColor(error?0xff241416:chip?0xff232426:android.graphics.Color.BLACK);bg.setCornerRadius(error?dp(12):chip?dp(22):0);bg.setStroke(dp(1),error?0xff704343:chip?0xff393a3c:kind.equals("user")?0xff393a3c:android.graphics.Color.BLACK);t.setBackground(bg);
+                GradientDrawable bg=new GradientDrawable();bg.setColor(error?0xff241416:chip?0xff232426:android.graphics.Color.BLACK);bg.setCornerRadius(error?dp(12):chip?dp(22):0);bg.setStroke(dp(1),error?0xff704343:chip?0xff393a3c:android.graphics.Color.BLACK);t.setBackground(bg);
                 LayoutParams lp=new LayoutParams(chip?-2:-1,-2);lp.setMargins(0,dp(6),0,dp(chip?3:10));lp.gravity=Gravity.START;t.setLayoutParams(lp);
             }
             if(t.getParent()==null){changed=true;timeline.addView(t,index);}else if(timeline.indexOfChild(t)!=index){changed=true;((AgentTimelineLayout)timeline).move(t,index);}index++;

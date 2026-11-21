@@ -20,14 +20,72 @@ final class AgentMarkdownView extends LinearLayout {
     private final ArrayList<String> signatures=new ArrayList<>();
     private final ArrayList<View> blocks=new ArrayList<>();
     private final TextView author;
+    private final TextView copyCode;
+    private List<String> fencedCode=Collections.emptyList();
     AgentMarkdownView(Context c){this(c,AgentMarkdown.create(c));}
-    AgentMarkdownView(Context c,Markwon renderer){super(c);setOrientation(VERTICAL);markdown=renderer;author=text(12);author.setTextColor(0xffecece5);addView(author);}
+    AgentMarkdownView(Context c,Markwon renderer){this(c,renderer,null);}
+    AgentMarkdownView(Context c,Markwon renderer,Runnable copyMessage){
+        super(c);setOrientation(VERTICAL);markdown=renderer;
+        author=text(copyMessage==null?12:11);
+        if(copyMessage==null){
+            author.setTextColor(WorkspaceDialogs.ACCENT);addView(author);copyCode=null;return;
+        }
+        setPadding(dp(5),0,dp(5),0);
+        LinearLayout toolbar=new LinearLayout(c);
+        toolbar.setGravity(Gravity.CENTER_VERTICAL);
+        toolbar.setTag("agent-message-toolbar");
+        author.setPadding(0,0,0,0);
+        author.setTextColor(WorkspaceDialogs.MUTED);
+        toolbar.addView(author,new LayoutParams(0,-2,1));
+        copyCode=messageButton(tr("Код","Code"),"agent-message-code",()->chooseCode(toolbar));
+        copyCode.setContentDescription(tr("Копировать блок кода","Copy code block"));
+        copyCode.setVisibility(GONE);
+        toolbar.addView(copyCode);
+        toolbar.addView(messageButton(tr("Копировать","Copy"),"agent-message-copy",copyMessage));
+        addView(toolbar,new LayoutParams(-1,-2));
+        LayoutParams margins=new LayoutParams(-1,-2);
+        margins.setMargins(0,dp(5),0,dp(20));
+        setLayoutParams(margins);
+    }
+    private String tr(String ru,String en){return WorkspaceLanguage.code(getContext()).equals("ru")?ru:en;}
+    private TextView messageButton(String title,String tag,Runnable click){
+        TextView button=new TextView(getContext());
+        button.setGravity(Gravity.CENTER);
+        button.setText(title);
+        button.setTextSize(11);
+        button.setTextColor(WorkspaceDialogs.MUTED);
+        button.setMinHeight(dp(44));
+        button.setPadding(dp(8),0,dp(8),0);
+        button.setTag(tag);
+        button.setOnClickListener(v->click.run());
+        return button;
+    }
+    private void chooseCode(View anchor){
+        if(fencedCode.size()==1){copyCode(fencedCode.get(0));return;}
+        PopupMenu menu=new PopupMenu(getContext(),anchor);
+        for(int i=0;i<fencedCode.size();i++){
+            String code=fencedCode.get(i);
+            menu.getMenu().add(tr("Код","Code")+" · "+(i+1)).setOnMenuItemClickListener(item->{copyCode(code);return true;});
+        }
+        menu.show();
+    }
+    private void copyCode(String code){
+        android.content.ClipboardManager clipboard=getContext().getSystemService(android.content.ClipboardManager.class);
+        clipboard.setPrimaryClip(ClipData.newPlainText("code",code));
+        Toast.makeText(getContext(),tr("Скопировано","Copied"),Toast.LENGTH_SHORT).show();
+    }
     private int dp(int n){return WorkspaceDialogs.dp(getContext(),n);}
     private TextView text(int size){TextView v=new AgentLinkTextView(getContext());v.setTextColor(0xfff0f0ee);v.setTextSize(size);v.setPadding(dp(10),dp(6),dp(10),dp(6));return v;}
     private GradientDrawable background(){GradientDrawable b=new GradientDrawable();b.setColor(WorkspaceDialogs.BG);b.setCornerRadius(dp(12));b.setStroke(dp(1),WorkspaceDialogs.LINE);return b;}
     void update(String name,String source,Runnable more){
         author.setText(name);String value=AgentMarkdown.checkboxes(source);
         Node document=markdown.parse(value);List<Node> nodes=new ArrayList<>();for(Node n=document.getFirstChild();n!=null;n=n.getNext())nodes.add(n);
+        if(copyCode!=null){
+            List<String> code=new ArrayList<>();
+            collectCode(document,code);
+            fencedCode=code;
+            copyCode.setVisibility(code.isEmpty()?GONE:VISIBLE);
+        }
         for(int i=0;i<nodes.size();i++){
             Node n=nodes.get(i);String signature=signature(n);View old=i<blocks.size()?blocks.get(i):null;
             if(old!=null&&signatures.get(i).equals(signature))continue;
@@ -40,6 +98,14 @@ final class AgentMarkdownView extends LinearLayout {
         while(blocks.size()>nodes.size()){int i=blocks.size()-1;removeView(blocks.remove(i));signatures.remove(i);}
         View existing=findViewWithTag("markdown-more");if(existing!=null)removeView(existing);
         if(more!=null){TextView button=text(12);button.setText(WorkspaceLanguage.code(getContext()).equals("ru")?"Нажмите для полного текста…":"Tap for full text…");button.setTextColor(0xffecece5);button.setTag("markdown-more");button.setOnClickListener(v->more.run());addView(button);}
+    }
+    private static void collectCode(Node node,List<String> values){
+        for(Node child=node.getFirstChild();child!=null;child=child.getNext()){
+            if(child instanceof FencedCodeBlock){
+                String value=((FencedCodeBlock)child).getLiteral();
+                values.add(value.endsWith("\n")?value.substring(0,value.length()-1):value);
+            }else collectCode(child,values);
+        }
     }
     private static String signature(Node n){StringBuilder b=new StringBuilder();signature(n,b);return b.toString();}
     private static void signature(Node n,StringBuilder b){b.append(n.getClass().getName()).append(':');if(n instanceof Text)b.append(((Text)n).getLiteral());if(n instanceof Code)b.append(((Code)n).getLiteral());if(n instanceof FencedCodeBlock)b.append(((FencedCodeBlock)n).getInfo()).append('\0').append(((FencedCodeBlock)n).getLiteral());if(n instanceof IndentedCodeBlock)b.append(((IndentedCodeBlock)n).getLiteral());if(n instanceof Heading)b.append(((Heading)n).getLevel());if(n instanceof TableCell)b.append(((TableCell)n).isHeader()).append(((TableCell)n).getAlignment());if(n instanceof Link)b.append(((Link)n).getDestination());if(n instanceof OrderedList)b.append(((OrderedList)n).getStartNumber());for(Node c=n.getFirstChild();c!=null;c=c.getNext())signature(c,b);b.append(';');}

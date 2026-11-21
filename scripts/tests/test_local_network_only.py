@@ -9,6 +9,7 @@ import platform
 import socket
 import subprocess
 import sys
+import tempfile
 
 if '--grandchild' in sys.argv:
     probe = socket.socket()
@@ -140,8 +141,9 @@ try:
         pass
     result = json.loads(complete.stdout)
     (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
-    import tempfile
-    with tempfile.TemporaryDirectory(prefix='ng', dir='/root/termux-fork/.verification/t') as scope:
+    socket_root = Path(os.environ.get('FORK_TEST_TMPDIR') or Path(__file__).resolve().parents[2] / '.cx')
+    socket_root.mkdir(mode=0o700, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='ng', dir=socket_root) as scope:
         foreign_unix = socket.socket(socket.AF_UNIX)
         foreign_name = scope + '/foreign.sock'
         foreign_unix.bind(foreign_name)

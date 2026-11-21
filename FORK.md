@@ -1,10 +1,10 @@
 # Building Termux Job’s
 
-Current stable source: **v2.1.8 / versionCode 1540**. `fork/base` includes this
-release line and current documentation. Use tag `v2.1.8` for the exact published
+Current stable source: **v2.1.9 / versionCode 1549**. `fork/base` includes this
+release line and current documentation. Use tag `v2.1.9` for the exact published
 release source; later documentation/CI commits do not replace that APK.
-[Release](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.8) ·
-[Artifact and validation](docs/fork/VALIDATION-v2.1.8.md).
+[Release](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.9) ·
+[Artifact and validation](docs/fork/VALIDATION-v2.1.9.md).
 
 ## Toolchain and isolation
 
@@ -23,6 +23,12 @@ working environments or a shared SDK. No APK is installed by these instructions.
 - [build-env.sh](scripts/build-env.sh) uses `.tools/sdk`, `.tools/gradle-home`
   and `.tools/tmp`. `FORK_ANDROID_HOME` must resolve inside the checkout;
   `FORK_JAVA_HOME` selects the project JDK. Do not put a shared SDK in `sdk.dir`.
+
+The local phone build runs from Ubuntu AI. Its JDK uses the Linux ARM64 glibc
+loader. The APK resource compiler used here is the project-local Android ARM64
+`aapt2`, which uses Android's `/system/bin/linker64` and its verified library
+set. Agent CLIs installed for Ubuntu AI use the guest's Linux ABI. Check these
+paths and loaders separately when moving the build to another environment.
 
 ## Verified inputs and CI
 
@@ -55,19 +61,30 @@ mandatory before a public application release. Documentation-only changes requir
 text/link/diff checks, not an APK rebuild. Read [LINT](docs/fork/LINT.md) for the
 modern runner and SDK warning boundaries.
 
+The JVM test entry points configure JDK 11 before launching Gradle 7.2 and
+Robolectric 4.4. Use `FORK_JAVA_HOME` for an explicit JDK 11. The test worker
+uses a real short directory under `.cx/` by default. CI supplies a short private
+path via `FORK_TEST_TMPDIR`. The test launcher preserves apostrophes in the
+Gradle worker classpath. Robolectric uses the normal Gradle Android resources
+and keeps downloaded framework JARs in the checkout-local `.tools/m2/`.
+
+For a focused retry, use `bash scripts/verify-java.sh --tests '*ClassName'`.
+Repeat `--tests` to add affected classes. With no filter, the script runs all
+four of its standard JVM module suites. CI runs its existing five-module suite.
+
 For an authorized ARM64 release build, prepare `FORK_NATIVE_SYSROOT` using an
 existing read-only Android NDK sysroot and set `FORK_NATIVE_CLANG`, `FORK_NATIVE_LLD`
 and `FORK_AAPT2` to compatible tools. Then run:
 
 ```sh
-TERMUX_APP_VERSION_NAME=2.1.8 bash scripts/build-local-arm64.sh
+TERMUX_APP_VERSION_NAME=2.1.9 bash scripts/build-local-arm64.sh
 ```
 
-This sets the APK tag to `v2.1.8-arm64`; the output is
-`build/apk/Termux-Jobs-v2.1.8-arm64.apk`. Set the version explicitly: the script's
+This sets the APK tag to `v2.1.9-arm64`; the output is
+`build/apk/Termux-Jobs-v2.1.9-arm64.apk`. Set the version explicitly: the script's
 legacy fallback is not the current release version. VersionCode comes from
 [app/build.gradle](app/build.gradle). A new release needs its own authorized
-metadata and checks; never overwrite the published 2.1.8 artifact.
+metadata and checks; preserve earlier signed artifacts.
 
 ## Signing and publication
 

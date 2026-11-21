@@ -1,5 +1,7 @@
 # Штатный RTK 1.1.0 OSS — исследование 2026-11-08
 
+> Historical research for the integration removed from the unreleased source.
+
 Исследование завершено до изменения приложения. Материалы: `.verification/rtk-native-research/`.
 Рабочие чаты, авторизация и сохранённые правила не менялись. Реальные CLI использовали
 фиктивный провайдер, изолированный HOME и kernel network guard. Это не реальные модели.

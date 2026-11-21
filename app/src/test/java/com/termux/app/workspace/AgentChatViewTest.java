@@ -19,7 +19,47 @@ public class AgentChatViewTest {
   view.assistantName("OpenCode");JSONObject thought=row("thought","reasoning","private reasoning"),answer=row("answer","text","first");view.rows(Arrays.asList(thought,answer),false);
   View chip=view.timeline.getChildAt(1),text=view.timeline.getChildAt(2);assertTrue(((TextView)chip).getText().toString().contains("Thinking")||((TextView)chip).getText().toString().contains("Рассуждение"));assertFalse(((TextView)chip).getText().toString().contains("private reasoning"));chip.performClick();assertEquals("private reasoning",opened.get().getString("body"));
   opened.set(null);text.performClick();assertNull(opened.get());
-  answer.put("body","second");view.rows(Arrays.asList(thought,answer),false);assertSame(chip,view.timeline.getChildAt(1));assertSame(text,view.timeline.getChildAt(2));assertTrue(((TextView)text).getText().toString().equals("OpenCode: second"));assertSame(view.requests,view.timeline.getChildAt(3));
+  answer.put("body","second");view.rows(Arrays.asList(thought,answer),false);assertSame(chip,view.timeline.getChildAt(1));assertSame(text,view.timeline.getChildAt(2));assertEquals("OpenCode",((TextView)((android.view.ViewGroup)((android.view.ViewGroup)text).getChildAt(0)).getChildAt(0)).getText().toString());assertEquals("second",((TextView)((android.view.ViewGroup)text).getChildAt(1)).getText().toString());assertSame(view.requests,view.timeline.getChildAt(3));
+ }
+ @Test public void assistantToolbarCopiesLatestRawMessageAndCode()throws Exception{
+  Activity activity=Robolectric.buildActivity(Activity.class).setup().get();
+  AgentChatView view=new AgentChatView(activity,r->{},()->{},()->{},()->{},()->{});
+  activity.setContentView(view);view.assistantName("Codex");
+  JSONObject reply=row("reply","text","**First content**");
+  view.rows(Collections.singletonList(reply),false);
+  AgentMarkdownView message=(AgentMarkdownView)view.timeline.getChildAt(1);
+  View toolbar=message.findViewWithTag("agent-message-toolbar");
+  View copy=toolbar.findViewWithTag("agent-message-copy"),code=toolbar.findViewWithTag("agent-message-code");
+  assertSame(toolbar,message.getChildAt(0));
+  assertEquals(View.GONE,code.getVisibility());assertEquals(view.dp(44),((TextView)copy).getMinHeight());
+  android.content.ClipboardManager clipboard=(android.content.ClipboardManager)activity.getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+  copy.performClick();assertEquals("**First content**",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
+  String raw="Updated\n\n```sh\nprintf hello\n```";
+  reply.put("body",raw);view.rows(Collections.singletonList(reply),false);
+  assertSame(message,view.timeline.getChildAt(1));assertEquals(View.VISIBLE,code.getVisibility());
+  copy.performClick();assertEquals(raw,clipboard.getPrimaryClip().getItemAt(0).getText().toString());
+  code.performClick();assertEquals("printf hello",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
+ }
+ @Test public void olderButtonConsumesBufferedPagesBeforeRequestingProviderHistory()throws Exception{
+  for(String name:new String[]{"Codex","Claude","OpenCode"}){
+   Activity activity=Robolectric.buildActivity(Activity.class).setup().get();
+   java.util.concurrent.atomic.AtomicInteger remote=new java.util.concurrent.atomic.AtomicInteger();
+   AgentChatView view=new AgentChatView(activity,r->{},remote::incrementAndGet,()->{},()->{},()->{});
+   activity.setContentView(view);view.assistantName(name);
+   List<JSONObject> rows=new ArrayList<>();
+   for(int i=0;i<120;i++)rows.add(row("message-"+i,"text","Line "+i).put("message","msg-"+i));
+   rows.add(71,row("part-70","text","Second part").put("message","msg-70"));
+   view.rows(rows,true);layout(view);
+   assertEquals("message-70",view.historyFirst());assertEquals(54,view.timeline.getChildCount());
+   view.older.performClick();layout(view);
+   assertEquals("message-20",view.historyFirst());assertEquals(104,view.timeline.getChildCount());assertEquals(0,remote.get());
+   view.older.performClick();layout(view);
+   assertEquals("message-0",view.historyFirst());assertEquals(0,remote.get());
+   view.older.performClick();assertEquals(1,remote.get());
+   view.findViewWithTag("timeline-follow-newest").performClick();layout(view);
+   assertEquals("message-70",view.historyFirst());assertEquals(54,view.timeline.getChildCount());assertFalse(view.historyPinned());
+   activity.finish();
+  }
  }
  @Test public void receiptInsertionKeepsToolAndFollowingAnswerInOrder()throws Exception{
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView view=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(view);
@@ -28,11 +68,33 @@ public class AgentChatViewTest {
  }
  @Test public void sendingFollowsNewRowsButReadingHistoryDoesNot()throws Exception{
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);
-  java.util.List<JSONObject> rows=new java.util.ArrayList<>();for(int i=0;i<30;i++)rows.add(row("r"+i,"text","line "+i+"\nmore text"));v.rows(rows,false);layout(v);v.scroll.scrollTo(0,0);
+  java.util.List<JSONObject> rows=new java.util.ArrayList<>();for(int i=0;i<30;i++)rows.add(row("r"+i,"text","line "+i+"\nmore text"));v.rows(rows,false);layout(v);readAt(v,0);
   rows.get(29).put("body","changed");v.rows(rows,false);layout(v);assertEquals(0,v.scroll.getScrollY());
   v.followAfterSend();rows.add(row("sent","user","new message"));v.rows(rows,false);layout(v);assertTrue(v.scroll.getScrollY()>0);assertEquals(v.timeline.getHeight()-v.scroll.getHeight(),v.scroll.getScrollY());assertEquals(View.GONE,v.status.getVisibility());assertSame(v.getChildAt(0),v.scroll.getParent());
  }
- private void layout(AgentChatView v){for(int i=0;i<3;i++){v.measure(View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(700,View.MeasureSpec.EXACTLY));v.layout(0,0,600,700);Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();}}
+ private void layoutBeforeDraw(AgentChatView view) {
+  for (int pass=0;pass<3;pass++) {
+   view.measure(View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY),
+     View.MeasureSpec.makeMeasureSpec(700,View.MeasureSpec.EXACTLY));
+   view.layout(0,0,600,700);
+  }
+  view.scroll.getViewTreeObserver().dispatchOnPreDraw();
+ }
+ private void layout(AgentChatView view) {
+  Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+  layoutBeforeDraw(view);
+ }
+ private void viewportTouch(AgentChatView view, int action) {
+  long now=android.os.SystemClock.uptimeMillis();
+  android.view.MotionEvent event=android.view.MotionEvent.obtain(now,now,action,50,100,0);
+  try {view.scroll.dispatchTouchEvent(event);} finally {event.recycle();}
+ }
+ private void readAt(AgentChatView view, int y) {
+  viewportTouch(view,android.view.MotionEvent.ACTION_DOWN);
+  view.scroll.scrollTo(0,y);
+  viewportTouch(view,android.view.MotionEvent.ACTION_CANCEL);
+ }
+
 
  @Test public void providerErrorShowsGuidanceAndRetainsOriginalDetailsForBothAgents()throws Exception{
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AtomicReference<JSONObject> opened=new AtomicReference<>();
@@ -45,7 +107,7 @@ public class AgentChatViewTest {
  @Test public void olderPageKeepsAnchorOffsetThroughStreamingAndReopeningForBothAgents()throws Exception{
   for(String agent:new String[]{"Claude","Codex"}){
    Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);v.assistantName(agent);v.scale(150);
-   List<JSONObject> rows=new ArrayList<>();for(int n=0;n<45;n++)rows.add(row("current-"+n,"text","line "+n+"\nsecond line\nthird line"));v.rows(rows,true);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();v.scroll.scrollTo(0,700);AgentChatView.Position before=v.position();assertFalse(before.bottom);assertNotNull(before.anchor);
+   List<JSONObject> rows=new ArrayList<>();for(int n=0;n<45;n++)rows.add(row("current-"+n,"text","line "+n+"\nsecond line\nthird line"));v.rows(rows,true);layout(v);readAt(v,700);AgentChatView.Position before=v.position();assertFalse(before.bottom);assertNotNull(before.anchor);
    List<JSONObject> expanded=new ArrayList<>();for(int n=0;n<35;n++)expanded.add(row("old-"+n,"text","previous message "+n+"\nextra line"));expanded.addAll(rows);v.olderRows(expanded,true);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();AgentChatView.Position after=v.position();assertEquals(before.anchor,after.anchor);assertEquals(before.offset,after.offset);
    expanded.get(expanded.size()-1).put("body","response keeps growing\nnew text");v.rows(expanded,true);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();assertEquals(before.anchor,v.position().anchor);assertEquals(before.offset,v.position().offset);
    AgentChatView.Position saved=v.position();v.clear();v.rows(expanded,true);v.restorePosition(saved);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();assertEquals(before.anchor,v.position().anchor);assertEquals(before.offset,v.position().offset);a.finish();
@@ -53,11 +115,11 @@ public class AgentChatViewTest {
  }
  @Test public void cachedPositionSurvivesClearRepopulateAndLaterTextUpdates()throws Exception{
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);
-  List<JSONObject> rows=new ArrayList<>();for(int i=0;i<40;i++)rows.add(row("r"+i,"text","line "+i+"\nextra line\nmore"));v.rows(rows,false);layout(v);v.scroll.scrollTo(0,600);AgentChatView.Position p=v.position();int y=v.scroll.getScrollY();assertTrue(y>0);assertFalse(p.bottom);
+  List<JSONObject> rows=new ArrayList<>();for(int i=0;i<40;i++)rows.add(row("r"+i,"text","line "+i+"\nextra line\nmore"));v.rows(rows,false);layout(v);readAt(v,600);AgentChatView.Position p=v.position();int y=v.scroll.getScrollY();assertTrue(y>0);assertFalse(p.bottom);
   v.clear();v.rows(rows,false);v.restorePosition(p);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();assertEquals(y,v.scroll.getScrollY());rows.get(39).put("body","streamed at end");v.rows(rows,false);layout(v);assertEquals(y,v.scroll.getScrollY());
  }
  @Test public void cachedBottomFollowsCurrentLayoutWithoutOldQueuedScrolls()throws Exception{
-  Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);List<JSONObject> rows=new ArrayList<>();for(int i=0;i<30;i++)rows.add(row("r"+i,"text","line "+i+"\nmore"));v.rows(rows,false);layout(v);v.scroll.fullScroll(View.FOCUS_DOWN);AgentChatView.Position p=v.position();assertTrue(p.bottom);v.clear();v.rows(rows,false);v.restorePosition(p);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();assertEquals(v.timeline.getHeight()-v.scroll.getHeight(),v.scroll.getScrollY());
+  Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);List<JSONObject> rows=new ArrayList<>();for(int i=0;i<30;i++)rows.add(row("r"+i,"text","line "+i+"\nmore"));v.rows(rows,false);layout(v);v.bottomAfterLayout();layout(v);AgentChatView.Position p=v.position();assertTrue(p.bottom);v.clear();v.rows(rows,false);v.restorePosition(p);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();assertEquals(v.timeline.getHeight()-v.scroll.getHeight(),v.scroll.getScrollY());
  }
 
  @Test public void olderPageStartsAtTopWhenPreviousContentFitsViewport()throws Exception{
@@ -70,16 +132,15 @@ public class AgentChatViewTest {
   android.widget.EditText input=new android.widget.EditText(a);v.addView(input);input.requestFocus();input.setText("draft");
   for(String kind:new String[]{"user","text","tool"}){
    rows.add(row("new-"+kind,kind,"new content\nline2\nline3\nline4"));v.rows(rows,false);
-   v.measure(View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(700,View.MeasureSpec.EXACTLY));v.layout(0,0,600,700);
-   v.scroll.getViewTreeObserver().dispatchOnPreDraw();
+   layoutBeforeDraw(v);
    assertEquals(kind,v.timeline.getHeight()-v.scroll.getHeight(),v.scroll.getScrollY());assertTrue(input.hasFocus());assertEquals("draft",input.getText().toString());
   }
  }
  @Test public void manualTouchCancelsPendingAutomaticScrollBeforeFirstDraw()throws Exception{
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);List<JSONObject> rows=new ArrayList<>();for(int i=0;i<30;i++)rows.add(row("r"+i,"text","line "+i+"\nmore"));v.rows(rows,false);layout(v);
   rows.add(row("new","text","growing\nmessage"));v.rows(rows,false);
-  android.view.MotionEvent e=android.view.MotionEvent.obtain(0,0,android.view.MotionEvent.ACTION_DOWN,50,100,0);v.scroll.dispatchTouchEvent(e);e.recycle();v.scroll.scrollTo(0,50);
-  layout(v);v.scroll.getViewTreeObserver().dispatchOnPreDraw();assertEquals(50,v.scroll.getScrollY());
+  readAt(v,50);
+  layout(v);assertEquals(50,v.scroll.getScrollY());
  }
 
  @Test public void attachmentCardsKeepIdentityFocusAndTheirOwnOpenTarget()throws Exception{
@@ -108,7 +169,7 @@ public class AgentChatViewTest {
 
  @Test public void markdownLinksStayClickableAndRichStreamingKeepsComposerFocus()throws Exception{
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);
-  JSONObject answer=row("answer","text","Read [docs](https://example.org/docs)");v.rows(Arrays.asList(answer),false);TextView plain=(TextView)v.timeline.getChildAt(1);
+  JSONObject answer=row("answer","text","Read [docs](https://example.org/docs)");v.rows(Arrays.asList(answer),false);TextView plain=(TextView)((AgentMarkdownView)v.timeline.getChildAt(1)).getChildAt(1);
   assertNotNull(plain.getMovementMethod());assertTrue(plain.getText() instanceof android.text.Spanned);android.text.Spanned rendered=(android.text.Spanned)plain.getText();android.text.style.ClickableSpan[] links=rendered.getSpans(0,rendered.length(),android.text.style.ClickableSpan.class);assertEquals(1,links.length);links[0].onClick(plain);assertNull(Shadows.shadowOf(a).getNextStartedActivity());android.app.AlertDialog linkPreview=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(linkPreview);assertTrue(linkPreview.isShowing());linkPreview.dismiss();
   answer.put("body","## Ready\n\n```python\nprint(1)");v.rows(Arrays.asList(answer),false);View rich=v.timeline.getChildAt(1);assertTrue(rich instanceof AgentMarkdownView);View heading=((android.view.ViewGroup)rich).getChildAt(1);android.widget.EditText input=new android.widget.EditText(a);v.addView(input);input.setText("new draft");input.requestFocus();answer.put("body","## Ready\n\n```python\nprint(12)\n```");v.rows(Arrays.asList(answer),false);layout(v);assertSame(rich,v.timeline.getChildAt(1));assertSame(heading,((android.view.ViewGroup)rich).getChildAt(1));assertTrue(input.hasFocus());assertEquals("new draft",input.getText().toString());
  }
@@ -119,7 +180,7 @@ public class AgentChatViewTest {
  }
  @Test public void composerInsetKeepsAnchorAndAllowsFullLastMessageAboveOverlay()throws Exception{
   Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});a.setContentView(v);
-  List<JSONObject> rows=new ArrayList<>();for(int i=0;i<45;i++)rows.add(row("inset-"+i,"text","message "+i+"\nsecond\nthird"));v.rows(rows,false);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();v.scroll.scrollTo(0,700);AgentChatView.Position before=v.position();assertFalse(before.bottom);
+  List<JSONObject> rows=new ArrayList<>();for(int i=0;i<45;i++)rows.add(row("inset-"+i,"text","message "+i+"\nsecond\nthird"));v.rows(rows,false);layout(v);readAt(v,700);AgentChatView.Position before=v.position();assertFalse(before.bottom);
   v.composerInset(150);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();assertEquals(before.anchor,v.position().anchor);assertEquals(before.offset,v.position().offset);
   TextView draft=v.label("attachment fixture",14);v.attachmentDrafts.addView(draft);v.attachmentDrafts.setVisibility(View.VISIBLE);layout(v);v.getViewTreeObserver().dispatchOnPreDraw();assertSame(draft,v.attachmentDrafts.getChildAt(0));
   v.bottomAfterLayout();layout(v);v.getViewTreeObserver().dispatchOnPreDraw();View last=v.timeline.getChildAt(45);assertTrue(last.getBottom()-v.scroll.getScrollY()<=v.scroll.getHeight()-150);assertTrue(v.timeline.getPaddingBottom()>=166);a.finish();

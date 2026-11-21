@@ -54,6 +54,20 @@ def revision(data, info):
     return ':'.join(map(str, (info.st_dev, info.st_ino, info.st_mtime_ns, info.st_mode, digest(data))))
 
 
+def learning_references(text, folder):
+    paths = re.findall(r'`([^`\n\r\0]*LEARNING\.md)`', text)
+    paths += re.findall(r'(?<![\w])(/[^\s`<>"\')]*?/LEARNING\.md)', text)
+    paths += re.findall(r'@([^\s`<>"\']*LEARNING\.md)', text)
+    references = set()
+    for raw in paths:
+        if '/' in raw and '://' not in raw and '\0' not in raw:
+            candidate = Path(raw)
+            if candidate.name == 'LEARNING.md':
+                path = candidate if candidate.is_absolute() else folder / candidate
+                references.add(str(path.parent.resolve() / path.name))
+    return references
+
+
 def directory(path, create=False):
     path = Path(path)
     if path.is_symlink():
@@ -67,6 +81,14 @@ def directory(path, create=False):
     return path
 
 
+def sync_directory(path):
+    descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
 def atomic(path, data, mode=0o600):
     fd, name = tempfile.mkstemp(prefix='.instructions-', dir=path.parent)
     try:
@@ -76,17 +98,29 @@ def atomic(path, data, mode=0o600):
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(name, path)
-        descriptor = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
+        sync_directory(path.parent)
     finally:
         if os.path.lexists(name):
             os.unlink(name)
 
 
+def publish_new(source, target):
+    if hasattr(os, 'link'):
+        os.link(source, target, follow_symlinks=False)
+        return
+    # Native Termux Python omits os.link. Use the same exclusive hard-link
+    # operation through libc for this regular file in private storage.
+    import ctypes
+    link = ctypes.CDLL(None, use_errno=True).link
+    if link(os.fsencode(source), os.fsencode(target)) != 0:
+        code = ctypes.get_errno()
+        raise OSError(code, os.strerror(code))
+
+
 class Editor:
+    agent = 'codex'
+    general_name = NAMES[0]
+
     def __init__(self, template, home=None, environ=None):
         self.env = dict(os.environ if environ is None else environ)
         self.home = Path(home if home is not None else Path.home()).resolve()
@@ -188,7 +222,7 @@ class Editor:
 
     def storage(self):
         if not self.codex_home.exists():
-            self.codex_home.mkdir(mode=0o700, parents=True)
+            self.codex_home.mkdir(mode=0o700, parents=True, exist_ok=True)
         directory(self.codex_home)
         store = directory(self.codex_home / '.termux-jobs-instructions', create=True)
         directory(store / 'history', create=True)
@@ -209,29 +243,40 @@ class Editor:
         finally:
             os.close(fd)
 
+    def existing_general_rules(self):
+        return any(os.path.lexists(self.codex_home / name) for name in NAMES)
+
     def initialize(self):
-        # Existing even-empty user files and overrides must never be replaced.
+        # Each instruction root opts into its common template only once.
         with self.locked() as store:
-            if any(os.path.lexists(self.codex_home / n) for n in NAMES):
+            marker = store / (self.agent + '-initialized')
+            recorded, _ = read_file(marker, limit=2)
+            if recorded is not None:
+                if recorded != b'1\n':
+                    raise Refused('INVALID_INITIALIZATION_STATE')
                 return {'created': False}
-            path = self.codex_home / NAMES[0]
-            # Publish without replacement, even if an external editor raced us.
-            fd, name = tempfile.mkstemp(prefix='.instructions-', dir=self.codex_home)
-            try:
-                with os.fdopen(fd, 'wb') as stream:
-                    os.fchmod(stream.fileno(), 0o600)
-                    stream.write(self.template)
-                    stream.flush()
-                    os.fsync(stream.fileno())
-                if any(os.path.lexists(self.codex_home / n) for n in NAMES):
-                    return {'created': False}
+            path = self.codex_home / self.general_name
+            created = False
+            if not self.existing_general_rules():
+                # Publish without replacement, even if an external editor raced us.
+                fd, name = tempfile.mkstemp(prefix='.instructions-', dir=self.codex_home)
                 try:
-                    os.link(name, path, follow_symlinks=False)
-                except FileExistsError:
-                    return {'created': False}
-            finally:
-                os.unlink(name)
-            return {'created': True, 'path': str(path)}
+                    with os.fdopen(fd, 'wb') as stream:
+                        os.fchmod(stream.fileno(), 0o600)
+                        stream.write(self.template)
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                    if not self.existing_general_rules():
+                        try:
+                            publish_new(name, path)
+                            created = True
+                        except FileExistsError:
+                            pass
+                finally:
+                    os.unlink(name)
+            sync_directory(path.parent)
+            atomic(marker, b'1\n')
+            return {'created': True, 'path': str(path)} if created else {'created': False}
 
     def save(self, request):
         text = request.get('text')
@@ -391,6 +436,9 @@ class Editor:
 
 class ClaudeEditor(Editor):
     """Same atomic/history engine, independent Claude file semantics."""
+    agent = 'claude'
+    general_name = 'CLAUDE.md'
+
     def __init__(self, template, home=None, environ=None):
         super().__init__(template, home, environ)
         self.claude_home = Path(self.env.get('CLAUDE_CONFIG_DIR', str(self.home / '.claude'))).expanduser().resolve()
@@ -423,15 +471,7 @@ class ClaudeEditor(Editor):
             for name in ('CLAUDE.md', 'CLAUDE.local.md', '.claude/CLAUDE.md'):
                 data, _ = read_file(folder / name)
                 if data:
-                    text = data.decode('utf-8')
-                    paths = re.findall(r'`([^`\n\r\0]*LEARNING\.md)`', text)
-                    paths += re.findall(r'(?<![\w])(/[^\s`<>\"\')]*?/LEARNING\.md)', text)
-                    paths += re.findall(r'@([^\s`<>\"\']*LEARNING\.md)', text)
-                    for raw in paths:
-                        if '/' in raw and '://' not in raw:
-                            candidate = Path(raw)
-                            if candidate.name == 'LEARNING.md':
-                                refs.add(str((candidate if candidate.is_absolute() else folder / candidate).resolve()))
+                    refs.update(learning_references(data.decode('utf-8'), folder))
             if refs:
                 return sorted(refs)
             if (folder / '.git').exists():
@@ -450,9 +490,8 @@ class ClaudeEditor(Editor):
                 'templateAvailable': data != self.template, 'storageAddition': self.storage_addition,
                 'claudeHome': str(self.claude_home), 'agent': 'claude', 'homeExplicit': bool(self.env.get('CLAUDE_CONFIG_DIR'))}
 
-    def initialize(self):
-        # Claude adoption is always explicit; never create instructions at chat launch.
-        return {'created': False}
+    def existing_general_rules(self):
+        return os.path.lexists(self.claude_home / self.general_name)
 
     def save(self, request):
         path = self.location(request)
@@ -466,7 +505,8 @@ class ClaudeEditor(Editor):
 
     def cli(self):
         pinned = self.home / '.local/share/termux-jobs/claude-code/2.1.296/claude'
-        executable = str(pinned) if pinned.is_file() else shutil.which('claude')
+        managed = self.env.get('JOBS_CLAUDE_MANAGED')
+        executable = managed or (str(pinned) if pinned.is_file() else shutil.which('claude'))
         result = {'path': executable, 'version': None, 'behaviorVerified': False, 'verifiedVersions': ['2.1.296']}
         if executable:
             try:
@@ -532,15 +572,150 @@ class ClaudeEditor(Editor):
                 'application': 'restart-and-resume; running request unchanged; version-specific native test required'}
 
 
+class GeminiEditor(Editor):
+    """Native Gemini/Antigravity instruction files with the shared editing engine."""
+    agent = 'gemini'
+    general_name = 'GEMINI.md'
+
+    def __init__(self, template, home=None, environ=None, runtime='antigravity'):
+        if runtime not in ('antigravity', 'legacy'):
+            raise Refused('INVALID_GEMINI_RUNTIME')
+        super().__init__(template, home, environ)
+        self.runtime = runtime
+        self.home_override = self.env.get('GEMINI_CLI_HOME') if runtime == 'legacy' else None
+        # Gemini CLI uses the supplied home verbatim, then appends .gemini.
+        base = Path(self.home_override) if self.home_override else self.home
+        self.gemini_home = (base / '.gemini').resolve()
+        self.codex_home = self.gemini_home  # storage engine root, not Codex configuration
+
+    def location(self, request):
+        scope = request.get('scope', 'general')
+        if scope == 'general':
+            return self.gemini_home / self.general_name
+        if scope != 'project' or request.get('name') not in (self.general_name, 'LEARNING.md'):
+            raise Refused('INVALID_SCOPE')
+        if request['name'] == 'LEARNING.md':
+            return super().location(request)
+        raw = request.get('project', '')
+        if not isinstance(raw, str) or not raw.startswith('/') or '\0' in raw:
+            raise Refused('INVALID_PROJECT')
+        project = directory(Path(raw).resolve(strict=True))
+        return project / self.general_name
+
+    @staticmethod
+    def project_chain(project):
+        chain = [project]
+        for folder in project.parents:
+            if (chain[-1] / '.git').exists():
+                return chain
+            chain.append(folder)
+        return chain if (chain[-1] / '.git').exists() else [project]
+
+    def memory_references(self, project):
+        # Project memory is shared across agents. Resolve literal references without
+        # executing imports or scanning optional modular rules.
+        for folder in self.project_chain(project):
+            refs = set()
+            names = [self.general_name, *NAMES, 'CLAUDE.md', 'CLAUDE.local.md',
+                     '.claude/CLAUDE.md']
+            if self.runtime == 'antigravity':
+                names.extend(('.agents/GEMINI.md', '.agents/AGENTS.md'))
+            for name in names:
+                path = folder / name
+                if path.parent.is_symlink():
+                    continue
+                data, _ = read_file(path)
+                if not data:
+                    continue
+                text = data.decode('utf-8')
+                refs.update(learning_references(text, path.parent))
+            if refs:
+                return sorted(refs)
+        return []
+
+    def existing_general_rules(self):
+        if os.path.lexists(self.gemini_home / self.general_name):
+            return True
+        if self.runtime != 'antigravity':
+            return False
+        config = self.gemini_home / 'config'
+        modules = config / 'rules'
+        if config.is_symlink() or modules.is_symlink():
+            return True  # Preserve configurations whose files may live elsewhere.
+        return any(os.path.lexists(path) for path in (
+            self.gemini_home / 'AGENTS.md', config / self.general_name, config / 'AGENTS.md'
+        )) or any(path.is_file() or path.is_symlink() for path in modules.glob('*.md'))
+
+    def context(self):
+        return {'agent': self.agent, 'geminiHome': str(self.gemini_home),
+                'geminiRuntime': self.runtime, 'homeExplicit': bool(self.home_override)}
+
+    def view(self, request):
+        path = self.location(request)
+        data, info = read_file(path)
+        project = request.get('scope') == 'project'
+        return {**self.context(), 'path': str(path), 'exists': data is not None,
+                'maskedBy': None, 'projectSource': None, 'active': None,
+                'projectBaseExists': os.path.lexists(Path(request['project']) / self.general_name) if project else None,
+                'contentPresent': bool(data and data.strip()),
+                'text': '' if data is None else data.decode('utf-8'), 'revision': revision(data, info),
+                'template': self.template.decode('utf-8'), 'templateId': self.template_id,
+                'templateAvailable': data != self.template, 'storageAddition': self.storage_addition}
+
+    def diagnostics(self, request):
+        cwd = directory(Path(request.get('project') or self.home).resolve(strict=True))
+        sources = []
+
+        def record(scope, path):
+            if path.parent.is_symlink():
+                return
+            try:
+                data, _ = read_file(path)
+                if data is not None:
+                    sources.append({'scope': scope, 'path': str(path), 'bytes': len(data),
+                                    'sha256': digest(data)})
+            except Refused:
+                sources.append({'scope': scope, 'path': str(path), 'readable': False})
+
+        def rules_directory(scope, path):
+            if not path.parent.is_symlink() and not path.is_symlink() and path.is_dir():
+                sources.append({'scope': scope, 'path': str(path), 'conditional': True})
+
+        record('global', self.gemini_home / self.general_name)
+        antigravity = self.runtime == 'antigravity'
+        if antigravity:
+            record('global', self.gemini_home / 'AGENTS.md')
+            record('global', self.gemini_home / 'config' / 'AGENTS.md')
+            record('global', self.gemini_home / 'config' / self.general_name)
+            rules_directory('global-rules', self.gemini_home / 'config' / 'rules')
+        for folder in reversed(self.project_chain(cwd)):
+            record('project', folder / self.general_name)
+            if antigravity:
+                record('project', folder / 'AGENTS.md')
+                record('project', folder / '.agents' / 'AGENTS.md')
+                record('project', folder / '.agents' / self.general_name)
+                rules_directory('rules', folder / '.agents' / 'rules')
+                rules_directory('rules', folder / '.agent' / 'rules')
+        return {**self.context(), 'generalPath': str(self.gemini_home / self.general_name),
+                'cwd': str(cwd), 'sources': sources, 'configurations': [],
+                'cli': {'behaviorVerified': False},
+                'mechanism': 'Antigravity cumulative workspace and global rules' if antigravity else 'Gemini CLI hierarchical context',
+                'limits': ['Known file locations only. Runtime settings, imports and conditional rules can affect discovery.'],
+                'application': 'Restart the agent to reread instructions. Resume the conversation when supported.'}
+
+
 def main():
     try:
         if len(sys.argv) != 2:
             raise Refused('ARGUMENTS')
         request = json.loads(sys.stdin.buffer.read(LIMIT * 8 + 1))
         agent = request.get('agent', 'codex')
-        if agent not in ('codex', 'claude'):
+        if agent not in ('codex', 'claude', 'gemini'):
             raise Refused('INVALID_AGENT')
+        gemini_runtime = request.get('geminiRuntime', 'antigravity')
         if request.get('kind') == 'skills':
+            if agent == 'gemini' and (gemini_runtime != 'antigravity' or request.get('environment', 'ubuntu-ai') != 'ubuntu-ai'):
+                raise Refused('INVALID_AGENT')
             import importlib.util
             spec = importlib.util.spec_from_file_location('agent_skills', Path(__file__).with_name('agent-skills.py'))
             module = importlib.util.module_from_spec(spec)
@@ -550,7 +725,11 @@ def main():
             except module.SkillError as error:
                 raise Refused(str(error)) from None
         else:
-            result = (ClaudeEditor if agent == 'claude' else Editor)(sys.argv[1]).call(request)
+            if agent == 'gemini':
+                editor = GeminiEditor(sys.argv[1], runtime=gemini_runtime)
+            else:
+                editor = (ClaudeEditor if agent == 'claude' else Editor)(sys.argv[1])
+            result = editor.call(request)
         if isinstance(result, dict):
             result['environment'] = request.get('environment', 'ubuntu-ai')
         print(json.dumps({'ok': True, 'result': result}, ensure_ascii=False))

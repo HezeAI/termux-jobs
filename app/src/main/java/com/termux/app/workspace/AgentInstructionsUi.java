@@ -22,10 +22,13 @@ final class AgentInstructionsUi {
     static WorkspaceStore.Session fileProfile(String env){WorkspaceStore.Session p=new WorkspaceStore.Session();p.environment=env.equals("termux")?"termux":"proot:"+env;p.codexEnvironment=env;return p;}
     static String runtimeNotice(android.content.Context c,String env){return tr(c,"Среда: ","Environment: ")+AgentEnvironments.label(env)+(env.equals("ubuntu-ai")?"":tr(c,". Сохранена среда старой сессии. Редактор работает с её файлами; инструкции Ubuntu AI не изменяются.",". The legacy session environment is retained. The editor uses its files; Ubuntu AI instructions are unchanged."));}
     static String suggested(WorkspaceStore.Session p){String env=runtime(p);String path=CodexProjects.directory(env,p!=null&&(!AgentPreparation.agent(p).isEmpty()||p.codexEnvironment.equals("ubuntu-ai")||WorkspaceEnvironments.alias(p).equals(env))?p.directory:env.equals("termux")?"~":"/root");return path.isEmpty()?"/root":path;}
-    static void show(TermuxActivity a,WorkspaceStore.Session profile){Editor e=new Editor(a,suggested(profile),q->AgentInstructions.request(a,q));e.projectExplicit=false;e.selectedEnvironment=runtime(profile);if(profile!=null&&profile.claudeAgent){e.agent="claude";e.name="CLAUDE.md";}e.show();}
+    static void show(TermuxActivity a,WorkspaceStore.Session profile){
+        Editor e=new Editor(a,suggested(profile),q->AgentInstructions.request(a,q));
+        e.bindProfile(profile);e.show();
+    }
     static void showProject(TermuxActivity a,WorkspaceStore.Session profile){
-        Editor e=new Editor(a,suggested(profile),q->AgentInstructions.request(a,q));e.scope="project";e.projectExplicit=false;e.selectedEnvironment=runtime(profile);
-        if(profile!=null&&profile.claudeAgent){e.agent="claude";e.name="CLAUDE.md";}e.show();
+        Editor e=new Editor(a,suggested(profile),q->AgentInstructions.request(a,q));
+        e.bindProfile(profile);e.scope="project";e.show();
     }
     static Editor sessionEditor(TermuxActivity a,WorkspaceStore.Session source,AgentInstructions.Backend backend){
         AgentSessionResourcesUi.Context context=AgentSessionResourcesUi.context(a,source);return context==null?null:context.editor(backend);
@@ -33,7 +36,7 @@ final class AgentInstructionsUi {
     static final class Editor {
         final TermuxActivity activity;final AgentInstructions.Backend backend;
         final ExecutorService worker=Executors.newSingleThreadExecutor();final Handler handler=new Handler(Looper.getMainLooper());
-        final String initialProject;String project,scope="general",name="AGENTS.md",agent="codex",selectedEnvironment="ubuntu-ai";JSONObject document;
+        final String initialProject;String project,scope="general",name="AGENTS.md",agent="codex",selectedEnvironment="ubuntu-ai",geminiRuntime="antigravity";JSONObject document;
         android.app.Dialog dialog;AgentManagerLayout frame;LinearLayout root,body,tabs,agents;TextView environmentLabel,runtimeLabel,projectCreate,projectTemplate;boolean projectExplicit,projectTemplateEditing,sessionBound;ImageButton refresh;EditText editor;TextView status,save,close;boolean busy;volatile boolean closed;int epoch;
         boolean createRequested,createReading,createGuard;String createContext="";AlertDialog creationDialog;String[] creationDraft;String creationDraftContext="";
         WorkspaceFileBrowser browser;WorkspaceLocalFilePicker importPicker;volatile ProjectFiles importFiles;
@@ -44,22 +47,36 @@ final class AgentInstructionsUi {
             try{return files.editRead(entry).text;}finally{files.close();synchronized(this){if(importFiles==files)importFiles=null;}}
         }
         Editor(TermuxActivity a,String path,AgentInstructions.Backend b){activity=a;project=initialProject=path;projectExplicit=path!=null&&path.startsWith("/");backend=b;}
+        void bindProfile(WorkspaceStore.Session profile){
+            projectExplicit=false;
+            selectedEnvironment=runtime(profile);
+            if(profile!=null&&profile.geminiAgent)agent="gemini";
+            else if(profile!=null&&profile.claudeAgent)agent="claude";
+            geminiRuntime=AgentInstructions.geminiRuntime(profile);
+            name=baseName();
+        }
         String t(String ru,String en){return tr(activity,ru,en);}
         int dp(int n){return WorkspaceDialogs.dp(activity,n);}
         LinearLayout column(){LinearLayout b=new LinearLayout(activity);b.setOrientation(LinearLayout.VERTICAL);return b;}
         TextView text(String s){TextView v=new TextView(activity);v.setText(s);v.setTextColor(WorkspaceDialogs.TEXT);v.setTextSize(13);v.setPadding(dp(6),dp(6),dp(6),dp(6));return v;}
         TextView action(LinearLayout b,String s,String tag,Runnable r){TextView v=WorkspaceDialogs.action(activity,s,0);v.setTag(tag);v.setOnClickListener(w->{if(!busy)r.run();});b.addView(v,new LinearLayout.LayoutParams(-1,-2));return v;}
-        JSONObject request(String op){try{return new JSONObject().put("operation",op).put("agent",agent).put("environment",environment()).put("scope",scope).put("project",project).put("name",name).put("memoryPath",memoryPath());}catch(JSONException e){throw new IllegalStateException(e);}}
+        JSONObject request(String op){try{JSONObject q=new JSONObject().put("operation",op).put("agent",agent).put("environment",environment()).put("scope",scope).put("project",project).put("name",name).put("memoryPath",memoryPath());if(agent.equals("gemini"))q.put("geminiRuntime",geminiRuntime);return q;}catch(JSONException e){throw new IllegalStateException(e);}}
         String environment(){return selectedEnvironment;}
-        String agentLabel(){return agent.equals("claude")?"Claude Code":"Codex";}
-        String baseName(){return agent.equals("claude")?"CLAUDE.md":"AGENTS.md";}
+        String agentLabel(){return agentLabel(agent);}
+        String agentLabel(String value){return value.equals("gemini")?(geminiRuntime.equals("legacy")?"Gemini CLI":"Gemini · Antigravity"):value.equals("claude")?"Claude Code":"Codex";}
+        String baseName(){return agent.equals("gemini")?"GEMINI.md":agent.equals("claude")?"CLAUDE.md":"AGENTS.md";}
         String memoryKey(){return environment().equals("ubuntu-ai")?project:environment()+"|"+project;}
         String memoryPath(){return activity.getSharedPreferences("agent-instructions-memory-paths",0).getString(memoryKey(),"");}
         void selectAgents(){if(agents!=null)for(int n=0;n<agents.getChildCount();n++){TextView v=(TextView)agents.getChildAt(n);selected(v,("instructions-agent-"+agent).equals(v.getTag()));}if(environmentLabel!=null)environmentLabel.setText(t("Посмотреть шаблон приложения","View app template"));if(runtimeLabel!=null)runtimeLabel.setText(runtimeNotice(activity,environment()));}
         void switchAgent(String chosen){if(busy||sessionBound)return;guard(()->{String old=environment();agent=chosen;if(!old.equals(environment()))project="/root";name=baseName();selectAgents();load();});}
 
         boolean memory(){return scope.equals("project")&&name.equals("LEARNING.md");}
-        String savedNotice(){return memory()?t("Сохранено. Агент читает память по указанию в инструкциях проекта; сохранение не запускает автоматическое обучение.","Saved. The agent reads memory when instructed by project rules; saving does not start automatic learning."):agent.equals("claude")?t("Сохранено. Выполняющийся запрос не изменяется. Для надёжного перечитывания правил перезапустите только Claude Code с продолжением диалога; поведение зависит от версии CLI.","Saved. The running request is unchanged. To reliably reread rules, restart only Claude Code and resume the conversation; behavior depends on the CLI version."):saved(activity);}
+        String savedNotice(){
+            if(memory())return t("Сохранено. Агент читает память по указанию в инструкциях проекта; сохранение не запускает автоматическое обучение.","Saved. The agent reads memory when instructed by project rules; saving does not start automatic learning.");
+            if(agent.equals("claude"))return t("Сохранено. Выполняющийся запрос не изменяется. Для надёжного перечитывания правил перезапустите только Claude Code с продолжением диалога; поведение зависит от версии CLI.","Saved. The running request is unchanged. To reliably reread rules, restart only Claude Code and resume the conversation; behavior depends on the CLI version.");
+            if(agent.equals("gemini"))return t("Сохранено. Чтобы перечитать правила, перезапустите выбранный чат с продолжением диалога.","Saved. Restart the selected chat and resume the conversation to reread its instructions.");
+            return saved(activity);
+        }
         void chooseMemory(){
             if(importPicker!=null)importPicker.close();importPicker=new WorkspaceLocalFilePicker(activity);
             importPicker.choose(t("Выбрать существующий LEARNING.md в выбранной Ubuntu","Choose existing LEARNING.md in the selected Ubuntu"),this::selectMemoryFile);
@@ -80,7 +97,7 @@ final class AgentInstructionsUi {
         }
         void show(){
             if(closed||dialog!=null&&dialog.isShowing())return;
-            frame=new AgentManagerLayout(activity);root=frame;agents=new LinearLayout(activity);for(String a:new String[]{"codex","claude"}){TextView button=WorkspaceDialogs.action(activity,a.equals("codex")?"Codex":"Claude Code",0);button.setTag("instructions-agent-"+a);button.setOnClickListener(v->switchAgent(a));agents.addView(button,new LinearLayout.LayoutParams(-2,-2));}if(!sessionBound)frame.content.addView(horizontal(agents,"instructions-agents-scroll"));
+            frame=new AgentManagerLayout(activity);root=frame;agents=new LinearLayout(activity);for(String a:new String[]{"codex","claude","gemini"}){TextView button=WorkspaceDialogs.action(activity,agentLabel(a),0);button.setTag("instructions-agent-"+a);button.setOnClickListener(v->switchAgent(a));agents.addView(button,new LinearLayout.LayoutParams(-2,-2));}if(!sessionBound)frame.content.addView(horizontal(agents,"instructions-agents-scroll"));
             environmentLabel=WorkspaceDialogs.action(activity,"",0);environmentLabel.setTag("instructions-template-view");environmentLabel.setOnClickListener(v->viewTemplate());frame.content.addView(environmentLabel);projectTemplate=WorkspaceDialogs.action(activity,t("Шаблон проектных инструкций","Project instructions template"),0);projectTemplate.setTag("instructions-project-template");projectTemplate.setOnClickListener(v->viewProjectTemplate());frame.content.addView(projectTemplate);projectCreate=WorkspaceDialogs.action(activity,t("Создание инструкций проекта","Create project instructions"),0);projectCreate.setTag("instructions-project-create");projectCreate.setOnClickListener(v->createProjectInstructions());frame.content.addView(projectCreate);runtimeLabel=text("");runtimeLabel.setTag("instructions-environment");frame.content.addView(runtimeLabel);selectAgents();
             tabs=new LinearLayout(activity);
             for(String tab:sessionBound?new String[]{}:new String[]{"general","project","diagnostics"}){
@@ -165,20 +182,23 @@ final class AgentInstructionsUi {
             return t("Не удалось выполнить операцию. Показанная среда должна быть доступна, с Python 3. Файл не заменён автоматически. Код: ","Operation unavailable. The displayed environment must be accessible with Python 3. No automatic replacement. Code: ")+safe(code);
         }
         String safe(String value){return value!=null&&value.matches("[A-Z_]{1,80}")?value:"INSTRUCTIONS_UNAVAILABLE";}
-        void load(){selectAgents();selectTabs();editor=null;document=null;save=null;updateProjectAction();body.removeAllViews();frame.actions(close);if(environment().equals("termux")&&agent.equals("claude")){status.setText(t("Claude Code в этой сохранённой среде не поддерживается редактором. Среда не переключалась; файлы Ubuntu AI не изменены.","The editor does not support Claude Code in this retained environment. The environment was not switched; Ubuntu AI files are unchanged."));return;}if(scope.equals("diagnostics"))call(request("diagnostics"),this::diagnostics);else call(request("read"),this::render);}
+        void load(){selectAgents();selectTabs();editor=null;document=null;save=null;updateProjectAction();body.removeAllViews();frame.actions(close);if(!AgentInstructions.supports(agent,environment())){status.setText(t("Для выбранного агента редактор в этой среде недоступен.","The instruction editor is unavailable for this agent in the selected environment."));return;}if(scope.equals("diagnostics"))call(request("diagnostics"),this::diagnostics);else call(request("read"),this::render);}
         void render(JSONObject d){
             projectTemplateEditing=false;document=d;updateProjectAction();body.removeAllViews();
             LinearLayout fields=column();frame.scroll.setTag("instructions-content-scroll");body.addView(fields,new LinearLayout.LayoutParams(-1,-1));
             if(scope.equals("project")){
                 TextView location=text(t("Проект: ","Project: ")+project);location.setTag("instructions-project-path");fields.addView(location);
                 LinearLayout buttons=new LinearLayout(activity);
-                for(String target:(agent.equals("claude")?new String[]{"CLAUDE.md","CLAUDE.local.md",".claude/CLAUDE.md","LEARNING.md"}:new String[]{"AGENTS.md","AGENTS.override.md","LEARNING.md"})){
+                String[] files=agent.equals("gemini")?new String[]{"GEMINI.md","LEARNING.md"}
+                    :agent.equals("claude")?new String[]{"CLAUDE.md","CLAUDE.local.md",".claude/CLAUDE.md","LEARNING.md"}
+                    :new String[]{"AGENTS.md","AGENTS.override.md","LEARNING.md"};
+                for(String target:files){
                     TextView v=WorkspaceDialogs.action(activity,target,0);v.setTag("instructions-file-"+target);selected(v,target.equals(name));v.setOnClickListener(w->{if(!busy)guard(()->{name=target;load();});v.post(()->v.requestRectangleOnScreen(new android.graphics.Rect(0,0,v.getWidth(),v.getHeight()),true));});buttons.addView(v,new LinearLayout.LayoutParams(-2,-1));
                 }fields.addView(horizontal(buttons,"instructions-files-scroll"));
                 TextView explanation=text(fileExplanation());
                 explanation.setTag("instructions-project-explanation");explanation.setTextSize(12);fields.addView(explanation);
                 String selected=d.isNull("projectSource")?"":d.optString("projectSource","");
-                TextView active=text(agent.equals("claude")?t("Claude читает несколько файлов совместно. Полный список и ограничения — в диагностике; выбор плашки меняет только редактируемый файл.","Claude combines multiple files. See diagnostics for sources and limits; a tab selects only the edit target."):selected.isEmpty()?t("В этой папке проектные инструкции отсутствуют.","No project instructions in this folder."):t("Codex читает в этой папке: ","Codex reads in this folder: ")+new java.io.File(selected).getName());
+                TextView active=text(!agent.equals("codex")?t("CLI может объединять правила из нескольких файлов. Диагностика показывает известные источники.","The CLI can combine rules from several files. Diagnostics shows the known sources."):selected.isEmpty()?t("В этой папке проектные инструкции отсутствуют.","No project instructions in this folder."):t("Codex читает в этой папке: ","Codex reads in this folder: ")+new java.io.File(selected).getName());
                 active.setTag("instructions-project-active");active.setTextSize(12);fields.addView(active);
                 if(!sessionBound)action(fields,t("Выбрать другой проект","Choose another project"),"instructions-choose-project",()->guard(this::chooseProject));
             }
@@ -207,7 +227,7 @@ final class AgentInstructionsUi {
             showPreview(t("Сохранить LEARNING.md","Save LEARNING.md"),editor.getText().toString(),t("Точный путь: ","Exact path: ")+document.optString("path"),t("Сохранить","Save"),()->save(editor.getText().toString()));
         }
         void memoryPreview(){
-            try{preview(t("Шаблон памяти · LEARNING.md","Memory template · LEARNING.md"),AgentInstructions.memoryTemplate(activity,AgentInstructions.language(activity)),t("Создать и сохранить","Create and save"));}
+            try{preview(t("Шаблон памяти · LEARNING.md","Memory template · LEARNING.md"),AgentInstructions.memoryTemplate(activity),t("Создать и сохранить","Create and save"));}
             catch(java.io.IOException e){status.setText(error("TEMPLATE_UNAVAILABLE"));}
         }
         void save(String text){save(text,null);}
@@ -301,7 +321,8 @@ final class AgentInstructionsUi {
             final String sourceContext=creationContext();final JSONObject target;try{target=new JSONObject(request("save").toString()).put("name",baseName()).put("path",document.getString("path")).put("revision",document.getString("revision"));}catch(JSONException e){throw new IllegalStateException(e);}
             final boolean[] discarded={false};
             AgentManagerLayout box=new AgentManagerLayout(activity);
-            String[] titles={t("Назначение проекта","Project purpose"),t("Рабочие пути","Working paths"),t("Ограничения проекта","Project constraints"),t("Способы проверки результата","Result verification"),t("Документация и расположение LEARNING.md","Documentation and LEARNING.md location")};
+            String[] headings={"Project purpose","Working paths","Project constraints","Result verification","Documentation and LEARNING.md location"};
+            String[] titles={t("Назначение проекта",headings[0]),t("Рабочие пути",headings[1]),t("Ограничения проекта",headings[2]),t("Способы проверки результата",headings[3]),t("Документация и расположение LEARNING.md",headings[4])};
             EditText[] inputs=new EditText[titles.length];
             box.content.addView(text(t("Все разделы необязательны. Указывайте только известные сведения. Открытие формы ничего не записывает; LEARNING.md и другие документы не создаются.","All sections are optional. Enter only known facts. Opening this form writes nothing; LEARNING.md and other documents are not created.")));
             box.content.addView(text(t("Точный путь: ","Exact path: ")+document.optString("path")));
@@ -314,7 +335,7 @@ final class AgentInstructionsUi {
             AlertDialog form=new AlertDialog(activity,com.termux.R.style.WorkspaceDialog){@Override public void cancel(){dismiss.run();}@Override public void onBackPressed(){dismiss.run();}};holder[0]=form;
             form.setTitle(t("Создание инструкций проекта","Create project instructions"));form.setView(box,0,0,0,0);
             TextView review=WorkspaceDialogs.action(activity,t("Просмотреть","Review"),0),cancel=WorkspaceDialogs.action(activity,t("Отмена","Cancel"),0);box.actions(review,cancel);cancel.setOnClickListener(v->dismiss.run());
-            review.setOnClickListener(v->{if(busy||closed)return;StringBuilder value=new StringBuilder(t("# Инструкции проекта\n","# Project instructions\n"));for(int i=0;i<inputs.length;i++){String body=inputs[i].getText().toString();if(!body.trim().isEmpty())value.append("\n## ").append(titles[i]).append("\n\n").append(body).append(body.endsWith("\n")?"":"\n");}
+            review.setOnClickListener(v->{if(busy||closed)return;StringBuilder value=new StringBuilder("# Project instructions\n");for(int i=0;i<inputs.length;i++){String body=inputs[i].getText().toString();if(!body.trim().isEmpty())value.append("\n## ").append(headings[i]).append("\n\n").append(body).append(body.endsWith("\n")?"":"\n");}
                 showPreview(t("Создание инструкций проекта","Create project instructions"),value.toString(),t("Точный путь: ","Exact path: ")+target.optString("path"),t("Создать и сохранить","Create and save"),()->{
                     if(!sourceContext.equals(creationContext())){status.setText(error("SOURCE_CHANGED"));return;}
                     JSONObject q;try{q=new JSONObject(target.toString()).put("text",value.toString());}catch(JSONException e){throw new IllegalStateException(e);}
@@ -340,7 +361,7 @@ final class AgentInstructionsUi {
             if(closed||busy||!context.equals(creationContext()))return;
             final String targetName=baseName();final String value;try{value=AgentInstructions.projectTemplate(activity);}catch(java.io.IOException e){status.setText(error("TEMPLATE_UNAVAILABLE"));return;}
             showPreview(t("Шаблон проектных инструкций","Project instructions template"),value,
-                t("Точный путь: ","Exact path: ")+snapshot.optString("path")+"\n\n"+t("Шаблон на русском языке. Поля [в скобках] заполните в редакторе. Просмотр ничего не записывает. Общие инструкции и другие проекты не меняются.","This supplied template is in Russian. Fill [bracketed fields] in the editor. Viewing writes nothing. Shared rules and other projects stay unchanged."),
+                t("Точный путь: ","Exact path: ")+snapshot.optString("path")+"\n\n"+t("Шаблон на английском языке. Поля [в скобках] заполните в редакторе. Просмотр ничего не записывает. Общие инструкции и другие проекты не меняются.","The template is in English. Fill [bracketed fields] in the editor. Viewing writes nothing. Shared rules and other projects stay unchanged."),
                 t("Редактировать шаблон","Edit template"),()->guard(()->{if(!context.equals(creationContext())){status.setText(error("SOURCE_CHANGED"));return;}name=targetName;render(snapshot);editor.setText(value);projectTemplateEditing=true;status.setText(t("Шаблон открыт как несохранённый черновик. Проверьте текст и путь перед сохранением.","Template opened as an unsaved draft. Review text and path before saving."));}));
         }
         void confirmProjectTemplateSave(String value,Runnable after){
@@ -350,40 +371,28 @@ final class AgentInstructionsUi {
                 t("Точный путь: ","Exact path: ")+document.optString("path")+"\n\n"+(exists?t("Подтверждение заменит существующий ","Confirmation replaces the existing ")+baseName()+t(" этим текстом. Предыдущая редакция останется в истории."," with this text. Its previous revision stays in history."):t("Будет создан новый файл ","A new file will be created: ")+baseName()+t(". До подтверждения файл не создаётся.",". Nothing is written before confirmation.")),
                 exists?t("Заменить ","Replace ")+baseName():t("Создать и сохранить","Create and save"),()->write(value,after));
         }
-        void storageAddition(){languagePreview(true);}
-        void template(){languagePreview(false);}
+        void storageAddition(){builtInPreview(true);}
+        void template(){builtInPreview(false);}
         void viewTemplate(){if(scope.equals("general"))template();}
-        void languagePreview(boolean addition){
+        void builtInPreview(boolean addition){
             if(!scope.equals("general"))return;
             final String current=editor==null?"":editor.getText().toString();
             if(addition&&AgentInstructions.hasStorageAddition(current)){status.setText(t("Дополнение уже есть в тексте (RU или EN).","The addition is already in the text (RU or EN)."));return;}
-            final String[] values=new String[2];
-            try{for(int n=0;n<2;n++){String value=AgentInstructions.builtInTemplate(activity,n==0?"ru":"en",agent);values[n]=addition?AgentInstructions.storageAddition(value):value;}}
-            catch(java.io.IOException e){status.setText(error("TEMPLATE_UNAVAILABLE"));return;}
-            final int[] choice={AgentInstructions.language(activity).equals("ru")?0:1};
-            LinearLayout header=column();LinearLayout languages=new LinearLayout(activity);TextView[] options=new TextView[2];
-            TextView selected=text("");selected.setTag("instructions-preview-language");
-            for(int n=0;n<2;n++){
-                TextView button=WorkspaceDialogs.action(activity,n==0?"RU":"EN",0);button.setTag("instructions-preview-"+(n==0?"ru":"en"));
-                button.setSingleLine(true);options[n]=button;languages.addView(button,new LinearLayout.LayoutParams(-2,-2));
-            }
-            languages.addView(selected,new LinearLayout.LayoutParams(0,-2,1));header.addView(languages);
-            TextView target=text(t(addition?"Добавление в: ":"Заменит файл: ",addition?"Append to: ":"Replace file: ")+(document==null?"":document.optString("path")));target.setTag("instructions-preview-target");target.setMaxLines(3);target.setTextIsSelectable(true);header.addView(target);
+            final String value;
+            try{
+                String template=AgentInstructions.builtInTemplate(activity,agent);
+                value=addition?AgentInstructions.storageAddition(template):template;
+            }catch(java.io.IOException e){status.setText(error("TEMPLATE_UNAVAILABLE"));return;}
+            LinearLayout header=column();
+            TextView target=text(t(addition?"Добавление в: ":"Заменит файл: ",addition?"Append to: ":"Replace file: ")+(document==null?"":document.optString("path")));
+            target.setTag("instructions-preview-target");target.setMaxLines(3);target.setTextIsSelectable(true);header.addView(target);
             String notice=addition?t("Раздел будет добавлен в конец текущего текста редактора. Существующий текст сохранится, предыдущая редакция файла останется в истории. Автоочистка не включается.","Append this section to the current editor text. Existing text is retained; the previous file revision remains in history. Automatic cleanup is not enabled."):
                 t("Применение заменит текст выбранного файла. Предыдущая редакция останется в истории. Несохранённый черновик будет заменён.","Applying replaces the selected file text. Its previous revision stays in history. An unsaved draft will be replaced.");
-            AlertDialog preview=showPreview(addition?t("Хранение файлов и временных данных","File and temporary data storage"):t("Встроенный шаблон · "+agentLabel(),"Built-in template · "+agentLabel()),values[choice[0]],notice,
+            showPreview(addition?t("Хранение файлов и временных данных","File and temporary data storage"):t("Встроенный шаблон · "+agentLabel(),"Built-in template · "+agentLabel()),value,notice,
                 addition?t("Добавить и сохранить","Append and save"):t("Применить шаблон","Apply template"),()->{
-                    String value=values[choice[0]];
                     if(addition&&(AgentInstructions.hasStorageAddition(current)||current.contains(value))){status.setText(t("Дополнение уже есть в тексте.","The addition is already in the text."));return;}
                     save(addition?current+(current.isEmpty()?"":current.endsWith("\n")?"\n":"\n\n")+value:value);
                 },header);
-            TextView value=preview.getWindow().getDecorView().findViewWithTag("instructions-preview-text");
-            Runnable refresh=()->{
-                value.setText(values[choice[0]]);selected.setText(t("Язык: ","Language: ")+(choice[0]==0?"RU":"EN"));
-                for(int n=0;n<2;n++){options[n].setSelected(n==choice[0]);options[n].setBackground(WorkspaceDialogs.background(activity,n==choice[0]));}
-            };
-            for(int n=0;n<2;n++){final int index=n;options[n].setOnClickListener(v->{choice[0]=index;refresh.run();ScrollView scroll=preview.getWindow().getDecorView().findViewWithTag("instructions-preview-scroll");scroll.scrollTo(0,0);});}
-            refresh.run();
         }
         void preview(String title,String value,String apply){
             showPreview(title,value,
@@ -393,8 +402,7 @@ final class AgentInstructionsUi {
         AlertDialog showPreview(String title,String value,String notice,String apply,Runnable commit,View header){
             final String sourceIdentity=agent+"|"+environment()+"|"+scope+"|"+project+"|"+(document==null?"":document.optString("path"));
             LinearLayout content=column();
-            // Keep the language switches available; long paths and warnings belong
-            // to the scrollable preview, rather than consuming its fixed header.
+            // Keep long paths and warnings inside the scrollable preview.
             if(header instanceof ViewGroup){ViewGroup group=(ViewGroup)header;for(String tag:new String[]{"instructions-preview-target","instructions-import-target","instructions-import-warning"}){View item=group.findViewWithTag(tag);if(item!=null&&item.getParent()==group){group.removeView(item);content.addView(item);}}}
             content.addView(text(notice));
             TextView view=text(value);view.setTag("instructions-preview-text");view.setTextIsSelectable(true);view.setTypeface(Typeface.MONOSPACE);content.addView(view);
@@ -450,6 +458,15 @@ final class AgentInstructionsUi {
         }
         void diagnostics(JSONObject result){
             if(agent.equals("claude")){claudeDiagnostics(result);return;}
+            if(agent.equals("gemini")){
+                body.removeAllViews();LinearLayout rows=column();body.addView(rows,new LinearLayout.LayoutParams(-1,-2));
+                rows.addView(text(agentLabel()));
+                rows.addView(text(t("Общие инструкции: ","Shared instructions: ")+result.optString("generalPath")));
+                rows.addView(text(t("Редактор показывает известные файлы стандартного запуска. Правила CLI могут зависеть от конфигурации, версии и команды подключения.","The editor shows known files for a standard launch. CLI rules can depend on configuration, version and the connection command.")));
+                TextView details=text(result.toString());details.setTextIsSelectable(true);details.setVisibility(View.GONE);
+                action(rows,t("Пути и технические сведения ▾","Paths and technical details ▾"),"instructions-details-toggle",()->details.setVisibility(details.getVisibility()==View.GONE?View.VISIBLE:View.GONE));rows.addView(details);
+                return;
+            }
             body.removeAllViews();LinearLayout rows=column();body.addView(rows,new LinearLayout.LayoutParams(-1,-2));
             JSONObject cli=result.optJSONObject("cli");String version=cli==null||cli.isNull("version")?t("не определена","unknown"):cli.optString("version");
             rows.addView(text("Codex · "+version));

@@ -1,16 +1,17 @@
-# Указатель рабочего контекста
+# Project handoff index
 
-Текущая цель, результаты, открытые вопросы и ближайший шаг находятся только
-в [основном CONTINUE.md](../../CONTINUE.md). Правила — в [AGENTS.md](../../AGENTS.md).
-Единственная память проекта: `/root/termux-fork/LEARNING.md`.
+Read the [root CONTINUE.md](../../CONTINUE.md) for the active goal, results,
+open issues, and next step. The [project rules](../../AGENTS.md) explain when
+to consult topic documents. Use the sole [project memory](../../LEARNING.md)
+when starting work.
 
-Исторические материалы:
+Historical references:
 
-- [История прежнего файла](history/HANDOFF-legacy-through-2026-11-09.md).
-- [История основного CONTINUE](history/HANDOFF-through-2026-11-09.md).
-- [Сохранённые записи исследований](history/INVESTIGATION-NOTES-through-2026-11-09.md).
-- [CHANGELOG](../../CHANGELOG.md), [отчёт 2.1.7](VALIDATION-v2.1.7.md)
-  и [проверка воспроизводимости 2.1.7](REPRODUCIBILITY-v2.1.7.md).
+- [Primary handoff archive](history/HANDOFF-through-2026-11-09.md).
+- [Legacy handoff archive](history/HANDOFF-legacy-through-2026-11-09.md).
+- [Investigation history](history/INVESTIGATION-NOTES-through-2026-11-09.md).
+- [Changelog](../../CHANGELOG.md), [2.1.7 validation](VALIDATION-v2.1.7.md),
+  and [2.1.7 reproducibility](REPRODUCIBILITY-v2.1.7.md).
 
-Архивные статусы и разрешения относятся к своим датам. Они не закрывают
-непроверенные сценарии и не разрешают новые действия. Здесь не вести новый журнал.
+The historical records keep their original dates and scope. Use the root
+handoff for current status and authorization.

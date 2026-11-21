@@ -30,14 +30,14 @@ final class AgentActionDetailsView extends LinearLayout {
         status=owner.label("",13);status.setTag("agent-action-status");addView(status,new LayoutParams(-1,-2));
         scroll=new ScrollView(getContext()){
             @Override protected void onMeasure(int widthSpec,int heightSpec){
-                if(compactPreview()){int cap=Math.max(owner.dp(100),Math.round(getResources().getDisplayMetrics().heightPixels*.55f));int mode=View.MeasureSpec.getMode(heightSpec);if(mode!=View.MeasureSpec.UNSPECIFIED)cap=Math.min(cap,View.MeasureSpec.getSize(heightSpec));heightSpec=View.MeasureSpec.makeMeasureSpec(cap,View.MeasureSpec.AT_MOST);}
+                {int cap=Math.max(owner.dp(100),Math.round(getResources().getDisplayMetrics().heightPixels*.55f));int mode=View.MeasureSpec.getMode(heightSpec);if(mode!=View.MeasureSpec.UNSPECIFIED)cap=Math.min(cap,View.MeasureSpec.getSize(heightSpec));heightSpec=View.MeasureSpec.makeMeasureSpec(cap,View.MeasureSpec.AT_MOST);}
                 super.onMeasure(widthSpec,heightSpec);
             }
         };scroll.setFillViewport(false);content=new LinearLayout(getContext());content.setOrientation(VERTICAL);scroll.addView(content);
         scroll.setOnTouchListener((v,event)->{interaction++;int a=event.getActionMasked();if(a==MotionEvent.ACTION_DOWN)touching=true;else if(a==MotionEvent.ACTION_UP||a==MotionEvent.ACTION_CANCEL)touching=false;return false;});
         preview=new LinearLayout(getContext());preview.setOrientation(VERTICAL);content.addView(preview,new LayoutParams(-1,-2));
         body=owner.label("",13);body.setTag("agent-action-output");body.setTypeface(Typeface.MONOSPACE);body.setTextIsSelectable(true);content.addView(body,new LayoutParams(-1,-2));
-        addView(scroll,new LayoutParams(-1,0,1));more=owner.pill(t("Полный вывод","Full output"),()->{});addView(more);update(row);
+        addView(scroll,new LayoutParams(-1,LayoutParams.WRAP_CONTENT));more=owner.pill(t("Полный вывод","Full output"),()->{});addView(more);update(row);
     }
     private String t(String ru,String en){return owner.tr(ru,en);}
     String key(){return row.optString("key");}
@@ -54,8 +54,14 @@ final class AgentActionDetailsView extends LinearLayout {
             else if(!row.has("exitCode")||row.isNull("exitCode"))state+=t("\nКод завершения не передан.","\nExit code not supplied.");
         }long started=AgentTimelineSummary.start(row);if(started>0)state+=" · "+t("Начало: ","Started: ")+AgentMessageTime.full(getContext(),started);if(!status.getText().toString().equals(state))status.setText(state);status.setTextColor(AgentTimelineSummary.neutral(row)?0xffa5a5a2:CodexActionTimeline.failed(row)?0xffffb08f:0xffecece5);
         JSONObject p=AgentActionPresentation.preview(row);String stamp=String.valueOf(p);if(!previewStamp.equals(stamp)){previewStamp=stamp;renderPreview(p);}
-        LayoutParams viewport=(LayoutParams)scroll.getLayoutParams();int height=compactPreview()?LayoutParams.WRAP_CONTENT:0;float weight=compactPreview()?0:1;
+        LayoutParams viewport=(LayoutParams)scroll.getLayoutParams();int height=LayoutParams.WRAP_CONTENT;float weight=0;
         if(viewport.height!=height||viewport.weight!=weight){viewport.height=height;viewport.weight=weight;scroll.setLayoutParams(viewport);}
+        if(retainText&&AgentSubagentPresentation.matches(row))try{
+            JSONObject loaded=new JSONObject(nativeText),live=new JSONObject(row.optString("body"));
+            if(!live.has("agentHistory")&&loaded.has("agentHistory"))live.put("agentHistory",loaded.get("agentHistory"));
+            if(!live.has("agentHistoryLimited")&&loaded.has("agentHistoryLimited"))live.put("agentHistoryLimited",loaded.get("agentHistoryLimited"));
+            nativeText=live.toString();showBody(p);
+        }catch(JSONException partial){/* Keep complete loaded messages while the snapshot is abbreviated. */}
         String current=row.optString("body")+row.optLong("bodyLength");if(!previous.equals(current))fullText=false;
         if(!retainText&&body.getSelectionStart()==body.getSelectionEnd()&&!nativeText.equals(row.optString("body"))){nativeText=row.optString("body");showBody(p);}
         if(nativeText.isEmpty()){nativeText=row.optString("body");showBody(p);}
@@ -63,8 +69,20 @@ final class AgentActionDetailsView extends LinearLayout {
         scroll.post(()->{if(getParent()==null||touching||interaction!=heldInteraction)return;if(following)scroll.fullScroll(View.FOCUS_DOWN);else scroll.scrollTo(0,y);});
     }
     void nativeText(String value,boolean complete){boolean follow=followsOutput();int y=scroll.getScrollY();nativeText=value;fullText=complete;retainText=true;showBody(AgentActionPresentation.preview(row));if(follow)scroll.post(()->scroll.fullScroll(View.FOCUS_DOWN));else scroll.post(()->scroll.scrollTo(0,y));}
-    String nativeText(){return nativeText;}
+    String nativeText(){return AgentSubagentPresentation.matches(row)?subagentText():nativeText;}
+    private String subagentText(){
+        try{new JSONObject(nativeText);JSONObject display=new JSONObject(row.toString());display.put("body",nativeText);return AgentSubagentPresentation.details(display,ru());}
+        catch(JSONException incomplete){return t("Загрузка подробностей субагента…","Loading subagent details…");}
+    }
+    void historyFailure(){
+        if(!AgentSubagentPresentation.matches(row))return;
+        String text=subagentText();
+        if(text.equals(t("Загрузка подробностей субагента…","Loading subagent details…")))text="";
+        body.setText(text+t("\nНе удалось загрузить историю субагента. Повторите загрузку.","\nCould not load subagent history. Retry loading."));
+    }
+    void copyOrExport(){owner.copyText(nativeText());}
     private void showBody(JSONObject p){
+        if(AgentSubagentPresentation.matches(row)){body.setVisibility(VISIBLE);body.setText(subagentText());return;}
         String kind=p==null?"":p.optString("kind");
         if(kind.equals("files")){
             if(fullText)try{renderFiles(new JSONArray(nativeText),false);body.setVisibility(GONE);return;}catch(JSONException ignored){body.setVisibility(VISIBLE);body.setText(nativeText);return;}

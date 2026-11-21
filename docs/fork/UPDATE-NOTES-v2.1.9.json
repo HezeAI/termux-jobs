@@ -1,0 +1,26 @@
+{
+  "ru": [
+    "Компактная хронология чатов, подробности действий и история субагентов Codex.",
+    "Обновление Codex, Claude и Antigravity в боковом меню. Новые Gemini-чаты в Ubuntu AI используют Antigravity и показывают запрос входа при запуске.",
+    "Общие шаблоны инструкций и формы инструкций и навыков Gemini. Существующие файлы сохраняются.",
+    "Подготовка Git и создание репозитория в рабочей папке нового чата. Вкладка «Изменения» работает до первого коммита.",
+    "Встроенный RTK удалён. Ранее установленные файлы, история и пользовательские настройки сохраняются."
+  ],
+  "en": [
+    "Compact chat timelines, action details and Codex child-agent history.",
+    "Update Codex, Claude and Antigravity from the sidebar. New Gemini chats on Ubuntu AI use Antigravity and show sign-in at startup.",
+    "Common instruction templates and Gemini instruction and skill forms. Existing files are preserved.",
+    "Prepare Git and initialize new chat projects. View project changes before the first commit.",
+    "Built-in RTK integration was removed. Existing runtime files, history and user settings are preserved."
+  ],
+  "compatibility": {
+    "ru": [
+      "Android 8 и новее, ARM64. Пакет и подпись прежние. Приложение не требует сброса данных или переустановки среды. Установка обновления Android может остановить работающие чаты.",
+      "Существующие профили Gemini остаются на своём подключении. Antigravity использует отдельный вход Google."
+    ],
+    "en": [
+      "Android 8 or later and ARM64. Same package and signer. No data reset or environment reinstall is requested. Android installation can stop running chats.",
+      "Existing Gemini profiles retain their connection. Antigravity uses a separate Google sign-in."
+    ]
+  }
+}

@@ -981,3 +981,14 @@ Archive/binary/license/notices SHA-256 values, upstream version, component revis
 and minimum glibc are pinned in app/src/main/assets/rtk-component.json.
 This private integration does not modify stable application update metadata,
 shared instructions or authentication and does not run rtk init.
+
+## User-supplied DevKit UI and Codex templates (2026-11-20)
+
+The Unreleased chat timeline and common Codex RU/EN templates adapt the
+user-provided DevKit 0.1.57 source by HezeAI (AI assistance: OpenAI Codex).
+Reference source archive SHA-256:
+`a354b53a1c212ce4246e00471a931248e55232ab41af6c34af6131c1c72742ca`.
+Source provenance and the scope of adaptation are recorded in
+`docs/fork/VALIDATION-devkit-timeline-2026-11-20.md`. No DevKit runtime binaries
+or additional third-party libraries are included by this change. Existing
+upstream authorship and license notices remain applicable.

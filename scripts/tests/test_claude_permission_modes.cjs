@@ -18,5 +18,14 @@ function child(){const c=new EventEmitter();c.stdout=new EventEmitter();c.stdout
   b.control=async(kind,fields)=>{calls.push([kind,fields]);if(kind==='set_permission_mode'&&!accepted)throw Error('Rejected');return {};};await b.startSDK();assert.equal(b.ready,accepted);assert(calls.some(x=>x[0]==='set_permission_mode'&&x[1].mode==='auto'));assert(calls.some(x=>x.includes('--permission-mode')&&x.includes('auto')));if(!accepted){assert.match(b.failure,/Auto is unavailable/);assert.equal(b.snapshot().rejectedMode,'auto');}else assert.equal(b.snapshot().rejectedMode,'');
   if(accepted){b.event({type:'system',subtype:'init',session_id:id,permissionMode:'default'});assert.equal(b.snapshot().mode,'manual');assert.equal(b.snapshot().rejectedMode,'auto');assert.match(b.failure,/instead of requested auto/);}b.ready=true;b.workerKind='sdk';b.mode='manual';b.control=async()=>{throw Error('Native refusal');};await assert.rejects(()=>b.command({op:'set-mode',mode:'auto'}));assert.equal(b.mode,'manual');assert.equal(b.setting,false);
  }
+ const terminal=backend('manual');terminal.auth=true;
+ let nativeArgs,nativeEnv;terminal.owned=(args,stdio,extra)=>{nativeArgs=args;nativeEnv=extra;return child();};
+ assert.equal((await terminal.openTerminal()).terminalReady,true);
+ const settings=JSON.parse(nativeArgs[nativeArgs.indexOf('--settings')+1]);
+ assert.deepEqual(Object.keys(settings.hooks),['SessionStart','UserPromptSubmit','Stop']);
+ for(const hooks of Object.values(settings.hooks))assert.match(hooks[0].hooks[0].command,/claude-native-hook\.cjs/);
+ const event={cwd:terminal.cwd,session:id,token:nativeEnv.JOBS_CLAUDE_EVENT_TOKEN};
+ await terminal.nativeEvent({...event,event:'UserPromptSubmit'});assert.equal(terminal.nativeBusy,true);
+ await terminal.nativeEvent({...event,event:'Stop'});assert.equal(terminal.nativeBusy,false);
  console.log('PASS mode allowlists, root refusal before spawn, CLI support, explicit Auto ACK, refusal preserves mode; synthetic controls only');
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(()=>{process.kill=kill;process.getuid=getuid;});

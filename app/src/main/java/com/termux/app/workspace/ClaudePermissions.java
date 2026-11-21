@@ -53,7 +53,11 @@ final class ClaudePermissions {
         body.post(()->new Thread(()->{String result="";org.json.JSONObject nativeStatus=null;
             try{nativeStatus=ClaudeLiveControl.request(a.getFilesDir(),draft.claudeSocketId,AgentChatUi.op("status"));}catch(Exception ignored){}
             try(ProjectFiles fs=new ProjectFiles(a,draft)){
-                result=new String(fs.readOnly("printf 'UID=%s\\n' \"$(id -u)\"; binary=\"$HOME/.local/share/termux-jobs/claude-code/2.1.296/claude\"; if [ -x \"$binary\" ]; then DISABLE_AUTOUPDATER=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \"$binary\" --help; else printf NOT_INSTALLED; fi",65536),java.nio.charset.StandardCharsets.UTF_8);
+                String resolver=AgentPreparation.cliResolverSource(a);
+                String command="export JOBS_AGENT_UBUNTU="+SessionShell.quote(AgentEnvironments.alias(draft))+"\n"+resolver
+                    +"\nprintf 'UID=%s\\n' \"$(id -u)\"; if binary=$(jobs_agent_cli_binary claude); then "
+                    +"DISABLE_AUTOUPDATER=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \"$binary\" --help; else printf NOT_INSTALLED; fi";
+                result=new String(fs.readOnly(command,65536),java.nio.charset.StandardCharsets.UTF_8);
             }catch(Exception ignored){}String output=result;org.json.JSONObject current=nativeStatus;
             a.runOnUiThread(()->{if(body.isAttachedToWindow()){
                 TextView active=body.findViewWithTag("claude-active-mode");if(active!=null)active.setText(AgentStatusUi.tr(a,"Действующий режим: ","Active mode: ")+(current!=null&&current.optBoolean("ready")&&valid(current.optString("mode"))?label(a,current.optString("mode")):AgentStatusUi.tr(a,"Нет данных","No data")));

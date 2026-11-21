@@ -64,6 +64,14 @@ CLAUDE_CONFIG_DIR, using the same environment preparation as the instruction edi
 | --- | --- | --- | --- |
 | Codex | `$HOME/.agents/skills` | `<project>/.agents/skills` | `$CODEX_HOME/skills`, ancestor project roots, `/etc/codex/skills`, config plugin cache |
 | Claude Code | `$CLAUDE_CONFIG_DIR/skills` (default `$HOME/.claude/skills`) | `<project>/.claude/skills` | ancestor project roots, config plugin cache |
+| Antigravity CLI in Ubuntu AI | `$HOME/.gemini/config/skills` | `<project>/.agents/skills` | `$HOME/.gemini/antigravity-cli/skills`, `$HOME/.gemini/skills`, project ancestors up to the nearest Git root |
+
+Select **Antigravity CLI** in **Agent skills**, or open **Skills** from the
+Antigravity chat's project menu. Both entry points provide General and Project.
+The manager only modifies its own installs in the selected scope. The extra
+Antigravity compatibility directories are read-only. The pinned 1.5.13 native
+probe reached the login prompt before skill listing, so native discovery is
+pending. [Google skill documentation](https://antigravity.google/docs/skills).
 
 General lists shared/legacy/system/plugin roots with their actual paths and does not search project or ancestor skill directories. Its list and install target are independent of the selected project. Project lists project/ancestor skills and retains collision information from shared roots. No existing skill is moved by this UI rename. Existing sources are not moved or duplicated. Only packages
 recorded by this manager at the selected install root can be updated or removed.

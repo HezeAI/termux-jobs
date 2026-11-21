@@ -1,6 +1,6 @@
 # Security, data and trust / Безопасность, данные и границы доверия
 
-Current release: **2.1.8 /1540**. The implementation/security review below was
+Current release: **2.1.9 / 1549**. The implementation/security review below was
 performed on **2026-11-04 for v2.1.3**; that date and scope are not extended by a
 new release. This documentation reconciliation compared the named source paths
 with v2.1.7 and its reports; it did not repeat a full security audit or phone tests.
@@ -8,11 +8,15 @@ with v2.1.7 and its reports; it did not repeat a full security audit or phone te
 [2.1.7 verification](docs/fork/VALIDATION-v2.1.7.md) ·
 [Separate release APK/source comparison](docs/fork/REPRODUCIBILITY-v2.1.7.md).
 
-The 2.1.8 release changes action presentation, adapter display metadata, session
-labels and notification lifecycle. It does not repeat the original security audit.
-[2.1.8 validation](docs/fork/VALIDATION-v2.1.8.md) scopes the checks and phone acceptance.
+Version 2.1.9 updates chat presentation, agent startup, CLI preparation,
+instructions, skills and project Git. The [2.1.9 validation](docs/fork/VALIDATION-v2.1.9.md)
+records the affected checks and current limits.
 
 ## Changes and evidence since the original review
+
+Version 2.1.9 removes the app-owned RTK hooks and command path from new agent
+launches. It preserves the user's Codex and Claude settings and previously saved
+RTK files.
 
 - Updater/package checks, Gemini/SSH vaults, backup engine/helper, diagnostic
   collector and the named server/skill/preparation classes retain identical
@@ -22,7 +26,7 @@ labels and notification lifecycle. It does not repeat the original security audi
   manifest changed. Their newer checks are scoped in the version reports; the
   original review does not attest these changes. See [2.1.6](docs/fork/VALIDATION-v2.1.6.md)
   and [2.1.7](docs/fork/VALIDATION-v2.1.7.md).
-- RTK is now optional per chat. Native rewriting may affect Codex command-prefix
+- Historical v2.1.8 RTK behavior applied per chat. Native rewriting may affect Codex command-prefix
   bans and Claude Bash deny/approval matching. Stored rules remain; the enable
   dialog warns about the limitation. Full-output recovery files may retain command
   data locally. Saving a recovery file does not itself send it to a model;

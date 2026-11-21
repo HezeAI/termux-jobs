@@ -15,6 +15,12 @@ allprojects {
         mavenCentral()
         maven { url "https://jitpack.io" }
     }
+    tasks.withType(Test).configureEach {
+        def testTmp = System.getenv('FORK_TEST_TMPDIR')
+        if (testTmp) systemProperty 'java.io.tmpdir', testTmp
+        def testExecutable = System.getenv('FORK_TEST_EXECUTABLE')
+        if (testExecutable) executable = testExecutable
+    }
 }
 
 task clean(type: Delete) {

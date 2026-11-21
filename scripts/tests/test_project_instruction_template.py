@@ -1,4 +1,4 @@
-"""User-supplied template bytes and real atomic storage in disposable projects only."""
+"""Bundled English template bytes and real atomic storage in disposable projects only."""
 from pathlib import Path
 import hashlib,importlib.util,tempfile,unittest,types
 from unittest.mock import patch
@@ -12,19 +12,19 @@ class ProjectTemplate(unittest.TestCase):
  def target(self,agent):
   project=self.root/agent;project.mkdir();other=self.root/(agent+'-other');other.mkdir();(other/'AGENTS.md').write_text('KEEP OTHER');
   cls=m.Editor if agent=='codex' else m.ClaudeEditor
-  builtin='agent-instructions-ubuntu-ai.md'if agent=='codex'else'agent-instructions-claude.md'
+  builtin='agent-instructions-ubuntu-ai.en.md'if agent=='codex'else'agent-instructions-claude.en.md'
   editor=cls(ROOT/'app/src/main/assets'/builtin,self.home,{})
   q=dict(scope='project',project=str(project),name='AGENTS.md'if agent=='codex'else'CLAUDE.md')
   return editor,q,project,other
  def save(self,e,q,view,value):return e.save(dict(q,path=view['path'],revision=view['revision'],text=value))
  def test_full_supplied_template_bytes_and_placeholders(self):
-  self.assertEqual('3554f8178cfbc032b50bc07f3e937236a66a10dea420da84f3b1a6ed7c6a39e4',hashlib.sha256(ASSET.read_bytes()).hexdigest())
-  self.assertNotIn('НАЧАЛО ШАБЛОНА',self.value);self.assertNotIn('КОНЕЦ ШАБЛОНА',self.value)
-  for field in ('[название]','[что делает проект]','[путь]','[документ проверок]','[команда проверки]'):self.assertIn(field,self.value)
+  self.assertEqual('2fbc2c5364233f0377a4818646ee0c8560c364ea97e3071e8f7c36a7265eafc8',hashlib.sha256(ASSET.read_bytes()).hexdigest())
+  self.assertNotRegex(self.value,r'[А-Яа-яЁё]')
+  for field in ('[name]','[what the project does]','[path]','[verification document]','[verification command]'):self.assertIn(field,self.value)
  def test_read_cancel_then_create_and_replace_exact_edited_text(self):
   for agent in ('codex','claude'):
    e,q,project,other=self.target(agent);view=e.view(q);self.assertFalse(Path(view['path']).exists());self.assertFalse((project/'LEARNING.md').exists())
-   edited=self.value.replace('[название]','Synthetic '+agent)+'\nCUSTOM USER TEXT\r\n';one=self.save(e,q,view,edited);self.assertEqual(edited,Path(view['path']).read_bytes().decode());self.assertEqual('KEEP OTHER',(other/'AGENTS.md').read_text())
+   edited=self.value.replace('[name]','Synthetic '+agent)+'\nCUSTOM USER TEXT\r\n';one=self.save(e,q,view,edited);self.assertEqual(edited,Path(view['path']).read_bytes().decode());self.assertEqual('KEEP OTHER',(other/'AGENTS.md').read_text())
    prior=Path(view['path']).read_bytes();e.view(q);self.assertEqual(prior,Path(view['path']).read_bytes())
    two=self.save(e,q,one,edited+'REPLACEMENT\n');self.assertEqual(edited+'REPLACEMENT\n',two['text']);self.assertEqual(edited,e.previous(dict(q,id=e.history(q)['history'][0]['id']))['text']);self.assertFalse((project/'LEARNING.md').exists())
  def test_other_process_change_refuses_stale_replace_for_both_agents(self):

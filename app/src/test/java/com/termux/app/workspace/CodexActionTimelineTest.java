@@ -2,6 +2,7 @@ package com.termux.app.workspace;
 
 import android.app.Activity;
 import android.app.Application;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
 import java.util.*;
@@ -32,38 +33,46 @@ public class CodexActionTimelineTest {
         assertTrue(CodexActionTimeline.shell(old));assertEquals("ls /sdcard/Download",CodexActionTimeline.command(old));assertFalse(old.has("durationMs"));
         Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView normal=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});normal.rows(Arrays.asList(old,shell("two","t","pwd","completed")),false);assertTrue(normal.timeline.getChildAt(1) instanceof TextView);assertTrue(normal.timeline.getChildAt(2) instanceof TextView);
     }
-    @Test public void streamingKeepsCardExpansionAndStepIdentityAndOpensOriginalOutput()throws Exception{
+    @Test public void streamingKeepsCardExpansionAndStepIdentityAndOpensOriginalOutput()throws Exception {
         Activity a=Robolectric.buildActivity(Activity.class).setup().get();WorkspaceLanguage.select(a,"ru");AtomicReference<JSONObject> opened=new AtomicReference<>();AgentChatView v=view(a,opened);
-        JSONObject one=shell("one","t","pwd","completed"),two=shell("two","t","ls","inProgress");v.rows(Arrays.asList(one,two),false);CodexActionsView card=(CodexActionsView)v.timeline.getChildAt(1);assertEquals(View.GONE,card.steps.getVisibility());assertTrue(card.currentAction.getText().toString().contains("Выполнение команды"));card.summaryCard.performClick();View first=card.steps.getChildAt(0);assertEquals(View.VISIBLE,card.steps.getVisibility());
-        two.put("body","ls\nnew native output").put("status","completed").put("exitCode",0).put("durationMs",250);JSONObject third=shell("three","t","uname -a","inProgress");v.rows(Arrays.asList(one,two,third),false);assertSame(card,v.timeline.getChildAt(1));assertSame(first,card.steps.getChildAt(0));assertEquals(View.VISIBLE,card.steps.getVisibility());assertEquals(3,card.steps.getChildCount());assertEquals(1,java.util.stream.IntStream.range(0,v.timeline.getChildCount()).filter(i->v.timeline.getChildAt(i) instanceof CodexActionsView).count());card.steps.getChildAt(1).performClick();assertSame(two,opened.get());assertEquals("two-message",opened.get().getString("message"));assertEquals("command",opened.get().getString("part"));assertTrue(opened.get().getString("body").contains("new native output"));assertTrue(((CodexActionsView.ActionRow)card.steps.getChildAt(1)).text().toString().contains("250 мс"));
+        JSONObject one=shell("one","t","pwd","completed"),two=shell("two","t","ls","inProgress");v.rows(Arrays.asList(one,two),false);View first=v.timeline.getChildAt(1);AgentCompactActionView second=(AgentCompactActionView)v.timeline.getChildAt(2);
+        two.put("body","ls\nnew native output").put("status","completed").put("exitCode",0).put("durationMs",250);v.rows(Arrays.asList(one,two,shell("three","t","uname -a","inProgress")),false);
+        assertSame(first,v.timeline.getChildAt(1));assertSame(second,v.timeline.getChildAt(2));second.item.performClick();assertSame(two,opened.get());assertEquals("two-message",opened.get().getString("message"));assertTrue(opened.get().getString("body").contains("new native output"));assertEquals(View.GONE,second.item.command.getVisibility());assertEquals(View.GONE,second.item.meta.getVisibility());
     }
-    @Test public void failuresAndRussianEnglishLabelsUseNativeFacts()throws Exception{
-        Activity a=Robolectric.buildActivity(Activity.class).setup().get();AtomicReference<JSONObject> opened=new AtomicReference<>();AgentChatView v=view(a,opened);JSONObject failure=shell("one","t","false","completed").put("exitCode",1),denied=shell("two","t","rm file","declined");
-        WorkspaceLanguage.select(a,"ru");v.rows(Arrays.asList(failure,denied),false);CodexActionsView card=(CodexActionsView)v.timeline.getChildAt(1);card.summaryCard.performClick();assertTrue(card.heading.getText().toString().contains("Хронология"));assertTrue(card.outcomes.getText().toString().contains("Одна команда завершилась с ошибкой"));assertTrue(((CodexActionsView.ActionRow)card.steps.getChildAt(0)).text().toString().contains("код 1"));assertTrue(((CodexActionsView.ActionRow)card.steps.getChildAt(1)).text().toString().contains("Отклонено"));assertFalse(((CodexActionsView.ActionRow)card.steps.getChildAt(0)).text().toString().contains("мс"));
-        WorkspaceLanguage.select(a,"en");failure.put("body","false\nupdated");v.rows(Arrays.asList(failure,denied),false);assertSame(card,v.timeline.getChildAt(1));assertTrue(card.outcomes.getText().toString().contains("One command failed"));assertTrue(((CodexActionsView.ActionRow)card.steps.getChildAt(0)).text().toString().contains("exit 1"));assertTrue(((CodexActionsView.ActionRow)card.steps.getChildAt(1)).text().toString().contains("Declined"));
+    @Test public void failuresAndRussianEnglishLabelsUseNativeFacts()throws Exception {
+        Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=view(a,new AtomicReference<>());JSONObject failure=shell("one","t","false","completed").put("exitCode",1),denied=shell("two","t","rm file","declined");
+        for(String language:new String[]{"ru","en"}){WorkspaceLanguage.select(a,language);v.rows(Arrays.asList(failure,denied),false);AgentCompactActionView first=(AgentCompactActionView)v.timeline.getChildAt(1),second=(AgentCompactActionView)v.timeline.getChildAt(2);assertTrue(first.item.text().toString().contains(language.equals("ru")?"код 1":"exit 1"));assertTrue(second.item.text().toString().contains(language.equals("ru")?"Отклонено":"Declined"));assertEquals(0xffffb08f,first.item.title.getCurrentTextColor());}
     }
-    @Test public void eventClockUsesDeviceZoneAndSurvivesRefreshWithoutTimingOtherRows()throws Exception{
-        java.util.TimeZone previous=java.util.TimeZone.getDefault();
-        try{java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("GMT+03:00"));
-            Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=view(a,new AtomicReference<>());
-            JSONObject first=shell("clock","t","pwd","inProgress").put("eventTime",1793611800000L),answer=text("answer-clock","text");
-            v.rows(Arrays.asList(first,answer),false);CodexActionsView card=(CodexActionsView)v.timeline.getChildAt(1);String clock=card.time.getText().toString();assertTrue(clock.matches("[0-2][0-9]:[0-5][0-9]"));assertEquals(AgentMessageTime.timelineTime(1793611800000L),clock);
-            first.put("status","completed");v.rows(Arrays.asList(first,answer),false);assertSame(card,v.timeline.getChildAt(1));assertEquals(clock,card.time.getText().toString());assertTrue(v.timeline.getChildAt(2) instanceof TextView);
-            for(int width:new int[]{240,280,360}){card.heading.setTextSize(28);card.time.setTextSize(24);card.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(1600,View.MeasureSpec.AT_MOST));card.layout(0,0,width,card.getMeasuredHeight());assertTrue(card.heading.getWidth()>0);assertTrue(card.heading.getRight()<=card.time.getLeft());assertTrue(card.time.getRight()<=width);}
-            java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("GMT-05:00"));v.rows(Arrays.asList(first,answer),false);assertNotEquals(clock,card.time.getText().toString());assertEquals(1793611800000L,first.getLong("eventTime"));
-            first.remove("eventTime");v.rows(Arrays.asList(first,answer),false);assertEquals(View.GONE,card.time.getVisibility());assertEquals("",card.time.getText().toString());a.finish();
-        }finally{java.util.TimeZone.setDefault(previous);}
+    @Test public void eventClockUsesDeviceZoneAndSurvivesRefreshWithoutTimingOtherRows()throws Exception {
+        TimeZone previous=TimeZone.getDefault();try{TimeZone.setDefault(TimeZone.getTimeZone("GMT+03:00"));Activity a=Robolectric.buildActivity(Activity.class).setup().get();AtomicReference<JSONObject> opened=new AtomicReference<>();AgentChatView v=view(a,opened);JSONObject first=shell("clock","t","pwd","inProgress").put("eventTime",1793611800000L);v.rows(Arrays.asList(first),false);AgentCompactActionView card=(AgentCompactActionView)v.timeline.getChildAt(1);String clock=AgentMessageTime.timelineTime(first.getLong("eventTime"));assertTrue(clock.matches("[0-2][0-9]:[0-5][0-9]"));first.put("status","completed");v.rows(Arrays.asList(first),false);assertSame(card,v.timeline.getChildAt(1));card.performClick();assertEquals(1793611800000L,opened.get().getLong("eventTime"));TimeZone.setDefault(TimeZone.getTimeZone("GMT-05:00"));assertNotEquals(clock,AgentMessageTime.timelineTime(first.getLong("eventTime")));}finally{TimeZone.setDefault(previous);}
     }
-    private void layout(AgentChatView v){for(int i=0;i<3;i++){v.measure(View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(700,View.MeasureSpec.EXACTLY));v.layout(0,0,600,700);Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();}}
+    private void layout(AgentChatView view) {
+        Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();
+        for (int pass=0;pass<3;pass++) {
+            view.measure(View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(700,View.MeasureSpec.EXACTLY));
+            view.layout(0,0,600,700);
+        }
+        view.scroll.getViewTreeObserver().dispatchOnPreDraw();
+    }
+    private void readAt(AgentChatView view,int y) {
+        long now=android.os.SystemClock.uptimeMillis();
+        MotionEvent down=MotionEvent.obtain(now,now,MotionEvent.ACTION_DOWN,50,100,0);
+        MotionEvent cancel=MotionEvent.obtain(now,now,MotionEvent.ACTION_CANCEL,50,100,0);
+        try {
+            view.scroll.dispatchTouchEvent(down);
+            view.scroll.scrollTo(0,y);
+            view.scroll.dispatchTouchEvent(cancel);
+        } finally {
+            down.recycle();
+            cancel.recycle();
+        }
+    }
     @Test public void updatesBelowTheViewportDoNotMoveReaderOrReplaceNeighborMessages()throws Exception{
-        Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=view(a,new AtomicReference<>());List<JSONObject> rows=new ArrayList<>();for(int i=0;i<25;i++)rows.add(text("message"+i,"text").put("body","message "+i+"\nlonger text\nthird line"));JSONObject command=shell("active","t","pwd","inProgress");rows.add(command);v.rows(rows,false);layout(v);v.scroll.scrollTo(0,500);int y=v.scroll.getScrollY();View neighbor=v.timeline.getChildAt(3);command.put("body","pwd\nnew output");v.rows(rows,false);layout(v);assertEquals(y,v.scroll.getScrollY());assertSame(neighbor,v.timeline.getChildAt(3));
+        Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=view(a,new AtomicReference<>());List<JSONObject> rows=new ArrayList<>();for(int i=0;i<25;i++)rows.add(text("message"+i,"text").put("body","message "+i+"\nlonger text\nthird line"));JSONObject command=shell("active","t","pwd","inProgress");rows.add(command);v.rows(rows,false);layout(v);readAt(v,500);int y=v.scroll.getScrollY();assertTrue(y>0);assertFalse(v.position().bottom);View neighbor=v.timeline.getChildAt(3);command.put("body","pwd\nnew output");v.rows(rows,false);layout(v);assertEquals(y,v.scroll.getScrollY());assertSame(neighbor,v.timeline.getChildAt(3));
     }
-    @Test public void skillCloudKeepsRealStepsAndStopsAtMessagesOrAnotherSkill()throws Exception{
-        Activity a=Robolectric.buildActivity(Activity.class).setup().get();WorkspaceLanguage.select(a,"ru");AtomicReference<JSONObject> opened=new AtomicReference<>();AgentChatView v=view(a,opened);
-        JSONObject read=shell("read","t","cat /root/skills/imagegen/SKILL.md","completed").put("skillName","imagegen").put("skillSource","read").put("skillContextName","imagegen");
-        JSONObject image=new JSONObject().put("key","image").put("kind","tool").put("message","image-msg").put("part","event").put("title","imageView").put("toolType","imageView").put("status","completed").put("turn","t").put("skillContextName","imagegen").put("body","original image event");
-        JSONObject next=shell("next","t","pwd","completed").put("skillContextName","openai-docs");v.rows(Arrays.asList(read,image,next),false);CodexActionsView cloud=(CodexActionsView)v.timeline.getChildAt(1);assertTrue(cloud.heading.getText().toString().contains("Навык: imagegen"));assertEquals(View.VISIBLE,cloud.summary.getVisibility());assertTrue(cloud.summary.getText().toString().contains("Команды: 1"));cloud.summaryCard.performClick();assertEquals(2,cloud.steps.getChildCount());assertTrue(((CodexActionsView.ActionRow)cloud.steps.getChildAt(1)).text().toString().contains("Просмотр изображения"));cloud.steps.getChildAt(1).performClick();assertSame(image,opened.get());assertEquals(2,java.util.stream.IntStream.range(0,v.timeline.getChildCount()).filter(i->v.timeline.getChildAt(i) instanceof CodexActionsView).count());
-        List<JSONObject> split=CodexActionTimeline.group(Arrays.asList(read,text("answer","text"),image));assertEquals(3,split.size());
+    @Test public void skillCloudKeepsRealStepsAndStopsAtMessagesOrAnotherSkill()throws Exception {
+        Activity a=Robolectric.buildActivity(Activity.class).setup().get();AtomicReference<JSONObject> opened=new AtomicReference<>();AgentChatView v=view(a,opened);JSONObject read=shell("read","t","cat /root/skills/imagegen/SKILL.md","completed").put("skillContextName","imagegen"),next=shell("next","t","pwd","completed").put("skillContextName","openai-docs");v.rows(Arrays.asList(read,text("answer","text"),next),false);assertTrue(v.timeline.getChildAt(1) instanceof AgentCompactActionView);assertTrue(v.timeline.getChildAt(2) instanceof AgentMarkdownView);assertTrue(v.timeline.getChildAt(3) instanceof AgentCompactActionView);v.timeline.getChildAt(1).performClick();assertSame(read,opened.get());v.timeline.getChildAt(3).performClick();assertSame(next,opened.get());assertEquals("openai-docs",opened.get().getString("skillContextName"));
     }
     @Test public void friendlyNamesDoNotGuessUnknownToolsOrTreatImagesAsSkills()throws Exception{
         JSONObject image=text("image","tool").put("title","image_view");assertEquals("Просмотр изображения",CodexActionLabels.title(image,true));assertEquals("View image",CodexActionLabels.title(image,false));
@@ -71,24 +80,14 @@ public class CodexActionTimelineTest {
         JSONObject skill=text("skill","tool").put("title","Skill").put("toolType","skill").put("skillName","my-custom-skill");assertEquals("Подключён навык: my-custom-skill",CodexActionLabels.title(skill,true));assertFalse(CodexActionLabels.title(image,true).contains("навык"));
         JSONObject unknown=text("unknown","tool").put("title","OriginalTool").put("toolType","unknown");assertEquals("OriginalTool",CodexActionLabels.title(unknown,true));
     }
-    @Test public void completedCardIsCompactAndUnknownStatusDoesNotFabricateCompletion()throws Exception{
-        Activity a=Robolectric.buildActivity(Activity.class).setup().get();WorkspaceLanguage.select(a,"ru");AgentChatView v=view(a,new AtomicReference<>());v.rows(Arrays.asList(shell("one","t","pwd","completed")),false);layout(v);CodexActionsView card=(CodexActionsView)v.timeline.getChildAt(1);assertEquals(View.VISIBLE,card.summary.getVisibility());assertTrue(card.summary.getText().toString().contains("Команды: 1"));assertEquals(View.GONE,card.steps.getVisibility());
-        JSONObject unknown=shell("one","t","pwd","unknown");v.rows(Arrays.asList(unknown),false);card.summaryCard.performClick();assertFalse(((CodexActionsView.ActionRow)card.steps.getChildAt(0)).text().toString().startsWith("✓"));
+    @Test public void completedCardIsCompactAndUnknownStatusDoesNotFabricateCompletion()throws Exception {
+        Activity a=Robolectric.buildActivity(Activity.class).setup().get();AgentChatView v=view(a,new AtomicReference<>());v.rows(Arrays.asList(shell("one","t","pwd","completed")),false);AgentCompactActionView card=(AgentCompactActionView)v.timeline.getChildAt(1);assertTrue(card.item.text().toString().startsWith("✓"));v.rows(Arrays.asList(shell("one","t","pwd","unknown")),false);assertSame(card,v.timeline.getChildAt(1));assertFalse(card.item.text().toString().startsWith("✓"));assertEquals(View.GONE,card.item.command.getVisibility());
+    }
+    @Test public void activeTimelineNeverOpensAutomaticallyAndRespectsExplicitChoice()throws Exception {
+        Activity a=Robolectric.buildActivity(Activity.class).setup().get();AtomicReference<JSONObject> opened=new AtomicReference<>();AgentChatView v=view(a,opened);JSONObject running=shell("running","t","build","inProgress").put("outputTail","compiling module");v.rows(Collections.singletonList(running),false);AgentCompactActionView card=(AgentCompactActionView)v.timeline.getChildAt(1);assertNull(opened.get());assertFalse(card.item.text().toString().contains("compiling module"));running.put("body","new output").put("status","completed");v.rows(Collections.singletonList(running),false);assertSame(card,v.timeline.getChildAt(1));assertNull(opened.get());card.item.performClick();assertSame(running,opened.get());
+    }
+    @Test public void provenUserDeclineUsesNeutralActionPresentationOnly()throws Exception {
+        Activity a=Robolectric.buildActivity(Activity.class).setup().get();for(String language:new String[]{"ru","en"}){WorkspaceLanguage.select(a,language);AgentChatView v=view(a,new AtomicReference<>());JSONObject denied=shell("denied","turn","synthetic","declined").put("actionOutcome","user_declined");v.rows(Arrays.asList(denied),false);AgentCompactActionView card=(AgentCompactActionView)v.timeline.getChildAt(1);assertEquals(0xfff0f0ee,card.item.title.getCurrentTextColor());assertTrue(card.item.text().toString().contains(language.equals("ru")?"Действие отклонено":"Action declined"));denied.remove("actionOutcome");v.rows(Arrays.asList(denied),false);assertEquals(0xffffb08f,card.item.title.getCurrentTextColor());}
     }
 
-    @Test public void activeTimelineNeverOpensAutomaticallyAndRespectsExplicitChoice()throws Exception{
-        Activity a=Robolectric.buildActivity(Activity.class).setup().get();WorkspaceLanguage.select(a,"ru");AgentChatView v=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});v.actionCards(true);
-        JSONObject running=shell("running","t","build","inProgress").put("outputTail","compiling module");v.rows(java.util.Collections.singletonList(running),false);CodexActionsView card=(CodexActionsView)v.timeline.getChildAt(1);assertEquals(View.GONE,card.steps.getVisibility());
-        assertFalse(((CodexActionsView.ActionRow)card.steps.getChildAt(0)).text().toString().contains("compiling module"));assertTrue(card.currentAction.getText().toString().contains("Выполнение команды"));card.summaryCard.performClick();assertEquals(View.VISIBLE,card.steps.getVisibility());running.put("outputTail","packaging module");v.rows(java.util.Collections.singletonList(running),false);assertEquals(View.VISIBLE,card.steps.getVisibility());assertFalse(((CodexActionsView.ActionRow)card.steps.getChildAt(0)).text().toString().contains("packaging module"));card.summaryCard.performClick();assertEquals(View.GONE,card.steps.getVisibility());running.put("body","new output");v.rows(java.util.Collections.singletonList(running),false);assertEquals(View.GONE,card.steps.getVisibility());running.put("status","completed");v.rows(java.util.Collections.singletonList(running),false);assertEquals(View.GONE,card.steps.getVisibility());
-    }
-
-
- @Test public void provenUserDeclineUsesNeutralActionPresentationOnly()throws Exception{
-  Activity a=Robolectric.buildActivity(Activity.class).setup().get();
-  for(String language:new String[]{"ru","en"}){WorkspaceLanguage.select(a,language);AgentChatView v=view(a,new AtomicReference<>());JSONObject denied=shell("denied","turn","synthetic","declined").put("actionOutcome","user_declined");v.rows(Arrays.asList(denied),false);
-   CodexActionsView card=(CodexActionsView)v.timeline.getChildAt(1);CodexActionsView.ActionRow step=(CodexActionsView.ActionRow)card.steps.getChildAt(0);assertEquals(0xfff0f0ee,step.title.getCurrentTextColor());assertTrue(step.text().toString().contains(language.equals("ru")?"Действие отклонено":"Action declined"));assertFalse(card.outcomes.getText().toString().contains(language.equals("ru")?"ошибкой":"failed"));
-   AgentActionDetailsView detail=new AgentActionDetailsView(v,denied,(r,i)->{},r->{});assertEquals(0xffa5a5a2,detail.status.getCurrentTextColor());
-   denied.remove("actionOutcome");v.rows(Arrays.asList(denied),false);assertEquals(0xffffb08f,((CodexActionsView.ActionRow)card.steps.getChildAt(0)).title.getCurrentTextColor());
-  }
- }
 }

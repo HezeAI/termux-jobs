@@ -63,7 +63,9 @@ public class AgentChatLinksTest {
     }
     @Test public void linkTapDoesNotAlsoOpenTruncatedMessageAndWhitespaceIsNotLink()throws Exception{
         AtomicInteger details=new AtomicInteger();AgentChatView chat=new AgentChatView(activity,r->details.incrementAndGet(),()->{},()->{},()->{},()->{});activity.setContentView(chat);chat.rows(Collections.singletonList(new JSONObject().put("key","a").put("kind","text").put("body","[Source](https://example.org/docs)").put("more",true)),false);layout(chat);TextView t=links(chat).get(0);tap(t);dialog();assertEquals(0,details.get());dismiss();
-        long now=SystemClock.uptimeMillis();float y=point(t)[1];event(t,now,now,MotionEvent.ACTION_DOWN,t.getWidth()-t.getTotalPaddingRight()-2,y);event(t,now,now+40,MotionEvent.ACTION_UP,t.getWidth()-t.getTotalPaddingRight()-2,y);assertFalse(ShadowAlertDialog.getLatestAlertDialog().isShowing());t.performClick();assertEquals(1,details.get());
+        long now=SystemClock.uptimeMillis();float y=point(t)[1];event(t,now,now,MotionEvent.ACTION_DOWN,t.getWidth()-t.getTotalPaddingRight()-2,y);event(t,now,now+40,MotionEvent.ACTION_UP,t.getWidth()-t.getTotalPaddingRight()-2,y);
+        assertFalse(ShadowAlertDialog.getLatestAlertDialog().isShowing());assertEquals(0,details.get());
+        View more=chat.findViewWithTag("markdown-more");assertNotNull(more);assertTrue(more.performClick());assertEquals(1,details.get());
     }
     @Test public void unsafeSchemesMalformedHostsAndCodeLiteralsStayInert(){
         for(String url:new String[]{"javascript:alert(1)","file:///root/key","intent://settings","data:text/html,x","https:///missing","https://user:pass@example.org/","https://example.org/\nnext"})AgentMarkdown.openLink(new View(activity),url);

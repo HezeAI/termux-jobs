@@ -33,7 +33,7 @@ env = {'HOME': str(HOME), 'CODEX_HOME': str(HOME), 'PATH': os.environ['PATH'], '
 config = (HOME/'config.toml').read_text().replace('model="gpt-6.1-sol"', 'model="gpt-6.1-sol"\nmodel_reasoning_effort="low"')
 (HOME/'config.toml').write_text(config)
 bin_dir = private/'bin';bin_dir.mkdir();(bin_dir/'codex').symlink_to(exe);env['PATH'] = str(bin_dir)+':'+env['PATH']
-for name in ('codex-chat.cjs','agent-receipts.cjs','agent-action-preview.cjs','agent-completion-times.cjs','codex-launch.cjs'):
+for name in ('codex-model-catalog.cjs','codex-chat.cjs','agent-attachments.cjs','agent-receipts.cjs','agent-action-preview.cjs','agent-completion-times.cjs','codex-launch.cjs'):
     shutil.copy2(repo/'app/src/main/assets'/name,private/name)
 shutil.copy2(repo/'app/src/main/assets/codex-control.js',private/'codex-wire-v0.2.22.js')
 def owned_stop(child):

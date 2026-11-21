@@ -166,8 +166,8 @@ jobs:
           # Same suites as check.sh plus the X11 module. Keep Unix socket fixture
           # paths below sockaddr_un's limit. Use a real task-local directory:
           # a symlink would invalidate canonical-path/security fixture assumptions.
-          mkdir "$RUNNER_TEMP/tj"
-          export JAVA_TOOL_OPTIONS="$JAVA_TOOL_OPTIONS -Djava.io.tmpdir=$RUNNER_TEMP/tj"
+          export FORK_TEST_TMPDIR="$RUNNER_TEMP/tj"
+          fork_configure_java_tests
           ./gradlew --no-daemon :terminal-emulator:testDebugUnitTest :terminal-view:testDebugUnitTest :termux-shared:testDebugUnitTest :app:testDebugUnitTest :x11:testDebugUnitTest
       - name: Build debug APK
         run: ./scripts/build-debug.sh

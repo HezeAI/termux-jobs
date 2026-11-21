@@ -19,12 +19,12 @@ public class AgentActionCardsTest {
     JSONObject barrier(String kind)throws Exception{return new JSONObject().put("key",kind).put("kind",kind).put("body",kind);}
     @Test public void allAgentsUseStableExpandableCardsWithOriginalDetailKeys()throws Exception {
         Activity a=Robolectric.buildActivity(Activity.class).setup().get();WorkspaceLanguage.select(a,"ru");
-        for(String name:new String[]{"OpenCode","Gemini","Claude"}) {
+        for(String name:new String[]{"OpenCode","Gemini","Claude"}){
             AtomicReference<JSONObject> opened=new AtomicReference<>();AgentChatView view=new AgentChatView(a,opened::set,()->{},()->{},()->{},()->{});view.actionCards(true);view.assistantName(name);a.setContentView(view);
             JSONObject first=tool("read","read_file","success"),second=tool("search","grep","executing");view.rows(Arrays.asList(first,second),false);
-            CodexActionsView card=(CodexActionsView)view.timeline.getChildAt(1);assertEquals(View.GONE,card.steps.getVisibility());card.summaryCard.performClick();assertEquals(View.VISIBLE,card.steps.getVisibility());View firstView=card.steps.getChildAt(0);assertEquals(2,card.steps.getChildCount());assertTrue(card.heading.getText().toString().contains("В работе"));
-            second.put("status","error");view.rows(Arrays.asList(first,second),false);assertSame(card,view.timeline.getChildAt(1));assertSame(firstView,card.steps.getChildAt(0));assertEquals(View.VISIBLE,card.steps.getVisibility());assertTrue(card.outcomes.getText().toString().contains("Одно действие"));card.steps.getChildAt(1).performClick();assertSame(second,opened.get());assertEquals("search",opened.get().getString("part"));
-            WorkspaceLanguage.select(a,"en");view.rows(Arrays.asList(first,second),false);assertTrue(((CodexActionsView.ActionRow)card.steps.getChildAt(0)).text().toString().contains("Reading file"));WorkspaceLanguage.select(a,"ru");
+            AgentCompactActionView card=(AgentCompactActionView)view.timeline.getChildAt(1),next=(AgentCompactActionView)view.timeline.getChildAt(2);assertTrue(next.item.title.getText().toString().contains("Выполняется"));
+            second.put("status","error");view.rows(Arrays.asList(first,second),false);assertSame(card,view.timeline.getChildAt(1));assertSame(next,view.timeline.getChildAt(2));assertEquals(0xffffb08f,next.item.title.getCurrentTextColor());next.item.performClick();assertSame(second,opened.get());assertEquals("search",opened.get().getString("part"));
+            WorkspaceLanguage.select(a,"en");view.rows(Arrays.asList(first,second),false);assertTrue(card.item.text().toString().contains("Reading file"));WorkspaceLanguage.select(a,"ru");
         }
     }
     @Test public void receiptsThoughtsAnswersAndUserMessagesKeepTheirPositions()throws Exception {
@@ -43,9 +43,10 @@ public class AgentActionCardsTest {
     }
     @Test public void pendingAndUnknownAreNotDisplayedAsCompleted()throws Exception {
         Activity a=Robolectric.buildActivity(Activity.class).setup().get();WorkspaceLanguage.select(a,"ru");AgentChatView view=new AgentChatView(a,r->{},()->{},()->{},()->{},()->{});view.actionCards(true);a.setContentView(view);
-        view.rows(Arrays.asList(tool("a","Read","awaiting_approval"),tool("b","Read","")),false);CodexActionsView card=(CodexActionsView)view.timeline.getChildAt(1);card.summaryCard.performClick();assertTrue(((CodexActionsView.ActionRow)card.steps.getChildAt(0)).text().toString().contains("Ожидает разрешения"));assertTrue(((CodexActionsView.ActionRow)card.steps.getChildAt(1)).text().toString().contains("Статус неизвестен"));assertFalse(((CodexActionsView.ActionRow)card.steps.getChildAt(1)).text().toString().contains("✓"));
+        view.rows(Arrays.asList(tool("a","Read","awaiting_approval"),tool("b","Read","")),false);
+        AgentCompactActionView pending=(AgentCompactActionView)view.timeline.getChildAt(1),unknown=(AgentCompactActionView)view.timeline.getChildAt(2);
+        assertTrue(pending.item.text().toString().contains("Ожидает разрешения"));assertTrue(unknown.item.text().toString().contains("Статус неизвестен"));assertFalse(unknown.item.text().toString().startsWith("✓"));
     }
-
     @Test public void automaticBottomScrollDoesNotStealComposerFocusSelectionOrComposition()throws Exception {
         Activity a=Robolectric.buildActivity(Activity.class).setup().get();
         android.widget.LinearLayout outer=new android.widget.LinearLayout(a);outer.setOrientation(android.widget.LinearLayout.VERTICAL);
@@ -69,7 +70,7 @@ public class AgentActionCardsTest {
             JSONObject result=tool("image-result","Tool result","completed").put("actionId","image-id").put("actionRole","result");
             List<JSONObject> rows=Arrays.asList(tool("before","Bash","completed"),image,result,tool("after","Read","completed"));
             List<JSONObject> grouped=CodexActionTimeline.group(rows,true);assertEquals(3,grouped.size());assertSame(image,grouped.get(1));assertEquals(1,grouped.get(0).getJSONArray("steps").length());assertEquals(1,grouped.get(2).getJSONArray("steps").length());
-            v.rows(rows,false);View chip=v.timeline.getChildAt(2);assertTrue(chip instanceof TextView);assertEquals("Просмотр изображения ▾",((TextView)chip).getText().toString());chip.performClick();assertSame(image,opened.get());
+            v.rows(rows,false);AgentImageActionView chip=(AgentImageActionView)v.timeline.getChildAt(2);assertEquals(View.GONE,chip.image.getVisibility());chip.heading.performClick();assertEquals(View.VISIBLE,chip.image.getVisibility());chip.thumbnail.performClick();assertEquals("/project/threads-menu.png",opened.get().getJSONObject("attachment").getString("path"));
             v.rows(rows,false);assertSame(chip,v.timeline.getChildAt(2));assertEquals("View image",CodexActionLabels.title(image,false));
             a.finish();
         }

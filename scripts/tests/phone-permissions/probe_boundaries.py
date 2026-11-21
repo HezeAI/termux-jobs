@@ -9,9 +9,9 @@ quote=lambda x:"'"+str(x).replace("'","'\\''")+"'"
 if agent=='codex':
  source=Path((REPO/'.verification/phone-boundaries/codex-launch-reference.txt').read_text().strip());command=source.read_text();oldroot=source.parent
  command=command.replace(str(oldroot/'project'),str(root/'project'));oldid=re.search(r'([a-f0-9-]{36})\.sock',command)[1];command=command.replace(str(oldroot),str(short)).replace(oldid,run)
- for src,dest in [('codex-launch.cjs','codex-launch-v1.cjs'),('codex-control.js','bridge-v0.2.21.js'),('codex-control.js','codex-wire-v0.2.22.js'),('codex-chat.cjs','codex-chat-v1.cjs'),('agent-receipts.cjs','agent-receipts.cjs'),('agent-completion-times.cjs','agent-completion-times.cjs'),('agent-action-preview.cjs','agent-attachments.cjs','agent-action-preview.cjs','agent-attachments.cjs')]:shutil.copy2(REPO/'app/src/main/assets'/src,short/dest)
+ for src,dest in [('codex-launch.cjs','codex-launch-v1.cjs'),('codex-control.js','bridge-v0.2.21.js'),('codex-control.js','codex-wire-v0.2.22.js'),('codex-model-catalog.cjs','codex-model-catalog.cjs'),('codex-chat.cjs','codex-chat-v1.cjs'),('agent-receipts.cjs','agent-receipts.cjs'),('agent-completion-times.cjs','agent-completion-times.cjs'),('agent-action-preview.cjs','agent-action-preview.cjs'),('agent-attachments.cjs','agent-attachments.cjs')]:shutil.copy2(REPO/'app/src/main/assets'/src,short/dest)
  ins=short/re.search(r'instructions-\d+',command)[0];ins.mkdir()
- for name in ['agent-instructions.py','agent-instructions-ubuntu-ai.md']:shutil.copy2(REPO/'app/src/main/assets'/name,ins/name)
+ for name in ['agent-instructions.py','agent-instructions-ubuntu-ai.en.md']:shutil.copy2(REPO/'app/src/main/assets'/name,ins/name)
 else:
  command='set -e; export JOBS_AGENT_UBUNTU=ubuntu-ai; source '+quote(assets/'agent-dependencies.sh')+'; jobs_agent_prepare '+agent+' api; source '+quote(assets/('ai-agents-bootstrap.sh'if agent=='opencode'else agent+'-bootstrap.sh'))+'; '
  if agent=='opencode':command+='exec node '+quote(assets/'ai-agents-control.js')+' run-chat '+quote(assets/'connections'/str(uuid.uuid4()))+' '+quote(endpoint)+' ses'+uuid.uuid4().hex+" '' build new '' ask unrestricted"

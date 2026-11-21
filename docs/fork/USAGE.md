@@ -1,10 +1,10 @@
-# Руководство Termux Job’s — 2.1.8
+# Руководство Termux Job’s — 2.1.9
 
 Termux Job’s объединяет терминалы, Linux-окружения, проектные файлы и чаты
 Codex, Claude Code, Gemini и OpenCode. Работающие агенты используют выбранный
 CLI и провайдера; приложение не предоставляет аккаунт или бесплатный доступ.
 [APK и совместимость](../../README.md#installation-and-compatibility) ·
-[Release](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.8).
+[Release](https://github.com/HezeAI/termux-jobs/releases/tag/v2.1.9).
 
 ## Первый запуск и окружения
 
@@ -66,6 +66,11 @@ Auto зависит от CLI/аккаунта. Bypass недоступен, ес
 [Права и границы](../../SECURITY.md) · [Инструкции](AGENT-INSTRUCTIONS.md) ·
 [Навыки](AGENT-SKILLS.md).
 
+In Ubuntu AI, open **Chat management → Update CLI** in the sidebar to check
+Codex, Claude or Antigravity. Confirm the version before installing it. A
+running chat uses the new version after its next launch. A new Gemini chat
+uses Antigravity and shows its terminal sign-in prompt when needed.
+
 ## Файлы, вложения и изменения
 
 Откройте «Файлы и изменения проекта» для выбранного чата. Вкладки показывают
@@ -78,29 +83,22 @@ Auto зависит от CLI/аккаунта. Bypass недоступен, ес
 Используются сохранённые окружение и папка. Для отсутствующих файлов или
 недоступной среды отображается причина; просмотр не восстанавливает их автоматически.
 
-## Лимиты, контекст и RTK
+A new Codex, Claude or Antigravity chat in Ubuntu AI prepares Git when needed.
+The app asks before installing a missing Git package. Select a writable project
+folder. An existing or enclosing repository is preserved, and the Changes tab
+can display files before the first commit. Committing requires write permission
+and a Git author. To correct a path saved by an earlier build, reselect it in
+the chat settings.
+
+## Лимиты и контекст
 
 Лимиты и текущий контекст — разные показатели. Недоступные сведения не заменяются
 нулём; сохранённые значения помечаются как последние известные с временем.
 Действия, которым нужен работающий агент, недоступны до запуска.
 
-RTK Lite и RTK штатный доступны Codex/Claude в Ubuntu AI и взаимоисключающие.
-Lite обрабатывает ограниченный проверенный набор команд. Штатный использует
-возможности закреплённого RTK и перед включением предупреждает о влиянии
-преобразования команд на некоторые правила разрешений.
-
-Компонент загружается из Components с проверкой ревизии и SHA-256.
-Подготовка имеет прогресс и отмену; одна установка обслуживает окружение,
-но режим, статистика и восстановление вывода отдельные для каждого чата.
-Для незапущенного чата выбор применяется при запуске. Перезапуск работающего
-чата требует согласия; выключение не удаляет компонент.
-
-После обновления до 2.1.7 откройте «Лимиты и контекст», чтобы обновить обработчик
-статистики. Бинарник RTK jobs.1 не изменился. Измерения относятся только к выводу
-команд; токены оценочные, не экономия подписки. Неизвестная база остаётся неизвестной.
-«Подробности» показывают байты, recall и число команд. Полный вывод сохраняется
-для явного восстановления; его сохранение не считается передачей модели.
-[RTK: механизм и ограничения](RTK-MODE.md).
+Version 2.1.9 removes RTK from this panel and from new agent launches.
+Existing installations and recovery files remain in Ubuntu AI. The previous
+behavior is documented in the [historical RTK guide](RTK-MODE.md).
 
 ## Серверы, X11, резервные копии
 

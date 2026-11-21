@@ -9,8 +9,8 @@ final class AgentChatCache {
     static final class State {
         final LinkedHashMap<String,JSONObject> rows=new LinkedHashMap<>();
         final LinkedHashMap<String,Boolean> timelineExpansion=new LinkedHashMap<>();
-        String older="",model="",session="",notice="";
-        boolean trimmed,historyExhausted,nativeChat,resolved,busy,directShell,needsTerminal,connected,failed;
+        String older="",model="",session="",notice="",historyFirst;
+        boolean trimmed,historyExhausted,historyPinned,nativeChat,resolved,busy,directShell,needsTerminal,connected,failed;
         AgentChatView.Position position;
         AgentIndicatorState.State indicator=AgentIndicatorState.State.IDLE;
         JSONObject modelConnection,requestTiming;
@@ -27,7 +27,7 @@ final class AgentChatCache {
         state.trimmed=state.rows.size()<list.size();
         while(state.timelineExpansion.size()>1024)state.timelineExpansion.remove(state.timelineExpansion.keySet().iterator().next());
         int choices=0;for(String key:state.timelineExpansion.keySet())choices+=key.length()+8;
-        state.chars=choices+(state.requestTiming==null?0:state.requestTiming.toString().length())+size+state.older.length()+state.model.length()+state.session.length()+state.notice.length()+(state.modelConnection==null?0:state.modelConnection.toString().length());
+        state.chars=choices+(state.requestTiming==null?0:state.requestTiming.toString().length())+size+state.older.length()+(state.historyFirst==null?0:state.historyFirst.length())+state.model.length()+state.session.length()+state.notice.length()+(state.modelConnection==null?0:state.modelConnection.toString().length());
         if(state.chars>MAX_TOTAL_CHARS)return;entries.put(owner,state);chars+=state.chars;
         while(entries.size()>MAX_ENTRIES||chars>MAX_TOTAL_CHARS)take(entries.keySet().iterator().next());
     }

@@ -1,3 +1,120 @@
+## 2.1.9 (1549) — 2026-11-21 — stable
+
+- Show compact agent actions, expandable command output and readable Codex
+  subagent history. Keep older chat pages reachable.
+- Add CLI update checks and confirmation in Chat management for Codex, Claude
+  and Antigravity in Ubuntu AI. New Gemini chats use Antigravity CLI and
+  surface sign-in before the first message.
+- Add shared instruction templates and Gemini instruction and skill forms.
+  Preserve existing instruction files and saved Gemini connections.
+- Prepare Git in Ubuntu AI when needed and initialize new chat projects before
+  agent startup. Show changes before the first commit and preserve exact
+  project paths, including names ending in a space.
+- Remove the built-in RTK integration. Retain existing histories, runtime files
+  and user hooks. Keep the Android package, signer and minimum SDK. The updater
+  requests no data reset or environment reinstall.
+- [Release notes](docs/fork/RELEASE-v2.1.9.md) · [Validation](docs/fork/VALIDATION-v2.1.9.md).
+
+## 2.1.9-test8 (1548) — 2026-11-21 — private
+
+- Initialize Git in the chosen project folder for new Codex, Claude and
+  Antigravity chats in Ubuntu AI. Preserve existing repositories and leave
+  the first commit to the developer.
+- Check for Git during Ubuntu AI preparation. With the user's confirmation,
+  install the Ubuntu Git package when an executable is unavailable.
+- Show Changes before the first commit. This private build can select the known
+  project-local Git by verified path and SHA-256 when the environment lacks Git.
+- Same package, signer and saved profile format as test7. Phone acceptance is
+  pending. [Build and validation](docs/fork/VALIDATION-2.1.9-test8.md).
+
+## 2.1.9-test7 (1547) — 2026-11-21 — private
+
+- Report Antigravity sign-in at chat startup, before the first user message.
+  Refresh native readiness after leaving the interactive terminal.
+- Keep **Update CLI** under sidebar **Chat management** and remove it from
+  the new-chat form.
+- Same package, signer and stored profile formats as test6. Phone acceptance
+  and actual account sign-in remain pending.
+- [Build and validation](docs/fork/VALIDATION-2.1.9-test7.md).
+
+## 2.1.9-test6 (1546) — 2026-11-21 — private
+
+- Adapt the built-in Codex instructions for Claude and Gemini in English.
+  Seed only the common template once per agent and effective instruction root.
+  Preserve existing files and require explicit creation of project instructions
+  and LEARNING.md.
+- Add Gemini General, Project and Diagnostics forms with preview, history,
+  import and the project memory interface. Add Antigravity General and Project
+  skill management in Ubuntu AI.
+- Keep the preparation dialog open on outside taps while work is running.
+  Show Retry check after failure and Close after successful preparation.
+- Include the Antigravity startup and CLI update fixes from test5. Same package,
+  signer and SDK requirements as test4/test5. Phone and live Antigravity
+  acceptance remain pending.
+- [Build and validation](docs/fork/VALIDATION-2.1.9-test6.md).
+
+## 2.1.9-test5 (1545) — 2026-11-21 — private
+
+- Fix the Antigravity startup and update probes when the official CLI writes
+  its help to stderr. Include Python 3 in the Ubuntu AI update prerequisites.
+- Let users open **Update CLI** in the new Gemini form before the first chat.
+  Keep the version check and explicit installation confirmation.
+- Same package ID, signer and profile format as test4. Device acceptance,
+  Google sign-in and a live provider response remain pending.
+- [Build and validation](docs/fork/VALIDATION-2.1.9-test5.md).
+
+## 2.1.9-test4 (1544) — 2026-11-21 — private
+
+- Show the CLI default model, new chat, and Antigravity permission settings
+  in the Gemini creation form in Russian and English.
+- Same package ID, signer and profile format as test3. The app requests no
+  data reset. Device acceptance and live Google sign-in are pending.
+- [Build and validation](docs/fork/VALIDATION-2.1.9-test4.md).
+
+## 2.1.9-test3 (1543) — 2026-11-21 — private
+
+- Use English for app-provided agent instructions and Markdown headings. Localize
+  the forms and preserve existing instructions, drafts, and history.
+- Apply the same message presentation and history window to Codex, Claude Code,
+  and OpenCode. Include raw-message Copy above the response and keep older
+  history reachable.
+- Remove RTK modes, preparation, and app-managed hooks. Keep historical data.
+- Add per-chat Codex context window, compaction threshold, and request speed.
+- Use Antigravity CLI in Ubuntu AI for new Gemini chats and the chat’s right-side
+  terminal for sign-in. Preserve existing Gemini connection profiles.
+- Check CLI update availability in the background after the chat bridge is ready.
+  Show a blue new label when a newer version is available. Installation requires
+  the existing explicit confirmation.
+- Same package ID, signing certificate and Android SDK levels as test2.
+  Older Codex profiles default to normal speed and automatic context limits.
+  Existing Gemini bindings are retained. The new Antigravity route uses
+  its own sign-in. Device acceptance and live provider checks are pending.
+- [Build and validation](docs/fork/VALIDATION-2.1.9-test3.md).
+
+## 2.1.9-test2 (1542) — 2026-11-20 — private
+
+- Add **Update CLI** under **Chat management** for Codex and Claude Code in
+  Ubuntu AI. Check the launch version and confirm the specific available update.
+- Verify each ARM64 package and switch launch selection after a successful
+  install. Other chats using the same agent in Ubuntu AI pick it up at their
+  next launch. Restart a running chat separately to apply the update.
+- Same Android package and signer. No data schema change or reset. Phone
+  acceptance is pending. [Work log and validation](docs/fork/VALIDATION-2.1.9-test2-cli-update.md).
+
+## 2.1.9-test1 (1541) — 2026-11-20 — private
+
+- Match DevKit 0.1.57 agent chat actions: individual compact rows, web queries,
+  image disclosure and centered native details.
+- Show Codex subagent events and verified read-only child history, with full
+  received task/response text, explicit unavailable history and no agent resume.
+- Replace common Codex RU/EN templates with the DevKit prompt adapted to the
+  selected Termux Job’s environment. Existing user rules remain preserved.
+- Package ID and existing signing identity retained. No data reset or migration;
+  restart a chat when needed to load the updated native helper. Device acceptance
+  is separate from source/UI/RPC fixture checks.
+- [APK validation, source checks and provenance](docs/fork/VALIDATION-devkit-timeline-2026-11-20.md).
+  Full build and modern Lint passed (0 errors /301 warnings); phone acceptance pending.
+
 ## 2.1.8 (1540) — 2026-11-10 — stable
 
 - Timeline action cards show a short action name and the actual command below it.
@@ -516,10 +633,6 @@ WebSocket-сбой Codex с большим контекстом изображе
 - Package/signing и форматы данных сохраняются; установки и миграции данных нет.
   Совместимость реального обновления и внешний вид ожидают телефона.
 - Старые APK сохранены. Резерв1499 не трогается. [Проверки](docs/fork/VALIDATION-2.1.5-test6.md).
-
-# Unreleased
-
-No other changes queued for publication.
 
 # 2026-11-06 — 2.1.5-test5 (versionCode1500, private v35 follow-up)
 

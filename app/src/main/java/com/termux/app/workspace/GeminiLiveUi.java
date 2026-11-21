@@ -140,7 +140,6 @@ final class GeminiLiveUi {
         AgentStatusUi.row(body,tr("Квоты AI Studio","AI Studio quotas"),"quotas",()->openQuotas());
         detailsContext=new AgentContextMeter(activity,"Gemini");body.addView(detailsContext);
         if(permissionsOnly){body.removeAllViews();body.addView(detailsMode);}else if(modelOnly){body.removeAllViews();body.addView(detailsModel);body.addView(detailsThinking);}else{body.removeView(detailsModel);body.removeView(detailsThinking);body.removeView(detailsMode);}
-        if(!permissionsOnly&&!modelOnly)body.addView(new RtkMode(activity,profile));
         AlertDialog dialog=WorkspaceDialogs.builder(activity).setTitle(permissionsOnly?tr("Права и подтверждения · Gemini","Permissions and approvals · Gemini "):modelOnly?tr("Модель Gemini","Gemini model"):tr("Лимиты и контекст · Gemini","Limits and context · Gemini")).setView(AgentStatusUi.scroll(body)).setPositiveButton(tr("Обновить","Refresh"),null).setNegativeButton(tr("Закрыть","Close"),null).create();detailsDialog=dialog;detailsRun=captured;
         dialog.setOnDismissListener(d->{if(detailsDialog==dialog)detailsDialog=null;});dialog.setOnShowListener(d->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{if(owns(captured))load(profile);}));dialog.show();if(modelOnly)dialog.getButton(AlertDialog.BUTTON_POSITIVE).setVisibility(android.view.View.GONE);update();
     }

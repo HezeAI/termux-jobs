@@ -198,26 +198,51 @@ def fetch(url):
 class Manager:
     def __init__(self, q):
         self.q = q; self.agent = q.get('agent', 'codex')
-        if self.agent not in ('codex','claude') or q.get('environment','ubuntu-ai') not in ('ubuntu-ai','ubuntu','termux') or self.agent == 'claude' and q.get('environment') == 'termux': fail('INVALID_ENVIRONMENT')
+        environment = q.get('environment', 'ubuntu-ai')
+        if self.agent == 'gemini':
+            if q.get('geminiRuntime', 'antigravity') != 'antigravity' or environment != 'ubuntu-ai':
+                fail('INVALID_AGENT')
+        elif self.agent not in ('codex','claude') or environment not in ('ubuntu-ai','ubuntu','termux') or self.agent == 'claude' and environment == 'termux':
+            fail('INVALID_ENVIRONMENT')
         self.home = safe_path(Path.home())
         self.project = safe_path(Path(q.get('project', str(self.home))))
         if len(self.project.parts)>64 or len(str(self.project))>4096: fail('PROJECT_PATH_LIMIT')
-        self.config = safe_path(Path(os.environ.get('CODEX_HOME', str(self.home/'.codex'))) if self.agent == 'codex' else Path(os.environ.get('CLAUDE_CONFIG_DIR',str(self.home/'.claude'))))
+        if self.agent == 'codex':
+            self.config = safe_path(Path(os.environ.get('CODEX_HOME', str(self.home/'.codex'))))
+            self.user_root = self.home/'.agents/skills'
+            self.project_folder = '.agents'
+        elif self.agent == 'claude':
+            self.config = safe_path(Path(os.environ.get('CLAUDE_CONFIG_DIR', str(self.home/'.claude'))))
+            self.user_root = self.config/'skills'
+            self.project_folder = '.claude'
+        else:
+            self.config = safe_path(self.home/'.gemini')
+            self.user_root = self.config/'config/skills'
+            self.project_folder = '.agents'
         self.scope = q.get('scope','user')
         if self.scope not in ('user','project'): fail('INVALID_SCOPE')
-        self.root = ((self.home/'.agents' if self.agent=='codex' else self.config) if self.scope=='user' else self.project/('.agents' if self.agent=='codex' else '.claude'))/'skills'
-        safe_path(self.root)
+        self.root = safe_path(self.user_root if self.scope == 'user' else self.project/self.project_folder/'skills')
         self.state = self.root.parent/'.termux-jobs-skills'
         self.staging = safe_path(self.home/'.local/share/termux-jobs/skill-previews')
     def roots(self, include_project=True):
-        result = [(self.home/'.agents/skills' if self.agent=='codex' else self.config/'skills','user')]
+        result = [(self.user_root, 'user')]
         if self.agent=='codex': result += [(self.config/'skills','legacy'),(Path('/etc/codex/skills'),'admin')]
+        if self.agent == 'gemini':
+            result += [(self.config/'antigravity-cli/skills', 'legacy'), (self.config/'skills', 'legacy')]
         if include_project:
+            projects = []
             for p in [self.project,*self.project.parents]:
-                result.append((p/('.agents' if self.agent=='codex' else '.claude')/'skills','project' if p==self.project else 'ancestor'))
-                if (p/'.git').exists(): break
+                projects.append((p/self.project_folder/'skills', 'project' if p == self.project else 'ancestor'))
+                marker = p/'.git'
+                if marker.exists() and (self.agent != 'gemini' or not marker.is_symlink()):
+                    break
+            else:
+                if self.agent == 'gemini':
+                    projects = projects[:1]
+            result.extend(projects)
         # Plugin directories are listed separately only when actual package SKILL.md is present.
-        result.append((self.config/'plugins/cache','plugin'))
+        if self.agent != 'gemini':
+            result.append((self.config/'plugins/cache','plugin'))
         return list(dict.fromkeys(result))
     def record(self, target):
         p = target.parent.parent/'.termux-jobs-skills'/target.name/'record.json'
@@ -234,7 +259,9 @@ class Manager:
                 safe_path(root)
                 for base, dirs, files in os.walk(root,followlinks=False):
                     depth=len(Path(base).relative_to(root).parts)
-                    dirs[:]=[d for d in dirs if not (Path(base)/d).is_symlink() and (depth<6 if scope=='plugin' else depth<2)]
+                    max_depth = 1 if self.agent == 'gemini' else 6 if scope == 'plugin' else 2
+                    dirs[:]=[d for d in dirs if depth < max_depth and not (Path(base)/d).is_symlink()]
+                    if self.agent == 'gemini' and depth != 1: continue
                     if 'SKILL.md' not in files: continue
                     folder=Path(base)
                     if str(folder) in seen: continue
@@ -356,6 +383,7 @@ class Manager:
             journal.unlink()
         else: fail('RECOVERY_CONFLICT')
     def mutate(self):
+        safe_path(self.state)
         self.state.mkdir(parents=True,exist_ok=True); safe_path(self.state)
         with open(safe_path(self.state/'lock'),'a+b') as lock:
             fcntl.flock(lock,fcntl.LOCK_EX)
@@ -410,13 +438,19 @@ class Manager:
         if op=='recover':
             name=self.q.get('name','')
             if not NAME.fullmatch(name): fail('INVALID_NAME')
+            safe_path(self.state)
             self.state.mkdir(parents=True,exist_ok=True); safe_path(self.state)
             with open(safe_path(self.state/'lock'),'a+b') as lock:
                 fcntl.flock(lock,fcntl.LOCK_EX); self.transaction(safe_path(self.state/name))
             return {'recovered':True}
         if op=='inspect':
             target=safe_path(Path(self.q.get('path','')))
-            if not any(target==root or root in target.parents for root,_ in self.roots()): fail('INVALID_SOURCE')
+            if self.agent == 'gemini':
+                project_scope = self.scope == 'project'
+                if not any(target.parent == root and (scope in ('project', 'ancestor')) == project_scope
+                           for root, scope in self.roots(include_project=project_scope)):
+                    fail('INVALID_SOURCE')
+            elif not any(target==root or root in target.parents for root,_ in self.roots()): fail('INVALID_SOURCE')
             result=metadata(target)
             try: result['files']=inventory(target)
             except SkillError as e: result['error']=str(e)

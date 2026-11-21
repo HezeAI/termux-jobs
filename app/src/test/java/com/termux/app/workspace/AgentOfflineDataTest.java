@@ -9,8 +9,4 @@ public class AgentOfflineDataTest {
   AgentOfflineData.remember(a,p,"context",new JSONObject("{\"stale\":true}"),30000);assertEquals(100,AgentOfflineData.read(a,p,"context").getJSONObject("data").getJSONObject("usage").getInt("used"));
   assertEquals(0,AgentOfflineData.read(a,other,"context").length());p.codexThread="another";assertEquals(0,AgentOfflineData.read(a,p,"context").length());
  }
- @Test public void stoppedRtkShowsSavedChoiceWithoutClaimingConnection()throws Exception{
-  Activity a=Robolectric.buildActivity(Activity.class).setup().get();WorkspaceLanguage.select(a,"ru");WorkspaceStore.Session p=new WorkspaceStore.Session();p.environment="codex";p.codexEnvironment="ubuntu-ai";
-  RtkMode r=new RtkMode(a,p,(op,token,events)->new JSONObject(),true);r.present(new JSONObject().put("mode","advanced").put("desired",true).put("enabled",false));assertTrue(r.advanced.isChecked());assertFalse(r.toggle.isChecked());assertEquals("Применится при запуске чата",r.stateLabel.getText().toString());assertEquals("RTK штатный",r.advanced.getText().toString());assertEquals("RTK Lite",r.toggle.getText().toString());r.close();a.finish();
- }
 }
