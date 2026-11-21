@@ -23,10 +23,15 @@ final class AgentActionDetailsView extends LinearLayout {
     private final Set<String> expanded=new HashSet<>();
     private JSONObject row;
     private String previewStamp="",nativeText="";
-    private boolean fullText,retainText,touching;
+    private boolean fullText,retainText,touching,capturedFailed;
+    final boolean capturedSubagent;
     private int interaction;
     AgentActionDetailsView(AgentChatView owner,JSONObject row,BiConsumer<JSONObject,ImageView> thumbnail,Consumer<JSONObject> openImage){
+        this(owner,row,thumbnail,openImage,false);
+    }
+    AgentActionDetailsView(AgentChatView owner,JSONObject row,BiConsumer<JSONObject,ImageView> thumbnail,Consumer<JSONObject> openImage,boolean capturedSubagent){
         super(owner.getContext());this.owner=owner;this.thumbnail=thumbnail;this.openImage=openImage;setOrientation(VERTICAL);
+        this.capturedSubagent=capturedSubagent;
         status=owner.label("",13);status.setTag("agent-action-status");addView(status,new LayoutParams(-1,-2));
         scroll=new ScrollView(getContext()){
             @Override protected void onMeasure(int widthSpec,int heightSpec){
@@ -47,7 +52,10 @@ final class AgentActionDetailsView extends LinearLayout {
     private boolean ru(){return WorkspaceLanguage.code(getContext()).equals("ru");}
     void update(JSONObject next){
         boolean following=followsOutput();
-        int y=scroll.getScrollY(),heldInteraction=interaction;String previous=row==null?"":row.optString("body")+row.optLong("bodyLength");row=next;
+        int y=scroll.getScrollY(),heldInteraction=interaction;
+        String previous=row==null?"":row.optString("body")+row.optLong("bodyLength");
+        boolean capturedChanged=capturedSubagent&&row!=null&&!sameBody(row,next);
+        row=next;
         String state=AgentActionPresentation.state(row,ru());
         if(AgentTimelineSummary.kind(row)==AgentTimelineSummary.Kind.COMMAND){
             if(row.has("exitCode")&&!row.isNull("exitCode")&&row.optInt("exitCode")==0)state+=t("\nКод 0: команда завершилась успешно; результат всей проверки зависит от вывода.","\nExit 0: the command succeeded; the overall check depends on its output.");
@@ -56,7 +64,8 @@ final class AgentActionDetailsView extends LinearLayout {
         JSONObject p=AgentActionPresentation.preview(row);String stamp=String.valueOf(p);if(!previewStamp.equals(stamp)){previewStamp=stamp;renderPreview(p);}
         LayoutParams viewport=(LayoutParams)scroll.getLayoutParams();int height=LayoutParams.WRAP_CONTENT;float weight=0;
         if(viewport.height!=height||viewport.weight!=weight){viewport.height=height;viewport.weight=weight;scroll.setLayoutParams(viewport);}
-        if(retainText&&AgentSubagentPresentation.matches(row))try{
+        if(capturedChanged){retainText=false;fullText=false;capturedFailed=false;}
+        if(retainText&&!capturedSubagent&&AgentSubagentPresentation.matches(row))try{
             JSONObject loaded=new JSONObject(nativeText),live=new JSONObject(row.optString("body"));
             if(!live.has("agentHistory")&&loaded.has("agentHistory"))live.put("agentHistory",loaded.get("agentHistory"));
             if(!live.has("agentHistoryLimited")&&loaded.has("agentHistoryLimited"))live.put("agentHistoryLimited",loaded.get("agentHistoryLimited"));
@@ -65,24 +74,38 @@ final class AgentActionDetailsView extends LinearLayout {
         String current=row.optString("body")+row.optLong("bodyLength");if(!previous.equals(current))fullText=false;
         if(!retainText&&body.getSelectionStart()==body.getSelectionEnd()&&!nativeText.equals(row.optString("body"))){nativeText=row.optString("body");showBody(p);}
         if(nativeText.isEmpty()){nativeText=row.optString("body");showBody(p);}
+        if(capturedSubagent&&!capturedFailed&&body.getSelectionStart()==body.getSelectionEnd())showBody(p);
         more.setVisibility(row.optBoolean("more")&&!fullText?VISIBLE:GONE);
         scroll.post(()->{if(getParent()==null||touching||interaction!=heldInteraction)return;if(following)scroll.fullScroll(View.FOCUS_DOWN);else scroll.scrollTo(0,y);});
     }
-    void nativeText(String value,boolean complete){boolean follow=followsOutput();int y=scroll.getScrollY();nativeText=value;fullText=complete;retainText=true;showBody(AgentActionPresentation.preview(row));if(follow)scroll.post(()->scroll.fullScroll(View.FOCUS_DOWN));else scroll.post(()->scroll.scrollTo(0,y));}
+    static boolean sameBody(JSONObject first,JSONObject second){
+        return first.optLong("bodyLength")==second.optLong("bodyLength")
+            &&first.optBoolean("more")==second.optBoolean("more")
+            &&first.optString("message").equals(second.optString("message"))
+            &&first.optString("part").equals(second.optString("part"))
+            &&first.optString("body").equals(second.optString("body"));
+    }
+    void nativeText(String value,boolean complete){boolean follow=followsOutput();int y=scroll.getScrollY();nativeText=value;fullText=complete;retainText=true;capturedFailed=false;if(!capturedSubagent||body.getSelectionStart()==body.getSelectionEnd())showBody(AgentActionPresentation.preview(row));if(follow)scroll.post(()->scroll.fullScroll(View.FOCUS_DOWN));else scroll.post(()->scroll.scrollTo(0,y));}
     String nativeText(){return AgentSubagentPresentation.matches(row)?subagentText():nativeText;}
     private String subagentText(){
         try{new JSONObject(nativeText);JSONObject display=new JSONObject(row.toString());display.put("body",nativeText);return AgentSubagentPresentation.details(display,ru());}
-        catch(JSONException incomplete){return t("Загрузка подробностей субагента…","Loading subagent details…");}
+        catch(JSONException incomplete){
+            if(capturedSubagent&&!row.optBoolean("more"))return t("Сведения о субагенте недоступны.","Subagent details are unavailable.");
+            return t("Загрузка подробностей субагента…","Loading subagent details…");
+        }
     }
     void historyFailure(){
         if(!AgentSubagentPresentation.matches(row))return;
+        capturedFailed=capturedSubagent;
         String text=subagentText();
         if(text.equals(t("Загрузка подробностей субагента…","Loading subagent details…")))text="";
-        body.setText(text+t("\nНе удалось загрузить историю субагента. Повторите загрузку.","\nCould not load subagent history. Retry loading."));
+        body.setText(text+(capturedSubagent
+            ?t("\nНе удалось загрузить сведения о субагенте. Повторите загрузку.","\nCould not load captured subagent details. Retry loading.")
+            :t("\nНе удалось загрузить историю субагента. Повторите загрузку.","\nCould not load subagent history. Retry loading.")));
     }
     void copyOrExport(){owner.copyText(nativeText());}
     private void showBody(JSONObject p){
-        if(AgentSubagentPresentation.matches(row)){body.setVisibility(VISIBLE);body.setText(subagentText());return;}
+        if(AgentSubagentPresentation.matches(row)){body.setVisibility(VISIBLE);String text=subagentText();if(!text.contentEquals(body.getText()))body.setText(text);return;}
         String kind=p==null?"":p.optString("kind");
         if(kind.equals("files")){
             if(fullText)try{renderFiles(new JSONArray(nativeText),false);body.setVisibility(GONE);return;}catch(JSONException ignored){body.setVisibility(VISIBLE);body.setText(nativeText);return;}

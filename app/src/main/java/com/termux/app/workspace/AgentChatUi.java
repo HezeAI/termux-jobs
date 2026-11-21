@@ -41,7 +41,7 @@ final class AgentChatUi {
     private String stopToken="",confirmedStopToken="",confirmedStopOwner="";
     private String vertexPrompted="";
     private TextView thinkingBody;private ScrollView thinkingScroll;private String thinkingKey="";
-    private AgentActionDetailsView actionDetails;
+    private volatile AgentActionDetailsView actionDetails;
     private boolean actionLiveLoading,actionManual;
     private String actionLiveStamp="";
     java.util.function.BiConsumer<Integer,EditText> terminalLibrary=(section,input)->{};
@@ -470,17 +470,24 @@ final class AgentChatUi {
             reads.execute(()->{JSONObject r=null;try{r=transport.request(p,q);}catch(Exception ignored){}final JSONObject result=r;handler.post(()->{if(closed||g!=generation||!dialog.isShowing())return;next.setEnabled(true);if(result==null||!result.optBoolean("ok")){next.setVisibility(View.VISIBLE);next.setText(tr("Повторить загрузку","Retry loading"));return;}if(offset[0]==0)body.setText((row.optString("kind").equals("receipt")?tr("Разрешение не означает успешного выполнения.\n\n","Permission does not mean successful execution.\n\n"):"")+result.optString("body"));else body.append(result.optString("body"));if(markdownBody!=null)markdownBody.update(name(),body.getText().toString(),null);offset[0]=result.isNull("next")?-1:result.optInt("next",-1);next.setVisibility(offset[0]<0?View.GONE:View.VISIBLE);next.setText(tr("Далее","More"));});});};next.setOnClickListener(v->page[0].run());page[0].run();
     }
     private JSONObject detailRequest(WorkspaceStore.Session p,JSONObject row,int offset,String session){
-        JSONObject q=op("chat-detail");try{if(p.geminiAgent||p.claudeAgent||p.environment.equals("codex")||p.aiAgent.equals("opencode"))q.put("session",session);q.put("message",row.optString("message")).put("part",row.optString("part")).put("offset",offset);if(AgentSubagentPresentation.matches(row))q.put("subagent",true);}catch(JSONException impossible){throw new IllegalStateException(impossible);}return q;
+        JSONObject q=op("chat-detail");try{if(p.geminiAgent||p.claudeAgent||p.environment.equals("codex")||p.aiAgent.equals("opencode"))q.put("session",session);q.put("message",row.optString("message")).put("part",row.optString("part")).put("offset",offset);if(p.environment.equals("codex")&&AgentSubagentPresentation.matches(row))q.put("subagent",true);}catch(JSONException impossible){throw new IllegalStateException(impossible);}return q;
     }
     private void actionDetails(JSONObject row){
         if(!selected())return;if(details!=null)details.dismiss();thinkingBody=null;thinkingScroll=null;thinkingKey="";
-        AgentActionDetailsView panel=new AgentActionDetailsView(view,row,attachments::thumbnail,attachments::open);actionDetails=panel;actionManual=false;actionLiveLoading=false;actionLiveStamp="";
+        final WorkspaceStore.Session p=snapshot();
+        boolean capturedSubagent=AgentSubagentPresentation.matches(row)&&!p.environment.equals("codex");
+        AgentActionDetailsView panel=new AgentActionDetailsView(view,row,attachments::thumbnail,attachments::open,capturedSubagent);actionDetails=panel;actionManual=false;actionLiveLoading=false;actionLiveStamp="";
         panel.setPadding(view.dp(12),view.dp(8),view.dp(12),view.dp(12));
         AlertDialog.Builder builder=WorkspaceDialogs.builder(activity).setTitle(AgentTimelineSummary.title(row,WorkspaceLanguage.code(activity).equals("ru"))).setView(panel)
             .setNeutralButton(tr("Копировать","Copy"),(d,w)->panel.copyOrExport()).setPositiveButton(tr("Закрыть","Close"),null);
         AlertDialog dialog=builder.create();details=dialog;
         dialog.setOnDismissListener(d->{if(actionDetails==panel){actionDetails=null;actionLiveLoading=false;actionLiveStamp="";}});dialog.setCanceledOnTouchOutside(true);WorkspaceDialogs.centerLibrary(dialog);dialog.show();
-        final WorkspaceStore.Session p=snapshot();final String session=nativeSession;final int g=generation;final int[] offset={0};final StringBuilder buffer=new StringBuilder();
+        if(capturedSubagent){
+            panel.more.setOnClickListener(v->{JSONObject latest=rows.get(panel.key());if(latest!=null)readCapturedSubagent(latest,true);});
+            refreshActionDetails();
+            return;
+        }
+        final String session=nativeSession;final int g=generation;final int[] offset={0};final StringBuilder buffer=new StringBuilder();
         Runnable[] page=new Runnable[1];page[0]=()->{actionManual=true;panel.more.setEnabled(false);JSONObject request=detailRequest(p,row,offset[0],session);
             reads.execute(()->{JSONObject r=null;try{r=transport.request(p,request);}catch(Exception ignored){}JSONObject result=r;handler.post(()->{
                 if(closed||g!=generation||actionDetails!=panel||!dialog.isShowing())return;panel.more.setEnabled(true);
@@ -491,10 +498,70 @@ final class AgentChatUi {
             });});};panel.more.setOnClickListener(v->page[0].run());
         if(AgentSubagentPresentation.matches(row))page[0].run();else refreshActionDetails();
     }
+    private void readCapturedSubagent(JSONObject row,boolean retry){
+        AgentActionDetailsView panel=actionDetails;
+        AlertDialog dialog=details;
+        if(panel==null||!panel.capturedSubagent||dialog==null||!dialog.isShowing()
+            ||!selected()||!AgentSubagentPresentation.matches(row)||!row.optBoolean("more")||actionLiveLoading)return;
+        String stamp=row.optLong("bodyLength")+":"+row.optString("body");
+        if(!retry&&stamp.equals(actionLiveStamp))return;
+        actionLiveStamp=stamp;
+        actionLiveLoading=true;
+        panel.more.setEnabled(false);
+        WorkspaceStore.Session p=snapshot();
+        String session=nativeSession;
+        int g=generation;
+        reads.execute(()->{
+            String value=null;
+            try{
+                StringBuilder buffer=new StringBuilder();
+                int offset=0;
+                while(!closed&&g==generation&&actionDetails==panel){
+                    // These bytes belong to the selected parent chat row. Only Codex
+                    // can request history from a linked child through the detail route.
+                    JSONObject part=transport.request(p,detailRequest(p,row,offset,session));
+                    if(part==null||!part.optBoolean("ok",true)||!(part.opt("body") instanceof String)||!part.has("next"))break;
+                    String chunk=part.getString("body");
+                    if(chunk.length()>30000||chunk.length()>2000000-buffer.length())break;
+                    buffer.append(chunk);
+                    if(part.isNull("next")){
+                        value=new JSONObject(buffer.toString()).toString();
+                        break;
+                    }
+                    int next=part.optInt("next",-1);
+                    if(next<=offset||next!=buffer.length())break;
+                    offset=next;
+                }
+            }catch(Exception unavailable){/* The snapshot stays available when its full detail cannot be read. */}
+            String result=value;
+            handler.post(()->{
+                if(closed||g!=generation||actionDetails!=panel||!dialog.isShowing())return;
+                actionLiveLoading=false;
+                panel.more.setEnabled(true);
+                JSONObject latest=rows.get(panel.key());
+                if(!session.equals(nativeSession)||latest==null)return;
+                if(!AgentActionDetailsView.sameBody(row,latest)){
+                    readCapturedSubagent(latest,false);
+                    return;
+                }
+                if(result!=null){
+                    panel.nativeText(result,true);
+                    panel.more.setVisibility(View.GONE);
+                }else{
+                    panel.historyFailure();
+                    panel.more.setVisibility(View.VISIBLE);
+                    panel.more.setText(tr("Повторить загрузку","Retry loading"));
+                }
+            });
+        });
+    }
     private void refreshActionDetails(){
         AgentActionDetailsView panel=actionDetails;AlertDialog dialog=details;if(panel==null||dialog==null||!dialog.isShowing())return;JSONObject row=rows.get(panel.key());if(row==null)return;
         panel.update(row);dialog.setTitle(AgentTimelineSummary.title(row,WorkspaceLanguage.code(activity).equals("ru")));
-        if(AgentSubagentPresentation.matches(row))return;
+        if(AgentSubagentPresentation.matches(row)){
+            if(panel.capturedSubagent)readCapturedSubagent(row,false);
+            return;
+        }
         JSONObject preview=AgentActionPresentation.preview(row);if(actionManual||actionLiveLoading||!row.optBoolean("more")||preview!=null||!panel.followsOutput())return;
         long length=row.optLong("bodyLength",row.optString("body").length());if(length<0||length>2000000)return;String stamp=row.optString("body")+":"+length+":"+row.optString("status");if(stamp.equals(actionLiveStamp))return;
         actionLiveLoading=true;int offset=(int)Math.max(0,length-24000);final int g=generation;final WorkspaceStore.Session p=snapshot();final String session=nativeSession;JSONObject request=detailRequest(p,row,offset,session);

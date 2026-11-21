@@ -17,6 +17,8 @@ const { fixture } = require('./fixture-paths.cjs');
 const root = fixture('agy');
 const conversation = 'b7078b35-47df-44e0-92db-e5e8c9bbff8f';
 const otherConversation = '8c44dcde-3504-4d26-9929-5ab05936064e';
+const childConversation = '0be921ce-0542-4f2d-9381-56270bfe658f';
+const secondChild = 'e4c61047-d37f-4ea3-a918-6332d07d26ee';
 const session = 'app-chat-1';
 const executable = '/verified/agy';
 const q = (op, fields = {}) => ({op, session, ...fields});
@@ -63,6 +65,10 @@ const init = (id = conversation) => ({event: 'init', conversation_id: id,
     init: {permission_mode: 'request-review'}});
 const step = (kind, text) => ({event: 'step_update', step_update: {
     conversation_id: conversation, step_type: kind, state: 'DONE', text_delta: text,
+}});
+const subagentStep = (index, state, subagents) => ({event: 'step_update', step_update: {
+    conversation_id: conversation, step_type: 'tool', step_index: index, state,
+    ...(subagents === undefined ? {} : {subagent_info: {subagents}}),
 }});
 const result = response => ({event: 'result', result: {
     conversation_id: conversation, status: 'SUCCESS', response,
@@ -207,6 +213,73 @@ async function ambiguousRecovery() {
     assert.throws(() => reopen.command(q('chat-snapshot', {cursor: 'foreign:1'})));
 }
 
+async function subagentDetails() {
+    const rt = fakeRuntime();
+    const file = path.join(root, 'subagents.json');
+    const chat = new AntigravityChat(file, session, executable, '', rt.options);
+    chat.startStream();
+    const worker = rt.children[0];
+    frame(worker, init());
+    const receipt = chat.command(message('delegate'));
+    const nativeChild = {conversation_id: childConversation, type_name: 'code reviewer', role: 'review',
+        log_uri: 'file:///fixture-private-log', workspace_uris: ['https://invalid.example/fixture-private-workspace'],
+        prompt: 'undocumented fixture-private-task'};
+    frame(worker, subagentStep(1, 'ACTIVE', [nativeChild]));
+    assert.deepEqual(chat.command(q('chat-snapshot')).rows, []);
+    frame(worker, step('user_input'));
+    assert.equal((await receipt).accepted, true);
+    frame(worker, subagentStep(-1, 'DONE', [nativeChild]));
+    frame(worker, subagentStep(2, 'DONE', [{conversation_id: conversation.toUpperCase()}, {conversation_id: '../fixture'}]));
+    frame(worker, subagentStep(3, 'DONE', [{conversation_id: secondChild, status: 'running'}]));
+    frame(worker, subagentStep(4, 'ACTIVE', [nativeChild]));
+
+    let rows = chat.command(q('chat-snapshot')).rows;
+    assert.deepEqual(rows.map(row => row.part), ['user', 'subagent-3', 'subagent-4']);
+    const launch = rows[2];
+    assert.equal(launch.kind, 'tool');
+    assert.equal(launch.toolType, 'collabAgentToolCall');
+    assert.equal(launch.toolName, 'spawnAgent');
+    assert.equal(launch.status, 'inProgress');
+    const request = q('chat-detail', {message: launch.message, part: launch.part, offset: 0});
+    assert.deepEqual(JSON.parse(chat.command(request).body), {
+        tool: 'spawnAgent', senderThreadId: conversation, receiverThreadIds: [childConversation],
+        agentParticipants: [{id: childConversation, type: 'code reviewer', role: 'review'}],
+        sourceHistoryAvailable: false,
+    });
+    assert.equal(chat.command({...request, session: 'foreign'}).error, 'STALE_SESSION');
+    assert.throws(() => chat.command({...request, message: 'msg_unrelated'}), /Unknown detail/);
+    assert.throws(() => chat.command({...request, part: 'subagent-2'}), /Unknown detail/);
+    assert.equal(rt.children.length, 1);
+    assert.equal(worker.inputs.length, 1);
+
+    frame(worker, subagentStep(4, 'ACTIVE', [{conversation_id: childConversation.toUpperCase()},
+        {conversation_id: secondChild, type_name: 'agent', role: 'research'}]));
+    frame(worker, subagentStep(4, 'DONE'));
+    frame(worker, subagentStep(4, 'ACTIVE', [nativeChild]));
+    rows = chat.command(q('chat-snapshot')).rows;
+    assert.equal(rows[2].key, launch.key);
+    assert.equal(rows[2].status, 'completed');
+    assert.equal(rows.length, 3);
+    const body = JSON.parse(chat.command(request).body);
+    assert.deepEqual(body.receiverThreadIds, [childConversation, secondChild]);
+    assert.deepEqual(body.agentParticipants, [{id: childConversation, type: 'code reviewer', role: 'review'},
+        {id: secondChild, type: 'agent', role: 'research'}]);
+    assert.equal(body.sourceHistoryAvailable, false);
+    assert.equal(body.agentsStates, undefined);
+    assert.equal(body.agentHistory, undefined);
+    frame(worker, result('parent response'));
+    const saved = fs.readFileSync(file, 'utf8');
+    assert.equal(saved.includes('fixture-private-'), false);
+    assert.equal(saved.includes('workspace_uris'), false);
+    const reopened = new AntigravityChat(file, session, executable, '', rt.options);
+    assert.deepEqual(reopened.command(request), chat.command(request));
+    assert.equal(reopened.command(q('chat-snapshot')).rows.at(-1).body, 'parent response');
+    assert.equal(rt.children.length, 1);
+    const closed = chat.worker.closed;
+    assert.equal(chat.command(q('stop')).stopped, true);
+    await closed;
+}
+
 function request(socket, query, halfClose = false) {
     return new Promise((resolve, reject) => {
         const data = JSON.stringify(query);
@@ -257,8 +330,9 @@ async function socketProtocol() {
     await stream();
     await authAndTerminal();
     await ambiguousRecovery();
+    await subagentDetails();
     await socketProtocol();
-    console.log('PASS Antigravity stream, auth handoff, durable history, socket framing, and owned process lifecycle fixtures');
+    console.log('PASS Antigravity stream, auth handoff, durable history, subagent details, socket framing, and owned process lifecycle fixtures');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

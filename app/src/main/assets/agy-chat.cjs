@@ -14,11 +14,69 @@ const FRAME_LIMIT = 2 * 1024 * 1024;
 const HISTORY_LIMIT = 12 * 1024 * 1024;
 const TURN_LIMIT = 200;
 const RESPONSE_LIMIT = 80000;
+const SUBAGENT_STEP_LIMIT = 32;
+const SUBAGENT_PARTICIPANT_LIMIT = 16;
+const SUBAGENT_LABEL_LIMIT = 120;
 const ACK_TIMEOUT = 12000;
 const validSession = value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(value);
 const nativeId = value => typeof value === 'string' && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value);
 const authRequired = value => typeof value === 'string' &&
     /authentication (?:required|failed|expired)|not (?:authenticated|signed in)|(?:please |must )(?:log|sign)[ -]?in|unauthenticated/i.test(value);
+const validStepIndex = value => Number.isSafeInteger(value) && value >= 0;
+const validLabel = value => typeof value === 'string' && value.length <= SUBAGENT_LABEL_LIMIT;
+
+function subagentLabel(value) {
+    return typeof value === 'string' ? clean(value.slice(0, SUBAGENT_LABEL_LIMIT))
+        .replace(/\s+/g, ' ').trim().slice(0, SUBAGENT_LABEL_LIMIT) : '';
+}
+
+function validSubagentSteps(steps, parent) {
+    if (!Array.isArray(steps) || steps.length > SUBAGENT_STEP_LIMIT) return false;
+    const indexes = new Set();
+    return steps.every(step => {
+        if (!validStepIndex(step?.index) || indexes.has(step.index) ||
+            !['inProgress', 'completed'].includes(step.status) ||
+            !Array.isArray(step.participants) || !step.participants.length ||
+            step.participants.length > SUBAGENT_PARTICIPANT_LIMIT) return false;
+        indexes.add(step.index);
+        const ids = new Set();
+        return step.participants.every(participant => {
+            if (!nativeId(participant?.id) || participant.id.toLowerCase() === parent ||
+                ids.has(participant.id.toLowerCase()) || !validLabel(participant.type) ||
+                !validLabel(participant.role)) return false;
+            ids.add(participant.id.toLowerCase());
+            return true;
+        });
+    });
+}
+
+function trackSubagentStep(record, payload, parent) {
+    if (!validStepIndex(payload.step_index) || !['ACTIVE', 'DONE'].includes(payload.state)) return;
+    const steps = record.subagentSteps || [];
+    const existing = steps.find(step => step.index === payload.step_index);
+    const reported = payload.subagent_info?.subagents;
+    if (!existing && (!Array.isArray(reported) || steps.length >= SUBAGENT_STEP_LIMIT)) return;
+    const participants = new Map(existing?.participants.map(participant =>
+        [participant.id.toLowerCase(), participant]));
+    if (Array.isArray(reported)) for (const agent of reported) {
+        const id = agent?.conversation_id;
+        if (!nativeId(id) || id.toLowerCase() === parent) continue;
+        const key = id.toLowerCase(), prior = participants.get(key);
+        if (!prior && participants.size >= SUBAGENT_PARTICIPANT_LIMIT) continue;
+        participants.set(key, {
+            id: prior?.id || id,
+            type: subagentLabel(agent.type_name) || prior?.type || '',
+            role: subagentLabel(agent.role) || prior?.role || '',
+        });
+    }
+    if (!participants.size) return;
+    const status = payload.state === 'DONE' || existing?.status === 'completed' ? 'completed' : 'inProgress';
+    if (existing) Object.assign(existing, {status, participants: Array.from(participants.values())});
+    else {
+        steps.push({index: payload.step_index, status, participants: Array.from(participants.values())});
+        record.subagentSteps = steps;
+    }
+}
 
 function processIdentity(pid) {
     if (!Number.isSafeInteger(pid) || pid <= 1) return null;
@@ -47,7 +105,9 @@ function loadHistory(file) {
             if (!Number.isSafeInteger(turn.seq) || turn.seq <= sequence || !delivery.validId(turn.id) ||
                 ids.has(turn.id) || typeof turn.text !== 'string' || typeof turn.response !== 'string' ||
                 typeof turn.status !== 'string' || !Number.isSafeInteger(turn.started) ||
-                !Number.isSafeInteger(turn.completed) || typeof turn.admitted !== 'boolean') {
+                !Number.isSafeInteger(turn.completed) || typeof turn.admitted !== 'boolean' ||
+                (turn.subagentSteps !== undefined && (!turn.admitted || !state.conversation ||
+                    !validSubagentSteps(turn.subagentSteps, state.conversation.toLowerCase())))) {
                 throw Error('Invalid history');
             }
             sequence = turn.seq;
@@ -265,6 +325,9 @@ class AntigravityChat {
             if (payload.step_type === 'agent_response' && typeof payload.text_delta === 'string' && turn.record.admitted) {
                 turn.record.response = (turn.record.response + clean(payload.text_delta)).slice(0, RESPONSE_LIMIT);
             }
+            if (turn.record.admitted && !['user_input', 'agent_response'].includes(payload.step_type)) {
+                trackSubagentStep(turn.record, payload, id.toLowerCase());
+            }
             return;
         }
 
@@ -446,6 +509,18 @@ class AntigravityChat {
         if (!turn.admitted) return rows;
         const receipt = delivery.receipt(this.sendReceipt(turn), turn.id);
         add('user', 'user', clean(turn.text), {deliveryReceipt: receipt});
+        for (const step of turn.subagentSteps || []) {
+            const body = {
+                tool: 'spawnAgent', senderThreadId: this.state.conversation,
+                receiverThreadIds: step.participants.map(participant => participant.id),
+                agentParticipants: step.participants.map(({id, type, role}) => ({id, type, role})),
+                // The CLI supplies launch metadata. No read-only child history API is used.
+                sourceHistoryAvailable: false,
+            };
+            add('subagent-' + step.index, 'tool', JSON.stringify(body), {
+                toolType: 'collabAgentToolCall', toolName: 'spawnAgent', status: step.status,
+            });
+        }
         if (turn.response) add('text', 'text', turn.response, turn.status === 'success' ? {
             requestSummary: {request: turn.id, completedAt: turn.completed, durationMs: Math.max(0, turn.completed - turn.started)},
         } : {});

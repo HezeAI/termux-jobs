@@ -66,6 +66,12 @@ Auto зависит от CLI/аккаунта. Bypass недоступен, ес
 [Права и границы](../../SECURITY.md) · [Инструкции](AGENT-INSTRUCTIONS.md) ·
 [Навыки](AGENT-SKILLS.md).
 
+Tap a subagent action to open its details. Codex can show linked child
+history. Claude retains bounded text excerpts carried by the current chat's
+CLI event stream. Antigravity lists the participants that its CLI reports.
+The Claude and Antigravity cards indicate when the full child history is
+unavailable.
+
 In Ubuntu AI, open **Chat management → Update CLI** in the sidebar to check
 Codex, Claude or Antigravity. Confirm the version before installing it. A
 running chat uses the new version after its next launch. A new Gemini chat

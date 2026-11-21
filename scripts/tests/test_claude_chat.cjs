@@ -30,5 +30,58 @@ const b=new ClaudeChat({socket:path.join(root,session+'.sock'),binary:'/not-used
  const entries=[{type:'user',uuid:'root',parentUuid:null},{type:'assistant',uuid:'old',parentUuid:'root'},{type:'assistant',uuid:'subagent',parentUuid:'root',isSidechain:true},{type:'assistant',uuid:'new',parentUuid:'root'}];assert.deepEqual(chain(entries).map(e=>e.uuid),['root','new']);
  const dir=path.join(process.env.CLAUDE_CONFIG_DIR,'projects','fixture');fs.mkdirSync(dir,{recursive:true});const native=entries.map(e=>({...e,sessionId:session}));fs.writeFileSync(path.join(dir,session+'.jsonl'),native.map(e=>JSON.stringify(e)).join('\n'));assert.deepEqual(readHistory(process.env.CLAUDE_CONFIG_DIR,session).map(e=>e.uuid),['root','new']);assert.deepEqual(readHistory(process.env.CLAUDE_CONFIG_DIR,'../../outside'),[]);
  assert(!JSON.stringify(await b.command({op:'status'})).includes('printf ok'));assert.equal(fs.statSync(path.join(root,session+'.receipts.json')).mode&0o777,0o600);
+
+ const parent='toolu_child_fixture',other='toolu_ordinary';
+ const call={type:'tool_use',id:parent,name:'Agent',input:{prompt:'Review the fixture',subagent_type:'reviewer'}};
+ const callMessage={type:'assistant',session_id:session,uuid:'parent-call',message:{content:[call,
+  {type:'tool_use',id:other,name:'Read',input:{file_path:'fixture.txt'}}]}};
+ b.event(callMessage);
+ b.event({type:'system',subtype:'task_started',session_id:session,task_id:'task_child',tool_use_id:parent});
+ const child=(id,value,scope=parent,selected=session)=>({type:'assistant',session_id:selected,parent_tool_use_id:scope,message:{id,content:[
+  {type:'thinking',thinking:'PRIVATE_REASONING_EXCLUDED'},{type:'text',text:value}
+ ]}});
+ b.event(child('wrong-session','FOREIGN_SESSION_EXCLUDED',parent,'22222222-2222-4222-8222-222222222222'));
+ b.event(child('wrong-tool','UNRELATED_TOOL_EXCLUDED',other));
+ b.event(child('response-1','First child response'));
+ b.event(child('response-1','First child response'));
+ const findAgent=project=>project.snapshot().rows.find(r=>r.part==='tool:'+parent);
+ const initialAgent=findAgent(b);assert.equal(initialAgent.status,'running');assert.equal(initialAgent.toolType,'collabAgentToolCall');
+ assert.equal(JSON.parse(initialAgent.body).prompt,'Review the fixture');
+ b.event(child('response-2','b'.repeat(14000)));
+ b.event(child('response-3','c'.repeat(14000)));
+ b.event({type:'system',subtype:'task_notification',session_id:session,task_id:'wrong-task',tool_use_id:parent,status:'failed',summary:'MISMATCH_EXCLUDED'});
+ b.event({type:'system',subtype:'task_notification',session_id:session,task_id:'task_child',status:'completed',summary:'Finished child review'});
+ const resultMessage={type:'user',session_id:session,uuid:'parent-result',message:{content:[
+  {type:'tool_result',tool_use_id:parent,content:'Parent tool result'}
+ ]}};
+ b.event(resultMessage);
+ const doneAgent=findAgent(b);assert.equal(doneAgent.key,initialAgent.key);assert.equal(doneAgent.status,'completed');assert.equal(doneAgent.more,true);
+ async function fullAgent(browser,row){
+  const request={op:'chat-detail',session,message:row.message,part:row.part};
+  const first=await browser.command({...request,offset:0});
+  assert.equal(first.next,24000);
+  const second=await browser.command({...request,offset:first.next});
+  assert.equal(second.next,null);
+  return first.body+second.body;
+ }
+ const detailBody=await fullAgent(b,doneAgent),childDetails=JSON.parse(detailBody);
+ assert.equal(childDetails.sourceHistoryAvailable,false);
+ assert.deepEqual(childDetails.receiverThreadIds,['task_child']);
+ assert.deepEqual(childDetails.agentParticipants,[{id:'task_child',type:'reviewer'}]);
+ assert.equal(childDetails.agentsStates.task_child.message,'Parent tool result');
+ const childHistory=childDetails.agentHistory.task_child;
+ assert.equal(childHistory.relationVerified,true);assert.equal(childHistory.complete,false);
+ assert.deepEqual(childHistory.messages.map(row=>row.id),['response-1','response-2','response-3']);
+ assert(!JSON.stringify(b.snapshot().rows.filter(row=>row.key!==doneAgent.key)).includes('First child response'));
+ for(const rejected of ['PRIVATE_REASONING_EXCLUDED','FOREIGN_SESSION_EXCLUDED','UNRELATED_TOOL_EXCLUDED','MISMATCH_EXCLUDED'])assert(!detailBody.includes(rejected));
+ assert.equal(fs.statSync(path.join(root,session+'.subagents.json')).mode&0o777,0o600);
+ const now=new Date().toISOString();
+ const persisted=[{...callMessage,sessionId:session,parentUuid:null,timestamp:now},
+  {...resultMessage,sessionId:session,parentUuid:callMessage.uuid,timestamp:now}];
+ fs.writeFileSync(path.join(dir,session+'.jsonl'),persisted.map(row=>JSON.stringify(row)).join('\n'));
+ const reopened=new ClaudeChat({socket:path.join(root,'reopened.sock'),binary:'/not-used',model:'sonnet',mode:'manual',chat:'id',thread:session,language:'en'});
+ assert.deepEqual(JSON.parse(await fullAgent(reopened,findAgent(reopened))),childDetails);
+ await assert.rejects(()=>reopened.command({op:'chat-detail',session:'22222222-2222-4222-8222-222222222222',message:doneAgent.message,part:doneAgent.part,offset:0}));
+ console.log('PASS Claude subagent parent scope, action state, bounded details and reopen');
  console.log('PASS Claude native streaming/projection, scoped dedup, permission nonce/session/once/deny/cancel, questions, receipts, native graph, foreign/subagent exclusion, busy handoff guard and private metadata');
 })().catch(e=>{console.error(e);process.exitCode=1;});

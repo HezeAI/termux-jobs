@@ -8,8 +8,13 @@ HezeAI maintains this independent Termux fork.
 
 ## Changes since 2.1.8
 
-- Agent timelines show compact action rows and detailed output on tap. Codex
-  child-agent results and earlier conversation pages are accessible from the chat.
+- Agent timelines show compact action rows and detailed output on tap. Earlier
+  conversation pages are accessible from the chat.
+- Open subagent details from the parent action. Codex can read linked child
+  history. Claude shows text directly linked by the CLI to that action and
+  preserves bounded excerpts. Antigravity shows reported participant names,
+  roles and identifiers. Full native child history is unavailable in the
+  Claude and Antigravity bridges.
 - Check and install Codex, Claude and Antigravity CLI updates from **Chat
   management** in Ubuntu AI. Installations require confirmation. A running
   chat picks up the new CLI at its next launch.
@@ -29,8 +34,9 @@ Android 8 or later, ARM64, version code 1549. The Android package and signing
 certificate match v2.1.8. This update requests no data reset or environment
 reinstall. Android may stop running app processes during installation.
 
-Existing Gemini profiles retain their connection. A new Antigravity profile
-uses its own Google sign-in. Committing in a project requires write permission
+Existing Gemini profiles retain their connection and can still select API or
+Vertex. A new Antigravity profile uses its own Google sign-in. Committing
+in a project requires write permission
 and an author name and email. Profiles previously saved with a truncated
 directory can reselect the original folder.
 

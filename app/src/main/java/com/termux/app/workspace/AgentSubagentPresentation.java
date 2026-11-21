@@ -20,6 +20,14 @@ final class AgentSubagentPresentation {
  field(b,d,"agentPath",ru?"Субагент":"Subagent");field(b,d,"agentThreadId",ru?"Получатель":"Recipient");
  JSONArray ids=d.optJSONArray("receiverThreadIds");if(ids!=null&&ids.length()>0){b.append(ru?"Получатели: ":"Recipients: ");for(int i=0;i<ids.length();i++){if(i>0)b.append(", ");b.append(ids.optString(i));}b.append("\n");}
  field(b,d,"model",ru?"Модель":"Model");field(b,d,"reasoningEffort",ru?"Уровень рассуждений":"Reasoning effort");
+ JSONArray participants=d.optJSONArray("agentParticipants");
+ if(participants!=null)for(int i=0;i<participants.length();i++){
+  JSONObject participant=participants.optJSONObject(i);
+  if(participant==null)continue;
+  field(b,participant,"id",ru?"Имя":"Name");
+  field(b,participant,"type",ru?"Тип":"Type");
+  field(b,participant,"role",ru?"Роль":"Role");
+ }
  b.append(ru?"Событие: ":"Event: ").append(title(row,ru)).append("\n");
  if(!row.optString("status").isEmpty())b.append(ru?"Состояние события: ":"Event state: ").append(state(row.optString("status"),ru)).append("\n");
  String action=row.optString("toolName");
@@ -31,13 +39,15 @@ final class AgentSubagentPresentation {
                  :(ru?"\nТекст сообщения недоступен\n":"\nMessage text unavailable\n"));
  }
  JSONObject states=d.optJSONObject("agentsStates");if(states!=null)for(String key:keys(states)){JSONObject agent=states.optJSONObject(key);if(agent!=null){b.append("\n").append(ru?"Субагент: ":"Subagent: ").append(key).append("\n");if(!agent.isNull("status"))b.append(ru?"Состояние: ":"State: ").append(state(agent.optString("status"),ru)).append("\n");field(b,agent,"message",ru?"Ответ":"Response");}}
+ boolean captured=d.has("sourceHistoryAvailable");
  JSONObject histories=d.optJSONObject("agentHistory");if(histories!=null)for(String id:keys(histories)){
   JSONObject h=histories.optJSONObject(id);if(h==null)continue;JSONArray messages=h.optJSONArray("messages");b.append("\n").append(ru?"История субагента: ":"Subagent history: ").append(id).append("\n");
   boolean hasMessages=messages!=null&&messages.length()>0;
   if(!h.optBoolean("relationVerified")||(!hasMessages&&h.optBoolean("unavailable"))){
    b.append(ru?"Не удалось загрузить историю субагента\n":"Could not load subagent history\n");continue;
   }
-  b.append(ru?"Сообщения связанного агента; соответствие конкретному событию не подтверждено.\n":"Messages from the related agent; correspondence to this specific event is unconfirmed.\n");
+  if(captured)b.append(ru?"Сообщения, полученные для этого субагента.\n":"Messages captured for this subagent.\n");
+  else b.append(ru?"Сообщения связанного агента; соответствие конкретному событию не подтверждено.\n":"Messages from the related agent; correspondence to this specific event is unconfirmed.\n");
   JSONObject status=h.optJSONObject("state");
   if(status!=null&&!(hasMessages&&status.optString("type").equals("notLoaded"))){
    b.append(ru?"Состояние при чтении: ":"State when read: ").append(state(status.optString("type"),ru)).append("\n");
@@ -47,6 +57,8 @@ final class AgentSubagentPresentation {
   if(!h.optBoolean("complete"))b.append(ru?"Получена не вся история субагента.\n":"The subagent history is incomplete.\n");
   if(h.optBoolean("refreshUnavailable"))b.append(ru?"Обновить историю не удалось; показаны ранее полученные сообщения.\n":"History could not be refreshed; previously received messages are shown.\n");
  }
+ if(captured&&!d.optBoolean("sourceHistoryAvailable"))
+  b.append(ru?"\nПолная история субагента недоступна. Показаны сведения из текущего чата.\n":"Full subagent history is unavailable. Showing information captured in this chat.\n");
  if(d.optBoolean("agentHistoryLimited"))b.append("\n").append(ru?"Показана история части получателей.":"History is shown for some recipients only.");
  return b.toString().trim();
  }catch(JSONException e){return ru?"Текст сообщения недоступен":"Message text unavailable";}}

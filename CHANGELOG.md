@@ -1,12 +1,14 @@
 ## 2.1.9 (1549) — 2026-11-21 — stable
 
-- Show compact agent actions, expandable command output and readable Codex
-  subagent history. Keep older chat pages reachable.
+- Show compact agent actions and expandable command output. Open Codex
+  subagent history, linked Claude transcript excerpts, and Antigravity
+  participants reported by its CLI. Keep older chat pages reachable.
 - Add CLI update checks and confirmation in Chat management for Codex, Claude
   and Antigravity in Ubuntu AI. New Gemini chats use Antigravity CLI and
   surface sign-in before the first message.
 - Add shared instruction templates and Gemini instruction and skill forms.
-  Preserve existing instruction files and saved Gemini connections.
+  Preserve existing instruction files and saved Gemini connections, including
+  the API and Vertex selector for legacy Gemini chats.
 - Prepare Git in Ubuntu AI when needed and initialize new chat projects before
   agent startup. Show changes before the first commit and preserve exact
   project paths, including names ending in a space.

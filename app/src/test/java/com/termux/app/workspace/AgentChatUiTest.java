@@ -496,6 +496,83 @@ public class AgentChatUiTest {
    dismissActionDialogOutside(dialog);
   }finally{ui.close();marker.delete();}
  }
+ @Test public void capturedSubagentDetailsRefreshAndPageOnlyTheirParentRow()throws Exception{
+  for(String provider:new String[]{"claude","antigravity"}){
+   TermuxActivity a=activity();
+   WorkspaceStore.Session p=profile();p.aiAgent="";p.environment="ubuntu";
+   p.claudeAgent=provider.equals("claude");p.geminiAgent=!p.claudeAgent;
+   if(p.geminiAgent)p.geminiAuth=GeminiCli.ANTIGRAVITY;
+   String session="parent-"+provider;
+   JSONObject event=new JSONObject().put("key","launch").put("message","parent-message")
+     .put("part","tool:confirmed-parent-call").put("kind","tool").put("toolType","collabAgentToolCall")
+     .put("toolName","spawnAgent").put("status","inProgress");
+   JSONObject data=new JSONObject().put("sourceHistoryAvailable",false).put("prompt","Initial recorded task");
+   AtomicReference<JSONObject> live=new AtomicReference<>(new JSONObject(event.toString()).put("body",data.toString()));
+   List<JSONObject> requests=new CopyOnWriteArrayList<>();
+   AtomicBoolean failNext=new AtomicBoolean(true),holdPage=new AtomicBoolean();
+   CountDownLatch pageEntered=new CountDownLatch(1),releasePage=new CountDownLatch(1);
+   String recorded=data.put("prompt","Paged captured task").toString();
+   AgentChatUi ui=new AgentChatUi(a,()->p,()->true,(selected,q)->{
+    if(q.optString("op").equals("chat-detail")){
+     requests.add(q);
+     if(failNext.getAndSet(false))return new JSONObject().put("ok",false);
+     if(holdPage.get()){pageEntered.countDown();releasePage.await(3,TimeUnit.SECONDS);}
+     int offset=q.getInt("offset"),end=Math.min(recorded.length(),offset+35);
+     return new JSONObject().put("ok",true).put("body",recorded.substring(offset,end))
+       .put("next",end==recorded.length()?JSONObject.NULL:end);
+    }
+    return result().put("session",session).put("connected",true).put("rows",new JSONArray().put(live.get()));
+   });
+   try{
+    ui.sync();
+    AgentChatView chat=org.robolectric.util.ReflectionHelpers.getField(ui,"view");
+    assertTrue(awaitTimelineAction(chat,AgentStandaloneActionView.class).performClick());
+    android.app.AlertDialog dialog=currentActionDialog();
+    android.widget.TextView output=dialog.getWindow().getDecorView().findViewWithTag("agent-action-output");
+    assertTrue(provider,output.getText().toString().contains("Initial recorded task"));
+    assertTrue(provider,requests.isEmpty());
+    live.set(new JSONObject(event.toString()).put("body",recorded.substring(0,20))
+      .put("bodyLength",recorded.length()).put("more",true));
+    reload(ui);
+    android.view.View retry=findText(dialog.getWindow().getDecorView(),"Повторить загрузку","Retry loading");
+    for(int i=0;i<35&&retry==null;i++){
+     drain();
+     retry=findText(dialog.getWindow().getDecorView(),"Повторить загрузку","Retry loading");
+    }
+    assertNotNull(provider,retry);
+    reload(ui);
+    assertEquals(1,requests.size());
+    assertTrue(retry.performClick());
+    for(int i=0;i<35&&!output.getText().toString().contains("Paged captured task");i++)drain();
+    assertTrue(provider,output.getText().toString().contains("Paged captured task"));
+    assertTrue(provider,requests.size()>1);
+    for(JSONObject request:requests){
+     assertEquals(session,request.getString("session"));
+     assertEquals("parent-message",request.getString("message"));
+     assertEquals("tool:confirmed-parent-call",request.getString("part"));
+     assertFalse(request.has("subagent"));
+    }
+    int reads=requests.size();
+    live.set(new JSONObject(event.toString()).put("status","completed")
+      .put("body",data.put("prompt","Final recorded task").toString()));
+    reload(ui);
+    assertTrue(provider,output.getText().toString().contains("Final recorded task"));
+    assertFalse(output.getText().toString().contains("Paged captured task"));
+    assertEquals(reads,requests.size());
+    assertSame(dialog,currentActionDialog());
+    holdPage.set(true);
+    live.set(new JSONObject(event.toString()).put("body",recorded.substring(0,18))
+      .put("bodyLength",recorded.length()).put("more",true));
+    reload(ui);
+    assertTrue(pageEntered.await(2,TimeUnit.SECONDS));
+    dialog.dismiss();
+    drain();
+    releasePage.countDown();
+    reload(ui);
+    assertEquals("Dismissing an open dialog stops subsequent detail pages",reads+1,requests.size());
+   }finally{releasePage.countDown();ui.close();}
+  }
+ }
 
 
  @Test public void successEnvelopeWithoutAdmissionNeverClearsComposer()throws Exception{

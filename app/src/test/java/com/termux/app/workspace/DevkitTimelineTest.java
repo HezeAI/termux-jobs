@@ -38,6 +38,24 @@ public class DevkitTimelineTest {
         AgentActionDetailsView failed=new AgentActionDetailsView(v,new JSONObject(event.toString()).put("body","{"),(j,i)->{},j->{});failed.historyFailure();assertTrue(failed.body.getText().toString().contains("Не удалось загрузить историю"));assertFalse(failed.body.getText().toString().contains("Загрузка подробностей"));
         history.remove("messages");history.put("unavailable",true);detail.update(new JSONObject(event.toString()).put("body",new JSONObject().put("agentThreadId","child").put("agentHistory",new JSONObject().put("child",history)).toString()));assertTrue(detail.body.getText().toString().contains("Не удалось загрузить историю субагента"));
     }
+    @Test public void capturedSubagentDetailsDistinguishMissingNativeHistoryFromCapturedMessages()throws Exception{
+        JSONObject message=new JSONObject().put("id","response").put("role","agentMessage").put("text","Captured response");
+        JSONObject history=new JSONObject().put("relationVerified",true).put("complete",false).put("messages",new JSONArray().put(message));
+        JSONObject participant=new JSONObject().put("id","repo-reader").put("type","explorer").put("role","review");
+        JSONObject event=tool("subagent","collabAgentToolCall").put("toolName","spawnAgent").put("body",
+            new JSONObject().put("sourceHistoryAvailable",false)
+                .put("agentParticipants",new JSONArray().put(participant))
+                .put("agentHistory",new JSONObject().put("repo-reader",history)).toString());
+        String english=AgentSubagentPresentation.details(event,false);
+        assertTrue(english.contains("Name: repo-reader\nType: explorer\nRole: review"));
+        assertTrue(english.contains("Captured response"));
+        assertTrue(english.contains("The subagent history is incomplete."));
+        assertTrue(english.contains("Full subagent history is unavailable."));
+        String russian=AgentSubagentPresentation.details(event,true);
+        assertTrue(russian.contains("Имя: repo-reader\nТип: explorer\nРоль: review"));
+        assertTrue(russian.contains("Получена не вся история субагента."));
+        assertTrue(russian.contains("Полная история субагента недоступна."));
+    }
     @Test public void compactCommandsNeverRewriteStoredArguments()throws Exception{
         assertEquals("bash -lc 'echo /bin/bash'",AgentCompactActionView.commandCaption("/bin/bash -lc 'echo /bin/bash'"));
         for(String command:new String[]{"/tmp/tool arg","$SHELL -c pwd","/bin/bash; rm -f x","'/bin/bash'bad -c pwd"})assertEquals(command,AgentCompactActionView.commandCaption(command));

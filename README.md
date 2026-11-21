@@ -39,13 +39,15 @@ from OpenAI Codex; not affiliated with or endorsed by the Termux team.
 
 ## v2.1.9 — agent chats, CLI updates and project Git
 
-**RU:** Компактная хронология чатов, история субагентов Codex и обновление CLI
-из бокового меню. Новые Gemini-чаты в Ubuntu AI используют Antigravity.
+**RU:** Компактная хронология чатов, действия субагентов Codex, Claude и
+Antigravity и обновление CLI из бокового меню. Новые Gemini-чаты в Ubuntu AI
+используют Antigravity.
 При создании чата приложение подготавливает Git для выбранной папки проекта
 и показывает изменения до первого коммита.
 
-**EN:** Chats have a compact timeline and Codex child-agent history. The sidebar
-manages CLI updates. New Gemini chats on Ubuntu AI use Antigravity. Chat creation
+**EN:** Chats have a compact timeline with subagent details for Codex, Claude
+and Antigravity. The sidebar manages CLI updates. New Gemini chats on Ubuntu AI
+use Antigravity. Chat creation
 prepares Git for the selected project folder and shows changes before the first
 commit.
 
